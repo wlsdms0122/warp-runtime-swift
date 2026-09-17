@@ -191,7 +191,7 @@ public struct Place: Sendable, Equatable {
 
 public extension Place {
     // Which document a place is an address in.
-    struct Document: Sendable, Equatable {
+    struct Document: Sendable, Hashable {
         // Which text this is. Nil where the program was never written down (a
         // caller that built it in memory) and that is the whole of what nil
         // means here: there is no file for a reader to be pointed back into.

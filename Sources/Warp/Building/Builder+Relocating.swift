@@ -20,19 +20,24 @@ struct Answered: Sendable {
     let table: [Linked]
     let rows: [Name: Int]
 
+    // Which document each origin is, for a closure a run over these rows
+    // makes.
+    let documents: [Place.Document]
+
     private let numbers: Numbers
 
     // MARK: - Initializer
-    private init(table: [Linked], rows: [Name: Int], numbers: Numbers) {
+    private init(table: [Linked], rows: [Name: Int], documents: [Place.Document], numbers: Numbers) {
         self.table = table
         self.rows = rows
+        self.documents = documents
         self.numbers = numbers
     }
 
     // A table holding nothing a link could answer: rows built from native
     // procedures alone, which carry no lowered body and send nothing.
-    static func unanswerable(_ table: [Linked], rows: [Name: Int]) -> Answered {
-        Answered(table: table, rows: rows, numbers: .rows)
+    static func unanswerable(_ table: [Linked], rows: [Name: Int], documents: [Place.Document]) -> Answered {
+        Answered(table: table, rows: rows, documents: documents, numbers: .rows)
     }
 
     // A table as compiling left it, and where each document numbers from. The
@@ -42,6 +47,7 @@ struct Answered: Sendable {
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
+        documents: [Place.Document],
         numbering: [Int: Numbering],
         named: [Int: [Int?]],
         closures: [Int: [Int]]
@@ -49,6 +55,7 @@ struct Answered: Sendable {
         Answered(
             table: table,
             rows: rows,
+            documents: documents,
             numbers: .documents(numbering, named: named, closures: closures)
         )
     }
@@ -67,8 +74,8 @@ struct Answered: Sendable {
     // one nothing numbered, said under the name that says who may make it:
     // `Relocating` alone, which is what keeps a table nobody answered from
     // standing as one whose numbers are rows.
-    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int]) -> Answered {
-        unanswerable(table, rows: rows)
+    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], documents: [Place.Document]) -> Answered {
+        unanswerable(table, rows: rows, documents: documents)
     }
 
     // MARK: - Public
@@ -79,12 +86,13 @@ struct Answered: Sendable {
     func holding(_ table: [Linked], closures: [Int: [Int]]) -> Answered {
         switch numbers {
         case .rows:
-            return Answered(table: table, rows: rows, numbers: numbers)
+            return Answered(table: table, rows: rows, documents: documents, numbers: numbers)
 
         case let .documents(numbering, named, _):
             return Answered(
                 table: table,
                 rows: rows,
+                documents: documents,
                 numbers: .documents(numbering, named: named, closures: closures)
             )
         }
@@ -177,16 +185,19 @@ struct Relocating {
     // answer a spelling.
     private let closures: [[Int]]
 
-    // Which document each declaration that wrote a closure stands in. A
-    // closure value is spelled by its writer, and the writer's document is
-    // whose numbering answers it.
-    private let writers: [Name: Int]
+    // Which document each writer of a closure stands in. A closure value is
+    // spelled by its writer, and the writer's document is whose numbering
+    // answers it.
+    private let writers: [Closure.Writer: Int]
+
+    private let documents: [Place.Document]
 
     // MARK: - Initializer
     init(
         table: [Linked],
         rows: [Name: Int],
-        writers: [Name: Int],
+        writers: [Closure.Writer: Int],
+        documents: [Place.Document],
         numbering: [Numbering],
         typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
@@ -197,6 +208,7 @@ struct Relocating {
         self.table = table
         self.rows = rows
         self.writers = writers
+        self.documents = documents
         self.numbering = numbering
         self.typeRows = typeNumbering.map { held in held.rows(in: loweredTypes) }
         self.contractProcedures = contractProcedures
@@ -211,7 +223,7 @@ struct Relocating {
         let loweredTypes = types.loweredTypes
 
         self.init(
-            table: try zip(assembled.table, zip(assembled.origins, assembled.lifted)).map { judged, standing in
+            table: try zip(assembled.table, zip(assembled.origins, assembled.written)).map { judged, standing in
                 try judged.linked(
                     in: loweredTypes,
                     of: standing.0,
@@ -222,6 +234,7 @@ struct Relocating {
             },
             rows: assembled.rows,
             writers: assembled.writers,
+            documents: assembled.documents,
             numbering: assembled.numbering,
             typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
@@ -235,13 +248,13 @@ struct Relocating {
     // spelled by the declaration that wrote it, and that declaration's
     // document is whose number it stands at.
     func row(of closure: Closure) throws -> Int {
-        try standing(of: closure, at: .procedure(closure.writing.spelling, in: .assembled)).row
+        try standing(of: closure, at: .procedure(closure.writer.name.spelling, in: closure.writer.document)).row
     }
 
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
     func linked() throws -> Answered {
-        Answered.relocated(try table.map { row in try relocated(row) }, rows: rows)
+        Answered.relocated(try table.map { row in try relocated(row) }, rows: rows, documents: documents)
     }
 
     // What each document's variables start a run holding, read as this link's
@@ -298,16 +311,16 @@ struct Relocating {
     // Where a closure value stands in this link: its writer's document, and
     // the row the number it stands at there turned out to be.
     private func standing(of closure: Closure, at place: Place) throws -> (origin: Int, row: Int) {
-        guard let origin = writers[closure.writing] else {
+        guard let origin = writers[closure.writer] else {
             throw BuildError(
-                "a closure '\(closure.writing)' wrote, and no module in this link writes one",
+                "a closure '\(closure.writer.name)' wrote, and no module in this link writes one",
                 at: place
             )
         }
 
-        guard let number = numbering[origin].closure(closure.nth, of: closure.writing)?.number else {
+        guard let number = numbering[origin].closure(closure.nth, of: closure.writer.name)?.number else {
             throw BuildError(
-                "closure \(closure.nth) of '\(closure.writing)', which wrote no such closure",
+                "closure \(closure.nth) of '\(closure.writer.name)', which wrote no such closure",
                 at: place
             )
         }

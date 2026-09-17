@@ -363,7 +363,7 @@ extension Closure {
     // captures, claiming nothing. What a slot that asks nothing takes.
     static func assembled(answering result: Value? = nil, in table: LoweredTypeTable = .empty) -> Closure {
         Closure(
-            writing: "assembled",
+            writer: Closure.Writer(document: .assembled, name: "assembled"),
             nth: 0,
             linked: Linked(
                 label: "assembled",

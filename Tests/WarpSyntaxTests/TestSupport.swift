@@ -280,7 +280,7 @@ extension Closure {
     // captures, claiming nothing.
     static func assembled() -> Closure {
         Closure(
-            writing: "assembled",
+            writer: Closure.Writer(document: .assembled, name: "assembled"),
             nth: 0,
             linked: Linked(
                 label: "assembled",

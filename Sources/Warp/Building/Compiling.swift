@@ -245,6 +245,7 @@ struct Compiling {
         Answered.documents(
             foldingRows,
             rows: lowering.rows,
+            documents: documents,
             numbering: lowering.numbering,
             named: named,
             closures: lowering.closureRows

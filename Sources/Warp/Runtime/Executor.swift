@@ -23,6 +23,11 @@ public struct Executor: Sendable {
     // What the numbers in those bodies stand for.
     let resolving: Resolving
 
+    // Which document each origin is, for a closure the run makes: the
+    // closure is spelled by its writer's document and the row says the
+    // origin.
+    let documents: [Place.Document]
+
     // The types the link declared, by row. Every boundary that settles a
     // value reads it.
     let loweredTypes: LoweredTypeTable
@@ -52,6 +57,7 @@ public struct Executor: Sendable {
         environment: (any Environment)?,
         linked: [Linked],
         resolving: Resolving,
+        documents: [Place.Document] = [],
         loweredTypes: LoweredTypeTable = .empty,
         boxes: [[Handle]] = []
     ) {
@@ -59,6 +65,7 @@ public struct Executor: Sendable {
         self.environment = environment
         self.linked = linked
         self.resolving = resolving
+        self.documents = documents
         self.loweredTypes = loweredTypes
         self.boxes = boxes
     }
@@ -75,6 +82,7 @@ public struct Executor: Sendable {
             environment: environment,
             linked: image.linked,
             resolving: .rows,
+            documents: image.documents,
             loweredTypes: image.loweredTypes,
             boxes: image.variables.map { started in
                 started.map { name, value in Handle(name, value) }
@@ -284,13 +292,13 @@ public struct Executor: Sendable {
         case let .closure(number, captures):
             let row = linked[try self.row(number, from: activation.origin)]
 
-            guard let nth = row.nth else {
+            guard let nth = row.nth, documents.indices.contains(row.origin) else {
                 throw ExecutionError("a closure stands on a row no declaration wrote")
             }
 
             return .procedure(
                 Closure(
-                    writing: row.label,
+                    writer: Closure.Writer(document: documents[row.origin], name: row.label),
                     nth: nth,
                     linked: row,
                     captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }

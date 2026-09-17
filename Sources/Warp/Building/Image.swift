@@ -42,6 +42,9 @@ public struct Image: Sendable {
     // one box per variable from these, in this order.
     public let variables: [[(name: Name, value: Value)]]
 
+    // Which document each origin is, in the order the link laid them.
+    let documents: [Place.Document]
+
     // MARK: - Initializer
     init(
         linked: [Linked],
@@ -49,7 +52,8 @@ public struct Image: Sendable {
         rows: [Name: Int],
         reached: Set<Name>,
         types: TypeTable,
-        variables: [[(name: Name, value: Value)]]
+        variables: [[(name: Name, value: Value)]],
+        documents: [Place.Document]
     ) {
         self.linked = linked
         self.start = start
@@ -57,6 +61,7 @@ public struct Image: Sendable {
         self.reached = reached
         self.types = types
         self.variables = variables
+        self.documents = documents
     }
 
     // MARK: - Public

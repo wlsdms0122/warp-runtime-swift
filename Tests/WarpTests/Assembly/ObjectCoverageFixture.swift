@@ -58,7 +58,7 @@ enum ObjectCoverageFixture {
     // A closure a fold settled, standing by its writing alone, whose one
     // captured cell holds every kind of value there is.
     static let everyValueClosure = Closure(
-        writing: "a.eleven",
+        writer: Closure.Writer(document: Place.Document(identity: Identity([1, 2, 3])), name: "a.eleven"),
         nth: 1,
         linked: nil,
         captured: [
@@ -75,7 +75,7 @@ enum ObjectCoverageFixture {
                         .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
                         .record(Record(name: nil, ["c": .null])),
                         .dictionary(Value.Dictionary(ordered: [(name: "k", value: .int(3))])),
-                        .procedure(Closure(writing: "a.eleven", nth: 0, linked: nil, captured: []))
+                        .procedure(Closure(writer: Closure.Writer(document: .assembled, name: "a.eleven"), nth: 0, linked: nil, captured: []))
                     ])
                 )
             )

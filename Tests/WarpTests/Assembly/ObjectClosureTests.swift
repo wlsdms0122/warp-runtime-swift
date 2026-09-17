@@ -126,7 +126,7 @@ struct ObjectClosureTests {
         // Given. A compiled document whose variable starts as a closure some
         // other spelling claims to have written.
         let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
-        let forged = try holding(Closure(writing: "app.nobody", nth: 0, linked: nil, captured: []), in: compiled)
+        let forged = try holding(Closure(writer: Closure.Writer(document: .assembled, name: "app.nobody"), nth: 0, linked: nil, captured: []), in: compiled)
 
         // When / Then
         await #expect(throws: BuildError.self) {
@@ -138,7 +138,7 @@ struct ObjectClosureTests {
     func aClosurePastItsWriterIsRefused() async throws {
         // Given. The writer wrote one closure, and the value asks for its sixth
         let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
-        let forged = try holding(Closure(writing: "app.later", nth: 5, linked: nil, captured: []), in: compiled)
+        let forged = try holding(Closure(writer: Closure.Writer(document: .assembled, name: "app.later"), nth: 5, linked: nil, captured: []), in: compiled)
 
         // When / Then
         await #expect(throws: BuildError.self) {
@@ -146,10 +146,30 @@ struct ObjectClosureTests {
         }
     }
 
-    @Test("two documents writing closures under one name are refused where they meet")
-    func twoWritersOfOneNameAreRefused() async throws {
-        // Given. Two documents compiled apart, each with a constant of the
-        // same spelling holding a closure, meeting at the link
+    @Test("two documents may each write a closure under one constant's spelling, and each runs its own")
+    func twoDocumentsMayShareAConstantsSpelling() async throws {
+        // Given. Two documents that were written down, compiled apart, each
+        // with a constant of one spelling holding a closure of its own. A
+        // constant's spelling is its document's, so the two are two writers.
+        let one = try await builder.compile(Module.standard + [madeOf(5, entry: "app.one", identity: Identity([1]))])
+        let other = try await builder.compile(
+            [madeOf(6, entry: "app.two", identity: Identity([2]))],
+            against: try builder.lay(one, supplying: Supplying(Module.standard))
+        )
+        let read = try (one + other).map { document in
+            try Compiled(written: try #require(document.written), of: document.identity)
+        }
+
+        // When
+        let image = try await builder.link(read, entry: "app.two", supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image) == .int(6))
+    }
+
+    @Test("two documents nobody wrote down writing closures under one name are refused where they meet")
+    func twoUnwrittenWritersOfOneNameAreRefused() async throws {
+        // Given. The same two, with no identity to tell them apart by
         let one = try await builder.compile(Module.standard + [madeOf(5, entry: "app.one")])
         let other = try await builder.compile([madeOf(6, entry: "app.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
 
@@ -173,7 +193,7 @@ struct ObjectClosureTests {
         )
     }
 
-    private func madeOf(_ number: Int, entry: Name) throws -> Module {
+    private func madeOf(_ number: Int, entry: Name, identity: Identity? = nil) throws -> Module {
         try Module(
             constants: ["app.made": .closure(answering(number))],
             procedures: [
@@ -182,7 +202,8 @@ struct ObjectClosureTests {
                     body: [],
                     result: .apply(reference("app.made"), arguments: [:])
                 )
-            ]
+            ],
+            identity: identity
         )
     }
 

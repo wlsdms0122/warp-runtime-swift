@@ -49,7 +49,7 @@ struct ObjectWriter {
         // on the way down.
         let written: Value
 
-        do {
+        do throws(Unwritable) {
             written = .array([
                 document(compiled.document),
                 .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
@@ -65,7 +65,7 @@ struct ObjectWriter {
                 keyed(compiled.answers, lowered),
                 numbering,
                 typeNumbering(compiled.typeNumbering),
-                .array(try compiled.variables.map { entry in
+                .array(try compiled.variables.map { (entry) throws(Unwritable) -> Value in
                     .array([name(entry.name), try value(entry.value)])
                 })
             ])
@@ -82,58 +82,78 @@ struct ObjectWriter {
     func value(_ value: Value) throws(Unwritable) -> Value {
         switch value {
         case .null:
-            return .array([.int(0)])
+            return tagged(.null)
 
         case .bool:
-            return .array([.int(1), value])
+            return tagged(.bool, value)
 
         case .int:
-            return .array([.int(2), value])
+            return tagged(.int, value)
 
         case .double:
-            return .array([.int(3), value])
+            return tagged(.double, value)
 
         case .string:
-            return .array([.int(4), value])
+            return tagged(.string, value)
 
         case .bytes:
-            return .array([.int(5), value])
+            return tagged(.bytes, value)
 
         case let .array(items):
-            return .array([.int(6), .array(try items.map(self.value))])
+            return tagged(.array, .array(try items.map(self.value)))
 
         case let .record(record):
-            return .array([
-                .int(7),
+            return tagged(
+                .record,
                 Self.maybe(record.layout.name, name),
                 .array(record.layout.fields.map(name)),
                 .array(try record.values.map(self.value))
-            ])
+            )
 
         case let .dictionary(dictionary):
-            return .array([
-                .int(8),
+            return tagged(
+                .dictionary,
                 .array(try dictionary.entries.map { (entry) throws(Unwritable) -> Value in
                     .array([name(entry.name), try self.value(entry.value)])
                 })
-            ])
+            )
 
         case let .procedure(closure):
-            return .array([
-                .int(9),
-                name(closure.writing),
+            return tagged(
+                .closure,
+                document(closure.writer.document),
+                name(closure.writer.name),
                 .int(closure.nth),
                 .array(try closure.captured.map { (slot, cell) throws(Unwritable) -> Value in
                     guard case let .value(held) = cell else { throw Unwritable() }
 
                     return .array([.int(slot), try self.value(held)])
                 })
-            ])
+            )
         }
     }
 
     // What no object holds, met on the way to writing one.
     struct Unwritable: Error {}
+
+    // How a value is written down: its kind first, then what the kind holds.
+    // One list for the writing and the reading, so the two are one rule.
+    enum ValueTag: Int {
+        case null
+        case bool
+        case int
+        case double
+        case string
+        case bytes
+        case array
+        case record
+        case dictionary
+        case closure
+    }
+
+    private func tagged(_ tag: ValueTag, _ fields: Value...) -> Value {
+        .array([.int(tag.rawValue)] + fields)
+    }
 
     // MARK: - Private
     // A list a name keys, in name order. The order is the whole of what makes

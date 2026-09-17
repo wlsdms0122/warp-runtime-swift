@@ -135,6 +135,16 @@ struct ObjectReader {
         return Place.Document(identity: read)
     }
 
+    // The document a closure's writer stands in, which may be another
+    // document's: a closure a fold settled came out of whatever the fold ran.
+    private func writing(_ value: Value) throws -> Place.Document {
+        Place.Document(
+            identity: try Fields.maybe(value, of: "writer") { written in
+                Identity(try Fields.bytes(written, of: "writer"))
+            }
+        )
+    }
+
     // The document a place inside this object is an address in. Every one of
     // them is this document, or none at all where the program was never
     // written down. A place naming some third document addresses a text this
@@ -180,23 +190,24 @@ extension ObjectReader {
         var fields = try Fields(value, of: "value")
         let read: Value
 
-        switch try fields.tag() {
-        case 0: read = .null
-        case 1:
+        switch ObjectWriter.ValueTag(rawValue: try fields.tag()) {
+        case .null: read = .null
+        case .bool:
             guard case let .bool(held) = try fields.next() else {
                 throw ObjectRefused("'value' writes something other than a bool where one stands")
             }
 
             read = .bool(held)
 
-        case 2: read = .int(try fields.integer())
-        case 3: read = .double(try fields.double())
-        case 4: read = .string(try fields.text())
-        case 5: read = .bytes(try Fields.bytes(fields.next(), of: "value"))
-        case 6: read = .array(try fields.list(self.value))
+        case .int: read = .int(try fields.integer())
+        case .double: read = .double(try fields.double())
+        case .string: read = .string(try fields.text())
+        case .bytes: read = .bytes(try Fields.bytes(fields.next(), of: "value"))
+        case .array: read = .array(try fields.list(self.value))
+
         // A value the model refuses is one the writing could not have laid
         // down, and so one this reading refuses as an object.
-        case 7:
+        case .record:
             let named = try fields.maybe(name)
             let names = try fields.list(name)
             let values = try fields.list(self.value)
@@ -205,7 +216,7 @@ extension ObjectReader {
                 .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
             }
 
-        case 8:
+        case .dictionary:
             let entries = try fields.list { entry -> (name: Name, value: Value) in
                 var fields = try Fields(entry, of: "entry")
                 let read = (name: try name(fields.next()), value: try self.value(fields.next()))
@@ -217,8 +228,8 @@ extension ObjectReader {
 
             read = try refusing { .dictionary(try Value.Dictionary(entries)) }
 
-        case 9:
-            let writing = try name(fields.next())
+        case .closure:
+            let writer = Closure.Writer(document: try writing(fields.next()), name: try name(fields.next()))
             let nth = try fields.count()
             let captured = try fields.list { cell -> (slot: Int, cell: Cell) in
                 var fields = try Fields(cell, of: "captured")
@@ -229,9 +240,9 @@ extension ObjectReader {
                 return read
             }
 
-            read = .procedure(Closure(writing: writing, nth: nth, linked: nil, captured: captured))
+            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
 
-        default: throw ObjectRefused("'value' answers in a way this reads none of")
+        case nil: throw ObjectRefused("'value' answers in a way this reads none of")
         }
 
         try fields.end()

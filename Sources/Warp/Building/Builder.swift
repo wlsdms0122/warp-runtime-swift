@@ -788,7 +788,8 @@ public struct Builder: Sendable {
             rows: assembled.rows,
             reached: spellings,
             types: types,
-            variables: variables
+            variables: variables,
+            documents: assembled.documents
         )
     }
 

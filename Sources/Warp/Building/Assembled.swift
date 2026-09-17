@@ -40,12 +40,12 @@ struct Assembled: Sendable {
 
     // Which of its writer's closures each row is, by position, for a row a
     // closure was lifted into. Nil for a declaration's own row.
-    let lifted: [Int?]
+    let written: [Int?]
 
-    // Which document each name that wrote a closure stands in. A closure
-    // value is spelled by its writer, and the writer's document is whose
-    // numbering answers it.
-    let writers: [Name: Int]
+    // Which document each writer of a closure stands in. A closure value is
+    // spelled by its writer, and the writer's document is whose numbering
+    // answers it.
+    let writers: [Closure.Writer: Int]
 
     // MARK: - Initializer
     init(_ documents: [Compiled]) throws {
@@ -55,8 +55,8 @@ struct Assembled: Sendable {
         var origins: [Int] = []
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
-        var lifted: [Int?] = []
-        var writers: [Name: Int] = [:]
+        var written: [Int?] = []
+        var writers: [Closure.Writer: Int] = [:]
 
         table.reserveCapacity(held)
         origins.reserveCapacity(held)
@@ -85,15 +85,19 @@ struct Assembled: Sendable {
                 rows[name] = start + offset
             }
 
-            // A name two documents write closures under is a spelling with two
-            // answers, the same as a name two documents declare.
-            for writer in document.numbering.writers {
+            // A writer's spelling is its document's own, so a closure is
+            // spelled by the two together. Two documents nobody wrote down
+            // are told apart by nothing, so a name both write a closure
+            // under has two answers.
+            for name in document.numbering.writers {
+                let writer = Closure.Writer(document: document.document, name: name)
+
                 if let taken = writers[writer] {
                     throw BuildError(
-                        "'\(writer)' writes a closure in \(documents[taken].document.spelled(at: taken))"
-                            + " and in \(document.document.spelled(at: origin))."
-                            + " Two writers of a name have no way to be told apart",
-                        at: .procedure(writer.spelling, in: document.document)
+                        "'\(name)' writes a closure in \(documents[taken].document.spelled(at: taken))"
+                            + " and in \(document.document.spelled(at: origin)), and the two"
+                            + " documents have no way to be told apart",
+                        at: .procedure(name.spelling, in: document.document)
                     )
                 }
 
@@ -103,14 +107,14 @@ struct Assembled: Sendable {
             closures[origin] = document.lifted.map { row in start + row }
 
             table.append(contentsOf: document.table)
-            lifted.append(contentsOf: document.table.indices.map(document.nth(ofRow:)))
+            written.append(contentsOf: document.table.indices.map(document.nth(ofRow:)))
             origins.append(contentsOf: [Int](repeating: origin, count: document.table.count))
         }
 
         self.table = table
         self.documents = documents.map(\.document)
         self.origins = origins
-        self.lifted = lifted
+        self.written = written
         self.writers = writers
         self.rows = rows
         self.closures = closures
