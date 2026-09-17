@@ -36,6 +36,12 @@ struct ConformanceTests {
 
             #expect(answered == expected, "\(sut.name): \(sut.note)")
 
+        case let .reads(expected):
+            let bytes = try #require(sut.bytes)
+
+            #expect(try BinaryEncoding.value(from: Data(bytes)) == expected, "\(sut.name): \(sut.note)")
+            #expect(Array(try BinaryEncoding.data(from: expected)) == bytes, "\(sut.name): \(sut.note)")
+
         case let .refuses(stage):
             let reached = try await reached(sut)
 
@@ -73,6 +79,19 @@ struct ConformanceTests {
     // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async throws -> Case.Stage? {
+        // Bytes are read and nothing else. There is no program to build until
+        // the reading answers one, so the one stage they reach is where they
+        // are read.
+        if let bytes = sut.bytes {
+            do {
+                _ = try BinaryEncoding.value(from: Data(bytes))
+            } catch {
+                return .load
+            }
+
+            return nil
+        }
+
         let builder = Builder()
         let vocabulary = try await sut.brought
         let module: Module
@@ -81,7 +100,7 @@ struct ConformanceTests {
         // document that does not read is the answer to this question and a
         // vocabulary that does not read is a case nobody can ask.
         do {
-            module = try Loader().load(sut.program, identity: nil)
+            module = try Loader().load(try sut.document(), identity: nil)
         } catch {
             return .load
         }
@@ -120,7 +139,7 @@ struct Case: Sendable, CustomStringConvertible {
     // Which types a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
-    static let version = 3
+    static let version = 4
     static let earliest = 2
 
     static let versionKey: Name = "test"
@@ -134,6 +153,11 @@ struct Case: Sendable, CustomStringConvertible {
     enum Expectation: Sendable {
         case answers(Value)
         case refuses(Stage)
+
+        // Those bytes are that value. Both ways: reading them answers it, and
+        // writing it answers them, since a writer that agrees with no reader
+        // and a reader that agrees with no writer each pass half of this.
+        case reads(Value)
     }
 
     // A module the runner brings. The declarations are held apart from the rest
@@ -185,9 +209,17 @@ struct Case: Sendable, CustomStringConvertible {
     let file: String
 
     let note: String
-    let program: Value
+
+    // The document this case asks about, where it asks about one. Exactly one
+    // of this and `bytes` is there.
+    let program: Value?
+
     let arguments: [Name: Value]
     let expectation: Expectation
+
+    // Bytes for a document, where the case asks about an encoding rather than
+    // about a program. Exactly one of this and `program` is there.
+    let bytes: [UInt8]?
 
     // The module this case asks the runner to bring, which is what a host does
     // for every program: the document names what it needs and the code arrives
@@ -232,15 +264,31 @@ struct Case: Sendable, CustomStringConvertible {
 
         guard
             case let .string(name)? = written["name"],
-            case let .string(note)? = written["note"],
-            let program = written["program"]
+            case let .string(note)? = written["note"]
         else {
-            throw ConformanceError("a case is a name, a note, a program and what should happen")
+            throw ConformanceError("a case is a name, a note, a subject and what should happen")
+        }
+
+        // A case asks about a program or about bytes, and a case holding both
+        // would be two cases sharing one answer.
+        switch (written["program"], written["bytes"]) {
+        case let (program?, nil):
+            self.program = program
+            self.bytes = nil
+
+        case let (nil, .bytes(bytes)?):
+            self.program = nil
+            self.bytes = bytes
+
+        case (nil, .some):
+            throw ConformanceError("the bytes a case asks about are written as bytes")
+
+        default:
+            throw ConformanceError("a case asks about exactly one of a `program` and `bytes`")
         }
 
         self.name = name
         self.note = note
-        self.program = program
 
         if case let .dictionary(arguments)? = written["arguments"] {
             self.arguments = Dictionary(
@@ -277,10 +325,31 @@ struct Case: Sendable, CustomStringConvertible {
         case "answers":
             self.expectation = .answers(expected)
 
+        case "reads":
+            self.expectation = .reads(expected)
+
         default:
             throw ConformanceError(
-                "a case expects what it answers or where it is refused, and not `\(held)`"
+                "a case expects what it answers, what its bytes read as,"
+                    + " or where it is refused, and not `\(held)`"
             )
+        }
+
+        // What a case asks about decides what it may expect. Bytes do not run,
+        // and a program is not read out of bytes here: the case is warpt text
+        // and the runner was handed the tree.
+        switch (self.bytes, self.expectation) {
+        case (nil, .reads):
+            throw ConformanceError("only bytes read as a value")
+
+        case (.some, .answers):
+            throw ConformanceError("bytes do not run, so they answer nothing")
+
+        case let (.some, .refuses(stage)) where stage != .load:
+            throw ConformanceError("bytes are refused where they are read, and not at \(stage)")
+
+        default:
+            break
         }
     }
 
@@ -361,7 +430,16 @@ struct Case: Sendable, CustomStringConvertible {
     // vocabulary it asked for, so building it is the case's own answer and not
     // a runner's.
     func modules() async throws -> [Module] {
-        try await brought + [try Loader().load(program, identity: nil)] + Module.standard
+        try await brought + [try Loader().load(try document(), identity: nil)] + Module.standard
+    }
+
+    // The document this case asks about. A case that asks about bytes has none,
+    // and nothing that runs programs reaches this without having read which of
+    // the two it holds.
+    func document() throws -> Value {
+        guard let program else { throw ConformanceError("'\(name)' asks about bytes and not a program") }
+
+        return program
     }
 
     // The vocabulary the case asked the runner for, as a module standing in

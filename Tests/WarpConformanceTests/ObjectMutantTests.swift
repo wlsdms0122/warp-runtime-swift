@@ -46,7 +46,7 @@ struct ObjectMutantTests {
         let supplying = try await Supplying(sut.modules())
         let behind = try await builder.compile(try sut.brought + Module.standard, against: [], supplying: supplying)
         let own = try await builder.compile(
-            [try Loader().load(sut.program, identity: nil)],
+            [try Loader().load(try sut.document(), identity: nil)],
             against: behind,
             supplying: supplying
         )
