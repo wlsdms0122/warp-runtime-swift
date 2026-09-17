@@ -234,7 +234,6 @@ struct Relocating {
     func started(_ variables: [[(name: Name, value: Value)]]) throws -> [[(name: Name, value: Value)]] {
         try variables.enumerated().map { origin, held in
             try held.map { name, value in
-                guard value.holdsProcedure else { return (name, value) }
 
                 return (
                     name,
@@ -284,7 +283,7 @@ struct Relocating {
             )
             let row = try self.row(closure.number, in: held)
 
-            return closure.standing(at: row, as: try relocated(table[row]), holding: closure.captured)
+            return closure.standing(at: row, as: try relocated(table[row]))
         }
     }
 
@@ -353,8 +352,6 @@ struct Relocating {
         switch operation {
         // A value the folding made may hold a closure, and a closure is a row.
         case let .literal(value):
-            guard value.holdsProcedure else { return operation }
-
             return .literal(try relocated(value, in: standing))
 
         // A closure is a body of its own, and a call through a contract can be
@@ -414,13 +411,11 @@ struct Relocating {
             throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
         }
 
-        let arguments = dispatch.arguments
-
         return DispatchOperation(
             contract: dispatch.contract,
             procedure: dispatch.procedure,
             receiver: dispatch.receiver,
-            arguments: arguments,
+            arguments: dispatch.arguments,
             calls: try asked.answering.reduce(into: [Name: CallOperation]()) { calls, entry in
                 guard let row = rows[entry.value] else {
                     throw BuildError.unjudged(
@@ -430,8 +425,8 @@ struct Relocating {
                 }
 
                 calls[entry.key] = try CallOperation(
-                    handing: { name in arguments[name] },
-                    written: arguments.keys,
+                    handing: { name in dispatch.arguments[name] },
+                    written: dispatch.arguments.keys,
                     receiver: nil,
                     to: table[row],
                     row: row,
