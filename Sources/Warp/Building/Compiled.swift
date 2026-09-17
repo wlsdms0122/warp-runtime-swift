@@ -220,7 +220,9 @@ public struct Compiled: Sendable, Declaring {
         // procedure as data. The validator says so of the text, and this says
         // so of the row, so a document read out of an object is held to it
         // the same as one read out of text.
-        for row in table where row.signature.parameters.values.contains(where: { parameter in parameter.default?.holdsProcedure == true }) {
+        let signatures = table.lazy.map(\.signature) + contracts.values.lazy.flatMap(\.values)
+
+        for signature in signatures where signature.parameters.values.contains(where: { parameter in parameter.default?.holdsProcedure == true }) {
             throw ObjectRefused("a parameter's default holds a procedure, which no document writes")
         }
 

@@ -132,14 +132,15 @@ struct ObjectClosureTests {
 
     @Test("a compiled document whose parameter default holds a procedure is refused")
     func aProcedureDefaultIsRefused() throws {
-        // Given. One row whose parameter falls back to a closure, which is a
-        // default no document writes.
+        // Given. A signature whose parameter falls back to a closure, which is
+        // a default no document writes, standing as a row and as a contract's.
+        let signature = Signature(
+            parameters: ["p": Parameter(default: .procedure(ObjectCoverageFixture.everyValueClosure))],
+            returns: .int
+        )
         let row = try Judged(
             label: "a.one",
-            signature: Signature(
-                parameters: ["p": Parameter(default: .procedure(ObjectCoverageFixture.everyValueClosure))],
-                returns: .int
-            ),
+            signature: signature,
             constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
@@ -164,6 +165,25 @@ struct ObjectClosureTests {
                 table: [row],
                 answers: [:],
                 numbering: Numbering(imports: [], declared: ["a.one"], closures: [:]),
+                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
+                judging: [],
+                dependencies: []
+            )
+        }
+
+        #expect(throws: ObjectRefused.self) {
+            try Compiled(
+                document: .assembled,
+                types: [:],
+                constraints: [:],
+                contracts: ["a.contract": ["a.asks": signature]],
+                claims: [:],
+                leaned: [:],
+                declared: [],
+                constants: [],
+                table: [],
+                answers: [:],
+                numbering: Numbering(imports: [], declared: [], closures: [:]),
                 typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
                 judging: [],
                 dependencies: []
