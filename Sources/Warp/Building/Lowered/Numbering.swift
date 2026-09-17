@@ -126,12 +126,9 @@ struct Numbering: Sendable {
             throw ObjectRefused("a numbering counts spellings its document does not declare")
         }
 
-        // A closure belongs to a declaration, so a count standing over a name
-        // this document does not declare counts closures nobody wrote.
-        guard counts.keys.allSatisfy(Set(own).contains) else {
-            throw ObjectRefused("a numbering counts closures for a name its document does not declare")
-        }
-
+        // A closure belongs to whatever wrote it: a declaration, or a constant
+        // or variable of the document, which a compiled document holds no
+        // other trace of. So the writers are taken as counted.
         // A writing counts a name only where that name wrote one, so a count
         // of none is a count no writing lays down. Two writings for one
         // numbering otherwise, and the reading answers them the same.

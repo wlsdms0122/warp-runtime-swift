@@ -245,7 +245,7 @@ public struct Compiled: Sendable, Declaring {
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an object stand, and it moves when they move
     // and for no other reason.
-    static let format = 3
+    static let format = 4
 
     // Which Warp wrote it. An object is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a
@@ -349,17 +349,6 @@ public struct Compiled: Sendable, Declaring {
         let written = try fields.next()
 
         try fields.end()
-
-        // The same question the writing asks of what it lays down, asked of
-        // what came back. A procedure is not data, and one read in would be
-        // one this could never write out again: a reading whose answer will
-        // not go back out the way it came in has read something else.
-        guard !written.holdsProcedure else {
-            throw ObjectRefused(
-                "this object settles a procedure into a value, and an"
-                    + " object carries values as data"
-            )
-        }
 
         self = try ObjectReader(of: identity, fingerprint: fingerprint).compiled(from: written)
     }

@@ -165,7 +165,74 @@ struct ObjectReader {
 
     private func variable(_ value: Value) throws -> (name: Name, value: Value) {
         var fields = try Fields(value, of: "variable")
-        let read = (name: try name(fields.next()), value: try fields.next())
+        let read = (name: try name(fields.next()), value: try self.value(fields.next()))
+
+        try fields.end()
+
+        return read
+    }
+}
+
+extension ObjectReader {
+    // A value as the writing laid it down: data as it is, and a closure by
+    // what it is spelled by, standing without a row until a link answers one.
+    func value(_ value: Value) throws -> Value {
+        var fields = try Fields(value, of: "value")
+        let read: Value
+
+        switch try fields.tag() {
+        case 0: read = .null
+        case 1:
+            guard case let .bool(held) = try fields.next() else {
+                throw ObjectRefused("'value' writes something other than a bool where one stands")
+            }
+
+            read = .bool(held)
+
+        case 2: read = .int(try fields.integer())
+        case 3: read = .double(try fields.double())
+        case 4: read = .string(try fields.text())
+        case 5: read = .bytes(try Fields.bytes(fields.next(), of: "value"))
+        case 6: read = .array(try fields.list(self.value))
+        // A value the model refuses is one the writing could not have laid
+        // down, and so one this reading refuses as an object.
+        case 7:
+            let named = try fields.maybe(name)
+            let names = try fields.list(name)
+            let values = try fields.list(self.value)
+
+            read = try refusing {
+                .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
+            }
+
+        case 8:
+            let entries = try fields.list { entry -> (name: Name, value: Value) in
+                var fields = try Fields(entry, of: "entry")
+                let read = (name: try name(fields.next()), value: try self.value(fields.next()))
+
+                try fields.end()
+
+                return read
+            }
+
+            read = try refusing { .dictionary(try Value.Dictionary(entries)) }
+
+        case 9:
+            let writing = try name(fields.next())
+            let nth = try fields.count()
+            let captured = try fields.list { cell -> (slot: Int, cell: Cell) in
+                var fields = try Fields(cell, of: "captured")
+                let read = (slot: try fields.count(), cell: Cell.value(try self.value(fields.next())))
+
+                try fields.end()
+
+                return read
+            }
+
+            read = .procedure(Closure(writing: writing, nth: nth, linked: nil, captured: captured))
+
+        default: throw ObjectRefused("'value' answers in a way this reads none of")
+        }
 
         try fields.end()
 
@@ -755,7 +822,7 @@ private extension ObjectReader {
         let read: Operation
 
         switch try fields.tag() {
-        case 0: read = .literal(try fields.next())
+        case 0: read = .literal(try self.value(fields.next()))
         case 1: read = .local(try address(fields.next()))
         case 2: read = .array(try Fields.list(fields.next(), of: "array", operation))
         case 3: read = .record(try recordOperation(fields.next()))

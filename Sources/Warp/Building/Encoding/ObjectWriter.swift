@@ -26,8 +26,8 @@ struct ObjectWriter {
     // one, so a value that is itself null is told from no value at all. The
     // reading of it is `Fields.maybe`, and the two are one rule said from
     // each side.
-    static func maybe<T>(_ value: T?, _ write: (T) -> Value) -> Value {
-        value.map { held in .array([write(held)]) } ?? .array([])
+    static func maybe<T>(_ value: T?, _ write: (T) throws -> Value) rethrows -> Value {
+        try value.map { held in .array([try write(held)]) } ?? .array([])
     }
 
     func value(of compiled: Compiled) -> Value? {
@@ -42,7 +42,10 @@ struct ObjectWriter {
         // less than it leans on is one a cache would hand back wrongly.
         guard let dependencies = compiled.dependencies else { return nil }
 
-        let written: Value = .array([
+        let written: Value
+
+        do {
+            written = .array([
             document(compiled.document),
             .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
             keyed(compiled.types, type),
@@ -53,32 +56,85 @@ struct ObjectWriter {
                 .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
             }),
             .array(compiled.declared.map(name)),
-            .array(compiled.table.map(judged)),
+            .array(try compiled.table.map(judged)),
             keyed(compiled.answers, lowered),
             numbering,
             typeNumbering(compiled.typeNumbering),
-            .array(compiled.variables.map { entry in
-                .array([name(entry.name), entry.value])
+            .array(try compiled.variables.map { entry in
+                .array([name(entry.name), try value(entry.value)])
             })
-        ])
-
-        // A procedure is not data, and what a value of one holds is the row a
-        // link gave it. Asked of what came out rather than of each place a
-        // value is embedded: a folded closure reaches an object through a
-        // module variable and through a body's literal both, and a third way
-        // would be answered here without this having to hear about it.
-        guard !written.holdsProcedure else { return nil }
+            ])
+        } catch {
+            return nil
+        }
 
         return written
     }
+
+    // A value written down: the data as it is, and a closure by what it is
+    // spelled by, since the row a link gave it is the link's. A cell held
+    // is a box of the run that made the closure, and no object holds one.
+    func value(_ value: Value) throws -> Value {
+        switch value {
+        case .null:
+            return .array([.int(0)])
+
+        case .bool:
+            return .array([.int(1), value])
+
+        case .int:
+            return .array([.int(2), value])
+
+        case .double:
+            return .array([.int(3), value])
+
+        case .string:
+            return .array([.int(4), value])
+
+        case .bytes:
+            return .array([.int(5), value])
+
+        case let .array(items):
+            return .array([.int(6), .array(try items.map(self.value))])
+
+        case let .record(record):
+            return .array([
+                .int(7),
+                Self.maybe(record.layout.name, name),
+                .array(record.layout.fields.map(name)),
+                .array(try record.values.map(self.value))
+            ])
+
+        case let .dictionary(dictionary):
+            return .array([
+                .int(8),
+                .array(try dictionary.entries.map { entry in .array([name(entry.name), try self.value(entry.value)]) })
+            ])
+
+        case let .procedure(closure):
+            return .array([
+                .int(9),
+                name(closure.writing),
+                .int(closure.nth),
+                .array(try closure.captured.map { slot, cell in
+                    guard case let .value(held) = cell else { throw Unwritable() }
+
+                    return .array([.int(slot), try self.value(held)])
+                })
+            ])
+        }
+    }
+
+    // What no object holds, met on the way to writing one.
+    struct Unwritable: Error {}
 
     // MARK: - Private
     // A list a name keys, in name order. The order is the whole of what makes
     // two writings of one object the same bytes, since a dictionary has none
     // to lend.
-    private func keyed<T>(_ entries: [Name: T], _ write: (T) -> Value) -> Value {
-        .array(entries.keys.sorted().map { key in
-            .array([name(key), write(entries[key]!)])
+    private func keyed<T>(_ entries: [Name: T], _ write: (T) throws -> Value) rethrows -> Value {
+        .array(try entries.keys.sorted().map { key in
+            .array([name(key), try write(entries[key]!)])
         })
     }
 
@@ -458,7 +514,7 @@ private extension ObjectWriter {
 }
 
 private extension ObjectWriter {
-    func judged(_ row: Judged) -> Value {
+    func judged(_ row: Judged) throws -> Value {
         .array([
             name(row.label),
             signature(row.signature),
@@ -466,14 +522,14 @@ private extension ObjectWriter {
             isolation(row.isolation),
             failing(row.failing),
             .array(row.sends.map(sent)),
-            implementation(row.implementation)
+            try implementation(row.implementation)
         ])
     }
 
-    func implementation(_ implementation: Judged.Implementation) -> Value {
+    func implementation(_ implementation: Judged.Implementation) throws -> Value {
         switch implementation {
         case let .body(body, frame):
-            return .array([.int(0), self.body(body), self.frame(frame)])
+            return .array([.int(0), try self.body(body), self.frame(frame)])
 
         case let .native(sending):
             return .array([.int(1), .array(sending.map(send))])
@@ -497,17 +553,17 @@ private extension ObjectWriter {
         ])
     }
 
-    func body(_ body: Body) -> Value {
+    func body(_ body: Body) throws -> Value {
         .array([
-            .array(body.instructions.map(instruction)),
-            ObjectWriter.maybe(body.result, operation)
+            .array(try body.instructions.map(instruction)),
+            try ObjectWriter.maybe(body.result, operation)
         ])
     }
 
-    func instruction(_ instruction: Instruction) -> Value {
+    func instruction(_ instruction: Instruction) throws -> Value {
         .array([
             ObjectWriter.maybe(instruction.binding, binding),
-            operation(instruction.code),
+            try operation(instruction.code),
             .string(instruction.label)
         ])
     }
@@ -547,19 +603,19 @@ private extension ObjectWriter {
 }
 
 private extension ObjectWriter {
-    func operation(_ operation: Operation) -> Value {
+    func operation(_ operation: Operation) throws -> Value {
         switch operation {
         case let .literal(value):
-            return .array([.int(0), value])
+            return .array([.int(0), try self.value(value)])
 
         case let .local(address):
             return .array([.int(1), self.address(address)])
 
         case let .array(elements):
-            return .array([.int(2), .array(elements.map(self.operation))])
+            return .array([.int(2), .array(try elements.map(self.operation))])
 
         case let .record(record):
-            return .array([.int(3), recordOperation(record)])
+            return .array([.int(3), try recordOperation(record)])
 
         case let .closure(number, captures):
             return .array([
@@ -571,63 +627,63 @@ private extension ObjectWriter {
         case let .apply(callee, arguments):
             return .array([
                 .int(5),
-                self.operation(callee),
-                .array(arguments.map { argument in
-                    .array([name(argument.0), self.operation(argument.1)])
+                try self.operation(callee),
+                .array(try arguments.map { argument in
+                    .array([name(argument.0), try self.operation(argument.1)])
                 })
             ])
 
         case let .cast(read, as: type, optional: optional):
-            return .array([.int(6), self.operation(read), lowered(type), .bool(optional)])
+            return .array([.int(6), try self.operation(read), lowered(type), .bool(optional)])
 
         case let .block(body):
-            return .array([.int(7), self.body(body)])
+            return .array([.int(7), try self.body(body)])
 
         case let .conditional(condition, then: then, else: otherwise):
             return .array([
                 .int(8),
-                self.operation(condition),
-                .array(then.map(instruction)),
-                ObjectWriter.maybe(otherwise) { written in .array(written.map(instruction)) }
+                try self.operation(condition),
+                .array(try then.map(instruction)),
+                try ObjectWriter.maybe(otherwise) { written in .array(try written.map(instruction)) }
             ])
 
         case let .loop(while: condition, body: body, round: round, keeps: keeps):
             return .array([
                 .int(9),
-                self.operation(condition),
-                self.body(body),
+                try self.operation(condition),
+                try self.body(body),
                 .int(round),
                 ObjectWriter.maybe(keeps) { kept in .array([.int(kept.lowerBound), .int(kept.upperBound)]) }
             ])
 
         case let .attempt(body, rescue: rescue, failure: failure):
-            return .array([.int(10), self.body(body), self.body(rescue), .int(failure)])
+            return .array([.int(10), try self.body(body), try self.body(rescue), .int(failure)])
 
         case let .call(call):
-            return .array([.int(11), callOperation(call)])
+            return .array([.int(11), try callOperation(call)])
 
         case let .dispatch(dispatch):
-            return .array([.int(12), dispatchOperation(dispatch)])
+            return .array([.int(12), try dispatchOperation(dispatch)])
 
         case let .leave(reach, target: target, read):
             return .array([
                 .int(13),
                 self.reach(reach),
                 ObjectWriter.maybe(target, name),
-                ObjectWriter.maybe(read, self.operation)
+                try ObjectWriter.maybe(read, self.operation)
             ])
         }
     }
 
-    func recordOperation(_ record: RecordOperation) -> Value {
-        .array([layout(record.layout), .array(record.fields.map(operation))])
+    func recordOperation(_ record: RecordOperation) throws -> Value {
+        .array([layout(record.layout), .array(try record.fields.map(operation))])
     }
 
-    func callOperation(_ call: CallOperation) -> Value {
+    func callOperation(_ call: CallOperation) throws -> Value {
         .array([
             .int(call.procedure),
-            ObjectWriter.maybe(call.receiver, operation),
-            .array(call.arguments.map { argument in ObjectWriter.maybe(argument, self.operation) }),
+            try ObjectWriter.maybe(call.receiver, operation),
+            .array(try call.arguments.map { argument in try ObjectWriter.maybe(argument, self.operation) }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
             })
@@ -637,19 +693,19 @@ private extension ObjectWriter {
     // Without the calls beside it. Which row answers a contract is the link's
     // answer and an object stands before one, so writing them down would be
     // writing a fact this document does not hold.
-    func dispatchOperation(_ dispatch: DispatchOperation) -> Value {
+    func dispatchOperation(_ dispatch: DispatchOperation) throws -> Value {
         .array([
             name(dispatch.contract),
             name(dispatch.procedure),
-            operation(dispatch.receiver),
-            keyed(dispatch.arguments, argument)
+            try operation(dispatch.receiver),
+            try keyed(dispatch.arguments, argument)
         ])
     }
 
-    func argument(_ argument: Argument) -> Value {
+    func argument(_ argument: Argument) throws -> Value {
         switch argument {
         case let .value(operation):
-            return .array([.int(0), self.operation(operation)])
+            return .array([.int(0), try self.operation(operation)])
 
         case let .reference(address):
             return .array([.int(1), self.address(address)])

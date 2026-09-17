@@ -43,11 +43,44 @@ enum ObjectCoverageFixture {
                 closures: ["a.eleven": 2]
             ),
             typeNumbering: try! LoweredTypeNumbering(ordered: ["a.one", "a.two"], memberships: ["a.four"]),
-            judging: [(name: "a.fourteen", value: .string("x")), (name: "a.thirteen", value: .int(13))],
+            // One of every kind of value, and a closure standing by what it is
+            // spelled by, holding one of everything.
+            judging: [
+                (name: "a.fifteen", value: .procedure(everyValueClosure)),
+                (name: "a.fourteen", value: .string("x")),
+                (name: "a.thirteen", value: .int(13))
+            ],
             // In byte order, which is the order a writing lays a set down in.
             dependencies: [Fingerprint([0x01, 0x02]), Fingerprint([0x03])]
         )
     }()
+
+    // A closure a fold settled, standing by its writing alone, whose one
+    // captured cell holds every kind of value there is.
+    static let everyValueClosure = Closure(
+        writing: "a.eleven",
+        nth: 1,
+        linked: nil,
+        captured: [
+            (
+                slot: 0,
+                cell: .value(
+                    .array([
+                        .null,
+                        .bool(true),
+                        .int(1),
+                        .double(1.5),
+                        .string("s"),
+                        .bytes([1, 2]),
+                        .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
+                        .record(Record(name: nil, ["c": .null])),
+                        .dictionary(Value.Dictionary(ordered: [(name: "k", value: .int(3))])),
+                        .procedure(Closure(writing: "a.eleven", nth: 0, linked: nil, captured: []))
+                    ])
+                )
+            )
+        ]
+    )
 
     static let parameter = Parameter(
         type: .double,
