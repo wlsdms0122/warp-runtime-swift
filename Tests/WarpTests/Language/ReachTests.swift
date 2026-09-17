@@ -182,10 +182,21 @@ struct ReachTests {
 
         // When
         var rows: [Int] = []
-        sut.closures { closure in rows.append(closure.number) }
+        let walkedToTheEnd = sut.closures { closure in
+            rows.append(closure.number)
+
+            return true
+        }
+        var first: Int?
+        let stopped = sut.closures { closure in
+            first = closure.number
+
+            return false
+        }
 
         // Then
-        #expect(rows == [7, 9])
+        #expect(rows == [7, 9] && walkedToTheEnd)
+        #expect(first == 7 && !stopped)
         #expect(sut.holdsProcedure)
         #expect(!Value.array([.int(1)]).holdsProcedure)
     }
