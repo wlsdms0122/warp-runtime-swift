@@ -209,11 +209,14 @@ public final class Linked: Sendable {
     }
 
     // The receiver settled against the slot at this row's receiver
-    // position, or as it is where the row takes none.
+    // position, or as it is where the row takes none. The receiver is the
+    // parameter a call fills by writing it in front, so it is held to what
+    // that parameter declares the way every other argument is: null is a
+    // value, and a slot that takes one says so.
     func settling(receiver value: Value) throws -> Value {
         guard let position = receiverPosition else { return value }
 
-        return try slots[position].checking(receiver: value, in: table)
+        return try slots[position].checking(value, in: table)
     }
 
     // The returned value, checked against what was declared.

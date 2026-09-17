@@ -269,10 +269,11 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("min without a receiver refuses in its own terms")
-    func minWithoutAReceiverRefusesInItsOwnTerms() async throws {
-        // Given. The receiver is a reference that reads null, which a procedure is
-        // sent as nothing
+    @Test("min sent null is held to the receiver it declares")
+    func minSentNullIsHeldToItsReceiver() async throws {
+        // Given. The receiver is a reference that reads null. Null is a value,
+        // and `some T: Comparable` does not admit one, so the boundary refuses
+        // before the ordering procedure is asked anything
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -289,11 +290,11 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then. The refusal is the ordering procedure's own, not arithmetic's
+        // When / Then
         await #expect {
             try await run(sut)
         } throws: { error in
-            "\(error)".contains("nothing arrived to order")
+            "\(error)".contains("input 'of': expected some T: std.Comparable, got null")
         }
     }
 

@@ -21,9 +21,9 @@ public struct Question<P: NativeProcedure>: Sendable {
     }
 
     // MARK: - Property
-    // What this was sent to, or nil where it was sent to nothing. Nil rather
-    // than null because a procedure decides for itself what being sent to nothing
-    // means: `contains` says false rather than failing.
+    // What this was sent to, settled against the parameter the declaration
+    // names as its receiver, or nil where it was sent to nothing. Null is a
+    // value that arrived, and only a parameter that admits one is handed it.
     public let receiver: Value?
 
     // The way back in travels with the arguments rather than being handed to

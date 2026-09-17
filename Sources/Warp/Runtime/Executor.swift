@@ -867,7 +867,7 @@ public struct Executor: Sendable {
     ) async throws -> Value? {
         try await query.evaluate(
             Question(
-                receiver: nothingIfNull(receiver),
+                receiver: receiver,
                 settled: settled,
                 sends: callee.sends,
                 from: callee.origin,
@@ -888,7 +888,7 @@ public struct Executor: Sendable {
             Invocation(
                 selector: callee.label,
                 signature: callee.signature,
-                receiver: nothingIfNull(receiver),
+                receiver: receiver,
                 settled: settled,
                 holds: holds,
                 sends: callee.sends,
@@ -897,14 +897,6 @@ public struct Executor: Sendable {
                 executor: self
             )
         )
-    }
-
-    // What a native procedure reads as what it was sent to. Null is being sent to
-    // nothing said as a value rather than by leaving it out, and a procedure
-    // decides for itself what being sent to nothing means, so both doors answer
-    // nothing and no procedure asks the question twice.
-    private func nothingIfNull(_ receiver: Value?) -> Value? {
-        receiver == .null ? nil : receiver
     }
 
     // Which row of this table a number written in a body stands for. A number
@@ -1011,10 +1003,9 @@ public struct Executor: Sendable {
     private func received(_ receiver: Value?, of callee: Linked) throws -> Value? {
         guard let receiver else { return nil }
 
-        // Null is being sent to nothing said as a value, so it reaches a
-        // procedure that declares nothing to be sent to without contradicting
-        // it. What a native procedure then reads is the door's to settle.
-        guard callee.receiverPosition != nil || receiver == .null else {
+        // A receiver handed over is a receiver written, whatever it holds: a
+        // procedure that receives by no name has no slot for it.
+        guard callee.receiverPosition != nil else {
             throw ExecutionError(
                 "'\(callee.label)' is sent to something, and it"
                     + " \(BuildError.receivesByNoName)"

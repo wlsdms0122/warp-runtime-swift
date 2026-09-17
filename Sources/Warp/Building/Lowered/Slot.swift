@@ -54,16 +54,6 @@ final class Slot: Sendable {
         return try checking(value, in: table)
     }
 
-    // A receiver checked as this slot, except that nothing passes through. A
-    // procedure decides for itself what being sent to nothing means: `contains`
-    // says false rather than failing, and a path that reached null is
-    // absence rather than misuse.
-    func checking(receiver value: Value, in table: LoweredTypeTable) throws -> Value {
-        guard value != .null else { return value }
-
-        return try checking(value, in: table)
-    }
-
     // The value settled to the declared representation, and held to the
     // spellings where the declaration lists them.
     func checking(_ value: Value, in table: LoweredTypeTable) throws -> Value {

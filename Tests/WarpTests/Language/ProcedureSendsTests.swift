@@ -262,10 +262,10 @@ struct ProcedureSendsTests {
         }
     }
 
-    @Test("sending null to one that declares nothing to be sent to is being sent to nothing")
-    func sendingNullCountsAsSendingToNothing() async throws {
-        // Given. Null is what being sent to nothing looks like as a value, so
-        // saying it and leaving it out are one fact
+    @Test("sending null to one that declares nothing to be sent to is a receiver it has no slot for")
+    func sendingNullToOneThatDeclaresNoneRefuses() async throws {
+        // Given. Null is a value, so handing it over is writing a receiver, and
+        // the callee has nowhere to put one
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
@@ -274,17 +274,16 @@ struct ProcedureSendsTests {
             entry: "entry"
         )
 
-        // When
-        let answer = try await Executor().run(image)
-
-        // Then
-        #expect(answer == .string("sent to nothing"))
+        // When / Then
+        await #expect(throws: ExecutionError.self) {
+            try await Executor().run(image)
+        }
     }
 
-    @Test("an effect that declares nothing to be sent to is sent to nothing too")
-    func anEffectSentNullIsSentToNothing() async throws {
-        // Given. What a query reads and what an effect reads say the same
-        // thing, so the fact is settled where the send crosses rather than
+    @Test("an effect that declares nothing to be sent to refuses null the same way")
+    func anEffectSentNullRefusesToo() async throws {
+        // Given. What a query is held to and what an effect is held to say the
+        // same thing, so the fact is settled where the send crosses rather than
         // beside each kind of callee
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
@@ -294,17 +293,17 @@ struct ProcedureSendsTests {
             entry: "entry"
         )
 
-        // When
-        let answer = try await Executor().run(image)
-
-        // Then
-        #expect(answer == .string("sent to nothing"))
+        // When / Then
+        await #expect(throws: ExecutionError.self) {
+            try await Executor().run(image)
+        }
     }
 
-    @Test("a procedure that declares what it is sent to reads null as being sent to nothing")
-    func aDeclaredReceiverSentNullReadsAsNothing() async throws {
-        // Given. The branch a callee with a receiver of its own takes, which is
-        // the one the door rather than the boundary answers
+    @Test("a receiver a send hands over is held to the parameter it fills")
+    func aDeclaredReceiverSentNullIsHeldToItsType() async throws {
+        // Given. `app.receiving` declares `said: string`, and null is not a
+        // string. The same gate an argument goes through, whichever side of
+        // the dot the value came from
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
@@ -313,11 +312,12 @@ struct ProcedureSendsTests {
             entry: "entry"
         )
 
-        // When
-        let answer = try await Executor().run(image)
+        // When / Then
+        let refusal = await #expect(throws: ArgumentError.self) {
+            try await Executor().run(image)
+        }
 
-        // Then
-        #expect(answer == .string("sent to nothing"))
+        #expect(refusal?.message.contains("expected string, got null") == true)
     }
 
     // MARK: - Private
