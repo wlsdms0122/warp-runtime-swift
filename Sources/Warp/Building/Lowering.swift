@@ -145,7 +145,7 @@ struct Lowering {
     // The same rows, answered. One per row, in place: what stands in the
     // table is what every number of it already reaches.
     mutating func replace(table answered: [Linked]) {
-        guard answered.count == table.count else { return }
+        assert(answered.count == table.count, "a table is answered row for row")
 
         table = answered
     }

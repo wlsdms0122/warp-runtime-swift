@@ -361,8 +361,13 @@ struct Relocating {
         }
     }
 
+    // The closures its literal values hold are the door's to answer; the
+    // numbers are this link's.
     private func filled(_ body: Body, in standing: Standing) throws -> Body {
-        try body.rewritten(
+        try answering.answered(
+            body,
+            at: standing.place,
+            rewriting: { row in try relocated(row) },
             operation: { operation in try relocated(operation, in: standing) },
             type: { type in try standing.loweredTypes.read(type, at: standing.place) }
         )
@@ -372,10 +377,6 @@ struct Relocating {
     // over with what nests in it already relocated.
     private func relocated(_ operation: Operation, in standing: Standing) throws -> Operation {
         switch operation {
-        // A value the folding made may hold a closure, and a closure is a row.
-        case let .literal(value):
-            return .literal(try relocated(value, in: standing))
-
         // A closure is a body of its own, and a call through a contract can be
         // written in one.
         case let .closure(number, captures):
@@ -387,7 +388,7 @@ struct Relocating {
         case let .dispatch(dispatch):
             return .dispatch(try relocated(dispatch, in: standing))
 
-        case .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             return operation
         }
     }

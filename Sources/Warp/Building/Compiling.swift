@@ -264,10 +264,8 @@ struct Compiling {
     // read out of an object holds its closures by spelling alone, and one
     // compiled in memory holds them standing as the rows of the compile that
     // folded them, which is not this one; a fold through either hands them
-    // on, so every one is answered here before anything folds. What
-    // answering a row is here: its literal values answered, and nothing else
-    // touched, since the numbers its code carries are read against this
-    // table as they are.
+    // on, so every one is answered here before anything folds. The numbers
+    // their code carries read against this table as they are.
     mutating func answerHeld() throws {
         let numbering = try naming.indices.map { origin -> Numbering in
             guard let held = lowering.numbering[origin] else {
@@ -287,39 +285,7 @@ struct Compiling {
             documents: documents
         )
 
-        func answered(_ standing: Linked) throws -> Linked {
-            let place = Place.procedure(standing.label.spelling, in: documents[standing.origin])
-
-            guard case let .body(body, frame) = standing.implementation,
-                  body.contains(where: { node in
-                      if case let .operation(.literal(value)) = node { return value.holdsProcedure }
-
-                      return false
-                  })
-            else {
-                return standing
-            }
-
-            return Linked(
-                standing,
-                implementation: .body(
-                    try body.rewritten(
-                        operation: { operation in
-                            guard case let .literal(value) = operation, value.holdsProcedure else { return operation }
-
-                            return .literal(try value.rewritten { closure in
-                                try answering.answered(closure, at: place, rewriting: answered)
-                            })
-                        },
-                        type: { type in type }
-                    ),
-                    frame
-                ),
-                sends: standing.sends
-            )
-        }
-
-        lowering.replace(table: try lowering.table.indices.map { row in try answering.row(at: row, rewriting: answered) })
+        lowering.replace(table: try lowering.table.indices.map { row in try answering.row(at: row) })
     }
 
     // What has been lowered since the last phase, written in.

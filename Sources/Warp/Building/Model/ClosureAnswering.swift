@@ -9,8 +9,12 @@ import Foundation
 
 // A closure a value holds, answered with the row it stands at: found by its
 // spelling, held to that row's frame, and standing as the row is once the
-// row itself is answered. One door for the link and for a compile laying
-// objects down, so a third asker answers alike without hearing of it.
+// row itself is answered. Answering a row is the closures its body's literal
+// values hold answered the same way, which is every asker's rule, and the
+// numbers its code carries read as the asker reads them, which is the
+// asker's: a compile reads them against its own table as they are, and a
+// link reads them into rows of its own. One door for both, so a third asker
+// answers closures alike without hearing of it.
 //
 // Rows are answered once each, whichever asks first, and a row asked for
 // again while its own answering is underway is a ring of rows holding
@@ -36,9 +40,10 @@ final class ClosureAnswering {
     }
 
     // MARK: - Public
-    // The row at a position, answered once. The rewriting says what
-    // answering a row is for whoever asks, handed the row as it stands.
-    func row(at row: Int, rewriting: (Linked) throws -> Linked) throws -> Linked {
+    // The row at a position, answered once. An asker whose numbers read
+    // differently says what it makes of the row, and answers the closures in
+    // it through the body below; one whose numbers stand says nothing.
+    func row(at row: Int, rewriting: ((Linked) throws -> Linked)? = nil) throws -> Linked {
         if let done = answered[row] { return done }
 
         guard !underway[row] else {
@@ -51,15 +56,15 @@ final class ClosureAnswering {
         underway[row] = true
         defer { underway[row] = false }
 
-        let done = try rewriting(table[row])
+        let done = try rewriting.map { rewriting in try rewriting(table[row]) } ?? standing(table[row])
 
         answered[row] = done
 
         return done
     }
 
-    // A closure a value holds, standing as the row the link answers for it.
-    func answered(_ closure: Closure, at place: Place, rewriting: (Linked) throws -> Linked) throws -> Closure {
+    // A closure a value holds, standing as the row answered for it.
+    func answered(_ closure: Closure, at place: Place, rewriting: ((Linked) throws -> Linked)? = nil) throws -> Closure {
         let row = try spelled.row(of: closure, at: place)
 
         try held(closure, to: table[row], at: place)
@@ -67,7 +72,43 @@ final class ClosureAnswering {
         return closure.standing(as: try self.row(at: row, rewriting: rewriting))
     }
 
+    // A body with the closures its literal values hold answered, and every
+    // other operation and every type read as the asker reads them. One pass,
+    // since a body is rebuilt by the rewriting and the asker's reading rides
+    // on the same one.
+    func answered(
+        _ body: Body,
+        at place: Place,
+        rewriting: ((Linked) throws -> Linked)? = nil,
+        operation reading: (Operation) throws -> Operation = { operation in operation },
+        type: (LoweredType) throws -> LoweredType = { type in type }
+    ) throws -> Body {
+        try body.rewritten(
+            operation: { operation in
+                guard case let .literal(value) = operation, value.holdsProcedure else { return try reading(operation) }
+
+                return .literal(try value.rewritten { closure in try answered(closure, at: place, rewriting: rewriting) })
+            },
+            type: type
+        )
+    }
+
     // MARK: - Private
+    // A row whose numbers stand as they are: its literal values answered and
+    // nothing else touched.
+    private func standing(_ row: Linked) throws -> Linked {
+        guard case let .body(body, frame) = row.implementation else { return row }
+
+        return Linked(
+            row,
+            implementation: .body(
+                try answered(body, at: .procedure(row.label.spelling, in: documents[row.origin])),
+                frame
+            ),
+            sends: row.sends
+        )
+    }
+
     // What a closure took with it fills exactly the slots its frame says a
     // closure fills. A value saying otherwise is a closure no body stood up,
     // and it is refused here rather than read into the frame at the run.
