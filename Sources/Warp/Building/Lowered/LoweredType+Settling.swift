@@ -711,11 +711,7 @@ extension LoweredType {
 
         // Its rows are numbered by the table of the link that made it, and a
         // closure no link answered is refused here in this door's words.
-        let linked: Linked
-
-        do {
-            linked = try closure.answered()
-        } catch {
+        guard let linked = closure.linked else {
             throw ArgumentError("\(path()): a closure no link answered")
         }
 
@@ -729,7 +725,7 @@ extension LoweredType {
             )
         }
 
-        if isolation == .isolated, try !closure.runsBeside() {
+        if isolation == .isolated, linked.isolation != .isolated {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got a procedure that writes"
                     + " what another body could touch"

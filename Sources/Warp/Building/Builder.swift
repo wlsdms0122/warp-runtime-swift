@@ -196,14 +196,11 @@ public struct Builder: Sendable {
     // Every object standing beside what it was compiled against. An object
     // says what it leaned on by fingerprint, and what it settled, a closure
     // spelled by a document's name and count among them, is true against
-    // exactly those compiles of them. A document handed over with no
-    // fingerprint says nothing here, and neither does one that leaned on
-    // nothing a fingerprint was worked out for.
+    // exactly those compiles of them. A document that leaned on nothing a
+    // fingerprint was worked out for says nothing here. One that did is
+    // held to it, document by document: what it leaned on stands beside it
+    // under the fingerprint it had then, or the document is not laid.
     private func against(_ compiled: [Compiled]) throws {
-        // A document handed back without its fingerprint is one nothing here
-        // can be held to, and beside one such the question has no answer.
-        guard compiled.allSatisfy({ document in document.fingerprint != nil }) else { return }
-
         let present = Set(compiled.compactMap(\.fingerprint))
 
         for (origin, document) in compiled.enumerated() {
@@ -225,7 +222,18 @@ public struct Builder: Sendable {
     // worked out. One that cannot be written down has nothing to work it out
     // from, which is the same absence said one step earlier.
     private func fingerprinted(_ object: Compiled) throws -> Compiled {
-        guard let fingerprinting, let written = object.written else { return object }
+        guard let fingerprinting else { return object }
+
+        let written: Value
+
+        do {
+            written = try object.object()
+        } catch is ObjectUnwritable {
+            // Nothing to work a fingerprint out from, for one of the reasons
+            // an object has none, and none of them is something that went
+            // wrong. The document stands without one.
+            return object
+        }
 
         return object.fingerprinted(try fingerprinting(written))
     }
