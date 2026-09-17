@@ -292,8 +292,12 @@ public struct Executor: Sendable {
         case let .closure(number, captures):
             let row = linked[try self.row(number, from: activation.origin)]
 
-            guard let nth = row.nth, documents.indices.contains(row.origin) else {
+            guard let nth = row.nth else {
                 throw ExecutionError("a closure stands on a row no declaration wrote")
+            }
+
+            guard documents.indices.contains(row.origin) else {
+                throw ExecutionError("a closure stands in a document this run was not told of")
             }
 
             return .procedure(
