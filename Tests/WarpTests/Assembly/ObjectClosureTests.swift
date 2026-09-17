@@ -198,6 +198,47 @@ struct ObjectClosureTests {
         #expect(try await Executor().run(image) == .int(6))
     }
 
+    @Test("a closure folded in one compile is answered anew where its document is laid into another")
+    func aClosureFoldedEarlierIsAnsweredWhereLaid() async throws {
+        // Given. A document compiled in memory, whose constant closure calls
+        // a procedure of the vocabulary, so its body reaches another row.
+        // Laid down again in another order, the rows stand elsewhere.
+        let calling = try Module(
+            imports: ["std.math.plus"],
+            constants: [
+                "app.made": .closure(
+                    Procedure(
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(receiver: .literal(.int(2)), selector: "std.math.plus", arguments: ["value": .literal(.int(3))]))
+                    )
+                )
+            ],
+            procedures: [
+                "app.give": Procedure(
+                    signature: Signature(returns: .procedure(Signature(returns: .int))),
+                    body: [],
+                    result: reference("app.made")
+                )
+            ]
+        )
+        let compiled = try await builder.compile(Module.standard + [calling])
+        let reordered = compiled.reversed().map { document in document }
+        let folding = try Module(
+            imports: ["app.give"],
+            constants: ["app.got": .call(Call(selector: "app.give"))],
+            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .apply(reference("app.got"), arguments: [:]))]
+        )
+
+        // When
+        let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
+        let against = try await builder.compile([folding], against: laid)
+        let image = try await builder.link(reordered + against, entry: "app.entry", supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image) == .int(5))
+    }
+
     @Test("a fold through a document read out of an object hands on the closure the object holds")
     func aFoldThroughAReadObjectHandsOnItsClosure() async throws {
         // Given. A written document whose constant holds a closure and whose

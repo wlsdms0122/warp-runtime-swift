@@ -261,11 +261,13 @@ struct Compiling {
 
     // Every closure a laid document's values hold answered with the row it
     // stands at here, through the door the link answers them by. A document
-    // read out of an object holds its closures by spelling alone, and a fold
-    // through such a document hands them on, so they are answered before
-    // anything folds. What answering a row is here: its literal values
-    // answered, and nothing else touched, since the numbers its code carries
-    // are read against this table as they are.
+    // read out of an object holds its closures by spelling alone, and one
+    // compiled in memory holds them standing as the rows of the compile that
+    // folded them, which is not this one; a fold through either hands them
+    // on, so every one is answered here before anything folds. What
+    // answering a row is here: its literal values answered, and nothing else
+    // touched, since the numbers its code carries are read against this
+    // table as they are.
     mutating func answerHeld() throws {
         let numbering = try naming.indices.map { origin -> Numbering in
             guard let held = lowering.numbering[origin] else {
@@ -286,7 +288,7 @@ struct Compiling {
         )
 
         func held(_ value: Value) -> Bool {
-            value.holdsClosure { closure in closure.linked == nil }
+            value.holdsProcedure
         }
 
         func answered(_ standing: Linked) throws -> Linked {
@@ -310,9 +312,7 @@ struct Compiling {
                             guard case let .literal(value) = operation, held(value) else { return operation }
 
                             return .literal(try value.rewritten { closure in
-                                guard closure.linked == nil else { return closure }
-
-                                return try answering.answered(closure, at: place, rewriting: answered)
+                                try answering.answered(closure, at: place, rewriting: answered)
                             })
                         },
                         type: { type in type }
