@@ -80,16 +80,31 @@ indirect enum LoweredType: Sendable {
     // MARK: - Property
     // What a box holds. A variable is a fact about the slot, and what is read
     // out of one is the type inside it.
+    //
+    // No `default` on any of the three below: a mark nobody thought about must
+    // be a compile error here rather than an answer of "no mark".
     var fieldUnwrapped: LoweredType {
-        if case let .variable(inner) = self { return inner }
+        switch self {
+        case let .variable(inner):
+            return inner
 
-        return self
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+            .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
+            .named, .parameter, .reading, .member, .undeclared:
+            return self
+        }
     }
 
     var inoutUnwrapped: LoweredType {
-        if case let .inout(inner) = self { return inner }
+        switch self {
+        case let .inout(inner):
+            return inner
 
-        return self
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+            .ranged, .array, .dictionary, .record, .procedure, .variable, .nullable,
+            .named, .parameter, .reading, .member, .undeclared:
+            return self
+        }
     }
 
     // Whether a slot holding this may be written through.
@@ -106,7 +121,9 @@ indirect enum LoweredType: Sendable {
         case let .variable(inner), let .inout(inner):
             return inner.slotUnwrapped
 
-        default:
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+            .ranged, .array, .dictionary, .record, .procedure, .nullable,
+            .named, .parameter, .reading, .member, .undeclared:
             return self
         }
     }

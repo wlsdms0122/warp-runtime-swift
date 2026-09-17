@@ -319,12 +319,17 @@ extension TypeExpression {
     // itself otherwise. What arrives through `inout`, `consuming` or
     // `borrowing` is the inner type, and every question about what fits asks
     // that.
+    //
+    // No `default`: a mark nobody thought about must be a compile error here
+    // rather than an answer of "no mark".
     public var slotUnwrapped: TypeExpression {
         switch self {
         case let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner
 
-        default:
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+            .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
+            .nullable, .named, .parameter, .reading:
             return self
         }
     }
@@ -341,8 +346,15 @@ extension TypeExpression {
 
     // The type a field holds, whether or not a path may write through it.
     public var fieldUnwrapped: TypeExpression {
-        if case let .variable(inner) = self { return inner }
-        return self
+        switch self {
+        case let .variable(inner):
+            return inner
+
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+            .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
+            .consuming, .borrowing, .nullable, .named, .parameter, .reading:
+            return self
+        }
     }
 
     var unrefined: TypeExpression {
