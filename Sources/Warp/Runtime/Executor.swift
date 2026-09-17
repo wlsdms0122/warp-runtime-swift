@@ -872,8 +872,7 @@ public struct Executor: Sendable {
             Question(
                 receiver: receiver,
                 settled: settled,
-                sends: callee.sends,
-                from: callee.origin,
+                of: callee,
                 executor: self
             )
         )
@@ -889,13 +888,10 @@ public struct Executor: Sendable {
     ) async throws -> Value {
         try await effect.run(
             Invocation(
-                selector: callee.label,
-                signature: callee.signature,
+                of: callee,
                 receiver: receiver,
                 settled: settled,
                 holds: holds,
-                sends: callee.sends,
-                from: callee.origin,
                 trace: trace,
                 executor: self
             )

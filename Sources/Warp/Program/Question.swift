@@ -13,10 +13,9 @@ public struct Question<P: NativeProcedure>: Sendable {
     // name where a caller asks the procedure directly, with no declaration and no
     // run behind them.
     private enum Arguments: Sendable {
-        // The sends this procedure declared travel with the run, since the rows they
-        // reach are the sender's document's numbers and only a run can say
-        // which rows they are.
-        case settled(Settled, sends: [Sent], from: Int, Executor)
+        // The row being asked travels with the run: the sends it declared are
+        // its document's numbers, and only a run can say which rows they are.
+        case settled(Settled, of: Linked, Executor)
         case given([Name: Value])
     }
 
@@ -42,9 +41,9 @@ public struct Question<P: NativeProcedure>: Sendable {
         self.arguments = .given(arguments)
     }
 
-    init(receiver: Value?, settled: Settled, sends: [Sent], from origin: Int, executor: Executor) {
+    init(receiver: Value?, settled: Settled, of callee: Linked, executor: Executor) {
         self.receiver = receiver
-        self.arguments = .settled(settled, sends: sends, from: origin, executor)
+        self.arguments = .settled(settled, of: callee, executor)
     }
 
     // MARK: - Public
@@ -57,7 +56,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // one was asked with no declaration behind it, so there are only names.
     public subscript(key: P.Parameters) -> Value {
         switch arguments {
-        case let .settled(settled, _, _, _):
+        case let .settled(settled, _, _):
             return settled[key.position]
 
         case let .given(given):
@@ -80,8 +79,8 @@ public struct Question<P: NativeProcedure>: Sendable {
         to receiver: Value? = nil,
         handing arguments: [Value] = []
     ) async throws -> Value {
-        guard case let .settled(_, sends, origin, executor) = self.arguments,
-            sends.indices.contains(key.position)
+        guard case let .settled(_, callee, executor) = self.arguments,
+            callee.sends.indices.contains(key.position)
         else {
             throw ExecutionError(
                 "this procedure sends '\(key.selector)', and this question was asked"
@@ -91,8 +90,8 @@ public struct Question<P: NativeProcedure>: Sendable {
         }
 
         return try await executor.send(
-            sends[key.position],
-            from: origin,
+            callee.sends[key.position],
+            from: callee.origin,
             to: receiver,
             handing: arguments
         )
@@ -109,7 +108,7 @@ public struct Question<P: NativeProcedure>: Sendable {
             )
         }
 
-        guard case let .settled(_, _, _, executor) = self.arguments else {
+        guard case let .settled(_, _, executor) = self.arguments else {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 

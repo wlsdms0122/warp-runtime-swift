@@ -13,11 +13,10 @@ import Foundation
 // environment.
 public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Property
-    public let selector: Name
-
-    // The declaration being sent, so a procedure reads its arguments by the names
-    // the declaration gave them.
-    public let signature: Signature
+    // The row being sent: what a trace and a refusal call it, the declaration
+    // its arguments are read by, and the sends it declared, which are its
+    // document's numbers.
+    private let callee: Linked
 
     // What this was sent to, settled against the parameter the declaration
     // names as its receiver, or nil where the declaration names none. Null is
@@ -37,35 +36,27 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // The variables handed in place, by parameter position.
     private let holds: [(position: Int, handle: Handle)]
 
-    // The sends this procedure declared, in the places it names them at: the row
-    // each reaches and where what it hands over stands.
-    private let sends: [Sent]
-
-    // Which document numbered them. A procedure's declared sends are numbered the
-    // way a call written in a body is, by the document that declared it.
-    private let origin: Int
-
     private let executor: Executor
+
+    public var selector: Name { callee.label }
+
+    // The declaration being sent, so a procedure reads its arguments by the names
+    // the declaration gave them.
+    public var signature: Signature { callee.signature }
 
     // MARK: - Initializer
     init(
-        selector: Name,
-        signature: Signature,
+        of callee: Linked,
         receiver: Value?,
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
-        sends: [Sent],
-        from origin: Int,
         trace: Trace,
         executor: Executor
     ) {
-        self.selector = selector
-        self.signature = signature
+        self.callee = callee
         self.receiver = receiver
         self.settled = settled
         self.holds = holds
-        self.sends = sends
-        self.origin = origin
         self.trace = trace
         self.executor = executor
     }
@@ -132,13 +123,13 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
-        guard sends.indices.contains(key.position) else {
+        guard callee.sends.indices.contains(key.position) else {
             throw ExecutionError("'\(selector)' sends '\(key.selector)', and the link resolved no row for it")
         }
 
         return try await executor.send(
-            sends[key.position],
-            from: origin,
+            callee.sends[key.position],
+            from: callee.origin,
             to: receiver,
             handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
