@@ -2387,29 +2387,6 @@ extension Builder {
         environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
     }
 
-    // The environment a walk's body reads: the enclosing names plus the
-    // element. Through the kind form of the material's reading, so bytes
-    // iterate as the array of bytes they are and the element reads as a byte.
-    // It takes the reading rather than the expression, so no asker walks the
-    // material a second time for it.
-    private func walking(
-        _ element: Name,
-        holding reading: LoweredType,
-        in environment: [Name: Binding]
-    ) -> [Name: Binding] {
-        let item: LoweredType
-
-        if case let .array(held) = reading.unrefined {
-            item = held
-        } else {
-            item = .any
-        }
-
-        return environment.merging(
-            [element: .fixed(.record(["item": item, "index": .int]))]
-        ) { _, new in new }
-    }
-
     // The environment a rescue stands in: the entry, soaked with what the body
     // may have written before it failed (no write certain, none ruled out) plus
     // the failure under its name.
