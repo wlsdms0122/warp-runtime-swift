@@ -55,17 +55,18 @@ enum Binding: Equatable, Sendable {
     }
 
     // MARK: - Public
-    // The same name held the same way, with what it holds replaced.
-    func holding(_ type: LoweredType) -> Binding {
+    // The same name where a run may find nothing in it: what it reads as is
+    // widened by null, and how it is held stays.
+    func orNull(_ nullable: (LoweredType) -> LoweredType) -> Binding {
         switch self {
-        case .fixed:
-            return .fixed(type)
+        case let .fixed(type):
+            return .fixed(nullable(type))
 
-        case .declared:
-            return .declared(type)
+        case let .declared(type):
+            return .declared(nullable(type))
 
-        case .assigned:
-            return .assigned(type)
+        case let .assigned(type):
+            return .assigned(nullable(type))
         }
     }
 

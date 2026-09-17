@@ -1806,18 +1806,19 @@ extension Builder {
             // A name the body declared is the body's own, whatever the entry
             // holds under that spelling, and is null at the 0-round exit (a
             // name a scope does not hold reads as null) so it reads back
-            // nullable, the same join every some-ways write gets.
+            // nullable, the same join every some-ways write gets. Of the
+            // entry's names only a box the rounds retyped moves: one that
+            // declared its type held every write to it.
             var tail: Inspection?
 
             if let result = body.result {
-                let declared = Set(body.body.compactMap { statement in statement.binding?.introduced })
                 var exit = seeded
 
                 for (name, written) in rounds.environment {
-                    if declared.contains(name) {
-                        exit[name] = written.holding(join(.null, written.type))
-                    } else if let entry = seeded[name] {
-                        exit[name] = entry.holding(join(entry.type, written.type))
+                    if rounds.locals.contains(name) {
+                        exit[name] = written.orNull { type in join(.null, type) }
+                    } else if case let .assigned(entry)? = seeded[name] {
+                        exit[name] = .assigned(join(entry, written.type))
                     }
                 }
 
@@ -2073,7 +2074,8 @@ extension Builder {
         calls: [CallSite],
         environment: [Name: Binding],
         reading: LoweredType,
-        flow: Flow
+        flow: Flow,
+        locals: Set<Name>
     )
 
     // A body read in order: the environment its statements leave behind,
@@ -2157,7 +2159,8 @@ extension Builder {
                     calls,
                     environment,
                     .never,
-                    leaving(flowed)
+                    leaving(flowed),
+                    locals
                 )
             }
 
@@ -2236,7 +2239,7 @@ extension Builder {
             }
         }
 
-        return (ask.rewrites ? rewritten : body, calls, environment, .null, flowed)
+        return (ask.rewrites ? rewritten : body, calls, environment, .null, flowed, locals)
     }
 
     // What never finishes binds nothing, so a name on it promises a binding
@@ -2459,7 +2462,7 @@ extension Builder {
         var widened = entry
 
         for name in absorbed(flow).written.keys {
-            widened[name] = widened[name]?.holding(.any) ?? .assigned(.any)
+            widened[name] = .assigned(.any)
         }
 
         // One more look in the widened environment, so what is handed back
