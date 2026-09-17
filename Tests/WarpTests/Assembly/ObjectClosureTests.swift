@@ -106,6 +106,30 @@ struct ObjectClosureTests {
         }
     }
 
+    @Test("a compiled document counting its constants out of name order is refused")
+    func constantsOutOfOrderAreRefused() throws {
+        // Given. Two constants counted in the order an object refuses to read.
+        // When / Then
+        #expect(throws: ObjectRefused.self) {
+            try Compiled(
+                document: .assembled,
+                types: [:],
+                constraints: [:],
+                contracts: [:],
+                claims: [:],
+                leaned: [:],
+                declared: [],
+                constants: ["a.two", "a.one"],
+                table: [],
+                answers: [:],
+                numbering: Numbering(imports: [], declared: [], closures: [:]),
+                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
+                judging: [],
+                dependencies: []
+            )
+        }
+    }
+
     @Test("a closure spelled by a writer no document of the link has is refused at the link")
     func aClosureOfAnUnknownWriterIsRefused() async throws {
         // Given. A compiled document whose variable starts as a closure some

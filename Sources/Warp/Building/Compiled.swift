@@ -209,6 +209,13 @@ public struct Compiled: Sendable, Declaring {
             throw ObjectRefused("this document writes its variables out of name order")
         }
 
+        // Constants are read out of an object in name order and refused in
+        // any other, so a document counting them in another order is one
+        // that writes what it cannot read back.
+        guard constants.ordered else {
+            throw ObjectRefused("this document counts its constants out of name order")
+        }
+
         // Which row a spelling stands for is read off where it stands in this
         // list, and which code a native row brings is read off the row's own
         // label. The two answer the same question, so a list that names them
