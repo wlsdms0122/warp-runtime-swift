@@ -102,4 +102,18 @@ extension Linked {
             return sends.map(\.row)
         }
     }
+
+    // Which of its document's variables this row reads, by the number the
+    // document gave them. What a body applies out of one is entered without
+    // being named, so the closures a variable starts out holding are reached
+    // through the rows that read it.
+    var variables: [Int] {
+        switch implementation {
+        case let .body(_, frame):
+            return frame.variables.map(\.variable)
+
+        case .native:
+            return []
+        }
+    }
 }

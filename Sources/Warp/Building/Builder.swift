@@ -777,19 +777,9 @@ public struct Builder: Sendable {
         let linked = try relocating.linked()
         let variables = try relocating.started(assembled.variables)
 
-        // Where a run can enter from: the start row, and the closures the
-        // documents' variables start out holding, which a body applies
-        // without naming.
-        var entered = [start]
-        for document in variables {
-            for entry in document {
-                entry.value.closures { closure in entered.append(closure.number) }
-            }
-        }
-
         // Walked as rows, reported as spellings: a closure is a row without
         // one and is walked through, and only what has one is reported.
-        let rows = reached(from: entered, over: linked.table)
+        let rows = reached(from: start, over: linked.table, starting: variables)
         let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(entry.value) }.map(\.key))
 
         return Image(
@@ -803,17 +793,28 @@ public struct Builder: Sendable {
     }
 
     // MARK: - Private
-    // Which rows a run entering at these can reach, following what each
-    // row's code names. Transitive. Every number met is a row of this table,
-    // since the link answered each one before the table was handed over.
-    private func reached(from entered: [Int], over table: [Linked]) -> Set<Int> {
+    // Which rows a run entering at this one can reach, following what each
+    // row's code names, and the closures a variable it reads starts out
+    // holding. Transitive. Every number met is a row of this table, since the
+    // link answered each one before the table was handed over.
+    private func reached(
+        from start: Int,
+        over table: [Linked],
+        starting variables: [[(name: Name, value: Value)]]
+    ) -> Set<Int> {
         var reached: Set<Int> = []
-        var frontier = entered
+        var frontier = [start]
 
         while let row = frontier.popLast() {
             guard reached.insert(row).inserted else { continue }
 
             frontier.append(contentsOf: table[row].reaches)
+
+            for variable in table[row].variables {
+                variables[table[row].origin][variable].value.closures { closure in
+                    frontier.append(closure.number)
+                }
+            }
         }
 
         return reached

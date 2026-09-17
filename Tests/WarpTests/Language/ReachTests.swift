@@ -143,6 +143,31 @@ struct ReachTests {
         #expect(!image.reached.contains("app.aside"))
     }
 
+    @Test("a closure a variable nobody reached reads starts out holding is not entered")
+    func aVariableNoReachedBodyReadsIsNotEntered() async throws {
+        // Given. `app.aside` alone reads the variable, and nothing reaches it
+        let sut = try Module(
+            variables: [
+                "app.held": .closure(Procedure(body: [], result: .call(Call(selector: "app.deep"))))
+            ],
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.int(1))),
+                "app.aside": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .apply(reference("app.held"), arguments: [:])
+                ),
+                "app.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+
+        // Then
+        #expect(image.reached == [entryName])
+    }
+
     @Test("a value names every closure it holds, what a closure captured included")
     func aValueNamesTheClosuresItHolds() async throws {
         // Given. A closure capturing another, inside an array; the rows are
