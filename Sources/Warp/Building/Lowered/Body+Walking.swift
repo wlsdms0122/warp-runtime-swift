@@ -25,6 +25,17 @@ extension Body {
         instructions.allSatisfy { instruction in instruction.walk(visit) }
             && (result?.walk(visit) ?? true)
     }
+
+    // Whether any node answers, stopping at the first that does.
+    func contains(where predicate: (Node) -> Bool) -> Bool {
+        !walk { node in !predicate(node) }
+    }
+}
+
+extension Operation {
+    func contains(where predicate: (Body.Node) -> Bool) -> Bool {
+        !walk { node in !predicate(node) }
+    }
 }
 
 extension Instruction {
@@ -73,10 +84,15 @@ extension Operation {
 
         // What a call through a contract hands over is in `arguments`. The
         // calls beside it are the link's copy of the same, so walking those
-        // too would read one fact twice.
+        // too would read one fact twice. An argument handed in place is a
+        // place and not an operation, and a place is the node's own to read.
         case let .dispatch(dispatch):
             return dispatch.receiver.walk(visit)
-                && dispatch.arguments.values.allSatisfy { argument in argument.read.walk(visit) }
+                && dispatch.arguments.values.allSatisfy { argument in
+                    guard case let .value(operation) = argument else { return true }
+
+                    return operation.walk(visit)
+                }
 
         case let .leave(_, _, read):
             return read?.walk(visit) ?? true

@@ -24,6 +24,6 @@ struct Body: Sendable {
 
 extension Body {
     func reads(_ slots: Range<Int>) -> Bool {
-        !walk { node in !node.reads(slots) }
+        contains { node in node.reads(slots) }
     }
 }

@@ -53,13 +53,15 @@ extension Operation {
     // Whether this reads any slot in the range, through a path's index
     // references as well. A closure's captures are reads of its own.
     func reads(_ slots: Range<Int>) -> Bool {
-        !walk { node in !node.reads(slots) }
+        contains { node in node.reads(slots) }
     }
 }
 
 extension Body.Node {
     // Whether this one node reads a slot of the range, apart from what nests
-    // in it.
+    // in it. A further question over the same shape as `stand`, and it stays
+    // apart: this counts only the slots a body's value depends on, and leaves
+    // out the ones it binds.
     func reads(_ slots: Range<Int>) -> Bool {
         switch self {
         case let .instruction(instruction):
@@ -78,7 +80,14 @@ extension Body.Node {
             case let .call(call):
                 return call.handed.contains { handed in handed.address.reads(slots) }
 
-            case .literal, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .dispatch, .leave:
+            case let .dispatch(dispatch):
+                return dispatch.arguments.values.contains { argument in
+                    guard case let .reference(address) = argument else { return false }
+
+                    return address.reads(slots)
+                }
+
+            case .literal, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
                 return false
             }
         }

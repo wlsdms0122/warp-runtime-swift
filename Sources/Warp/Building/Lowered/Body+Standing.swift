@@ -145,7 +145,14 @@ extension Body.Node {
                 standing.stand(calling: call.procedure, handing: call.arguments.count)
                 call.handed.forEach { handed in handed.address.stand(in: &standing) }
 
-            case .literal, .array, .record, .apply, .block, .conditional, .dispatch, .leave:
+            case let .dispatch(dispatch):
+                dispatch.arguments.values.forEach { argument in
+                    guard case let .reference(address) = argument else { return }
+
+                    address.stand(in: &standing)
+                }
+
+            case .literal, .array, .record, .apply, .block, .conditional, .leave:
                 break
             }
         }
