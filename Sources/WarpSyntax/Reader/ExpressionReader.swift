@@ -155,7 +155,8 @@ public struct ExpressionReader: Decodable {
         return try template(in: record, at: steps, in: decoder)
     }
 
-    // No form key: an ordinary record of expressions.
+    // No form key: an ordinary record of expressions. In the record's order,
+    // so that a record with two bad fields refuses the same one every run.
     private static func fields(
         in record: Value.Dictionary,
         at steps: [Place.Step],
