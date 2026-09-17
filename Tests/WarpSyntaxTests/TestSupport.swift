@@ -282,7 +282,6 @@ extension Closure {
         Closure(
             writer: Closure.Writer(document: .assembled, name: "assembled"),
             nth: 0,
-            origin: nil,
             linked: Linked(
                 label: "assembled",
                 origin: 0,

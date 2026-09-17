@@ -15,7 +15,9 @@ import Foundation
 // Which closure it is, is spelled by its writer and which of the writer's it
 // is: what an object writes a closure down as, and what a link answers a row
 // for. A closure a fold settled into an object stands by that spelling alone
-// until the link reading the object answers it.
+// until the link reading the object answers it. No position in any link
+// rides along: a compiled document is laid into whatever link a caller makes
+// of it, in whatever order, and a spelling is what survives that.
 public struct Closure: Sendable {
     // The declaration, constant or variable that wrote a closure, in the
     // document it stands in. A constant's spelling is its document's own, so
@@ -28,13 +30,6 @@ public struct Closure: Sendable {
     // MARK: - Property
     let writer: Writer
     let nth: Int
-
-    // Where the writer stood in the link the run that made this value ran
-    // in, by position. Two documents nobody wrote down are told apart by
-    // nothing else. Nil once the value has been written down, since an
-    // object spells no position, and what it spells is a document that was
-    // written down.
-    let origin: Int?
 
     public let linked: Linked?
     let captured: [(slot: Int, cell: Cell)]
@@ -57,10 +52,9 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Initializer
-    init(writer: Writer, nth: Int, origin: Int?, linked: Linked?, captured: [(slot: Int, cell: Cell)]) {
+    init(writer: Writer, nth: Int, linked: Linked?, captured: [(slot: Int, cell: Cell)]) {
         self.writer = writer
         self.nth = nth
-        self.origin = origin
         self.linked = linked
         self.captured = captured
     }
@@ -69,12 +63,12 @@ public struct Closure: Sendable {
     // The same closure as a link reads it: the body standing in that link's
     // tables.
     func standing(as linked: Linked) -> Closure {
-        Closure(writer: writer, nth: nth, origin: origin, linked: linked, captured: captured)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured)
     }
 
     // The same closure holding something else.
     func holding(_ captured: [(slot: Int, cell: Cell)]) -> Closure {
-        Closure(writer: writer, nth: nth, origin: origin, linked: linked, captured: captured)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured)
     }
 
     // MARK: - Private

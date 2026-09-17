@@ -74,6 +74,12 @@ struct ObjectWriter {
             return nil
         }
 
+        // What an object holds is data, and a closure in it is spelled as
+        // data. Asked of what came out rather than at each place a value is
+        // written, so a place added later is answered here without this
+        // having to hear of it.
+        guard !written.holdsProcedure else { return nil }
+
         return written
     }
 

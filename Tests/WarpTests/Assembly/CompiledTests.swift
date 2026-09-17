@@ -157,7 +157,7 @@ struct CompiledTests {
         let compiled = try await compiled([top, middle, bottom])
 
         func constness(of declared: Name) throws -> Constness {
-            try Assembled(compiled).table[#require(try Assembled(compiled).rows[declared])].constness
+            try Assembled(compiled).table[#require(try Assembled(compiled).rows[declared])].judged.constness
         }
 
         // Then. The whole chain answers by the run, and what reaches none of
@@ -833,7 +833,7 @@ struct CompiledTests {
         let assembled = try Assembled(compiled)
 
         guard
-            case let .body(body, _) = try assembled.table[#require(assembled.rows[declared])].implementation
+            case let .body(body, _) = try assembled.table[#require(assembled.rows[declared])].judged.implementation
         else {
             throw BuildError("'\(declared)' holds no written body", at: nil)
         }

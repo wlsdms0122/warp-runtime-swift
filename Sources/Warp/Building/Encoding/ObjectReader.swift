@@ -248,7 +248,7 @@ extension ObjectReader {
                 return read
             }
 
-            read = .procedure(Closure(writer: writer, nth: nth, origin: nil, linked: nil, captured: captured))
+            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
 
         case nil: throw ObjectRefused("'value' answers in a way this reads none of")
         }

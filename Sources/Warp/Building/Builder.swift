@@ -747,10 +747,10 @@ public struct Builder: Sendable {
             numbered: Linkage()
         )
         let signatures = assembled.rows.reduce(into: [Name: Placed<Signature>]()) { table, entry in
-            let origin = assembled.origins[entry.value]
+            let origin = assembled.table[entry.value].origin
 
             table[entry.key] = Placed(
-                assembled.table[entry.value].signature,
+                assembled.table[entry.value].judged.signature,
                 at: .procedure(entry.key.spelling, in: compiled[origin].document),
                 of: origin
             )

@@ -28,12 +28,11 @@ struct ClosureWalkTests {
         // Given. A closure capturing one by copy and one through a hold,
         // inside an array
         let row = try await row
-        let copied = Closure(writer: Closure.Writer(document: .assembled, name: "w"), nth: 9, origin: nil, linked: row, captured: [])
-        let held = Closure(writer: Closure.Writer(document: .assembled, name: "w"), nth: 11, origin: nil, linked: row, captured: [])
+        let copied = Closure(writer: Closure.Writer(document: .assembled, name: "w"), nth: 9, linked: row, captured: [])
+        let held = Closure(writer: Closure.Writer(document: .assembled, name: "w"), nth: 11, linked: row, captured: [])
         let capturing = Closure(
             writer: Closure.Writer(document: .assembled, name: "w"),
             nth: 7,
-            origin: nil,
             linked: row,
             captured: [
                 (slot: 0, cell: .value(.procedure(copied))),
@@ -55,7 +54,7 @@ struct ClosureWalkTests {
     func holdingIsAnsweredAtTheFirst() async throws {
         // Given
         let row = try await row
-        let inner = Closure(writer: Closure.Writer(document: .assembled, name: "w"), nth: 9, origin: nil, linked: row, captured: [])
+        let inner = Closure(writer: Closure.Writer(document: .assembled, name: "w"), nth: 9, linked: row, captured: [])
         let sut: Value = .record(
             Record(name: nil, ["a": .int(1), "b": .array([.procedure(inner)])])
         )

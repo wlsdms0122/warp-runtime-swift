@@ -15,14 +15,22 @@ import Foundation
 // their block began.
 struct Assembled: Sendable {
     // MARK: - Property
-    let table: [Judged]
+    // One row of the link: the judged row, which document it came out of,
+    // and which of its writer's closures it is where a closure was lifted
+    // into it. One value per row, so the three cannot come apart.
+    struct Row: Sendable {
+        let judged: Judged
+        let origin: Int
+        let nth: Int?
+    }
+
+    let table: [Row]
 
     // Which document each block came out of, for a refusal that names one.
     let documents: [Place.Document]
 
     // Which document each row's block came from, stamped as the blocks
     // were laid down. A row does not say it, so this is where it is said.
-    let origins: [Int]
 
     // Every declared spelling, by row.
     let rows: [Name: Int]
@@ -38,10 +46,6 @@ struct Assembled: Sendable {
     let typeNumbering: [LoweredTypeNumbering]
     let variables: [[(name: Name, value: Value)]]
 
-    // Which of its writer's closures each row is, by position, for a row a
-    // closure was lifted into. Nil for a declaration's own row.
-    let written: [Int?]
-
     // Which documents each writer of a closure stands in. A closure value is
     // spelled by its writer, and the writer's document is whose numbering
     // answers it. Two documents nobody wrote down are told apart by nothing,
@@ -53,15 +57,12 @@ struct Assembled: Sendable {
     init(_ documents: [Compiled]) throws {
         let held = documents.reduce(0) { held, document in held + document.table.count }
 
-        var table: [Judged] = []
-        var origins: [Int] = []
+        var table: [Row] = []
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
-        var written: [Int?] = []
         var writing: [Closure.Writer: [Int]] = [:]
 
         table.reserveCapacity(held)
-        origins.reserveCapacity(held)
         rows.reserveCapacity(held)
 
         for (origin, document) in documents.enumerated() {
@@ -74,7 +75,7 @@ struct Assembled: Sendable {
                 // compiled together are held to this already; documents
                 // compiled apart meet here for the first time.
                 if let taken = rows[name] {
-                    let first = origins[taken]
+                    let first = table[taken].origin
 
                     throw BuildError(
                         "'\(name)' is declared by \(documents[first].document.spelled(at: first))"
@@ -95,15 +96,13 @@ struct Assembled: Sendable {
 
             closures[origin] = document.lifted.map { row in start + row }
 
-            table.append(contentsOf: document.table)
-            written.append(contentsOf: document.table.indices.map(document.nth(ofRow:)))
-            origins.append(contentsOf: [Int](repeating: origin, count: document.table.count))
+            table.append(contentsOf: document.table.enumerated().map { index, judged in
+                Row(judged: judged, origin: origin, nth: document.nth(ofRow: index))
+            })
         }
 
         self.table = table
         self.documents = documents.map(\.document)
-        self.origins = origins
-        self.written = written
         self.writing = writing
         self.rows = rows
         self.closures = closures
