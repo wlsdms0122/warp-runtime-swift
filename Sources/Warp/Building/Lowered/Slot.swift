@@ -13,23 +13,24 @@ import Foundation
 // must be one of. The declaration's type is not here; its lowering is.
 final class Slot: Sendable {
     // MARK: - Property
-    let name: Name
-    let type: LoweredType
+    // What a procedure type holds of this parameter, and what the boundary
+    // asks beyond it.
+    let parameter: LoweredParameter
     let `default`: Value?
     let candidates: [Candidate]?
 
+    var name: Name { parameter.name }
+    var type: LoweredType { parameter.type }
+    var mustBeGiven: Bool { parameter.mustBeGiven }
+
     // MARK: - Initializer
-    init(name: Name, type: LoweredType, default: Value?, candidates: [Candidate]?) {
-        self.name = name
-        self.type = type
+    init(_ parameter: LoweredParameter, default: Value?, candidates: [Candidate]?) {
+        self.parameter = parameter
         self.default = `default`
         self.candidates = candidates
     }
 
     // MARK: - Public
-    func mustBeGiven(in table: LoweredTypeTable) -> Bool {
-        type.mustBeGiven(default: `default`, in: table)
-    }
 
     // An argument as given, or the default where nothing was. Nil is the
     // absence: a key the call never wrote. A null is a value like any other
@@ -146,6 +147,13 @@ extension Parameter {
     // This parameter as the run reads it. An undeclared type lowers to
     // `any`: the boundary tells "nothing written" from "`any` written" in no
     // way, so the slot does not either.
+    // This declaration as a lowered procedure type holds it, over the type it
+    // lowered to. The one place a parameter's lowering is worked out, whether
+    // a procedure type or a boundary's slot is what asks.
+    func lowered(named name: Name, as type: LoweredType, in table: LoweredTypeTable) -> LoweredParameter {
+        LoweredParameter(name: name, type: type, mustBeGiven: type.mustBeGiven(default: `default`, in: table))
+    }
+
     func lowered(named name: Name, in table: LoweredTypeTable) -> Slot {
         slot(named: name, holding: declared.lowered(in: table), in: table)
     }
@@ -159,8 +167,7 @@ extension Parameter {
 
     private func slot(named name: Name, holding type: LoweredType, in table: LoweredTypeTable) -> Slot {
         Slot(
-            name: name,
-            type: type,
+            lowered(named: name, as: type, in: table),
             default: `default`,
             candidates: candidates.map { written in
                 written.map { spelling in Candidate(spelling, in: type, reading: table) }

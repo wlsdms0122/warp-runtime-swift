@@ -32,7 +32,7 @@ indirect enum LoweredType: Sendable {
     // with, in position order, and what it must answer. Nil where nothing
     // was declared. Constness and isolation are the slot's requirements.
     case procedure(
-        parameters: [(name: Name, type: LoweredType, mustBeGiven: Bool)]?,
+        parameters: [LoweredParameter]?,
         returns: LoweredType?,
         constness: Constness,
         isolation: Isolation
@@ -264,12 +264,7 @@ indirect enum LoweredType: Sendable {
             return true
 
         case let (mine?, theirs?):
-            return mine.count == theirs.count
-                && zip(mine, theirs).allSatisfy { one, other in
-                    one.name == other.name
-                        && one.type == other.type
-                        && one.mustBeGiven == other.mustBeGiven
-                }
+            return mine == theirs
 
         default:
             return false

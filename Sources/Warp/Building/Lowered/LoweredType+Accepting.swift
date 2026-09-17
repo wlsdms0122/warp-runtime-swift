@@ -149,7 +149,7 @@ extension LoweredType {
             // declare more only where the name stands unfilled: a name
             // nothing hands it and a call must fill is one no call could.
             guard given.allSatisfy({ slot in
-                !slot.mustBeGiven || required.contains { name, _, _ in name == slot.name }
+                !slot.mustBeGiven || required.contains { parameter in parameter.name == slot.name }
             }) else {
                 return false
             }
@@ -157,9 +157,9 @@ extension LoweredType {
             // The directions are opposite on purpose: what is given must
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
-            for (name, type, _) in required {
-                guard let taken = given.first(where: { slot in slot.name == name }) else { continue }
-                guard taken.type.accepts(type, in: table, assuming: assuming) else { return false }
+            for parameter in required {
+                guard let taken = given.first(where: { slot in slot.name == parameter.name }) else { continue }
+                guard taken.type.accepts(parameter.type, in: table, assuming: assuming) else { return false }
             }
 
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assuming: assuming)

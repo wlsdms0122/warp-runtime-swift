@@ -518,7 +518,7 @@ private extension ObjectReader {
                 parameters: try fields.maybe { written in
                     try Fields.list(written, of: "parameters") { parameter in
                         var held = try Fields(parameter, of: "parameter")
-                        let taken = (
+                        let taken = LoweredParameter(
                             name: try name(held.next()),
                             type: try lowered(held.next()),
                             mustBeGiven: try held.flag()

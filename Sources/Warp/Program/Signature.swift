@@ -228,7 +228,7 @@ public struct Signature: Sendable, Equatable {
         var missing: [Name] = []
 
         for (position, slot) in slots.enumerated() where !skipping(position) {
-            if given[position] == nil, slot.mustBeGiven(in: table) {
+            if given[position] == nil, slot.mustBeGiven {
                 missing.append(slot.name)
             }
         }

@@ -113,7 +113,7 @@ enum ObjectCoverageFixture {
         ("array", .array(.string)),
         ("dictionary", .dictionary(.bool)),
         ("procedure", .procedure(
-            parameters: [(name: "p", type: .int, mustBeGiven: true)],
+            parameters: [LoweredParameter(name: "p", type: .int, mustBeGiven: true)],
             returns: .double,
             constness: .const,
             isolation: .unstated

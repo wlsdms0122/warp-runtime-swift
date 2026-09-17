@@ -335,8 +335,8 @@ extension LoweredType {
 
             guard let parameters else { return spelling }
 
-            let written = parameters.map { name, type, _ in
-                "\(name): \(type.rendered(in: table))"
+            let written = parameters.map { parameter in
+                "\(parameter.name): \(parameter.type.rendered(in: table))"
             }
 
             return "\(spelling)<(\(written.joined(separator: ", ")))"
@@ -700,7 +700,7 @@ extension LoweredType {
 
     private func settlingProcedure(
         _ value: Value,
-        parameters required: [(name: Name, type: LoweredType, mustBeGiven: Bool)]?,
+        parameters required: [LoweredParameter]?,
         returns: LoweredType?,
         constness: Constness,
         isolation: Isolation,
@@ -728,9 +728,7 @@ extension LoweredType {
         }
 
         let given = LoweredType.procedure(
-            parameters: closure.linked.slots.map { slot in
-                (name: slot.name, type: slot.type, mustBeGiven: slot.mustBeGiven(in: table))
-            },
+            parameters: closure.linked.slots.map(\.parameter),
             returns: closure.linked.returns,
             constness: closure.constness,
             isolation: closure.isolation
