@@ -30,7 +30,9 @@ struct RegexQuery: Query {
     }
 
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let receiver = question.receiver else { return .bool(false) }
+        guard let receiver = question.receiver else {
+            throw ExecutionError("regex is sent nothing, and asks a string")
+        }
 
         guard case let .string(pattern) = question[.value] else {
             return .bool(false)

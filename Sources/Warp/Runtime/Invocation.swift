@@ -19,7 +19,9 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // the declaration gave them.
     public let signature: Signature
 
-    // What this was sent to, or nil where it was sent to nothing.
+    // What this was sent to, settled against the parameter the declaration
+    // names as its receiver, or nil where the declaration names none. Null is
+    // a value that arrived, and only a parameter that admits one is handed it.
     public let receiver: Value?
 
     private let settled: Settled
