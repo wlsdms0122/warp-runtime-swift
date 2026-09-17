@@ -91,41 +91,56 @@ public enum BinaryEncoding {
     }
 
     // MARK: - Private
-    // Fields under names, with the name of the layout they stood on where
-    // there was one.
-    private static func write(
-        _ held: Value.Dictionary,
-        named name: Name?,
-        into bytes: inout Data,
-        within depth: Int
-    ) throws {
-        if let name {
-            guard name.isDeclarable else {
-                throw EncodingError.invalidValue(
-                    Value.string(name.spelling),
-                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
-                )
+    // A container part-written: what of it is still to go, and how deep its
+    // parts stand. The mirror of `Opened` on the reading side, and open for
+    // the same reason: what a container holds is written after it rather than
+    // inside it, so nothing here stands on a call frame.
+    private enum Writing {
+        case elements(ArraySlice<Value>, within: Int)
+        case fields(ArraySlice<(name: Name, value: Value)>, within: Int)
+    }
+
+    // One pass with an explicit stack, for the reason the reader has one: the
+    // depth of a document must never be the depth of the host's call stack.
+    // What a writer is handed is a value a caller built, and a caller that
+    // built a deep one is owed the refusal rather than the process.
+    //
+    // `within` runs out where the reader's limit runs out, so the writer cannot
+    // produce a document its own reader would refuse.
+    private static func write(_ value: Value, into bytes: inout Data) throws {
+        var open: [Writing] = []
+
+        try write(value, into: &bytes, within: depth, opening: &open)
+
+        while let container = open.popLast() {
+            switch container {
+            case var .elements(rest, within):
+                guard let next = rest.popFirst() else { continue }
+
+                open.append(.elements(rest, within: within))
+
+                try write(next, into: &bytes, within: within, opening: &open)
+
+            case var .fields(rest, within):
+                guard let next = rest.popFirst() else { continue }
+
+                open.append(.fields(rest, within: within))
+
+                write(Array(next.name.spelling.utf8), into: &bytes)
+
+                try write(next.value, into: &bytes, within: within, opening: &open)
             }
-
-            bytes.append(Tag.namedRecord.rawValue)
-            write(Array(name.spelling.utf8), into: &bytes)
-        } else {
-            bytes.append(Tag.record.rawValue)
-        }
-
-        write(UInt64(held.count), into: &bytes)
-
-        // Both spellings hold their fields in byte order, the order written.
-        for (key, value) in held.entries {
-            write(Array(key.spelling.utf8), into: &bytes)
-
-            try write(value, into: &bytes, within: depth - 1)
         }
     }
 
-    // `within` runs out where the reader's limit runs out, so the writer cannot
-    // produce a document its own reader would refuse.
-    private static func write(_ value: Value, into bytes: inout Data, within depth: Int = depth) throws {
+    // One value's own bytes. What it holds is left open on the stack rather
+    // than written here, so nothing on this path calls itself.
+    private static func write(
+        _ value: Value,
+        into bytes: inout Data,
+        within depth: Int,
+        opening open: inout [Writing]
+    ) throws {
         guard depth >= 0 else {
             throw EncodingError.invalidValue(
                 value,
@@ -181,8 +196,8 @@ public enum BinaryEncoding {
 
             write(UInt64(array.count), into: &bytes)
 
-            for element in array {
-                try write(element, into: &bytes, within: depth - 1)
+            if !array.isEmpty {
+                open.append(.elements(array[...], within: depth - 1))
             }
 
         // Sorted by their UTF-8 bytes, so that the same document is the same
@@ -191,10 +206,10 @@ public enum BinaryEncoding {
         // A record under a name is written under its own tag with the name in
         // front, so a reader that met the tag knows a name follows.
         case let .record(record):
-            try write(record.asDictionary, named: record.name, into: &bytes, within: depth)
+            try write(record.asDictionary, named: record.name, into: &bytes, within: depth, opening: &open)
 
         case let .dictionary(held):
-            try write(held, named: nil, into: &bytes, within: depth)
+            try write(held, named: nil, into: &bytes, within: depth, opening: &open)
 
         case .procedure:
             throw EncodingError.invalidValue(
@@ -204,6 +219,37 @@ public enum BinaryEncoding {
                     debugDescription: "a procedure is code, and data is what a document spells"
                 )
             )
+        }
+    }
+
+    // Fields under names, with the name of the layout they stood on where
+    // there was one.
+    private static func write(
+        _ held: Value.Dictionary,
+        named name: Name?,
+        into bytes: inout Data,
+        within depth: Int,
+        opening open: inout [Writing]
+    ) throws {
+        if let name {
+            guard name.isDeclarable else {
+                throw EncodingError.invalidValue(
+                    Value.string(name.spelling),
+                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
+                )
+            }
+
+            bytes.append(Tag.namedRecord.rawValue)
+            write(Array(name.spelling.utf8), into: &bytes)
+        } else {
+            bytes.append(Tag.record.rawValue)
+        }
+
+        write(UInt64(held.count), into: &bytes)
+
+        // Both spellings hold their fields in byte order, the order written.
+        if !held.isEmpty {
+            open.append(.fields(held.entries[...], within: depth - 1))
         }
     }
 
