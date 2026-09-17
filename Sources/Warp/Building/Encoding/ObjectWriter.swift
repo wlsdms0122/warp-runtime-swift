@@ -54,7 +54,6 @@ struct ObjectWriter {
             }),
             .array(compiled.declared.map(name)),
             .array(compiled.table.map(judged)),
-            .array(compiled.calls.map { called in .array(called.map(name)) }),
             keyed(compiled.answers, lowered),
             numbering,
             typeNumbering(compiled.typeNumbering),

@@ -55,12 +55,6 @@ public struct Compiled: Sendable, Declaring {
     var standing: Range<Int> { 0 ..< declared.count }
     var lifted: Range<Int> { declared.count ..< table.count }
 
-    // What each declaration calls, beside the spelling it was declared
-    // by. Read off the bodies as they were judged, so what a link walks is
-    // what was proved rather than what a second reading of the same text
-    // would find.
-    let calls: [[Name]]
-
     // What the build read off a body whose declaration wrote no `returns`,
     // by the spelling it was declared under and in this document's own
     // type numbers. A declaration that wrote its answer is not here:
@@ -115,7 +109,6 @@ public struct Compiled: Sendable, Declaring {
         leaned: [Claim: Place],
         declared: [Name],
         table: [Judged],
-        calls: [[Name]],
         answers: [Name: LoweredType],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
@@ -131,7 +124,6 @@ public struct Compiled: Sendable, Declaring {
         self.leaned = leaned
         self.declared = declared
         self.table = table
-        self.calls = calls
         self.answers = answers
         self.numbering = numbering
         self.typeNumbering = typeNumbering
@@ -156,7 +148,6 @@ public struct Compiled: Sendable, Declaring {
         leaned: [Claim: Place],
         declared: [Name],
         table: [Judged],
-        calls: [[Name]],
         answers: [Name: LoweredType],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
@@ -178,12 +169,6 @@ public struct Compiled: Sendable, Declaring {
             throw ObjectRefused(
                 "an object numbers \(numbering.closureCount) closure(s) behind"
                     + " \(table.count - declared.count) row(s)"
-            )
-        }
-
-        guard calls.count == declared.count else {
-            throw ObjectRefused(
-                "an object writes \(calls.count) call list(s) for \(declared.count) declaration(s)"
             )
         }
 
@@ -212,7 +197,6 @@ public struct Compiled: Sendable, Declaring {
             leaned: leaned,
             declared: declared,
             table: table,
-            calls: calls,
             answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,
@@ -261,7 +245,7 @@ public struct Compiled: Sendable, Declaring {
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an object stand, and it moves when they move
     // and for no other reason.
-    static let format = 2
+    static let format = 3
 
     // Which Warp wrote it. An object is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a
@@ -320,7 +304,6 @@ public struct Compiled: Sendable, Declaring {
             leaned: leaned,
             declared: declared,
             table: table,
-            calls: calls,
             answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,

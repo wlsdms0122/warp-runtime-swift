@@ -643,7 +643,6 @@ struct CompiledTests {
 
             #expect(one.document == other.document)
             #expect(one.declared == other.declared)
-            #expect(one.calls == other.calls)
             #expect(one.answers == other.answers)
             #expect(one.typeNumbering.types == other.typeNumbering.types)
             #expect(one.typeNumbering.memberships == other.typeNumbering.memberships)

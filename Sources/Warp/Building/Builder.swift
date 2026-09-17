@@ -411,10 +411,9 @@ public struct Builder: Sendable {
         // wrote no `returns`.
         var read: [Name: LoweredType] = [:]
 
-        // What this document settled, and what each of its declarations calls.
+        // What this document settled.
         var constants: [Name: Value] = [:]
         var variables: [Name: Value] = [:]
-        var calls: [Name: [Name]] = [:]
 
         func context() -> TypingContext {
             compiling.context(reading: reading)
@@ -651,9 +650,7 @@ public struct Builder: Sendable {
         // are judged is not a question the entry answers.
         for symbol in holding {
             try await fulfillment.folding(symbol.place) {
-                let (procedure, gathered) = try await resolved(symbol)
-
-                calls[symbol.declared] = gathered.map { call in call.callee }
+                let (procedure, _) = try await resolved(symbol)
 
                 // A constant answer is a value and not only a type, so it is
                 // held to what the declaration admits as well as to what it
@@ -694,7 +691,6 @@ public struct Builder: Sendable {
             leaned: fulfillment.claims(of: origin),
             declared: declared,
             table: lowered.table.map(Judged.init),
-            calls: declared.map { name in calls[name] ?? [] },
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,

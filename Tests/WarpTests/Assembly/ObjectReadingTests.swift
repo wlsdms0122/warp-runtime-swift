@@ -107,7 +107,7 @@ struct ObjectReadingTests {
         // numbering answers by position, so a swallowed name moves every number
         // after it onto some other declaration.
         guard case var .array(parts) = try await parts(),
-              case var .array(numbering) = parts[12],
+              case var .array(numbering) = parts[11],
               case let .array(types) = numbering[0],
               let first = types.first
         else {
@@ -117,7 +117,7 @@ struct ObjectReadingTests {
         }
 
         numbering[0] = .array(types + [first])
-        parts[12] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -196,7 +196,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(answers) = parts[10],
+              case var .array(answers) = parts[9],
               case var .array(entry) = answers[0],
               case var .array(answer) = entry[1],
               case var .array(record) = answer[1],
@@ -216,7 +216,7 @@ struct ObjectReadingTests {
         answer[1] = .array(record)
         entry[1] = .array(answer)
         answers[0] = .array(entry)
-        parts[10] = .array(answers)
+        parts[9] = .array(answers)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -259,21 +259,6 @@ struct ObjectReadingTests {
         }
 
         parts[8] = .array(table.dropLast())
-
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
-    @Test("is refused where a call list stands for no declaration")
-    func callsThatStandForNothing() async throws {
-        guard case var .array(parts) = try await parts(), case let .array(calls) = parts[9] else {
-            Issue.record("an object writes what each declaration calls as a part")
-
-            return
-        }
-
-        parts[9] = .array(calls + [.array([])])
 
         #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
@@ -385,7 +370,7 @@ struct ObjectReadingTests {
         // The declarations stand at the end of that list, so every self call
         // would reach whatever the link answers that name with.
         guard case var .array(parts) = try await parts(),
-              case var .array(numbering) = parts[11],
+              case var .array(numbering) = parts[10],
               case let .array(spellings) = numbering[1],
               !spellings.isEmpty
         else {
@@ -395,7 +380,7 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array(spellings.dropLast() + [.string("std.math.add")])
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -597,7 +582,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[11],
+              case var .array(numbering) = parts[10],
               case let .array(closing) = numbering[2],
               closing.count == 2
         else {
@@ -607,7 +592,7 @@ struct ObjectReadingTests {
         }
 
         numbering[2] = .array(closing.reversed())
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -702,7 +687,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[11],
+              case var .array(numbering) = parts[10],
               case let .array(sent) = numbering[0],
               sent.count == 2
         else {
@@ -712,7 +697,7 @@ struct ObjectReadingTests {
         }
 
         numbering[0] = .array(sent.reversed())
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -745,7 +730,7 @@ struct ObjectReadingTests {
             return
         }
 
-        parts[13] = .array([.array([.string(settled.name.spelling), settled.value])])
+        parts[12] = .array([.array([.string(settled.name.spelling), settled.value])])
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -775,7 +760,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[11],
+              case var .array(numbering) = parts[10],
               case let .array(counts) = numbering[2],
               case let .array(entry) = counts.first,
               counts.count == 1
@@ -786,7 +771,7 @@ struct ObjectReadingTests {
         }
 
         numbering[2] = .array([.array([.string("app.other"), entry[1]])])
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -816,7 +801,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[11]
+              case var .array(numbering) = parts[10]
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
@@ -827,7 +812,7 @@ struct ObjectReadingTests {
             .array([.string("app.entry"), .int(.max - 1)]),
             .array([.string("app.other"), .int(1)])
         ])
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -857,7 +842,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[11],
+              case var .array(numbering) = parts[10],
               case let .array(counts) = numbering[2],
               counts.count == 1
         else {
@@ -867,7 +852,7 @@ struct ObjectReadingTests {
         }
 
         numbering[2] = .array(counts + [.array([.string("app.other"), .int(0)])])
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -896,7 +881,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[11],
+              case var .array(numbering) = parts[10],
               case let .array(counts) = numbering[2],
               case let .array(entry) = counts.first,
               counts.count == 1
@@ -907,7 +892,7 @@ struct ObjectReadingTests {
         }
 
         numbering[2] = .array([.array([entry[0], .int(4)])])
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -937,7 +922,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[11]
+              case var .array(numbering) = parts[10]
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
@@ -948,7 +933,7 @@ struct ObjectReadingTests {
             .array([.string("app.entry"), .int(.max)]),
             .array([.string("app.other"), .int(.max)])
         ])
-        parts[11] = .array(numbering)
+        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -1006,7 +991,7 @@ struct ObjectReadingTests {
         )
 
         guard case var .array(parts) = try await parts(of: sut),
-              case let .array(variables) = parts[13],
+              case let .array(variables) = parts[12],
               variables.count == 2
         else {
             Issue.record("an object writes what its variables start holding")
@@ -1014,7 +999,7 @@ struct ObjectReadingTests {
             return
         }
 
-        parts[13] = .array(variables.reversed())
+        parts[12] = .array(variables.reversed())
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {

@@ -63,7 +63,6 @@ struct ObjectReader {
         // in the order some initialiser happens to declare.
         let declared = try Fields.ordered(fields.next(), of: "declared", name)
         let table = try fields.list(judged)
-        let calls = try fields.list { written in try Fields.list(written, of: "calls", name) }
         let answers = try keyed(fields.next(), of: "answers", lowered)
         let numbering = try Numbering(written: fields.next(), declaring: declared)
         let typeNumbering = try typeNumbering(fields.next())
@@ -77,7 +76,6 @@ struct ObjectReader {
             leaned: leaned,
             declared: declared,
             table: table,
-            calls: calls,
             answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,

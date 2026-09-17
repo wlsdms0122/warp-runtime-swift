@@ -32,10 +32,6 @@ struct Assembled: Sendable {
     // spelling reaches it, so it stands here rather than in `rows`.
     let closures: [[Int]]
 
-    // What each row calls, by row. A closure calls through its own body
-    // and is reached by no spelling, so its entry is empty.
-    let calls: [[Name]]
-
     // By document, which is what a body carries and what a row says it
     // came from. Read at every row walked, so read by position.
     let numbering: [Numbering]
@@ -48,13 +44,11 @@ struct Assembled: Sendable {
 
         var table: [Judged] = []
         var origins: [Int] = []
-        var calls: [[Name]] = []
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
 
         table.reserveCapacity(held)
         origins.reserveCapacity(held)
-        calls.reserveCapacity(held)
         rows.reserveCapacity(held)
 
         for (origin, document) in documents.enumerated() {
@@ -84,8 +78,6 @@ struct Assembled: Sendable {
 
             table.append(contentsOf: document.table)
             origins.append(contentsOf: [Int](repeating: origin, count: document.table.count))
-            calls.append(contentsOf: document.calls)
-            calls.append(contentsOf: [[Name]](repeating: [], count: document.lifted.count))
         }
 
         self.table = table
@@ -93,7 +85,6 @@ struct Assembled: Sendable {
         self.origins = origins
         self.rows = rows
         self.closures = closures
-        self.calls = calls
         self.numbering = documents.map(\.numbering)
         self.typeNumbering = documents.map(\.typeNumbering)
         self.variables = documents.map(\.variables)

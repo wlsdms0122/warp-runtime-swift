@@ -34,7 +34,6 @@ enum ObjectCoverageFixture {
                 try lifted(label: "a.twenty"),
                 try lifted(label: "a.twentyOne")
             ],
-            calls: [["a.twelve"], []],
             answers: ["a.eleven": everyLoweredType],
             // The two closures behind the spellings belong to the declaration whose
             // body stands them up, which is the one with a body.
