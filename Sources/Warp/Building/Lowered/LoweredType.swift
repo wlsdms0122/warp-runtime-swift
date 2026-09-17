@@ -78,11 +78,11 @@ indirect enum LoweredType: Sendable {
     case undeclared(label: String, refusal: String)
 
     // MARK: - Property
-    // What a box holds. A variable is a fact about the slot, and what is read
-    // out of one is the type inside it.
+    // What a field a declaration wrote `var` holds. The mark is a fact about
+    // the field, and what is read out of it is the type inside.
     //
-    // No `default` on any of the three below: a mark nobody thought about must
-    // be a compile error here rather than an answer of "no mark".
+    // No `default` on either below: a mark nobody thought about must be a
+    // compile error here rather than an answer of "no mark".
     var fieldUnwrapped: LoweredType {
         switch self {
         case let .variable(inner):
@@ -90,18 +90,6 @@ indirect enum LoweredType: Sendable {
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
-            .named, .parameter, .reading, .member, .undeclared:
-            return self
-        }
-    }
-
-    var inoutUnwrapped: LoweredType {
-        switch self {
-        case let .inout(inner):
-            return inner
-
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
-            .ranged, .array, .dictionary, .record, .procedure, .variable, .nullable,
             .named, .parameter, .reading, .member, .undeclared:
             return self
         }
