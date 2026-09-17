@@ -40,7 +40,7 @@ extension Builder {
         let symbol: Symbol
 
         let block: Block
-        let environment: [Name: LoweredType]
+        let environment: [Name: Binding]
         let sends: Set<Name>
     }
 

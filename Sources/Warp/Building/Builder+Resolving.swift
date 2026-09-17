@@ -369,7 +369,7 @@ extension Builder {
                 let (judged, calls) = try await resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in type(of: value, in: context.loweredTypes) },
+                    in: known.mapValues { value in .fixed(type(of: value, in: context.loweredTypes)) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -428,7 +428,7 @@ extension Builder {
                 let (judged, calls) = try await resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in type(of: value, in: context.loweredTypes) },
+                    in: known.mapValues { value in .fixed(type(of: value, in: context.loweredTypes)) },
                     with: context,
                     folding: nil,
                     writing: fulfillment

@@ -32,8 +32,8 @@ extension Builder {
     // MARK: - Internal
     // The environment a procedure's body starts from: its own parameters, which
     // are the only names declared before the first statement.
-    func environment(of signature: Signature, in table: LoweredTypeTable) -> [Name: LoweredType] {
-        signature.parameters.mapValues { parameter in parameter.declared.lowered(in: table) }
+    func environment(of signature: Signature, in table: LoweredTypeTable) -> [Name: Binding] {
+        signature.parameters.mapValues { parameter in Binding(parameter: parameter.declared.lowered(in: table)) }
     }
 
     // What a body hands its caller: the result it reads, and every `return`
@@ -49,7 +49,7 @@ extension Builder {
     func reading(
         from block: Block,
         at place: Place,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext
     ) async throws -> LoweredType {
         let walked = try await inspected(
@@ -98,7 +98,7 @@ extension Builder {
     func resolvedSites(
         in block: Block,
         at place: Place,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         answering returns: TypeExpression?,
         with context: TypingContext,
         folding: Folding?,
@@ -128,7 +128,7 @@ extension Builder {
     func resolvedSites(
         in expression: Expression,
         at place: Place,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
@@ -361,20 +361,18 @@ extension Builder {
     // all, so there is nothing to judge and nothing to refuse.
     func reading(
         of path: [PathSegment],
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
 
-        guard case let .key(head, _)? = path.first, var current = environment[head] else {
+        guard case let .key(head, _)? = path.first, let bound = environment[head] else {
             return asWritten(path, in: environment, with: context, at: place, writing: fulfillment)
         }
 
-        // A box stands in the environment marked as one; what is read out of
-        // it is what it holds.
-        current = current.fieldUnwrapped.inoutUnwrapped
+        var current = bound.type
 
         var resolved: [PathSegment] = [.key(head)]
         var walked: [PathSegment] = [.key(head)]
@@ -674,7 +672,7 @@ extension Builder {
     // stops.
     private func asWritten(
         _ segments: [PathSegment],
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -714,7 +712,7 @@ extension Builder {
 
     private func indexReference(
         _ inner: [PathSegment],
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -743,7 +741,7 @@ extension Builder {
     // provably is not.
     private func keyReference(
         _ inner: [PathSegment],
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -912,23 +910,18 @@ extension Builder {
         return (join(held.type, later.type), held.definite)
     }
 
-    private func apply(_ flowed: Flow, to environment: inout [Name: LoweredType]) {
+    private func apply(_ flowed: Flow, to environment: inout [Name: Binding]) {
         for (name, write) in flowed.written {
-            // A box whose type is fixed was checked where it was written, and
-            // a write into it changes nothing about what it holds.
-            if case .inout? = environment[name] { continue }
+            // A flow writes boxes, and a box that declared its type was
+            // checked where it was written, so a write into it changes
+            // nothing about what it holds.
+            guard case let .assigned(held)? = environment[name] else { continue }
 
-            let held = environment[name]?.fieldUnwrapped
-
-            let retyped = write.definite
-                ? write.type
-                : join(held, write.type)
-
-            if case .variable? = environment[name] {
-                environment[name] = .variable(retyped)
-            } else {
-                environment[name] = retyped
-            }
+            environment[name] = .assigned(
+                write.definite
+                    ? write.type
+                    : join(held, write.type)
+            )
         }
     }
 
@@ -1075,7 +1068,7 @@ extension Builder {
     private func inspected(
         _ expression: Expression,
         at place: Place,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
     ) async throws -> Inspection {
@@ -1378,7 +1371,7 @@ extension Builder {
                 // and the body that declared the variable reads it as the
                 // type it gave it. A write here retypes nothing outside.
                 for (name, write) in inner.flow.written.sorted(by: { $0.key < $1.key }) {
-                    guard let held = environment[name]?.fieldUnwrapped.inoutUnwrapped else { continue }
+                    guard let held = environment[name]?.type else { continue }
 
                     guard held.accepts(write.type, in: context.loweredTypes) else {
                         throw BuildError(
@@ -1412,7 +1405,11 @@ extension Builder {
             // said about it. The claim is the slot's, so it stands wherever the
             // name is read, and a closure that applies a captured one is judged
             // on that word exactly as the body around it would be.
-            let captured = environment.filter { _, held in
+            let captured = environment.compactMapValues { bound -> LoweredType? in
+                guard case let .fixed(held) = bound else { return nil }
+
+                return held
+            }.filter { _, held in
                 held.isConstProcedure || held.isIsolatedProcedure
             }
 
@@ -1812,8 +1809,8 @@ extension Builder {
                 var exit = seeded
 
                 for (name, written) in rounds.environment {
-                    exit[name] = seeded[name].map { entry in join(entry, written) }
-                        ?? join(.null, written)
+                    exit[name] = seeded[name].map { entry in entry.holding(join(entry.type, written.type)) }
+                        ?? .fixed(join(.null, written.type))
                 }
 
                 tail = try await inspected(result, at: place.part(.result), in: exit, with: context, ask: ask)
@@ -1897,7 +1894,7 @@ extension Builder {
         contract asked: ContractProcedure,
         call: Call,
         at place: Place,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
     ) async throws -> Inspection {
@@ -1997,7 +1994,7 @@ extension Builder {
     private func inspected(
         block: Block,
         at place: Place,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
     ) async throws -> (block: Block, calls: [CallSite], reading: LoweredType, flow: Flow) {
@@ -2066,7 +2063,7 @@ extension Builder {
     private typealias BodyWalk = (
         body: [Statement],
         calls: [CallSite],
-        environment: [Name: LoweredType],
+        environment: [Name: Binding],
         reading: LoweredType,
         flow: Flow
     )
@@ -2079,7 +2076,7 @@ extension Builder {
     private func inspected(
         _ body: [Statement],
         at place: Place,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
     ) async throws -> BodyWalk {
@@ -2165,16 +2162,13 @@ extension Builder {
             // nothing holds what the link worked out from what it was given.
             case let .constant(id, declared)?:
                 locals.insert(id)
-                environment[id] = try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
+                environment[id] = .fixed(try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask))
 
-            // A variable stands in the environment as a box, so a later
-            // write can tell it from a fixed name. A box that said what it
-            // holds is fixed at that, and a write into it is held to it.
             case let .variable(id, declared)?:
                 locals.insert(id)
 
                 let holds = try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
-                environment[id] = declared == nil ? .variable(holds) : .inout(holds)
+                environment[id] = declared == nil ? .assigned(holds) : .declared(holds)
 
             // A write to a whole variable retypes it, the way a declaration
             // did, unless the box's type is fixed elsewhere, in which case what
@@ -2185,7 +2179,7 @@ extension Builder {
                 guard let id = path.head else { break }
 
                 switch environment[id] {
-                case let .inout(fixed)?:
+                case let .declared(fixed)?:
                     try refuseUnfit(
                         inner.reading,
                         writtenTo: path,
@@ -2196,9 +2190,9 @@ extension Builder {
                         when: ask
                     )
 
-                case .variable?:
+                case .assigned?:
                     if path.count == 1 {
-                        environment[id] = .variable(inner.reading)
+                        environment[id] = .assigned(inner.reading)
 
                         if !locals.contains(id) {
                             flowed.written[id] = merged(flowed.written[id], with: (inner.reading, true))
@@ -2214,12 +2208,12 @@ extension Builder {
                             when: ask
                         )
 
-                        if !locals.contains(id), let current = environment[id]?.fieldUnwrapped {
+                        if !locals.contains(id), let current = environment[id]?.type {
                             flowed.written[id] = merged(flowed.written[id], with: (current, true))
                         }
                     }
 
-                default:
+                case .fixed?, nil:
                     try refuse(
                         "writes '\(id)', which is not a variable here",
                         at: here,
@@ -2376,10 +2370,10 @@ extension Builder {
     // The environment a loop's insides read: the enclosing names plus the
     // round. One maker, because the fixpoint and its asker both read it.
     private func rounded(
-        _ environment: [Name: LoweredType],
+        _ environment: [Name: Binding],
         as round: Name
-    ) -> [Name: LoweredType] {
-        environment.merging([round: Self.roundType]) { _, new in new }
+    ) -> [Name: Binding] {
+        environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
     }
 
     // The environment a walk's body reads: the enclosing names plus the
@@ -2390,8 +2384,8 @@ extension Builder {
     private func walking(
         _ element: Name,
         holding reading: LoweredType,
-        in environment: [Name: LoweredType]
-    ) -> [Name: LoweredType] {
+        in environment: [Name: Binding]
+    ) -> [Name: Binding] {
         let item: LoweredType
 
         if case let .array(held) = reading.unrefined {
@@ -2401,7 +2395,7 @@ extension Builder {
         }
 
         return environment.merging(
-            [element: .record(["item": item, "index": .int])]
+            [element: .fixed(.record(["item": item, "index": .int]))]
         ) { _, new in new }
     }
 
@@ -2411,13 +2405,13 @@ extension Builder {
     private func caught(
         soaking flow: Flow,
         failure: Name,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext
-    ) -> [Name: LoweredType] {
+    ) -> [Name: Binding] {
         var caught = environment
 
         apply(absorbed(flow), to: &caught)
-        caught[failure] = FailurePayload.declared.lowered(in: context.loweredTypes)
+        caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
 
         return caught
     }
@@ -2434,9 +2428,9 @@ extension Builder {
     // the body writes falls to `any`, over-wide and never wrong; the judging
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
-        from entry: [Name: LoweredType],
-        read: ([Name: LoweredType]) async throws -> (round: Round, flow: Flow)
-    ) async rethrows -> (environment: [Name: LoweredType], last: Round, converged: Bool) {
+        from entry: [Name: Binding],
+        read: ([Name: Binding]) async throws -> (round: Round, flow: Flow)
+    ) async rethrows -> (environment: [Name: Binding], last: Round, converged: Bool) {
         var seeded = entry
         var (last, flow) = try await read(seeded)
         var steps = 0
@@ -2457,7 +2451,7 @@ extension Builder {
         var widened = entry
 
         for name in absorbed(flow).written.keys {
-            widened[name] = .any
+            widened[name] = widened[name]?.holding(.any) ?? .assigned(.any)
         }
 
         // One more look in the widened environment, so what is handed back
@@ -2597,7 +2591,7 @@ extension Builder {
     // type that may be null is not written into, and neither is `any`.
     func writable(
         _ path: [PathSegment],
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -2606,7 +2600,7 @@ extension Builder {
             return .refused("writes '\(path.rendered)', and its head is not a name here")
         }
 
-        var current = box.fieldUnwrapped.inoutUnwrapped
+        var current = box.type
         var walked: [PathSegment] = [.key(head)]
 
         for segment in path.dropFirst() {
@@ -2698,7 +2692,7 @@ extension Builder {
     private func handedInPlace(
         by call: Call,
         to signature: Signature,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         when ask: Ask
@@ -2723,11 +2717,7 @@ extension Builder {
                 continue
             }
 
-            switch environment[head] {
-            case .variable?, .inout?:
-                break
-
-            default:
+            guard environment[head]?.isBox == true else {
                 try refuse(
                     "hands '\(head)' in place, which is a fixed name here. A"
                         + " variable is handed in place",
@@ -2775,7 +2765,7 @@ extension Builder {
         _ written: LoweredType,
         writtenTo path: [PathSegment],
         holding fixed: LoweredType?,
-        in environment: [Name: LoweredType],
+        in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         when ask: Ask
