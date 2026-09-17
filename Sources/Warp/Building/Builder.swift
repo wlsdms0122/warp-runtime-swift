@@ -808,13 +808,7 @@ public struct Builder: Sendable {
         while let row = frontier.popLast() {
             guard reached.insert(row).inserted else { continue }
 
-            frontier.append(contentsOf: table[row].reaches)
-
-            for variable in table[row].variables {
-                variables[table[row].origin][variable].value.closures { closure in
-                    frontier.append(closure.number)
-                }
-            }
+            frontier.append(contentsOf: table[row].reaches(starting: variables))
         }
 
         return reached

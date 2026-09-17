@@ -86,32 +86,25 @@ extension Operation {
 }
 
 extension Linked {
-    // The rows this row can send a run into: what its body names, or the
-    // sends a native declared.
-    var reaches: [Int] {
+    // The rows this row can send a run into: what its body names, the
+    // closures the variables it reads start out holding, since a body applies
+    // what it reads out of one without naming it, or the sends a native
+    // declared. The variables are every document's, by the document and then
+    // by the number it gave them.
+    func reaches(starting variables: [[(name: Name, value: Value)]]) -> [Int] {
         switch implementation {
-        case let .body(body, _):
+        case let .body(body, frame):
             var rows: [Int] = []
             body.reaches(into: &rows)
+
+            for (variable, _) in frame.variables {
+                variables[origin][variable].value.closures { closure in rows.append(closure.number) }
+            }
 
             return rows
 
         case .native:
             return sends.map(\.row)
-        }
-    }
-
-    // Which of its document's variables this row reads, by the number the
-    // document gave them. What a body applies out of one is entered without
-    // being named, so the closures a variable starts out holding are reached
-    // through the rows that read it.
-    var variables: [Int] {
-        switch implementation {
-        case let .body(_, frame):
-            return frame.variables.map(\.variable)
-
-        case .native:
-            return []
         }
     }
 }
