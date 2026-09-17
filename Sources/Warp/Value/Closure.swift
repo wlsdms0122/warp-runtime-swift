@@ -50,9 +50,11 @@ public struct Closure: Sendable {
 
     // Whether this may run beside another body. Constness does not answer it: a
     // const body can still call a native procedure that holds state, and that procedure
-    // is what two of these would meet in.
-    public var runsBeside: Bool {
-        linked?.isolation == .isolated
+    // is what two of these would meet in. Asked of the row the link answered,
+    // so a closure no link answered is refused here rather than read as one
+    // that may not.
+    public func runsBeside() throws -> Bool {
+        try answered().isolation == .isolated
     }
 
     // Whether a cell it took is a hold rather than a copy: a box of the

@@ -23,7 +23,7 @@ struct ClosureRows {
     private let documents: [Place.Document]
 
     // MARK: - Initializer
-    init(
+    private init(
         writing: [Closure.Writer: [Int]],
         numbering: [Numbering],
         closures: [[Int]],

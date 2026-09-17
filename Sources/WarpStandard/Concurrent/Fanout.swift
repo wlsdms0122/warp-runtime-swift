@@ -197,7 +197,7 @@ struct Fanout: Sendable {
         // The slot asks for isolated closures, so a piece that reached here
         // has already been settled against that. Asked again at the procedure's own
         // door, where a host that assembled the invocation itself arrives.
-        guard closure.runsBeside else {
+        guard try closure.runsBeside() else {
             throw ExecutionError(
                 "\(name) runs isolated closures, and piece \(label) writes"
                     + " what another body could touch"

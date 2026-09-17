@@ -722,7 +722,7 @@ extension LoweredType {
             )
         }
 
-        if isolation == .isolated, !closure.runsBeside {
+        if isolation == .isolated, try !closure.runsBeside() {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got a procedure that writes"
                     + " what another body could touch"
