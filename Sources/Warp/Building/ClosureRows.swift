@@ -51,7 +51,7 @@ struct ClosureRows {
 
     // MARK: - Public
     func row(of closure: Closure, at place: Place) throws -> Int {
-        guard let origins = writing[closure.writer], let origin = origins.first else {
+        guard let origins = writing[closure.writer] else {
             throw BuildError(
                 named.contains(closure.writer.document)
                     ? "closure \(closure.nth) of '\(closure.writer.name)', which wrote no closure"
@@ -60,7 +60,7 @@ struct ClosureRows {
             )
         }
 
-        guard origins.count == 1 else {
+        guard origins.count == 1, let origin = origins.first else {
             throw BuildError(
                 "a closure '\(closure.writer.name)' wrote, and "
                     + origins.map { origin in documents[origin].spelled(at: origin) }.joined(separator: " and ")
