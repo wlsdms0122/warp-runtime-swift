@@ -334,13 +334,14 @@ public struct Compiled: Sendable, Declaring {
     // Which document it belongs to and what it was compiled against are the
     // first two things written, so an object says what it stands against
     // before it says anything it stood on that.
-    // Nothing on either of two counts, and neither is something that went
-    // wrong. A document that settles a procedure into a value holds what an
-    // object carries as data and a procedure is not data, which is a property
-    // of the document: a caller told to build again would build the same
-    // document again. And a build handed no way to work a fingerprint out
-    // leaves every document that leaned on another unable to say what it is
-    // true against, which is a property of the build.
+    // Nothing on any of four counts, and none is something that went wrong.
+    // A document numbered by a link's rows is no object. A build handed no
+    // way to work a fingerprint out leaves every document that leaned on
+    // another unable to say what it is true against. A value holding a
+    // closure a document nobody wrote down wrote holds what no object can
+    // spell. And a value holding a closure that holds a box of the run that
+    // folded it holds what no object carries. Which one it was is what
+    // `object()` says.
     public var written: Value? {
         try? object()
     }

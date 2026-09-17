@@ -70,7 +70,6 @@ struct ObjectWriter {
             }),
             .array(compiled.constants.map(name))
         ])
-
     }
 
     // A value written down: the data as it is, and a closure by what it is

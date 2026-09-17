@@ -287,16 +287,12 @@ struct Compiling {
             documents: documents
         )
 
-        func held(_ value: Value) -> Bool {
-            value.holdsProcedure
-        }
-
         func answered(_ standing: Linked) throws -> Linked {
             let place = Place.procedure(standing.label.spelling, in: documents[standing.origin])
 
             guard case let .body(body, frame) = standing.implementation,
                   body.contains(where: { node in
-                      if case let .operation(.literal(value)) = node { return held(value) }
+                      if case let .operation(.literal(value)) = node { return value.holdsProcedure }
 
                       return false
                   })
@@ -309,7 +305,7 @@ struct Compiling {
                 implementation: .body(
                     try body.rewritten(
                         operation: { operation in
-                            guard case let .literal(value) = operation, held(value) else { return operation }
+                            guard case let .literal(value) = operation, value.holdsProcedure else { return operation }
 
                             return .literal(try value.rewritten { closure in
                                 try answering.answered(closure, at: place, rewriting: answered)
