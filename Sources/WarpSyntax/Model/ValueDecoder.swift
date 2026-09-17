@@ -389,11 +389,10 @@ struct ValueDecoder: Decoder {
             throw ReadingError("expected a record, found \(value.type)", at: steps)
         }
 
-        return try record.names
-            .map(\.spelling)
-            .sorted()
-            .reduce(into: [String: T]()) { read, key in
-                read[key] = try descending(to: key).decode(T.self)
+        return try record.entries
+            .sorted { left, right in left.name.spelling < right.name.spelling }
+            .reduce(into: [String: T]()) { read, entry in
+                read[entry.name.spelling] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
             }
     }
 
