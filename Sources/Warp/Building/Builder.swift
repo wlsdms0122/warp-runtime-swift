@@ -701,7 +701,7 @@ public struct Builder: Sendable {
 
     // Which row a run starts from, and which declarations it reaches. Nothing
     // runs here: every declaration stands compiled already, and the answer is
-    // read off the call graph the compile gathered.
+    // read off the code of the rows once the link has relocated them.
     //
     // What is judged here is what no document could answer about itself, and
     // is the second judgement for that reason: the entry names a declaration,
