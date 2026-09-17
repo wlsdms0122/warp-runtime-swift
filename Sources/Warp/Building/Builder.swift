@@ -779,7 +779,7 @@ public struct Builder: Sendable {
 
         // Walked as rows, reported as spellings: a closure is a row without
         // one and is walked through, and only what has one is reported.
-        let rows = try linked.table.reached(from: start, starting: variables, answering: relocating.row(of:))
+        let rows = try linked.table.reached(from: start, starting: variables, answering: relocating.row(of:holding:))
         let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(entry.value) }.map(\.key))
 
         return Image(

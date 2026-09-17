@@ -137,12 +137,18 @@ struct ObjectReader {
 
     // The document a closure's writer stands in, which may be another
     // document's: a closure a fold settled came out of whatever the fold ran.
+    // The writing spells no document nobody wrote down, so a writer with
+    // none is one the writing never laid down.
     private func writing(_ value: Value) throws -> Place.Document {
-        Place.Document(
-            identity: try Fields.maybe(value, of: "writer") { written in
-                Identity(try Fields.bytes(written, of: "writer"))
-            }
-        )
+        let identity = try Fields.maybe(value, of: "writer") { written in
+            Identity(try Fields.bytes(written, of: "writer"))
+        }
+
+        guard let identity else {
+            throw ObjectRefused("a closure's writer stands in a document nobody wrote down")
+        }
+
+        return Place.Document(identity: identity)
     }
 
     // The document a place inside this object is an address in. Every one of
@@ -190,7 +196,7 @@ extension ObjectReader {
         var fields = try Fields(value, of: "value")
         let read: Value
 
-        switch ObjectWriter.ValueTag(rawValue: try fields.tag()) {
+        switch ValueTag(rawValue: try fields.tag()) {
         case .null: read = .null
         case .bool:
             guard case let .bool(held) = try fields.next() else {

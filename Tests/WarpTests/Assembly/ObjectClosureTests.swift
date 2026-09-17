@@ -24,16 +24,7 @@ struct ObjectClosureTests {
     @Test("a module variable starting as a closure comes back and runs")
     func aVariableThatStartsAsAProcedure() async throws {
         // Given
-        let sut = try Module(
-            variables: ["app.later": .closure(answering(7))],
-            procedures: [
-                "app.entry": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .apply(reference("app.later"), arguments: [:])
-                )
-            ]
-        )
+        let sut = try answeringLater(7, identity: Identity([1]))
 
         // When
         let answer = try await roundTripped(sut, entry: "app.entry")
@@ -45,16 +36,7 @@ struct ObjectClosureTests {
     @Test("a literal a body folded from a closure comes back and runs")
     func aLiteralFoldedFromAProcedure() async throws {
         // Given
-        let sut = try Module(
-            constants: ["app.made": .closure(answering(5))],
-            procedures: [
-                "app.entry": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .apply(reference("app.made"), arguments: [:])
-                )
-            ]
-        )
+        let sut = try madeOf(5, entry: "app.entry", identity: Identity([1]))
 
         // When
         let answer = try await roundTripped(sut, entry: "app.entry")
@@ -74,7 +56,8 @@ struct ObjectClosureTests {
                     body: [Statement(binding: .constant("x"), expression: .literal(.int(11)))],
                     result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: reference("x")))
                 )
-            ]
+            ],
+            identity: Identity([1])
         )
         let sut = try Module(
             imports: ["app.make"],
@@ -85,7 +68,8 @@ struct ObjectClosureTests {
                     body: [],
                     result: .apply(reference("app.held"), arguments: [:])
                 )
-            ]
+            ],
+            identity: Identity([2])
         )
 
         // When
@@ -167,22 +151,72 @@ struct ObjectClosureTests {
         #expect(try await Executor().run(image) == .int(6))
     }
 
-    @Test("a closure two documents nobody wrote down each write under one name has no one answer")
-    func twoUnwrittenWritersOfOneNameAreRefused() async throws {
-        // Given. The same two, with no identity to tell them apart by. Both
-        // closures are relocated at the link, and each is spelled by a name
-        // the two documents both write under
+    @Test("two documents nobody wrote down each read a closure of their own under one name")
+    func twoUnwrittenWritersOfOneNameEachReadTheirOwn() async throws {
+        // Given. The same two, with no identity to tell them apart by. Each
+        // holds its own closure in its own body, and the holder is read as
+        // the writer where it writes the name
         let one = try await builder.compile(Module.standard + [madeOf(5, entry: "app.one")])
         let other = try await builder.compile([madeOf(6, entry: "app.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
 
+        // When
+        let image = try await builder.link(one + other, entry: "app.two", supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image) == .int(6))
+    }
+
+    @Test("a closure a document nobody wrote down wrote is not written into an object")
+    func aClosureOfAnUnwrittenDocumentIsNotWritten() async throws {
+        // Given. A written document whose variable folds a closure out of
+        // an unwritten one. An object cannot spell the writer, so none is
+        // written for the holder
+        let maker = try Module(
+            procedures: [
+                "app.make": Procedure(
+                    signature: Signature(returns: .procedure(Signature(returns: .int))),
+                    body: [],
+                    result: .closure(answering(3))
+                )
+            ]
+        )
+        let sut = try Module(
+            imports: ["app.make"],
+            variables: ["app.held": .call(Call(selector: "app.make"))],
+            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .apply(reference("app.held"), arguments: [:]))],
+            identity: Identity([7])
+        )
+
+        // When
+        let compiled = try await builder.compile(Module.standard + [maker, sut])
+
+        // Then
+        #expect(compiled.last?.written == nil)
+    }
+
+    @Test("a closure holding a cell its frame has not is refused at the link")
+    func aClosureHoldingACellPastItsFrameIsRefused() async throws {
+        // Given. The closure the writer wrote takes nothing with it, and the
+        // value claims a cell at 99
+        let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
+        let forged = try holding(
+            Closure(
+                writer: Closure.Writer(document: .assembled, name: "app.later"),
+                nth: 0,
+                linked: nil,
+                captured: [(slot: 99, cell: .value(.int(1)))]
+            ),
+            in: compiled
+        )
+
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.link(one + other, entry: "app.one", supplying: Supplying(Module.standard))
+            try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
         }
     }
 
     // MARK: - Private
-    private func answeringLater(_ number: Int) throws -> Module {
+    private func answeringLater(_ number: Int, identity: Identity? = nil) throws -> Module {
         try Module(
             variables: ["app.later": .closure(answering(number))],
             procedures: [
@@ -191,7 +225,8 @@ struct ObjectClosureTests {
                     body: [],
                     result: .apply(reference("app.later"), arguments: [:])
                 )
-            ]
+            ],
+            identity: identity
         )
     }
 

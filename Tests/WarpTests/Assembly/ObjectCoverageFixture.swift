@@ -75,7 +75,7 @@ enum ObjectCoverageFixture {
                         .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
                         .record(Record(name: nil, ["c": .null])),
                         .dictionary(Value.Dictionary(ordered: [(name: "k", value: .int(3))])),
-                        .procedure(Closure(writer: Closure.Writer(document: .assembled, name: "a.eleven"), nth: 0, linked: nil, captured: []))
+                        .procedure(Closure(writer: Closure.Writer(document: Place.Document(identity: Identity([4])), name: "a.ten"), nth: 0, linked: nil, captured: []))
                     ])
                 )
             )

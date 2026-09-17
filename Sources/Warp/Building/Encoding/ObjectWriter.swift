@@ -118,7 +118,11 @@ struct ObjectWriter {
                 })
             )
 
+        // A document nobody wrote down is one an object cannot spell, so a
+        // closure such a document wrote is not written either.
         case let .procedure(closure):
+            guard closure.writer.document.identity != nil else { throw Unwritable() }
+
             return tagged(
                 .closure,
                 document(closure.writer.document),
@@ -133,23 +137,10 @@ struct ObjectWriter {
         }
     }
 
-    // What no object holds, met on the way to writing one.
+    // What no object holds, met on the way to writing one: a hold a closure
+    // captured, which is a box of the run that made it, or a closure a
+    // document nobody wrote down wrote.
     struct Unwritable: Error {}
-
-    // How a value is written down: its kind first, then what the kind holds.
-    // One list for the writing and the reading, so the two are one rule.
-    enum ValueTag: Int {
-        case null
-        case bool
-        case int
-        case double
-        case string
-        case bytes
-        case array
-        case record
-        case dictionary
-        case closure
-    }
 
     private func tagged(_ tag: ValueTag, _ fields: Value...) -> Value {
         .array([.int(tag.rawValue)] + fields)
