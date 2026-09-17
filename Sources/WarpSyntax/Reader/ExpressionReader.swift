@@ -146,11 +146,11 @@ public struct ExpressionReader: Decodable {
 
         guard !formKeys.isEmpty else { return try fields(in: record, at: steps, in: decoder) }
 
-        if record.names.contains("ref") { return try reference(in: record, at: steps, in: decoder) }
+        if record.names.contains("ref") { return try reference(in: record) }
         if record.names.contains("as") || record.names.contains("as?") { return try cast(in: record, at: steps, in: decoder) }
         if record.names.contains(Self.closureKey) { return try closure(in: record, at: steps, in: decoder) }
         if record.names.contains("call") { return try call(in: record, at: steps, in: decoder) }
-        if record.names.contains("value") { return try literal(in: record, at: steps, in: decoder) }
+        if record.names.contains("value") { return try literal(in: record) }
 
         return try template(in: record, at: steps, in: decoder)
     }
@@ -172,11 +172,7 @@ public struct ExpressionReader: Decodable {
         )
     }
 
-    private static func reference(
-        in record: Value.Dictionary,
-        at steps: [Place.Step],
-        in decoder: Decoder?
-    ) throws -> Expression {
+    private static func reference(in record: Value.Dictionary) throws -> Expression {
         guard record.count == 1 else {
             throw ExpressionFormError(
                 "a record with `ref` must be exactly { ref: <path> }."
@@ -333,11 +329,7 @@ public struct ExpressionReader: Decodable {
         }
     }
 
-    private static func literal(
-        in record: Value.Dictionary,
-        at steps: [Place.Step],
-        in decoder: Decoder?
-    ) throws -> Expression {
+    private static func literal(in record: Value.Dictionary) throws -> Expression {
         guard record.count == 1, let payload = record["value"] else {
             throw ExpressionFormError(
                 "a record with `value` must be exactly { value: <data> }."
