@@ -20,9 +20,7 @@ extension Body {
 
 extension Argument {
     func reaches(into rows: inout [Int]) {
-        guard case let .value(operation) = self else { return }
-
-        operation.reaches(into: &rows)
+        read.reaches(into: &rows)
     }
 }
 
