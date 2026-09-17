@@ -120,7 +120,7 @@ public struct Compiled: Sendable, Declaring {
     // What a closure written by this document is spelled with: the text it
     // was read from, or this compile of it.
     var naming: Closure.Document {
-        identity.map(Closure.Document.written) ?? .compiled(token)
+        Closure.Document(identity: identity, token: token)
     }
 
     // MARK: - Initializer
@@ -342,9 +342,12 @@ public struct Compiled: Sendable, Declaring {
     // leaves every document that leaned on another unable to say what it is
     // true against, which is a property of the build.
     public var written: Value? {
-        ObjectWriter().value(of: self).map { written in
-            .array([.int(Self.format), .string(Self.runtime), written])
-        }
+        try? object()
+    }
+
+    // The same, saying why there is none where there is none.
+    public func object() throws(ObjectUnwritable) -> Value {
+        .array([.int(Self.format), .string(Self.runtime), try ObjectWriter().value(of: self)])
     }
 
     // The same object, said as what it was worked out to be.

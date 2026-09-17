@@ -32,17 +32,19 @@ struct ObjectWriter {
         return .array([try write(value)])
     }
 
-    func value(of compiled: Compiled) -> Value? {
+    func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
         // A numbering counting from a link's own rows belongs to no document,
         // so what holds one is not an object and there is none to write.
         guard let numbering = compiled.numbering.written(declaring: compiled.declared.count) else {
-            return nil
+            throw ObjectUnwritable("the document is numbered by a link's rows, and is no object")
         }
 
         // A document compiled against an object nobody worked a fingerprint
         // out for cannot say what it is true against, and an object that says
         // less than it leans on is one a cache would hand back wrongly.
-        guard let dependencies = compiled.dependencies else { return nil }
+        guard let dependencies = compiled.dependencies else {
+            throw ObjectUnwritable("the document leans on one no fingerprint was worked out for")
+        }
 
         // What this cannot write is a closure: one holding a box of the run
         // that made it, or one a document nobody wrote down wrote. Either is
@@ -72,7 +74,7 @@ struct ObjectWriter {
                 .array(compiled.constants.map(name))
             ])
         } catch {
-            return nil
+            throw ObjectUnwritable(error.reason)
         }
 
         return written
@@ -123,7 +125,9 @@ struct ObjectWriter {
         // A document nobody wrote down is one an object cannot spell, so a
         // closure such a document wrote is not written either.
         case let .procedure(closure):
-            guard case let .written(identity) = closure.writer.document else { throw Unwritable() }
+            guard case let .written(identity) = closure.writer.document else {
+                throw Unwritable(reason: "a value holds a closure a document nobody wrote down wrote")
+            }
 
             return tagged(
                 .closure,
@@ -131,7 +135,9 @@ struct ObjectWriter {
                 name(closure.writer.name),
                 .int(closure.nth),
                 .array(try closure.captured.map { (slot, cell) throws(Unwritable) -> Value in
-                    guard case let .value(held) = cell else { throw Unwritable() }
+                    guard case let .value(held) = cell else {
+                        throw Unwritable(reason: "a value holds a closure holding a box of the run that made it")
+                    }
 
                     return .array([.int(slot), try self.value(held)])
                 })
@@ -142,7 +148,9 @@ struct ObjectWriter {
     // What no object holds, met on the way to writing one: a hold a closure
     // captured, which is a box of the run that made it, or a closure a
     // document nobody wrote down wrote.
-    struct Unwritable: Error {}
+    struct Unwritable: Error {
+        let reason: String
+    }
 
     private func tagged(_ tag: ValueTag, _ fields: Value...) -> Value {
         .array([.int(tag.rawValue)] + fields)
