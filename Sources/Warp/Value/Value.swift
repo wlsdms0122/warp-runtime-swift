@@ -103,7 +103,13 @@ public indirect enum Value: Sendable, Equatable {
     // only at the outside would pass a program that carries one and refuse the
     // same program written without the wrapper.
     public var holdsProcedure: Bool {
-        !walked { _ in false }
+        holdsClosure { _ in true }
+    }
+
+    // Whether a closure this value holds answers the predicate. Stops at the
+    // first that does.
+    func holdsClosure(where predicate: (Closure) -> Bool) -> Bool {
+        !walked { closure in !predicate(closure) }
     }
 
     // Every closure this value holds, however deep: inside an array, a record
