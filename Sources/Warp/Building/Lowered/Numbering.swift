@@ -207,15 +207,7 @@ struct Numbering: Sendable {
     // standing up a number outside its own run is a body reaching a closure
     // some other declaration wrote.
     func writing(_ nth: Int) -> Name? {
-        var standing = 0
-
-        for run in runs {
-            standing += run.count
-
-            if nth < standing { return run.name }
-        }
-
-        return nil
+        written(nth)?.by
     }
 
     // Which declaration wrote the closure standing nth among this document's,
