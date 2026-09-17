@@ -35,7 +35,7 @@ public enum BinaryEncoding {
 
     // How deep a document may nest. The bound is exact: a reader takes every
     // document within it and refuses the first container past it.
-    static let depth = 512
+    static let depth = 128
 
     private enum Tag: UInt8 {
         case null = 0x00

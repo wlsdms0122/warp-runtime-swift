@@ -33,7 +33,7 @@ public enum TextEncoding {
 
     // The same bound the binary reader holds. One document has one depth,
     // whichever encoding carries it.
-    static let depth = 512
+    static let depth = 128
 
     // MARK: - Public
     public static func text(from value: Value) throws -> String {

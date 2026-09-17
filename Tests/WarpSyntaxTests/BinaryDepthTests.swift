@@ -22,7 +22,7 @@ struct BinaryDepthTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("is written, read and written again at the bound", arguments: [1, 64, 511])
+    @Test("is written, read and written again at the bound", arguments: [1, 64, 128])
     func survivesAtTheBound(_ deep: Int) throws {
         // Given. Arrays inside arrays, one element each, the innermost holding
         // a value.
@@ -39,7 +39,7 @@ struct BinaryDepthTests {
     @Test("is refused past the bound rather than ending the process")
     func refusesPastTheBound() throws {
         #expect(throws: (any Error).self) {
-            try BinaryEncoding.data(from: Self.nested(600))
+            try BinaryEncoding.data(from: Self.nested(129))
         }
     }
 
