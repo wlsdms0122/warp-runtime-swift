@@ -26,8 +26,10 @@ struct ObjectWriter {
     // one, so a value that is itself null is told from no value at all. The
     // reading of it is `Fields.maybe`, and the two are one rule said from
     // each side.
-    static func maybe<T>(_ value: T?, _ write: (T) throws -> Value) rethrows -> Value {
-        try value.map { held in .array([try write(held)]) } ?? .array([])
+    static func maybe<T, Failure: Error>(_ value: T?, _ write: (T) throws(Failure) -> Value) throws(Failure) -> Value {
+        guard let value else { return .array([]) }
+
+        return .array([try write(value)])
     }
 
     func value(of compiled: Compiled) -> Value? {
@@ -42,27 +44,30 @@ struct ObjectWriter {
         // less than it leans on is one a cache would hand back wrongly.
         guard let dependencies = compiled.dependencies else { return nil }
 
+        // The one thing this cannot write is a hold a closure captured, which
+        // is a box of the run that made it, and that is the one error thrown
+        // on the way down.
         let written: Value
 
         do {
             written = .array([
-            document(compiled.document),
-            .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
-            keyed(compiled.types, type),
-            keyed(compiled.constraints) { types in .array(types.map(type)) },
-            keyed(compiled.contracts) { procedures in keyed(procedures, signature) },
-            keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
-            .array(compiled.leaned.keys.sorted().map { claim in
-                .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
-            }),
-            .array(compiled.declared.map(name)),
-            .array(try compiled.table.map(judged)),
-            keyed(compiled.answers, lowered),
-            numbering,
-            typeNumbering(compiled.typeNumbering),
-            .array(try compiled.variables.map { entry in
-                .array([name(entry.name), try value(entry.value)])
-            })
+                document(compiled.document),
+                .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
+                keyed(compiled.types, type),
+                keyed(compiled.constraints) { types in .array(types.map(type)) },
+                keyed(compiled.contracts) { procedures in keyed(procedures, signature) },
+                keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
+                .array(compiled.leaned.keys.sorted().map { claim in
+                    .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
+                }),
+                .array(compiled.declared.map(name)),
+                .array(try compiled.table.map(judged)),
+                keyed(compiled.answers, lowered),
+                numbering,
+                typeNumbering(compiled.typeNumbering),
+                .array(try compiled.variables.map { entry in
+                    .array([name(entry.name), try value(entry.value)])
+                })
             ])
         } catch {
             return nil
@@ -74,7 +79,7 @@ struct ObjectWriter {
     // A value written down: the data as it is, and a closure by what it is
     // spelled by, since the row a link gave it is the link's. A cell held
     // is a box of the run that made the closure, and no object holds one.
-    func value(_ value: Value) throws -> Value {
+    func value(_ value: Value) throws(Unwritable) -> Value {
         switch value {
         case .null:
             return .array([.int(0)])
@@ -108,7 +113,9 @@ struct ObjectWriter {
         case let .dictionary(dictionary):
             return .array([
                 .int(8),
-                .array(try dictionary.entries.map { entry in .array([name(entry.name), try self.value(entry.value)]) })
+                .array(try dictionary.entries.map { (entry) throws(Unwritable) -> Value in
+                    .array([name(entry.name), try self.value(entry.value)])
+                })
             ])
 
         case let .procedure(closure):
@@ -116,7 +123,7 @@ struct ObjectWriter {
                 .int(9),
                 name(closure.writing),
                 .int(closure.nth),
-                .array(try closure.captured.map { slot, cell in
+                .array(try closure.captured.map { (slot, cell) throws(Unwritable) -> Value in
                     guard case let .value(held) = cell else { throw Unwritable() }
 
                     return .array([.int(slot), try self.value(held)])
@@ -132,10 +139,14 @@ struct ObjectWriter {
     // A list a name keys, in name order. The order is the whole of what makes
     // two writings of one object the same bytes, since a dictionary has none
     // to lend.
-    private func keyed<T>(_ entries: [Name: T], _ write: (T) throws -> Value) rethrows -> Value {
-        .array(try entries.keys.sorted().map { key in
-            .array([name(key), try write(entries[key]!)])
-        })
+    private func keyed<T, Failure: Error>(_ entries: [Name: T], _ write: (T) throws(Failure) -> Value) throws(Failure) -> Value {
+        var written: [Value] = []
+
+        for key in entries.keys.sorted() {
+            written.append(.array([name(key), try write(entries[key]!)]))
+        }
+
+        return .array(written)
     }
 
     private func name(_ name: Name) -> Value {
@@ -514,7 +525,7 @@ private extension ObjectWriter {
 }
 
 private extension ObjectWriter {
-    func judged(_ row: Judged) throws -> Value {
+    func judged(_ row: Judged) throws(Unwritable) -> Value {
         .array([
             name(row.label),
             signature(row.signature),
@@ -526,7 +537,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func implementation(_ implementation: Judged.Implementation) throws -> Value {
+    func implementation(_ implementation: Judged.Implementation) throws(Unwritable) -> Value {
         switch implementation {
         case let .body(body, frame):
             return .array([.int(0), try self.body(body), self.frame(frame)])
@@ -553,14 +564,14 @@ private extension ObjectWriter {
         ])
     }
 
-    func body(_ body: Body) throws -> Value {
+    func body(_ body: Body) throws(Unwritable) -> Value {
         .array([
             .array(try body.instructions.map(instruction)),
             try ObjectWriter.maybe(body.result, operation)
         ])
     }
 
-    func instruction(_ instruction: Instruction) throws -> Value {
+    func instruction(_ instruction: Instruction) throws(Unwritable) -> Value {
         .array([
             ObjectWriter.maybe(instruction.binding, binding),
             try operation(instruction.code),
@@ -603,7 +614,7 @@ private extension ObjectWriter {
 }
 
 private extension ObjectWriter {
-    func operation(_ operation: Operation) throws -> Value {
+    func operation(_ operation: Operation) throws(Unwritable) -> Value {
         switch operation {
         case let .literal(value):
             return .array([.int(0), try self.value(value)])
@@ -628,7 +639,7 @@ private extension ObjectWriter {
             return .array([
                 .int(5),
                 try self.operation(callee),
-                .array(try arguments.map { argument in
+                .array(try arguments.map { (argument) throws(Unwritable) -> Value in
                     .array([name(argument.0), try self.operation(argument.1)])
                 })
             ])
@@ -644,7 +655,7 @@ private extension ObjectWriter {
                 .int(8),
                 try self.operation(condition),
                 .array(try then.map(instruction)),
-                try ObjectWriter.maybe(otherwise) { written in .array(try written.map(instruction)) }
+                try ObjectWriter.maybe(otherwise) { (written) throws(Unwritable) -> Value in .array(try written.map(instruction)) }
             ])
 
         case let .loop(while: condition, body: body, round: round, keeps: keeps):
@@ -675,15 +686,15 @@ private extension ObjectWriter {
         }
     }
 
-    func recordOperation(_ record: RecordOperation) throws -> Value {
+    func recordOperation(_ record: RecordOperation) throws(Unwritable) -> Value {
         .array([layout(record.layout), .array(try record.fields.map(operation))])
     }
 
-    func callOperation(_ call: CallOperation) throws -> Value {
+    func callOperation(_ call: CallOperation) throws(Unwritable) -> Value {
         .array([
             .int(call.procedure),
             try ObjectWriter.maybe(call.receiver, operation),
-            .array(try call.arguments.map { argument in try ObjectWriter.maybe(argument, self.operation) }),
+            .array(try call.arguments.map { (argument) throws(Unwritable) -> Value in try ObjectWriter.maybe(argument, self.operation) }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
             })
@@ -693,7 +704,7 @@ private extension ObjectWriter {
     // Without the calls beside it. Which row answers a contract is the link's
     // answer and an object stands before one, so writing them down would be
     // writing a fact this document does not hold.
-    func dispatchOperation(_ dispatch: DispatchOperation) throws -> Value {
+    func dispatchOperation(_ dispatch: DispatchOperation) throws(Unwritable) -> Value {
         .array([
             name(dispatch.contract),
             name(dispatch.procedure),
@@ -702,7 +713,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func argument(_ argument: Argument) throws -> Value {
+    func argument(_ argument: Argument) throws(Unwritable) -> Value {
         switch argument {
         case let .value(operation):
             return .array([.int(0), try self.operation(operation)])
