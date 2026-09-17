@@ -35,13 +35,3 @@ struct Instruction: Sendable {
     // MARK: - Public
     // MARK: - Private
 }
-
-extension Instruction {
-    func reads(_ slots: Range<Int>) -> Bool {
-        if case let .assign(address, _)? = binding, address.reads(slots) {
-            return true
-        }
-
-        return code.reads(slots)
-    }
-}

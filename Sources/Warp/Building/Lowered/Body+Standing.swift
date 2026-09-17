@@ -13,10 +13,6 @@ import Foundation
 // One walk answers all of them, because they are read off the same places, and
 // one door asks it: the row the body belongs to, handed what only the list
 // beside it knows.
-//
-// `reads` asks a further question over the same shape and stays apart: it
-// counts only the slots a body's value depends on, and leaves out the ones it
-// writes.
 extension Body {
     struct Standing {
         // MARK: - Property
@@ -96,33 +92,63 @@ extension Body {
     var standing: Standing {
         var standing = Standing()
 
-        stand(in: &standing)
+        walk { node in
+            node.stand(in: &standing)
+
+            return true
+        }
 
         return standing
     }
-
-    func stand(in standing: inout Body.Standing) {
-        instructions.forEach { instruction in instruction.stand(in: &standing) }
-        result?.stand(in: &standing)
-    }
 }
 
-extension Instruction {
+extension Body.Node {
+    // What this one node stands on, apart from what nests in it.
     func stand(in standing: inout Body.Standing) {
-        switch binding {
-        case let .bind(slot, settling)?, let .declare(slot, settling)?:
-            standing.stand(on: slot)
-            settling.map { type in standing.stand(on: type) }
+        switch self {
+        case let .instruction(instruction):
+            switch instruction.binding {
+            case let .bind(slot, settling)?, let .declare(slot, settling)?:
+                standing.stand(on: slot)
+                settling.map { type in standing.stand(on: type) }
 
-        case let .assign(address, settling)?:
-            address.stand(in: &standing)
-            settling.map { type in standing.stand(on: type) }
+            case let .assign(address, settling)?:
+                address.stand(in: &standing)
+                settling.map { type in standing.stand(on: type) }
 
-        case nil:
-            break
+            case nil:
+                break
+            }
+
+        case let .operation(operation):
+            switch operation {
+            case let .local(address):
+                address.stand(in: &standing)
+
+            // The outer slot is this frame's and the inner one is the
+            // closure's own, so the two are counted apart.
+            case let .closure(number, captures):
+                captures.forEach { outer, _ in standing.stand(on: outer) }
+                standing.stand(up: number, taking: captures.map { _, inner in inner })
+
+            case let .cast(_, type, _):
+                standing.stand(on: type)
+
+            case let .loop(_, _, round, keeps):
+                standing.stand(on: round)
+                keeps.map { kept in standing.stand(over: kept) }
+
+            case let .attempt(_, _, failure):
+                standing.stand(on: failure)
+
+            case let .call(call):
+                standing.stand(calling: call.procedure, handing: call.arguments.count)
+                call.handed.forEach { handed in handed.address.stand(in: &standing) }
+
+            case .literal, .array, .record, .apply, .block, .conditional, .dispatch, .leave:
+                break
+            }
         }
-
-        code.stand(in: &standing)
     }
 }
 
@@ -138,86 +164,5 @@ extension Step {
         guard case let .at(address, _) = self else { return }
 
         address.stand(in: &standing)
-    }
-}
-
-extension Argument {
-    func stand(in standing: inout Body.Standing) {
-        switch self {
-        case let .value(operation):
-            operation.stand(in: &standing)
-
-        case let .reference(address):
-            address.stand(in: &standing)
-        }
-    }
-}
-
-extension Operation {
-    func stand(in standing: inout Body.Standing) {
-        switch self {
-        case .literal:
-            break
-
-        case let .local(address):
-            address.stand(in: &standing)
-
-        case let .array(elements):
-            elements.forEach { element in element.stand(in: &standing) }
-
-        case let .record(record):
-            record.fields.forEach { field in field.stand(in: &standing) }
-
-        // The outer slot is this frame's and the inner one is the closure's
-        // own, so the two are counted apart.
-        case let .closure(number, captures):
-            captures.forEach { outer, _ in standing.stand(on: outer) }
-            standing.stand(up: number, taking: captures.map { _, inner in inner })
-
-        case let .apply(callee, arguments):
-            callee.stand(in: &standing)
-            arguments.forEach { _, argument in argument.stand(in: &standing) }
-
-        case let .cast(read, type, _):
-            read.stand(in: &standing)
-            standing.stand(on: type)
-
-        case let .block(body):
-            body.stand(in: &standing)
-
-        case let .conditional(condition, then: then, else: otherwise):
-            condition.stand(in: &standing)
-            then.forEach { instruction in instruction.stand(in: &standing) }
-            otherwise?.forEach { instruction in instruction.stand(in: &standing) }
-
-        case let .loop(while: condition, body: body, round: round, keeps: keeps):
-            condition.stand(in: &standing)
-            body.stand(in: &standing)
-            standing.stand(on: round)
-            if let kept = keeps {
-                standing.stand(over: kept)
-            }
-
-        case let .attempt(body, rescue: rescue, failure: failure):
-            body.stand(in: &standing)
-            rescue.stand(in: &standing)
-            standing.stand(on: failure)
-
-        case let .call(call):
-            standing.stand(calling: call.procedure, handing: call.arguments.count)
-            call.receiver?.stand(in: &standing)
-            call.arguments.forEach { argument in argument?.stand(in: &standing) }
-            call.handed.forEach { handed in handed.address.stand(in: &standing) }
-
-        // What a call through a contract hands over is in `arguments`. The
-        // calls beside it are the link's copy of the same, so walking those
-        // too would count one fact twice.
-        case let .dispatch(dispatch):
-            dispatch.receiver.stand(in: &standing)
-            dispatch.arguments.forEach { _, argument in argument.stand(in: &standing) }
-
-        case let .leave(_, _, read):
-            read?.stand(in: &standing)
-        }
     }
 }

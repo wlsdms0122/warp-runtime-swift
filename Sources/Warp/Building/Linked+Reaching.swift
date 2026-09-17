@@ -12,75 +12,41 @@ import Foundation
 // whose body is a row of its own. Read once the link has answered every
 // number with a row, so what comes back is rows of this link.
 extension Body {
-    func reaches(into rows: inout [Int]) {
-        instructions.forEach { instruction in instruction.code.reaches(into: &rows) }
-        result?.reaches(into: &rows)
+    var reaches: [Int] {
+        var rows: [Int] = []
+
+        walk { node in
+            node.reaches(into: &rows)
+
+            return true
+        }
+
+        return rows
     }
 }
 
-extension Argument {
+extension Body.Node {
+    // The rows this one node sends a run into, apart from what nests in it.
     func reaches(into rows: inout [Int]) {
-        read.reaches(into: &rows)
-    }
-}
+        guard case let .operation(operation) = self else { return }
 
-extension Operation {
-    func reaches(into rows: inout [Int]) {
-        switch self {
+        switch operation {
         // A closure held by a value stands in a body as a literal, and its
         // row is the number the link answered it with.
         case let .literal(value):
             value.closures { closure in rows.append(closure.number) }
 
-        case .local:
-            break
-
-        case let .array(elements):
-            elements.forEach { element in element.reaches(into: &rows) }
-
-        case let .record(record):
-            record.fields.forEach { field in field.reaches(into: &rows) }
-
         case let .closure(row, _):
             rows.append(row)
 
-        case let .apply(callee, arguments):
-            callee.reaches(into: &rows)
-            arguments.forEach { _, argument in argument.reaches(into: &rows) }
-
-        case let .cast(read, _, _):
-            read.reaches(into: &rows)
-
-        case let .block(body):
-            body.reaches(into: &rows)
-
-        case let .conditional(condition, then: then, else: otherwise):
-            condition.reaches(into: &rows)
-            then.forEach { instruction in instruction.code.reaches(into: &rows) }
-            otherwise?.forEach { instruction in instruction.code.reaches(into: &rows) }
-
-        case let .loop(while: condition, body: body, _, _):
-            condition.reaches(into: &rows)
-            body.reaches(into: &rows)
-
-        case let .attempt(body, rescue: rescue, _):
-            body.reaches(into: &rows)
-            rescue.reaches(into: &rows)
-
         case let .call(call):
             rows.append(call.procedure)
-            call.receiver?.reaches(into: &rows)
-            call.arguments.forEach { argument in argument?.reaches(into: &rows) }
 
-        // The calls beside a dispatch hand over what `arguments` holds, so
-        // only the rows they reach are read off them.
         case let .dispatch(dispatch):
-            dispatch.receiver.reaches(into: &rows)
-            dispatch.arguments.forEach { _, argument in argument.reaches(into: &rows) }
             dispatch.calls.values.forEach { call in rows.append(call.procedure) }
 
-        case let .leave(_, _, read):
-            read?.reaches(into: &rows)
+        case .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+            break
         }
     }
 }
@@ -94,8 +60,7 @@ extension Linked {
     func reaches(starting variables: [(name: Name, value: Value)]) -> [Int] {
         switch implementation {
         case let .body(body, frame):
-            var rows: [Int] = []
-            body.reaches(into: &rows)
+            var rows = body.reaches
 
             for (variable, _) in frame.variables {
                 variables[variable].value.closures { closure in rows.append(closure.number) }

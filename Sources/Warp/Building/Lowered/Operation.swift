@@ -53,57 +53,34 @@ extension Operation {
     // Whether this reads any slot in the range, through a path's index
     // references as well. A closure's captures are reads of its own.
     func reads(_ slots: Range<Int>) -> Bool {
-        switch self {
-        case .literal:
-            return false
+        !walk { node in !node.reads(slots) }
+    }
+}
 
-        case let .local(address):
+extension Body.Node {
+    // Whether this one node reads a slot of the range, apart from what nests
+    // in it.
+    func reads(_ slots: Range<Int>) -> Bool {
+        switch self {
+        case let .instruction(instruction):
+            guard case let .assign(address, _)? = instruction.binding else { return false }
+
             return address.reads(slots)
 
-        case let .array(elements):
-            return elements.contains { element in element.reads(slots) }
+        case let .operation(operation):
+            switch operation {
+            case let .local(address):
+                return address.reads(slots)
 
-        case let .record(held):
-            return held.fields.contains { field in field.reads(slots) }
+            case let .closure(_, captures):
+                return captures.contains { outer, _ in slots.contains(outer) }
 
-        case let .closure(_, captures):
-            return captures.contains { outer, _ in slots.contains(outer) }
+            case let .call(call):
+                return call.handed.contains { handed in handed.address.reads(slots) }
 
-        case let .apply(callee, arguments):
-            return callee.reads(slots) || arguments.contains { _, argument in argument.reads(slots) }
-
-        case let .cast(value, _, _):
-            return value.reads(slots)
-
-        case let .block(body):
-            return body.reads(slots)
-
-        case let .conditional(condition, then, otherwise):
-            return condition.reads(slots)
-                || then.contains { instruction in instruction.reads(slots) }
-                || otherwise?.contains { instruction in instruction.reads(slots) } == true
-
-        case let .loop(condition, body, _, _):
-            return condition.reads(slots) || body.reads(slots)
-
-        case let .attempt(body, rescue, _):
-            return body.reads(slots) || rescue.reads(slots)
-
-        case let .call(call):
-            return call.receiver?.reads(slots) == true
-                || call.arguments.contains { argument in argument?.reads(slots) == true }
-                || call.handed.contains { handed in handed.address.reads(slots) }
-
-        // What a call through a contract hands over is in `arguments`. The
-        // calls beside it are the link's copy of the same, and a body is
-        // asked this before a link has made them, so asking those alone
-        // stops at the dot.
-        case let .dispatch(dispatch):
-            return dispatch.receiver.reads(slots)
-                || dispatch.arguments.contains { _, argument in argument.read.reads(slots) }
-
-        case let .leave(_, _, value):
-            return value?.reads(slots) == true
+            case .literal, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .dispatch, .leave:
+                return false
+            }
         }
     }
 }
