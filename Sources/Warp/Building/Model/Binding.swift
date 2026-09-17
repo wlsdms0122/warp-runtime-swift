@@ -47,11 +47,8 @@ enum Binding: Equatable, Sendable {
         case let .inout(inner):
             self = .declared(inner.slotUnwrapped)
 
-        case let .variable(inner):
-            self = .assigned(inner.slotUnwrapped)
-
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
-            .ranged, .array, .dictionary, .record, .procedure, .nullable,
+            .ranged, .array, .dictionary, .record, .procedure, .variable, .nullable,
             .named, .parameter, .reading, .member, .undeclared:
             self = .fixed(declared)
         }
