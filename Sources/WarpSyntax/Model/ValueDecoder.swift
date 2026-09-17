@@ -426,12 +426,20 @@ struct ValueDecoder: Decoder {
     }
 
     // MARK: - Private
+    // Looked up where the value keeps it, so that a reader asking for its
+    // keys one after another does not rebuild a record as a dictionary once
+    // per key.
     private func held(_ key: String) throws -> Value? {
-        guard let record = value.asDictionary else {
+        switch value {
+        case let .record(record):
+            return (try? Name(key)).flatMap { name in record[name] }
+
+        case let .dictionary(dictionary):
+            return (try? Name(key)).flatMap { name in dictionary[name] }
+
+        default:
             throw ReadingError("expected a record, found \(value.type)", at: steps)
         }
-
-        return (try? Name(key)).flatMap { name in record[name] }
     }
 
     private func descending(to key: String, holding held: Value) -> ValueDecoder {
