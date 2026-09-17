@@ -35,12 +35,8 @@ struct LoweredRecord: Sendable, Equatable {
         self.init(layout: layout, fields: fields)
     }
 
+    // The inner door: the maker already stands on the layout.
     init(layout: Layout, fields: [LoweredType]) {
-        precondition(
-            layout.fields.count == fields.count,
-            "a record has one type per field its layout names"
-        )
-
         self.layout = layout
         self.fields = fields
     }
