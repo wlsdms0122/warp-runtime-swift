@@ -123,7 +123,7 @@ struct ObjectWriter {
         // A document nobody wrote down is one an object cannot spell, so a
         // closure such a document wrote is not written either.
         case let .procedure(closure):
-            guard case let .written(identity) = closure.writer.document else { throw Unwritable(reason: .unwritten) }
+            guard case let .written(identity) = closure.writer.document else { throw Unwritable() }
 
             return tagged(
                 .closure,
@@ -131,7 +131,7 @@ struct ObjectWriter {
                 name(closure.writer.name),
                 .int(closure.nth),
                 .array(try closure.captured.map { (slot, cell) throws(Unwritable) -> Value in
-                    guard case let .value(held) = cell else { throw Unwritable(reason: .held) }
+                    guard case let .value(held) = cell else { throw Unwritable() }
 
                     return .array([.int(slot), try self.value(held)])
                 })
@@ -142,14 +142,7 @@ struct ObjectWriter {
     // What no object holds, met on the way to writing one: a hold a closure
     // captured, which is a box of the run that made it, or a closure a
     // document nobody wrote down wrote.
-    struct Unwritable: Error {
-        enum Reason {
-            case held
-            case unwritten
-        }
-
-        let reason: Reason
-    }
+    struct Unwritable: Error {}
 
     private func tagged(_ tag: ValueTag, _ fields: Value...) -> Value {
         .array([.int(tag.rawValue)] + fields)

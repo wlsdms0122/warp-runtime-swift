@@ -583,6 +583,8 @@ struct Lowering {
             stands = nil
         } else if let given = held.closure(count, of: label) {
             stands = given
+        } else if let counted = held.count(of: label) {
+            throw BuildError.unjudged("closure \(count) of a declaration whose document numbered \(counted)", at: place)
         } else {
             throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
         }

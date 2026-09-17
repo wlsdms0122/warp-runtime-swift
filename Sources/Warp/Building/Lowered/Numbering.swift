@@ -218,6 +218,12 @@ struct Numbering: Sendable {
         runs.map(\.name)
     }
 
+    // How many closures a declaration wrote here, or nil where the document
+    // was never read for that declaration's closures.
+    func count(of declared: Name) -> Int? {
+        run(of: declared)?.count
+    }
+
     // Which of this document's closures a number stands for, or nothing where
     // it stands for a spelling instead. A body carries reference numbers, and
     // which closure one of them is, is this document's own arithmetic.
