@@ -325,79 +325,88 @@ struct Bench {
         // MARK: - Private
     }
 
-    // One column of the workload table: what it is called, what it reads for a
-    // workload, and what a table compared against is asked for where the
-    // column moves at all.
+    // One column of a table: what it is called, what it prints for a row, and
+    // what a table compared against is asked for where the column moves at
+    // all.
     //
     // A column named once is a column that cannot be printed and not compared,
     // which is what happened twice while the name lived in five places.
-    private struct Column: Sendable {
+    private struct Column<Row> {
         let heading: String
 
-        // What it reads, said once: the cell and the comparison stand on the
-        // same arithmetic rather than on two copies of it.
-        let read: @Sendable (Measurement, Double) -> Double
+        // The cell, for a row.
+        let text: (Row) -> String
 
-        let decimals: Int
+        // What it reads, where it moves: the cell and the comparison stand on
+        // the same arithmetic rather than on two copies of it. Nil for a
+        // column read off the loop of this same run, which has nothing to
+        // move from.
+        let read: ((Row) -> Double)?
 
-        // Whether a table compared against is asked for this. A column read
-        // off the loop of this same run has nothing to move from.
-        let moves: Bool
-
-        func text(_ measurement: Measurement, over loop: Double) -> String {
-            String(format: "%.\(decimals)f", read(measurement, loop))
+        // A figure printed to a number of decimals.
+        static func figure(
+            _ heading: String,
+            decimals: Int,
+            moves: Bool,
+            _ read: @escaping (Row) -> Double
+        ) -> Column {
+            Column(
+                heading: heading,
+                text: { row in String(format: "%.\(decimals)f", read(row)) },
+                read: moves ? read : nil
+            )
         }
     }
-
-    private static let columns: [Column] = [
-        Column(
-            heading: "ns/round",
-            read: { measurement, _ in measurement.perRound },
-            decimals: 0,
-            moves: true
-        ),
-        Column(
-            heading: "minus loop",
-            read: { measurement, loop in measurement.perRound - loop },
-            decimals: 0,
-            moves: false
-        ),
-        Column(
-            heading: "x loop",
-            read: { measurement, loop in loop > 0 ? measurement.perRound / loop : 0 },
-            decimals: 2,
-            moves: false
-        ),
-        Column(
-            heading: "load us",
-            read: { measurement, _ in measurement.load / 1000 },
-            decimals: 0,
-            moves: true
-        ),
-        Column(
-            heading: "build us",
-            read: { measurement, _ in measurement.build / 1000 },
-            decimals: 0,
-            moves: true
-        ),
-        Column(
-            heading: "baked us",
-            read: { measurement, _ in measurement.baked / 1000 },
-            decimals: 0,
-            moves: true
-        ),
-        Column(
-            heading: "once us",
-            read: { measurement, _ in measurement.once / 1000 },
-            decimals: 0,
-            moves: true
-        )
-    ]
 
     private static func moved(_ now: Double, from before: Double?) -> String {
         guard let before, before > 0 else { return "" }
 
         return String(format: "%+.1f%%", (now - before) / before * 100)
+    }
+
+    // Heading, rule and rows all read the one list of columns, so a column is
+    // added once and a column that moves is compared because it said it does.
+    private static func table<Row>(
+        _ rows: [(label: String, row: Row)],
+        labelled first: String,
+        columns: [Column<Row>],
+        against read: [String: [String: Double]]?,
+        from path: String?,
+        under heading: String,
+        noting notes: [String] = []
+    ) -> String {
+        let comparison = Comparison(
+            read,
+            over: columns.compactMap { column in column.read == nil ? nil : column.heading },
+            from: path
+        )
+        let against = comparison.rows
+        let headings = columns.flatMap { column in
+            against == nil || column.read == nil ? [column.heading] : [column.heading, "moved"]
+        }
+
+        var lines = [comparison.said(beside: heading), ""]
+            + notes.flatMap { note in [note, ""] }
+            + [
+                "| \(first) | " + headings.joined(separator: " | ") + " |",
+                "|---" + String(repeating: "|---", count: headings.count) + "|"
+            ]
+
+        for (label, row) in rows {
+            let before = against?[label]
+
+            let cells = columns.flatMap { column -> [String] in
+                let cell = column.text(row)
+
+                guard against != nil, let read = column.read else { return [cell] }
+
+                return [cell, Self.moved(read(row), from: before?[column.heading])]
+            }
+
+            lines.append("| " + label + " | " + cells.joined(separator: " | ") + " |")
+        }
+
+        return lines.joined(separator: "\n")
     }
 
     private static func table(
@@ -407,47 +416,26 @@ struct Bench {
         rounds: Int,
         repeats: Int
     ) -> String {
-        let comparison = Comparison(
-            read,
-            over: columns.filter(\.moves).map(\.heading),
-            from: path
-        )
         let loop = measured[baseline]?.perRound ?? 0
-        let against = comparison.rows
-        let heading = "rounds \(rounds), fastest of \(repeats);"
-            + " load, build, baked and once are the fastest of \(buildSamples)"
-
-        // Heading, rule and rows all read the same list, so a column is added
-        // once and a column that moves is compared because it said it does.
-        let headings = columns.flatMap { column in
-            against == nil || !column.moves ? [column.heading] : [column.heading, "moved"]
-        }
-
-        var lines = [
-            comparison.said(beside: heading),
-            "",
-            "| workload | " + headings.joined(separator: " | ") + " |",
-            "|---" + String(repeating: "|---", count: headings.count) + "|"
+        let columns: [Column<Measurement>] = [
+            .figure("ns/round", decimals: 0, moves: true) { measurement in measurement.perRound },
+            .figure("minus loop", decimals: 0, moves: false) { measurement in measurement.perRound - loop },
+            .figure("x loop", decimals: 2, moves: false) { measurement in loop > 0 ? measurement.perRound / loop : 0 },
+            .figure("load us", decimals: 0, moves: true) { measurement in measurement.load / 1000 },
+            .figure("build us", decimals: 0, moves: true) { measurement in measurement.build / 1000 },
+            .figure("baked us", decimals: 0, moves: true) { measurement in measurement.baked / 1000 },
+            .figure("once us", decimals: 0, moves: true) { measurement in measurement.once / 1000 }
         ]
 
-        for (name, measurement) in measured.sorted(by: { $0.key < $1.key }) {
-            let before = against?[name]
-
-            let cells = columns.flatMap { column -> [String] in
-                let cell = column.text(measurement, over: loop)
-
-                guard against != nil, column.moves else { return [cell] }
-
-                return [
-                    cell,
-                    Self.moved(column.read(measurement, loop), from: before?[column.heading])
-                ]
-            }
-
-            lines.append("| " + name + " | " + cells.joined(separator: " | ") + " |")
-        }
-
-        return lines.joined(separator: "\n")
+        return table(
+            measured.sorted { one, other in one.key < other.key }.map { name, measurement in (label: name, row: measurement) },
+            labelled: "workload",
+            columns: columns,
+            against: read,
+            from: path,
+            under: "rounds \(rounds), fastest of \(repeats);"
+                + " load, build, baked and once are the fastest of \(buildSamples)"
+        )
     }
 
     // What building a chain of procedures costs, once with the procedures dealt one to a
@@ -467,8 +455,8 @@ struct Bench {
         against read: [String: [String: Double]]?,
         from path: String?
     ) -> String {
-        let comparison = Comparison(read, over: ["spread us", "gathered us"], from: path)
-        let against = comparison.rows
+        typealias Chained = (count: Int, apart: Double, together: Double)
+
         let counts = spread.keys.sorted()
 
         guard
@@ -477,42 +465,36 @@ struct Bench {
             let gatheredBase = gathered[smallest], gatheredBase > 0
         else { return "" }
 
-        var lines = [
-            comparison.said(beside: "building a chain of procedures, each calling the one in"
-                + " front of it; spread one to a document and gathered into one; fastest of"
-                + " \(buildSamples)"),
-            "",
-            against == nil
-                ? "| procedures | spread us | spread each | gathered us | gathered each |"
-                : "| procedures | spread us | spread each | gathered us | gathered each |"
-                    + " spread moved | gathered moved |",
-            against == nil ? "|---|---|---|---|---|" : "|---|---|---|---|---|---|---|"
-        ]
-
-        for count in counts {
-            guard let apart = spread[count], let together = gathered[count] else { continue }
-
-            let figures = String(
-                format: "| %d | %.0f | %@ | %.0f | %@ |",
-                count,
-                apart / 1000, Self.each(apart, over: spreadBase, from: smallest, to: count),
-                together / 1000, Self.each(together, over: gatheredBase, from: smallest, to: count)
+        let columns: [Column<Chained>] = [
+            .figure("spread us", decimals: 0, moves: true) { chained in chained.apart / 1000 },
+            Column(
+                heading: "spread each",
+                text: { chained in Self.each(chained.apart, over: spreadBase, from: smallest, to: chained.count) },
+                read: nil
+            ),
+            .figure("gathered us", decimals: 0, moves: true) { chained in chained.together / 1000 },
+            Column(
+                heading: "gathered each",
+                text: { chained in Self.each(chained.together, over: gatheredBase, from: smallest, to: chained.count) },
+                read: nil
             )
+        ]
+        let rows: [(label: String, row: Chained)] = counts.compactMap { count in
+            guard let apart = spread[count], let together = gathered[count] else { return nil }
 
-            guard let against else {
-                lines.append(figures)
-
-                continue
-            }
-
-            lines.append(figures + String(
-                format: " %@ | %@ |",
-                Self.moved(apart / 1000, from: against["\(count)"]?["spread us"]),
-                Self.moved(together / 1000, from: against["\(count)"]?["gathered us"])
-            ))
+            return (label: "\(count)", row: (count: count, apart: apart, together: together))
         }
 
-        return lines.joined(separator: "\n")
+        return table(
+            rows,
+            labelled: "procedures",
+            columns: columns,
+            against: read,
+            from: path,
+            under: "building a chain of procedures, each calling the one in"
+                + " front of it; spread one to a document and gathered into one; fastest of"
+                + " \(buildSamples)"
+        )
     }
 
     // What one count of procedures costs to build as it is dealt into more and more
@@ -536,60 +518,37 @@ struct Bench {
         against read: [String: [String: Double]]?,
         from path: String?
     ) -> String {
-        let comparison = Comparison(
-            read,
-            over: ["build us", "compile us", "alone us", "link us"],
-            from: path
-        )
-        let against = comparison.rows
+        typealias Dealt = (count: Int, cost: Cost)
 
-        var lines = [
-            comparison.said(beside: "building \(procedures) procedures that call nothing,"
-                + " dealt into documents, against a vocabulary compiled once; fastest of"
-                + " \(buildSamples)"),
-            "",
-            "`alone` is the documents compiled one at a time rather than together."
-                + " `spread` is one document's share of that plus the link, which is"
-                + " what the row costs on as many cores as it has documents and"
-                + " nothing charged for handing them out; `x` is `build` over it.",
-            "",
-            against == nil
-                ? "| documents | build us | compile us | alone us | link us | spread us | x |"
-                : "| documents | build us | moved | compile us | moved | alone us | moved"
-                    + " | link us | moved | spread us | x |",
-            against == nil ? "|---|---|---|---|---|---|---|" : "|---|---|---|---|---|---|---|---|---|---|---|"
+        let spread: (Dealt) -> Double = { dealt in dealt.cost.alone / Double(dealt.count) + dealt.cost.link }
+        let columns: [Column<Dealt>] = [
+            .figure("build us", decimals: 0, moves: true) { dealt in dealt.cost.build / 1000 },
+            .figure("compile us", decimals: 0, moves: true) { dealt in dealt.cost.compile / 1000 },
+            .figure("alone us", decimals: 0, moves: true) { dealt in dealt.cost.alone / 1000 },
+            .figure("link us", decimals: 0, moves: true) { dealt in dealt.cost.link / 1000 },
+            .figure("spread us", decimals: 0, moves: false) { dealt in spread(dealt) / 1000 },
+            .figure("x", decimals: 2, moves: false) { dealt in spread(dealt) > 0 ? dealt.cost.build / spread(dealt) : 0 }
         ]
-
-        for count in costs.keys.sorted() {
-            guard let cost = costs[count] else { continue }
-
-            let spread = cost.alone / Double(count) + cost.link
-            let figures = String(
-                format: "| %d | %.0f | %.0f | %.0f | %.0f | %.0f | %.2f |",
-                count, cost.build / 1000, cost.compile / 1000, cost.alone / 1000,
-                cost.link / 1000, spread / 1000, spread > 0 ? cost.build / spread : 0
-            )
-
-            guard let against else {
-                lines.append(figures)
-
-                continue
-            }
-
-            let before = against["\(count)"]
-
-            lines.append(String(
-                format: "| %d | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %.2f |",
-                count,
-                cost.build / 1000, Self.moved(cost.build / 1000, from: before?["build us"]),
-                cost.compile / 1000, Self.moved(cost.compile / 1000, from: before?["compile us"]),
-                cost.alone / 1000, Self.moved(cost.alone / 1000, from: before?["alone us"]),
-                cost.link / 1000, Self.moved(cost.link / 1000, from: before?["link us"]),
-                spread / 1000, spread > 0 ? cost.build / spread : 0
-            ))
+        let rows: [(label: String, row: Dealt)] = costs.keys.sorted().compactMap { count in
+            costs[count].map { cost in (label: "\(count)", row: (count: count, cost: cost)) }
         }
 
-        return lines.joined(separator: "\n")
+        return table(
+            rows,
+            labelled: "documents",
+            columns: columns,
+            against: read,
+            from: path,
+            under: "building \(procedures) procedures that call nothing,"
+                + " dealt into documents, against a vocabulary compiled once; fastest of"
+                + " \(buildSamples)",
+            noting: [
+                "`alone` is the documents compiled one at a time rather than together."
+                    + " `spread` is one document's share of that plus the link, which is"
+                    + " what the row costs on as many cores as it has documents and"
+                    + " nothing charged for handing them out; `x` is `build` over it."
+            ]
+        )
     }
 
     // Microseconds each procedure past the smallest chain added, where any did.
