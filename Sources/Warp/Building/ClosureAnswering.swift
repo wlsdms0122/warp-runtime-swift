@@ -82,9 +82,9 @@ final class ClosureAnswering {
     }
 
     // A body with the closures its literal values hold answered, and every
-    // other operation and every type read as the asker reads them. One pass,
-    // since a body is rebuilt by the rewriting and the asker's reading rides
-    // on the same one.
+    // other operation and every type read as the asker reads them, the
+    // answered literal included. One pass, since a body is rebuilt by the
+    // rewriting and the asker's reading rides on the same one.
     func answered(
         _ body: Body,
         at place: Place,
@@ -95,7 +95,7 @@ final class ClosureAnswering {
             operation: { operation in
                 guard case let .literal(value) = operation, value.holdsProcedure else { return try reading(operation) }
 
-                return .literal(try value.rewritten { closure in try answered(closure, at: place) })
+                return try reading(.literal(try value.rewritten { closure in try answered(closure, at: place) }))
             },
             type: type
         )

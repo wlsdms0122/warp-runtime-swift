@@ -90,20 +90,26 @@ extension Array where Element == Linked {
         starting variables: [[(name: Name, value: Value)]],
         in documents: [Place.Document]
     ) throws -> Set<Int> {
-        var reached: Set<ObjectIdentifier> = []
+        // Which row of this table each is, by identity, since a row a closure
+        // holds arrives as the row and not as a number. One that is not here
+        // is a row a closure brought in from some other table, and it is
+        // refused where it is met and not walked into.
+        let numbered = Dictionary(
+            enumerated().map { row, linked in (ObjectIdentifier(linked), row) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var reached: Set<Int> = []
         var frontier = [self[start]]
 
         while let next = frontier.popLast() {
-            guard reached.insert(ObjectIdentifier(next)).inserted else { continue }
-
-            // A row of this table stands in a document of this link. One that
-            // does not is a row a closure brought in from some other table.
-            guard variables.indices.contains(next.origin) else {
+            guard let row = numbered[ObjectIdentifier(next)] else {
                 throw BuildError.unjudged(
                     "a closure holding a row of some other table",
                     at: .procedure(next.label.spelling, in: documents.indices.contains(next.origin) ? documents[next.origin] : .assembled)
                 )
             }
+
+            guard reached.insert(row).inserted else { continue }
 
             let reach = next.reaches(starting: variables[next.origin])
 
@@ -111,14 +117,6 @@ extension Array where Element == Linked {
             frontier.append(contentsOf: reach.held)
         }
 
-        // Walked by identity, since a row a closure brought is walked through
-        // whether or not the table numbers it; answered as this table's rows,
-        // which is what a caller holding the table asked about.
-        let numbered = Dictionary(
-            enumerated().map { row, linked in (ObjectIdentifier(linked), row) },
-            uniquingKeysWith: { first, _ in first }
-        )
-
-        return Set(reached.compactMap { identity in numbered[identity] })
+        return reached
     }
 }
