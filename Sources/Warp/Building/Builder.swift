@@ -224,16 +224,10 @@ public struct Builder: Sendable {
     private func fingerprinted(_ object: Compiled) throws -> Compiled {
         guard let fingerprinting else { return object }
 
-        let written: Value
-
-        do {
-            written = try object.object()
-        } catch is ObjectUnwritable {
-            // Nothing to work a fingerprint out from, for one of the reasons
-            // an object has none, and none of them is something that went
-            // wrong. The document stands without one.
-            return object
-        }
+        // Nothing to work a fingerprint out from, for one of the reasons an
+        // object has none, and none of them is something that went wrong. The
+        // document stands without one.
+        guard let written = try? object.object() else { return object }
 
         return object.fingerprinted(try fingerprinting(written))
     }

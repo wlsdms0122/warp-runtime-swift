@@ -26,22 +26,8 @@ struct ClosureRows {
     private let documents: [Place.Document]
 
     // MARK: - Initializer
-    private init(
-        writing: [Closure.Writer: [Int]],
-        named: Set<Closure.Document>,
-        numbering: [Numbering],
-        closures: [[Int]],
-        documents: [Place.Document]
-    ) {
-        self.writing = writing
-        self.named = named
-        self.numbering = numbering
-        self.closures = closures
-        self.documents = documents
-    }
-
-    // The same, with the writers read off the numberings: every name a
-    // document numbers closures for writes them, in that document.
+    // The writers are read off the numberings: every name a document
+    // numbers closures for writes them, in that document.
     init(
         naming: [Closure.Document],
         numbering: [Numbering],
@@ -56,7 +42,11 @@ struct ClosureRows {
             }
         }
 
-        self.init(writing: writing, named: Set(naming), numbering: numbering, closures: closures, documents: documents)
+        self.writing = writing
+        self.named = Set(naming)
+        self.numbering = numbering
+        self.closures = closures
+        self.documents = documents
     }
 
     // MARK: - Public
