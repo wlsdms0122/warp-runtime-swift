@@ -1803,17 +1803,22 @@ extension Builder {
             // condition that declines at the start, a round that finishes or
             // breaks) and it reads in the join of those exits: the entry the
             // rounds seeded, joined with the environment the statements leave.
-            // A name only the body declared is null at the 0-round exit (a name
-            // a scope does not hold reads as null) so it reads back nullable,
-            // the same join every some-ways write gets.
+            // A name the body declared is the body's own, whatever the entry
+            // holds under that spelling, and is null at the 0-round exit (a
+            // name a scope does not hold reads as null) so it reads back
+            // nullable, the same join every some-ways write gets.
             var tail: Inspection?
 
             if let result = body.result {
+                let declared = Set(body.body.compactMap { statement in statement.binding?.introduced })
                 var exit = seeded
 
                 for (name, written) in rounds.environment {
-                    exit[name] = seeded[name].map { entry in entry.holding(join(entry.type, written.type)) }
-                        ?? .fixed(join(.null, written.type))
+                    if declared.contains(name) {
+                        exit[name] = written.holding(join(.null, written.type))
+                    } else if let entry = seeded[name] {
+                        exit[name] = entry.holding(join(entry.type, written.type))
+                    }
                 }
 
                 tail = try await inspected(result, at: place.part(.result), in: exit, with: context, ask: ask)

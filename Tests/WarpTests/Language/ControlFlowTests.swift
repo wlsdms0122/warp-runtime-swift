@@ -163,6 +163,43 @@ struct ControlFlowTests {
         )
     }
 
+    @Test("a loop's result reads a name its body declared as the body's, whatever the entry holds under it")
+    func aLoopResultReadsTheBodysOwnDeclaration() async throws {
+        // Given. The entry holds `x` as a declared int box. The body declares
+        // its own `x`, a string, and the result reads that one: null where no
+        // round ran, and the body's otherwise
+        let loop = Warp.Expression.loop(
+            while: differs(reference("round", "index"), .literal(.int(1))),
+            body: Block(
+                body: [Statement(binding: .variable("x"), expression: .literal(.string("s")))],
+                result: reference("x")
+            ),
+            round: "round"
+        )
+        let sut = try Module(
+            imports: ["std.logic.notEqual"],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(binding: .variable("x", declared: .int), expression: .literal(.int(1))),
+                        Statement(binding: .constant("probe"), expression: loop)
+                    ],
+                    result: reference("probe")
+                )
+            ]
+        )
+
+        // When
+        let compiled = try await Builder().compile([sut] + Module.standard)
+        let answered = compiled.compactMap { document in document.answers[entryName] }.first
+
+        // Then. The reading is the body's string, nullable for the exit no
+        // round reached, and not the entry's int joined into anything
+        #expect(answered == .nullable(.string))
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        #expect(try await Executor().run(image) == .string("s"))
+    }
+
     @Test("a loop reads how many rounds have passed")
     func loopReadsItsRoundIndex() async throws {
         // Given
