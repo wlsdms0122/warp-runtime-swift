@@ -63,7 +63,7 @@ extension Linked {
     // them.
     func reaches(
         starting variables: [(name: Name, value: Value)],
-        answering row: (Closure, Int) throws -> Int
+        answering row: (Closure) throws -> Int
     ) rethrows -> [Int] {
         switch implementation {
         case let .body(body, frame):
@@ -73,8 +73,7 @@ extension Linked {
                 variables[variable].value.closures { closure in held.append(closure) }
             }
 
-            return try body.reaches { closure in try row(closure, origin) }
-                + (try held.map { closure in try row(closure, origin) })
+            return try body.reaches(answering: row) + (try held.map(row))
 
         case .native:
             return sends.map(\.row)
@@ -91,7 +90,7 @@ extension Array where Element == Linked {
     func reached(
         from start: Int,
         starting variables: [[(name: Name, value: Value)]],
-        answering row: (Closure, Int) throws -> Int
+        answering row: (Closure) throws -> Int
     ) rethrows -> Set<Int> {
         var reached: Set<Int> = []
         var frontier = [start]

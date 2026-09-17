@@ -67,6 +67,7 @@ struct ObjectReader {
         let numbering = try Numbering(written: fields.next(), declaring: declared)
         let typeNumbering = try typeNumbering(fields.next())
         let variables = try fields.list(variable)
+        let constants = try Fields.ordered(fields.next(), of: "constants", name)
         let read = try Compiled(
             document: document,
             types: types,
@@ -75,6 +76,7 @@ struct ObjectReader {
             claims: claims,
             leaned: leaned,
             declared: declared,
+            constants: constants,
             table: table,
             answers: answers,
             numbering: numbering,
@@ -246,7 +248,7 @@ extension ObjectReader {
                 return read
             }
 
-            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
+            read = .procedure(Closure(writer: writer, nth: nth, origin: nil, linked: nil, captured: captured))
 
         case nil: throw ObjectRefused("'value' answers in a way this reads none of")
         }
@@ -406,7 +408,17 @@ private extension ObjectReader {
         let read = Parameter(
             type: try fields.maybe(expression),
             candidates: try fields.maybe { written in try Fields.list(written, of: "candidates", text) },
-            default: try fields.maybe { written in written },
+            default: try fields.maybe { written in
+                let read = try self.value(written)
+
+                // A default is what a document wrote, and a document writes no
+                // procedure.
+                guard !read.holdsProcedure else {
+                    throw ObjectRefused("a parameter's default holds a procedure, which no document writes")
+                }
+
+                return read
+            },
             description: try fields.maybe(text)
         )
 

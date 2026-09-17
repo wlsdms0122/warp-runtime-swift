@@ -95,6 +95,7 @@ struct ObjectClosureTests {
                 claims: [:],
                 leaned: [:],
                 declared: ["a.one"],
+                constants: [],
                 table: table,
                 answers: [:],
                 numbering: Numbering(imports: [], declared: ["a.one"], closures: ["a.two": 1]),
@@ -110,7 +111,7 @@ struct ObjectClosureTests {
         // Given. A compiled document whose variable starts as a closure some
         // other spelling claims to have written.
         let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
-        let forged = try holding(Closure(writer: Closure.Writer(document: .assembled, name: "app.nobody"), nth: 0, linked: nil, captured: []), in: compiled)
+        let forged = try holding(Closure(writer: Closure.Writer(document: .assembled, name: "app.nobody"), nth: 0, origin: nil, linked: nil, captured: []), in: compiled)
 
         // When / Then
         await #expect(throws: BuildError.self) {
@@ -122,7 +123,7 @@ struct ObjectClosureTests {
     func aClosurePastItsWriterIsRefused() async throws {
         // Given. The writer wrote one closure, and the value asks for its sixth
         let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
-        let forged = try holding(Closure(writer: Closure.Writer(document: .assembled, name: "app.later"), nth: 5, linked: nil, captured: []), in: compiled)
+        let forged = try holding(Closure(writer: Closure.Writer(document: .assembled, name: "app.later"), nth: 5, origin: compiled.count - 1, linked: nil, captured: []), in: compiled)
 
         // When / Then
         await #expect(throws: BuildError.self) {
@@ -146,6 +147,38 @@ struct ObjectClosureTests {
 
         // When
         let image = try await builder.link(read, entry: "app.two", supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image) == .int(6))
+    }
+
+    @Test("a closure an unwritten document folded out of another unwritten one runs the other's body")
+    func aClosureFoldedBetweenUnwrittenDocumentsKeepsItsWriter() async throws {
+        // Given. Two documents nobody wrote down, both writing a closure under
+        // `app.made`. The second hands its own out through a procedure, and
+        // the first folds that into a variable. The value says where its
+        // writer stood, so the first document's own `app.made` is not it.
+        let other = try Module(
+            constants: ["app.made": .closure(answering(6))],
+            procedures: [
+                "app.give": Procedure(
+                    signature: Signature(returns: .procedure(Signature(returns: .int))),
+                    body: [],
+                    result: reference("app.made")
+                )
+            ]
+        )
+        let one = try Module(
+            imports: ["app.give"],
+            constants: ["app.made": .closure(answering(5))],
+            variables: ["app.held": .call(Call(selector: "app.give"))],
+            procedures: [
+                "app.one": Procedure(signature: Signature(returns: .int), body: [], result: .apply(reference("app.held"), arguments: [:]))
+            ]
+        )
+
+        // When
+        let image = try await builder.build(Module.standard + [other, one], entry: "app.one")
 
         // Then
         #expect(try await Executor().run(image) == .int(6))
@@ -203,6 +236,7 @@ struct ObjectClosureTests {
             Closure(
                 writer: Closure.Writer(document: .assembled, name: "app.later"),
                 nth: 0,
+                origin: compiled.count - 1,
                 linked: nil,
                 captured: [(slot: 99, cell: .value(.int(1)))]
             ),
@@ -258,6 +292,7 @@ struct ObjectClosureTests {
                 claims: one.claims,
                 leaned: one.leaned,
                 declared: one.declared,
+                constants: one.constants,
                 table: one.table,
                 answers: one.answers,
                 numbering: one.numbering,

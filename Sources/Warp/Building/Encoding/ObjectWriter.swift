@@ -53,9 +53,9 @@ struct ObjectWriter {
             written = .array([
                 document(compiled.document),
                 .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
-                keyed(compiled.types, type),
-                keyed(compiled.constraints) { types in .array(types.map(type)) },
-                keyed(compiled.contracts) { procedures in keyed(procedures, signature) },
+                try keyed(compiled.types, type),
+                try keyed(compiled.constraints) { (types) throws(Unwritable) -> Value in .array(try types.map(type)) },
+                try keyed(compiled.contracts) { (procedures) throws(Unwritable) -> Value in try keyed(procedures, signature) },
                 keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
                 .array(compiled.leaned.keys.sorted().map { claim in
                     .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
@@ -67,7 +67,8 @@ struct ObjectWriter {
                 typeNumbering(compiled.typeNumbering),
                 .array(try compiled.variables.map { (entry) throws(Unwritable) -> Value in
                     .array([name(entry.name), try value(entry.value)])
-                })
+                }),
+                .array(compiled.constants.map(name))
             ])
         } catch {
             return nil
@@ -168,7 +169,7 @@ struct ObjectWriter {
         ObjectWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
-    private func type(_ expression: TypeExpression) -> Value {
+    private func type(_ expression: TypeExpression) throws(Unwritable) -> Value {
         switch expression {
         case .any:
             return .array([.int(0)])
@@ -201,39 +202,39 @@ struct ObjectWriter {
             return .array([.int(9), ranged(refinement)])
 
         case let .array(element):
-            return .array([.int(10), type(element)])
+            return .array([.int(10), try type(element)])
 
         case let .dictionary(element):
-            return .array([.int(11), type(element)])
+            return .array([.int(11), try type(element)])
 
         case let .record(fields):
-            return .array([.int(12), keyed(fields, type)])
+            return .array([.int(12), try keyed(fields, type)])
 
         case let .procedure(written, constness, isolation):
             return .array([
                 .int(13),
-                ObjectWriter.maybe(written, signature),
+                try ObjectWriter.maybe(written, signature),
                 self.constness(constness),
                 self.isolation(isolation)
             ])
 
         case let .variable(held):
-            return .array([.int(14), type(held)])
+            return .array([.int(14), try type(held)])
 
         case let .inout(held):
-            return .array([.int(15), type(held)])
+            return .array([.int(15), try type(held)])
 
         case let .linear(held):
-            return .array([.int(16), type(held)])
+            return .array([.int(16), try type(held)])
 
         case let .consuming(held):
-            return .array([.int(17), type(held)])
+            return .array([.int(17), try type(held)])
 
         case let .borrowing(held):
-            return .array([.int(18), type(held)])
+            return .array([.int(18), try type(held)])
 
         case let .nullable(held):
-            return .array([.int(19), type(held)])
+            return .array([.int(19), try type(held)])
 
         case let .named(spelling):
             return .array([.int(20), name(spelling)])
@@ -290,19 +291,19 @@ struct ObjectWriter {
         }
     }
 
-    private func signature(_ signature: Signature) -> Value {
+    private func signature(_ signature: Signature) throws(Unwritable) -> Value {
         .array([
             ObjectWriter.maybe(signature.receiver, name),
-            keyed(signature.parameters, parameter),
-            ObjectWriter.maybe(signature.returns, type)
+            try keyed(signature.parameters, parameter),
+            try ObjectWriter.maybe(signature.returns, type)
         ])
     }
 
-    private func parameter(_ parameter: Parameter) -> Value {
+    private func parameter(_ parameter: Parameter) throws(Unwritable) -> Value {
         .array([
-            ObjectWriter.maybe(parameter.type, type),
+            try ObjectWriter.maybe(parameter.type, type),
             ObjectWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
-            ObjectWriter.maybe(parameter.default) { held in held },
+            try ObjectWriter.maybe(parameter.default, value),
             ObjectWriter.maybe(parameter.description, Value.string)
         ])
     }
@@ -539,7 +540,7 @@ private extension ObjectWriter {
     func judged(_ row: Judged) throws(Unwritable) -> Value {
         .array([
             name(row.label),
-            signature(row.signature),
+            try signature(row.signature),
             constness(row.constness),
             isolation(row.isolation),
             failing(row.failing),

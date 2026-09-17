@@ -99,8 +99,13 @@ public struct Compiled: Sendable, Declaring {
     // what the next object records leaning on.
     public let fingerprint: Fingerprint?
 
+    // The constants this document declared, by spelling. What they settled
+    // to stands in the bodies that read them, and the spellings stay as the
+    // names a closure may be written under.
+    let constants: [Name]
+
     // MARK: - Initializer
-    init(
+    private init(
         document: Place.Document,
         types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
@@ -108,6 +113,7 @@ public struct Compiled: Sendable, Declaring {
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
         declared: [Name],
+        constants: [Name],
         table: [Judged],
         answers: [Name: LoweredType],
         numbering: Numbering,
@@ -117,6 +123,7 @@ public struct Compiled: Sendable, Declaring {
         fingerprint: Fingerprint? = nil
     ) {
         self.document = document
+        self.constants = constants
         self.types = types
         self.constraints = constraints
         self.contracts = contracts
@@ -147,6 +154,7 @@ public struct Compiled: Sendable, Declaring {
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
         declared: [Name],
+        constants: [Name],
         table: [Judged],
         answers: [Name: LoweredType],
         numbering: Numbering,
@@ -188,13 +196,20 @@ public struct Compiled: Sendable, Declaring {
             throw ObjectRefused("an object declares its rows in an order its table does not")
         }
 
-        // A lifted row is labelled by the declaration that wrote the closure,
-        // and the numbering says which declaration wrote each. A closure value
-        // is spelled by the two together, so a row whose numbering names
-        // another writer is a row two spellings reach.
+        // A lifted row is labelled by what wrote the closure, and the
+        // numbering says what wrote each. A closure value is spelled by the
+        // two together, so a row whose numbering names another writer is a
+        // row two spellings reach. What writes one is a declaration, a
+        // constant or a variable of this document and nothing else.
+        let writers = Set(declared + constants + variables.map(\.name))
+
         for (index, row) in table.enumerated().dropFirst(declared.count) {
             guard numbering.written(index - declared.count)?.by == row.label else {
                 throw ObjectRefused("a numbering writes a closure for a name other than the row's")
+            }
+
+            guard writers.contains(row.label) else {
+                throw ObjectRefused("a closure is written under a name its document does not declare")
             }
         }
 
@@ -206,6 +221,7 @@ public struct Compiled: Sendable, Declaring {
             claims: claims,
             leaned: leaned,
             declared: declared,
+            constants: constants,
             table: table,
             answers: answers,
             numbering: numbering,
@@ -265,7 +281,7 @@ public struct Compiled: Sendable, Declaring {
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an object stand, and it moves when they move
     // and for no other reason.
-    static let format = 4
+    static let format = 5
 
     // Which Warp wrote it. An object is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a
@@ -323,6 +339,7 @@ public struct Compiled: Sendable, Declaring {
             claims: claims,
             leaned: leaned,
             declared: declared,
+            constants: constants,
             table: table,
             answers: answers,
             numbering: numbering,

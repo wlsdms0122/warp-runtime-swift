@@ -304,6 +304,7 @@ public struct Executor: Sendable {
                 Closure(
                     writer: Closure.Writer(document: documents[row.origin], name: row.label),
                     nth: nth,
+                    origin: row.origin,
                     linked: row,
                     captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
                 )

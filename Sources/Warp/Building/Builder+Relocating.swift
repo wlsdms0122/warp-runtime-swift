@@ -247,8 +247,8 @@ struct Relocating {
     // Which row of this link a closure value stands at. A closure value is
     // spelled by the declaration that wrote it, and that declaration's
     // document is whose number it stands at.
-    func row(of closure: Closure, holding origin: Int) throws -> Int {
-        try standing(of: closure, at: Place(in: closure.writer.document), holding: origin).row
+    func row(of closure: Closure) throws -> Int {
+        try standing(of: closure, at: Place(in: closure.writer.document)).row
     }
 
     // Every row, numbered by this link and with the calls through a contract
@@ -304,17 +304,17 @@ struct Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            closure.standing(as: try relocated(table[try self.standing(of: closure, at: standing.place, holding: standing.origin).row]))
+            closure.standing(as: try relocated(table[try self.standing(of: closure, at: standing.place).row]))
         }
     }
 
     // Where a closure value stands in this link: its writer's document, and
-    // the row the number it stands at there turned out to be. The value is
-    // held by some document, and that matters where the writer's document
-    // is one nobody wrote down: two such documents are told apart by
-    // nothing, so a name both write a closure under is read as the holder's
-    // own where the holder writes it, and has no one answer otherwise.
-    private func standing(of closure: Closure, at place: Place, holding holder: Int) throws -> (origin: Int, row: Int) {
+    // the row the number it stands at there turned out to be. A value the
+    // link's own run made says where its writer stood, and that is taken as
+    // it is, held to the writer writing there. A value read out of an object
+    // says only its writer, and the writer's document was written down, so
+    // one document of this link is it.
+    private func standing(of closure: Closure, at place: Place) throws -> (origin: Int, row: Int) {
         guard let origins = writing[closure.writer], let first = origins.first else {
             throw BuildError(
                 "a closure '\(closure.writer.name)' wrote, and no module in this link writes one",
@@ -324,10 +324,17 @@ struct Relocating {
 
         let origin: Int
 
-        if origins.count == 1 {
+        if let stood = closure.origin {
+            guard origins.contains(stood) else {
+                throw BuildError(
+                    "a closure '\(closure.writer.name)' wrote in \(documents[stood].spelled(at: stood)), which writes no such closure",
+                    at: place
+                )
+            }
+
+            origin = stood
+        } else if origins.count == 1 {
             origin = first
-        } else if closure.writer.document.identity == nil, origins.contains(holder) {
-            origin = holder
         } else {
             throw BuildError(
                 "a closure '\(closure.writer.name)' wrote, and "

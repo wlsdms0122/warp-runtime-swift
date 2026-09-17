@@ -26,6 +26,7 @@ enum ObjectCoverageFixture {
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],
+            constants: ["a.sixteen"],
             // Two declarations and the two closures their bodies lifted, which
             // is the order a document numbers its rows in.
             table: [
@@ -60,6 +61,7 @@ enum ObjectCoverageFixture {
     static let everyValueClosure = Closure(
         writer: Closure.Writer(document: Place.Document(identity: Identity([1, 2, 3])), name: "a.eleven"),
         nth: 1,
+        origin: nil,
         linked: nil,
         captured: [
             (
@@ -75,7 +77,7 @@ enum ObjectCoverageFixture {
                         .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
                         .record(Record(name: nil, ["c": .null])),
                         .dictionary(Value.Dictionary(ordered: [(name: "k", value: .int(3))])),
-                        .procedure(Closure(writer: Closure.Writer(document: Place.Document(identity: Identity([4])), name: "a.ten"), nth: 0, linked: nil, captured: []))
+                        .procedure(Closure(writer: Closure.Writer(document: Place.Document(identity: Identity([4])), name: "a.ten"), nth: 0, origin: nil, linked: nil, captured: []))
                     ])
                 )
             )

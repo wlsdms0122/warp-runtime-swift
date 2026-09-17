@@ -682,7 +682,9 @@ public struct Builder: Sendable {
             answering: read
         )
 
-        return Compiled(
+        // Through the one door an object read back goes through, so what a
+        // compile stands up is what a reading would take.
+        return try Compiled(
             document: .of(module),
             types: module.types,
             constraints: module.constraints,
@@ -690,11 +692,12 @@ public struct Builder: Sendable {
             claims: module.claims,
             leaned: fulfillment.claims(of: origin),
             declared: declared,
+            constants: module.constants.keys.sorted(),
             table: lowered.table.map(Judged.init),
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            variables: boxes.map { name in (name: name, value: variables[name] ?? .null) },
+            judging: boxes.map { name in (name: name, value: variables[name] ?? .null) },
             dependencies: dependencies
         )
     }
@@ -779,7 +782,7 @@ public struct Builder: Sendable {
 
         // Walked as rows, reported as spellings: a closure is a row without
         // one and is walked through, and only what has one is reported.
-        let rows = try linked.table.reached(from: start, starting: variables, answering: relocating.row(of:holding:))
+        let rows = try linked.table.reached(from: start, starting: variables, answering: relocating.row(of:))
         let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(entry.value) }.map(\.key))
 
         return Image(
