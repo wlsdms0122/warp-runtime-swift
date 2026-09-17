@@ -622,7 +622,7 @@ private struct NullingEffect: Effect {
     // MARK: - Private
 }
 
-// Declares nothing to be sent to, and says what it was sent to.
+// Declares nothing to be sent to.
 private struct PlainQuery: Query {
     typealias Parameters = NoParameters
 
@@ -630,7 +630,7 @@ private struct PlainQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        question.receiver == nil ? .string("sent to nothing") : .string("sent to something")
+        .string("plain")
     }
 
     // MARK: - Private
@@ -656,7 +656,7 @@ private struct NullingToAnEffect: Effect {
     // MARK: - Private
 }
 
-// Declares nothing to be sent to, runs, and says what it was sent to.
+// Declares nothing to be sent to, and runs.
 private struct PlainlyRunningEffect: Effect {
     typealias Parameters = NoParameters
 
@@ -664,7 +664,7 @@ private struct PlainlyRunningEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) throws -> Value {
-        invocation.receiver == nil ? .string("sent to nothing") : .string("sent to something")
+        .string("ran")
     }
 
     // MARK: - Private
@@ -690,7 +690,7 @@ private struct NullingToAReceiver: Effect {
     // MARK: - Private
 }
 
-// Declares what it is sent to, and says what it was sent.
+// Declares what it is sent to, as a string.
 private struct ReceivingReporter: Effect {
     enum Parameters: Int, ParameterSet {
         case said
@@ -704,7 +704,7 @@ private struct ReceivingReporter: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) throws -> Value {
-        invocation.receiver == nil ? .string("sent to nothing") : .string("sent to something")
+        .string("received")
     }
 
     // MARK: - Private
