@@ -134,6 +134,9 @@ public struct ExpressionReader: Decodable {
         }
     }
 
+    // One form, one function. What a form refuses with is written in that
+    // function alone, so the walk down through a nested call carries the
+    // frame of the call form and not the sentences of the five it is not.
     private static func read(
         record: Value.Dictionary,
         at steps: [Place.Step],
@@ -141,178 +144,216 @@ public struct ExpressionReader: Decodable {
     ) throws -> Expression {
         let formKeys = Set(record.names).intersection(Self.formKeys)
 
-        // No form key: an ordinary record of expressions.
-        guard !formKeys.isEmpty else {
-            // In the record's order, so that a record with two bad fields
-            // refuses the same one every run.
-            return .record(
-                try record.entries.reduce(into: [Name: Expression]()) { fields, entry in
-                    fields[entry.name] = try read(
-                        entry.value,
-                        at: steps + [.key(entry.name.spelling)],
-                        in: decoder
+        guard !formKeys.isEmpty else { return try fields(in: record, at: steps, in: decoder) }
+
+        if record.names.contains("ref") { return try reference(in: record, at: steps, in: decoder) }
+        if record.names.contains("as") || record.names.contains("as?") { return try cast(in: record, at: steps, in: decoder) }
+        if record.names.contains(Self.closureKey) { return try closure(in: record, at: steps, in: decoder) }
+        if record.names.contains("call") { return try call(in: record, at: steps, in: decoder) }
+        if record.names.contains("value") { return try literal(in: record, at: steps, in: decoder) }
+
+        return try template(in: record, at: steps, in: decoder)
+    }
+
+    // No form key: an ordinary record of expressions.
+    private static func fields(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        .record(
+            try record.entries.reduce(into: [Name: Expression]()) { fields, entry in
+                fields[entry.name] = try read(
+                    entry.value,
+                    at: steps + [.key(entry.name.spelling)],
+                    in: decoder
+                )
+            }
+        )
+    }
+
+    private static func reference(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard record.count == 1 else {
+            throw ExpressionFormError(
+                "a record with `ref` must be exactly { ref: <path> }."
+                    + " Wrap it in { value: ... } if the keys are plain data"
+                    + " (found keys: \(record.names))"
+            )
+        }
+
+        guard case let .string(rendered)? = record["ref"] else {
+            throw ExpressionFormError(
+                "{ ref: } takes a path string like a.b[0]"
+            )
+        }
+
+        do {
+            return .reference(try TemplateParser().parseRefPath(rendered))
+        } catch {
+            throw ExpressionFormError("{ ref: \(rendered) }: \(error)")
+        }
+    }
+
+    private static func cast(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard !(record.names.contains("as") && record.names.contains("as?")) else {
+            throw ExpressionFormError(
+                "a cast names one type. `as` and `as?` are the two ways to"
+                    + " read a mismatch, not two types to read"
+            )
+        }
+
+        let optional = record.names.contains("as?")
+        let key: Name = optional ? "as?" : "as"
+
+        guard record.count == 2, let written = record[key], let read = record[Self.subjectKey] else {
+            throw ExpressionFormError(
+                "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }."
+                    + " Wrap it in { value: ... } if the keys are plain data"
+                    + " (found keys: \(record.names))"
+            )
+        }
+
+        // A type has two spellings and a cast takes either: the string a
+        // built-in or a declared name is written as, and the mapping a
+        // record or a procedure signature is written as. Reading only the
+        // first would put a type out of a cast's reach for no reason but
+        // how it is written.
+        let type: TypeExpression
+
+        do {
+            if case let .string(spelling) = written {
+                type = try TypeReader.parse(spelling)
+            } else {
+                guard let decoder else {
+                    throw ExpressionFormError(
+                        "{ \(key): } written as a mapping cannot be read here."
+                            + " This surface reads a type by its name alone"
                     )
                 }
-            )
-        }
 
-        if record.names.contains("ref") {
-            guard record.count == 1 else {
-                throw ExpressionFormError(
-                    "a record with `ref` must be exactly { ref: <path> }."
-                        + " Wrap it in { value: ... } if the keys are plain data"
-                        + " (found keys: \(record.names))"
-                )
-            }
-
-            guard case let .string(rendered)? = record["ref"] else {
-                throw ExpressionFormError(
-                    "{ ref: } takes a path string like a.b[0]"
-                )
-            }
-
-            do {
-                return .reference(try TemplateParser().parseRefPath(rendered))
-            } catch {
-                throw ExpressionFormError("{ ref: \(rendered) }: \(error)")
-            }
-        }
-
-        if record.names.contains("as") || record.names.contains("as?") {
-            guard !(record.names.contains("as") && record.names.contains("as?")) else {
-                throw ExpressionFormError(
-                    "a cast names one type. `as` and `as?` are the two ways to"
-                        + " read a mismatch, not two types to read"
-                )
-            }
-
-            let optional = record.names.contains("as?")
-            let key: Name = optional ? "as?" : "as"
-
-            guard record.count == 2, let written = record[key], let read = record[Self.subjectKey] else {
-                throw ExpressionFormError(
-                    "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }."
-                        + " Wrap it in { value: ... } if the keys are plain data"
-                        + " (found keys: \(record.names))"
-                )
-            }
-
-            // A type has two spellings and a cast takes either: the string a
-            // built-in or a declared name is written as, and the mapping a
-            // record or a procedure signature is written as. Reading only the
-            // first would put a type out of a cast's reach for no reason but
-            // how it is written.
-            let type: TypeExpression
-
-            do {
-                if case let .string(spelling) = written {
-                    type = try TypeReader.parse(spelling)
-                } else {
-                    guard let decoder else {
-                        throw ExpressionFormError(
-                            "{ \(key): } written as a mapping cannot be read here."
-                                + " This surface reads a type by its name alone"
-                        )
-                    }
-
-                    type = try TypeReader(from: ValueDecoder(
-                        value: written,
-                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key.spelling)],
-                        steps: steps + [.key(key.spelling)],
-                        userInfo: decoder.userInfo
-                    ))
-                    .type
-                }
-            } catch let error as TypeFormError {
-                throw ExpressionFormError("{ \(key): }: \(error.message)")
-            }
-
-            return .cast(
-                try Self.read(read, at: steps + [.key(Self.subjectKey.spelling)], in: decoder),
-                as: type,
-                optional: optional
-            )
-        }
-
-        if record.names.contains(Self.closureKey) {
-            guard record.count == 1, let written = record[Self.closureKey] else {
-                throw ExpressionFormError(
-                    "a record with `closure` must be exactly { closure: <procedure> }"
-                        + " (found keys: \(record.names))"
-                )
-            }
-
-            guard let decoder else {
-                throw ExpressionFormError(
-                    "{ closure: } cannot be read here. A closure carries statements,"
-                        + " and this surface reads expressions alone"
-                )
-            }
-
-            do {
-                return .closure(
-                    try ProcedureReader(from: ValueDecoder(
-                        value: written,
-                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: Self.closureKey.spelling)],
-                        steps: steps + [.key(Self.closureKey.spelling)],
-                        userInfo: decoder.userInfo
-                    ))
-                    .procedure
-                )
-            } catch let refusal as ReadingError {
-                // A reading that says where it is says it deeper than here, and
-                // folding it into this form's sentence would spend the address
-                // to say the procedures again.
-                throw refusal
-            } catch {
-                throw ExpressionFormError("{ closure: }: \(error)")
-            }
-        }
-
-        if record.names.contains("call") {
-            guard record.count == 1, let written = record["call"] else {
-                throw ExpressionFormError(
-                    "a record with `call` must be exactly { call: <call> }"
-                        + " (found keys: \(record.names))"
-                )
-            }
-
-            guard let decoder else {
-                throw ExpressionFormError(
-                    "{ call: } cannot be read here. A call may carry bodies,"
-                        + " and this surface reads expressions alone"
-                )
-            }
-
-            do {
-                // A message written where a value is wanted has no statement to
-                // take a name from, and nothing in a message wants one.
-                return try CallForm(from: ValueDecoder(
+                type = try TypeReader(from: ValueDecoder(
                     value: written,
-                    codingPath: decoder.codingPath + [AnyCodingKey(stringValue: "call")],
-                    steps: steps + [.key("call")],
+                    codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key.spelling)],
+                    steps: steps + [.key(key.spelling)],
                     userInfo: decoder.userInfo
                 ))
-                .expression(boundTo: "")
-            } catch let refusal as ReadingError {
-                throw refusal
-            } catch {
-                throw ExpressionFormError("{ call: }: \(error)")
+                .type
             }
+        } catch let error as TypeFormError {
+            throw ExpressionFormError("{ \(key): }: \(error.message)")
         }
 
-        if record.names.contains("value") {
-            guard record.count == 1, let payload = record["value"] else {
-                throw ExpressionFormError(
-                    "a record with `value` must be exactly { value: <data> }."
-                        + " Wrap the whole record in { value: ... } if the keys are"
-                        + " plain data (found keys: \(record.names))"
-                )
-            }
+        return .cast(
+            try Self.read(read, at: steps + [.key(Self.subjectKey.spelling)], in: decoder),
+            as: type,
+            optional: optional
+        )
+    }
 
-            return .literal(payload)
+    private static func closure(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard record.count == 1, let written = record[Self.closureKey] else {
+            throw ExpressionFormError(
+                "a record with `closure` must be exactly { closure: <procedure> }"
+                    + " (found keys: \(record.names))"
+            )
         }
 
+        guard let decoder else {
+            throw ExpressionFormError(
+                "{ closure: } cannot be read here. A closure carries statements,"
+                    + " and this surface reads expressions alone"
+            )
+        }
+
+        do {
+            return .closure(
+                try ProcedureReader(from: ValueDecoder(
+                    value: written,
+                    codingPath: decoder.codingPath + [AnyCodingKey(stringValue: Self.closureKey.spelling)],
+                    steps: steps + [.key(Self.closureKey.spelling)],
+                    userInfo: decoder.userInfo
+                ))
+                .procedure
+            )
+        } catch let refusal as ReadingError {
+            // A reading that says where it is says it deeper than here, and
+            // folding it into this form's sentence would spend the address
+            // to say the procedures again.
+            throw refusal
+        } catch {
+            throw ExpressionFormError("{ closure: }: \(error)")
+        }
+    }
+
+    private static func call(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard record.count == 1, let written = record["call"] else {
+            throw ExpressionFormError(
+                "a record with `call` must be exactly { call: <call> }"
+                    + " (found keys: \(record.names))"
+            )
+        }
+
+        guard let decoder else {
+            throw ExpressionFormError(
+                "{ call: } cannot be read here. A call may carry bodies,"
+                    + " and this surface reads expressions alone"
+            )
+        }
+
+        do {
+            // A message written where a value is wanted has no statement to
+            // take a name from, and nothing in a message wants one.
+            return try CallForm(from: ValueDecoder(
+                value: written,
+                codingPath: decoder.codingPath + [AnyCodingKey(stringValue: "call")],
+                steps: steps + [.key("call")],
+                userInfo: decoder.userInfo
+            ))
+            .expression(boundTo: "")
+        } catch let refusal as ReadingError {
+            throw refusal
+        } catch {
+            throw ExpressionFormError("{ call: }: \(error)")
+        }
+    }
+
+    private static func literal(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard record.count == 1, let payload = record["value"] else {
+            throw ExpressionFormError(
+                "a record with `value` must be exactly { value: <data> }."
+                    + " Wrap the whole record in { value: ... } if the keys are"
+                    + " plain data (found keys: \(record.names))"
+            )
+        }
+
+        return .literal(payload)
+    }
+
+    private static func template(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
         // says a document may not write it. It does not hand the procedures back to
