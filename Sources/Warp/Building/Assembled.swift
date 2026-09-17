@@ -42,6 +42,11 @@ struct Assembled: Sendable {
     // closure was lifted into. Nil for a declaration's own row.
     let lifted: [Int?]
 
+    // Which document each name that wrote a closure stands in. A closure
+    // value is spelled by its writer, and the writer's document is whose
+    // numbering answers it.
+    let writers: [Name: Int]
+
     // MARK: - Initializer
     init(_ documents: [Compiled]) throws {
         let held = documents.reduce(0) { held, document in held + document.table.count }
@@ -51,6 +56,7 @@ struct Assembled: Sendable {
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
         var lifted: [Int?] = []
+        var writers: [Name: Int] = [:]
 
         table.reserveCapacity(held)
         origins.reserveCapacity(held)
@@ -79,12 +85,25 @@ struct Assembled: Sendable {
                 rows[name] = start + offset
             }
 
+            // A name two documents write closures under is a spelling with two
+            // answers, the same as a name two documents declare.
+            for writer in document.numbering.writers {
+                if let taken = writers[writer] {
+                    throw BuildError(
+                        "'\(writer)' writes a closure in \(documents[taken].document.spelled(at: taken))"
+                            + " and in \(document.document.spelled(at: origin))."
+                            + " Two writers of a name have no way to be told apart",
+                        at: .procedure(writer.spelling, in: document.document)
+                    )
+                }
+
+                writers[writer] = origin
+            }
+
             closures[origin] = document.lifted.map { row in start + row }
 
             table.append(contentsOf: document.table)
-            lifted.append(contentsOf: document.table.indices.map { index in
-                document.lifted.contains(index) ? document.numbering.written(index - document.lifted.lowerBound)?.nth : nil
-            })
+            lifted.append(contentsOf: document.table.indices.map(document.nth(ofRow:)))
             origins.append(contentsOf: [Int](repeating: origin, count: document.table.count))
         }
 
@@ -92,6 +111,7 @@ struct Assembled: Sendable {
         self.documents = documents.map(\.document)
         self.origins = origins
         self.lifted = lifted
+        self.writers = writers
         self.rows = rows
         self.closures = closures
         self.numbering = documents.map(\.numbering)

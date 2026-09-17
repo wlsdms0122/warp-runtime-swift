@@ -188,6 +188,16 @@ public struct Compiled: Sendable, Declaring {
             throw ObjectRefused("an object declares its rows in an order its table does not")
         }
 
+        // A lifted row is labelled by the declaration that wrote the closure,
+        // and the numbering says which declaration wrote each. A closure value
+        // is spelled by the two together, so a row whose numbering names
+        // another writer is a row two spellings reach.
+        for (index, row) in table.enumerated().dropFirst(declared.count) {
+            guard numbering.written(index - declared.count)?.by == row.label else {
+                throw ObjectRefused("a numbering writes a closure for a name other than the row's")
+            }
+        }
+
         self.init(
             document: document,
             types: types,
@@ -221,6 +231,16 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Public
+    // Which of its writer's closures the row at a position is, for a row a
+    // closure was lifted into, and nil for a declaration's own row. The
+    // numbering's arithmetic, asked here once for both the link and a compile
+    // laying this document down.
+    func nth(ofRow index: Int) -> Int? {
+        guard lifted.contains(index) else { return nil }
+
+        return numbering.written(index - lifted.lowerBound)?.nth
+    }
+
     // Every name this document declares, as a link asks for them. The exact
     // dual of a module's `uses`, and held here for the reason that one is held
     // there: a reader assembling it from the four tables is one more place to

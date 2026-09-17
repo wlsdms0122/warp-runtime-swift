@@ -31,8 +31,8 @@ enum ObjectCoverageFixture {
             table: [
                 try row(label: "a.eleven", body: true),
                 try row(label: "a.ten", body: false),
-                try lifted(label: "a.twenty"),
-                try lifted(label: "a.twentyOne")
+                try lifted(label: "a.eleven"),
+                try lifted(label: "a.eleven")
             ],
             answers: ["a.eleven": everyLoweredType],
             // The two closures behind the spellings belong to the declaration whose

@@ -127,8 +127,10 @@ struct Numbering: Sendable {
         }
 
         // A closure belongs to whatever wrote it: a declaration, or a constant
-        // or variable of the document, which a compiled document holds no
-        // other trace of. So the writers are taken as counted.
+        // or variable of the document. Which names those are is what the rows
+        // say, since a lifted row is labelled by its writer, so the object
+        // holds the writers to its rows where it has both.
+
         // A writing counts a name only where that name wrote one, so a count
         // of none is a count no writing lays down. Two writings for one
         // numbering otherwise, and the reading answers them the same.
@@ -296,23 +298,23 @@ struct Numbering: Sendable {
     // Where the nth closure a declaration wrote stands: the number its body
     // carries, and which of the document's closures that is. Nil where the
     // document was never read for that declaration's closures, which is a link
-    // lowering a body it never scanned.
+    // lowering a body it never scanned, and nil past the ones it wrote.
     func closure(_ nth: Int, of declared: Name) -> (number: Int, nth: Int)? {
-        guard let start = beginning(of: declared) else { return nil }
+        guard let run = run(of: declared), nth >= 0, nth < run.count else { return nil }
 
-        return (number: opening + start + nth, nth: start + nth)
+        return (number: opening + run.start + nth, nth: run.start + nth)
     }
 
     // MARK: - Private
-    // Which of this document's closures a declaration's first one is. The runs
-    // stand in name order, so a declaration's own begins behind everything the
-    // names before it wrote. Nil where the document was never read for that
-    // declaration's closures.
-    private func beginning(of declared: Name) -> Int? {
+    // Where a declaration's closures stand among this document's, and how
+    // many there are. The runs stand in name order, so a declaration's own
+    // begin behind everything the names before it wrote. Nil where the
+    // document was never read for that declaration's closures.
+    private func run(of declared: Name) -> (start: Int, count: Int)? {
         var standing = 0
 
         for run in runs {
-            guard run.name != declared else { return standing }
+            guard run.name != declared else { return (start: standing, count: run.count) }
 
             standing += run.count
         }

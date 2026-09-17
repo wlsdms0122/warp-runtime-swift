@@ -186,6 +186,7 @@ struct Relocating {
     init(
         table: [Linked],
         rows: [Name: Int],
+        writers: [Name: Int],
         numbering: [Numbering],
         typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
@@ -195,10 +196,8 @@ struct Relocating {
         self.closures = closures
         self.table = table
         self.rows = rows
+        self.writers = writers
         self.numbering = numbering
-        self.writers = numbering.enumerated().reduce(into: [Name: Int]()) { writers, entry in
-            for writer in entry.element.writers { writers[writer] = entry.offset }
-        }
         self.typeRows = typeNumbering.map { held in held.rows(in: loweredTypes) }
         self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
@@ -222,6 +221,7 @@ struct Relocating {
                 )
             },
             rows: assembled.rows,
+            writers: assembled.writers,
             numbering: assembled.numbering,
             typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
@@ -231,17 +231,11 @@ struct Relocating {
     }
 
     // MARK: - Public
-    // Which row of this link a closure value stands at, read the way the
-    // relocation answers it. Nil where no document of this link wrote it.
-    func row(of closure: Closure) -> Int? {
-        guard let origin = writers[closure.writing],
-              let nth = numbering[origin].closure(closure.nth, of: closure.writing)?.nth,
-              closures[origin].indices.contains(nth)
-        else {
-            return nil
-        }
-
-        return closures[origin][nth]
+    // Which row of this link a closure value stands at. A closure value is
+    // spelled by the declaration that wrote it, and that declaration's
+    // document is whose number it stands at.
+    func row(of closure: Closure) throws -> Int {
+        try standing(of: closure, at: .procedure(closure.writing.spelling, in: .assembled)).row
     }
 
     // Every row, numbered by this link and with the calls through a contract
@@ -297,27 +291,30 @@ struct Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            // A closure value is spelled by the declaration that wrote it,
-            // and that declaration's document is whose number it stands at.
-            guard let origin = writers[closure.writing] else {
-                throw BuildError(
-                    "a closure '\(closure.writing)' wrote, and no module in this link declares it",
-                    at: standing.place
-                )
-            }
-
-            guard let number = numbering[origin].closure(closure.nth, of: closure.writing)?.number else {
-                throw BuildError.unjudged(
-                    "closure \(closure.nth) of '\(closure.writing)', which its document never numbered",
-                    at: standing.place
-                )
-            }
-
-            let held = Standing(origin: origin, place: standing.place, loweredTypes: typeRows[origin])
-            let row = try self.row(number, in: held)
-
-            return closure.standing(as: try relocated(table[row]))
+            closure.standing(as: try relocated(table[try self.standing(of: closure, at: standing.place).row]))
         }
+    }
+
+    // Where a closure value stands in this link: its writer's document, and
+    // the row the number it stands at there turned out to be.
+    private func standing(of closure: Closure, at place: Place) throws -> (origin: Int, row: Int) {
+        guard let origin = writers[closure.writing] else {
+            throw BuildError(
+                "a closure '\(closure.writing)' wrote, and no module in this link writes one",
+                at: place
+            )
+        }
+
+        guard let number = numbering[origin].closure(closure.nth, of: closure.writing)?.number else {
+            throw BuildError(
+                "closure \(closure.nth) of '\(closure.writing)', which wrote no such closure",
+                at: place
+            )
+        }
+
+        let held = Standing(origin: origin, place: place, loweredTypes: typeRows[origin])
+
+        return (origin: origin, row: try row(number, in: held))
     }
 
     private func relocated(_ row: Linked) throws -> Linked {

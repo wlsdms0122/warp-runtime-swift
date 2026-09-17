@@ -95,7 +95,121 @@ struct ObjectClosureTests {
         #expect(answer == .int(11))
     }
 
+    @Test("an object whose numbering names another writer than a lifted row's is refused")
+    func aNumberingNamingAnotherWriterIsRefused() throws {
+        // Given. One declaration, and one lifted row labelled by it, which the
+        // numbering attributes to a name that wrote nothing.
+        let table = [try ObjectCoverageFixture.row(label: "a.one", body: true), try ObjectCoverageFixture.lifted(label: "a.one")]
+
+        // When / Then
+        #expect(throws: ObjectRefused.self) {
+            try Compiled(
+                document: .assembled,
+                types: [:],
+                constraints: [:],
+                contracts: [:],
+                claims: [:],
+                leaned: [:],
+                declared: ["a.one"],
+                table: table,
+                answers: [:],
+                numbering: Numbering(imports: [], declared: ["a.one"], closures: ["a.two": 1]),
+                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
+                judging: [],
+                dependencies: []
+            )
+        }
+    }
+
+    @Test("a closure spelled by a writer no document of the link has is refused at the link")
+    func aClosureOfAnUnknownWriterIsRefused() async throws {
+        // Given. A compiled document whose variable starts as a closure some
+        // other spelling claims to have written.
+        let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
+        let forged = try holding(Closure(writing: "app.nobody", nth: 0, linked: nil, captured: []), in: compiled)
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
+        }
+    }
+
+    @Test("a closure spelled past what its writer wrote is refused at the link")
+    func aClosurePastItsWriterIsRefused() async throws {
+        // Given. The writer wrote one closure, and the value asks for its sixth
+        let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
+        let forged = try holding(Closure(writing: "app.later", nth: 5, linked: nil, captured: []), in: compiled)
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
+        }
+    }
+
+    @Test("two documents writing closures under one name are refused where they meet")
+    func twoWritersOfOneNameAreRefused() async throws {
+        // Given. Two documents compiled apart, each with a constant of the
+        // same spelling holding a closure, meeting at the link
+        let one = try await builder.compile(Module.standard + [madeOf(5, entry: "app.one")])
+        let other = try await builder.compile([madeOf(6, entry: "app.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await builder.link(one + other, entry: "app.one", supplying: Supplying(Module.standard))
+        }
+    }
+
     // MARK: - Private
+    private func answeringLater(_ number: Int) throws -> Module {
+        try Module(
+            variables: ["app.later": .closure(answering(number))],
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .apply(reference("app.later"), arguments: [:])
+                )
+            ]
+        )
+    }
+
+    private func madeOf(_ number: Int, entry: Name) throws -> Module {
+        try Module(
+            constants: ["app.made": .closure(answering(number))],
+            procedures: [
+                entry: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .apply(reference("app.made"), arguments: [:])
+                )
+            ]
+        )
+    }
+
+    // The same objects, with the one variable there is starting as the
+    // closure handed in.
+    private func holding(_ closure: Closure, in compiled: [Compiled]) throws -> [Compiled] {
+        try compiled.map { one in
+            guard let held = one.variables.first else { return one }
+
+            return try Compiled(
+                document: one.document,
+                types: one.types,
+                constraints: one.constraints,
+                contracts: one.contracts,
+                claims: one.claims,
+                leaned: one.leaned,
+                declared: one.declared,
+                table: one.table,
+                answers: one.answers,
+                numbering: one.numbering,
+                typeNumbering: one.typeNumbering,
+                judging: [(name: held.name, value: .procedure(closure))],
+                dependencies: one.dependencies
+            )
+        }
+    }
+
     private func answering(_ number: Int) -> Procedure {
         Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(number)))
     }

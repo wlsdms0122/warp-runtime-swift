@@ -13,47 +13,41 @@ import Foundation
 // number with a row, so what comes back is rows of this link. A closure a
 // value holds is spelled by its writer, and the link says which row that is.
 extension Body {
-    var reaches: Reach {
-        var reach = Reach()
+    // The rows this body reaches, with every closure a value holds answered
+    // by the link.
+    func reaches(answering row: (Closure) throws -> Int) rethrows -> [Int] {
+        var rows: [Int] = []
+        var held: [Closure] = []
 
         walk { node in
-            node.reaches(into: &reach)
+            node.reaches(into: &rows, holding: &held)
 
             return true
         }
 
-        return reach
-    }
-}
-
-// What a body reaches: rows by number, and closures a value holds.
-struct Reach {
-    var rows: [Int] = []
-    var held: [Closure] = []
-
-    mutating func reach(_ value: Value) {
-        value.closures { closure in held.append(closure) }
+        return rows + (try held.map(row))
     }
 }
 
 extension Body.Node {
-    // The rows this one node sends a run into, apart from what nests in it.
-    func reaches(into reach: inout Reach) {
+    // The rows this one node sends a run into, apart from what nests in it,
+    // and the closures the values it holds hold.
+    func reaches(into rows: inout [Int], holding held: inout [Closure]) {
         guard case let .operation(operation) = self else { return }
 
         switch operation {
         // A closure held by a value stands in a body as a literal.
         case let .literal(value):
-            reach.reach(value)
+            value.closures { closure in held.append(closure) }
 
         case let .closure(row, _):
-            reach.rows.append(row)
+            rows.append(row)
 
         case let .call(call):
-            reach.rows.append(call.procedure)
+            rows.append(call.procedure)
 
         case let .dispatch(dispatch):
-            dispatch.calls.values.forEach { call in reach.rows.append(call.procedure) }
+            dispatch.calls.values.forEach { call in rows.append(call.procedure) }
 
         case .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             break
@@ -62,23 +56,27 @@ extension Body.Node {
 }
 
 extension Linked {
-    // What this row can send a run into: what its body names, the closures
-    // the variables it reads start out holding, since a body applies what it
-    // reads out of one without naming it, or the sends a native declared. The
-    // variables are its own document's, by the number it gave them.
-    func reaches(starting variables: [(name: Name, value: Value)]) -> Reach {
+    // The rows this row can send a run into: what its body names, the
+    // closures the variables it reads start out holding, since a body applies
+    // what it reads out of one without naming it, or the sends a native
+    // declared. The variables are its own document's, by the number it gave
+    // them.
+    func reaches(
+        starting variables: [(name: Name, value: Value)],
+        answering row: (Closure) throws -> Int
+    ) rethrows -> [Int] {
         switch implementation {
         case let .body(body, frame):
-            var reach = body.reaches
+            var held: [Closure] = []
 
             for (variable, _) in frame.variables {
-                reach.reach(variables[variable].value)
+                variables[variable].value.closures { closure in held.append(closure) }
             }
 
-            return reach
+            return try body.reaches(answering: row) + (try held.map(row))
 
         case .native:
-            return Reach(rows: sends.map(\.row))
+            return sends.map(\.row)
         }
     }
 }
@@ -92,18 +90,15 @@ extension Array where Element == Linked {
     func reached(
         from start: Int,
         starting variables: [[(name: Name, value: Value)]],
-        answering row: (Closure) -> Int?
-    ) -> Set<Int> {
+        answering row: (Closure) throws -> Int
+    ) rethrows -> Set<Int> {
         var reached: Set<Int> = []
         var frontier = [start]
 
         while let next = frontier.popLast() {
             guard reached.insert(next).inserted else { continue }
 
-            let reach = self[next].reaches(starting: variables[self[next].origin])
-
-            frontier.append(contentsOf: reach.rows)
-            frontier.append(contentsOf: reach.held.compactMap(row))
+            frontier.append(contentsOf: try self[next].reaches(starting: variables[self[next].origin], answering: row))
         }
 
         return reached
