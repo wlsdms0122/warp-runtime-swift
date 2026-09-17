@@ -109,7 +109,7 @@ public indirect enum Value: Sendable, Equatable {
     // Whether a closure this value holds answers the predicate. Stops at the
     // first that does.
     func holdsClosure(where predicate: (Closure) -> Bool) -> Bool {
-        !walked { closure in !predicate(closure) }
+        !walk { closure in !predicate(closure) }
     }
 
     // Every closure this value holds, however deep: inside an array, a record
@@ -117,7 +117,7 @@ public indirect enum Value: Sendable, Equatable {
     // value like any other. A cell captured as a hold is a box of the run
     // that made the closure, and what the box holds is that run's.
     func closures(_ body: (Closure) -> Void) {
-        walked { closure in
+        walk { closure in
             body(closure)
 
             return true
@@ -166,26 +166,26 @@ public indirect enum Value: Sendable, Equatable {
     // The walk itself. The body answers whether to go on, and the walk
     // answers whether it reached the end.
     @discardableResult
-    private func walked(_ body: (Closure) -> Bool) -> Bool {
+    private func walk(_ body: (Closure) -> Bool) -> Bool {
         switch self {
         case let .procedure(closure):
             guard body(closure) else { return false }
 
             for (_, cell) in closure.captured {
                 guard case let .value(captured) = cell else { continue }
-                guard captured.walked(body) else { return false }
+                guard captured.walk(body) else { return false }
             }
 
             return true
 
         case let .array(items):
-            return items.allSatisfy { item in item.walked(body) }
+            return items.allSatisfy { item in item.walk(body) }
 
         case let .record(record):
-            return record.values.allSatisfy { value in value.walked(body) }
+            return record.values.allSatisfy { value in value.walk(body) }
 
         case let .dictionary(dictionary):
-            return dictionary.entries.allSatisfy { entry in entry.value.walked(body) }
+            return dictionary.entries.allSatisfy { entry in entry.value.walk(body) }
 
         case .null, .bool, .int, .double, .string, .bytes:
             return true

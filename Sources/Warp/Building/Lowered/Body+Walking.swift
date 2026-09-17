@@ -32,19 +32,15 @@ extension Body {
     }
 }
 
-extension Operation {
-    func contains(where predicate: (Body.Node) -> Bool) -> Bool {
-        !walk { node in !predicate(node) }
-    }
-}
-
 extension Instruction {
+    @discardableResult
     func walk(_ visit: (Body.Node) -> Bool) -> Bool {
         visit(.instruction(self)) && code.walk(visit)
     }
 }
 
 extension Operation {
+    @discardableResult
     func walk(_ visit: (Body.Node) -> Bool) -> Bool {
         guard visit(.operation(self)) else { return false }
 
@@ -97,5 +93,9 @@ extension Operation {
         case let .leave(_, _, read):
             return read?.walk(visit) ?? true
         }
+    }
+
+    func contains(where predicate: (Body.Node) -> Bool) -> Bool {
+        !walk { node in !predicate(node) }
     }
 }
