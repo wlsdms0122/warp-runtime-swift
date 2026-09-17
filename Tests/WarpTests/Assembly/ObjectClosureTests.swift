@@ -198,6 +198,44 @@ struct ObjectClosureTests {
         #expect(try await Executor().run(image) == .int(6))
     }
 
+    @Test("a fold through a document read out of an object hands on the closure the object holds")
+    func aFoldThroughAReadObjectHandsOnItsClosure() async throws {
+        // Given. A written document whose constant holds a closure and whose
+        // procedure hands it on, compiled, written down and read back. A
+        // second document folds a constant through that procedure, and its
+        // entry applies what it got.
+        let held = try Module(
+            constants: ["app.made": .closure(answering(5))],
+            procedures: [
+                "app.give": Procedure(
+                    signature: Signature(returns: .procedure(Signature(returns: .int))),
+                    body: [],
+                    result: reference("app.made")
+                )
+            ],
+            identity: Identity([1])
+        )
+        let read = try (await builder.compile(Module.standard + [held])).map { document in
+            try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
+        }
+        let folding = try Module(
+            imports: ["app.give"],
+            constants: ["app.got": .call(Call(selector: "app.give"))],
+            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .apply(reference("app.got"), arguments: [:]))],
+            identity: Identity([2])
+        )
+
+        // When. The second document is written down and read back too, so
+        // what its constant settled to crosses an object as well.
+        let compiled = try (await builder.compile([folding], against: try builder.lay(read, supplying: Supplying(Module.standard)))).map { document in
+            try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
+        }
+        let image = try await builder.link(read + compiled, entry: "app.entry", supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image) == .int(5))
+    }
+
     @Test("a closure holding fewer cells than its frame is filled from is refused at the link")
     func aClosureHoldingTooFewCellsIsRefused() async throws {
         // Given. The closure the writer wrote takes one cell with it, and the

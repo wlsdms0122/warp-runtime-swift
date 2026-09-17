@@ -117,6 +117,14 @@ struct Lowering {
     // A document being compiled lifts its closures as it lowers, so it hands
     // none over here. One already compiled hands over the block it left.
     @discardableResult
+    // The same rows, answered. One per row, in place: what stands in the
+    // table is what every number of it already reaches.
+    mutating func replace(table answered: [Linked]) {
+        guard answered.count == table.count else { return }
+
+        table = answered
+    }
+
     mutating func hold(
         _ origin: Int,
         standing block: [Linked],

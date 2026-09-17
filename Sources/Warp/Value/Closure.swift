@@ -34,6 +34,11 @@ public struct Closure: Sendable {
     enum Document: Hashable, Sendable {
         case written(Identity)
         case compiled(Compiled.Token)
+
+        // The one rule: the text where there is one, the compile otherwise.
+        init(identity: Identity?, token: Compiled.Token) {
+            self = identity.map(Document.written) ?? .compiled(token)
+        }
     }
 
     // MARK: - Property

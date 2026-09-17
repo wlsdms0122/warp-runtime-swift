@@ -180,6 +180,7 @@ public struct Builder: Sendable {
             compiling.lay(document, at: origin, rows: rows, answering: answered)
         }
 
+        try compiling.answerHeld()
         try compiling.answering()
 
         return Laid(
@@ -360,7 +361,7 @@ public struct Builder: Sendable {
             contractProcedures: lowered.contractProcedures,
             naming: documents.map(\.document),
             spelling: compiled.map(\.naming) + zip(laying, tokens).map { module, token in
-                module.identity.map(Closure.Document.written) ?? .compiled(token)
+                Closure.Document(identity: module.identity, token: token)
             }
         )
 
@@ -792,7 +793,7 @@ public struct Builder: Sendable {
 
         // Walked as rows, reported as spellings: a closure is a row without
         // one and is walked through, and only what has one is reported.
-        let rows = linked.table.reached(from: start, starting: variables)
+        let rows = try linked.table.reached(from: start, starting: variables)
         let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(ObjectIdentifier(linked.table[entry.value])) }.map(\.key))
 
         return Image(

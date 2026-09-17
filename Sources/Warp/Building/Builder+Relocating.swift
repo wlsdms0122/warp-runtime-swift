@@ -184,10 +184,8 @@ struct Relocating {
     // answer a spelling.
     private let closures: [[Int]]
 
-    // Which documents each writer of a closure stands in. A closure value is
-    // spelled by its writer, and the writer's document is whose numbering
-    // answers it.
-    private let writing: [Closure.Writer: [Int]]
+    // Which row a closure a value holds stands at, by its spelling.
+    private let spelled: ClosureRows
 
     private let documents: [Place.Document]
     private let naming: [Closure.Document]
@@ -213,7 +211,7 @@ struct Relocating {
     init(
         table: [Linked],
         rows: [Name: Int],
-        writing: [Closure.Writer: [Int]],
+        spelled: ClosureRows,
         documents: [Place.Document],
         naming: [Closure.Document],
         numbering: [Numbering],
@@ -226,7 +224,7 @@ struct Relocating {
         self.table = table
         self.memo = Memo(count: table.count)
         self.rows = rows
-        self.writing = writing
+        self.spelled = spelled
         self.documents = documents
         self.naming = naming
         self.numbering = numbering
@@ -253,7 +251,7 @@ struct Relocating {
                 )
             },
             rows: assembled.rows,
-            writing: assembled.writing,
+            spelled: assembled.spelled,
             documents: assembled.documents,
             naming: assembled.naming,
             numbering: assembled.numbering,
@@ -318,47 +316,12 @@ struct Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            let row = try self.standing(of: closure, at: standing.place).row
+            let row = try spelled.row(of: closure, at: standing.place)
 
             try held(closure, to: table[row], at: standing.place)
 
             return closure.standing(as: try relocated(at: row))
         }
-    }
-
-    // Where a closure value stands in this link: its writer's document, and
-    // the row the number it stands at there turned out to be. A writer's
-    // document is one document of this link, by the text it was read from or
-    // by the compile that made it. Two documents named the same way, laid in
-    // one link, are one document laid twice, and a name they write a closure
-    // under has no one answer here.
-    private func standing(of closure: Closure, at place: Place) throws -> (origin: Int, row: Int) {
-        guard let origins = writing[closure.writer], let origin = origins.first else {
-            throw BuildError(
-                "a closure '\(closure.writer.name)' wrote, and no module in this link writes one",
-                at: place
-            )
-        }
-
-        guard origins.count == 1 else {
-            throw BuildError(
-                "a closure '\(closure.writer.name)' wrote, and "
-                    + origins.map { origin in documents[origin].spelled(at: origin) }.joined(separator: " and ")
-                    + " each write one, with nothing to tell the two apart",
-                at: place
-            )
-        }
-
-        guard let number = numbering[origin].closure(closure.nth, of: closure.writer.name)?.number else {
-            throw BuildError(
-                "closure \(closure.nth) of '\(closure.writer.name)', which wrote no such closure",
-                at: place
-            )
-        }
-
-        let held = Standing(origin: origin, place: place, loweredTypes: typeRows[origin])
-
-        return (origin: origin, row: try row(number, in: held))
     }
 
     // What a closure took with it fills exactly the slots its frame says a

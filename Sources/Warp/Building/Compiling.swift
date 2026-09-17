@@ -259,6 +259,91 @@ struct Compiling {
         )
     }
 
+    // Every closure a laid document's values hold answered with the row it
+    // stands at here, the way the link answers them. A document read out of
+    // an object holds its closures by spelling alone, and a fold through
+    // such a document applies them, so they are answered before anything
+    // folds. Answered row by row, each once, and a row met again while its
+    // own answering is underway is a ring no build lowers.
+    mutating func answerHeld() throws {
+        var writing: [Closure.Writer: [Int]] = [:]
+
+        for origin in naming.indices {
+            for name in lowering.numbering[origin]?.writers ?? [] {
+                writing[Closure.Writer(document: naming[origin], name: name), default: []].append(origin)
+            }
+        }
+
+        let spelled = ClosureRows(
+            writing: writing,
+            numbering: naming.indices.map { origin in lowering.numbering[origin] ?? Numbering(rows: [:]) },
+            closures: naming.indices.map { origin in lowering.closureRows[origin] ?? [] },
+            documents: documents
+        )
+        var answered: [Linked?] = Array(repeating: nil, count: lowering.table.count)
+        var underway = Set<Int>()
+
+        func held(_ value: Value) -> Bool {
+            value.holdsClosure { closure in closure.linked == nil }
+        }
+
+        func answering(_ row: Int) throws -> Linked {
+            if let done = answered[row] { return done }
+
+            let place = Place.procedure(lowering.table[row].label.spelling, in: documents[lowering.table[row].origin])
+
+            guard underway.insert(row).inserted else {
+                throw BuildError.unjudged("a closure closing a ring of rows through the values they hold", at: place)
+            }
+
+            defer { underway.remove(row) }
+
+            let standing = lowering.table[row]
+
+            guard case let .body(body, frame) = standing.implementation,
+                  body.contains(where: { node in
+                      if case let .operation(.literal(value)) = node { return held(value) }
+
+                      return false
+                  })
+            else {
+                answered[row] = standing
+
+                return standing
+            }
+
+            let done = Linked(
+                standing,
+                implementation: .body(
+                    try body.rewritten(
+                        operation: { operation in
+                            guard case let .literal(value) = operation, held(value) else { return operation }
+
+                            return .literal(try value.rewritten { closure in
+                                guard closure.linked == nil else { return closure }
+
+                                return closure.standing(as: try answering(try spelled.row(of: closure, at: place)))
+                            })
+                        },
+                        type: { type in type }
+                    ),
+                    frame
+                ),
+                sends: standing.sends
+            )
+
+            answered[row] = done
+
+            return done
+        }
+
+        for row in lowering.table.indices {
+            _ = try answering(row)
+        }
+
+        lowering.replace(table: answered.compactMap { row in row })
+    }
+
     // What has been lowered since the last phase, written in.
     mutating func foldable() {
         foldingRows.append(contentsOf: lowering.table[foldingRows.count...].map(\.folding))

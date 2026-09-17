@@ -46,11 +46,8 @@ struct Assembled: Sendable {
     let typeNumbering: [LoweredTypeNumbering]
     let variables: [[(name: Name, value: Value)]]
 
-    // Which documents each writer of a closure stands in. A closure value is
-    // spelled by its writer, and the writer's document is whose numbering
-    // answers it. A document laid twice stands a writer in both places, and
-    // a closure spelled by it has two answers where it is asked.
-    let writing: [Closure.Writer: [Int]]
+    // Which row a closure a value holds stands at, by its spelling.
+    let spelled: ClosureRows
 
     // MARK: - Initializer
     init(_ documents: [Compiled]) throws {
@@ -103,7 +100,12 @@ struct Assembled: Sendable {
         self.table = table
         self.documents = documents.map(\.document)
         self.naming = documents.map(\.naming)
-        self.writing = writing
+        self.spelled = ClosureRows(
+            writing: writing,
+            numbering: documents.map(\.numbering),
+            closures: closures,
+            documents: documents.map(\.document)
+        )
         self.rows = rows
         self.closures = closures
         self.numbering = documents.map(\.numbering)

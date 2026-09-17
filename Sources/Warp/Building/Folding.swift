@@ -99,7 +99,7 @@ struct Folding {
             in: .unanswerable(
                 table,
                 rows: rows,
-                naming: modules.map { module in module.identity.map(Closure.Document.written) ?? .compiled(Compiled.Token()) }
+                naming: modules.map { module in Closure.Document(identity: module.identity, token: Compiled.Token()) }
             ),
             loweredTypes: loweredTypes
         )
