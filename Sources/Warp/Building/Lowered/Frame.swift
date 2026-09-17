@@ -29,5 +29,14 @@ struct Frame: Sendable {
     }
 
     // MARK: - Public
+    // Whether these are exactly the slots a closure fills from what it took
+    // with it: no fewer, since a cell left out reads as null, and none
+    // other, since a slot a parameter or a variable fills is not one a
+    // closure took. Asked of a closure literal where an object is read and
+    // of a closure value where a link answers it, so the two ask alike.
+    func fills(_ slots: [Int]) -> Bool {
+        slots.count == captures.count && Set(slots) == Set(captures)
+    }
+
     // MARK: - Private
 }

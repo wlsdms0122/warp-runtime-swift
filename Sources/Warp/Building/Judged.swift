@@ -192,9 +192,9 @@ struct Judged: Sendable {
                 )
             }
 
-            guard closure.inner.allSatisfy({ slot in slot < stands.size }) else {
+            guard stands.fills(closure.inner) else {
                 throw ObjectRefused(
-                    "a closure takes something into a slot its own frame does not hold"
+                    "a closure takes something into slots other than the ones its own frame is filled at"
                 )
             }
         }

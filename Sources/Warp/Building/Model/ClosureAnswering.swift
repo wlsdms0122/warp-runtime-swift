@@ -69,18 +69,14 @@ final class ClosureAnswering {
 
     // MARK: - Private
     // What a closure took with it fills exactly the slots its frame says a
-    // closure fills: no fewer, since a cell left out reads as null, and none
-    // other, since a slot a parameter or a variable fills is not one a
-    // closure took. A value saying otherwise is a closure no body stood up,
+    // closure fills. A value saying otherwise is a closure no body stood up,
     // and it is refused here rather than read into the frame at the run.
     private func held(_ closure: Closure, to row: Linked, at place: Place) throws {
         guard case let .body(_, frame) = row.implementation else {
             throw BuildError.unjudged("closure \(closure.nth) of '\(closure.writer.name)' standing on a native row", at: place)
         }
 
-        guard closure.captured.count == frame.captures.count,
-              Set(closure.captured.map(\.slot)) == Set(frame.captures)
-        else {
+        guard frame.fills(closure.captured.map(\.slot)) else {
             throw BuildError(
                 "closure \(closure.nth) of '\(closure.writer.name)' holds cells at"
                     + " \(closure.captured.map(\.slot).sorted()), and its frame is filled at \(frame.captures.sorted())",
