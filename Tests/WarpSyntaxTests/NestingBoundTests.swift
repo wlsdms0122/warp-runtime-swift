@@ -77,8 +77,21 @@ struct NestingBoundTests {
         let deeper = shape.document(deep: shape.levels + 1)
 
         _ = try BinaryEncoding.data(from: document)
-        #expect(throws: (any Error).self) { try BinaryEncoding.data(from: deeper) }
-        #expect(throws: (any Error).self) { try Loader().load(deeper, identity: nil) }
+        #expect {
+            try BinaryEncoding.data(from: deeper)
+        } throws: { error in
+            "\(error)".contains("nests deeper than a document may")
+        }
+        #expect {
+            try TextEncoding.text(from: deeper)
+        } throws: { error in
+            "\(error)".contains("nests deeper than a document may")
+        }
+        #expect {
+            try Loader().load(deeper, identity: nil)
+        } throws: { error in
+            "\(error)".contains("nesting deeper than \(Envelope.nesting) containers")
+        }
 
         // When. Read, built and run.
         let module = try Loader().load(document, identity: nil)
