@@ -315,7 +315,7 @@ struct Relocating {
                 )
             )
 
-        default:
+        case .null, .bool, .int, .double, .string, .bytes:
             return value
         }
     }
