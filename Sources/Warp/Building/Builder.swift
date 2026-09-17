@@ -775,31 +775,43 @@ public struct Builder: Sendable {
         // calls through a contract filled with the rows that answer them.
         let relocating = try Relocating(assembled, types: types, supplied: natives)
         let linked = try relocating.linked()
+        let variables = try relocating.started(assembled.variables)
+
+        // Where a run can enter from: the start row, and the closures the
+        // documents' variables start out holding, which a body applies
+        // without naming.
+        var entered = [start]
+        for document in variables {
+            for entry in document {
+                entry.value.reaches(into: &entered)
+            }
+        }
+
+        let reached = reached(from: entered, over: linked.table)
 
         return Image(
             linked: linked.table,
             start: start,
             rows: assembled.rows,
-            reached: reached(from: start, over: linked.table, named: assembled.rows),
+            reached: Set(assembled.rows.lazy.filter { entry in reached.contains(entry.value) }.map(\.key)),
             types: types,
-            variables: try relocating.started(assembled.variables)
+            variables: variables
         )
     }
 
     // MARK: - Private
-    // Which declared spellings a run from the start row can enter, following
-    // what each row's code names. Closures are rows too and are walked
-    // through, and only what has a spelling is reported.
-    private func reached(from start: Int, over table: [Linked], named rows: [Name: Int]) -> Set<Name> {
+    // Which rows a run entering at these can reach, following what each
+    // row's code names. Transitive, closures walked through like any row.
+    private func reached(from entered: [Int], over table: [Linked]) -> Set<Int> {
         var reached: Set<Int> = []
-        var frontier: [Int] = [start]
+        var frontier = entered
 
         while let row = frontier.popLast() {
-            guard reached.insert(row).inserted, table.indices.contains(row) else { continue }
+            guard table.indices.contains(row), reached.insert(row).inserted else { continue }
 
             frontier.append(contentsOf: table[row].reaches)
         }
 
-        return Set(rows.lazy.filter { entry in reached.contains(entry.value) }.map(\.key))
+        return reached
     }
 }

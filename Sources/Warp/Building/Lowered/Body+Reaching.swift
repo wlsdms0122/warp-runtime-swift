@@ -11,9 +11,6 @@ import Foundation
 // row that answers a contract it calls through, and every closure it writes,
 // whose body is a row of its own. Read once the link has answered every
 // number with a row, so what comes back is rows of this link.
-//
-// A procedure reached only as a value, read back out of a variable and
-// applied, is not named by any code and is not here.
 extension Body {
     func reaches(into rows: inout [Int]) {
         instructions.forEach { instruction in instruction.code.reaches(into: &rows) }
@@ -30,8 +27,8 @@ extension Argument {
 }
 
 extension Value {
-    // A folded closure stands in a body as a literal, and its row is the
-    // number the link answered it with.
+    // A closure held by a value stands in a body as a literal, or starts a
+    // variable off, and its row is the number the link answered it with.
     func reaches(into rows: inout [Int]) {
         guard holdsProcedure else { return }
 

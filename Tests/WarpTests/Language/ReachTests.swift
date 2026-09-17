@@ -117,6 +117,32 @@ struct ReachTests {
         #expect(!image.reached.contains("app.aside"))
     }
 
+    @Test("a procedure a closure a variable starts out holding calls is reached")
+    func aClosureAVariableStartsWithIsEntered() async throws {
+        // Given. The closure is a variable's starting value, so no body
+        // writes it; the entry applies what it reads out of the variable
+        let sut = try Module(
+            variables: [
+                "app.held": .closure(Procedure(body: [], result: .call(Call(selector: "app.deep"))))
+            ],
+            procedures: [
+                entryName: Procedure(
+                    body: [],
+                    result: .apply(reference("app.held"), arguments: [:])
+                ),
+                "app.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
+                "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+
+        // Then
+        #expect(image.reached.isSuperset(of: [entryName, "app.deep"]))
+        #expect(!image.reached.contains("app.aside"))
+    }
+
     @Test("what a native procedure declares it sends is reached")
     func aNativeSendIsReached() async throws {
         // Given. `app.twice` is native and sends `std.math.times`
