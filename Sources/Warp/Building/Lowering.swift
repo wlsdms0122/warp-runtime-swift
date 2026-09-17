@@ -487,170 +487,272 @@ struct Lowering {
             })
 
         case let .record(record):
-            let ordered = record.sorted { $0.key < $1.key }
-
-            return .record(
-                RecordOperation(
-                    layout: Layout(name: nil, ordered: ordered.map(\.key)),
-                    fields: try ordered.map { _, field in
-                        try lower(field, in: scope, on: slots, label: label, at: place)
-                    }
-                )
-            )
+            return try lower(record: record, in: scope, on: slots, label: label, at: place)
 
         case let .closure(procedure):
-            guard let block = procedure.block else {
-                throw BuildError.unjudged("a closure with no body", at: place)
-            }
-
-            let inner = Slots(origin: slots.origin, variables: slots.variables, outer: (slots, scope))
-            var innerScope = Names()
-
-            for name in procedure.signature.names {
-                innerScope.slots[name] = inner.allocateParameter(name)
-            }
-
-            let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
-
-            // Taken before the body is lowered would number a closure before
-            // the ones it holds; taken after numbers the innermost first. The
-            // count read off the document walks the same way, so this reads it
-            // here.
-            let count = written[slots.origin, default: [:]][label, default: 0]
-            written[slots.origin, default: [:]][label] = count + 1
-
-            let held = numbered(slots.origin)
-            let row = table.count
-            let stands: (number: Int, nth: Int)?
-
-            if held.numbersAreRows {
-                stands = nil
-            } else if let given = held.closure(count, of: label) {
-                stands = given
-            } else {
-                throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
-            }
-
-            table.append(
-                Linked(
-                    label: label,
-                    origin: slots.origin,
-                    signature: procedure.signature,
-                    constness: procedure.constness,
-                    isolation: procedure.isolation,
-                    failing: procedure.failing,
-                    implementation: .body(body, inner.frame),
-                    foldable: true,
-                    in: loweredTypes
-                )
-            )
-
-            guard let stands else { return .closure(row, captures: inner.captures) }
-
-            var taken = closureRows[slots.origin] ?? []
-
-            if taken.count <= stands.nth {
-                taken.append(contentsOf: Array(repeating: row, count: stands.nth + 1 - taken.count))
-            }
-
-            taken[stands.nth] = row
-            closureRows[slots.origin] = taken
-
-            return .closure(stands.number, captures: inner.captures)
+            return try lower(closure: procedure, in: scope, on: slots, label: label, at: place)
 
         case let .apply(callee, arguments):
-            return .apply(
-                try lower(callee, in: scope, on: slots, label: label, at: place),
-                arguments: try arguments.sorted { $0.key < $1.key }.map { name, argument in
-                    (name, try lower(argument, in: scope, on: slots, label: label, at: place))
-                }
-            )
+            return try lower(apply: callee, arguments: arguments, in: scope, on: slots, label: label, at: place)
 
         case let .cast(value, type, optional):
-            let lowered = type.lowered(in: loweredTypes)
-            slots.note(lowered)
-
-            return .cast(
-                try lower(value, in: scope, on: slots, label: label, at: place),
-                as: lowered,
-                optional: optional
-            )
+            return try lower(cast: value, as: type, optional: optional, in: scope, on: slots, label: label, at: place)
 
         case let .block(block):
             return .block(try lower(block, in: scope, on: slots, label: label, at: place))
 
         case let .conditional(condition, then, otherwise):
-            var thenScope = scope
-            var elseScope = scope
-
-            return .conditional(
-                try lower(condition, in: scope, on: slots, label: label, at: place),
-                then: try lower(then, in: &thenScope, on: slots, label: label, at: place),
-                else: try otherwise.map { statements in
-                    try lower(statements, in: &elseScope, on: slots, label: label, at: place)
-                }
-            )
+            return try lower(conditional: condition, then: then, else: otherwise, in: scope, on: slots, label: label, at: place)
 
         case let .loop(condition, body, round):
-            var inner = scope
-            let slot = slots.allocate(round)
-            inner.slots[round] = slot
-            slots.hold(slot, .record(.round))
-
-            let taking = try lower(condition, in: inner, on: slots, label: label, at: place)
-            let start = slots.size
-            let instructions = try lower(body.body, in: &inner, on: slots, label: label, at: place)
-            let bound = start ..< slots.size
-            let result = try body.result.map { result in
-                try lower(result, in: inner, on: slots, label: label, at: place)
-            }
-
-            // A round that ends early has bound part of what a full round
-            // binds. The result reads the last finished round, so where it
-            // reads the body's slots, the run puts them back after a round
-            // cut short. Whether a round can end early is the run's fact.
-            let keeps = result.map { result in result.reads(bound) ? bound : nil } ?? nil
-
-            return .loop(
-                while: taking,
-                body: Body(instructions: instructions, result: result),
-                round: slot,
-                keeps: keeps
-            )
+            return try lower(loop: condition, body: body, round: round, in: scope, on: slots, label: label, at: place)
 
         case let .attempt(block, rescue, failure):
-            let attempted = try lower(block, in: scope, on: slots, label: label, at: place)
-            var inner = scope
-            let slot = slots.allocate(failure)
-            inner.slots[failure] = slot
-
-            return .attempt(
-                attempted,
-                rescue: try lower(rescue, in: inner, on: slots, label: label, at: place),
-                failure: slot
-            )
+            return try lower(attempt: block, rescue: rescue, failure: failure, in: scope, on: slots, label: label, at: place)
 
         case let .call(call):
-            // A selector naming a contract's procedure names no row. Which row
-            // answers is the receiver's, so every one the build found is
-            // lowered here and the run picks by the name it reads.
-            if let asked = contractProcedures[call.selector] {
-                return .dispatch(
-                    try lower(call, through: asked, in: scope, on: slots, label: label, at: place)
-                )
-            }
-
-            return .call(try lower(call, in: scope, on: slots, label: label, at: place))
+            return try lower(call: call, in: scope, on: slots, label: label, at: place)
 
         case let .leave(leave):
-            return .leave(
-                leave.reach,
-                target: leave.target,
-                try leave.value.map { value in
-                    try lower(value, in: scope, on: slots, label: label, at: place)
+            return try lower(leave: leave, in: scope, on: slots, label: label, at: place)
+        }
+    }
+
+    // One construct, one function. The switch above is what every nested
+    // expression passes through on the way down, and it carries the locals
+    // of no construct but the one it is lowering.
+    private mutating func lower(
+        record: [Name: Expression],
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        let ordered = record.sorted { $0.key < $1.key }
+
+        return .record(
+            RecordOperation(
+                layout: Layout(name: nil, ordered: ordered.map(\.key)),
+                fields: try ordered.map { _, field in
+                    try lower(field, in: scope, on: slots, label: label, at: place)
                 }
             )
+        )
+    }
+
+    private mutating func lower(
+        closure procedure: Procedure,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        guard let block = procedure.block else {
+            throw BuildError.unjudged("a closure with no body", at: place)
         }
+
+        let inner = Slots(origin: slots.origin, variables: slots.variables, outer: (slots, scope))
+        var innerScope = Names()
+
+        for name in procedure.signature.names {
+            innerScope.slots[name] = inner.allocateParameter(name)
+        }
+
+        let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
+
+        // Taken before the body is lowered would number a closure before
+        // the ones it holds; taken after numbers the innermost first. The
+        // count read off the document walks the same way, so this reads it
+        // here.
+        let count = written[slots.origin, default: [:]][label, default: 0]
+        written[slots.origin, default: [:]][label] = count + 1
+
+        let held = numbered(slots.origin)
+        let row = table.count
+        let stands: (number: Int, nth: Int)?
+
+        if held.numbersAreRows {
+            stands = nil
+        } else if let given = held.closure(count, of: label) {
+            stands = given
+        } else {
+            throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
+        }
+
+        table.append(
+            Linked(
+                label: label,
+                origin: slots.origin,
+                signature: procedure.signature,
+                constness: procedure.constness,
+                isolation: procedure.isolation,
+                failing: procedure.failing,
+                implementation: .body(body, inner.frame),
+                foldable: true,
+                in: loweredTypes
+            )
+        )
+
+        guard let stands else { return .closure(row, captures: inner.captures) }
+
+        var taken = closureRows[slots.origin] ?? []
+
+        if taken.count <= stands.nth {
+            taken.append(contentsOf: Array(repeating: row, count: stands.nth + 1 - taken.count))
+        }
+
+        taken[stands.nth] = row
+        closureRows[slots.origin] = taken
+
+        return .closure(stands.number, captures: inner.captures)
+    }
+
+    private mutating func lower(
+        apply callee: Expression,
+        arguments: [Name: Expression],
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        return .apply(
+            try lower(callee, in: scope, on: slots, label: label, at: place),
+            arguments: try arguments.sorted { $0.key < $1.key }.map { name, argument in
+                (name, try lower(argument, in: scope, on: slots, label: label, at: place))
+            }
+        )
+    }
+
+    private mutating func lower(
+        cast value: Expression,
+        as type: TypeExpression,
+        optional: Bool,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        let lowered = type.lowered(in: loweredTypes)
+        slots.note(lowered)
+
+        return .cast(
+            try lower(value, in: scope, on: slots, label: label, at: place),
+            as: lowered,
+            optional: optional
+        )
+    }
+
+    private mutating func lower(
+        conditional condition: Expression,
+        then: [Statement],
+        else otherwise: [Statement]?,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        var thenScope = scope
+        var elseScope = scope
+
+        return .conditional(
+            try lower(condition, in: scope, on: slots, label: label, at: place),
+            then: try lower(then, in: &thenScope, on: slots, label: label, at: place),
+            else: try otherwise.map { statements in
+                try lower(statements, in: &elseScope, on: slots, label: label, at: place)
+            }
+        )
+    }
+
+    private mutating func lower(
+        loop condition: Expression,
+        body: Block,
+        round: Name,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        var inner = scope
+        let slot = slots.allocate(round)
+        inner.slots[round] = slot
+        slots.hold(slot, .record(.round))
+
+        let taking = try lower(condition, in: inner, on: slots, label: label, at: place)
+        let start = slots.size
+        let instructions = try lower(body.body, in: &inner, on: slots, label: label, at: place)
+        let bound = start ..< slots.size
+        let result = try body.result.map { result in
+            try lower(result, in: inner, on: slots, label: label, at: place)
+        }
+
+        // A round that ends early has bound part of what a full round
+        // binds. The result reads the last finished round, so where it
+        // reads the body's slots, the run puts them back after a round
+        // cut short. Whether a round can end early is the run's fact.
+        let keeps = result.map { result in result.reads(bound) ? bound : nil } ?? nil
+
+        return .loop(
+            while: taking,
+            body: Body(instructions: instructions, result: result),
+            round: slot,
+            keeps: keeps
+        )
+    }
+
+    private mutating func lower(
+        attempt block: Block,
+        rescue: Block,
+        failure: Name,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        let attempted = try lower(block, in: scope, on: slots, label: label, at: place)
+        var inner = scope
+        let slot = slots.allocate(failure)
+        inner.slots[failure] = slot
+
+        return .attempt(
+            attempted,
+            rescue: try lower(rescue, in: inner, on: slots, label: label, at: place),
+            failure: slot
+        )
+    }
+
+    private mutating func lower(
+        call: Call,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        // A selector naming a contract's procedure names no row. Which row
+        // answers is the receiver's, so every one the build found is
+        // lowered here and the run picks by the name it reads.
+        if let asked = contractProcedures[call.selector] {
+            return .dispatch(
+                try lower(call, through: asked, in: scope, on: slots, label: label, at: place)
+            )
+        }
+
+        return .call(try lower(call, in: scope, on: slots, label: label, at: place))
+    }
+
+    private mutating func lower(
+        leave: Leave,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Operation {
+        return .leave(
+            leave.reach,
+            target: leave.target,
+            try leave.value.map { value in
+                try lower(value, in: scope, on: slots, label: label, at: place)
+            }
+        )
     }
 
     private mutating func lower(
