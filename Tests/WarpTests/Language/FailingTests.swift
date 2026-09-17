@@ -72,10 +72,10 @@ struct FailingTests {
         #expect(image[entryName]?.failing == .these(["aborted"]))
     }
 
-    @Test("abort sent null aborts with the null it was sent")
-    func abortSentNullAbortsWithIt() async throws {
-        // Given. `abort` takes `of: any`, and null is a value `any` admits, so
-        // what arrives is a message, read as text the way `text` reads null
+    @Test("abort sent null says the default message")
+    func abortSentNullSaysTheDefault() async throws {
+        // Given. `abort` takes `of: any`, and null is a value `any` admits.
+        // Null spells nothing, and a refusal says something
         let sut = try Module(
             imports: ["std.control.abort"],
             procedures: [
@@ -93,7 +93,7 @@ struct FailingTests {
             try await Executor().run(image, arguments: ["it": .null])
         }
 
-        #expect(aborted?.message == "")
+        #expect(aborted?.message == "aborted")
     }
 
     @Test("a plain cast is what the runtime itself may fail with")
