@@ -274,10 +274,6 @@ public enum TextEncoding {
         var opened: [Opened] = []
 
         while true {
-            guard opened.count <= Envelope.nesting else {
-                throw refused("the document nests deeper than a reader must follow")
-            }
-
             guard let token = tokens.popFirst() else {
                 throw refused("the text ends where a value should begin")
             }
@@ -321,11 +317,13 @@ public enum TextEncoding {
             } else {
                 switch token {
                 case .arrayOpen:
+                    try opening(opened)
                     opened.append(.array([]))
 
                     continue
 
                 case .recordOpen:
+                    try opening(opened)
                     opened.append(.record(held: [:], key: nil, name: nil))
 
                     continue
@@ -352,6 +350,7 @@ public enum TextEncoding {
                 // declared type the value settled to.
                 case let .bare(bare):
                     if tokens.first == .recordOpen, let name = try? Name(bare), name.isDeclarable {
+                        try opening(opened)
                         tokens.removeFirst()
                         opened.append(.record(held: [:], key: nil, name: name))
 
@@ -499,16 +498,6 @@ public enum TextEncoding {
         into text: inout String,
         within depth: Int
     ) throws {
-        guard depth >= 0 else {
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "the value nests deeper than a document may"
-                )
-            )
-        }
-
         switch value {
         case .null:
             text += "null"
@@ -543,6 +532,8 @@ public enum TextEncoding {
             text += "\""
 
         case let .array(array):
+            try opening(value, within: depth)
+
             guard !array.isEmpty else {
                 text += "[]"
 
@@ -562,9 +553,11 @@ public enum TextEncoding {
             text += String(repeating: "  ", count: indent) + "]"
 
         case let .record(record):
+            try opening(value, within: depth)
             try write(record.asDictionary, named: record.name, at: indent, into: &text, within: depth)
 
         case let .dictionary(held):
+            try opening(value, within: depth)
             try write(held, named: nil, at: indent, into: &text, within: depth)
 
         case .procedure:
@@ -601,6 +594,28 @@ public enum TextEncoding {
         }
 
         text += "\""
+    }
+
+    // The same count the writer keeps: containers open on the path, and the
+    // one about to open is one more of them.
+    private static func opening(_ opened: [Opened]) throws {
+        guard opened.count < Envelope.nesting else {
+            throw refused("the document nests deeper than a reader must follow")
+        }
+    }
+
+    // A container opens within the bound or not at all, and what it holds is
+    // written one container deeper.
+    private static func opening(_ value: Value, within depth: Int) throws {
+        guard depth > 0 else {
+            throw EncodingError.invalidValue(
+                value,
+                .init(
+                    codingPath: [],
+                    debugDescription: "the value nests deeper than a document may"
+                )
+            )
+        }
     }
 
     private static func refused(_ said: String) -> Error {

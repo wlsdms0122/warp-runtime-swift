@@ -136,16 +136,6 @@ public enum BinaryEncoding {
         within depth: Int,
         opening open: inout [Writing]
     ) throws {
-        guard depth >= 0 else {
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "the value nests deeper than a document may"
-                )
-            )
-        }
-
         switch value {
         case .null:
             bytes.append(Tag.null.rawValue)
@@ -187,6 +177,8 @@ public enum BinaryEncoding {
             write(raw, into: &bytes)
 
         case let .array(array):
+            try opening(value, within: depth)
+
             bytes.append(Tag.array.rawValue)
 
             write(UInt64(array.count), into: &bytes)
@@ -201,9 +193,11 @@ public enum BinaryEncoding {
         // A record under a name is written under its own tag with the name in
         // front, so a reader that met the tag knows a name follows.
         case let .record(record):
+            try opening(value, within: depth)
             try write(record.asDictionary, named: record.name, into: &bytes, within: depth, opening: &open)
 
         case let .dictionary(held):
+            try opening(value, within: depth)
             try write(held, named: nil, into: &bytes, within: depth, opening: &open)
 
         case .procedure:
@@ -212,6 +206,21 @@ public enum BinaryEncoding {
                 .init(
                     codingPath: [],
                     debugDescription: "a procedure is code, and data is what a document spells"
+                )
+            )
+        }
+    }
+
+    // A container opens within the bound or not at all, and what it holds is
+    // written one container deeper. Counted where a container opens, so an
+    // empty one past the bound is refused the same as a full one.
+    private static func opening(_ value: Value, within depth: Int) throws {
+        guard depth > 0 else {
+            throw EncodingError.invalidValue(
+                value,
+                .init(
+                    codingPath: [],
+                    debugDescription: "the value nests deeper than a document may"
                 )
             )
         }
@@ -287,10 +296,6 @@ public enum BinaryEncoding {
         var opened: [Opened] = []
 
         while true {
-            guard opened.count <= Envelope.nesting else {
-                throw refused("the document nests deeper than a reader must follow")
-            }
-
             guard let raw = reading.byte() else {
                 throw refused("the bytes end where a value should begin")
             }
@@ -344,6 +349,8 @@ public enum BinaryEncoding {
                 settled = .bytes(Array(raw))
 
             case .array:
+                try opening(opened)
+
                 let count = try length(from: &reading, of: "an array", costing: 1)
 
                 if count == 0 {
@@ -357,6 +364,8 @@ public enum BinaryEncoding {
                 }
 
             case .record, .namedRecord:
+                try opening(opened)
+
                 let name = try tag == .namedRecord ? Self.name(from: &reading) : nil
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
@@ -530,6 +539,14 @@ public enum BinaryEncoding {
     // to the procedure cannot miss. A truncating one here would say otherwise.
     private static func unzigzagged(_ unsigned: UInt64) -> Int {
         Int(Int64(bitPattern: unsigned >> 1 ^ (0 &- (unsigned & 1))))
+    }
+
+    // The same count the writer keeps: containers open on the path, and the
+    // one about to open is one more of them.
+    private static func opening(_ opened: [Opened]) throws {
+        guard opened.count < Envelope.nesting else {
+            throw refused("the document nests deeper than a reader must follow")
+        }
     }
 
     private static func refused(_ said: String) -> Error {
