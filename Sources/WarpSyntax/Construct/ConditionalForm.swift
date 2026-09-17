@@ -35,11 +35,9 @@ public struct ConditionalForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "conditional")
 
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        self.condition = try container.decode(ConditionReader.self, forKey: .when).condition
-        self.then = try container.decode(BodyReader.self, forKey: .then).statements
-        self.otherwise = try container.decodeIfPresent(BodyReader.self, forKey: .else)?.statements
+        self.condition = try decoder.descending(to: CodingKeys.when).read(ConditionReader.self).condition
+        self.then = try decoder.descending(to: CodingKeys.then).read(BodyReader.self).statements
+        self.otherwise = try decoder.descendingIfPresent(to: CodingKeys.else)?.read(BodyReader.self).statements
     }
 
     // MARK: - Public

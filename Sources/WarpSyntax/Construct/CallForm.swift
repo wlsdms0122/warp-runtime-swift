@@ -47,14 +47,13 @@ public struct CallForm: ConstructForm {
             try container.decode(String.self, forKey: .procedure),
             at: decoder.steps
         )
-        self.receiver = try container.decodeIfPresent(ExpressionReader.self, forKey: .of)?
+        self.receiver = try decoder.descendingIfPresent(to: CodingKeys.of)?
+            .read(ExpressionReader.self)
             .expression
-        self.arguments = try container.decodeIfPresent(
-            [String: ExpressionReader].self,
-            forKey: .arguments
-        )?
-        .mapValues(\.expression)
-        .named(at: decoder.steps) ?? [:]
+        self.arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
+            .read([String: ExpressionReader].self)
+            .mapValues(\.expression)
+            .named(at: decoder.steps) ?? [:]
     }
 
     // MARK: - Public

@@ -34,15 +34,11 @@ public struct ApplyForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "apply")
 
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        self.callee = try container.decode(ExpressionReader.self, forKey: .procedure).expression
-        self.arguments = try container.decodeIfPresent(
-            [String: ExpressionReader].self,
-            forKey: .arguments
-        )?
-        .mapValues(\.expression)
-        .named(at: decoder.steps) ?? [:]
+        self.callee = try decoder.descending(to: CodingKeys.procedure).read(ExpressionReader.self).expression
+        self.arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
+            .read([String: ExpressionReader].self)
+            .mapValues(\.expression)
+            .named(at: decoder.steps) ?? [:]
     }
 
     // MARK: - Public

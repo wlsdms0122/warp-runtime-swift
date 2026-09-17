@@ -22,12 +22,12 @@ public struct BlockReader: Decodable {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "block")
 
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
         self.block = try .reading(
-            body: try container.decodeIfPresent(BodyReader.self, forKey: .body)?
+            body: try decoder.descendingIfPresent(to: CodingKeys.body)?
+                .read(BodyReader.self)
                 .statements ?? [],
-            result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?
+            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
+                .read(ExpressionReader.self)
                 .expression,
             at: decoder.steps
         )

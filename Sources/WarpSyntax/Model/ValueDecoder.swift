@@ -340,6 +340,63 @@ struct ValueDecoder: Decoder {
         SingleContainer(value: value, codingPath: codingPath, steps: steps, userInfo: userInfo)
     }
 
+    // The reading under a key, standing on it. A keyed container answers the
+    // same question through a box and a protocol extension apiece, and a
+    // reading nested as deep as the wire admits spends its stack on those
+    // before it spends it on the document.
+    func descending(to key: String) throws -> ValueDecoder {
+        guard let held = try held(key) else {
+            throw ReadingError("no value for key '\(key)'", at: steps + [.key(key)])
+        }
+
+        return descending(to: key, holding: held)
+    }
+
+    // The same, and nothing where the key is not written or holds null.
+    func descendingIfPresent(to key: String) throws -> ValueDecoder? {
+        guard let held = try held(key), held != .null else { return nil }
+
+        return descending(to: key, holding: held)
+    }
+
+    // Every element, read where it stands.
+    func read<T: Decodable>(_ type: [T].Type) throws -> [T] {
+        guard let elements = value.elements else {
+            throw ReadingError("expected array, found \(value.type)", at: steps)
+        }
+
+        return try elements.enumerated().map { index, element in
+            try ValueDecoder(
+                value: element,
+                codingPath: codingPath + [AnyKey(intValue: index)],
+                steps: steps + [.index(index)],
+                userInfo: userInfo
+            )
+            .decode(T.self)
+        }
+    }
+
+    // A record of readers, read in the order the names sort in.
+    //
+    // `Dictionary` reads its keys in hash order, and the seed for that changes
+    // from one process to the next. Two entries that are both wrong would then
+    // be refused in either order, and the one line an author is given would not
+    // be the same line twice, which is the whole of what an address is for.
+    // Sorted rather than as-written because a document is a value by then and a
+    // value's record has no order to have kept.
+    func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
+        guard let record = value.asDictionary else {
+            throw ReadingError("expected a record, found \(value.type)", at: steps)
+        }
+
+        return try record.names
+            .map(\.spelling)
+            .sorted()
+            .reduce(into: [String: T]()) { read, key in
+                read[key] = try descending(to: key).decode(T.self)
+            }
+    }
+
     // The one place a Codable type is made from a value, shared by all three
     // containers so a special case cannot hold in one and not another.
     //
@@ -368,6 +425,24 @@ struct ValueDecoder: Decoder {
             throw ReadingError(refusal, at: steps)
         }
     }
+
+    // MARK: - Private
+    private func held(_ key: String) throws -> Value? {
+        guard let record = value.asDictionary else {
+            throw ReadingError("expected a record, found \(value.type)", at: steps)
+        }
+
+        return (try? Name(key)).flatMap { name in record[name] }
+    }
+
+    private func descending(to key: String, holding held: Value) -> ValueDecoder {
+        ValueDecoder(
+            value: held,
+            codingPath: codingPath + [AnyKey(stringValue: key)],
+            steps: steps + [.key(key)],
+            userInfo: userInfo
+        )
+    }
 }
 
 extension Decoder {
@@ -395,22 +470,48 @@ extension Decoder {
         return try decoder.decode(type)
     }
 
-    // A record of readers, read in the order the names sort in.
-    //
-    // `Dictionary` reads its keys in hash order, and the seed for that changes
-    // from one process to the next. Two entries that are both wrong would then
-    // be refused in either order, and the one line an author is given would not
-    // be the same line twice, which is the whole of what an address is for.
-    // Sorted rather than as-written because a document is a value by then and a
-    // value's record has no order to have kept.
     func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
-        let container = try container(keyedBy: AnyCodingKey.self)
+        guard let decoder = self as? ValueDecoder else {
+            let container = try container(keyedBy: AnyCodingKey.self)
 
-        return try container.allKeys
-            .map(\.stringValue)
-            .sorted()
-            .reduce(into: [String: T]()) { read, key in
-                read[key] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
-            }
+            return try container.allKeys
+                .map(\.stringValue)
+                .sorted()
+                .reduce(into: [String: T]()) { read, key in
+                    read[key] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
+                }
+        }
+
+        return try decoder.read(type)
+    }
+
+    func read<T: Decodable>(_ type: [T].Type) throws -> [T] {
+        guard let decoder = self as? ValueDecoder else { return try [T](from: self) }
+
+        return try decoder.read(type)
+    }
+
+    // The reading under a key, standing on it.
+    func descending(to key: some CodingKey) throws -> Decoder {
+        guard let decoder = self as? ValueDecoder else {
+            return try container(keyedBy: AnyCodingKey.self)
+                .superDecoder(forKey: AnyCodingKey(stringValue: key.stringValue))
+        }
+
+        return try decoder.descending(to: key.stringValue)
+    }
+
+    // The same, and nothing where the key is not written or holds null.
+    func descendingIfPresent(to key: some CodingKey) throws -> Decoder? {
+        guard let decoder = self as? ValueDecoder else {
+            let container = try container(keyedBy: AnyCodingKey.self)
+            let written = AnyCodingKey(stringValue: key.stringValue)
+
+            guard container.contains(written), try !container.decodeNil(forKey: written) else { return nil }
+
+            return try container.superDecoder(forKey: written)
+        }
+
+        return try decoder.descendingIfPresent(to: key.stringValue)
     }
 }

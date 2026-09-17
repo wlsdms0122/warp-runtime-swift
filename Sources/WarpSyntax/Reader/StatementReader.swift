@@ -193,7 +193,7 @@ public struct StatementReader: Decodable {
             )
         }
 
-        let inside = try container.superDecoder(forKey: valueKey)
+        let inside = try decoder.descending(to: valueKey)
         let expression = try Self.expression(
             in: inside,
             registry: registry,
@@ -240,7 +240,7 @@ public struct StatementReader: Decodable {
             key != Self.valueKey,
             let form = registry.form(for: key)
         {
-            let inside = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: written))
+            let inside = try decoder.descending(to: AnyCodingKey(stringValue: written))
             let built: any ConstructForm
 
             do {

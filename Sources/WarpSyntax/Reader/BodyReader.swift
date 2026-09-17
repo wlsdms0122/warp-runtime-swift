@@ -23,7 +23,7 @@ public struct BodyReader: Decodable {
         // Nothing is done to what a statement refuses with. Each one names
         // itself as it is read, so a refusal arrives already wearing the name
         // the author knows it by.
-        let statements = try [StatementReader](from: decoder).map(\.statement)
+        let statements = try decoder.read([StatementReader].self).map(\.statement)
 
         // What is refused here is a pair and not a statement, so the name is
         // read off the statement that was made rather than off the document a

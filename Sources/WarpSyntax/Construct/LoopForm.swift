@@ -37,12 +37,11 @@ public struct LoopForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "loop")
 
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        self.condition = try container.decode(ConditionReader.self, forKey: .while).condition
+        self.condition = try decoder.descending(to: CodingKeys.while).read(ConditionReader.self).condition
         self.body = try .reading(
-            body: try container.decode(BodyReader.self, forKey: .body).statements,
-            result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?
+            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).statements,
+            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
+                .read(ExpressionReader.self)
                 .expression,
             at: decoder.steps
         )

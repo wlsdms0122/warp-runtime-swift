@@ -35,11 +35,11 @@ public struct ProcedureReader: Decodable {
         // A procedure's body and result are the same pair a block writes, so
         // they are joined by the same assembler and under the same rule.
         let block = try Block.reading(
-            body: try container
-                .decodeIfPresent(BodyReader.self, forKey: .body)?
+            body: try decoder.descendingIfPresent(to: CodingKeys.body)?
+                .read(BodyReader.self)
                 .statements ?? [],
-            result: try container
-                .decodeIfPresent(ExpressionReader.self, forKey: .result)?
+            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
+                .read(ExpressionReader.self)
                 .expression,
             at: decoder.steps
         )
