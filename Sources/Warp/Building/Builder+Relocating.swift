@@ -194,12 +194,19 @@ struct Relocating {
 
     // Every row relocated once, whichever asks for it first: the table, or a
     // value holding a closure whose row it is. One object per row, so a
-    // closure a value holds holds the row of the table it stands in.
-    private let memo = Memo()
+    // closure a value holds holds the row of the table it stands in. By
+    // row, since every row is asked for, and the marks of the ones underway
+    // beside them.
+    private let memo: Memo
 
     private final class Memo {
-        var rows: [Int: Linked] = [:]
-        var underway: Set<Int> = []
+        var rows: [Linked?]
+        var underway: [Bool]
+
+        init(count: Int) {
+            rows = Array(repeating: nil, count: count)
+            underway = Array(repeating: false, count: count)
+        }
     }
 
     // MARK: - Initializer
@@ -217,6 +224,7 @@ struct Relocating {
     ) {
         self.closures = closures
         self.table = table
+        self.memo = Memo(count: table.count)
         self.rows = rows
         self.writing = writing
         self.documents = documents
@@ -384,14 +392,15 @@ struct Relocating {
         // rows holding closures of one another, through values in their
         // bodies. A body holds a value the fold settled, and a fold settles
         // nothing through itself, so a build lowers no such ring.
-        guard memo.underway.insert(row).inserted else {
+        guard !memo.underway[row] else {
             throw BuildError.unjudged(
                 "a closure closing a ring of rows through the values they hold",
                 at: .procedure(table[row].label.spelling, in: documents[table[row].origin])
             )
         }
 
-        defer { memo.underway.remove(row) }
+        memo.underway[row] = true
+        defer { memo.underway[row] = false }
 
         let done = try relocated(table[row])
 

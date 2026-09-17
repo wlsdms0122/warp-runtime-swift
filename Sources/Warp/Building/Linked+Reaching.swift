@@ -80,33 +80,22 @@ extension Linked {
 
 extension Array where Element == Linked {
     // Which rows a run entering at one can reach: what each row reaches,
-    // transitively. Every number met is a row of this table, since the link
-    // answered each one before the table was handed over, and every row a
-    // closure holds is one of these, since the link relocates a row once.
-    // The variables are every document's, by the document and then by the
-    // number it gave them.
-    func reached(from start: Int, starting variables: [[(name: Name, value: Value)]]) throws -> Set<Int> {
-        let numbered = Dictionary(enumerated().map { number, row in (ObjectIdentifier(row), number) }) { first, _ in first }
-        var reached: Set<Int> = []
-        var frontier = [start]
+    // transitively, by the rows themselves. Every number met is a row of
+    // this table, since the link answered each one before the table was
+    // handed over, and every row a closure holds is one of these, since the
+    // link relocates a row once. The variables are every document's, by the
+    // document and then by the number it gave them.
+    func reached(from start: Int, starting variables: [[(name: Name, value: Value)]]) -> Set<ObjectIdentifier> {
+        var reached: Set<ObjectIdentifier> = []
+        var frontier = [self[start]]
 
         while let next = frontier.popLast() {
-            guard reached.insert(next).inserted else { continue }
+            guard reached.insert(ObjectIdentifier(next)).inserted else { continue }
 
-            let reach = self[next].reaches(starting: variables[self[next].origin])
+            let reach = next.reaches(starting: variables[next.origin])
 
-            frontier.append(contentsOf: reach.rows)
-
-            for held in reach.held {
-                guard let row = numbered[ObjectIdentifier(held)] else {
-                    throw BuildError.unjudged(
-                        "a closure holding a row of some other table",
-                        at: .procedure(held.label.spelling, in: .assembled)
-                    )
-                }
-
-                frontier.append(row)
-            }
+            frontier.append(contentsOf: reach.rows.map { row in self[row] })
+            frontier.append(contentsOf: reach.held)
         }
 
         return reached
