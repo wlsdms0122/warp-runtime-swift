@@ -52,13 +52,13 @@ struct ObjectWriter {
         // it is not written.
         let written: Value
 
-        do throws(Unwritable) {
+        do throws(ObjectUnwritable) {
             written = .array([
                 document(compiled.document),
                 .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
                 try keyed(compiled.types, type),
-                try keyed(compiled.constraints) { (types) throws(Unwritable) -> Value in .array(try types.map(type)) },
-                try keyed(compiled.contracts) { (procedures) throws(Unwritable) -> Value in try keyed(procedures, signature) },
+                try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in .array(try types.map(type)) },
+                try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in try keyed(procedures, signature) },
                 keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
                 .array(compiled.leaned.keys.sorted().map { claim in
                     .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
@@ -68,13 +68,13 @@ struct ObjectWriter {
                 keyed(compiled.answers, lowered),
                 numbering,
                 typeNumbering(compiled.typeNumbering),
-                .array(try compiled.variables.map { (entry) throws(Unwritable) -> Value in
+                .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
                     .array([name(entry.name), try value(entry.value)])
                 }),
                 .array(compiled.constants.map(name))
             ])
         } catch {
-            throw ObjectUnwritable(error.reason)
+            throw error
         }
 
         return written
@@ -83,7 +83,7 @@ struct ObjectWriter {
     // A value written down: the data as it is, and a closure by what it is
     // spelled by, since the row a link gave it is the link's. A cell held
     // is a box of the run that made the closure, and no object holds one.
-    func value(_ value: Value) throws(Unwritable) -> Value {
+    func value(_ value: Value) throws(ObjectUnwritable) -> Value {
         switch value {
         case .null:
             return tagged(.null)
@@ -117,7 +117,7 @@ struct ObjectWriter {
         case let .dictionary(dictionary):
             return tagged(
                 .dictionary,
-                .array(try dictionary.entries.map { (entry) throws(Unwritable) -> Value in
+                .array(try dictionary.entries.map { (entry) throws(ObjectUnwritable) -> Value in
                     .array([name(entry.name), try self.value(entry.value)])
                 })
             )
@@ -126,7 +126,7 @@ struct ObjectWriter {
         // closure such a document wrote is not written either.
         case let .procedure(closure):
             guard case let .written(identity) = closure.writer.document else {
-                throw Unwritable(reason: "a value holds a closure a document nobody wrote down wrote")
+                throw ObjectUnwritable("a value holds a closure a document nobody wrote down wrote")
             }
 
             return tagged(
@@ -134,22 +134,15 @@ struct ObjectWriter {
                 .bytes(identity.bytes),
                 name(closure.writer.name),
                 .int(closure.nth),
-                .array(try closure.captured.map { (slot, cell) throws(Unwritable) -> Value in
+                .array(try closure.captured.map { (slot, cell) throws(ObjectUnwritable) -> Value in
                     guard case let .value(held) = cell else {
-                        throw Unwritable(reason: "a value holds a closure holding a box of the run that made it")
+                        throw ObjectUnwritable("a value holds a closure holding a box of the run that made it")
                     }
 
                     return .array([.int(slot), try self.value(held)])
                 })
             )
         }
-    }
-
-    // What no object holds, met on the way to writing one: a hold a closure
-    // captured, which is a box of the run that made it, or a closure a
-    // document nobody wrote down wrote.
-    struct Unwritable: Error {
-        let reason: String
     }
 
     private func tagged(_ tag: ValueTag, _ fields: Value...) -> Value {
@@ -178,7 +171,7 @@ struct ObjectWriter {
         ObjectWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
-    private func type(_ expression: TypeExpression) throws(Unwritable) -> Value {
+    private func type(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
         switch expression {
         case .any:
             return .array([.int(0)])
@@ -300,7 +293,7 @@ struct ObjectWriter {
         }
     }
 
-    private func signature(_ signature: Signature) throws(Unwritable) -> Value {
+    private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
         .array([
             ObjectWriter.maybe(signature.receiver, name),
             try keyed(signature.parameters, parameter),
@@ -308,7 +301,7 @@ struct ObjectWriter {
         ])
     }
 
-    private func parameter(_ parameter: Parameter) throws(Unwritable) -> Value {
+    private func parameter(_ parameter: Parameter) throws(ObjectUnwritable) -> Value {
         .array([
             try ObjectWriter.maybe(parameter.type, type),
             ObjectWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
@@ -546,7 +539,7 @@ private extension ObjectWriter {
 }
 
 private extension ObjectWriter {
-    func judged(_ row: Judged) throws(Unwritable) -> Value {
+    func judged(_ row: Judged) throws(ObjectUnwritable) -> Value {
         .array([
             name(row.label),
             try signature(row.signature),
@@ -558,7 +551,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func implementation(_ implementation: Judged.Implementation) throws(Unwritable) -> Value {
+    func implementation(_ implementation: Judged.Implementation) throws(ObjectUnwritable) -> Value {
         switch implementation {
         case let .body(body, frame):
             return .array([.int(0), try self.body(body), self.frame(frame)])
@@ -586,14 +579,14 @@ private extension ObjectWriter {
         ])
     }
 
-    func body(_ body: Body) throws(Unwritable) -> Value {
+    func body(_ body: Body) throws(ObjectUnwritable) -> Value {
         .array([
             .array(try body.instructions.map(instruction)),
             try ObjectWriter.maybe(body.result, operation)
         ])
     }
 
-    func instruction(_ instruction: Instruction) throws(Unwritable) -> Value {
+    func instruction(_ instruction: Instruction) throws(ObjectUnwritable) -> Value {
         .array([
             ObjectWriter.maybe(instruction.binding, binding),
             try operation(instruction.code),
@@ -636,7 +629,7 @@ private extension ObjectWriter {
 }
 
 private extension ObjectWriter {
-    func operation(_ operation: Operation) throws(Unwritable) -> Value {
+    func operation(_ operation: Operation) throws(ObjectUnwritable) -> Value {
         switch operation {
         case let .literal(value):
             return .array([.int(0), try self.value(value)])
@@ -661,7 +654,7 @@ private extension ObjectWriter {
             return .array([
                 .int(5),
                 try self.operation(callee),
-                .array(try arguments.map { (argument) throws(Unwritable) -> Value in
+                .array(try arguments.map { (argument) throws(ObjectUnwritable) -> Value in
                     .array([name(argument.0), try self.operation(argument.1)])
                 })
             ])
@@ -677,7 +670,7 @@ private extension ObjectWriter {
                 .int(8),
                 try self.operation(condition),
                 .array(try then.map(instruction)),
-                try ObjectWriter.maybe(otherwise) { (written) throws(Unwritable) -> Value in .array(try written.map(instruction)) }
+                try ObjectWriter.maybe(otherwise) { (written) throws(ObjectUnwritable) -> Value in .array(try written.map(instruction)) }
             ])
 
         case let .loop(while: condition, body: body, round: round, keeps: keeps):
@@ -708,15 +701,15 @@ private extension ObjectWriter {
         }
     }
 
-    func recordOperation(_ record: RecordOperation) throws(Unwritable) -> Value {
+    func recordOperation(_ record: RecordOperation) throws(ObjectUnwritable) -> Value {
         .array([layout(record.layout), .array(try record.fields.map(operation))])
     }
 
-    func callOperation(_ call: CallOperation) throws(Unwritable) -> Value {
+    func callOperation(_ call: CallOperation) throws(ObjectUnwritable) -> Value {
         .array([
             .int(call.procedure),
             try ObjectWriter.maybe(call.receiver, operation),
-            .array(try call.arguments.map { (argument) throws(Unwritable) -> Value in try ObjectWriter.maybe(argument, self.operation) }),
+            .array(try call.arguments.map { (argument) throws(ObjectUnwritable) -> Value in try ObjectWriter.maybe(argument, self.operation) }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
             })
@@ -726,7 +719,7 @@ private extension ObjectWriter {
     // Without the calls beside it. Which row answers a contract is the link's
     // answer and an object stands before one, so writing them down would be
     // writing a fact this document does not hold.
-    func dispatchOperation(_ dispatch: DispatchOperation) throws(Unwritable) -> Value {
+    func dispatchOperation(_ dispatch: DispatchOperation) throws(ObjectUnwritable) -> Value {
         .array([
             name(dispatch.contract),
             name(dispatch.procedure),
@@ -735,7 +728,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func argument(_ argument: Argument) throws(Unwritable) -> Value {
+    func argument(_ argument: Argument) throws(ObjectUnwritable) -> Value {
         switch argument {
         case let .value(operation):
             return .array([.int(0), try self.operation(operation)])

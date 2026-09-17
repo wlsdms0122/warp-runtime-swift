@@ -8,14 +8,17 @@
 import Foundation
 
 // Why no object was written for a compiled document. A caller keeping
-// objects reads it where a document it expected to keep has none.
-public struct ObjectUnwritable: Error, Sendable {
+// objects reads it where a document it expected to keep has none. No place:
+// what was not written is not in any text.
+public struct ObjectUnwritable: WarpError {
     // MARK: - Property
-    public let reason: String
+    public let message: String
+
+    public let place: Place? = nil
 
     // MARK: - Initializer
-    init(_ reason: String) {
-        self.reason = reason
+    init(_ message: String) {
+        self.message = message
     }
 
     // MARK: - Public

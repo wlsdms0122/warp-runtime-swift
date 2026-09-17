@@ -85,7 +85,11 @@ extension Array where Element == Linked {
     // handed over, and every row a closure holds is one of these, since the
     // link relocates a row once. The variables are every document's, by the
     // document and then by the number it gave them.
-    func reached(from start: Int, starting variables: [[(name: Name, value: Value)]]) throws -> Set<ObjectIdentifier> {
+    func reached(
+        from start: Int,
+        starting variables: [[(name: Name, value: Value)]],
+        in documents: [Place.Document]
+    ) throws -> Set<ObjectIdentifier> {
         var reached: Set<ObjectIdentifier> = []
         var frontier = [self[start]]
 
@@ -95,7 +99,10 @@ extension Array where Element == Linked {
             // A row of this table stands in a document of this link. One that
             // does not is a row a closure brought in from some other table.
             guard variables.indices.contains(next.origin) else {
-                throw BuildError.unjudged("a closure holding a row of some other table", at: .procedure(next.label.spelling, in: .assembled))
+                throw BuildError.unjudged(
+                    "a closure holding a row of some other table",
+                    at: .procedure(next.label.spelling, in: documents.indices.contains(next.origin) ? documents[next.origin] : .assembled)
+                )
             }
 
             let reach = next.reaches(starting: variables[next.origin])
