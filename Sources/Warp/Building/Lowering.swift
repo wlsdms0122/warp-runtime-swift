@@ -511,16 +511,24 @@ struct Lowering {
             return try lower(attempt: block, rescue: rescue, failure: failure, in: scope, on: slots, label: label, at: place)
 
         case let .call(call):
-            return try lower(call: call, in: scope, on: slots, label: label, at: place)
+            // A selector naming a contract's procedure names no row. Which row
+            // answers is the receiver's, so every one the build found is
+            // lowered here and the run picks by the name it reads.
+            if let asked = contractProcedures[call.selector] {
+                return .dispatch(try lower(call, through: asked, in: scope, on: slots, label: label, at: place))
+            }
+
+            return .call(try lower(call, in: scope, on: slots, label: label, at: place))
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: slots, label: label, at: place)
         }
     }
 
-    // One construct, one function. The switch above is what every nested
-    // expression passes through on the way down, and it carries the locals
-    // of no construct but the one it is lowering.
+    // A construct with locals of its own is lowered in a function of its
+    // own. The switch above is what every nested expression passes through
+    // on the way down, and it carries no construct's locals but the one it
+    // is lowering.
     private mutating func lower(
         record: [Name: Expression],
         in scope: Names,
@@ -718,25 +726,6 @@ struct Lowering {
             rescue: try lower(rescue, in: inner, on: slots, label: label, at: place),
             failure: slot
         )
-    }
-
-    private mutating func lower(
-        call: Call,
-        in scope: Names,
-        on slots: Slots,
-        label: Name,
-        at place: Place
-    ) throws -> Operation {
-        // A selector naming a contract's procedure names no row. Which row
-        // answers is the receiver's, so every one the build found is
-        // lowered here and the run picks by the name it reads.
-        if let asked = contractProcedures[call.selector] {
-            return .dispatch(
-                try lower(call, through: asked, in: scope, on: slots, label: label, at: place)
-            )
-        }
-
-        return .call(try lower(call, in: scope, on: slots, label: label, at: place))
     }
 
     private mutating func lower(
