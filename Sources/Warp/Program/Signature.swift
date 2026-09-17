@@ -110,13 +110,6 @@ public struct Signature: Sendable, Equatable {
         return try returns.settling(value, at: "returns", in: types)
     }
 
-    // The receiver, checked against what the parameter naming it declares.
-    public func settling(receiver value: Value, in types: TypeTable = .empty) throws -> Value {
-        guard let receiver, let parameter = parameters[receiver] else { return value }
-
-        return try parameter.checking(receiver: value, called: receiver, in: types)
-    }
-
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
     func lowered(in table: LoweredTypeTable) -> [Slot] {

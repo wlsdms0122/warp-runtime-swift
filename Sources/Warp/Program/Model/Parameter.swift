@@ -53,14 +53,6 @@ public struct Parameter: Sendable, Equatable {
     }
 
     public func checking(
-        receiver value: Value,
-        called name: Name,
-        in types: TypeTable = .empty
-    ) throws -> Value {
-        try lowered(named: name, in: types.loweredTypes).checking(receiver: value, in: types.loweredTypes)
-    }
-
-    public func checking(
         _ value: Value,
         called name: Name,
         in types: TypeTable = .empty
