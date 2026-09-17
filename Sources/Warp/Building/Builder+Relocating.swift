@@ -341,26 +341,15 @@ struct Relocating {
     }
 
     private func filled(_ body: Body, in standing: Standing) throws -> Body {
-        Body(
-            instructions: try body.instructions.map { instruction in
-                try relocated(instruction, in: standing)
-            },
-            result: try body.result.map { result in try filled(result, in: standing) }
+        try body.rewritten(
+            operation: { operation in try relocated(operation, in: standing) },
+            type: { type in try standing.loweredTypes.read(type, at: standing.place) }
         )
     }
 
-    // One statement, both what it computes and where it writes. A statement
-    // stands in three places (a body, and either arm of a conditional) and
-    // reads the same way in all of them.
-    private func relocated(_ instruction: Instruction, in standing: Standing) throws -> Instruction {
-        Instruction(
-            binding: try relocated(instruction.binding, in: standing),
-            code: try filled(instruction.code, in: standing),
-            label: instruction.label
-        )
-    }
-
-    private func filled(_ operation: Operation, in standing: Standing) throws -> Operation {
+    // One operation with the rows its document's numbers stand for, handed
+    // over with what nests in it already relocated.
+    private func relocated(_ operation: Operation, in standing: Standing) throws -> Operation {
         switch operation {
         // A value the folding made may hold a closure, and a closure is a row.
         case let .literal(value):
@@ -368,70 +357,10 @@ struct Relocating {
 
             return .literal(try relocated(value, in: standing))
 
-        case let .local(address):
-            return .local(try relocated(address, in: standing))
-
-        case let .array(elements):
-            return .array(try elements.map { element in try filled(element, in: standing) })
-
-        case let .record(held):
-            return .record(
-                RecordOperation(
-                    layout: held.layout,
-                    fields: try held.fields.map { field in try filled(field, in: standing) }
-                )
-            )
-
         // A closure is a body of its own, and a call through a contract can be
         // written in one.
         case let .closure(number, captures):
             return .closure(try row(number, in: standing), captures: captures)
-
-        case let .apply(callee, arguments):
-            return .apply(
-                try filled(callee, in: standing),
-                arguments: try arguments.map { name, argument in
-                    (name, try filled(argument, in: standing))
-                }
-            )
-
-        case let .cast(value, type, optional):
-            return .cast(
-                try filled(value, in: standing),
-                as: try relocated(type, in: standing),
-                optional: optional
-            )
-
-        case let .block(body):
-            return .block(try filled(body, in: standing))
-
-        case let .conditional(condition, then, otherwise):
-            return .conditional(
-                try filled(condition, in: standing),
-                then: try then.map { instruction in
-                    try relocated(instruction, in: standing)
-                },
-                else: try otherwise.map { instructions in
-                    try instructions.map { instruction in
-                        try relocated(instruction, in: standing)
-                    }
-                }
-            )
-
-        case let .loop(condition, body, round, keeps):
-            return .loop(
-                while: try filled(condition, in: standing),
-                body: try filled(body, in: standing),
-                round: round,
-                keeps: keeps
-            )
-
-        case let .attempt(body, rescue, failure):
-            return .attempt(
-                try filled(body, in: standing),
-                rescue: try filled(rescue, in: standing),
-                failure: failure
-            )
 
         case let .call(call):
             return .call(try relocated(call, in: standing))
@@ -439,13 +368,12 @@ struct Relocating {
         case let .dispatch(dispatch):
             return .dispatch(try filled(dispatch, in: standing))
 
-        case let .leave(reach, target, value):
-            return .leave(reach, target: target, try value.map { value in try filled(value, in: standing) })
+        case .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+            return operation
         }
     }
 
-    // A named call with the row its document's number stands for, and its
-    // operands walked.
+    // A named call with the row its document's number stands for.
     private func relocated(
         _ call: CallOperation,
         in standing: Standing
@@ -470,65 +398,9 @@ struct Relocating {
 
         return CallOperation(
             procedure: procedure,
-            receiver: try call.receiver.map { receiver in try filled(receiver, in: standing) },
-            arguments: try call.arguments.map { argument in
-                try argument.map { operation in try filled(operation, in: standing) }
-            },
-            handed: try call.handed.map { handed in
-                CallOperation.Handed(
-                    position: handed.position,
-                    address: try relocated(handed.address, in: standing)
-                )
-            }
-        )
-    }
-
-    // What a statement writes to and the type it takes it as: the path where
-    // writing to it walks one, and the row of every type either way.
-    private func relocated(
-        _ binding: Instruction.Binding?,
-        in standing: Standing
-    ) throws -> Instruction.Binding? {
-        switch binding {
-        case let .bind(slot, settling)?:
-            return .bind(slot, settling: try relocated(settling, in: standing))
-
-        case let .declare(slot, settling)?:
-            return .declare(slot, settling: try relocated(settling, in: standing))
-
-        case let .assign(address, settling)?:
-            return .assign(
-                try relocated(address, in: standing),
-                settling: try relocated(settling, in: standing)
-            )
-
-        case nil:
-            return nil
-        }
-    }
-
-    // A type with the rows its document's numbers stand for.
-    private func relocated(_ type: LoweredType?, in standing: Standing) throws -> LoweredType? {
-        try type.map { held in try relocated(held, in: standing) }
-    }
-
-    private func relocated(_ type: LoweredType, in standing: Standing) throws -> LoweredType {
-        try standing.loweredTypes.read(type, at: standing.place)
-    }
-
-    // A path with the rows the paths inside its index steps stand for.
-    private func relocated(_ address: Address, in standing: Standing) throws -> Address {
-        Address(
-            slot: address.slot,
-            steps: try address.steps.map { step in
-                switch step {
-                case let .at(inner, optional):
-                    return .at(try relocated(inner, in: standing), optional: optional)
-
-                case .field, .key, .index:
-                    return step
-                }
-            }
+            receiver: call.receiver,
+            arguments: call.arguments,
+            handed: call.handed
         )
     }
 
@@ -542,21 +414,12 @@ struct Relocating {
             throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
         }
 
-        let receiver = try filled(dispatch.receiver, in: standing)
-        let arguments = try dispatch.arguments.mapValues { argument -> Argument in
-            switch argument {
-            case let .value(operation):
-                return .value(try filled(operation, in: standing))
-
-            case let .reference(address):
-                return .reference(try relocated(address, in: standing))
-            }
-        }
+        let arguments = dispatch.arguments
 
         return DispatchOperation(
             contract: dispatch.contract,
             procedure: dispatch.procedure,
-            receiver: receiver,
+            receiver: dispatch.receiver,
             arguments: arguments,
             calls: try asked.answering.reduce(into: [Name: CallOperation]()) { calls, entry in
                 guard let row = rows[entry.value] else {
