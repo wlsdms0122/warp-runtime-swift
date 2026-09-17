@@ -116,9 +116,6 @@ public indirect enum Value: Sendable, Equatable {
     // or a dictionary, and inside what a closure captured by copy, which is a
     // value like any other. A cell captured as a hold is a box of the run
     // that made the closure, and what the box holds is that run's.
-    //
-    // The one place that says where a procedure can stand in a value, so a
-    // walk asking after them reads the same shape as the next.
     func closures(_ body: (Closure) -> Void) {
         walked { closure in
             body(closure)
