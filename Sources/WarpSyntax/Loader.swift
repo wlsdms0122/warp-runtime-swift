@@ -290,6 +290,13 @@ public struct Loader: Sendable {
         in document: Place.Document,
         from notation: Notation = .canonical
     ) throws -> T {
+        // Held here rather than in each reader below: a value a caller built
+        // reaches every reader through this one door, and past the bound the
+        // readers recurse in the ordinary way.
+        guard value.nesting <= Envelope.nesting else {
+            throw ReadingError("nesting deeper than \(Envelope.nesting) containers", at: []).read(in: document)
+        }
+
         let userInfo: [CodingUserInfoKey: Any] = [
             .constructRegistry: registry,
             .notation: notation

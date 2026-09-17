@@ -1,6 +1,6 @@
 //
 //  NestingBoundTests.swift
-//  WarpTests
+//  WarpSyntaxTests
 //
 //  Created by JSilver
 //
@@ -71,13 +71,14 @@ struct NestingBoundTests {
     // MARK: - Test
     @Test("is read, built and run", arguments: [Shape.call, .closure])
     func isReadBuiltAndRun(_ shape: Shape) async throws {
-        // Given. A document the wire admits, one level short of one it refuses.
+        // Given. A document the wire admits, one level short of one it refuses
+        // on the way out and at the door alike.
         let document = shape.document(deep: shape.levels)
+        let deeper = shape.document(deep: shape.levels + 1)
 
         _ = try BinaryEncoding.data(from: document)
-        #expect(throws: (any Error).self) {
-            try BinaryEncoding.data(from: shape.document(deep: shape.levels + 1))
-        }
+        #expect(throws: (any Error).self) { try BinaryEncoding.data(from: deeper) }
+        #expect(throws: (any Error).self) { try Loader().load(deeper, identity: nil) }
 
         // When. Read, built and run.
         let module = try Loader().load(document, identity: nil)

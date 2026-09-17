@@ -31,15 +31,11 @@ public enum TextEncoding {
     public static let name = "warpt"
     public static let format = 1
 
-    // The same bound the binary reader holds. One document has one depth,
-    // whichever encoding carries it.
-    static let depth = 128
-
     // MARK: - Public
     public static func text(from value: Value) throws -> String {
         var written = "\(name) \(format)\n"
 
-        try write(value, at: 0, into: &written, within: depth)
+        try write(value, at: 0, into: &written, within: Envelope.nesting)
 
         written += "\n"
 
@@ -278,7 +274,7 @@ public enum TextEncoding {
         var opened: [Opened] = []
 
         while true {
-            guard opened.count <= depth else {
+            guard opened.count <= Envelope.nesting else {
                 throw refused("the document nests deeper than a reader must follow")
             }
 

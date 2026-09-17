@@ -33,10 +33,6 @@ public enum BinaryEncoding {
     public static let magic: [UInt8] = [0x57, 0x41, 0x52, 0x50]
     public static let format: UInt8 = 1
 
-    // How deep a document may nest. The bound is exact: a reader takes every
-    // document within it and refuses the first container past it.
-    static let depth = 128
-
     private enum Tag: UInt8 {
         case null = 0x00
         case `false` = 0x01
@@ -109,7 +105,7 @@ public enum BinaryEncoding {
     private static func write(_ value: Value, into bytes: inout Data) throws {
         var open: [Writing] = []
 
-        try write(value, into: &bytes, within: depth, opening: &open)
+        try write(value, into: &bytes, within: Envelope.nesting, opening: &open)
 
         while let container = open.popLast() {
             switch container {
@@ -291,7 +287,7 @@ public enum BinaryEncoding {
         var opened: [Opened] = []
 
         while true {
-            guard opened.count <= depth else {
+            guard opened.count <= Envelope.nesting else {
                 throw refused("the document nests deeper than a reader must follow")
             }
 

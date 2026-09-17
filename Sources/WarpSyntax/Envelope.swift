@@ -37,6 +37,11 @@ public enum Envelope {
     public static let versionKey: Name = "warp"
     public static let importsKey: Name = "imports"
 
+    // How deep a document may nest. The bound is exact: every reader takes
+    // a document within it and refuses the first container past it, and a
+    // value a caller built is held to it at the door a document is read at.
+    public static let nesting = 128
+
     // MARK: - Public
     // Whether a document declares what it imports.
     //
