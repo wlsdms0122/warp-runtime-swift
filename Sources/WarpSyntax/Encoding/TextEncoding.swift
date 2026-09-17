@@ -31,8 +31,8 @@ public enum TextEncoding {
     public static let name = "warpt"
     public static let format = 1
 
-    // The same bound the binary reader holds, for the same reason: the depth of
-    // a document must never be the depth of the host's call stack.
+    // The same bound the binary reader holds. One document has one depth,
+    // whichever encoding carries it.
     static let depth = 512
 
     // MARK: - Public
