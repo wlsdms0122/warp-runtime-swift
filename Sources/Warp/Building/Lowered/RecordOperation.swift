@@ -32,6 +32,8 @@ struct RecordOperation: Sendable {
 
     // The inner door: the maker already stands on the layout.
     init(layout: Layout, fields: [Operation]) {
+        assert(layout.fields.count == fields.count, "a record literal has one field per place its layout names")
+
         self.layout = layout
         self.fields = fields
     }

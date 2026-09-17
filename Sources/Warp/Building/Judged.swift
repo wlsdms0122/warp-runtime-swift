@@ -71,9 +71,7 @@ struct Judged: Sendable {
     }
 
     // The same, where the parts were read apart and what has to be true is how
-    // the body, its frame and the declaration stand to each other. A frame is
-    // reached by position everywhere a run touches it, so a list written short
-    // is an array read past its end rather than a row that answers wrongly.
+    // the body, its frame and the declaration stand to each other.
     init(
         label: Name,
         signature: Signature,
@@ -83,32 +81,7 @@ struct Judged: Sendable {
         sends: [Sent],
         judging implementation: Implementation
     ) throws {
-        if case let .body(_, frame) = implementation {
-            guard sends.isEmpty else {
-                throw ObjectRefused("a body stands sends its own code carries")
-            }
-
-            guard frame.names.count == frame.size else {
-                throw ObjectRefused(
-                    "a frame of \(frame.size) names \(frame.names.count) slot(s)"
-                )
-            }
-
-            guard frame.parameters.count == signature.names.count else {
-                throw ObjectRefused(
-                    "a frame stands \(frame.parameters.count) of the"
-                        + " \(signature.names.count) its declaration takes"
-                )
-            }
-
-            guard frame.parameters.allSatisfy({ slot in slot < frame.size }),
-                  frame.variables.allSatisfy({ _, slot in slot < frame.size })
-            else {
-                throw ObjectRefused(
-                    "a frame of \(frame.size) stands a parameter or a variable past its end"
-                )
-            }
-        }
+        try Self.judge(implementation, sends: sends, against: signature)
 
         self.init(
             label: label,
@@ -123,23 +96,31 @@ struct Judged: Sendable {
 
     // What of a row its document settled. What is left behind is a reading of
     // this against a table, which any table gives again. The link stood the
-    // frame up beside the body it lowered, so nothing here is asked again:
-    // what a reading of an object has to judge, a build already holds.
+    // frame up beside the body it lowered, so what a reading of an object has
+    // to judge, a build already holds, and a debug build says so.
     init(_ row: Linked) {
+        let implementation: Implementation
+
+        switch row.implementation {
+        case let .body(body, frame):
+            implementation = .body(body, frame)
+
+        case let .native(procedure):
+            implementation = Self.native(procedure)
+        }
+
+        assert(
+            (try? Self.judge(implementation, sends: row.sends, against: row.signature)) != nil,
+            "the link stands a body up beside a frame that fits it"
+        )
+
         self.label = row.label
         self.signature = row.signature
         self.constness = row.constness
         self.isolation = row.isolation
         self.failing = row.failing
         self.sends = row.sends
-
-        switch row.implementation {
-        case let .body(body, frame):
-            self.implementation = .body(body, frame)
-
-        case let .native(procedure):
-            self.implementation = Self.native(procedure)
-        }
+        self.implementation = implementation
     }
 
     // MARK: - Internal
@@ -250,6 +231,42 @@ struct Judged: Sendable {
     }
 
     // MARK: - Private
+    // How a body, its frame and the declaration stand to each other. A frame
+    // is reached by position everywhere a run touches it, so a list written
+    // short is an array read past its end rather than a row that answers
+    // wrongly.
+    private static func judge(
+        _ implementation: Implementation,
+        sends: [Sent],
+        against signature: Signature
+    ) throws {
+        guard case let .body(_, frame) = implementation else { return }
+
+        guard sends.isEmpty else {
+            throw ObjectRefused("a body stands sends its own code carries")
+        }
+
+        guard frame.names.count == frame.size else {
+            throw ObjectRefused(
+                "a frame of \(frame.size) names \(frame.names.count) slot(s)"
+            )
+        }
+
+        guard frame.parameters.count == signature.names.count else {
+            throw ObjectRefused(
+                "a frame stands \(frame.parameters.count) of the"
+                    + " \(signature.names.count) its declaration takes"
+            )
+        }
+
+        guard frame.parameters.allSatisfy({ slot in slot < frame.size }),
+              frame.variables.allSatisfy({ _, slot in slot < frame.size })
+        else {
+            throw ObjectRefused(
+                "a frame of \(frame.size) stands a parameter or a variable past its end"
+            )
+        }
+    }
     private func linked(
         in table: LoweredTypeTable,
         of origin: Int,
