@@ -407,6 +407,10 @@ public struct Executor: Sendable {
                 return try await answer(callee, for: receiver, with: settled, at: trace)
             } catch let unfit as ReferenceUnfit {
                 throw unfit
+            } catch let failure as any RecoverableFailure {
+                // What a procedure raises is the program's to rescue, under the
+                // name it raised it by, whatever the receiver was written as.
+                throw failure
             } catch {
                 // A procedure blaming a type is answerable only if the author
                 // can see which name held it.
@@ -548,9 +552,8 @@ public struct Executor: Sendable {
         }
 
         // A receiver is written on the other side of the dot rather than by
-        // name. It is not settled as an argument, since being sent to nothing
-        // is something a procedure answers rather than refuses, but the body
-        // reads it under the name its signature gave it.
+        // name, and was settled at the boundary the way an argument is. The
+        // body reads it under the name its signature gave it.
         if let position = callee.receiverPosition, let receiver {
             activation.cells[frame.parameters[position]] = .value(receiver)
         }
