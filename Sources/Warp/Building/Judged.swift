@@ -49,9 +49,8 @@ struct Judged: Sendable {
     let implementation: Implementation
 
     // MARK: - Initializer
-    // Each part stated. What a reading of an object has: the row was settled
-    // once and written down, so nothing here is settled again.
-    init(
+    // Each part stated, reached only through the door below.
+    private init(
         label: Name,
         signature: Signature,
         constness: Constness,

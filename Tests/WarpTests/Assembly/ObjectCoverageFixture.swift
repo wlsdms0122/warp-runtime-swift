@@ -29,10 +29,10 @@ enum ObjectCoverageFixture {
             // Two declarations and the two closures their bodies lifted, which
             // is the order a document numbers its rows in.
             table: [
-                row(label: "a.eleven", body: true),
-                row(label: "a.ten", body: false),
-                lifted(label: "a.twenty"),
-                lifted(label: "a.twentyOne")
+                try row(label: "a.eleven", body: true),
+                try row(label: "a.ten", body: false),
+                try lifted(label: "a.twenty"),
+                try lifted(label: "a.twentyOne")
             ],
             calls: [["a.twelve"], []],
             answers: ["a.eleven": everyLoweredType],
@@ -163,30 +163,30 @@ enum ObjectCoverageFixture {
 
     // A row a closure literal was lifted into, whose frame holds what the
     // body that stood it up takes into it.
-    static func lifted(label: Name) -> Judged {
-        Judged(
+    static func lifted(label: Name) throws -> Judged {
+        try Judged(
             label: label,
             signature: Signature(returns: .int),
             constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
             sends: [],
-            implementation: .body(
+            judging: .body(
                 Body(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], names: ["c0", "c1"])
             )
         )
     }
 
-    static func row(label: Name, body: Bool) -> Judged {
-        Judged(
+    static func row(label: Name, body: Bool) throws -> Judged {
+        try Judged(
             label: label,
             signature: Signature(receiver: body ? "p" : nil, parameters: ["p": parameter], returns: .int),
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
             sends: body ? [] : [Sent(row: 1, handing: [0, 2])],
-            implementation: body
+            judging: body
                 ? .body(
                     everyOperation,
                     Frame(
