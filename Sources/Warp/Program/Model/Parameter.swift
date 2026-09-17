@@ -57,7 +57,7 @@ public struct Parameter: Sendable, Equatable {
         called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try lowered(named: name, in: types.loweredTypes).checking(value, in: types.loweredTypes)
+        try lowered(named: name, in: types.loweredTypes).checking(value, at: "input '\(name)'", in: types.loweredTypes)
     }
 
     // MARK: - Private

@@ -365,7 +365,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("'of'[1]: expected isolated procedure, got int")
+            "\(error)".contains("the receiver of 'std.concurrent.all'[1]: expected isolated procedure, got int")
         }
     }
 

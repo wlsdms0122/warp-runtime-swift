@@ -294,7 +294,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await run(sut)
         } throws: { error in
-            "\(error)".contains("input 'of': expected some T: std.Comparable, got null")
+            "\(error)".contains("the receiver of 'std.math.min': expected some T: std.Comparable, got null")
         }
     }
 

@@ -291,7 +291,7 @@ struct BytesTests {
         await #expect {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
-            "\(error)".contains("'of'[0]: expected string, got int")
+            "\(error)".contains("the receiver of 'std.text.joined'[0]: expected string, got int")
                 && !"\(error)".contains("expected array")
         }
     }

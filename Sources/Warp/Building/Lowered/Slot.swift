@@ -43,32 +43,34 @@ final class Slot: Sendable {
                     throw ArgumentError("input '\(name)': required, and nothing was given")
                 }
 
-                return try checking(.null, in: table)
+                return try checking(.null, at: "input '\(name)'", in: table)
             }
 
             // The fallback walks through the same gate an argument does, so
             // the body reads the declared representation either way.
-            return try checking(fallback, in: table)
+            return try checking(fallback, at: "input '\(name)'", in: table)
         }
 
-        return try checking(value, in: table)
+        return try checking(value, at: "input '\(name)'", in: table)
     }
 
     // The value settled to the declared representation, and held to the
-    // spellings where the declaration lists them.
-    func checking(_ value: Value, in table: LoweredTypeTable) throws -> Value {
+    // spellings where the declaration lists them. `locus` is where a refusal
+    // says the value stood, in the caller's terms: an argument is named by
+    // its key, and a receiver by the procedure it was sent to.
+    func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
         if value == .null {
             // Null passes where the declaration says it is a value: a `T?`
             // slot, or the legacy spelling of the same fact, an explicitly
             // null default.
             guard self.default == .null || type.admitsNull(in: table) else {
-                throw ArgumentError("input '\(name)': expected \(type.rendered(in: table)), got null")
+                throw ArgumentError("\(locus): expected \(type.rendered(in: table)), got null")
             }
 
             return value
         }
 
-        let settled = try type.settling(value, at: "input '\(name)'", in: table)
+        let settled = try type.settling(value, at: locus, in: table)
 
         if let candidates {
             let written = candidates.map(\.spelling)
@@ -84,7 +86,7 @@ final class Slot: Sendable {
                     } ?? false
                 }) else {
                     throw ArgumentError(
-                        "input '\(name)': '\(Self.shown(settled))' not in enum \(written)"
+                        "\(locus): '\(Self.shown(settled))' not in enum \(written)"
                     )
                 }
 
@@ -93,7 +95,7 @@ final class Slot: Sendable {
 
                 guard let scalar, written.contains(scalar) else {
                     throw ArgumentError(
-                        "input '\(name)': '\(scalar ?? "\(settled.type)")' not in enum \(written)"
+                        "\(locus): '\(scalar ?? "\(settled.type)")' not in enum \(written)"
                     )
                 }
             }

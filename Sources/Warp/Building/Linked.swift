@@ -216,7 +216,7 @@ public final class Linked: Sendable {
     func settling(receiver value: Value) throws -> Value {
         guard let position = receiverPosition else { return value }
 
-        return try slots[position].checking(value, in: table)
+        return try slots[position].checking(value, at: "the receiver of '\(label)'", in: table)
     }
 
     // The returned value, checked against what was declared.
