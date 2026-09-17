@@ -201,6 +201,90 @@ struct ConstnessTests {
         #expect(answer == .string("answered"))
     }
 
+    @Test("a variable declared to hold a const procedure carries that into a closure that captured it")
+    func aDeclaredVariableCarriesItsClaimIntoACapture() async throws {
+        // Given. The variable says what it holds, so every write into it is
+        // held to that, and a closure capturing it applies what the
+        // declaration said
+        let handed = try Module(
+            procedures: [
+                "asking": asking,
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .variable("answering", declared: .procedure(Signature(returns: .string), .const)),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .literal(.string("answered"))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("relaying"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .apply(reference("answering"), arguments: [:])
+                                )
+                            )
+                        )
+                    ],
+                    result: .call(Call(selector: "asking", arguments: ["body": reference("relaying")]))
+                )
+            ]
+        )
+
+        // When
+        let answer = try await run(handed)
+
+        // Then
+        #expect(answer == .string("answered"))
+    }
+
+    @Test("a variable that may be retyped says nothing a closure that captured it can apply as const")
+    func aRetypableVariableCarriesNoClaimIntoACapture() async throws {
+        // Given. The same capture, of a variable that declared nothing. A
+        // write after the capture may put any procedure in it
+        let handed = try Module(
+            procedures: [
+                "asking": asking,
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .variable("answering"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .literal(.string("answered"))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("relaying"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .apply(reference("answering"), arguments: [:])
+                                )
+                            )
+                        )
+                    ],
+                    result: .call(Call(selector: "asking", arguments: ["body": reference("relaying")]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([handed] + Module.standard, entry: entryName)
+        }
+    }
+
     @Test("a body applying a name no slot said anything about is refused")
     func aBodyApplyingAnUndeclaredNameIsRefused() async throws {
         // Given. The same apply, on a name whose slot says only `procedure`.

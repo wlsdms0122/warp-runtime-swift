@@ -1404,11 +1404,14 @@ extension Builder {
             // A name this closure captured carries what the slot it came from
             // said about it. The claim is the slot's, so it stands wherever the
             // name is read, and a closure that applies a captured one is judged
-            // on that word exactly as the body around it would be.
+            // on that word exactly as the body around it would be. A box that
+            // may be retyped after the capture says nothing the closure can
+            // hold on to; one that declared its type holds it through every
+            // write.
             let captured = environment.compactMapValues { bound -> LoweredType? in
-                guard case let .fixed(held) = bound else { return nil }
+                if case .assigned = bound { return nil }
 
-                return held
+                return bound.type
             }.filter { _, held in
                 held.isConstProcedure || held.isIsolatedProcedure
             }
