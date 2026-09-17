@@ -38,9 +38,8 @@ public struct Closure: Sendable {
     }
 
     // The same closure as another link reads it: the row it turned out to be
-    // there, the body standing in that link's tables, and what it captured
-    // read the same way.
-    func standing(at number: Int, as linked: Linked, holding captured: [(slot: Int, cell: Cell)]) -> Closure {
+    // there, and the body standing in that link's tables.
+    func standing(at number: Int, as linked: Linked) -> Closure {
         Closure(origin: origin, number: number, linked: linked, captured: captured)
     }
 

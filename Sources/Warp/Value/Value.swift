@@ -125,8 +125,9 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The same value with every closure in it replaced, innermost first: what
-    // a closure holds by value is rewritten before the closure is handed over.
-    // A cell held is the run's box, and stays.
+    // a closure holds by value is rewritten and put back into what the body
+    // answers, so the body answers for the closure alone. A cell held is the
+    // run's box, and stays.
     func rewritten(closures body: (Closure) throws -> Closure) rethrows -> Value {
         switch self {
         case let .procedure(closure):
@@ -136,7 +137,7 @@ public indirect enum Value: Sendable, Equatable {
                 return (slot, .value(try inner.rewritten(closures: body)))
             }
 
-            return .procedure(try body(closure.holding(captured)))
+            return .procedure(try body(closure).holding(captured))
 
         case let .array(items):
             return .array(try items.map { item in try item.rewritten(closures: body) })
