@@ -89,7 +89,7 @@ extension Array where Element == Linked {
         from start: Int,
         starting variables: [[(name: Name, value: Value)]],
         in documents: [Place.Document]
-    ) throws -> Set<ObjectIdentifier> {
+    ) throws -> Set<Int> {
         var reached: Set<ObjectIdentifier> = []
         var frontier = [self[start]]
 
@@ -111,6 +111,14 @@ extension Array where Element == Linked {
             frontier.append(contentsOf: reach.held)
         }
 
-        return reached
+        // Walked by identity, since a row a closure brought is walked through
+        // whether or not the table numbers it; answered as this table's rows,
+        // which is what a caller holding the table asked about.
+        let numbered = Dictionary(
+            enumerated().map { row, linked in (ObjectIdentifier(linked), row) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        return Set(reached.compactMap { identity in numbered[identity] })
     }
 }
