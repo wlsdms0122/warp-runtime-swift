@@ -201,19 +201,19 @@ public struct Builder: Sendable {
     // held to it, document by document: what it leaned on stands beside it
     // under the fingerprint it had then, or the document is not laid.
     private func against(_ compiled: [Compiled]) throws {
-        let present = Set(compiled.compactMap(\.fingerprint))
+        let present = Set(compiled.indices.compactMap { origin in compiled[origin].fingerprint })
 
-        for (origin, document) in compiled.enumerated() {
-            guard let dependencies = document.dependencies,
+        for origin in compiled.indices {
+            guard let dependencies = compiled[origin].dependencies,
                   let missing = dependencies.first(where: { fingerprint in !present.contains(fingerprint) })
             else {
                 continue
             }
 
             throw BuildError(
-                "\(document.document.spelled(at: origin)) was compiled against a document"
+                "\(compiled[origin].document.spelled(at: origin)) was compiled against a document"
                     + " (\(missing)) that is not laid beside it as it was then",
-                at: Place(in: document.document)
+                at: Place(in: compiled[origin].document)
             )
         }
     }

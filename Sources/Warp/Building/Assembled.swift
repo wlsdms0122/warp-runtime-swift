@@ -50,20 +50,34 @@ struct Assembled: Sendable {
     let spelled: ClosureRows
 
     // MARK: - Initializer
+    // Each document is read in place and once. A compiled document is a
+    // wide value, and every pass that took one by value paid for the whole
+    // of it to read one field.
     init(_ documents: [Compiled]) throws {
-        let held = documents.reduce(0) { held, document in held + document.table.count }
+        let held = documents.indices.reduce(0) { held, origin in held + documents[origin].table.count }
 
         var table: [Row] = []
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
+        var named: [Place.Document] = []
+        var naming: [Closure.Document] = []
+        var numbering: [Numbering] = []
+        var typeNumbering: [LoweredTypeNumbering] = []
+        var variables: [[(name: Name, value: Value)]] = []
 
         table.reserveCapacity(held)
         rows.reserveCapacity(held)
+        named.reserveCapacity(documents.count)
+        naming.reserveCapacity(documents.count)
+        numbering.reserveCapacity(documents.count)
+        typeNumbering.reserveCapacity(documents.count)
+        variables.reserveCapacity(documents.count)
 
-        for (origin, document) in documents.enumerated() {
+        for origin in documents.indices {
             let start = table.count
+            let document = documents[origin].document
 
-            for (offset, name) in document.declared.enumerated() {
+            for (offset, name) in documents[origin].declared.enumerated() {
                 // A name two documents declare is a table with no answer for
                 // that name, so it is refused where the table is made rather
                 // than answered by whichever was laid down last. Documents
@@ -73,37 +87,38 @@ struct Assembled: Sendable {
                     let first = table[taken].origin
 
                     throw BuildError(
-                        "'\(name)' is declared by \(documents[first].document.spelled(at: first))"
-                            + " and by \(document.document.spelled(at: origin))."
+                        "'\(name)' is declared by \(named[first].spelled(at: first))"
+                            + " and by \(document.spelled(at: origin))."
                             + " Two declarations of a name have no way to be told apart",
-                        at: .procedure(name.spelling, in: document.document)
+                        at: .procedure(name.spelling, in: document)
                     )
                 }
 
                 rows[name] = start + offset
             }
 
-            closures[origin] = document.lifted.map { row in start + row }
+            closures[origin] = documents[origin].lifted.map { row in start + row }
 
-            table.append(contentsOf: document.table.enumerated().map { index, judged in
-                Row(judged: judged, origin: origin, nth: document.nth(ofRow: index))
-            })
+            for index in documents[origin].table.indices {
+                table.append(Row(judged: documents[origin].table[index], origin: origin, nth: documents[origin].nth(ofRow: index)))
+            }
+
+            named.append(document)
+            naming.append(documents[origin].naming)
+            numbering.append(documents[origin].numbering)
+            typeNumbering.append(documents[origin].typeNumbering)
+            variables.append(documents[origin].variables)
         }
 
         self.table = table
-        self.documents = documents.map(\.document)
-        self.naming = documents.map(\.naming)
-        self.spelled = ClosureRows(
-            naming: documents.map(\.naming),
-            numbering: documents.map(\.numbering),
-            closures: closures,
-            documents: documents.map(\.document)
-        )
+        self.documents = named
+        self.naming = naming
+        self.spelled = ClosureRows(naming: naming, numbering: numbering, closures: closures, documents: named)
         self.rows = rows
         self.closures = closures
-        self.numbering = documents.map(\.numbering)
-        self.typeNumbering = documents.map(\.typeNumbering)
-        self.variables = documents.map(\.variables)
+        self.numbering = numbering
+        self.typeNumbering = typeNumbering
+        self.variables = variables
     }
 
     // MARK: - Public

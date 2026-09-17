@@ -19,7 +19,9 @@ struct ClosureRows {
     private let writing: [Closure.Writer: [Int]]
 
     // Every document of the link, by what a closure of it is spelled with.
-    private let named: Set<Closure.Document>
+    // Read only to say which of two things a refusal is, so a list and not
+    // a set: a link hashes nothing for a sentence it does not say.
+    private let naming: [Closure.Document]
 
     private let numbering: [Numbering]
     private let closures: [[Int]]
@@ -43,7 +45,7 @@ struct ClosureRows {
         }
 
         self.writing = writing
-        self.named = Set(naming)
+        self.naming = naming
         self.numbering = numbering
         self.closures = closures
         self.documents = documents
@@ -53,7 +55,7 @@ struct ClosureRows {
     func row(of closure: Closure, at place: Place) throws -> Int {
         guard let origins = writing[closure.writer] else {
             throw BuildError(
-                named.contains(closure.writer.document)
+                naming.contains(closure.writer.document)
                     ? "closure \(closure.nth) of '\(closure.writer.name)', which wrote no closure"
                     : "a closure '\(closure.writer.name)' wrote in a document no module in this link is",
                 at: place
