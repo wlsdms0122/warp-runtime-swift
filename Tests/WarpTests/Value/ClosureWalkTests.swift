@@ -1,0 +1,76 @@
+//
+//  ClosureWalkTests.swift
+//  Warp
+//
+//  Created by JSilver on 9/17/26.
+//
+
+import Testing
+@testable import Warp
+
+@Suite("A value names the closures it holds")
+struct ClosureWalkTests {
+    // MARK: - Property
+    // A closure needs a row to stand on; any row does, since only the walk
+    // over the value is asked.
+    private var row: Linked {
+        get async throws {
+            try await Builder().build(
+                [try Module(procedures: [entryName: Procedure(body: [])])] + Module.standard,
+                entry: entryName
+            ).entry
+        }
+    }
+
+    // MARK: - Test
+    @Test("every closure is named, what a closure captured by copy included")
+    func everyClosureIsNamed() async throws {
+        // Given. A closure capturing one by copy and one through a hold,
+        // inside an array
+        let row = try await row
+        let copied = Closure(origin: 0, number: 9, linked: row, captured: [])
+        let held = Closure(origin: 0, number: 11, linked: row, captured: [])
+        let capturing = Closure(
+            origin: 0,
+            number: 7,
+            linked: row,
+            captured: [
+                (slot: 0, cell: .value(.procedure(copied))),
+                (slot: 1, cell: .hold(Handle("box", .procedure(held))))
+            ]
+        )
+        let sut: Value = .array([.int(1), .procedure(capturing)])
+
+        // When
+        var rows: [Int] = []
+        sut.closures { closure in rows.append(closure.number) }
+
+        // Then. The hold is the run's box, and what it holds is not the value's
+        #expect(Set(rows) == [7, 9])
+        #expect(capturing.tookAHold && !copied.tookAHold)
+    }
+
+    @Test("holding one is answered at the first, and answered no by a value without any")
+    func holdingIsAnsweredAtTheFirst() async throws {
+        // Given
+        let row = try await row
+        let inner = Closure(origin: 0, number: 9, linked: row, captured: [])
+        let sut: Value = .record(
+            Record(name: nil, ["a": .int(1), "b": .array([.procedure(inner)])])
+        )
+
+        // When
+        var visited = 0
+        let holds = sut.holdsClosure { _ in
+            visited += 1
+
+            return true
+        }
+
+        // Then
+        #expect(holds && visited == 1)
+        #expect(sut.holdsProcedure)
+        #expect(!sut.holdsClosure(where: \.tookAHold))
+        #expect(!Value.array([.int(1), .string("x")]).holdsProcedure)
+    }
+}
