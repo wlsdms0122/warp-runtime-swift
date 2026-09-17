@@ -43,7 +43,7 @@ public struct Image: Sendable {
     public let variables: [[(name: Name, value: Value)]]
 
     // What a closure each document writes is spelled with, by origin.
-    let documents: [Closure.Document]
+    let naming: [Closure.Document]
 
     // MARK: - Initializer
     init(
@@ -53,7 +53,7 @@ public struct Image: Sendable {
         reached: Set<Name>,
         types: TypeTable,
         variables: [[(name: Name, value: Value)]],
-        documents: [Closure.Document]
+        naming: [Closure.Document]
     ) {
         self.linked = linked
         self.start = start
@@ -61,7 +61,7 @@ public struct Image: Sendable {
         self.reached = reached
         self.types = types
         self.variables = variables
-        self.documents = documents
+        self.naming = naming
     }
 
     // MARK: - Public

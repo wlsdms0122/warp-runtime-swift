@@ -32,9 +32,6 @@ struct Assembled: Sendable {
     // What a closure each document writes is spelled with.
     let naming: [Closure.Document]
 
-    // Which document each row's block came from, stamped as the blocks
-    // were laid down. A row does not say it, so this is where it is said.
-
     // Every declared spelling, by row.
     let rows: [Name: Int]
 
@@ -51,9 +48,8 @@ struct Assembled: Sendable {
 
     // Which documents each writer of a closure stands in. A closure value is
     // spelled by its writer, and the writer's document is whose numbering
-    // answers it. Two documents nobody wrote down are told apart by nothing,
-    // so a writer of theirs may stand in both, and a closure spelled by it
-    // has two answers where it is asked.
+    // answers it. A document laid twice stands a writer in both places, and
+    // a closure spelled by it has two answers where it is asked.
     let writing: [Closure.Writer: [Int]]
 
     // MARK: - Initializer

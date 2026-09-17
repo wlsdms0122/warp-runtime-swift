@@ -710,7 +710,9 @@ extension LoweredType {
         guard case let .procedure(closure) = value else { throw mismatch(value, at: path(), in: table) }
 
         // Its rows are numbered by the table of the link that made it.
-        guard let linked = closure.linked, linked.readable(in: table) else {
+        let linked = try closure.answered()
+
+        guard linked.readable(in: table) else {
             throw ArgumentError("\(path()): \(Linked.unreadable)")
         }
 

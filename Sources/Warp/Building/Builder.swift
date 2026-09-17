@@ -802,7 +802,7 @@ public struct Builder: Sendable {
             reached: spellings,
             types: types,
             variables: variables,
-            documents: assembled.naming
+            naming: assembled.naming
         )
     }
 

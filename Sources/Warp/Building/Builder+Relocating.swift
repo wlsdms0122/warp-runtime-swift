@@ -21,22 +21,22 @@ struct Answered: Sendable {
     let rows: [Name: Int]
 
     // What a closure a run over these rows makes is spelled with, by origin.
-    let documents: [Closure.Document]
+    let naming: [Closure.Document]
 
     private let numbers: Numbers
 
     // MARK: - Initializer
-    private init(table: [Linked], rows: [Name: Int], documents: [Closure.Document], numbers: Numbers) {
+    private init(table: [Linked], rows: [Name: Int], naming: [Closure.Document], numbers: Numbers) {
         self.table = table
         self.rows = rows
-        self.documents = documents
+        self.naming = naming
         self.numbers = numbers
     }
 
     // A table holding nothing a link could answer: rows built from native
     // procedures alone, which carry no lowered body and send nothing.
-    static func unanswerable(_ table: [Linked], rows: [Name: Int], documents: [Closure.Document]) -> Answered {
-        Answered(table: table, rows: rows, documents: documents, numbers: .rows)
+    static func unanswerable(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
+        Answered(table: table, rows: rows, naming: naming, numbers: .rows)
     }
 
     // A table as compiling left it, and where each document numbers from. The
@@ -46,7 +46,7 @@ struct Answered: Sendable {
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
-        documents: [Closure.Document],
+        naming: [Closure.Document],
         numbering: [Int: Numbering],
         named: [Int: [Int?]],
         closures: [Int: [Int]]
@@ -54,7 +54,7 @@ struct Answered: Sendable {
         Answered(
             table: table,
             rows: rows,
-            documents: documents,
+            naming: naming,
             numbers: .documents(numbering, named: named, closures: closures)
         )
     }
@@ -73,8 +73,8 @@ struct Answered: Sendable {
     // one nothing numbered, said under the name that says who may make it:
     // `Relocating` alone, which is what keeps a table nobody answered from
     // standing as one whose numbers are rows.
-    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], documents: [Closure.Document]) -> Answered {
-        unanswerable(table, rows: rows, documents: documents)
+    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
+        unanswerable(table, rows: rows, naming: naming)
     }
 
     // MARK: - Public
@@ -85,13 +85,13 @@ struct Answered: Sendable {
     func holding(_ table: [Linked], closures: [Int: [Int]]) -> Answered {
         switch numbers {
         case .rows:
-            return Answered(table: table, rows: rows, documents: documents, numbers: numbers)
+            return Answered(table: table, rows: rows, naming: naming, numbers: numbers)
 
         case let .documents(numbering, named, _):
             return Answered(
                 table: table,
                 rows: rows,
-                documents: documents,
+                naming: naming,
                 numbers: .documents(numbering, named: named, closures: closures)
             )
         }
@@ -260,7 +260,7 @@ struct Relocating {
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
     func linked() throws -> Answered {
-        Answered.relocated(try table.indices.map(relocated(at:)), rows: rows, documents: naming)
+        Answered.relocated(try table.indices.map(relocated(at:)), rows: rows, naming: naming)
     }
 
     // What each document's variables start a run holding, read as this link's
@@ -320,9 +320,10 @@ struct Relocating {
 
     // Where a closure value stands in this link: its writer's document, and
     // the row the number it stands at there turned out to be. A writer's
-    // document that was written down is one document of this link. One
-    // nobody wrote down is told from another such by nothing, so a name two
-    // of them write a closure under has no one answer here.
+    // document is one document of this link, by the text it was read from or
+    // by the compile that made it. Two documents named the same way, laid in
+    // one link, are one document laid twice, and a name they write a closure
+    // under has no one answer here.
     private func standing(of closure: Closure, at place: Place) throws -> (origin: Int, row: Int) {
         guard let origins = writing[closure.writer], let origin = origins.first else {
             throw BuildError(
@@ -379,13 +380,21 @@ struct Relocating {
     private func relocated(at row: Int) throws -> Linked {
         if let done = memo.rows[row] { return done }
 
+        // A row met again while its own relocation is underway is a ring of
+        // rows holding closures of one another, through values in their
+        // bodies. A body holds a value the fold settled, and a fold settles
+        // nothing through itself, so a build lowers no such ring.
         guard memo.underway.insert(row).inserted else {
-            throw BuildError.unjudged("a row holding a closure of itself", at: .procedure(table[row].label.spelling, in: .assembled))
+            throw BuildError.unjudged(
+                "a closure closing a ring of rows through the values they hold",
+                at: .procedure(table[row].label.spelling, in: documents[table[row].origin])
+            )
         }
+
+        defer { memo.underway.remove(row) }
 
         let done = try relocated(table[row])
 
-        memo.underway.remove(row)
         memo.rows[row] = done
 
         return done

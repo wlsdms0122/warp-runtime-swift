@@ -69,6 +69,15 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Public
+    // The row a link answered for this closure. A closure reaches a run and
+    // a settling only through a link, so one without a row there is one no
+    // link read, and this is the one place that is said.
+    func answered() throws -> Linked {
+        guard let linked else { throw ExecutionError("a closure no link answered") }
+
+        return linked
+    }
+
     // The same closure as a link reads it: the body standing in that link's
     // tables.
     func standing(as linked: Linked) -> Closure {

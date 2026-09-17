@@ -50,7 +50,7 @@ struct Folding {
         self.init(
             constants: bindings,
             origin: 0,
-            in: .unanswerable(image.linked, rows: image.rows, documents: image.documents),
+            in: .unanswerable(image.linked, rows: image.rows, naming: image.naming),
             loweredTypes: image.loweredTypes
         )
     }
@@ -99,7 +99,7 @@ struct Folding {
             in: .unanswerable(
                 table,
                 rows: rows,
-                documents: modules.map { module in module.identity.map(Closure.Document.written) ?? .compiled(Compiled.Token()) }
+                naming: modules.map { module in module.identity.map(Closure.Document.written) ?? .compiled(Compiled.Token()) }
             ),
             loweredTypes: loweredTypes
         )
@@ -195,7 +195,7 @@ struct Folding {
             environment: nil,
             linked: answered.table,
             resolving: answered.resolving,
-            documents: answered.documents,
+            naming: answered.naming,
             loweredTypes: loweredTypes
         )
         let value = try await executor.read(code, in: activation)

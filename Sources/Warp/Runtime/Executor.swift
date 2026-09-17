@@ -25,7 +25,7 @@ public struct Executor: Sendable {
 
     // What a closure the run makes is spelled with, by the origin its row
     // says.
-    let documents: [Closure.Document]
+    let naming: [Closure.Document]
 
     // The types the link declared, by row. Every boundary that settles a
     // value reads it.
@@ -46,7 +46,7 @@ public struct Executor: Sendable {
         observer: (any ExecutionObserver)? = nil,
         environment: (any Environment)? = nil
     ) {
-        self.init(observer: observer, environment: environment, linked: [], resolving: .rows)
+        self.init(observer: observer, environment: environment, linked: [], resolving: .rows, naming: [])
     }
 
     // Seeded, and not public: the table is the link's answer, so a caller
@@ -56,7 +56,7 @@ public struct Executor: Sendable {
         environment: (any Environment)?,
         linked: [Linked],
         resolving: Resolving,
-        documents: [Closure.Document] = [],
+        naming: [Closure.Document],
         loweredTypes: LoweredTypeTable = .empty,
         boxes: [[Handle]] = []
     ) {
@@ -64,7 +64,7 @@ public struct Executor: Sendable {
         self.environment = environment
         self.linked = linked
         self.resolving = resolving
-        self.documents = documents
+        self.naming = naming
         self.loweredTypes = loweredTypes
         self.boxes = boxes
     }
@@ -81,7 +81,7 @@ public struct Executor: Sendable {
             environment: environment,
             linked: image.linked,
             resolving: .rows,
-            documents: image.documents,
+            naming: image.naming,
             loweredTypes: image.loweredTypes,
             boxes: image.variables.map { started in
                 started.map { name, value in Handle(name, value) }
@@ -295,13 +295,13 @@ public struct Executor: Sendable {
                 throw ExecutionError("a closure stands on a row no declaration wrote")
             }
 
-            guard documents.indices.contains(row.origin) else {
+            guard naming.indices.contains(row.origin) else {
                 throw ExecutionError("a closure stands in a document this run was not told of")
             }
 
             return .procedure(
                 Closure(
-                    writer: Closure.Writer(document: documents[row.origin], name: row.label),
+                    writer: Closure.Writer(document: naming[row.origin], name: row.label),
                     nth: nth,
                     linked: row,
                     captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
@@ -517,9 +517,7 @@ public struct Executor: Sendable {
         given arguments: [(name: Name, value: Value)],
         at trace: Trace
     ) async throws -> Value {
-        guard let linked = closure.linked else {
-            throw ExecutionError("a closure no link answered")
-        }
+        let linked = try closure.answered()
 
         guard case let .body(body, frame) = linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
