@@ -783,17 +783,20 @@ public struct Builder: Sendable {
         var entered = [start]
         for document in variables {
             for entry in document {
-                entry.value.reaches(into: &entered)
+                entry.value.closures { closure in entered.append(closure.number) }
             }
         }
 
-        let reached = reached(from: entered, over: linked.table)
+        // Walked as rows, reported as spellings: a closure is a row without
+        // one and is walked through, and only what has one is reported.
+        let rows = reached(from: entered, over: linked.table)
+        let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(entry.value) }.map(\.key))
 
         return Image(
             linked: linked.table,
             start: start,
             rows: assembled.rows,
-            reached: Set(assembled.rows.lazy.filter { entry in reached.contains(entry.value) }.map(\.key)),
+            reached: spellings,
             types: types,
             variables: variables
         )
@@ -801,13 +804,14 @@ public struct Builder: Sendable {
 
     // MARK: - Private
     // Which rows a run entering at these can reach, following what each
-    // row's code names. Transitive, closures walked through like any row.
+    // row's code names. Transitive. Every number met is a row of this table,
+    // since the link answered each one before the table was handed over.
     private func reached(from entered: [Int], over table: [Linked]) -> Set<Int> {
         var reached: Set<Int> = []
         var frontier = entered
 
         while let row = frontier.popLast() {
-            guard table.indices.contains(row), reached.insert(row).inserted else { continue }
+            guard reached.insert(row).inserted else { continue }
 
             frontier.append(contentsOf: table[row].reaches)
         }
