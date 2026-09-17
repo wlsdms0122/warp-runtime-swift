@@ -400,17 +400,7 @@ private extension ObjectReader {
         let read = Parameter(
             type: try fields.maybe(expression),
             candidates: try fields.maybe { written in try Fields.list(written, of: "candidates", text) },
-            default: try fields.maybe { written in
-                let read = try self.value(written)
-
-                // A default is what a document wrote, and a document writes no
-                // procedure.
-                guard !read.holdsProcedure else {
-                    throw ObjectRefused("a parameter's default holds a procedure, which no document writes")
-                }
-
-                return read
-            },
+            default: try fields.maybe { written in try self.value(written) },
             description: try fields.maybe(text)
         )
 

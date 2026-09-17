@@ -130,6 +130,47 @@ struct ObjectClosureTests {
         }
     }
 
+    @Test("a compiled document whose parameter default holds a procedure is refused")
+    func aProcedureDefaultIsRefused() throws {
+        // Given. One row whose parameter falls back to a closure, which is a
+        // default no document writes.
+        let row = try Judged(
+            label: "a.one",
+            signature: Signature(
+                parameters: ["p": Parameter(default: .procedure(ObjectCoverageFixture.everyValueClosure))],
+                returns: .int
+            ),
+            constness: .unstated,
+            isolation: .unstated,
+            failing: .unstated,
+            sends: [],
+            judging: .body(
+                Body(instructions: [], result: .literal(.int(0))),
+                Frame(size: 1, parameters: [0], variables: [], captures: [], names: ["p"])
+            )
+        )
+
+        // When / Then
+        #expect(throws: ObjectRefused.self) {
+            try Compiled(
+                document: .assembled,
+                types: [:],
+                constraints: [:],
+                contracts: [:],
+                claims: [:],
+                leaned: [:],
+                declared: ["a.one"],
+                constants: [],
+                table: [row],
+                answers: [:],
+                numbering: Numbering(imports: [], declared: ["a.one"], closures: [:]),
+                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
+                judging: [],
+                dependencies: []
+            )
+        }
+    }
+
     @Test("a closure spelled by a writer no document of the link has is refused at the link")
     func aClosureOfAnUnknownWriterIsRefused() async throws {
         // Given. A compiled document whose variable starts as a closure some

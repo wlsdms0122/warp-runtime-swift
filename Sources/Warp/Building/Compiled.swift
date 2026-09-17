@@ -216,6 +216,14 @@ public struct Compiled: Sendable, Declaring {
             throw ObjectRefused("this document counts its constants out of name order")
         }
 
+        // A default is a value a document wrote, and a document writes no
+        // procedure as data. The validator says so of the text, and this says
+        // so of the row, so a document read out of an object is held to it
+        // the same as one read out of text.
+        for row in table where row.signature.parameters.values.contains(where: { parameter in parameter.default?.holdsProcedure == true }) {
+            throw ObjectRefused("a parameter's default holds a procedure, which no document writes")
+        }
+
         // Which row a spelling stands for is read off where it stands in this
         // list, and which code a native row brings is read off the row's own
         // label. The two answer the same question, so a list that names them
