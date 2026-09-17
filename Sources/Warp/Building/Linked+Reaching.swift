@@ -85,7 +85,7 @@ extension Array where Element == Linked {
     // closure holds is one of these, since the link relocates a row once.
     // The variables are every document's, by the document and then by the
     // number it gave them.
-    func reached(from start: Int, starting variables: [[(name: Name, value: Value)]]) -> Set<Int> {
+    func reached(from start: Int, starting variables: [[(name: Name, value: Value)]]) throws -> Set<Int> {
         let numbered = Dictionary(enumerated().map { number, row in (ObjectIdentifier(row), number) }) { first, _ in first }
         var reached: Set<Int> = []
         var frontier = [start]
@@ -96,7 +96,17 @@ extension Array where Element == Linked {
             let reach = self[next].reaches(starting: variables[self[next].origin])
 
             frontier.append(contentsOf: reach.rows)
-            frontier.append(contentsOf: reach.held.compactMap { held in numbered[ObjectIdentifier(held)] })
+
+            for held in reach.held {
+                guard let row = numbered[ObjectIdentifier(held)] else {
+                    throw BuildError.unjudged(
+                        "a closure holding a row of some other table",
+                        at: .procedure(held.label.spelling, in: .assembled)
+                    )
+                }
+
+                frontier.append(row)
+            }
         }
 
         return reached

@@ -275,7 +275,7 @@ struct Relocating {
                         value,
                         in: Standing(
                             origin: origin,
-                            place: .variable(name.spelling, in: .assembled),
+                            place: .variable(name.spelling, in: documents[origin]),
                             loweredTypes: typeRows[origin]
                         )
                     )
@@ -403,7 +403,7 @@ struct Relocating {
     private func relocated(_ row: Linked) throws -> Linked {
         let standing = Standing(
             origin: row.origin,
-            place: .procedure(row.label.spelling, in: .assembled),
+            place: .procedure(row.label.spelling, in: documents[row.origin]),
             loweredTypes: typeRows[row.origin]
         )
         let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: standing)) }
