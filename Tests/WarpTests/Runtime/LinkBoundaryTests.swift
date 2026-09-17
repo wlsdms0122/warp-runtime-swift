@@ -47,7 +47,7 @@ struct LinkBoundaryTests {
             return
         }
 
-        guard case let .named(row)? = closure.linked?.slots[0].type else {
+        guard case let .named(row) = try closure.answered().slots[0].type else {
             Issue.record("the parameter is declared as a name")
 
             return
@@ -58,8 +58,8 @@ struct LinkBoundaryTests {
         #expect(theirs.types.loweredTypes.labels[row] == "app.Alpha")
 
         // And the run refuses it rather than reading the other declaration
-        #expect(closure.linked?.readable(in: mine.types.loweredTypes) == true)
-        #expect(closure.linked?.readable(in: theirs.types.loweredTypes) == false)
+        #expect(try closure.answered().readable(in: mine.types.loweredTypes))
+        #expect(try !closure.answered().readable(in: theirs.types.loweredTypes))
     }
 
     // MARK: - Private

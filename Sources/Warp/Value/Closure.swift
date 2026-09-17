@@ -45,7 +45,7 @@ public struct Closure: Sendable {
     let writer: Writer
     let nth: Int
 
-    public let linked: Linked?
+    let linked: Linked?
     let captured: [(slot: Int, cell: Cell)]
 
     // Whether this may run beside another body. Constness does not answer it: a
@@ -77,7 +77,7 @@ public struct Closure: Sendable {
     // The row a link answered for this closure. A closure reaches a run and
     // a settling only through a link, so one without a row there is one no
     // link read, and this is the one place that is said.
-    func answered() throws -> Linked {
+    public func answered() throws -> Linked {
         guard let linked else { throw ExecutionError("a closure no link answered") }
 
         return linked

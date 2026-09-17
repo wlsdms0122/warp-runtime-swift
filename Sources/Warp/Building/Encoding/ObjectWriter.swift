@@ -50,34 +50,27 @@ struct ObjectWriter {
         // that made it, or one a document nobody wrote down wrote. Either is
         // the one error thrown on the way down, and an object of what holds
         // it is not written.
-        let written: Value
+        return .array([
+            document(compiled.document),
+            .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
+            try keyed(compiled.types, type),
+            try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in .array(try types.map(type)) },
+            try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in try keyed(procedures, signature) },
+            keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
+            .array(compiled.leaned.keys.sorted().map { claim in
+                .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
+            }),
+            .array(compiled.declared.map(name)),
+            .array(try compiled.table.map(judged)),
+            keyed(compiled.answers, lowered),
+            numbering,
+            typeNumbering(compiled.typeNumbering),
+            .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
+                .array([name(entry.name), try value(entry.value)])
+            }),
+            .array(compiled.constants.map(name))
+        ])
 
-        do throws(ObjectUnwritable) {
-            written = .array([
-                document(compiled.document),
-                .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
-                try keyed(compiled.types, type),
-                try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in .array(try types.map(type)) },
-                try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in try keyed(procedures, signature) },
-                keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
-                .array(compiled.leaned.keys.sorted().map { claim in
-                    .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
-                }),
-                .array(compiled.declared.map(name)),
-                .array(try compiled.table.map(judged)),
-                keyed(compiled.answers, lowered),
-                numbering,
-                typeNumbering(compiled.typeNumbering),
-                .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
-                    .array([name(entry.name), try value(entry.value)])
-                }),
-                .array(compiled.constants.map(name))
-            ])
-        } catch {
-            throw error
-        }
-
-        return written
     }
 
     // A value written down: the data as it is, and a closure by what it is
