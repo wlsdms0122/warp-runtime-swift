@@ -143,6 +143,28 @@ struct ReachTests {
         #expect(!image.reached.contains("app.aside"))
     }
 
+    @Test("a value names every closure it holds, what a closure captured included")
+    func aValueNamesTheClosuresItHolds() async throws {
+        // Given. A closure capturing another, inside an array; the rows are
+        // any rows, since only the walk is asked
+        let image = try await builder.build(
+            [try Module(procedures: [entryName: Procedure(body: [])])] + Module.standard,
+            entry: entryName
+        )
+        let captured = Closure(origin: 0, number: 9, linked: image.entry, captured: [])
+        let capturing = Closure(origin: 0, number: 7, linked: image.entry, captured: [(slot: 0, cell: .value(.procedure(captured)))])
+        let sut: Value = .array([.int(1), .procedure(capturing)])
+
+        // When
+        var rows: [Int] = []
+        sut.closures { closure in rows.append(closure.number) }
+
+        // Then
+        #expect(rows == [7, 9])
+        #expect(sut.holdsProcedure)
+        #expect(!Value.array([.int(1)]).holdsProcedure)
+    }
+
     @Test("what a native procedure declares it sends is reached")
     func aNativeSendIsReached() async throws {
         // Given. `app.twice` is native and sends `std.math.times`

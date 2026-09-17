@@ -103,12 +103,38 @@ public indirect enum Value: Sendable, Equatable {
     // only at the outside would pass a program that carries one and refuse the
     // same program written without the wrapper.
     public var holdsProcedure: Bool {
+        var held = false
+        closures { _ in held = true }
+
+        return held
+    }
+
+    // Every closure this value holds, however deep: inside an array, a record
+    // or a dictionary, and inside what a closure captured, which is a value
+    // like any other. The one place that says where a procedure can stand in
+    // a value, so a walk asking after them reads the same shape as the next.
+    func closures(_ body: (Closure) -> Void) {
         switch self {
-        case .procedure: true
-        case let .array(items): items.contains { item in item.holdsProcedure }
-        case let .record(record): record.values.contains { value in value.holdsProcedure }
-        case let .dictionary(dictionary): dictionary.entries.contains { entry in entry.value.holdsProcedure }
-        case .null, .bool, .int, .double, .string, .bytes: false
+        case let .procedure(closure):
+            body(closure)
+
+            for (_, cell) in closure.captured {
+                guard case let .value(captured) = cell else { continue }
+
+                captured.closures(body)
+            }
+
+        case let .array(items):
+            items.forEach { item in item.closures(body) }
+
+        case let .record(record):
+            record.values.forEach { value in value.closures(body) }
+
+        case let .dictionary(dictionary):
+            dictionary.entries.forEach { entry in entry.value.closures(body) }
+
+        case .null, .bool, .int, .double, .string, .bytes:
+            break
         }
     }
 

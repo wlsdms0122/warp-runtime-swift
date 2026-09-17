@@ -26,34 +26,13 @@ extension Argument {
     }
 }
 
-extension Value {
-    // A closure held by a value stands in a body as a literal, or starts a
-    // variable off, and its row is the number the link answered it with.
-    func reaches(into rows: inout [Int]) {
-        switch self {
-        case let .procedure(closure):
-            rows.append(closure.number)
-
-        case let .array(items):
-            items.forEach { item in item.reaches(into: &rows) }
-
-        case let .record(record):
-            record.values.forEach { value in value.reaches(into: &rows) }
-
-        case let .dictionary(dictionary):
-            dictionary.entries.forEach { entry in entry.value.reaches(into: &rows) }
-
-        case .null, .bool, .int, .double, .string, .bytes:
-            break
-        }
-    }
-}
-
 extension Operation {
     func reaches(into rows: inout [Int]) {
         switch self {
+        // A closure held by a value stands in a body as a literal, and its
+        // row is the number the link answered it with.
         case let .literal(value):
-            value.reaches(into: &rows)
+            value.closures { closure in rows.append(closure.number) }
 
         case .local:
             break
