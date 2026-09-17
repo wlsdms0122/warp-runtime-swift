@@ -1816,7 +1816,7 @@ extension Builder {
 
                 for (name, written) in rounds.environment {
                     if rounds.locals.contains(name) {
-                        exit[name] = written.orNull { type in join(.null, type) }
+                        exit[name] = written.map { type in join(.null, type) }
                     } else if case let .assigned(entry)? = seeded[name] {
                         exit[name] = .assigned(join(entry, written.type))
                     }

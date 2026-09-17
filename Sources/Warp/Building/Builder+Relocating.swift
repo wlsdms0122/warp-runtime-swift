@@ -256,8 +256,7 @@ struct Relocating {
     func started(_ variables: [[(name: Name, value: Value)]]) throws -> [[(name: Name, value: Value)]] {
         try variables.enumerated().map { origin, held in
             try held.map { name, value in
-
-                return (
+                (
                     name,
                     try relocated(
                         value,
@@ -397,7 +396,7 @@ struct Relocating {
             return .call(try relocated(call, in: standing))
 
         case let .dispatch(dispatch):
-            return .dispatch(try filled(dispatch, in: standing))
+            return .dispatch(try relocated(dispatch, in: standing))
 
         case .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             return operation
@@ -435,7 +434,9 @@ struct Relocating {
         )
     }
 
-    private func filled(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
+    // A call through a contract with the calls the rows answering it stand
+    // for, one per type that answers.
+    private func relocated(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
         let spelling = ContractProcedure.spelling(
             of: dispatch.contract,
             procedure: dispatch.procedure
