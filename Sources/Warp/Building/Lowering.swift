@@ -597,6 +597,7 @@ struct Lowering {
                 failing: procedure.failing,
                 implementation: .body(body, inner.frame),
                 foldable: true,
+                nth: count,
                 in: loweredTypes
             )
         )

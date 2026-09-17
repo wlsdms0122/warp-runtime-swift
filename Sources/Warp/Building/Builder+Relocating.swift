@@ -177,6 +177,11 @@ struct Relocating {
     // answer a spelling.
     private let closures: [[Int]]
 
+    // Which document each declaration that wrote a closure stands in. A
+    // closure value is spelled by its writer, and the writer's document is
+    // whose numbering answers it.
+    private let writers: [Name: Int]
+
     // MARK: - Initializer
     init(
         table: [Linked],
@@ -191,6 +196,9 @@ struct Relocating {
         self.table = table
         self.rows = rows
         self.numbering = numbering
+        self.writers = numbering.enumerated().reduce(into: [Name: Int]()) { writers, entry in
+            for writer in entry.element.writers { writers[writer] = entry.offset }
+        }
         self.typeRows = typeNumbering.map { held in held.rows(in: loweredTypes) }
         self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
@@ -204,12 +212,13 @@ struct Relocating {
         let loweredTypes = types.loweredTypes
 
         self.init(
-            table: try zip(assembled.table, assembled.origins).map { judged, origin in
+            table: try zip(assembled.table, zip(assembled.origins, assembled.lifted)).map { judged, standing in
                 try judged.linked(
                     in: loweredTypes,
-                    of: origin,
+                    of: standing.0,
+                    nth: standing.1,
                     supplied: supplied,
-                    at: assembled.documents[origin]
+                    at: assembled.documents[standing.0]
                 )
             },
             rows: assembled.rows,
@@ -222,6 +231,19 @@ struct Relocating {
     }
 
     // MARK: - Public
+    // Which row of this link a closure value stands at, read the way the
+    // relocation answers it. Nil where no document of this link wrote it.
+    func row(of closure: Closure) -> Int? {
+        guard let origin = writers[closure.writing],
+              let nth = numbering[origin].closure(closure.nth, of: closure.writing)?.nth,
+              closures[origin].indices.contains(nth)
+        else {
+            return nil
+        }
+
+        return closures[origin][nth]
+    }
+
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
     func linked() throws -> Answered {
@@ -276,14 +298,26 @@ struct Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            let held = Standing(
-                origin: closure.origin,
-                place: standing.place,
-                loweredTypes: typeRows[closure.origin]
-            )
-            let row = try self.row(closure.number, in: held)
+            // A closure value is spelled by the declaration that wrote it,
+            // and that declaration's document is whose number it stands at.
+            guard let origin = writers[closure.writing] else {
+                throw BuildError(
+                    "a closure '\(closure.writing)' wrote, and no module in this link declares it",
+                    at: standing.place
+                )
+            }
 
-            return closure.standing(at: row, as: try relocated(table[row]))
+            guard let number = numbering[origin].closure(closure.nth, of: closure.writing)?.number else {
+                throw BuildError.unjudged(
+                    "closure \(closure.nth) of '\(closure.writing)', which its document never numbered",
+                    at: standing.place
+                )
+            }
+
+            let held = Standing(origin: origin, place: standing.place, loweredTypes: typeRows[origin])
+            let row = try self.row(number, in: held)
+
+            return closure.standing(as: try relocated(table[row]))
         }
     }
 

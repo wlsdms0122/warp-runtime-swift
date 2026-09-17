@@ -32,6 +32,11 @@ public final class Linked: Sendable {
     // Which document declared it, whose variables its body reads.
     public let origin: Int
 
+    // Which of its label's closures this row is, for a row a closure literal
+    // was lifted into: the declaration that wrote it and this count are what
+    // a closure value is spelled by. Nil for a declaration's own row.
+    let nth: Int?
+
     public let signature: Signature
 
     // Where the receiver stands among the slots, which is where it stands
@@ -83,6 +88,7 @@ public final class Linked: Sendable {
         implementation: Implementation,
         foldable: Bool,
         sends: [Sent] = [],
+        nth: Int? = nil,
         in table: LoweredTypeTable
     ) {
         let slots = signature.lowered(in: table)
@@ -91,6 +97,7 @@ public final class Linked: Sendable {
 
         self.label = label
         self.origin = origin
+        self.nth = nth
         self.signature = signature
         self.receiverPosition = receiverPosition
         self.constness = constness
@@ -114,6 +121,7 @@ public final class Linked: Sendable {
     init(_ row: Linked, in table: LoweredTypeTable) {
         self.label = row.label
         self.origin = row.origin
+        self.nth = row.nth
         self.signature = row.signature
         self.receiverPosition = row.receiverPosition
         self.constness = row.constness
@@ -134,6 +142,7 @@ public final class Linked: Sendable {
     init(_ row: Linked, implementation: Implementation, sends: [Sent]) {
         self.label = row.label
         self.origin = row.origin
+        self.nth = row.nth
         self.signature = row.signature
         self.receiverPosition = row.receiverPosition
         self.constness = row.constness

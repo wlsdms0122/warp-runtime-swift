@@ -280,8 +280,8 @@ extension Closure {
     // captures, claiming nothing.
     static func assembled() -> Closure {
         Closure(
-            origin: 0,
-            number: 0,
+            writing: "assembled",
+            nth: 0,
             linked: Linked(
                 label: "assembled",
                 origin: 0,

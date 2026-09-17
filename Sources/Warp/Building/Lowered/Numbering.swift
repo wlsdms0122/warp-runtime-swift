@@ -219,6 +219,26 @@ struct Numbering: Sendable {
         return nil
     }
 
+    // Which declaration wrote the closure standing nth among this document's,
+    // and which of that declaration's it is. What a closure value is spelled
+    // by, wherever the value goes.
+    func written(_ nth: Int) -> (by: Name, nth: Int)? {
+        var standing = 0
+
+        for run in runs {
+            if nth < standing + run.count { return (by: run.name, nth: nth - standing) }
+
+            standing += run.count
+        }
+
+        return nil
+    }
+
+    // Every declaration that wrote a closure here.
+    var writers: [Name] {
+        runs.map(\.name)
+    }
+
     // Which of this document's closures a number stands for, or nothing where
     // it stands for a spelling instead. A body carries reference numbers, and
     // which closure one of them is, is this document's own arithmetic.

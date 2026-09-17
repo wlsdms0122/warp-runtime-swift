@@ -38,6 +38,10 @@ struct Assembled: Sendable {
     let typeNumbering: [LoweredTypeNumbering]
     let variables: [[(name: Name, value: Value)]]
 
+    // Which of its writer's closures each row is, by position, for a row a
+    // closure was lifted into. Nil for a declaration's own row.
+    let lifted: [Int?]
+
     // MARK: - Initializer
     init(_ documents: [Compiled]) throws {
         let held = documents.reduce(0) { held, document in held + document.table.count }
@@ -46,6 +50,7 @@ struct Assembled: Sendable {
         var origins: [Int] = []
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
+        var lifted: [Int?] = []
 
         table.reserveCapacity(held)
         origins.reserveCapacity(held)
@@ -77,12 +82,16 @@ struct Assembled: Sendable {
             closures[origin] = document.lifted.map { row in start + row }
 
             table.append(contentsOf: document.table)
+            lifted.append(contentsOf: document.table.indices.map { index in
+                document.lifted.contains(index) ? document.numbering.written(index - document.lifted.lowerBound)?.nth : nil
+            })
             origins.append(contentsOf: [Int](repeating: origin, count: document.table.count))
         }
 
         self.table = table
         self.documents = documents.map(\.document)
         self.origins = origins
+        self.lifted = lifted
         self.rows = rows
         self.closures = closures
         self.numbering = documents.map(\.numbering)

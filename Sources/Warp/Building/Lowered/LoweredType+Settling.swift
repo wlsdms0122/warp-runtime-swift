@@ -710,11 +710,11 @@ extension LoweredType {
         guard case let .procedure(closure) = value else { throw mismatch(value, at: path(), in: table) }
 
         // Its rows are numbered by the table of the link that made it.
-        guard closure.linked.readable(in: table) else {
+        guard let linked = closure.linked, linked.readable(in: table) else {
             throw ArgumentError("\(path()): \(Linked.unreadable)")
         }
 
-        if constness == .const, closure.constness != .const {
+        if constness == .const, linked.constness != .const {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got a procedure that runs"
             )
@@ -728,10 +728,10 @@ extension LoweredType {
         }
 
         let given = LoweredType.procedure(
-            parameters: closure.linked.slots.map(\.parameter),
-            returns: closure.linked.returns,
-            constness: closure.constness,
-            isolation: closure.isolation
+            parameters: linked.slots.map(\.parameter),
+            returns: linked.returns,
+            constness: linked.constness,
+            isolation: linked.isolation
         )
 
         guard LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated).accepts(given, in: table) else {

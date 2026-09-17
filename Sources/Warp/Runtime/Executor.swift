@@ -282,11 +282,17 @@ public struct Executor: Sendable {
         // Making a closure runs nothing: it is the capture, and the capture is
         // these cells.
         case let .closure(number, captures):
+            let row = linked[try self.row(number, from: activation.origin)]
+
+            guard let nth = row.nth else {
+                throw ExecutionError("a closure stands on a row no declaration wrote")
+            }
+
             return .procedure(
                 Closure(
-                    origin: activation.origin,
-                    number: number,
-                    linked: linked[try row(number, from: activation.origin)],
+                    writing: row.label,
+                    nth: nth,
+                    linked: row,
                     captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
                 )
             )
@@ -500,17 +506,21 @@ public struct Executor: Sendable {
         given arguments: [(name: Name, value: Value)],
         at trace: Trace
     ) async throws -> Value {
-        guard case let .body(body, frame) = closure.linked.implementation else {
+        guard let linked = closure.linked else {
+            throw ExecutionError("a closure no link answered")
+        }
+
+        guard case let .body(body, frame) = linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
         }
 
         // Its rows are numbered by the table of the link that made it.
-        guard closure.linked.readable(in: loweredTypes) else {
+        guard linked.readable(in: loweredTypes) else {
             throw ExecutionError("this call \(Linked.unreadable)")
         }
 
-        let settled = try closure.linked.settle(arguments)
-        var activation = try self.activation(of: closure.linked, in: frame)
+        let settled = try linked.settle(arguments)
+        var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
             activation.cells[slot] = cell
@@ -520,7 +530,7 @@ public struct Executor: Sendable {
             activation.cells[frame.parameters[position]] = .value(value ?? .null)
         }
 
-        return try await answer(body, of: closure.linked, in: &activation, at: trace)
+        return try await answer(body, of: linked, in: &activation, at: trace)
     }
 
     // The one way a written procedure is called: its frame, the settled

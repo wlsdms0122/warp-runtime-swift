@@ -155,10 +155,11 @@ public struct Builder: Sendable {
         for (origin, document) in compiled.enumerated() {
             let numbered = document.typeNumbering.rows(in: lowered.types.loweredTypes)
 
-            let rows = try document.table.map { judged -> Linked in
+            let rows = try document.table.enumerated().map { index, judged -> Linked in
                 let row = try judged.folding(
                     in: lowered.types.loweredTypes,
                     of: origin,
+                    nth: document.lifted.contains(index) ? document.numbering.written(index - document.lifted.lowerBound)?.nth : nil,
                     supplied: natives,
                     at: document.document
                 )
@@ -778,7 +779,7 @@ public struct Builder: Sendable {
 
         // Walked as rows, reported as spellings: a closure is a row without
         // one and is walked through, and only what has one is reported.
-        let rows = linked.table.reached(from: start, starting: variables)
+        let rows = linked.table.reached(from: start, starting: variables, answering: relocating.row(of:))
         let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(entry.value) }.map(\.key))
 
         return Image(

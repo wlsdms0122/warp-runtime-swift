@@ -7,57 +7,28 @@
 
 import Foundation
 
-// A procedure as a value: the row its body was lowered into, and the cells
-// it took from the frame it was written in, each with the slot it fills in
-// the closure's own frame. A value cell was copied; a hold shares its box.
+// A procedure as a value: which closure it is, the row a link answered for
+// it, and the cells it took from the frame it was written in, each with the
+// slot it fills in the closure's own frame. A value cell was copied; a hold
+// shares its box.
+//
+// Which closure it is, is spelled by the declaration that wrote it and which
+// of that declaration's it is: what an object writes a closure down as, and
+// what a link answers a row for. A closure a fold settled into an object
+// stands by that spelling alone until the link reading the object answers it.
 public struct Closure: Sendable {
     // MARK: - Property
-    // Which closure of which document this is, read the way the operation that
-    // made it is read: the number is the document's own until a link answers
-    // it, and the row once one has.
-    let origin: Int
-    let number: Int
+    let writing: Name
+    let nth: Int
 
-    public let linked: Linked
+    public let linked: Linked?
     let captured: [(slot: Int, cell: Cell)]
-
-    public var signature: Signature { linked.signature }
-
-    // What the link derived about the literal's text, carried with the value so
-    // a slot the link could not see, one reached through `any` or through a
-    // field no declaration named, still asks it.
-    public var constness: Constness { linked.constness }
-    public var isolation: Isolation { linked.isolation }
-
-    // MARK: - Initializer
-    init(origin: Int, number: Int, linked: Linked, captured: [(slot: Int, cell: Cell)]) {
-        self.origin = origin
-        self.number = number
-        self.linked = linked
-        self.captured = captured
-    }
-
-    // The same closure as another link reads it: the row it turned out to be
-    // there, and the body standing in that link's tables.
-    func standing(at number: Int, as linked: Linked) -> Closure {
-        Closure(origin: origin, number: number, linked: linked, captured: captured)
-    }
-
-    // The same closure holding something else.
-    func holding(_ captured: [(slot: Int, cell: Cell)]) -> Closure {
-        Closure(origin: origin, number: number, linked: linked, captured: captured)
-    }
-
-    // MARK: - Public
-    func settling(returned value: Value) throws -> Value {
-        try linked.settling(returned: value)
-    }
 
     // Whether this may run beside another body. Constness does not answer it: a
     // const body can still call a native procedure that holds state, and that procedure
     // is what two of these would meet in.
     public var runsBeside: Bool {
-        isolation == .isolated
+        linked?.isolation == .isolated
     }
 
     // Whether a cell it took is a hold rather than a copy: a box of the
@@ -68,6 +39,26 @@ public struct Closure: Sendable {
 
             return false
         }
+    }
+
+    // MARK: - Initializer
+    init(writing: Name, nth: Int, linked: Linked?, captured: [(slot: Int, cell: Cell)]) {
+        self.writing = writing
+        self.nth = nth
+        self.linked = linked
+        self.captured = captured
+    }
+
+    // MARK: - Public
+    // The same closure as a link reads it: the body standing in that link's
+    // tables.
+    func standing(as linked: Linked) -> Closure {
+        Closure(writing: writing, nth: nth, linked: linked, captured: captured)
+    }
+
+    // The same closure holding something else.
+    func holding(_ captured: [(slot: Int, cell: Cell)]) -> Closure {
+        Closure(writing: writing, nth: nth, linked: linked, captured: captured)
     }
 
     // MARK: - Private
