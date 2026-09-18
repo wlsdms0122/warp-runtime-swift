@@ -26,7 +26,7 @@ public final class Linked: Sendable {
 
     // MARK: - Property
     // The declared spelling, or the spelling of the declaration a closure was
-    // written in. What a trace and a refusal call this row.
+    // written in.
     public let label: Name
 
     // Which document declared it, whose variables its body reads.
@@ -36,6 +36,12 @@ public final class Linked: Sendable {
     // was lifted into: the declaration that wrote it and this count are what
     // a closure value is spelled by. Nil for a declaration's own row.
     let nth: Int?
+
+    // What a refusal calls this row: a declaration by its spelling, a closure
+    // by which of its writer's it is.
+    var rendered: String {
+        nth.map { nth in "closure \(nth) of '\(label)'" } ?? "'\(label)'"
+    }
 
     public let signature: Signature
 
@@ -225,7 +231,7 @@ public final class Linked: Sendable {
     func settling(receiver value: Value) throws -> Value {
         guard let position = receiverPosition else { return value }
 
-        return try slots[position].checking(value, at: "the receiver of '\(label)'", in: table)
+        return try slots[position].checking(value, at: "the receiver of \(rendered)", in: table)
     }
 
     // The returned value, checked against what was declared.
