@@ -539,7 +539,12 @@ public struct Executor: Sendable {
             activation.cells[frame.parameters[position]] = .value(value ?? .null)
         }
 
-        return try await answer(body, of: linked, in: &activation, at: trace)
+        return try await answer(
+            body,
+            of: linked,
+            in: &activation,
+            at: trace.appending(.closure(of: closure.writer.name.spelling, nth: closure.nth))
+        )
     }
 
     // The one way a written procedure is called: its frame, the settled

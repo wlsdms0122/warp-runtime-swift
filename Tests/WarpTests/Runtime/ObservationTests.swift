@@ -126,8 +126,9 @@ struct ObservationTests {
     @Test("a piece of a fan-out is announced under which piece it is")
     func piecesAreToldApart() async throws {
         // Given. `std.concurrent.map` is written in Warp, so the walk that
-        // builds the pieces stands in the path too. What tells the pieces
-        // apart is the number the fan-out put on each
+        // builds the pieces stands in the path too, and so does the closure
+        // of its own it runs each piece in. What tells the pieces apart is
+        // the number the fan-out put on each
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
@@ -168,8 +169,8 @@ struct ObservationTests {
         _ = try await Executor(observer: observer).run(image)
 
         // Then
-        #expect(await observer.events.contains(.completed("both.std.concurrent.map[0].answered.step", .int(1))))
-        #expect(await observer.events.contains(.completed("both.std.concurrent.map[1].answered.step", .int(2))))
+        #expect(await observer.events.contains(.completed("both.std.concurrent.map[0].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(1))))
+        #expect(await observer.events.contains(.completed("both.std.concurrent.map[1].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(2))))
     }
 
     @Test("a call into a body keeps the statement that called it")
@@ -241,6 +242,46 @@ struct ObservationTests {
         } catch let error as Aborted {
             #expect(error.trace?.rendered == "[0].helper.[0]")
             #expect("\(error)" == "[0].helper.[0]: no")
+        }
+    }
+
+    @Test("a refusal inside a closure says which of its writer's closures it was in")
+    func aRefusalNamesTheClosureItWasIn() async throws {
+        // Given. Two closures written by `entry`, and the second is the one
+        // that refuses when called
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("first"),
+                            expression: .closure(Procedure(body: [], result: .literal(.int(1))))
+                        ),
+                        Statement(
+                            binding: .constant("second"),
+                            expression: .closure(
+                                Procedure(
+                                    body: [
+                                        Statement(expression: refusing(literal("no")))
+                                    ]
+                                )
+                            )
+                        ),
+                        Statement(binding: .constant("called"), expression: .apply(reference("second"), arguments: [:]))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+
+        // Then
+        do {
+            _ = try await Executor().run(image)
+            Issue.record("the closure was expected to refuse")
+        } catch let error as Aborted {
+            #expect(error.trace?.rendered == "called.entry.closure[1].[0]")
         }
     }
 
