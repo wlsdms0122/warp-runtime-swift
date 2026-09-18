@@ -70,18 +70,22 @@ extension LoweredType {
                 }
             }
 
-        // In the other direction a composition stands for some member of
-        // every membership it names, so it fits where one of those would;
-        // a contract alone names no type, and nothing is provable.
+        // In the other direction a value of a composition is one of every
+        // membership's members and nothing says which, so it stands where
+        // every member of some membership would. One bounded by contracts
+        // alone stands for a type nothing here lists, so nothing is
+        // provable and it passes to be judged where it arrives.
         case let (_, .composition(bounds)):
-            return bounds.allSatisfy { bound in
-                switch bound {
-                case let .membership(row):
-                    table.constraints[row].contains { member in accepts(member, in: table, assuming: assuming) }
+            let memberships = bounds.compactMap { bound -> Int? in
+                guard case let .membership(row) = bound else { return nil }
 
-                case .contract:
-                    true
-                }
+                return row
+            }
+
+            guard !memberships.isEmpty else { return true }
+
+            return memberships.contains { row in
+                table.constraints[row].allSatisfy { member in accepts(member, in: table, assuming: assuming) }
             }
 
         // `var` is a fact about a slot, and fitting is asked of the inner
@@ -119,17 +123,6 @@ extension LoweredType {
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
             return accepts(table.loweredTypes[row], in: table, assuming: assuming + [(self, other)])
-
-        // A membership standing as a type takes whatever it admits. In the
-        // other direction a value of it is one of the members and nothing says
-        // which, so it stands only where every one of them would.
-        case let (.member(row), _):
-            return table.admits(constraint: row, reading: other, assuming: [])
-
-        case let (_, .member(row)):
-            return table.constraints[row].allSatisfy { member in
-                accepts(member, in: table, assuming: assuming)
-            }
 
         // A nullable slot takes null, the declared half, and anything
         // nullable whose declared half it takes. What may be null does not
@@ -316,17 +309,25 @@ extension LoweredType {
 
         if provesNothing || other.provesNothing { return true }
 
-        // A value of a membership is one of its members, so a value could be
-        // both wherever one member could.
-        if case let .member(row) = self {
-            return table.constraints[row].contains { member in
-                member.couldBothHold(other, in: table, assuming: assuming)
+        // A value of a composition is one of every membership's members, so
+        // a value could be both wherever one member could.
+        if case let .composition(bounds) = self {
+            return bounds.allSatisfy { bound in
+                guard case let .membership(row) = bound else { return true }
+
+                return table.constraints[row].contains { member in
+                    member.couldBothHold(other, in: table, assuming: assuming)
+                }
             }
         }
 
-        if case let .member(row) = other {
-            return table.constraints[row].contains { member in
-                couldBothHold(member, in: table, assuming: assuming)
+        if case let .composition(bounds) = other {
+            return bounds.allSatisfy { bound in
+                guard case let .membership(row) = bound else { return true }
+
+                return table.constraints[row].contains { member in
+                    couldBothHold(member, in: table, assuming: assuming)
+                }
             }
         }
 
@@ -408,11 +409,6 @@ extension LoweredType {
 
                 return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
             }
-
-        // A value here is one of the members, so a candidate any of them
-        // spells is one a call could match.
-        case let .member(constraint):
-            return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
 
         case let .named(row):
             return table.loweredTypes[row].spells(candidate, in: table)

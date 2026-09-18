@@ -215,15 +215,6 @@ final class LoweredTypeTable: Sendable {
                 }
             }
 
-        // A value of a membership is one of its members and nothing says
-        // which, so it is admitted here only where every one of them is.
-        case let .member(constraint):
-            guard !assuming.contains(constraint) else { return true }
-
-            return constraints[constraint].allSatisfy { member in
-                admits(constraint: row, reading: member, assuming: assuming + [constraint])
-            }
-
         // Nothing can be said about a reading the table does not answer, so
         // it passes here and is refused where the name is met.
         case .undeclared:

@@ -35,14 +35,14 @@ extension LoweredType {
         against given: LoweredType,
         into bound: inout [Name: LoweredType],
         disagreeing: inout [Name: LoweredType],
-        holding: inout [(reading: LoweredType, bounds: [LoweredType.Bound])],
+        holding: inout [Held],
         in table: LoweredTypeTable
     ) {
         switch (self, given) {
         // A composition has no name to be read under: what arrived is held
         // to its bounds where it arrived, wherever in the slot that was.
         case let (.composition(bounds), _):
-            holding.append((reading: given, bounds: bounds))
+            holding.append(Held(reading: given, bounds: bounds))
 
         case let (.parameter(name, _), _):
             guard let already = bound[name] else {

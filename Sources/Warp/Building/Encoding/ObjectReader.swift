@@ -649,7 +649,6 @@ private extension ObjectReader {
                 path: try Fields.list(fields.next(), of: "path", segment)
             )
 
-        case 20: read = .member(try fields.count())
         case 21: read = .undeclared(label: try fields.text(), refusal: try fields.text())
         case 22:
             let bounds = try Fields.ordered(fields.next(), of: "composition", bound)

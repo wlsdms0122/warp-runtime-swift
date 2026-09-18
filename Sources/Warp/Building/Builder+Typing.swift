@@ -93,31 +93,56 @@ extension Builder {
 
         // A composition the declaration promises holds the answer to its
         // bounds the way a slot holds what arrives, wherever in the promise
-        // it stands.
+        // it stands, and a parameter the promise mentions twice is answered
+        // the same both times.
+        if let refusal = refusal(
+            holding: read,
+            to: promised,
+            as: "the answer holds",
+            answering: true,
+            in: table,
+            fulfillment: fulfillment,
+            at: place
+        ) {
+            throw BuildError(refusal, at: place.part(resulting ? .result : .returns))
+        }
+    }
+
+    // Why what arrived is provably outside what a declaration holds it to,
+    // wherever in the declaration a composition stands, or nothing. What
+    // leans on a claim this table cannot settle is written down for the
+    // link to settle.
+    private func refusal(
+        holding given: LoweredType,
+        to declared: LoweredType,
+        as label: String,
+        answering: Bool = false,
+        in table: LoweredTypeTable,
+        fulfillment: Fulfillment?,
+        at place: Place
+    ) -> String? {
         var readings: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var holding: [(reading: LoweredType, bounds: [LoweredType.Bound])] = []
+        var holding: [Held] = []
 
-        promised.binding(against: read, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
+        declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
 
-        // A parameter the promise mentions twice is answered the same both
-        // times, or the answer is two things.
-        guard disagreeing.isEmpty else {
-            let named = disagreeing.keys.sorted().map { parameter in
+        if answering, !disagreeing.isEmpty {
+            return disagreeing.keys.sorted().map { parameter in
                 "'\(parameter)' is answered as \(readings[parameter]?.rendered(in: table) ?? "?")"
                     + " and as \(disagreeing[parameter]?.rendered(in: table) ?? "?")"
-            }
-
-            throw BuildError(named.joined(separator: ", "), at: place.part(resulting ? .result : .returns))
+            }.joined(separator: ", ")
         }
 
         for held in holding {
             for bound in held.bounds {
-                if let refusal = refusal(of: held.reading, holdingTo: bound, as: "the answer holds", in: table, fulfillment: fulfillment, at: place) {
-                    throw BuildError(refusal, at: place.part(resulting ? .result : .returns))
+                if let refusal = refusal(of: held.reading, holdingTo: bound, as: label, in: table, fulfillment: fulfillment, at: place) {
+                    return refusal
                 }
             }
         }
+
+        return nil
     }
 
     // A block with every dot judged and every call gathered, each site carrying
@@ -309,12 +334,12 @@ extension Builder {
             return .refusal(refusal)
         }
 
-        for held in substitution.holding {
+        for (slot, held) in substitution.holding {
             for bound in held.bounds {
                 if let refusal = refusal(
                     of: held.reading,
                     holdingTo: bound,
-                    as: "'\(held.slot)' holds",
+                    as: "'\(slot)' holds",
                     in: loweredTypes,
                     fulfillment: fulfillment,
                     at: place
@@ -345,10 +370,10 @@ extension Builder {
     ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var holding: [(slot: Name, reading: LoweredType, bounds: [LoweredType.Bound])] = []
+        var holding: [(slot: Name, held: Held)] = []
 
         func read(_ slot: Slot, as reading: LoweredType) {
-            var held: [(reading: LoweredType, bounds: [LoweredType.Bound])] = []
+            var held: [Held] = []
 
             slot.type.binding(
                 against: reading,
@@ -358,7 +383,7 @@ extension Builder {
                 in: loweredTypes
             )
 
-            holding += held.map { held in (slot: slot.name, reading: held.reading, bounds: held.bounds) }
+            holding += held.map { held in (slot: slot.name, held: held) }
         }
 
         for name in call.arguments.keys.sorted() {
@@ -2824,6 +2849,17 @@ extension Builder {
             return declared
         }
 
+        if let refusal = refusal(
+            holding: given,
+            to: declared,
+            as: "holds",
+            in: context.loweredTypes,
+            fulfillment: ask.fulfillment,
+            at: place
+        ) {
+            try refuse(refusal, at: place, when: ask)
+        }
+
         return declared
     }
 
@@ -2859,6 +2895,17 @@ extension Builder {
                 when: ask
             )
             return
+        }
+
+        if let refusal = refusal(
+            holding: written,
+            to: slot,
+            as: "writes '\(path.rendered)' as",
+            in: context.loweredTypes,
+            fulfillment: ask.fulfillment,
+            at: place
+        ) {
+            try refuse(refusal, at: place, when: ask)
         }
     }
 }

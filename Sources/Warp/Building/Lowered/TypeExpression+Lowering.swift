@@ -99,7 +99,7 @@ extension TypeExpression {
             }
 
             if let row = table.constraintRow(named: name) {
-                return .member(row)
+                return .composition([.membership(row)])
             }
 
             if table.satisfying[name] != nil {

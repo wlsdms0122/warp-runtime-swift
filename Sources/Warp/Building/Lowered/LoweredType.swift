@@ -81,10 +81,6 @@ indirect enum LoweredType: Sendable {
     // way it answers `any`; it stands apart for the walk's own naming.
     case reading(of: Name, path: [PathSegment])
 
-    // A declared membership standing as a type, by its row: a value of one of
-    // the types it admits. What a slot holds here is decided, and which of the
-    // members it is only a cast tells apart.
-    case member(Int)
 
     // A name the table does not answer: nothing declares it, or it names
     // itself. Nothing can be said about it, so every judgment over readings
@@ -107,7 +103,7 @@ indirect enum LoweredType: Sendable {
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
-            .named, .parameter, .composition, .reading, .member, .undeclared:
+            .named, .parameter, .composition, .reading, .undeclared:
             return self
         }
     }
@@ -128,7 +124,7 @@ indirect enum LoweredType: Sendable {
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .array, .dictionary, .record, .procedure, .nullable,
-            .named, .parameter, .composition, .reading, .member, .undeclared:
+            .named, .parameter, .composition, .reading, .undeclared:
             return self
         }
     }
@@ -168,7 +164,7 @@ indirect enum LoweredType: Sendable {
     // Whether what this stands for is settled at the call.
     var decidedAtCall: Bool {
         switch self {
-        case .parameter, .composition, .reading:
+        case .parameter, .reading:
             return true
 
         default:
@@ -353,9 +349,6 @@ extension LoweredType: Equatable {
             return myLabel == theirLabel && mine == theirs
 
         case let (.composition(mine), .composition(theirs)):
-            return mine == theirs
-
-        case let (.member(mine), .member(theirs)):
             return mine == theirs
 
         case let (.reading(myRoot, myPath), .reading(theirRoot, theirPath)):

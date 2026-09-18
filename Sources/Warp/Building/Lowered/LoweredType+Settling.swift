@@ -34,9 +34,6 @@ extension LoweredType {
                 try standing(value, boundBy: bound, at: path(), in: table, assuming: assuming)
             }
 
-        case let .member(constraint):
-            return try standing(value, boundBy: .membership(constraint), at: path(), in: table, assuming: assuming)
-
         default:
             return try judging(value, at: path(), in: table, assuming: assuming)
         }
@@ -96,9 +93,6 @@ extension LoweredType {
         case let .named(row):
             return table.loweredTypes[row].admitsNull(in: table)
 
-        case let .member(constraint):
-            return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
-
         // A parameter stands for what arrived and does not settle it, so an
         // unbounded one holds a null the way it holds anything. A bounded one
         // asks each membership, the way a member does.
@@ -126,10 +120,14 @@ extension LoweredType {
         case let .named(row):
             return table.loweredTypes[row].declaresNull(in: table)
 
-        // A value of a membership is one of its members, so null is spelled
-        // here wherever a member spells it.
-        case let .member(constraint):
-            return table.constraints[constraint].contains { member in member.declaresNull(in: table) }
+        // A value of a composition is one of every membership's members, so
+        // null is spelled here where every membership has a member spelling it.
+        case let .composition(bounds):
+            return bounds.allSatisfy { bound in
+                guard case let .membership(constraint) = bound else { return false }
+
+                return table.constraints[constraint].contains { member in member.declaresNull(in: table) }
+            }
 
         default:
             return false
@@ -178,16 +176,6 @@ extension LoweredType {
                     boundAssuming: boundAssuming
                 )
             }
-
-        // A value here is one of the members, so the membership answers this
-        // the way it answers for a parameter it bounds.
-        case let .member(constraint):
-            return holdsEveryByte(
-                of: constraint,
-                in: table,
-                namedAssuming: namedAssuming,
-                boundAssuming: boundAssuming
-            )
 
         case let .ranged(refinement):
             return refinement.holdsEveryByte
@@ -315,9 +303,6 @@ extension LoweredType {
         case let .composition(bounds):
             return bounds.rendered(in: table)
 
-        case let .member(constraint):
-            return table.constraintLabels[constraint].spelling
-
         case let .variable(inner):
             return "var \(inner.rendered(in: table))"
 
@@ -377,7 +362,7 @@ extension LoweredType {
         assuming: [Int]
     ) throws -> Value {
         switch self {
-        case .any, .reading, .parameter, .composition, .member:
+        case .any, .reading, .parameter, .composition:
             return try settling(value, at: path(), in: table, assuming: assuming)
 
         // A value arrived where nothing was supposed to, so the arrival is the

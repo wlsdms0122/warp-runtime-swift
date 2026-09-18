@@ -159,7 +159,7 @@ enum ObjectCoverageFixture {
         ("parameterContract", .parameter(label: "U", bounds: [.contract("a.five")])),
         ("parameterNone", .parameter(label: "V", bounds: [])),
         ("reading", .reading(of: "a.sixteen", path: [.index(1, optional: true)])),
-        ("member", .member(7)),
+        ("composition", .composition([.membership(7), .contract("a.five")])),
         ("undeclared", .undeclared(label: "W", refusal: "nothing declares it"))
     ]
 

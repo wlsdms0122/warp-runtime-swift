@@ -81,9 +81,6 @@ extension LoweredType {
         case let .named(row):
             return .named(try type(row))
 
-        case let .member(row):
-            return .member(try membership(row))
-
         case let .parameter(label, bounds):
             return .parameter(label: label, bounds: try bounds.renumbered(membership: membership))
 
@@ -101,12 +98,14 @@ extension LoweredType {
 
 extension Array where Element == LoweredType.Bound {
     // The same bounds over the rows the transform answers: a membership
-    // stands on a row and a contract on a name.
+    // stands on a row and a contract on a name. Sorted again, since the
+    // order is the rows' and the rows moved.
     func renumbered(membership: (Int) throws -> Int) rethrows -> [LoweredType.Bound] {
         try map { bound in
             guard case let .membership(row) = bound else { return bound }
 
             return .membership(try membership(row))
         }
+        .sorted()
     }
 }

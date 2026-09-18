@@ -24,12 +24,19 @@ struct Substitution: Sendable {
     // lets a refusal name them.
     let disagreeing: [Name: LoweredType]
 
-    // What arrived at each slot declared as a composition, beside what the
-    // composition holds it to. Nothing fills a composition and no name ties
-    // it to another slot, so it is judged slot by slot rather than read.
-    let holding: [(slot: Name, reading: LoweredType, bounds: [LoweredType.Bound])]
+    // What arrived wherever a slot declared a composition, by slot. Nothing
+    // fills a composition and no name ties it to another slot, so it is
+    // judged where it stands rather than read.
+    let holding: [(slot: Name, held: Held)]
 
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
+}
+
+// A value that arrived where a composition stands, beside what the
+// composition holds it to.
+struct Held: Sendable {
+    let reading: LoweredType
+    let bounds: [LoweredType.Bound]
 }

@@ -523,9 +523,6 @@ private extension ObjectWriter {
         case let .reading(of: read, path: path):
             return .array([.int(19), name(read), .array(path.map(segment))])
 
-        case let .member(row):
-            return .array([.int(20), .int(row)])
-
         case let .undeclared(label, refusal):
             return .array([.int(21), .string(label), .string(refusal)])
         }

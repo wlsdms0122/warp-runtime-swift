@@ -354,7 +354,8 @@ public struct TypeReader: Decodable {
 
         for index in text.indices {
             switch text[index] {
-            case "<": depth += 1
+            // `..<` is a range's far edge, and opens nothing.
+            case "<" where !text[..<index].hasSuffix(".."): depth += 1
             case ">": depth -= 1
             case "&" where depth == 0:
                 parts.append(text[start ..< index])

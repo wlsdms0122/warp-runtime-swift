@@ -58,7 +58,7 @@ extension Body {
 
         mutating func stand(on type: LoweredType) {
             switch type {
-            case let .named(number), let .member(number):
+            case let .named(number):
                 types.append(number)
 
             case let .parameter(_, bounds), let .composition(bounds):
