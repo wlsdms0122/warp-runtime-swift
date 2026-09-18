@@ -238,12 +238,30 @@ extension Builder {
 
         guard let answer = asked.returns else { return nil }
 
-        guard answer.lowered(in: table.loweredTypes)
-            .accepts((given.returns ?? .any).lowered(in: table.loweredTypes), in: table.loweredTypes)
-        else {
+        let promised = answer.lowered(in: table.loweredTypes)
+        let answered = (given.returns ?? .any).lowered(in: table.loweredTypes)
+
+        guard promised.accepts(answered, in: table.loweredTypes) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                     + " asks, and answers \((given.returns ?? .any).rendered)"
                     + " where the contract writes \(answer.rendered)"
+        }
+
+        // A contract the answer is held to is answered by what every document
+        // says, and this is where what documents say is gathered: an answer
+        // no document says satisfies the contract does not answer it.
+        if case let .composition(bounds) = promised {
+            for bound in bounds {
+                guard case let .contract(name) = bound,
+                      case let .leansOn(types) = table.loweredTypes.answering(contract: name, reading: answered),
+                      let unheld = types.first(where: { held in table.loweredTypes.settles(contract: name, arrived: held) != true })
+                else {
+                    continue
+                }
+
+                return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
+                        + " asks, and answers '\(unheld)', which no document says satisfies '\(name)'"
+            }
         }
 
         return nil

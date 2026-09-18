@@ -281,14 +281,14 @@ final class LoweredTypeTable: Sendable {
 extension LoweredTypeTable.Answering {
     // Two answers about one contract from two memberships one value belongs
     // to, read as one: what either settles is settled, what both refuse is
-    // refused, and what is left leans on what either leans on.
+    // refused, and what one alone leans on is leaned on. Where both lean, a
+    // claim written down is one every name has to answer, and one of the
+    // two would do, so nothing is written and the value is judged where it
+    // arrives.
     func either(_ other: LoweredTypeTable.Answering) -> LoweredTypeTable.Answering {
         switch (self, other) {
-        case (.settled(true), _), (_, .settled(true)):
+        case (.settled(true), _), (_, .settled(true)), (.leansOn, .leansOn):
             .settled(true)
-
-        case let (.leansOn(mine), .leansOn(theirs)):
-            .leansOn(mine + theirs)
 
         case let (.leansOn(names), .settled(false)), let (.settled(false), .leansOn(names)):
             .leansOn(names)

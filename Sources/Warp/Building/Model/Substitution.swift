@@ -29,14 +29,14 @@ struct Substitution: Sendable {
     // judged where it stands rather than read.
     let holding: [(slot: Name, held: Held)]
 
+    // A value that arrived where a composition stands, beside what the
+    // composition holds it to.
+    struct Held: Sendable {
+        let reading: LoweredType
+        let bounds: [LoweredType.Bound]
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
-}
-
-// A value that arrived where a composition stands, beside what the
-// composition holds it to.
-struct Held: Sendable {
-    let reading: LoweredType
-    let bounds: [LoweredType.Bound]
 }

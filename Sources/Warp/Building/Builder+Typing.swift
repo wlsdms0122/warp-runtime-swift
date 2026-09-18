@@ -123,7 +123,7 @@ extension Builder {
     ) -> String? {
         var readings: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var holding: [Held] = []
+        var holding: [Substitution.Held] = []
 
         declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
 
@@ -372,10 +372,10 @@ extension Builder {
     ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var holding: [(slot: Name, held: Held)] = []
+        var holding: [(slot: Name, held: Substitution.Held)] = []
 
         func read(_ slot: Slot, as reading: LoweredType) {
-            var held: [Held] = []
+            var held: [Substitution.Held] = []
 
             slot.type.binding(
                 against: reading,

@@ -401,6 +401,33 @@ struct ConstraintTests {
         _ = try? await builder.build([sut] + Module.standard, entry: entryName)
     }
 
+    @Test("null is not a value of a contract standing as a type")
+    func nullIsRefusedWhereAContractStands() async throws {
+        // Given
+        let sut = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: [
+                "app.tell": Procedure(
+                    signature: Signature(parameters: ["it": Parameter(type: .named("app.Describable"))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "app.tell", arguments: ["it": .literal(.null)]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`
