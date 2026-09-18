@@ -56,15 +56,15 @@ struct ClosureRows {
         guard let origins = writing[closure.writer] else {
             throw BuildError(
                 naming.contains(closure.writer.document)
-                    ? "'\(closure.rendered)', and '\(closure.writer.name)' wrote no closure"
-                    : "a closure '\(closure.writer.name)' wrote in a document no module in this link is",
+                    ? "'\(closure.rendered)', and nothing by that name wrote a closure"
+                    : "'\(closure.rendered)', written in a document no module in this link is",
                 at: place
             )
         }
 
         guard origins.count == 1, let origin = origins.first else {
             throw BuildError(
-                "a closure '\(closure.writer.name)' wrote, and "
+                "'\(closure.rendered)', and "
                     + origins.map { origin in documents[origin].spelled(at: origin) }.joined(separator: " and ")
                     + " each write one, with nothing to tell the two apart",
                 at: place
@@ -75,7 +75,7 @@ struct ClosureRows {
               closures[origin].indices.contains(nth)
         else {
             throw BuildError(
-                "'\(closure.rendered)', and '\(closure.writer.name)' wrote no such closure",
+                "'\(closure.rendered)', and its writer wrote no closure at that count",
                 at: place
             )
         }

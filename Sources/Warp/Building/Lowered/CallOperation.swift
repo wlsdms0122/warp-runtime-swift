@@ -70,7 +70,7 @@ struct CallOperation: Sendable {
     ) throws {
         if let stray = written.first(where: { name in callee.signature.parameters[name] == nil }) {
             throw BuildError.unjudged(
-                "an argument '\(stray)' that '\(callee.label)' does not declare",
+                "an argument '\(stray)' that '\(callee.rendered)' does not declare",
                 at: place
             )
         }
@@ -94,7 +94,7 @@ struct CallOperation: Sendable {
             if case .inout = slot.type {
                 guard case let .reference(address)? = given else {
                     throw BuildError.unjudged(
-                        "'\(name)' handed to '\(callee.label)' in place without a variable",
+                        "'\(name)' handed to '\(callee.rendered)' in place without a variable",
                         at: place
                     )
                 }
@@ -108,7 +108,7 @@ struct CallOperation: Sendable {
             if isReceiver, let receiver {
                 guard written == nil else {
                     throw BuildError.unjudged(
-                        "'\(name)' sent to '\(callee.label)' both in front and by name",
+                        "'\(name)' sent to '\(callee.rendered)' both in front and by name",
                         at: place
                     )
                 }
