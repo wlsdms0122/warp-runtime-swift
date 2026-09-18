@@ -607,7 +607,7 @@ extension Builder {
             declared,
             over: declaredSlots,
             answering: context.answer(of: call.selector),
-            filledWith: bound(
+            filledWith: substitution(
                 of: declared,
                 over: declaredSlots,
                 at: call,

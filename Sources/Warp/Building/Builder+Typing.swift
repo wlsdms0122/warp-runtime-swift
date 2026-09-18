@@ -262,7 +262,7 @@ extension Builder {
         _ declared: Signature,
         over slots: [Slot],
         answering: LoweredType?,
-        filledWith bound: Bound,
+        filledWith substitution: Substitution,
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment?,
         at place: Place
@@ -270,14 +270,14 @@ extension Builder {
         // A declaration with nothing to fill and nothing to hold is read as
         // the link lowered it. Lowering it again per call site is the same
         // answer paid for again, and this is the site every call goes through.
-        guard declared.isGeneric || !bound.holding.isEmpty else {
+        guard declared.isGeneric || !substitution.holding.isEmpty else {
             return .fits(slots: slots, returns: answering)
         }
 
-        guard bound.disagreeing.isEmpty else {
-            let named = bound.disagreeing.keys.sorted().map { parameter in
-                "'\(parameter)' is read as \(bound.readings[parameter]?.rendered(in: loweredTypes) ?? "?")"
-                    + " and as \(bound.disagreeing[parameter]?.rendered(in: loweredTypes) ?? "?")"
+        guard substitution.disagreeing.isEmpty else {
+            let named = substitution.disagreeing.keys.sorted().map { parameter in
+                "'\(parameter)' is read as \(substitution.readings[parameter]?.rendered(in: loweredTypes) ?? "?")"
+                    + " and as \(substitution.disagreeing[parameter]?.rendered(in: loweredTypes) ?? "?")"
             }
 
             return .refusal(named.joined(separator: ", "))
@@ -288,7 +288,7 @@ extension Builder {
 
         if let refusal = constraintRefusal(
             mentions: mentions,
-            readings: bound.readings,
+            readings: substitution.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
             at: place
@@ -296,7 +296,7 @@ extension Builder {
             return .refusal(refusal)
         }
 
-        for held in bound.holding {
+        for held in substitution.holding {
             for bound in held.bounds {
                 if let refusal = refusal(
                     of: held.reading,
@@ -312,8 +312,8 @@ extension Builder {
         }
 
         return .fits(
-            slots: declared.lowered(in: loweredTypes, filling: bound.readings),
-            returns: answering?.filling(bound.readings)
+            slots: declared.lowered(in: loweredTypes, filling: substitution.readings),
+            returns: answering?.filling(substitution.readings)
         )
     }
 
@@ -322,14 +322,14 @@ extension Builder {
     // hand, so nothing is walked a second time for the asking. A receiver is a
     // parameter written on the other side of the dot, so it is read the same
     // way.
-    func bound(
+    func substitution(
         of signature: Signature,
         over slots: [Slot],
         at call: Call,
         readings sent: [Name: LoweredType],
         receiver received: LoweredType?,
         in loweredTypes: LoweredTypeTable
-    ) -> Bound {
+    ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
         var holding: [(slot: Name, reading: LoweredType, bounds: [LoweredType.Bound])] = []
@@ -362,7 +362,7 @@ extension Builder {
             read(slot, as: received)
         }
 
-        return Bound(readings: bound, disagreeing: disagreeing, holding: holding)
+        return Substitution(readings: bound, disagreeing: disagreeing, holding: holding)
     }
 
     // What a call answers: the declaration's returns, filled from the operands
@@ -382,7 +382,7 @@ extension Builder {
         guard signature.isGeneric else { return returns }
 
         return returns.filling(
-            bound(
+            substitution(
                 of: signature,
                 over: slots,
                 at: call,

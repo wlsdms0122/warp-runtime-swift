@@ -1,5 +1,5 @@
 //
-//  Bound.swift
+//  Substitution.swift
 //  Warp
 //
 //  Created by JSilver on 8/20/26.
@@ -15,7 +15,7 @@ import Foundation
 // says "anything", which is what a declaration says when it said nothing, so a
 // checker that folded a disagreement would go on as though nothing had been
 // declared.
-struct Bound: Sendable {
+struct Substitution: Sendable {
     // MARK: - Property
     // The first reading of each type parameter.
     let readings: [Name: LoweredType]
