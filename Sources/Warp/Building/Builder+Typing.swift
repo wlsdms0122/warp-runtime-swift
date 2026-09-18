@@ -112,7 +112,7 @@ extension Builder {
     // wherever in the declaration a composition stands, or nothing. What
     // leans on a claim this table cannot settle is written down for the
     // link to settle.
-    private func refusal(
+    func refusal(
         holding given: LoweredType,
         to declared: LoweredType,
         as label: String,
@@ -243,7 +243,7 @@ extension Builder {
     // not. A membership and a contract ask different questions of the same
     // reading: what a membership admits is a set of types, what a contract
     // asks is a set of procedures the reading's own type answers.
-    private func refusal(
+    func refusal(
         of reading: LoweredType,
         holdingTo bound: LoweredType.Bound,
         as label: String,
@@ -254,9 +254,23 @@ extension Builder {
         switch bound {
         case let .contract(name):
             switch loweredTypes.answering(contract: name, reading: reading) {
+            // What leans on a claim is written down for the link to settle;
+            // at the link, where nothing is written, it is held to what the
+            // documents say.
             case let .leansOn(types):
+                guard let fulfillment else {
+                    guard let unheld = types.first(where: { type in
+                        loweredTypes.settles(contract: name, arrived: type) != true
+                    }) else {
+                        return nil
+                    }
+
+                    return "\(label) \(reading.rendered(in: loweredTypes)), and no document"
+                        + " says '\(unheld)' answers every procedure '\(name)' asks"
+                }
+
                 for type in types {
-                    fulfillment?.require(Claim(type: type, contract: name), at: place)
+                    fulfillment.require(Claim(type: type, contract: name), at: place)
                 }
 
                 return nil

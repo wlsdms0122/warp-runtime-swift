@@ -143,17 +143,6 @@ extension Builder {
             return .waits("\(claim.spelled) says " + reason)
         }
 
-        // A value handed on once is followed by the name that holds it, and
-        // where a contract stands a value is held under no name.
-        guard !Builder.handedOnce(.named(type), in: table) else {
-            throw BuildError(
-                "says '\(type)' answers '\(contract)', and a value written `linear`"
-                    + " is followed by the name that holds it. Where a contract stands"
-                    + " nothing follows one",
-                at: claim.place
-            )
-        }
-
         var answering: [Name: Name] = [:]
 
         for (procedure, signature) in asked.held.sorted(by: { $0.key < $1.key }) {
@@ -176,6 +165,7 @@ extension Builder {
                 receiving: type,
                 of: contract,
                 procedure: procedure,
+                at: claim.place,
                 in: table
             ) {
                 return .waits("\(witness.spelled) declares '\(spelling)', which " + reason)
@@ -198,6 +188,7 @@ extension Builder {
         receiving type: Name,
         of contract: Name,
         procedure: Name,
+        at place: Place,
         in table: TypeTable
     ) -> String? {
         guard let receiver = given.receiver, let held = given.parameters[receiver] else {
@@ -258,41 +249,19 @@ extension Builder {
                     + " where the contract writes \(answer.rendered)"
         }
 
-        // A contract the answer is held to, wherever in the promise it
-        // stands, is answered by what every document says, and this is where
-        // what documents say is gathered: an answer no document says
-        // satisfies the contract does not answer it. What a table still
-        // being filled cannot say is written down for the link to say.
-        var readings: [Name: LoweredType] = [:]
-        var disagreeing: [Name: LoweredType] = [:]
-        var holding: [Substitution.Held] = []
-
-        promised.binding(against: answered, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table.loweredTypes)
-
-        for held in holding {
-            for bound in held.bounds {
-                guard case let .contract(name) = bound,
-                      case let .leansOn(types) = table.loweredTypes.answering(contract: name, reading: held.reading)
-                else {
-                    continue
-                }
-
-                for leaned in types {
-                    switch table.loweredTypes.settles(contract: name, arrived: leaned) {
-                    case true?:
-                        continue
-
-                    case nil:
-                        guard let unsettled = table.loweredTypes.unsettled else { fallthrough }
-
-                        unsettled.require(folded: Claim(type: leaned, contract: name))
-
-                    case false?:
-                        return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                                + " asks, and answers '\(leaned)', which no document says satisfies '\(name)'"
-                    }
-                }
-            }
+        // A composition the answer is held to, wherever in the promise it
+        // stands, is held the way a slot holds what arrives: what leans on a
+        // claim is written down while a document is compiled, and held to
+        // what the documents say where they are all in.
+        if let refusal = refusal(
+            holding: answered,
+            to: promised,
+            as: "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)' asks, and answers",
+            in: table.loweredTypes,
+            fulfillment: table.loweredTypes.unsettled,
+            at: place
+        ) {
+            return refusal
         }
 
         return nil

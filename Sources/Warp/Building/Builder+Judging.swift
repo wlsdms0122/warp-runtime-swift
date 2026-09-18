@@ -148,6 +148,20 @@ extension Builder {
         nested: Bool = false,
         resolve table: TypeTable
     ) throws {
+        // A value handed on once is followed by the name that holds it, so
+        // it stands where a name can hold it and nowhere else. Inside another
+        // type there is no name to follow, and what the type does with what
+        // it carries is not something the link can read.
+        guard !nested || !Builder.handedOnce(type, in: table) else {
+            throw BuildError(
+                "carries '\(type.rendered)' inside another type, and a value written"
+                    + " `linear` is followed by the name that holds it."
+                    + " Nothing follows one inside a list, a record or"
+                    + " another declaration",
+                at: place
+            )
+        }
+
         switch type {
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes:
             return
@@ -198,16 +212,6 @@ extension Builder {
                 )
             }
 
-            guard !nested || !Builder.handedOnce(type, in: table) else {
-                throw BuildError(
-                    "carries `\(type.rendered)` inside another type, and a value written"
-                        + " `linear` is followed by the name that holds it."
-                        + " Nothing follows one inside a list, a record or"
-                        + " another declaration",
-                    at: place
-                )
-            }
-
         // The flag rides through rather than turning on: a procedure type in a
         // signature's slot is part of that signature, and one in a declared
         // type is not a filling site. A parameter written there is never bound
@@ -241,9 +245,10 @@ extension Builder {
         // membership's or a contract's, since a type is one thing and not a
         // bound on some other.
         case let .composition(names):
-            guard !names.isEmpty, Set(names).count == names.count else {
+            guard !names.isEmpty, Set(names).count == names.count, names == names.sorted() else {
                 throw BuildError(
-                    "joins \(names.isEmpty ? "nothing" : "one name twice") with `&`, and a composition names what a value answers, each once",
+                    "joins \(names.isEmpty ? "nothing" : Set(names).count == names.count ? "names out of order" : "one name twice")"
+                        + " with `&`, and a composition names what a value answers, each once and in name order",
                     at: place
                 )
             }
@@ -252,19 +257,6 @@ extension Builder {
                 throw BuildError(
                     "joins '\(name)' with `&`, and `&` joins the names of memberships"
                         + " and contracts, which no module in this link declares '\(name)' as",
-                    at: place
-                )
-            }
-
-            // What every member of a membership hands on once is handed on
-            // once, and a value handed on once is followed by the name that
-            // holds it, which nothing inside another type does.
-            guard !nested || !Builder.handedOnce(type, in: table) else {
-                throw BuildError(
-                    "carries `\(type.rendered)` inside another type, and a value written"
-                        + " `linear` is followed by the name that holds it."
-                        + " Nothing follows one inside a list, a record or"
-                        + " another declaration",
                     at: place
                 )
             }
@@ -278,20 +270,6 @@ extension Builder {
                 throw BuildError(
                     "names type '\(name)', which no module in this"
                         + " link declares",
-                    at: place
-                )
-            }
-
-            // A value handed on once is followed by the name that holds it, so
-            // it stands where a name can hold it and nowhere else. Inside
-            // another type there is no name to follow, and what the type
-            // does with what it carries is not something the link can read.
-            guard !nested || !Builder.handedOnce(.named(name), in: table) else {
-                throw BuildError(
-                    "carries '\(name)' inside another type, and a value written"
-                        + " `linear` is followed by the name that holds it."
-                        + " Nothing follows one inside a list, a record or"
-                        + " another declaration",
                     at: place
                 )
             }
