@@ -89,6 +89,24 @@ extension Builder {
                 at: place.part(resulting ? .result : .returns)
             )
         }
+
+        // A composition the declaration promises holds the answer to its
+        // bounds the way a slot holds what arrives, wherever in the promise
+        // it stands. What leans on a claim this table cannot see settles
+        // where the value arrives.
+        var readings: [Name: LoweredType] = [:]
+        var disagreeing: [Name: LoweredType] = [:]
+        var holding: [(reading: LoweredType, bounds: [LoweredType.Bound])] = []
+
+        promised.binding(against: read, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
+
+        for held in holding {
+            for bound in held.bounds {
+                if let refusal = refusal(of: held.reading, holdingTo: bound, as: "the answer", in: table, fulfillment: nil, at: place) {
+                    throw BuildError("answers \(refusal)", at: place.part(resulting ? .result : .returns))
+                }
+            }
+        }
     }
 
     // A block with every dot judged and every call gathered, each site carrying

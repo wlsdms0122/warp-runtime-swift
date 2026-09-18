@@ -134,10 +134,12 @@ extension TypeExpression {
         names.first { name in table.constraintRow(named: name) == nil && table.satisfying[name] == nil }
     }
 
-    // The bounds a list of declared names stands for.
+    // The bounds a list of declared names stands for, in the one order a
+    // set of bounds is written in.
     private func bounds(_ names: [Name], in table: LoweredTypeTable) -> [LoweredType.Bound] {
         names.map { name in
             table.constraintRow(named: name).map(LoweredType.Bound.membership) ?? .contract(name)
         }
+        .sorted()
     }
 }

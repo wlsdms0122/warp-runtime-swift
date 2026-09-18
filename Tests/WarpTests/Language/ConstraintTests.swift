@@ -278,6 +278,29 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a composition a declaration promises holds the answer to its bounds")
+    func aPromisedCompositionIsJudgedAtTheBuild() async throws {
+        // Given. `A` admits int and string, `B` admits string alone, and the
+        // declaration promises what belongs to both while answering a whole number
+        let sut = try Module(
+            constraints: ["A": [.int, .string], "B": [.string]],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .composition(["A", "B"])),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which 'B' does not admit")
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

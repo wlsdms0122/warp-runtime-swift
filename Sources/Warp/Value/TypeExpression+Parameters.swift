@@ -17,10 +17,7 @@ extension TypeExpression {
     func parameterConstraints(into table: inout [Name: Set<Name>]) {
         var occurrences: [Name: Set<[Name]>] = [:]
         parameterOccurrences(into: &occurrences)
-
-        for (name, sets) in occurrences {
-            table[name, default: []].formUnion(sets.flatMap { names in names })
-        }
+        table.merge(occurrences.constraints) { mine, theirs in mine.union(theirs) }
     }
 
     // Every type parameter mentioned in here, each with the constraint names
@@ -101,10 +98,7 @@ public extension Signature {
     func parameterConstraints(into table: inout [Name: Set<Name>]) {
         var occurrences: [Name: Set<[Name]>] = [:]
         parameterOccurrences(into: &occurrences)
-
-        for (name, sets) in occurrences {
-            table[name, default: []].formUnion(sets.flatMap { names in names })
-        }
+        table.merge(occurrences.constraints) { mine, theirs in mine.union(theirs) }
     }
 
     // The same, occurrence by occurrence.
@@ -187,5 +181,12 @@ extension TypeExpression {
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return self
         }
+    }
+}
+
+extension Dictionary where Key == Name, Value == Set<[Name]> {
+    // The occurrences read as one set of names per parameter.
+    var constraints: [Name: Set<Name>] {
+        mapValues { sets in Set(sets.flatMap { names in names }) }
     }
 }

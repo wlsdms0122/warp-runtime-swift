@@ -221,10 +221,11 @@ extension Builder {
                 }
 
                 // A name left standing names no declared type: another
-                // membership, which is a set of types and stands; or a
-                // contract or nothing, and neither is a type.
+                // membership, which is a set of types and stands; a
+                // contract, which is not a type; or nothing, which the
+                // mention below refuses by its own name.
                 let concrete = switch resolved {
-                case let .named(name): members[name] != nil
+                case let .named(name): contracts[name] == nil
                 case .parameter, .any, .never, .composition: false
                 case .null, .bool, .int, .double, .string, .bytes, .number, .ranged, .array,
                     .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
