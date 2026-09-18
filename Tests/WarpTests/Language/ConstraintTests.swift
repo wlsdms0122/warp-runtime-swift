@@ -528,6 +528,36 @@ struct ConstraintTests {
         _ = try await builder.build([sut] + Module.standard, entry: entryName)
     }
 
+    @Test("a contract answered by a value handed on once is not carried inside another type")
+    func aLinearAnswererIsNotNested() async throws {
+        // Given
+        let sut = try Module(
+            types: ["app.Handle": .linear(.record(["name": .string]))],
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            claims: ["app.Handle": ["app.Describable"]],
+            procedures: [
+                "app.Handle.describe": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))], returns: .string),
+                    body: [],
+                    result: .literal(.string("a handle"))
+                ),
+                "app.tellAll": Procedure(
+                    signature: Signature(parameters: ["them": Parameter(type: .array(.named("app.Describable")))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("inside another type")
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

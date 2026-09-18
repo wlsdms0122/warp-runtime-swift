@@ -24,6 +24,7 @@ extension LoweredTypeTable {
         _ types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
         satisfying: [Name: Set<Name>] = [:],
+        settled: Bool,
         unsettled: Fulfillment? = nil,
         standing: [Name]? = nil,
         constraintStanding: [Name]? = nil,
@@ -40,7 +41,7 @@ extension LoweredTypeTable {
                 constraintLabels: [],
                 recordRows: [],
                 satisfying: satisfying,
-                settled: unsettled == nil,
+                settled: settled,
                 unsettled: unsettled,
                 of: linkage
             )
@@ -107,7 +108,7 @@ extension LoweredTypeTable {
             recordRows: recordRows,
             cycling: cycling,
             satisfying: satisfying,
-            settled: unsettled == nil,
+            settled: settled,
             unsettled: unsettled,
             of: linkage
         )

@@ -62,6 +62,15 @@ indirect enum LoweredType: Sendable {
         case membership(Int)
         case contract(Name)
 
+        // Whether null is a value of what this holds to: a membership's
+        // where a member admits one, and a contract's never, since a
+        // contract is answered by a type and null wears none.
+        func admitsNull(in table: LoweredTypeTable) -> Bool {
+            guard case let .membership(constraint) = self else { return false }
+
+            return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
+        }
+
         // Memberships first, by row; contracts behind, by name. One order,
         // so one set of bounds has one writing.
         static func < (lhs: Bound, rhs: Bound) -> Bool {

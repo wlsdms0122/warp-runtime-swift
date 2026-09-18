@@ -66,6 +66,54 @@ extension Builder {
             unsettled: unsettled
         )
 
+        // What answers a contract is handed on once as one or not at all, so
+        // that a contract standing where a type is written is one thing to
+        // follow: a value written `linear` is followed by the name that holds
+        // it, and a contract holds every answerer under one name.
+        for (contract, answering) in table.loweredTypes.satisfying.sorted(by: { $0.key < $1.key }) {
+            let once = answering.filter { type in Builder.handedOnce(.named(type), in: table) }
+
+            guard !once.isEmpty, once.count != answering.count else { continue }
+
+            let mixed = claims.first { placed in placed.held.contract == contract && once.contains(placed.held.type) }
+
+            throw BuildError(
+                "'\(contract)' is answered by \(once.sorted().map { type in "'\(type)'" }.joined(separator: ", ")), handed on once, and by"
+                    + " \(answering.subtracting(once).sorted().map { type in "'\(type)'" }.joined(separator: ", ")), not."
+                    + " A value written `linear` is followed by the name that holds it, so what answers"
+                    + " one contract is handed on once as one or not at all",
+                at: mixed?.place ?? contracts[contract]?.place ?? Place(in: .assembled)
+            )
+        }
+
+        // A contract every answerer of which is handed on once is followed by
+        // the name that holds it, and nothing inside another type is. Asked
+        // here, where what answers a contract is known, since a declaration
+        // was judged before any claim was gathered.
+        for contract in contracts.keys.sorted() where Builder.handedOnce(.named(contract), in: table) {
+            for (name, placed) in signatures.sorted(by: { $0.key < $1.key })
+            where placed.held.parameters.values.contains(where: { parameter in parameter.declared.nests(contract) })
+                || placed.held.returns?.nests(contract) == true {
+                throw BuildError(
+                    "carries '\(contract)' inside another type in '\(name)', and a value written"
+                        + " `linear` is followed by the name that holds it."
+                        + " Nothing follows one inside a list, a record or"
+                        + " another declaration",
+                    at: placed.place
+                )
+            }
+
+            for (name, placed) in declaredTypes.sorted(by: { $0.key < $1.key }) where placed.held.nests(contract) {
+                throw BuildError(
+                    "carries '\(contract)' inside another type in '\(name)', and a value written"
+                        + " `linear` is followed by the name that holds it."
+                        + " Nothing follows one inside a list, a record or"
+                        + " another declaration",
+                    at: placed.place
+                )
+            }
+        }
+
         // The procedures the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
         // into, so what a call reaches and what a judgment reads are one

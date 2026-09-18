@@ -69,6 +69,7 @@ public struct TypeTable: Sendable {
         constraints: [Name: [TypeExpression]],
         contracts: [Name: [Name: Signature]] = [:],
         satisfying: [Name: Set<Name>] = [:],
+        settled: Bool = false,
         unsettled: Fulfillment? = nil,
         standing: [Name]? = nil,
         constraintStanding: [Name]? = nil,
@@ -80,10 +81,14 @@ public struct TypeTable: Sendable {
         self.standing = standing
         self.constraintStanding = constraintStanding
         self.linkage = linkage
+        // Every declared contract has an entry, so a contract's name stands
+        // as one wherever a type is asked for, whether or not the claims
+        // have been gathered yet.
         self.loweredTypes = LoweredTypeTable.lowering(
             types,
             constraints: constraints,
-            satisfying: satisfying,
+            satisfying: satisfying.merging(contracts.keys.map { contract in (contract, Set<Name>()) }) { held, _ in held },
+            settled: settled,
             unsettled: unsettled,
             standing: standing,
             constraintStanding: constraintStanding,
@@ -96,7 +101,9 @@ public struct TypeTable: Sendable {
     // answer a contract is read off the documents' claims, which are gathered
     // after this table is first built, so the table is remade rather than
     // holding an answer it did not have. The rows are numbered from the
-    // declarations alone, so they are the rows the first table had.
+    // declarations alone, so they are the rows the first table had. The
+    // answer is settled where every document is in, which is where nothing
+    // is left unsettled to write down.
     func satisfying(
         _ satisfying: [Name: Set<Name>],
         unsettled: Fulfillment? = nil
@@ -106,6 +113,7 @@ public struct TypeTable: Sendable {
             constraints: constraints,
             contracts: contracts,
             satisfying: satisfying,
+            settled: unsettled == nil,
             unsettled: unsettled,
             standing: standing,
             constraintStanding: constraintStanding,

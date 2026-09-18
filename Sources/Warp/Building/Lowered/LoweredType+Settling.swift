@@ -94,24 +94,10 @@ extension LoweredType {
             return table.loweredTypes[row].admitsNull(in: table)
 
         // A parameter stands for what arrived and does not settle it, so an
-        // unbounded one holds a null the way it holds anything. A bounded one
-        // asks each membership, the way a member does.
-        case let .parameter(_, bounds):
-            return bounds.allSatisfy { bound in
-                guard case let .membership(constraint) = bound else { return true }
-
-                return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
-            }
-
-        // A composition is the slot's own type, and null is a value of it only
-        // where every bound admits one: a contract is answered by a type, and
-        // null wears none.
-        case let .composition(bounds):
-            return bounds.allSatisfy { bound in
-                guard case let .membership(constraint) = bound else { return false }
-
-                return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
-            }
+        // unbounded one holds a null the way it holds anything; a bounded
+        // one, and a composition, hold null only where every bound does.
+        case let .parameter(_, bounds), let .composition(bounds):
+            return bounds.allSatisfy { bound in bound.admitsNull(in: table) }
 
         default:
             return declaresNull(in: table)

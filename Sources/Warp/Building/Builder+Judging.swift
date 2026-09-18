@@ -564,8 +564,8 @@ extension Builder {
 
             let names = bounded.first ?? []
 
-            guard Set(names).count == names.count else {
-                throw BuildError("`some \(parameter)` names one bound twice", at: place)
+            guard Set(names).count == names.count, names == names.sorted() else {
+                throw BuildError("`some \(parameter)` names its bounds once each and in name order", at: place)
             }
 
             for bound in names where table.constraint(bound) == nil && table.contracts[bound] == nil {

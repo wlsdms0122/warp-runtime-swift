@@ -91,15 +91,15 @@ extension Builder {
     ) -> Bool? {
         guard !assuming.contains(name) else { return nil }
 
-        // A contract holds whatever answers it, so it is handed on once
-        // wherever one of those is; and one nothing answers yet says
-        // nothing.
+        // A contract holds whatever answers it, and what answers it is
+        // handed on once as one or not at all, so it is handed on once when
+        // every answerer is; one nothing answers yet says nothing.
         if let answering = table.loweredTypes.satisfying[name] {
             let answers = answering.sorted().compactMap { type in
                 reaches(.named(type), in: table, assuming: assuming.union([name]))
             }
 
-            return answers.isEmpty ? nil : answers.contains(true)
+            return answers.isEmpty ? nil : answers.allSatisfy { answer in answer }
         }
 
         guard let members = table.constraint(name), !members.isEmpty else { return false }

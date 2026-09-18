@@ -250,15 +250,15 @@ extension Builder {
         }
 
         // A composition the answer is held to, wherever in the promise it
-        // stands, is held the way a slot holds what arrives: what leans on a
-        // claim is written down while a document is compiled, and held to
-        // what the documents say where they are all in.
+        // stands, is held the way a slot holds what arrives. Nothing is
+        // written down: a witness reads what the documents say, and where
+        // they are all in what they say is settled.
         if let refusal = refusal(
             holding: answered,
             to: promised,
             as: "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)' asks, and answers",
             in: table.loweredTypes,
-            fulfillment: table.loweredTypes.unsettled,
+            fulfillment: nil,
             at: place
         ) {
             return refusal

@@ -255,12 +255,12 @@ extension Builder {
         case let .contract(name):
             switch loweredTypes.answering(contract: name, reading: reading) {
             // What leans on a claim is written down for the link to settle;
-            // at the link, where nothing is written, it is held to what the
-            // documents say.
+            // where nothing is written, it is held to what the documents say,
+            // and what they have not said yet passes.
             case let .leansOn(types):
                 guard let fulfillment else {
                     guard let unheld = types.first(where: { type in
-                        loweredTypes.settles(contract: name, arrived: type) != true
+                        loweredTypes.settles(contract: name, arrived: type) == false
                     }) else {
                         return nil
                     }
