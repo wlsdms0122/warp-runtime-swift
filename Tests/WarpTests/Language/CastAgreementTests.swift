@@ -71,7 +71,7 @@ struct CastAgreementTests {
         .named("Tree"),
         .named("Nothing declares this"),
         .parameter(name: "T"),
-        .parameter(name: "N", constraint: "Comparable"),
+        .parameter(name: "N", constraints: ["Comparable"]),
         .reading(of: "T", path: [.key("inner")]),
         .procedure(nil)
     ]

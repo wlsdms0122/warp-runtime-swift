@@ -38,7 +38,9 @@ extension LoweredType {
         in table: LoweredTypeTable
     ) {
         switch (self, given) {
-        case let (.parameter(name, _), _):
+        // A composition has no name to be read under: what fills a slot of
+        // whatever answers is a value, and nothing else mentions it.
+        case let (.parameter(name?, _), _):
             guard let already = bound[name] else {
                 bound[name] = given
 
@@ -141,7 +143,7 @@ extension LoweredType {
     func filling(_ bound: [Name: LoweredType]) -> LoweredType {
         switch self {
         case let .parameter(name, _):
-            return bound[name] ?? .any
+            return name.map { name in bound[name] ?? .any } ?? self
 
         // Nothing fills a walk through a parameter. It is named for a path only
         // the body that wrote it can read, and no call site says anything about

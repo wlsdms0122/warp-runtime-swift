@@ -113,7 +113,7 @@ enum ObjectCoverageFixture {
         "borrowing": .borrowing(.string),
         "nullable": .nullable(.int),
         "named": .named("a.one"),
-        "parameter": .parameter(name: "T", constraint: "a.four"),
+        "parameter": .parameter(name: "T", constraints: ["a.four"]),
         "reading": .reading(
             of: "a.fifteen",
             path: [
@@ -155,9 +155,9 @@ enum ObjectCoverageFixture {
         ("inoutish", .inout(.bool)),
         ("nullable", .nullable(.bytes)),
         ("named", .named(2)),
-        ("parameterMembership", .parameter(label: "T", bound: .membership(5))),
-        ("parameterContract", .parameter(label: "U", bound: .contract("a.five"))),
-        ("parameterNone", .parameter(label: "V", bound: nil)),
+        ("parameterMembership", .parameter(label: "T", bounds: [.membership(5)])),
+        ("parameterContract", .parameter(label: "U", bounds: [.contract("a.five")])),
+        ("parameterNone", .parameter(label: "V", bounds: [])),
         ("reading", .reading(of: "a.sixteen", path: [.index(1, optional: true)])),
         ("member", .member(7)),
         ("undeclared", .undeclared(label: "W", refusal: "nothing declares it"))

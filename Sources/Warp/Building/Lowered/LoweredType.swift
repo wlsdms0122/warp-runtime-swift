@@ -45,9 +45,11 @@ indirect enum LoweredType: Sendable {
     // A declared type, by its row in the table.
     case named(Int)
 
-    // A type parameter the call fills. The label is the spelling a refusal
-    // shows; the bound is what the signature held it to.
-    case parameter(label: Name, bound: Bound?)
+    // A type parameter the call fills, and what the signature held it to.
+    // The label is the spelling that ties one mention to another; a mention
+    // with none is a composition, a value of whatever type answers every
+    // bound, which no call fills and no other mention shares.
+    case parameter(label: Name?, bounds: [Bound])
 
     // What a type parameter is held to. Two, because the two are answered
     // differently: a membership lists types and the table lowered them into
@@ -171,8 +173,13 @@ indirect enum LoweredType: Sendable {
     // value, and where the walk landed is the same field either way.
     func reaching(_ path: [PathSegment]) -> LoweredType? {
         switch self {
-        case let .parameter(name, _):
+        case let .parameter(name?, _):
             return .reading(of: name, path: path.map(\.unmarked))
+
+        // Nothing ties a composition to another mention, so a walk through
+        // one reaches what a walk through `any` does.
+        case .parameter(nil, _):
+            return .any
 
         case let .reading(of, walked):
             return .reading(of: of, path: walked + path.map(\.unmarked))

@@ -41,8 +41,11 @@ extension TypeExpression {
         case let .named(name):
             [name]
 
-        case let .parameter(_, constraint):
-            constraint.map { name in [name] } ?? []
+        case let .parameter(_, constraints):
+            Set(constraints)
+
+        case let .composition(names):
+            Set(names)
 
         case .reading:
             []

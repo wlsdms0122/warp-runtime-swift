@@ -187,9 +187,9 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "value": Parameter(type: .parameter(name: "T", constraint: "std.Comparable"))
+                            "value": Parameter(type: .parameter(name: "T", constraints: ["std.Comparable"]))
                         ],
-                        returns: .parameter(name: "T", constraint: "std.Comparable")
+                        returns: .parameter(name: "T", constraints: ["std.Comparable"])
                     ),
                     body: [],
                     result: reference("value")
@@ -335,9 +335,9 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "value": Parameter(type: .parameter(name: "T", constraint: "Numeric"))
+                            "value": Parameter(type: .parameter(name: "T", constraints: ["Numeric"]))
                         ],
-                        returns: .parameter(name: "T", constraint: "Numeric")
+                        returns: .parameter(name: "T", constraints: ["Numeric"])
                     ),
                     body: [],
                     result: reference("value")

@@ -159,6 +159,16 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T?") }
     }
 
+    @Test("names joined with & read as a composition, in name order, and write back the same way")
+    func compositionsParse() throws {
+        #expect(try TypeReader.parse("app.B & app.A") == .composition(["app.A", "app.B"]))
+        #expect(try TypeReader.parse("array<app.A & app.B>") == .array(.composition(["app.A", "app.B"])))
+        #expect(try Writer().value(of: .composition(["app.A", "app.B"])) == .string("app.A & app.B"))
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.B?") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & array<int>") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.A") }
+    }
+
     @Test("a signature bounds its type parameters once, in bounds")
     func aBoundIsDeclaredInTheSignature() async throws {
         // Given. The slots name the parameter, and the signature says what the
@@ -176,13 +186,13 @@ struct TypeNotationTests {
 
         #expect(
             signature?.parameters["of"]?.type
-                == .parameter(name: "T", constraint: "Comparable")
+                == .parameter(name: "T", constraints: ["Comparable"])
         )
         #expect(
             signature?.parameters["value"]?.type
-                == .parameter(name: "T", constraint: "Comparable")
+                == .parameter(name: "T", constraints: ["Comparable"])
         )
-        #expect(signature?.returns == .parameter(name: "T", constraint: "Comparable"))
+        #expect(signature?.returns == .parameter(name: "T", constraints: ["Comparable"]))
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
@@ -257,7 +267,7 @@ struct TypeNotationTests {
 
         #expect(
             parameters?["of"]?.type
-                == .array(.parameter(name: "Element", constraint: "Comparable"))
+                == .array(.parameter(name: "Element", constraints: ["Comparable"]))
         )
 
         guard case let .procedure(.some(inner), _, _) = parameters?["by"]?.type else {
@@ -268,7 +278,7 @@ struct TypeNotationTests {
 
         #expect(
             inner.parameters["item"]?.type
-                == .parameter(name: "Element", constraint: "Comparable")
+                == .parameter(name: "Element", constraints: ["Comparable"])
         )
     }
 

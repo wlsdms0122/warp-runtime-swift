@@ -371,11 +371,13 @@ extension LoweredType {
 
         // An unbounded type parameter is filled by the call, so nothing about
         // the candidates is knowable here. A bounded one takes only what some
-        // member of its constraint could spell.
-        case let .parameter(_, bound):
-            guard case let .membership(constraint)? = bound else { return true }
+        // member of each of its memberships could spell.
+        case let .parameter(_, bounds):
+            return bounds.allSatisfy { bound in
+                guard case let .membership(constraint) = bound else { return true }
 
-            return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
+                return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
+            }
 
         // A value here is one of the members, so a candidate any of them
         // spells is one a call could match.

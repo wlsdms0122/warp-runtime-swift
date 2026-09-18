@@ -283,7 +283,7 @@ struct CompiledTests {
                         signature: Signature(
                             receiver: "it",
                             parameters: [
-                                "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                                "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
                             ],
                             returns: .string
                         ),
@@ -898,7 +898,7 @@ struct CompiledTests {
                         signature: Signature(
                             receiver: "it",
                             parameters: [
-                                "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                                "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
                             ],
                             returns: .string
                         ),

@@ -242,11 +242,14 @@ struct ObjectWriter {
         case let .named(spelling):
             return .array([.int(20), name(spelling)])
 
-        case let .parameter(spelling, constraint):
-            return .array([.int(21), name(spelling), ObjectWriter.maybe(constraint, name)])
+        case let .parameter(spelling, constraints):
+            return .array([.int(21), name(spelling), .array(constraints.map(name))])
 
         case let .reading(of: read, path: path):
             return .array([.int(22), name(read), .array(path.map(segment))])
+
+        case let .composition(names):
+            return .array([.int(23), .array(names.map(name))])
         }
     }
 
@@ -511,8 +514,8 @@ private extension ObjectWriter {
         case let .named(row):
             return .array([.int(17), .int(row)])
 
-        case let .parameter(label, bound):
-            return .array([.int(18), name(label), ObjectWriter.maybe(bound, self.bound)])
+        case let .parameter(label, bounds):
+            return .array([.int(18), ObjectWriter.maybe(label, name), .array(bounds.map(bound))])
 
         case let .reading(of: read, path: path):
             return .array([.int(19), name(read), .array(path.map(segment))])

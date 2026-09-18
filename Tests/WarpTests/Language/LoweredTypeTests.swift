@@ -38,7 +38,7 @@ struct LoweredTypeTests {
         let written: [TypeExpression] = Array(types.types.values) + [
             .array(.named("bank.Acct")),
             .nullable(.named("bank.Owner")),
-            .parameter(name: "T", constraint: "app.Ordered"),
+            .parameter(name: "T", constraints: ["app.Ordered"]),
             .procedure(Signature(parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .int), .const),
             .dictionary(.named("app.Maybe"))
         ]
@@ -147,7 +147,7 @@ struct LoweredTypeTests {
 
         // Then
         #expect(row.slots.map(\.name) == ["of", "value"])
-        #expect(row.slots.map(\.type) == [.parameter(label: "T", bound: .membership(ordered)), .parameter(label: "T", bound: .membership(ordered))])
+        #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: [.membership(ordered)]), .parameter(label: "T", bounds: [.membership(ordered)])])
         #expect(row.returns == .bool)
         #expect(try await Executor().run(image) == .bool(true))
     }
@@ -409,7 +409,7 @@ struct LoweredTypeTests {
     @Test("a reading naming an undeclared constraint passes membership, since nothing is proven of it")
     func anUndeclaredReadingPassesMembership() {
         // Given
-        let reading = TypeExpression.parameter(name: "T", constraint: "app.Nobody")
+        let reading = TypeExpression.parameter(name: "T", constraints: ["app.Nobody"])
 
         // When / Then
         #expect(types.admits(constraint: "app.Ordered", reading: reading) == true)

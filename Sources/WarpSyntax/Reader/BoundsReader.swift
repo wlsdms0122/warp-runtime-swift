@@ -28,23 +28,35 @@ enum BoundsReader {
     ) throws -> Signature {
         guard let bounds, !bounds.isEmpty else { return signature }
 
-        // A bound is only ever a name (the membership lives in a declaration,
-        // not in a signature) so a type here is refused where it was written
-        // rather than surfacing later as a name nothing declares. The same
-        // predicate the slot's `some T` spelling is held to.
-        for (parameter, constraint) in bounds.sorted(by: { $0.key < $1.key }) {
-            guard TypeReader.isName(constraint) else {
+        // A bound is the names of contracts and memberships, one or several
+        // joined with `&`, and never a type: the membership lives in a
+        // declaration, not in a signature. Read by the one reading every type
+        // spelling gets, so what `&` means here is what it means in a slot.
+        var named: [Name: [Name]] = [:]
+
+        for (parameter, bound) in bounds.sorted(by: { $0.key < $1.key }) {
+            let names: [Name]
+
+            switch try? TypeReader.parse(bound) {
+            case let .named(name)?:
+                names = [name]
+
+            case let .composition(joined)?:
+                names = joined
+
+            default:
                 throw ReadingError(
                     "bounds bind '\(parameter)' to"
-                        + " '\(constraint)', which is not a constraint's name."
+                        + " '\(bound)', which is not a constraint's name."
                         + " A membership is declared, never written in a"
                         + " signature",
                     at: steps
                 )
             }
+
+            named[try Name.read(parameter, at: steps)] = names
         }
 
-        let named = try bounds.named(at: steps).mapValues { constraint in try Name.read(constraint, at: steps) }
         let bounded = signature.bounded(by: named)
 
         var mentioned: [Name: Set<Name>] = [:]

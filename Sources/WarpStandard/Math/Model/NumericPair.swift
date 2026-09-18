@@ -27,7 +27,7 @@ enum NumericPair: Int, ParameterSet {
     }
 
     var declared: Parameter {
-        Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
+        Parameter(type: .parameter(name: "N", constraints: ["std.Numeric"]))
     }
 
     // MARK: - Initializer

@@ -55,11 +55,10 @@ extension Builder {
 
         // A parameter bounded by a membership stands for some member of it, so
         // what every member is, it is. An unbounded one stands for whatever the
-        // call put there, which the build never wrote down.
-        case let .parameter(_, bound):
-            guard let bound else { return false }
-
-            return reaches(membership: bound, in: table, assuming: assuming)
+        // call put there, which the build never wrote down. A composition
+        // stands for a member of every membership it names.
+        case let .parameter(_, bounds), let .composition(bounds):
+            return bounds.contains { bound in reaches(membership: bound, in: table, assuming: assuming) == true }
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return reaches(inner, in: table, assuming: assuming)

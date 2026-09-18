@@ -142,12 +142,21 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // `named`. A name is looked up in a table and this is worked out from the
     // call.
     //
-    // The second name bounds it: a parameter bounded by `Comparable` takes only
-    // what the constraint by that name admits. The constraint is a declaration
-    // like a type (a module binds a name to the types it admits) so a signature
-    // writes the name and never the membership, and there is no inline union
-    // for the membership to leak out through.
-    case parameter(name: Name, constraint: Name? = nil)
+    // The names bound it: a parameter bounded by `Comparable` takes only
+    // what the constraint by that name admits, and one bounded by several
+    // takes only what every one of them admits or asks. A bound is a
+    // declaration like a type (a module binds a name to the types it admits,
+    // or to the procedures it asks) so a signature writes the names and never
+    // the membership, and there is no inline union for the membership to
+    // leak out through. In name order, so one set has one spelling.
+    case parameter(name: Name, constraints: [Name] = [])
+
+    // A value of whatever type answers every name here, written `A & B`:
+    // the contracts it answers and the memberships it belongs to, with no
+    // name of its own to tie one mention to another. One name in this
+    // position is written as the name and read as this where the name is a
+    // contract's.
+    case composition([Name])
 
     // What a walk *through* a type parameter reached. Still a type the call
     // decides (a dot on it stands as written, the way a dot on the parameter
@@ -234,8 +243,13 @@ public indirect enum TypeExpression: Sendable, Equatable {
         // no document spells. So the bound rides along: `some N` alone would
         // hide the one fact a bound refusal is about. What a document spells is
         // the writer's question, and the writer answers it with `bounds`.
-        case let .parameter(name, constraint):
-            return constraint.map { bound in "some \(name): \(bound)" } ?? "some \(name)"
+        case let .parameter(name, constraints):
+            return constraints.isEmpty
+                ? "some \(name)"
+                : "some \(name): \(constraints.map(\.spelling).joined(separator: " & "))"
+
+        case let .composition(names):
+            return names.map(\.spelling).joined(separator: " & ")
 
         // Spelled as what it is. The type reached by that path. No document
         // writes this, so the spelling answers to the message alone: an author
@@ -329,7 +343,7 @@ extension TypeExpression {
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
-            .nullable, .named, .parameter, .reading:
+            .nullable, .named, .parameter, .reading, .composition:
             return self
         }
     }
@@ -352,7 +366,7 @@ extension TypeExpression {
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
-            .consuming, .borrowing, .nullable, .named, .parameter, .reading:
+            .consuming, .borrowing, .nullable, .named, .parameter, .reading, .composition:
             return self
         }
     }

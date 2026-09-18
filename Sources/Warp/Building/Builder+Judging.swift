@@ -227,11 +227,24 @@ extension Builder {
 
             try judgeConstraints(of: signature, at: place, in: table)
 
-        // Types and memberships are two tables and no name is in both, so a
-        // mention reaches whichever declares it. A membership standing here is
-        // a value of one of its members.
+        // A value of whatever type answers every name: each has to be a
+        // membership's or a contract's, since a type is one thing and not a
+        // bound on some other.
+        case let .composition(names):
+            for name in names where table.constraint(name) == nil && table.contracts[name] == nil {
+                throw BuildError(
+                    "joins '\(name)' with `&`, and `&` joins the names of memberships"
+                        + " and contracts, which no module in this link declares '\(name)' as",
+                    at: place
+                )
+            }
+
+        // Types, memberships and contracts are three tables and no name is in
+        // two, so a mention reaches whichever declares it. A membership
+        // standing here is a value of one of its members, and a contract
+        // standing here is a value of whatever type answers it.
         case let .named(name):
-            guard table.resolve(name) != nil || table.constraint(name) != nil else {
+            guard table.resolve(name) != nil || table.constraint(name) != nil || table.contracts[name] != nil else {
                 throw BuildError(
                     "names type '\(name)', which no module in this"
                         + " link declares",
@@ -512,10 +525,9 @@ extension Builder {
     }
 
     // Whether a signature's bounded parameters could ever be judged: every
-    // constraint it names has to be one somebody declared, and one parameter
-    // takes one constraint. Each occurrence carries its bound separately, so
-    // occurrences carrying different bounds for one name are two claims about
-    // one thing.
+    // name a bound names has to be one somebody declared. A bound names a
+    // membership or a contract, and the two are separate spaces no name is
+    // in both of, so a mention reaches whichever declares it.
     private func judgeConstraints(
         of signature: Signature,
         at place: Place,
@@ -525,31 +537,13 @@ extension Builder {
         signature.parameterConstraints(into: &bounds)
 
         for (parameter, names) in bounds.sorted { $0.key < $1.key } {
-            guard names.count <= 1 else {
+            for bound in names.sorted() where table.constraint(bound) == nil && table.contracts[bound] == nil {
                 throw BuildError(
-                    "`some \(parameter)` is bounded by"
-                        + " \(names.sorted().map(\.spelling).joined(separator: " and "))."
-                        + " One parameter takes one constraint",
+                    "`some \(parameter)` names '\(bound)', which no module in this"
+                        + " link declares as a membership or a contract",
                     at: place
                 )
             }
-
-            // A bound names a membership or a contract. The two are separate
-            // spaces and no name is in both, so a mention reaches whichever
-            // declares it.
-            guard
-                let bound = names.first,
-                table.constraint(bound) == nil,
-                table.contracts[bound] == nil
-            else {
-                continue
-            }
-
-            throw BuildError(
-                "`some \(parameter)` names '\(bound)', which no module in this"
-                    + " link declares as a membership or a contract",
-                at: place
-            )
         }
     }
 

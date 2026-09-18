@@ -225,16 +225,20 @@ public struct Writer: Sendable {
                     + " fills"
             )
 
-        case let .parameter(name, constraint):
-            guard constraint == nil else {
+        case let .parameter(name, constraints):
+            guard constraints.isEmpty else {
                 throw WritingError(
-                    "'some \(name)' is bounded by '\(constraint ?? "")', and nothing"
+                    "'some \(name)' is bounded by"
+                        + " '\(constraints.map(\.spelling).joined(separator: " & "))', and nothing"
                         + " here declares it. A bound is written in the `bounds` of"
                         + " a procedure's signature, which this type is not part of"
                 )
             }
 
             return .string("some \(name)")
+
+        case let .composition(names):
+            return .string(names.map(\.spelling).joined(separator: " & "))
 
         // Written as the name it is where the element has one, and under its
         // own key where the element has none. An array of procedures is the
@@ -413,8 +417,9 @@ public struct Writer: Sendable {
         case let .parameter(name, _):
             return .parameter(name: name)
 
-        // Carries no bound to strip.
-        case .reading:
+        // Neither carries a bound to strip: a composition is its bounds, and
+        // a slot spells it whole.
+        case .reading, .composition:
             return type
 
         case let .array(element):
@@ -478,19 +483,8 @@ public struct Writer: Sendable {
 
         var bounds: [Name: Value] = [:]
 
-        for (name, constraints) in mentioned.sorted(by: { $0.key < $1.key }) {
-            guard constraints.count <= 1 else {
-                throw WritingError(
-                    "'some \(name)' is bounded by"
-                        + " \(constraints.sorted().map(\.spelling).joined(separator: " and "))."
-                        + " One parameter takes one constraint, so there is no"
-                        + " `bounds` to write"
-                )
-            }
-
-            if let bound = constraints.first {
-                bounds[name] = .string(bound.spelling)
-            }
+        for (name, constraints) in mentioned.sorted(by: { $0.key < $1.key }) where !constraints.isEmpty {
+            bounds[name] = .string(constraints.sorted().map(\.spelling).joined(separator: " & "))
         }
 
         return bounds.isEmpty ? nil : .dictionary(bounds)

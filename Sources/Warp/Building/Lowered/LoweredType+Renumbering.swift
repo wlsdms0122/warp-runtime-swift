@@ -84,10 +84,15 @@ extension LoweredType {
         case let .member(row):
             return .member(try membership(row))
 
-        case let .parameter(label, bound):
-            guard case let .membership(row)? = bound else { return self }
+        case let .parameter(label, bounds):
+            return .parameter(
+                label: label,
+                bounds: try bounds.map { bound in
+                    guard case let .membership(row) = bound else { return bound }
 
-            return .parameter(label: label, bound: .membership(try membership(row)))
+                    return .membership(try membership(row))
+                }
+            )
 
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.

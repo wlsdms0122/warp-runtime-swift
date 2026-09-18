@@ -21,7 +21,7 @@ struct CatalogueClaimTests {
                 "chart.draw": Procedure(
                     signature: Signature(
                         receiver: "it",
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraint: "chart.Plottable"))],
+                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["chart.Plottable"]))],
                         returns: .int
                     ),
                     body: [],

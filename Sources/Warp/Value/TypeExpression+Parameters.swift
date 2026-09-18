@@ -19,12 +19,12 @@ extension TypeExpression {
     // refuses rather than picks from.
     func parameterConstraints(into table: inout [Name: Set<Name>]) {
         switch self {
-        case let .parameter(name, constraint):
-            table[name, default: []].formUnion(constraint.map { bound in [bound] } ?? [])
+        case let .parameter(name, constraints):
+            table[name, default: []].formUnion(constraints)
 
-        // Not a slot a signature declares, and it carries no bound to claim.
-        // There is nothing here for a `bounds` to speak for.
-        case .reading:
+        // Neither is a slot a signature declares, and neither carries a bound
+        // to claim. There is nothing here for a `bounds` to speak for.
+        case .reading, .composition:
             return
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
@@ -68,7 +68,7 @@ extension TypeExpression {
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner.isGeneric
 
-        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named, .composition:
             return false
         }
     }
@@ -106,7 +106,7 @@ public extension Signature {
     // An occurrence already carrying a bound keeps it: a nested signature may
     // have declared its own, and overwriting would silently pick between two
     // claims the link refuses out loud.
-    func bounded(by bounds: [Name: Name]) -> Signature {
+    func bounded(by bounds: [Name: [Name]]) -> Signature {
         guard !bounds.isEmpty else { return self }
 
         return Signature(
@@ -128,12 +128,12 @@ extension TypeExpression {
     // The occurrence side of `Signature.bounded(by:)`, walked through every
     // place a type parameter may sit. A nested signature's parameters included,
     // because they are the outer signature's own slots.
-    func bounded(by bounds: [Name: Name]) -> TypeExpression {
+    func bounded(by bounds: [Name: [Name]]) -> TypeExpression {
         switch self {
-        case let .parameter(name, constraint):
-            return .parameter(name: name, constraint: constraint ?? bounds[name])
+        case let .parameter(name, constraints):
+            return .parameter(name: name, constraints: constraints.isEmpty ? bounds[name] ?? [] : constraints)
 
-        case .reading:
+        case .reading, .composition:
             return self
 
         case let .linear(inner):

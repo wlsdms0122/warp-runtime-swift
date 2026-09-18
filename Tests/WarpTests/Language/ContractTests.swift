@@ -235,7 +235,7 @@ struct ContractTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraint: "chart.Plottable"))
+                            "it": Parameter(type: .parameter(name: "T", constraints: ["chart.Plottable"]))
                         ],
                         returns: .int
                     ),
@@ -396,7 +396,7 @@ struct ContractTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                            "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -449,7 +449,7 @@ struct ContractTests {
                 signature: Signature(
                     receiver: "it",
                     parameters: [
-                        "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                        "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
                     ],
                     returns: .string
                 ),
@@ -491,7 +491,7 @@ struct ContractTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                            "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
                         returns: .string
                     ),

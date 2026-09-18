@@ -29,8 +29,10 @@ extension LoweredType {
 
         // Both ask the membership and neither settles: a value stands as what
         // it arrived as, and which member it matched is a question a cast asks.
-        case let .parameter(_, bound):
-            return try standing(value, boundBy: bound, at: path(), in: table, assuming: assuming)
+        case let .parameter(_, bounds):
+            return try bounds.reduce(value) { value, bound in
+                try standing(value, boundBy: bound, at: path(), in: table, assuming: assuming)
+            }
 
         case let .member(constraint):
             return try standing(value, boundBy: .membership(constraint), at: path(), in: table, assuming: assuming)
@@ -99,11 +101,13 @@ extension LoweredType {
 
         // A parameter stands for what arrived and does not settle it, so an
         // unbounded one holds a null the way it holds anything. A bounded one
-        // asks the membership, the way a member does.
-        case let .parameter(_, bound):
-            guard case let .membership(constraint)? = bound else { return true }
+        // asks each membership, the way a member does.
+        case let .parameter(_, bounds):
+            return bounds.allSatisfy { bound in
+                guard case let .membership(constraint) = bound else { return true }
 
-            return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
+                return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
+            }
 
         default:
             return declaresNull(in: table)
@@ -163,15 +167,17 @@ extension LoweredType {
         // bounded one still asks each value for its membership, and a member
         // that takes every byte answers that question for all of them at
         // once.
-        case let .parameter(_, bound):
-            guard case let .membership(constraint)? = bound else { return true }
+        case let .parameter(_, bounds):
+            return bounds.allSatisfy { bound in
+                guard case let .membership(constraint) = bound else { return true }
 
-            return holdsEveryByte(
-                of: constraint,
-                in: table,
-                namedAssuming: namedAssuming,
-                boundAssuming: boundAssuming
-            )
+                return holdsEveryByte(
+                    of: constraint,
+                    in: table,
+                    namedAssuming: namedAssuming,
+                    boundAssuming: boundAssuming
+                )
+            }
 
         // A value here is one of the members, so the membership answers this
         // the way it answers for a parameter it bounds.
@@ -303,17 +309,17 @@ extension LoweredType {
         case let .ranged(refinement):
             return refinement.rendered
 
-        case let .parameter(label, bound):
-            switch bound {
-            case let .membership(row):
-                return "some \(label): \(table.constraintLabels[row])"
+        case let .parameter(label, bounds):
+            let bounded = bounds.map { bound -> String in
+                switch bound {
+                case let .membership(row): table.constraintLabels[row].spelling
+                case let .contract(name): name.spelling
+                }
+            }.joined(separator: " & ")
 
-            case let .contract(name):
-                return "some \(label): \(name)"
+            guard let label else { return bounded }
 
-            case nil:
-                return "some \(label)"
-            }
+            return bounds.isEmpty ? "some \(label)" : "some \(label): \(bounded)"
 
         case let .member(constraint):
             return table.constraintLabels[constraint].spelling
@@ -519,7 +525,7 @@ extension LoweredType {
     // for what arrived; it does not settle it.
     private func standing(
         _ value: Value,
-        boundBy bound: LoweredType.Bound?,
+        boundBy bound: LoweredType.Bound,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable,
         assuming: [Int]
@@ -531,7 +537,7 @@ extension LoweredType {
         // lets the value pass, so the list that holds every claim answers for
         // it. Where there is nowhere to write, there is nothing to wait for
         // and the value is held to what this table knows.
-        if case let .contract(name)? = bound {
+        if case let .contract(name) = bound {
             switch table.settles(contract: name, arrived: value.nominal) {
             case true?:
                 return value
@@ -559,7 +565,7 @@ extension LoweredType {
             }
         }
 
-        guard case let .membership(constraint)? = bound, !assuming.contains(constraint) else { return value }
+        guard case let .membership(constraint) = bound, !assuming.contains(constraint) else { return value }
 
         guard table.admits(constraint: constraint, value: value, assuming: assuming) else {
             throw ArgumentError(

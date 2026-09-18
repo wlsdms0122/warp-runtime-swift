@@ -158,11 +158,9 @@ final class LoweredTypeTable: Sendable {
             return .leansOn(labels[row])
 
         // A parameter stands for whatever fills it, and a call fills it with
-        // something the same bound was asked of.
-        case let .parameter(_, bound):
-            guard case let .contract(held)? = bound else { return .settled(false) }
-
-            return .settled(held == name)
+        // something every bound was asked of.
+        case let .parameter(_, bounds):
+            return .settled(bounds.contains(.contract(name)))
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return answering(contract: name, reading: inner)
@@ -199,15 +197,22 @@ final class LoweredTypeTable: Sendable {
             return true
 
         // A parameter bounded by a membership stands for some member of it, so
-        // it fits where every one of those would. One bounded by a contract
-        // stands for a type nothing here lists, so nothing is provable and it
-        // passes the way an unbounded one does.
-        case let .parameter(_, bound):
-            guard case let .membership(constraint)? = bound else { return true }
-            guard !assuming.contains(constraint) else { return true }
+        // it fits where every one of those would. One bounded by contracts
+        // alone stands for a type nothing here lists, so nothing is provable
+        // and it passes the way an unbounded one does.
+        case let .parameter(_, bounds):
+            let memberships = bounds.compactMap { bound -> Int? in
+                guard case let .membership(constraint) = bound, !assuming.contains(constraint) else { return nil }
 
-            return constraints[constraint].allSatisfy { member in
-                admits(constraint: row, reading: member, assuming: assuming + [constraint])
+                return constraint
+            }
+
+            guard !memberships.isEmpty else { return true }
+
+            return memberships.contains { constraint in
+                constraints[constraint].allSatisfy { member in
+                    admits(constraint: row, reading: member, assuming: assuming + [constraint])
+                }
             }
 
         // A value of a membership is one of its members and nothing says

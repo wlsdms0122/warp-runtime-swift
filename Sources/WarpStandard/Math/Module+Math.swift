@@ -19,7 +19,7 @@ public extension Module {
                 signature: Signature(
                     of: PlusQuery.self,
                     receiver: .of,
-                    returns: .parameter(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(PlusQuery())
             ),
@@ -28,7 +28,7 @@ public extension Module {
                 signature: Signature(
                     of: MinusQuery.self,
                     receiver: .of,
-                    returns: .parameter(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(MinusQuery())
             ),
@@ -37,7 +37,7 @@ public extension Module {
                 signature: Signature(
                     of: TimesQuery.self,
                     receiver: .of,
-                    returns: .parameter(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(TimesQuery())
             ),
@@ -51,7 +51,7 @@ public extension Module {
                 signature: Signature(
                     of: RemainderQuery.self,
                     receiver: .of,
-                    returns: .parameter(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(RemainderQuery())
             ),

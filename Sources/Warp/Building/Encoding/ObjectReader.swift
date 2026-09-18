@@ -296,13 +296,19 @@ private extension ObjectReader {
         case 18: read = .borrowing(try expression(fields.next()))
         case 19: read = .nullable(try expression(fields.next()))
         case 20: read = .named(try name(fields.next()))
-        case 21: read = .parameter(name: try name(fields.next()), constraint: try fields.maybe(name))
+        case 21:
+            read = .parameter(
+                name: try name(fields.next()),
+                constraints: try Fields.ordered(fields.next(), of: "bounds", name)
+            )
+
         case 22:
             read = .reading(
                 of: try name(fields.next()),
                 path: try Fields.list(fields.next(), of: "path", segment)
             )
 
+        case 23: read = .composition(try Fields.ordered(fields.next(), of: "composition", name))
         default:
             throw ObjectRefused("'type' names a kind this reads none of")
         }
@@ -626,7 +632,12 @@ private extension ObjectReader {
         case 15: read = .inout(try lowered(fields.next()))
         case 16: read = .nullable(try lowered(fields.next()))
         case 17: read = .named(try fields.count())
-        case 18: read = .parameter(label: try name(fields.next()), bound: try fields.maybe(bound))
+        case 18:
+            read = .parameter(
+                label: try fields.maybe(name),
+                bounds: try Fields.list(fields.next(), of: "bounds", bound)
+            )
+
         case 19:
             read = .reading(
                 of: try name(fields.next()),

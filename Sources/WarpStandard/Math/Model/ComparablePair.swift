@@ -27,7 +27,7 @@ enum ComparablePair: Int, ParameterSet {
     }
 
     var declared: Parameter {
-        Parameter(type: .parameter(name: "T", constraint: "std.Comparable"))
+        Parameter(type: .parameter(name: "T", constraints: ["std.Comparable"]))
     }
 
     // MARK: - Initializer

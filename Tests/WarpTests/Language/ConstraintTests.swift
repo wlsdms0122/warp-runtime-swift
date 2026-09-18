@@ -111,8 +111,8 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .parameter(name: "T", constraint: "Scalar"))],
-                        returns: .parameter(name: "T", constraint: "Scalar")
+                        parameters: ["value": Parameter(type: .parameter(name: "T", constraints: ["Scalar"]))],
+                        returns: .parameter(name: "T", constraints: ["Scalar"])
                     ),
                     body: [],
                     result: reference("value")
@@ -143,8 +143,8 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .parameter(name: "T", constraint: "Scalar"))],
-                        returns: .parameter(name: "T", constraint: "Scalar")
+                        parameters: ["value": Parameter(type: .parameter(name: "T", constraints: ["Scalar"]))],
+                        returns: .parameter(name: "T", constraints: ["Scalar"])
                     ),
                     body: [],
                     result: reference("value")
@@ -176,8 +176,8 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .parameter(name: "T", constraint: "Sortable"))],
-                        returns: .parameter(name: "T", constraint: "Sortable")
+                        parameters: ["value": Parameter(type: .parameter(name: "T", constraints: ["Sortable"]))],
+                        returns: .parameter(name: "T", constraints: ["Sortable"])
                     ),
                     body: [],
                     result: reference("value")
@@ -198,36 +198,38 @@ struct ConstraintTests {
         }
     }
 
-    @Test("one parameter written with two constraints refuses at the build")
-    func twoBoundsOnOneParameterRefuseAtTheLink() async throws {
-        // Given. The bound is written inline, so two slots writing different
-        // bounds for one name are two claims about one thing
-        let sut = try Module(
-            constraints: ["A": [.int], "B": [.string]],
-            procedures: [
-                "keep": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraint: "A")),
-                            "right": Parameter(type: .parameter(name: "T", constraint: "B"))
-                        ]
+    @Test("a parameter bounded by two memberships takes only what both admit")
+    func twoBoundsOnOneParameterBothHold() async throws {
+        // Given. `A` admits int and string, `B` admits string alone, and `T`
+        // is bounded by both
+        func module(handing argument: Value) throws -> Module {
+            try Module(
+                constraints: ["A": [.int, .string], "B": [.string]],
+                procedures: [
+                    "keep": Procedure(
+                        signature: Signature(
+                            parameters: ["left": Parameter(type: .parameter(name: "T", constraints: ["A", "B"]))],
+                            returns: .int
+                        ),
+                        body: [],
+                        result: .literal(.int(1))
                     ),
-                    body: [],
-                    result: .literal(.null)
-                ),
-                entryName: Procedure(
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
+                    entryName: Procedure(
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(selector: "keep", arguments: ["left": .literal(argument)]))
+                    )
+                ]
+            )
+        }
 
-        // When / Then
+        // When / Then. A string is inside both; a whole number is outside `B`
+        _ = try await builder.build([try module(handing: .string("x"))] + Module.standard, entry: entryName)
+
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([try module(handing: .int(1))] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("One parameter takes one constraint")
+            error is BuildError && "\(error)".contains("which 'B' does not admit")
         }
     }
 
@@ -241,7 +243,7 @@ struct ConstraintTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraint: "Scalar")),
+                            "left": Parameter(type: .parameter(name: "T", constraints: ["Scalar"])),
                             "right": Parameter(type: .parameter(name: "T"))
                         ]
                     ),
@@ -322,7 +324,7 @@ struct ConstraintTests {
         // Given. A declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
         let sut = try Module(
-            types: ["Weird": .parameter(name: "T", constraint: "Sortable")],
+            types: ["Weird": .parameter(name: "T", constraints: ["Sortable"])],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
@@ -356,7 +358,7 @@ struct ConstraintTests {
             types: [
                 "Callback": .procedure(
                     Signature(
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraint: "Scalar"))]
+                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["Scalar"]))]
                     )
                 )
             ],
@@ -428,7 +430,7 @@ struct ConstraintTests {
     func aConstraintMemberMustBeConcrete() async throws {
         // Given. `some` in member position stands for a type and names none;
         // admitting it would also let a membership chase itself forever
-        for member in [TypeExpression.parameter(name: "S", constraint: "Loop"), .any, .never] {
+        for member in [TypeExpression.parameter(name: "S", constraints: ["Loop"]), .any, .never] {
             let sut = try Module(
                 constraints: ["Loop": [member]],
                 procedures: [
@@ -459,7 +461,7 @@ struct ConstraintTests {
                     signature: Signature(
                         parameters: [
                             "speed": Parameter(
-                                type: .parameter(name: "N", constraint: "std.Numeric"),
+                                type: .parameter(name: "N", constraints: ["std.Numeric"]),
                                 candidates: ["fast", "slow"]
                             )
                         ]
@@ -557,7 +559,7 @@ struct ConstraintTests {
                     signature: Signature(
                         parameters: [
                             "level": Parameter(
-                                type: .parameter(name: "N", constraint: "std.Numeric"),
+                                type: .parameter(name: "N", constraints: ["std.Numeric"]),
                                 candidates: ["1", "2.5"]
                             )
                         ]
@@ -735,7 +737,7 @@ struct ConstraintTests {
                         Statement(binding: .constant("kept"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        "it": Parameter(type: .parameter(name: "T", constraint: "Nope"))
+                                        "it": Parameter(type: .parameter(name: "T", constraints: ["Nope"]))
                                     ]
                                 ),
                                 body: [],
@@ -831,14 +833,14 @@ struct ConstraintTests {
         // Given. A table nothing linked, holding the declaration the build would
         // have refused; the table answers rather than chasing it
         let sut = TypeTable(
-            constraints: ["Loop": [.parameter(name: "S", constraint: "Loop")]]
+            constraints: ["Loop": [.parameter(name: "S", constraints: ["Loop"])]]
         )
 
         // When / Then
         #expect(
             sut.admits(
                 constraint: "Loop",
-                reading: .parameter(name: "T", constraint: "Loop")
+                reading: .parameter(name: "T", constraints: ["Loop"])
             ) == true
         )
         let table = sut.loweredTypes
@@ -857,8 +859,8 @@ struct ConstraintTests {
                 "smallest": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraint: "Exact")),
-                            "right": Parameter(type: .parameter(name: "T", constraint: "Exact"))
+                            "left": Parameter(type: .parameter(name: "T", constraints: ["Exact"])),
+                            "right": Parameter(type: .parameter(name: "T", constraints: ["Exact"]))
                         ],
                         returns: .bool
                     ),

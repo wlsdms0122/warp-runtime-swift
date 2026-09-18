@@ -89,9 +89,10 @@ extension TypeExpression {
         case let .linear(inner), let .consuming(inner), let .borrowing(inner):
             return inner.lowered(in: table)
 
-        // Types and memberships are two tables and no name is in both, so a
-        // mention is looked for in each. A membership standing as a type is a
-        // value of one of its members.
+        // Types, memberships and contracts are three tables and no name is
+        // in two, so a mention is looked for in each. A membership standing
+        // as a type is a value of one of its members, and a contract standing
+        // as a type is a value of whatever answers it.
         case let .named(name):
             if let row = table.row(named: name) {
                 return .named(row)
@@ -101,28 +102,48 @@ extension TypeExpression {
                 return .member(row)
             }
 
+            if table.satisfying[name] != nil {
+                return .parameter(label: nil, bounds: [.contract(name)])
+            }
+
             return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
 
         // A bound names a membership or a contract, and the two are separate
-        // spaces, so it is looked for in each.
-        case let .parameter(name, bound):
-            guard let bound else { return .parameter(label: name, bound: nil) }
+        // spaces, so each is looked for in both.
+        case let .parameter(name, constraints):
+            return bounds(constraints, in: table).map { bounds in .parameter(label: name, bounds: bounds) }
+                ?? .undeclared(
+                    label: rendered,
+                    refusal: "a bound, which nothing declares as a membership or a contract"
+                )
 
-            if let row = table.constraintRow(named: bound) {
-                return .parameter(label: name, bound: .membership(row))
-            }
-
-            if table.satisfying[bound] != nil {
-                return .parameter(label: name, bound: .contract(bound))
-            }
-
-            return .undeclared(
-                label: "some \(name): \(bound)",
-                refusal: "'\(bound)', which nothing declares as a membership or a contract"
-            )
+        case let .composition(names):
+            return bounds(names, in: table).map { bounds in .parameter(label: nil, bounds: bounds) }
+                ?? .undeclared(
+                    label: rendered,
+                    refusal: "a name, which nothing declares as a membership or a contract"
+                )
 
         case let .reading(of, path):
             return .reading(of: of, path: path)
         }
+    }
+
+    // The bounds a list of names stands for, or nothing where one of them
+    // is neither a membership nor a contract.
+    private func bounds(_ names: [Name], in table: LoweredTypeTable) -> [LoweredType.Bound]? {
+        var bounds: [LoweredType.Bound] = []
+
+        for name in names {
+            if let row = table.constraintRow(named: name) {
+                bounds.append(.membership(row))
+            } else if table.satisfying[name] != nil {
+                bounds.append(.contract(name))
+            } else {
+                return nil
+            }
+        }
+
+        return bounds
     }
 }

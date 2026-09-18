@@ -84,6 +84,31 @@ public struct TypeReader: Decodable {
             return .procedure(signature, constness, isolation)
         }
 
+        // `A & B`: the names a value answers, and nothing else. Read before
+        // `?` and the rest so that every part is held to being a name; a `?`
+        // on a part is a part that is not one, and a composition is not a
+        // slot to mark.
+        if let parts = joined(text) {
+            let names = try parts.map { part -> Name in
+                let parsed = try parse(part.trimmingCharacters(in: .whitespaces))
+
+                guard case let .named(name) = parsed else {
+                    throw TypeFormError(
+                        "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
+                            + " and `&` joins the names of contracts and memberships"
+                    )
+                }
+
+                return name
+            }
+
+            guard Set(names).count == names.count else {
+                throw TypeFormError("type '\(text)' names one bound twice")
+            }
+
+            return .composition(names.sorted())
+        }
+
         if text.hasSuffix("?") {
             let inner = try parse(String(text.dropLast()))
 
@@ -320,6 +345,32 @@ public struct TypeReader: Decodable {
     // One name with nothing structural in it. What a type parameter's spelling
     // has to be, and what a `bounds` value has to be: the two halves of one
     // notation, held to one predicate.
+    // The parts an `&` at the top of a spelling joins, or nothing where the
+    // spelling has no such `&`: one inside brackets belongs to the argument.
+    private static func joined(_ text: String) -> [Substring]? {
+        var depth = 0
+        var parts: [Substring] = []
+        var start = text.startIndex
+
+        for index in text.indices {
+            switch text[index] {
+            case "<": depth += 1
+            case ">": depth -= 1
+            case "&" where depth == 0:
+                parts.append(text[start ..< index])
+                start = text.index(after: index)
+
+            default: break
+            }
+        }
+
+        guard !parts.isEmpty else { return nil }
+
+        parts.append(text[start...])
+
+        return parts
+    }
+
     static func isName(_ text: String) -> Bool {
         !text.isEmpty && !text.contains("<") && !text.contains(">")
             && !text.contains(" ") && !text.contains(":")

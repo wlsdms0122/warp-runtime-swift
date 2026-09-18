@@ -61,10 +61,12 @@ extension Body {
             case let .named(number), let .member(number):
                 types.append(number)
 
-            case let .parameter(_, bound):
-                guard case let .membership(number)? = bound else { return }
+            case let .parameter(_, bounds):
+                for bound in bounds {
+                    guard case let .membership(number) = bound else { continue }
 
-                memberships.append(number)
+                    memberships.append(number)
+                }
 
             case let .array(held), let .dictionary(held), let .variable(held),
                 let .inout(held), let .nullable(held):
