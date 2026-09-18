@@ -219,18 +219,9 @@ extension Builder {
             guard let reading = readings[parameter] else { continue }
 
             for name in names.sorted() {
-                // A bound names a membership or a contract, and the two are
-                // separate spaces, so it is looked for in each. One nothing
-                // declares was refused where the declaration was judged.
-                let bound: LoweredType.Bound
-
-                if loweredTypes.satisfying[name] != nil {
-                    bound = .contract(name)
-                } else if let row = loweredTypes.constraintRow(named: name) {
-                    bound = .membership(row)
-                } else {
-                    continue
-                }
+                // One nothing declares was refused where the declaration was
+                // judged.
+                guard let bound = loweredTypes.bound(named: name) else { continue }
 
                 if let refusal = refusal(
                     of: reading,

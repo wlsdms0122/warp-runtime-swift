@@ -463,6 +463,71 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a claim leaning on a claim that fell falls with it")
+    func aClaimLeaningOnAFallenClaimFalls() async throws {
+        // Given. `Box` answers `Printable` by showing a `Card`, `Card` claims
+        // `Describable` and answers nothing it asks
+        let sut = try Module(
+            types: ["app.Box": .record(["n": .int]), "bank.Card": .record(["last": .string])],
+            contracts: [
+                "app.Describable": ["describe": Signature(returns: .string)],
+                "app.Printable": ["show": Signature(returns: .named("app.Describable"))]
+            ],
+            claims: ["bank.Card": ["app.Describable"], "app.Box": ["app.Printable"]],
+            procedures: [
+                "app.Box.show": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("app.Box"))], returns: .named("bank.Card")),
+                    body: [],
+                    result: .cast(.record(["last": .literal(.string("x"))]), as: .named("bank.Card"), optional: false)
+                ),
+                entryName: Procedure(
+                    signature: Signature(returns: .string),
+                    body: [
+                        Statement(
+                            binding: .constant("box"),
+                            expression: .cast(.record(["n": .literal(.int(1))]), as: .named("app.Box"), optional: false)
+                        ),
+                        Statement(
+                            binding: .constant("shown"),
+                            expression: .call(Call(receiver: reference("box"), selector: "app.Printable.show"))
+                        )
+                    ],
+                    result: .call(Call(receiver: reference("shown"), selector: "app.Describable.describe"))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError
+        }
+    }
+
+    @Test("null fills a nullable composition whole")
+    func nullFillsANullableComposition() async throws {
+        // Given
+        let sut = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: [
+                "app.tell": Procedure(
+                    signature: Signature(parameters: ["it": Parameter(type: .nullable(.named("app.Describable")))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "app.tell", arguments: ["it": .literal(.null)]))
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

@@ -114,6 +114,11 @@ extension LoweredType {
         // A parameter inside a nullable slot is read from the declared half.
         // Null carries no reading, and a nullable arrival reads by its own
         // declared half for the same reason.
+        // A nullable slot takes null whole: it carries no reading and leaves
+        // nothing to hold.
+        case (.nullable, .null):
+            return
+
         case let (.nullable(mine), .nullable(theirs)):
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
