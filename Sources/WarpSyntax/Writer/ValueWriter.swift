@@ -57,14 +57,10 @@ public struct ValueWriter: Encodable {
         // close the only way out for a value that never spelled itself bytes:
         // an `array<int>` slot hands on what it was given, and what it was
         // given may have been written `x"6869"`.
-        //
-        // Both spellings go out through the one projection that owns the
-        // equation, so neither can be written a way the other is not.
-        case .bytes, .array:
-            guard let elements = value.elements else {
-                preconditionFailure("a value with a collection's spelling had no elements")
-            }
+        case let .bytes(bytes):
+            try container.encode(bytes.map { byte in ValueWriter(.int(Int(byte))) })
 
+        case let .array(elements):
             try container.encode(elements.map(ValueWriter.init))
 
         // A carrier keys its fields by Swift's equality, which folds

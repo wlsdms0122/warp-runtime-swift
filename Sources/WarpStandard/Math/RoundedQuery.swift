@@ -24,7 +24,7 @@ struct RoundedQuery: Query {
             return .int(number)
 
         case let .double(real):
-            return .int(try integer.of(real.rounded(), from: real))
+            return .int(try integer.of(real, rounded: .toNearestOrAwayFromZero))
 
         default:
             return nil

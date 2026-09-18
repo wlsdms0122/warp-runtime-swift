@@ -39,7 +39,7 @@ struct Arithmetic: Sendable {
 
     // MARK: - Public
     func answer(_ receiver: Value?, _ operand: Value) throws -> Value {
-        guard let receiver, isNumber(receiver), isNumber(operand) else {
+        guard let receiver, let left = number(receiver), let right = number(operand) else {
             throw ExecutionError(
                 "arithmetic asks \(receiver?.type.description ?? "nothing") and"
                     + " \(operand.type), expected two numbers"
@@ -53,18 +53,14 @@ struct Arithmetic: Sendable {
             throw ExecutionError("\(operation) asks zero")
         }
 
-        // A quotient is a fraction even between wholes, so `dividedBy` always
-        // takes the fraction path.
         if
             case let .int(leftWhole) = receiver,
             case let .int(rightWhole) = operand,
-            operation != .dividedBy
+            let answered = try whole(leftWhole, rightWhole)
         {
-            return .int(try whole(leftWhole, rightWhole))
+            return .int(answered)
         }
 
-        let left = fraction(receiver)
-        let right = fraction(operand)
         let answered = real(left, right)
 
         // The line the whole path holds with its edge. Infinity is a fraction
@@ -86,7 +82,9 @@ struct Arithmetic: Sendable {
         operation == .dividedBy || operation == .remainder
     }
 
-    private func whole(_ left: Int, _ right: Int) throws -> Int {
+    // The whole answer two wholes have, or nil where the operation has none:
+    // a quotient is a fraction even between wholes.
+    private func whole(_ left: Int, _ right: Int) throws -> Int? {
         let answered: (partialValue: Int, overflow: Bool)
 
         switch operation {
@@ -99,11 +97,8 @@ struct Arithmetic: Sendable {
         case .times:
             answered = left.multipliedReportingOverflow(by: right)
 
-        // A quotient is a fraction, so `dividedBy` never takes the whole path.
-        // The caller's guard holds that line, and a call that slips it stops
-        // here loudly rather than answering the other operation.
         case .dividedBy:
-            preconditionFailure("a quotient is a fraction")
+            return nil
 
         // A remainder is smaller than its divisor, so it always fits the int.
         // The overflow guard below is not its judge. The one divisor that trips
@@ -143,19 +138,10 @@ struct Arithmetic: Sendable {
         }
     }
 
-    private func isNumber(_ value: Value?) -> Bool {
-        switch value {
-        case .int, .double:
-            return true
-
-        default:
-            return false
-        }
-    }
-
-    // The fraction path's reading of one side. Binary64's own rounding, which
-    // every int is within reach of.
-    private func fraction(_ value: Value?) -> Double {
+    // The number a value carries, as the fraction path reads it: binary64's
+    // own rounding, which every int is within reach of. Nil for what is not a
+    // number.
+    private func number(_ value: Value) -> Double? {
         switch value {
         case let .int(whole):
             return Double(whole)
@@ -163,11 +149,8 @@ struct Arithmetic: Sendable {
         case let .double(real):
             return real
 
-        // The numeric guard in `answer` already refused everything else, so
-        // reaching here is this file's own defect. The same line `whole` holds
-        // for a quotient, not a failure a program could see.
         default:
-            preconditionFailure("arithmetic reads a number it never admitted")
+            return nil
         }
     }
 }

@@ -21,25 +21,21 @@ struct IntegerConversion: Sendable {
     }
 
     // MARK: - Public
-    // The reasons rounding can fail are different facts, and the refusal names
-    // the one that happened. Through the one reading every judge of a fraction
-    // shares.
-    func of(_ rounded: Double, from asked: Double) throws -> Int {
-        switch Int.reading(rounded) {
-        case let .int(answered):
-            return answered
-
-        case .notANumber:
+    // The whole a fraction rounds to. The reasons there is none are
+    // different facts, and the refusal names the one that happened: a
+    // fraction that is not a number has no whole at all, and a rounded
+    // whole past the int's own edge is one no int holds. Rounding is done
+    // here, so what is narrowed has no digits after the point to refuse.
+    func of(_ asked: Double, rounded rule: FloatingPointRoundingRule) throws -> Int {
+        guard !asked.isNaN else {
             throw ExecutionError("\(asked) has no whole answer")
-
-        case .overflow:
-            throw ExecutionError("\(procedure) of \(asked) overflows int")
-
-        // The input already went through `rounded(_:)`, so digits after the
-        // point cannot survive to here.
-        case .fractional:
-            preconditionFailure("a rounded fraction still had digits")
         }
+
+        guard let answered = Int(exactly: asked.rounded(rule)) else {
+            throw ExecutionError("\(procedure) of \(asked) overflows int")
+        }
+
+        return answered
     }
 
     // MARK: - Private
