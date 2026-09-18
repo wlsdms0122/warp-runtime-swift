@@ -25,6 +25,31 @@ struct WriterTests {
 
     // MARK: - Initializer
     // MARK: - Test
+    @Test("a name two occurrences bound differently has no document to write")
+    func differingOccurrencesAreNotWritten() throws {
+        // Given
+        let sut = try Module(
+            constraints: ["A": [.int], "B": [.string]],
+            procedures: [
+                "keep": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "left": Parameter(type: .parameter(name: "T", constraints: ["A"])),
+                            "right": Parameter(type: .parameter(name: "T", constraints: ["B"]))
+                        ]
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: sut)
+        }
+    }
+
     @Test("every construct survives being written and read back", arguments: Self.corpus)
     func writingIsAFixedPoint(_ document: Value) async throws {
         // Given

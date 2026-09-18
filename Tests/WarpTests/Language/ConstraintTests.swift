@@ -227,6 +227,57 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a composition inside a slot is held to its bounds where the call is written")
+    func aNestedCompositionIsJudgedAtTheBuild() async throws {
+        // Given. `A` admits int and string, `B` admits string alone, and the
+        // slot takes a list of what belongs to both
+        func module(handing element: Value) throws -> Module {
+            try Module(
+                constraints: ["A": [.int, .string], "B": [.string]],
+                procedures: [
+                    "keep": Procedure(
+                        signature: Signature(
+                            parameters: ["items": Parameter(type: .array(.composition(["A", "B"])))],
+                            returns: .int
+                        ),
+                        body: [],
+                        result: .literal(.int(1))
+                    ),
+                    entryName: Procedure(
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(selector: "keep", arguments: ["items": .literal(.array([element]))]))
+                    )
+                ]
+            )
+        }
+
+        // When / Then
+        _ = try await builder.build([try module(handing: .string("x"))] + Module.standard, entry: entryName)
+
+        await #expect {
+            try await builder.build([try module(handing: .int(1))] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which 'B' does not admit")
+        }
+    }
+
+    @Test("a member that is a composition or a contract is not a concrete type")
+    func aCompositionIsNotAMember() async throws {
+        // Given
+        let sut = try Module(
+            constraints: ["A": [.int], "B": [.string], "Loop": [.composition(["A", "B"])]],
+            procedures: [entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a member is a concrete type")
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

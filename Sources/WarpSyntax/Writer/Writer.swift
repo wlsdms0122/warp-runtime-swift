@@ -478,13 +478,26 @@ public struct Writer: Sendable {
     // bound differently is two claims about one thing: a signature the link
     // refuses has no document.
     private func bounds(of signature: Signature) throws -> Value? {
-        var mentioned: [Name: Set<Name>] = [:]
-        signature.parameterConstraints(into: &mentioned)
+        var occurrences: [Name: Set<[Name]>] = [:]
+        signature.parameterOccurrences(into: &occurrences)
 
         var bounds: [Name: Value] = [:]
 
-        for (name, constraints) in mentioned.sorted(by: { $0.key < $1.key }) where !constraints.isEmpty {
-            bounds[name] = .string(constraints.sorted().map(\.spelling).joined(separator: " & "))
+        for (name, sets) in occurrences.sorted(by: { $0.key < $1.key }) {
+            let bounded = sets.filter { names in !names.isEmpty }
+
+            guard bounded.count <= 1 else {
+                throw WritingError(
+                    "'some \(name)' is bounded by"
+                        + " \(bounded.map { names in names.map(\.spelling).joined(separator: " & ") }.sorted().joined(separator: " in one place and "))"
+                        + " in another. One name is held to one set of bounds, so there is no"
+                        + " `bounds` to write"
+                )
+            }
+
+            if let constraints = bounded.first {
+                bounds[name] = .string(constraints.map(\.spelling).joined(separator: " & "))
+            }
         }
 
         return bounds.isEmpty ? nil : .dictionary(bounds)

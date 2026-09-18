@@ -36,12 +36,19 @@ enum BoundsReader {
 
         for (parameter, bound) in bounds.sorted(by: { $0.key < $1.key }) {
             let names: [Name]
+            let parsed: TypeExpression
 
-            switch try? TypeReader.parse(bound) {
-            case let .named(name)?:
+            do {
+                parsed = try TypeReader.parse(bound)
+            } catch let refused as TypeFormError {
+                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: steps)
+            }
+
+            switch parsed {
+            case let .named(name):
                 names = [name]
 
-            case let .composition(joined)?:
+            case let .composition(joined):
                 names = joined
 
             default:

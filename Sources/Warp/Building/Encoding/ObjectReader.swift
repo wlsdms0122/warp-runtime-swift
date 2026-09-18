@@ -641,10 +641,16 @@ private extension ObjectReader {
         case 16: read = .nullable(try lowered(fields.next()))
         case 17: read = .named(try fields.count())
         case 18:
-            read = .parameter(
-                label: try fields.maybe(name),
-                bounds: try Fields.list(fields.next(), of: "bounds", bound)
-            )
+            let label = try fields.maybe(name)
+            let bounds = try Fields.ordered(fields.next(), of: "bounds", bound)
+
+            // A parameter with no name is its bounds, and one with none of
+            // either would hold every value to nothing under no spelling.
+            guard label != nil || !bounds.isEmpty else {
+                throw ObjectRefused("'lowered type' stands a composition of nothing")
+            }
+
+            read = .parameter(label: label, bounds: bounds)
 
         case 19:
             read = .reading(

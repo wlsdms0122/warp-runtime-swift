@@ -54,9 +54,20 @@ indirect enum LoweredType: Sendable {
     // What a type parameter is held to. Two, because the two are answered
     // differently: a membership lists types and the table lowered them into
     // rows, a contract lists procedures and what answers it is a type's own name.
-    enum Bound: Sendable, Equatable {
+    enum Bound: Sendable, Equatable, Comparable {
         case membership(Int)
         case contract(Name)
+
+        // Memberships first, by row; contracts behind, by name. One order,
+        // so one set of bounds has one writing.
+        static func < (lhs: Bound, rhs: Bound) -> Bool {
+            switch (lhs, rhs) {
+            case let (.membership(mine), .membership(theirs)): mine < theirs
+            case (.membership, .contract): true
+            case (.contract, .membership): false
+            case let (.contract(mine), .contract(theirs)): mine < theirs
+            }
+        }
     }
 
     // The type a walk reached by taking a path through one a call decides.

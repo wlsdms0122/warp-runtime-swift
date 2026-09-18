@@ -220,17 +220,24 @@ extension Builder {
                     resolved = underneath.held
                 }
 
-                switch resolved {
-                case .parameter, .any, .never:
+                // A name left standing names no declared type: another
+                // membership, which is a set of types and stands; or a
+                // contract or nothing, and neither is a type.
+                let concrete = switch resolved {
+                case let .named(name): members[name] != nil
+                case .parameter, .any, .never, .composition: false
+                case .null, .bool, .int, .double, .string, .bytes, .number, .ranged, .array,
+                    .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
+                    .borrowing, .nullable, .reading: true
+                }
+
+                guard concrete else {
                     throw BuildError(
                         "a member is a concrete type."
                             + " `\(member.rendered)` says nothing a"
                             + " membership could hold",
                         at: declaration.place
                     )
-
-                default:
-                    break
                 }
             }
         }

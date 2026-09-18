@@ -58,7 +58,9 @@ extension Builder {
         // call put there, which the build never wrote down. A composition
         // stands for a member of every membership it names.
         case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.contains { bound in reaches(membership: bound, in: table, assuming: assuming) == true }
+            let answers = bounds.compactMap { bound in reaches(membership: bound, in: table, assuming: assuming) }
+
+            return answers.isEmpty ? nil : answers.contains(true)
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return reaches(inner, in: table, assuming: assuming)

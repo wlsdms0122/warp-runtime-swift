@@ -317,16 +317,17 @@ extension Builder {
         var holding: [(slot: Name, reading: LoweredType, bounds: [LoweredType.Bound])] = []
 
         func read(_ slot: Slot, as reading: LoweredType) {
-            if case let .parameter(nil, bounds) = slot.type.slotUnwrapped {
-                holding.append((slot: slot.name, reading: reading, bounds: bounds))
-            }
+            var held: [(reading: LoweredType, bounds: [LoweredType.Bound])] = []
 
             slot.type.binding(
                 against: reading,
                 into: &bound,
                 disagreeing: &disagreeing,
+                holding: &held,
                 in: loweredTypes
             )
+
+            holding += held.map { held in (slot: slot.name, reading: held.reading, bounds: held.bounds) }
         }
 
         for name in call.arguments.keys.sorted() {

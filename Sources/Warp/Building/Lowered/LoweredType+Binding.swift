@@ -35,11 +35,15 @@ extension LoweredType {
         against given: LoweredType,
         into bound: inout [Name: LoweredType],
         disagreeing: inout [Name: LoweredType],
+        holding: inout [(reading: LoweredType, bounds: [LoweredType.Bound])],
         in table: LoweredTypeTable
     ) {
         switch (self, given) {
-        // A composition has no name to be read under: what fills a slot of
-        // whatever answers is a value, and nothing else mentions it.
+        // A composition has no name to be read under: what arrived is held
+        // to its bounds where it arrived, wherever in the slot that was.
+        case let (.parameter(nil, bounds), _):
+            holding.append((reading: given, bounds: bounds))
+
         case let (.parameter(name?, _), _):
             guard let already = bound[name] else {
                 bound[name] = given
@@ -87,34 +91,34 @@ extension LoweredType {
         // Null carries no reading, and a nullable arrival reads by its own
         // declared half for the same reason.
         case let (.nullable(mine), .nullable(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
+            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
 
         case let (.nullable(mine), _):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: table)
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
 
         case let (.array(mine), .array(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
+            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
 
         // `bytes` is `array<byte>` in a compact spelling, so an element
         // parameter reads a byte from it. `first` on bytes answers one.
         case (.array(let mine), .bytes):
-            mine.binding(against: .byteElement, into: &bound, disagreeing: &disagreeing, in: table)
+            mine.binding(against: .byteElement, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
 
         case let (.dictionary(mine), .dictionary(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
+            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
 
         case let (.record(mine), .record(theirs)):
             for (name, field) in mine.named {
                 guard let opposite = theirs[name] else { continue }
 
-                field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, in: table)
+                field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
             }
 
         case let (.variable(mine), _), let (.inout(mine), _):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: table)
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
 
         case let (_, .variable(theirs)), let (_, .inout(theirs)):
-            binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
+            binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
 
         case let (.procedure(.some(mine), myAnswer, _, _), .procedure(.some(theirs), theirAnswer, _, _)):
             let opposite = Dictionary(theirs.map { slot in (slot.name, slot.type) }) { first, _ in first }
@@ -122,13 +126,14 @@ extension LoweredType {
             for parameter in mine {
                 guard let against = opposite[parameter.name] else { continue }
 
-                parameter.type.binding(against: against, into: &bound, disagreeing: &disagreeing, in: table)
+                parameter.type.binding(against: against, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
             }
 
             (myAnswer ?? .any).binding(
                 against: theirAnswer ?? .any,
                 into: &bound,
                 disagreeing: &disagreeing,
+                holding: &holding,
                 in: table
             )
 

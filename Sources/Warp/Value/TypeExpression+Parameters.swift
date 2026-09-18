@@ -11,38 +11,15 @@ import Foundation
 // is bounded by, and whether it has any at all. What a call puts in them is
 // read off the lowered declaration, where the readings are.
 extension TypeExpression {
-    // Every type parameter mentioned in here, each with the constraint names
-    // carried on it. A set per name, because occurrences carry the bound
-    // separately: `some T` bounded in one slot and bare in another are one
-    // parameter bounded once, and two occurrences carrying different
-    // constraints are two claims about one name. A disagreement the link
-    // refuses rather than picks from.
+    // Every type parameter mentioned in here, each with every constraint
+    // name any occurrence carries: the occurrences below, read as one set
+    // per name.
     func parameterConstraints(into table: inout [Name: Set<Name>]) {
-        switch self {
-        case let .parameter(name, constraints):
-            table[name, default: []].formUnion(constraints)
+        var occurrences: [Name: Set<[Name]>] = [:]
+        parameterOccurrences(into: &occurrences)
 
-        // Neither is a slot a signature declares, and neither carries a bound
-        // to claim. There is nothing here for a `bounds` to speak for.
-        case .reading, .composition:
-            return
-
-        case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
-            element.parameterConstraints(into: &table)
-
-        case let .record(fields):
-            for field in fields.values {
-                field.parameterConstraints(into: &table)
-            }
-
-        case let .procedure(signature, _, _):
-            signature?.parameterConstraints(into: &table)
-
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            inner.parameterConstraints(into: &table)
-
-        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
-            return
+        for (name, sets) in occurrences {
+            table[name, default: []].formUnion(sets.flatMap { names in names })
         }
     }
 
@@ -53,7 +30,7 @@ extension TypeExpression {
     func parameterOccurrences(into table: inout [Name: Set<[Name]>]) {
         switch self {
         case let .parameter(name, constraints):
-            table[name, default: []].insert(constraints)
+            table[name, default: []].insert(constraints.sorted())
 
         case .reading, .composition:
             return
@@ -122,11 +99,12 @@ public extension Signature {
     // not collected, because the link refuses one anywhere but a procedure
     // signature and never fills one through the name.
     func parameterConstraints(into table: inout [Name: Set<Name>]) {
-        for parameter in parameters.values {
-            parameter.declared.parameterConstraints(into: &table)
-        }
+        var occurrences: [Name: Set<[Name]>] = [:]
+        parameterOccurrences(into: &occurrences)
 
-        returns?.parameterConstraints(into: &table)
+        for (name, sets) in occurrences {
+            table[name, default: []].formUnion(sets.flatMap { names in names })
+        }
     }
 
     // The same, occurrence by occurrence.
