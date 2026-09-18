@@ -81,6 +81,11 @@ public struct Record: Sendable {
             throw ValueRefused("\(layout.name.map { name in "\(name) " } ?? "")has no field '\(field)'")
         }
 
+        return writing(at: place, with: value)
+    }
+
+    // The same, at the place the layout puts the field.
+    func writing(at place: Int, with value: Value) -> Record {
         var written = values
         written[place] = value
 

@@ -25,9 +25,9 @@ extension Value {
                 throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
             }
 
-            var values = record.values
-            values[position] = try values[position].writing(value, at: rest, under: rendered)
-            return .record(Record(layout: record.layout, values: values))
+            return .record(
+                record.writing(at: position, with: try record.values[position].writing(value, at: rest, under: rendered))
+            )
 
         // A name written into what holds its names as data. The link judged
         // the path, so a name that reaches here is one it allowed.
