@@ -35,7 +35,7 @@ struct ObjectWriter {
     func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
         // A numbering counting from a link's own rows belongs to no document,
         // so what holds one is not an object and there is none to write.
-        guard let numbering = compiled.numbering.written(declaring: compiled.declared.count) else {
+        guard let numbering = compiled.numbering.written(dropping: compiled.declared.count) else {
             throw ObjectUnwritable("the document is numbered by a link's rows, and is no object")
         }
 

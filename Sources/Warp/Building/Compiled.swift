@@ -227,7 +227,7 @@ public struct Compiled: Sendable, Declaring {
         // out again. A door that throws lets nothing past it.
         for row in table {
             try row.judge(
-                standingIn: { number in frame(ofClosure: number, written: row.label) },
+                standingIn: frame(ofClosure:),
                 reaching: reaches(_:),
                 holding: variables.count
             )
@@ -384,20 +384,20 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Private
-    // The frame of the row a body's closure number stands, or nothing where
-    // this document numbers no closure there or numbers it for some other
-    // declaration. Which row that is, is this document's own arithmetic.
     // Whether a number a body carries is one this document gave, and where it
-    // stands for a closure, one this document stood up.
+    // stands for a row of this document, what that row takes. Which row that
+    // is, is this document's own arithmetic: the declarations stand behind
+    // what it sends, and the closures behind those, in the order the table
+    // holds them.
     private func reaches(_ number: Int) -> (taking: Int, standing: Bool)? {
         guard numbering.gave(number) else { return nil }
 
         guard let written = numbering.lifted(number) else {
-            // A spelling, which this document may or may not declare. Where it
-            // does, the row is here and what it takes is known.
-            guard let name = numbering.reaching(number), let row = declared.firstIndex(of: name) else {
-                return (taking: 0, standing: false)
-            }
+            let row = number - (numbering.opening - declared.count)
+
+            // What it sends stands in front of what it declares, and a row
+            // another document holds is the link's answer.
+            guard row >= 0 else { return (taking: 0, standing: false) }
 
             return (taking: table[row].signature.names.count, standing: true)
         }
@@ -407,9 +407,10 @@ public struct Compiled: Sendable, Declaring {
         return (taking: table[lifted.lowerBound + written].signature.names.count, standing: true)
     }
 
-    private func frame(ofClosure number: Int, written by: Name) -> Frame? {
+    // The frame of the row a body's closure number stands, or nothing where
+    // this document numbers no closure there.
+    private func frame(ofClosure number: Int) -> Frame? {
         guard let written = numbering.lifted(number), written < lifted.count,
-              numbering.writer(of: written)?.by == by,
               case let .body(_, frame) = table[lifted.lowerBound + written].implementation
         else {
             return nil

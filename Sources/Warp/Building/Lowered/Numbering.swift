@@ -90,7 +90,7 @@ struct Numbering: Sendable {
     // asks where that declaration's run begins.
     // The spellings this document declares are written once, beside the
     // table, so only what it sends and what it counted stand here.
-    func written(declaring declared: Int) -> Value? {
+    func written(dropping declared: Int) -> Value? {
         guard case let .document(spellings, _) = space else { return nil }
 
         return .array([
@@ -287,7 +287,7 @@ struct Numbering: Sendable {
 
     // The first number the closures take. What a body carries is a number of
     // this document; which of its closures that is, is the number less this.
-    private var opening: Int {
+    var opening: Int {
         guard case let .document(spellings, _) = space else { return 0 }
 
         return spellings.count
