@@ -81,7 +81,7 @@ struct Judged: Sendable {
         sends: [Sent],
         judging implementation: Implementation
     ) throws {
-        try Self.judge(implementation, sends: sends, against: signature)
+        try Self.judge(implementation, against: signature)
 
         self.init(
             label: label,
@@ -110,7 +110,7 @@ struct Judged: Sendable {
         }
 
         do {
-            try Self.judge(implementation, sends: row.sends, against: row.signature)
+            try Self.judge(implementation, against: row.signature)
         } catch {
             assertionFailure("the link stands a body up beside a frame that fits it: \(error)")
         }
@@ -225,7 +225,6 @@ struct Judged: Sendable {
     // wrongly.
     private static func judge(
         _ implementation: Implementation,
-        sends: [Sent],
         against signature: Signature
     ) throws {
         guard case let .body(_, frame) = implementation else { return }

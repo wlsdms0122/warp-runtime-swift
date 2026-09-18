@@ -386,18 +386,13 @@ public struct Compiled: Sendable, Declaring {
     // MARK: - Private
     // Whether a number a body carries is one this document gave, and where it
     // stands for a row of this document, what that row takes. Which row that
-    // is, is this document's own arithmetic: the declarations stand behind
-    // what it sends, and the closures behind those, in the order the table
-    // holds them.
+    // is, is the numbering's answer; a row another document holds is the
+    // link's.
     private func reaches(_ number: Int) -> (taking: Int, standing: Bool)? {
         guard numbering.gave(number) else { return nil }
 
         guard let written = numbering.lifted(number) else {
-            let row = number - (numbering.opening - declared.count)
-
-            // What it sends stands in front of what it declares, and a row
-            // another document holds is the link's answer.
-            guard row >= 0 else { return (taking: 0, standing: false) }
+            guard let row = numbering.declaring(number) else { return (taking: 0, standing: false) }
 
             return (taking: table[row].signature.names.count, standing: true)
         }

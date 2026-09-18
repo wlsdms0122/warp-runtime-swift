@@ -42,6 +42,10 @@ struct Numbering: Sendable {
     private let space: Space
     private let called: [Name: Int]
 
+    // How many spellings stand in front of the document's own declarations:
+    // what it sends.
+    private let sent: Int
+
     // How many closures each declaration wrote, in name order, over the ones
     // that wrote any. The order is the document's own: a closure is the nth
     // one its declaration wrote, and the declarations run in name order, so
@@ -63,6 +67,7 @@ struct Numbering: Sendable {
         let sent = imports.sorted()
         let counted = closures.filter { _, count in count > 0 }
 
+        self.sent = sent.count
         space = .document(spellings: sent + declared, closures: counted.values.reduce(0, +))
         called = Self.placed(sent, from: 0)
             .merging(Self.placed(declared, from: sent.count)) { _, own in own }
@@ -73,6 +78,7 @@ struct Numbering: Sendable {
     init(rows: [Name: Int]) {
         space = .table
         called = rows
+        sent = 0
         runs = []
     }
 
@@ -170,14 +176,14 @@ struct Numbering: Sendable {
         return number >= 0 && number < spellings.count + closures
     }
 
-    // Which spelling a number stands for, or nothing where it stands for a
-    // closure instead.
-    func reaching(_ number: Int) -> Name? {
-        guard case let .document(spellings, _) = space, spellings.indices.contains(number) else {
+    // Which of this document's own declarations a number stands at, or
+    // nothing where it stands for what the document sends or for a closure.
+    func declaring(_ number: Int) -> Int? {
+        guard case let .document(spellings, _) = space, number >= sent, number < spellings.count else {
             return nil
         }
 
-        return spellings[number]
+        return number - sent
     }
 
     // Which declaration wrote the closure standing nth among this document's,
@@ -294,7 +300,7 @@ struct Numbering: Sendable {
 
     // The first number the closures take. What a body carries is a number of
     // this document; which of its closures that is, is the number less this.
-    var opening: Int {
+    private var opening: Int {
         guard case let .document(spellings, _) = space else { return 0 }
 
         return spellings.count
