@@ -17,7 +17,7 @@ struct Handle: Sendable {
     // MARK: - Property
     let head: Name
     let box: Variable
-    let path: [PathSegment]
+    let path: [Projection]
 
     // MARK: - Initializer
     init(_ head: Name, _ value: Value) {
@@ -26,7 +26,7 @@ struct Handle: Sendable {
         self.path = []
     }
 
-    init(head: Name, box: Variable, path: [PathSegment]) {
+    init(head: Name, box: Variable, path: [Projection]) {
         self.head = head
         self.box = box
         self.path = path
@@ -42,19 +42,19 @@ struct Handle: Sendable {
 
     // Writes the part a path below the hold names. The box is read once,
     // rewritten, and stored once, so nothing observes the value halfway.
-    func write(_ value: Value, at rest: [PathSegment]) throws {
+    func write(_ value: Value, at rest: [Projection]) throws {
         let whole = path + rest
 
         box.value = try box.value.writing(value, at: whole, under: rendered(whole))
     }
 
     // The same box, held through a longer path.
-    func extended(by rest: [PathSegment]) -> Handle {
+    func extended(by rest: [Projection]) -> Handle {
         Handle(head: head, box: box, path: path + rest)
     }
 
     // MARK: - Private
-    private func rendered(_ path: [PathSegment]) -> String {
-        ([.key(head)] + path).rendered
+    private func rendered(_ path: [Projection]) -> String {
+        ([.key(head)] + path.map(\.spelled)).rendered
     }
 }

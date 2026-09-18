@@ -407,7 +407,7 @@ struct InPlaceTests {
         // Given. The contract says these are one value
         let laid = Value.record(Record(name: nil, ["a": .int(1)]))
         let held = Value.dictionary(["a": .int(1)])
-        let path: [PathSegment] = [.key("b", optional: false)]
+        let path: [Projection] = [.key("b")]
 
         // When / Then
         #expect(laid == held)

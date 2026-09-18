@@ -1191,23 +1191,14 @@ public struct Executor: Sendable {
                     return .unfit(reason)
                 }
 
-            // The place the link proved, held to the name beside it. Two
-            // grounds for one field would let a writing say one of them and
-            // mean the other, and what came back then would not be refused
-            // but wrong. The name is what a write lands on, so the read is
-            // held to it here.
-            case let .field(position, name, _):
+            // The place the link proved, which is where a write lands too.
+            case let .field(position, _, _):
                 guard case let .record(record) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
-                guard record.layout.fields.indices.contains(position),
-                      record.layout.fields[position] == name
-                else {
-                    return .unfit(
-                        "\(walked().rendered) drills to a field this record"
-                            + " names otherwise"
-                    )
+                guard record.values.indices.contains(position) else {
+                    return .unfit("\(walked().rendered) drills past the fields this record holds")
                 }
 
                 read = .found(record.values[position])
@@ -1294,16 +1285,19 @@ public struct Executor: Sendable {
 
     // Every index reference read to a position: a write lands on one
     // position, and a hold is extended by positions.
-    private func positioned(_ address: Address, in activation: Activation) throws -> [PathSegment] {
+    private func positioned(_ address: Address, in activation: Activation) throws -> [Projection] {
         try address.steps.map { step in
             switch step {
-            case let .field(_, name, optional), let .key(name, optional):
-                return .key(name, optional: optional)
+            case let .field(position, name, _):
+                return .field(position, name)
 
-            case let .index(index, optional):
-                return .index(index, optional: optional)
+            case let .key(name, _):
+                return .key(name)
 
-            case let .at(inner, optional):
+            case let .index(index, _):
+                return .index(index)
+
+            case let .at(inner, _):
                 guard case let .int(index) = try found(inner, in: activation) else {
                     throw ExecutionError(
                         "'\(spelled(address, in: activation).rendered)' indexes with"
@@ -1311,7 +1305,7 @@ public struct Executor: Sendable {
                     )
                 }
 
-                return .index(index, optional: optional)
+                return .index(index)
             }
         }
     }

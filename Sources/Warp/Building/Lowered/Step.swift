@@ -11,9 +11,8 @@ import Foundation
 // path it reads the position from.
 enum Step: Sendable {
     // A field of a record whose layout the link proved: the place it stands
-    // in, beside the spelling the path wrote. The link reaches this where the
-    // value was settled to a declared type or built from a lowered layout,
-    // so the place is the one the value's layout puts the field at.
+    // in, which is where a read and a write both land, beside the spelling
+    // the path wrote, which is what a sentence calls it.
     case field(Int, Name, optional: Bool)
 
     // A name read from what only the run knows the keys of: a dictionary, or
