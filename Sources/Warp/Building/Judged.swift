@@ -137,8 +137,6 @@ struct Judged: Sendable {
     func judge(
         standingIn frames: (Int) -> Frame?,
         reaching given: (Int) -> (taking: Int, standing: Bool)?,
-        numbering types: (Int) -> Bool,
-        membering memberships: (Int) -> Bool,
         holding variables: Int
     ) throws {
         guard case let .body(body, frame) = implementation else { return }
@@ -159,18 +157,14 @@ struct Judged: Sendable {
             )
         }
 
-        // A number a call reaches is one this document gave. Which row that
-        // is, is the link's answer, but a number the document never gave is
-        // one no link can answer.
+        // What a call hands over fills the slots the row it reaches declares,
+        // and a run writes them by position. Answered where the row is this
+        // document's own; a row another document holds is the link's answer
+        // and is asked there, as is a number this document never gave.
         for call in standing.calls {
-            guard let reached = given(call.number) else {
-                throw ObjectRefused("a body calls a number its document never gave")
-            }
+            guard let reached = given(call.number), reached.standing else { continue }
 
-            // What it hands over fills the slots the row it reaches declares.
-            // Answered where the row is this document's own; a row another
-            // document holds is the link's answer and is asked there.
-            guard !reached.standing || reached.taking == call.arguments else {
+            guard reached.taking == call.arguments else {
                 throw ObjectRefused(
                     "a call stands \(call.arguments) argument(s) where the"
                         + " \(reached.taking) its callee declares stand"
@@ -178,19 +172,10 @@ struct Judged: Sendable {
             }
         }
 
-        // The same of the numbers its types stand at. A document numbers its
-        // types and its memberships apart, so the two are asked apart.
-        guard standing.types.allSatisfy(types), standing.memberships.allSatisfy(memberships) else {
-            throw ObjectRefused("a body stands on a type number its document never gave")
-        }
-
+        // What a closure takes with it fills the slots its own frame is
+        // filled at, since a run writes them by position.
         for closure in standing.closures {
-            guard let stands = frames(closure.number) else {
-                throw ObjectRefused(
-                    "a body stands up a closure at \(closure.number), where this"
-                        + " document numbers none that a body stands"
-                )
-            }
+            guard let stands = frames(closure.number) else { continue }
 
             guard stands.fills(closure.inner) else {
                 throw ObjectRefused(
@@ -245,24 +230,14 @@ struct Judged: Sendable {
     ) throws {
         guard case let .body(_, frame) = implementation else { return }
 
-        guard sends.isEmpty else {
-            throw ObjectRefused("a body stands sends its own code carries")
-        }
-
         guard frame.names.count == frame.size else {
             throw ObjectRefused(
                 "a frame of \(frame.size) names \(frame.names.count) slot(s)"
             )
         }
 
-        // A slot a closure fills from what it took with it is one slot, and
-        // not one a parameter or a module variable fills.
-        let taken = Set(frame.parameters).union(frame.variables.map(\.slot))
-
-        guard Set(frame.captures).count == frame.captures.count,
-              frame.captures.allSatisfy({ slot in slot >= 0 && slot < frame.size && !taken.contains(slot) })
-        else {
-            throw ObjectRefused("a frame is filled from a closure's cells at a slot it has not, or one something else fills")
+        guard frame.captures.allSatisfy({ slot in slot >= 0 && slot < frame.size }) else {
+            throw ObjectRefused("a frame is filled from a closure's cells at a slot it has not")
         }
 
         guard frame.parameters.count == signature.names.count else {

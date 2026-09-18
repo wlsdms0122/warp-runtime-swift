@@ -61,8 +61,6 @@ struct Numbering: Sendable {
     // joins the link.
     init(imports: Set<Name>, declared: [Name], closures: [Name: Int] = [:]) {
         let sent = imports.sorted()
-        let opening = sent.count + declared.count
-
         let counted = closures.filter { _, count in count > 0 }
 
         space = .document(spellings: sent + declared, closures: counted.values.reduce(0, +))
@@ -90,56 +88,35 @@ struct Numbering: Sendable {
     // How many closures each declaration wrote is neither: folding runs a
     // dependency's body against this, and lowering a closure literal there
     // asks where that declaration's run begins.
+    // The spellings this document declares are written once, beside the
+    // table, so only what it sends and what it counted stand here.
     func written(declaring declared: Int) -> Value? {
         guard case let .document(spellings, _) = space else { return nil }
 
         return .array([
             .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
-            .array(spellings.suffix(declared).map { name in .string(name.spelling) }),
             .array(runs.map { run in .array([.string(run.name.spelling), .int(run.count)]) })
         ])
     }
 
     // Read back beside the spellings the document declares, because what a
     // body's number reaches is answered from here rather than from those: the
-    // declarations stand at the end of this list, and a list whose tail is
-    // some other module's names sends every self call somewhere else while
-    // every other part of the object stays in step.
+    // declarations stand at the end of this list, behind what it sends.
     init(written value: Value, declaring declared: [Name]) throws {
         var fields = try Fields(value, of: "numbering")
 
-        // Two runs of names, not one. What a document sends stands first and
-        // what it declares stands behind, each in its own order, so a reading
-        // that took them as one list would have to take them out of order to
-        // take them at all. Each is judged as what it is.
         let sent = try Fields.ordered(fields.next(), of: "numbering imports") { written in
             try Fields.name(written, of: "numbering imports")
-        }
-        let own = try Fields.ordered(fields.next(), of: "numbering declarations") { written in
-            try Fields.name(written, of: "numbering declarations")
         }
         let counts = try Self.read(try fields.next(), of: "numbering closures")
 
         try fields.end()
 
-        guard own == declared else {
-            throw ObjectRefused("a numbering counts spellings its document does not declare")
-        }
-
-        // A writing counts a name only where that name wrote one, so a count
-        // of none is a count no writing lays down. Two writings for one
-        // numbering otherwise, and the reading answers them the same. Which
-        // names may be counted is what the rows say, since a lifted row is
-        // labelled by its writer, and the object holds the two together.
-        guard counts.values.allSatisfy({ $0 > 0 }) else {
-            throw ObjectRefused("a numbering counts no closures for a name it counts")
-        }
-
         // A closure's number stands behind the spellings, so the last number
         // this numbering gives is the spellings and every closure counted
         // together. Counted here, because the door below reaches that number
         // by adding and a sum that leaves an int is not one.
-        var standing = sent.count + own.count
+        var standing = sent.count + declared.count
 
         for count in counts.values {
             let (summed, overflowed) = standing.addingReportingOverflow(count)
@@ -155,7 +132,7 @@ struct Numbering: Sendable {
         // stands up is a numbering that counting could have reached. A
         // beginning written down is a beginning that can disagree with the one
         // beside it; a count is not.
-        self.init(imports: Set(sent), declared: own, closures: counts)
+        self.init(imports: Set(sent), declared: declared, closures: counts)
     }
 
     // MARK: - Public

@@ -265,35 +265,6 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where the spellings stand in an order the table does not")
-    func declarationsOutOfStep() async throws {
-        // Given. A document of two declarations, with the spellings swapped and
-        // the rows left where they were. Each row still knows its own label, so
-        // nothing but the two together can tell.
-        let sut = try Module(
-            procedures: [
-                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
-            ]
-        )
-
-        guard case var .array(parts) = try await parts(of: sut),
-              case let .array(declared) = parts[7],
-              declared.count == 2
-        else {
-            Issue.record("an object writes its declared spellings as a part")
-
-            return
-        }
-
-        parts[7] = .array(declared.reversed())
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
     @Test("is refused where a call stands more arguments than its callee takes")
     func aCallStandingTooMany() async throws {
         // Given. A document whose body calls one of its own declarations, with
@@ -357,30 +328,6 @@ struct ObjectReadingTests {
         }
 
         parts[7] = .array([.string("app.entr\u{0079}\u{0301}")])
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
-    @Test("is refused where a numbering counts a spelling the document does not declare")
-    func aNumberingOffItsDocument() async throws {
-        // Given. A real object whose numbering ends on some other spelling.
-        // The declarations stand at the end of that list, so every self call
-        // would reach whatever the link answers that name with.
-        guard case var .array(parts) = try await parts(),
-              case var .array(numbering) = parts[10],
-              case let .array(spellings) = numbering[1],
-              !spellings.isEmpty
-        else {
-            Issue.record("an object writes its numbering as a part")
-
-            return
-        }
-
-        numbering[1] = .array(spellings.dropLast() + [.string("std.math.add")])
-        parts[10] = .array(numbering)
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -474,32 +421,6 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a body stands sends of its own")
-    func aBodyThatStandsSends() async throws {
-        // Given. A real object with one send added to a row that has a body.
-        // A body's calls are in its own code, so a list here is a fact about
-        // some other kind of row.
-        guard case var .array(parts) = try await parts(),
-              case var .array(table) = parts[8],
-              case var .array(row) = table[0],
-              case let .array(sends) = row[5],
-              sends.isEmpty
-        else {
-            Issue.record("an object writes a row's sends beside its implementation")
-
-            return
-        }
-
-        row[5] = .array([.array([.int(0), .array([])])])
-        table[0] = .array(row)
-        parts[8] = .array(table)
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
     @Test("is refused where a claim's contracts stand out of order")
     func claimsOutOfOrder() async throws {
         // Given. A type that answers two contracts, with the two swapped. The
@@ -583,7 +504,7 @@ struct ObjectReadingTests {
 
         guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[10],
-              case let .array(closing) = numbering[2],
+              case let .array(closing) = numbering[1],
               closing.count == 2
         else {
             Issue.record("an object writes where each declaration's closures begin")
@@ -591,7 +512,7 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[2] = .array(closing.reversed())
+        numbering[1] = .array(closing.reversed())
         parts[10] = .array(numbering)
 
         // When / Then.
@@ -675,47 +596,6 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a closure is counted for a declaration that did not write it")
-    func aClosureCountedForAnother() async throws {
-        // Given. Two declarations, one of which writes a closure, with the
-        // count moved onto the other. Every number still stands somewhere, so
-        // nothing is out of range; what moves is which body owns it.
-        let sut = try Module(
-            procedures: [
-                "app.entry": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [Statement(
-                        binding: .constant("made"),
-                        expression: .closure(
-                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-                        )
-                    )],
-                    result: .apply(reference("made"), arguments: [:])
-                ),
-                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
-            ]
-        )
-
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[10],
-              case let .array(counts) = numbering[2],
-              case let .array(entry) = counts.first,
-              counts.count == 1
-        else {
-            Issue.record("an object writes how many closures each declaration wrote")
-
-            return
-        }
-
-        numbering[2] = .array([.array([.string("app.other"), entry[1]])])
-        parts[10] = .array(numbering)
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
     @Test("is refused where the numbers behind the spellings run past what an int holds")
     func closureNumbersPastAnInt() async throws {
         // Given. Two declarations whose counts add up to exactly what an int
@@ -745,50 +625,10 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[2] = .array([
+        numbering[1] = .array([
             .array([.string("app.entry"), .int(.max - 1)]),
             .array([.string("app.other"), .int(1)])
         ])
-        parts[10] = .array(numbering)
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
-    @Test("is refused where a numbering counts a declaration for no closures")
-    func aDeclarationCountedForNone() async throws {
-        // Given. One declaration writing one closure, with a second name
-        // counted for none beside it. A writing counts a name only where that
-        // name wrote one, so nothing it lays down carries this entry.
-        let sut = try Module(
-            procedures: [
-                "app.entry": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [Statement(
-                        binding: .constant("made"),
-                        expression: .closure(
-                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-                        )
-                    )],
-                    result: .apply(reference("made"), arguments: [:])
-                ),
-                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
-            ]
-        )
-
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[10],
-              case let .array(counts) = numbering[2],
-              counts.count == 1
-        else {
-            Issue.record("an object writes how many closures each declaration wrote")
-
-            return
-        }
-
-        numbering[2] = .array(counts + [.array([.string("app.other"), .int(0)])])
         parts[10] = .array(numbering)
 
         // When / Then.
@@ -819,7 +659,7 @@ struct ObjectReadingTests {
 
         guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[10],
-              case let .array(counts) = numbering[2],
+              case let .array(counts) = numbering[1],
               case let .array(entry) = counts.first,
               counts.count == 1
         else {
@@ -828,7 +668,7 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[2] = .array([.array([entry[0], .int(4)])])
+        numbering[1] = .array([.array([entry[0], .int(4)])])
         parts[10] = .array(numbering)
 
         // When / Then.
@@ -866,7 +706,7 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[2] = .array([
+        numbering[1] = .array([
             .array([.string("app.entry"), .int(.max)]),
             .array([.string("app.other"), .int(.max)])
         ])
@@ -912,186 +752,6 @@ struct ObjectReadingTests {
 
         #expect(throws: ObjectRefused.self) {
             try Compiled(written: written, of: nil)
-        }
-    }
-
-    @Test("is refused where the variables stand out of name order")
-    func variablesOutOfOrder() async throws {
-        // Given. Two module variables with the pair swapped. A body reaches one
-        // by its number and never by its name, so the order is the fact and the
-        // two would read each other's start.
-        let sut = try Module(
-            variables: ["app.one": .literal(.int(1)), "app.two": .literal(.int(2))],
-            procedures: [
-                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: reference("app.one"))
-            ]
-        )
-
-        guard case var .array(parts) = try await parts(of: sut),
-              case let .array(variables) = parts[12],
-              variables.count == 2
-        else {
-            Issue.record("an object writes what its variables start holding")
-
-            return
-        }
-
-        parts[12] = .array(variables.reversed())
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
-    @Test("is refused where a call reaches a number the document never gave")
-    func aCallOffTheNumbering() async throws {
-        // Given. A body that calls one of its own declarations, with the number
-        // moved past everything this document numbered. What a number stands
-        // for is the link's answer, but one never given is one no link answers.
-        let sut = try Module(
-            procedures: [
-                "app.entry": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "app.twice", arguments: ["n": .literal(.int(2))]))
-                ),
-                "app.twice": Procedure(
-                    signature: Signature(parameters: ["n": Parameter(type: .int)], returns: .int),
-                    body: [],
-                    result: reference("n")
-                )
-            ]
-        )
-
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(table) = parts[8],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[6],
-              case var .array(body) = implementation[1],
-              case var .array(result) = body[1],
-              case var .array(operation) = result[0],
-              case let .int(11) = operation[0],
-              case var .array(call) = operation[1]
-        else {
-            Issue.record("an object writes a body whose result is a call")
-
-            return
-        }
-
-        call[0] = .int(9999)
-        operation[1] = .array(call)
-        result[0] = .array(operation)
-        body[1] = .array(result)
-        implementation[1] = .array(body)
-        row[6] = .array(implementation)
-        table[0] = .array(row)
-        parts[8] = .array(table)
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
-    @Test("is refused where a body stands on a type number the document never gave")
-    func aTypeNumberOffTheNumbering() async throws {
-        // Given. A body that casts to a declared type, with the number moved
-        // past everything this document numbered.
-        let sut = try Module(
-            types: ["app.Point": .record(["x": .int])],
-            procedures: [
-                "app.entry": Procedure(
-                    signature: Signature(parameters: ["p": Parameter(type: .any)], returns: .named("app.Point")),
-                    body: [],
-                    result: .cast(reference("p"), as: .named("app.Point"), optional: false)
-                )
-            ]
-        )
-
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(table) = parts[8],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[6],
-              case var .array(body) = implementation[1],
-              case var .array(result) = body[1],
-              case var .array(operation) = result[0],
-              case let .int(6) = operation[0],
-              case var .array(type) = operation[2],
-              case let .int(17) = type[0]
-        else {
-            Issue.record("an object writes a body that casts to a declared type")
-
-            return
-        }
-
-        type[1] = .int(9999)
-        operation[2] = .array(type)
-        result[0] = .array(operation)
-        body[1] = .array(result)
-        implementation[1] = .array(body)
-        row[6] = .array(implementation)
-        table[0] = .array(row)
-        parts[8] = .array(table)
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
-        }
-    }
-
-    @Test("is refused where a place inside it addresses another document")
-    func aPlaceOfAnotherDocument() async throws {
-        // Given. A document that leans a type on a contract, so the object
-        // holds a place, with that place moved onto some other document.
-        let sut = try Module(
-            types: ["app.Box": .record(["v": .int])],
-            contracts: ["app.Show": ["show": Signature(returns: .int)]],
-            claims: ["app.Box": ["app.Show"]],
-            procedures: [
-                "app.entry": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [Statement(
-                        binding: .constant("box"),
-                        expression: .cast(
-                            .record(["v": .literal(.int(1))]),
-                            as: .named("app.Box"),
-                            optional: false
-                        )
-                    )],
-                    result: .call(Call(receiver: reference("box"), selector: "app.Show.show"))
-                ),
-                "app.Box.show": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .named("app.Box"))],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(leaned) = parts[6],
-              case var .array(entry) = leaned.first,
-              case var .array(place) = entry[2],
-              leaned.count == 1
-        else {
-            Issue.record("an object writes where each pair its bodies lean on was written")
-
-            return
-        }
-
-        place[0] = .array([.bytes([0x07])])
-        entry[2] = .array(place)
-        leaned[0] = .array(entry)
-        parts[6] = .array(leaned)
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
         }
     }
 

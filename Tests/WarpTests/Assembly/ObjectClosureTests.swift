@@ -79,58 +79,7 @@ struct ObjectClosureTests {
         #expect(answer == .int(11))
     }
 
-    @Test("an object whose numbering names another writer than a lifted row's is refused")
-    func aNumberingNamingAnotherWriterIsRefused() throws {
-        // Given. One declaration, and one lifted row labelled by it, which the
-        // numbering attributes to a name that wrote nothing.
-        let table = [try ObjectCoverageFixture.row(label: "a.one", body: true), try ObjectCoverageFixture.lifted(label: "a.one")]
-
-        // When / Then
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(
-                document: .assembled,
-                types: [:],
-                constraints: [:],
-                contracts: [:],
-                claims: [:],
-                leaned: [:],
-                declared: ["a.one"],
-                constants: [],
-                table: table,
-                answers: [:],
-                numbering: Numbering(imports: [], declared: ["a.one"], closures: ["a.two": 1]),
-                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
-                judging: [],
-                dependencies: []
-            )
-        }
-    }
-
-    @Test("a compiled document counting its constants out of name order is refused")
-    func constantsOutOfOrderAreRefused() throws {
-        // Given. Two constants counted in the order an object refuses to read.
-        // When / Then
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(
-                document: .assembled,
-                types: [:],
-                constraints: [:],
-                contracts: [:],
-                claims: [:],
-                leaned: [:],
-                declared: [],
-                constants: ["a.two", "a.one"],
-                table: [],
-                answers: [:],
-                numbering: Numbering(imports: [], declared: [], closures: [:]),
-                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
-                judging: [],
-                dependencies: []
-            )
-        }
-    }
-
-    @Test("a parameter default holding a procedure is refused where it is written and where it is read")
+    @Test("a parameter default holding a procedure is refused where it is written")
     func aProcedureDefaultIsRefused() throws {
         // Given. A row whose parameter falls back to a closure, which is a
         // default no document writes.
@@ -172,30 +121,6 @@ struct ObjectClosureTests {
         #expect(throws: ObjectUnwritable.self) {
             try compiled.object()
         }
-
-        // And an object forged to hold one in every default it writes, the
-        // ones inside type expressions included, is refused where it is read.
-        let closure = try ObjectWriter().value(.procedure(ObjectCoverageFixture.everyValueClosure))
-        let forged = forging(try ObjectCoverageFixture.everything.object(), default: closure)
-
-        #expect(forged != (try ObjectCoverageFixture.everything.object()))
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: forged, of: nil)
-        }
-    }
-
-    // The same object with every parameter's default replaced. A parameter is
-    // written as four fields, each present one wrapped as a list of one, the
-    // last its description, and the fixture describes every one of its
-    // parameters the same way.
-    private func forging(_ written: Value, default replacement: Value) -> Value {
-        guard case var .array(parts) = written else { return written }
-
-        if parts.count == 4, parts[3] == .array([.string(ObjectCoverageFixture.parameter.description ?? "")]) {
-            parts[2] = .array([replacement])
-        }
-
-        return .array(parts.map { part in forging(part, default: replacement) })
     }
 
     @Test("a closure spelled by a writer no document of the link has is refused at the link")

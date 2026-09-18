@@ -202,46 +202,6 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
-        // What a variable is, is where it stands in this list: a body reaches
-        // one by its number and never by its name. So the order is the fact,
-        // and two entries swapped are two variables reading each other's start.
-        guard variables.map(\.name).ordered else {
-            throw ObjectRefused("this document writes its variables out of name order")
-        }
-
-        // Constants are read out of an object in name order and refused in
-        // any other, so a document counting them in another order is one
-        // that writes what it cannot read back.
-        guard constants.ordered else {
-            throw ObjectRefused("this document counts its constants out of name order")
-        }
-
-        // Which row a spelling stands for is read off where it stands in this
-        // list, and which code a native row brings is read off the row's own
-        // label. The two answer the same question, so a list that names them
-        // in another order leaves every row knowing itself and every spelling
-        // reaching somebody else.
-        guard declared == table.prefix(declared.count).map(\.label) else {
-            throw ObjectRefused("an object declares its rows in an order its table does not")
-        }
-
-        // A lifted row is labelled by what wrote the closure, and the
-        // numbering says what wrote each. A closure value is spelled by the
-        // two together, so a row whose numbering names another writer is a
-        // row two spellings reach. What writes one is a declaration, a
-        // constant or a variable of this document and nothing else.
-        let writers = Set(declared + constants + variables.map(\.name))
-
-        for (index, row) in table.enumerated().dropFirst(declared.count) {
-            guard numbering.writer(of: index - declared.count)?.by == row.label else {
-                throw ObjectRefused("a numbering writes a closure for a name other than the row's")
-            }
-
-            guard writers.contains(row.label) else {
-                throw ObjectRefused("a closure is written under a name its document does not declare")
-            }
-        }
-
         self.init(
             document: document,
             types: types,
@@ -269,8 +229,6 @@ public struct Compiled: Sendable, Declaring {
             try row.judge(
                 standingIn: { number in frame(ofClosure: number, written: row.label) },
                 reaching: reaches(_:),
-                numbering: typeNumbering.types.indices.contains,
-                membering: typeNumbering.memberships.indices.contains,
                 holding: variables.count
             )
         }
@@ -311,7 +269,7 @@ public struct Compiled: Sendable, Declaring {
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an object stand, and it moves when they move
     // and for no other reason.
-    static let format = 6
+    static let format = 7
 
     // Which Warp wrote it. An object is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a

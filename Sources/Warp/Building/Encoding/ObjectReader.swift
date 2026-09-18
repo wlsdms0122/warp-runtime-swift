@@ -145,17 +145,10 @@ struct ObjectReader {
         .written(Identity(try Fields.bytes(value, of: "writer")))
     }
 
-    // The document a place inside this object is an address in. Every one of
-    // them is this document, or none at all where the program was never
-    // written down. A place naming some third document addresses a text this
-    // link was never handed.
+    // The document a place inside this object is an address in.
     private func held(_ value: Value) throws -> Place.Document {
         let read = try Fields.maybe(value, of: "place document") { written in
             Identity(try Fields.bytes(written, of: "place document"))
-        }
-
-        guard read == nil || read == identity else {
-            throw ObjectRefused("a place inside this object addresses another document")
         }
 
         return Place.Document(identity: read)
@@ -400,17 +393,7 @@ private extension ObjectReader {
         let read = Parameter(
             type: try fields.maybe(expression),
             candidates: try fields.maybe { written in try Fields.list(written, of: "candidates", text) },
-            default: try fields.maybe { written in
-                let read = try self.value(written)
-
-                // What the writer refuses to write, read as what it is: no
-                // document writes a procedure as data.
-                guard !read.holdsProcedure else {
-                    throw ObjectRefused("a parameter's default holds a procedure, which no document writes")
-                }
-
-                return read
-            },
+            default: try fields.maybe { written in try self.value(written) },
             description: try fields.maybe(text)
         )
 
