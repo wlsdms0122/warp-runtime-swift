@@ -48,6 +48,12 @@ public struct Closure: Sendable {
     let linked: Linked?
     let captured: [(slot: Int, cell: Cell)]
 
+    // What a refusal calls this closure, spelled as the hop a trace takes
+    // into its body.
+    var rendered: String {
+        Trace.Hop.closure(of: writer.name.spelling, nth: nth).rendered
+    }
+
     // Whether this may run beside another body. Constness does not answer it: a
     // const body can still call a native procedure that holds state, and that procedure
     // is what two of these would meet in. Asked of the row the link answered,

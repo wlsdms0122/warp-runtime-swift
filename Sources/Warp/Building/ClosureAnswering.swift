@@ -131,12 +131,12 @@ final class ClosureAnswering {
     // and it is refused here rather than read into the frame at the run.
     private func held(_ closure: Closure, to row: Linked, at place: Place) throws {
         guard case let .body(_, frame) = row.implementation else {
-            throw BuildError.unjudged("closure \(closure.nth) of '\(closure.writer.name)' standing on a native row", at: place)
+            throw BuildError.unjudged("'\(closure.rendered)' standing on a native row", at: place)
         }
 
         guard frame.fills(closure.captured.map(\.slot)) else {
             throw BuildError(
-                "closure \(closure.nth) of '\(closure.writer.name)' holds cells at"
+                "'\(closure.rendered)' holds cells at"
                     + " \(closure.captured.map(\.slot).sorted()), and its frame is filled at \(frame.captures.sorted())",
                 at: place
             )

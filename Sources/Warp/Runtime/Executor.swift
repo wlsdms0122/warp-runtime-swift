@@ -472,7 +472,7 @@ public struct Executor: Sendable {
                 settled: settled,
                 receiver: receiver,
                 holding: holds,
-                at: trace.appending(.procedure(callee.label.spelling))
+                at: trace.appending(callee.hop)
             )
         }
     }
@@ -543,7 +543,7 @@ public struct Executor: Sendable {
             body,
             of: linked,
             in: &activation,
-            at: trace.appending(.closure(of: closure.writer.name.spelling, nth: closure.nth))
+            at: trace.appending(linked.hop)
         )
     }
 
@@ -665,7 +665,7 @@ public struct Executor: Sendable {
         guard !frame.variables.isEmpty else { return activation }
 
         guard boxes.indices.contains(callee.origin) else {
-            throw ExecutionError("\(callee.rendered) reads its document's variables, and this run holds none")
+            throw ExecutionError("'\(callee.rendered)' reads its document's variables, and this run holds none")
         }
 
         let held = boxes[callee.origin]
@@ -689,7 +689,7 @@ public struct Executor: Sendable {
         try handed.map { handed in
             guard case let .hold(handle) = activation.cells[handed.address.slot] else {
                 throw ExecutionError(
-                    "\(callee.rendered) takes '\(callee.slots[handed.position].name)' in place,"
+                    "'\(callee.rendered)' takes '\(callee.slots[handed.position].name)' in place,"
                         + " and '\(activation.frame.names[handed.address.slot])' is not a variable here"
                 )
             }
@@ -962,7 +962,7 @@ public struct Executor: Sendable {
                 receiver: sent(to: callee, receiver: sentTo, arguments: settled),
                 settled: settled,
                 holds: [],
-                trace: trace.appending(.procedure(callee.label.spelling))
+                trace: trace.appending(callee.hop)
             )
 
         case let .body(body, frame):
@@ -982,7 +982,7 @@ public struct Executor: Sendable {
                 body,
                 of: callee,
                 in: &inner,
-                at: trace.appending(.procedure(callee.label.spelling))
+                at: trace.appending(callee.hop)
             )
         }
     }
@@ -1000,7 +1000,7 @@ public struct Executor: Sendable {
 
         guard callee.constness == .const else {
             throw ExecutionError(
-                "\(callee.rendered) answers only by running, so it cannot be"
+                "'\(callee.rendered)' answers only by running, so it cannot be"
                     + " read as data here"
             )
         }
@@ -1030,7 +1030,7 @@ public struct Executor: Sendable {
         // procedure that receives by no name has no slot for it.
         guard callee.receiverPosition != nil else {
             throw ExecutionError(
-                "\(callee.rendered) is sent to something, and it"
+                "'\(callee.rendered)' is sent to something, and it"
                     + " \(BuildError.receivesByNoName)"
             )
         }
@@ -1054,7 +1054,7 @@ public struct Executor: Sendable {
         // about a send the build cannot read.
         guard values.count == sending.handing.count else {
             throw ExecutionError(
-                "\(callee.rendered) is handed \(values.count) here, and the procedure sending"
+                "'\(callee.rendered)' is handed \(values.count) here, and the procedure sending"
                     + " it declares it hands \(sending.handing.count)"
             )
         }
@@ -1066,7 +1066,7 @@ public struct Executor: Sendable {
             // row this send was not compiled against.
             guard given.indices.contains(position) else {
                 throw ExecutionError(
-                    "\(callee.rendered) takes \(callee.slots.count) parameters, and this send"
+                    "'\(callee.rendered)' takes \(callee.slots.count) parameters, and this send"
                         + " stands something at \(position)"
                 )
             }
@@ -1078,7 +1078,7 @@ public struct Executor: Sendable {
             // refuse the same thing.
             guard receiver == nil || position != callee.receiverPosition else {
                 throw ExecutionError(
-                    "'\(callee.slots[position].name)' sent to \(callee.rendered) both as what"
+                    "'\(callee.slots[position].name)' sent to '\(callee.rendered)' both as what"
                         + " it is sent to and by name"
                 )
             }

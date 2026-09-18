@@ -31,23 +31,18 @@ public struct Trace: Sendable, Equatable {
     //   hello.greet.many[2].call
     //   hello.greet.closure[0].say
     //
-    // Names are joined with dots and what tells one of a name from another is
-    // bracketed: which round of a loop, which piece of a fan-out, which of
-    // the closures a declaration wrote.
+    // Names are joined with dots and what tells one from another of the same
+    // name is bracketed: which round of a loop, which piece of a fan-out,
+    // which of the closures a declaration wrote, and which statement where
+    // the text gave it no name.
     public var rendered: String {
         hops.reduce(into: "") { written, hop in
             switch hop {
-            case let .procedure(name), let .statement(name):
-                written += written.isEmpty ? name : ".\(name)"
+            case .procedure, .closure, .statement:
+                written += written.isEmpty ? hop.rendered : ".\(hop.rendered)"
 
-            case let .closure(writer, nth):
-                written += (written.isEmpty ? writer : ".\(writer)") + ".closure[\(nth)]"
-
-            case let .round(index):
-                written += "[\(index)]"
-
-            case let .piece(name):
-                written += "[\(name)]"
+            case .round, .piece:
+                written += hop.rendered
             }
         }
     }
@@ -105,5 +100,16 @@ public extension Trace {
         case statement(String)
         case round(Int)
         case piece(String)
+
+        // How the hop reads on its own, which is also what a refusal calls
+        // the body it enters.
+        var rendered: String {
+            switch self {
+            case let .procedure(name), let .statement(name): name
+            case let .closure(writer, nth): "\(writer).closure[\(nth)]"
+            case let .round(index): "[\(index)]"
+            case let .piece(name): "[\(name)]"
+            }
+        }
     }
 }

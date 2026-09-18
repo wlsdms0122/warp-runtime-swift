@@ -37,11 +37,14 @@ public final class Linked: Sendable {
     // a closure value is spelled by. Nil for a declaration's own row.
     let nth: Int?
 
-    // What a refusal calls this row: a declaration by its spelling, a closure
-    // by which of its writer's it is.
-    var rendered: String {
-        nth.map { nth in "closure \(nth) of '\(label)'" } ?? "'\(label)'"
+    // The hop a trace takes into this row: a declaration by its spelling, a
+    // closure by which of its writer's it is.
+    var hop: Trace.Hop {
+        nth.map { nth in .closure(of: label.spelling, nth: nth) } ?? .procedure(label.spelling)
     }
+
+    // What a refusal calls this row.
+    var rendered: String { hop.rendered }
 
     public let signature: Signature
 
@@ -231,7 +234,7 @@ public final class Linked: Sendable {
     func settling(receiver value: Value) throws -> Value {
         guard let position = receiverPosition else { return value }
 
-        return try slots[position].checking(value, at: "the receiver of \(rendered)", in: table)
+        return try slots[position].checking(value, at: "the receiver of '\(rendered)'", in: table)
     }
 
     // The returned value, checked against what was declared.

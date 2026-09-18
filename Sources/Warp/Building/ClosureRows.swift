@@ -56,7 +56,7 @@ struct ClosureRows {
         guard let origins = writing[closure.writer] else {
             throw BuildError(
                 naming.contains(closure.writer.document)
-                    ? "closure \(closure.nth) of '\(closure.writer.name)', which wrote no closure"
+                    ? "'\(closure.rendered)', and '\(closure.writer.name)' wrote no closure"
                     : "a closure '\(closure.writer.name)' wrote in a document no module in this link is",
                 at: place
             )
@@ -75,7 +75,7 @@ struct ClosureRows {
               closures[origin].indices.contains(nth)
         else {
             throw BuildError(
-                "closure \(closure.nth) of '\(closure.writer.name)', which wrote no such closure",
+                "'\(closure.rendered)', and '\(closure.writer.name)' wrote no such closure",
                 at: place
             )
         }
