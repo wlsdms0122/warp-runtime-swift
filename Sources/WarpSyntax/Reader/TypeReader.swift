@@ -345,6 +345,12 @@ public struct TypeReader: Decodable {
     // One name with nothing structural in it. What a type parameter's spelling
     // has to be, and what a `bounds` value has to be: the two halves of one
     // notation, held to one predicate.
+    static func isName(_ text: String) -> Bool {
+        !text.isEmpty && !text.contains("<") && !text.contains(">")
+            && !text.contains(" ") && !text.contains(":")
+    }
+
+    // MARK: - Private
     // The parts an `&` at the top of a spelling joins, or nothing where the
     // spelling has no such `&`: one inside brackets belongs to the argument.
     private static func joined(_ text: String) -> [Substring]? {
@@ -372,12 +378,6 @@ public struct TypeReader: Decodable {
         return parts
     }
 
-    static func isName(_ text: String) -> Bool {
-        !text.isEmpty && !text.contains("<") && !text.contains(">")
-            && !text.contains(" ") && !text.contains(":")
-    }
-
-    // MARK: - Private
     private static func read(from decoder: Decoder) throws -> TypeExpression {
         if let written = try? decoder.singleValueContainer().decode(String.self) {
             return try parse(written)

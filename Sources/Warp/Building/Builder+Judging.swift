@@ -198,6 +198,16 @@ extension Builder {
                 )
             }
 
+            guard !nested || !Builder.handedOnce(type, in: table) else {
+                throw BuildError(
+                    "carries `\(type.rendered)` inside another type, and a value written"
+                        + " `linear` is followed by the name that holds it."
+                        + " Nothing follows one inside a list, a record or"
+                        + " another declaration",
+                    at: place
+                )
+            }
+
         // The flag rides through rather than turning on: a procedure type in a
         // signature's slot is part of that signature, and one in a declared
         // type is not a filling site. A parameter written there is never bound
@@ -242,6 +252,19 @@ extension Builder {
                 throw BuildError(
                     "joins '\(name)' with `&`, and `&` joins the names of memberships"
                         + " and contracts, which no module in this link declares '\(name)' as",
+                    at: place
+                )
+            }
+
+            // What every member of a membership hands on once is handed on
+            // once, and a value handed on once is followed by the name that
+            // holds it, which nothing inside another type does.
+            guard !nested || !Builder.handedOnce(type, in: table) else {
+                throw BuildError(
+                    "carries `\(type.rendered)` inside another type, and a value written"
+                        + " `linear` is followed by the name that holds it."
+                        + " Nothing follows one inside a list, a record or"
+                        + " another declaration",
                     at: place
                 )
             }

@@ -428,6 +428,41 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a contract named in a contract's own signature holds the witness to it")
+    func aContractInItsOwnSignatureIsJudged() async throws {
+        // Given. `describe` promises what answers the contract, and the
+        // witness answers a whole number
+        let sut = try Module(
+            types: ["bank.Card": .record(["last": .string])],
+            contracts: ["app.Describable": ["describe": Signature(returns: .named("app.Describable"))]],
+            claims: ["bank.Card": ["app.Describable"]],
+            procedures: [
+                "bank.Card.describe": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Card"))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .constant("card"),
+                            expression: .cast(.record(["last": .literal(.string("x"))]), as: .named("bank.Card"), optional: false)
+                        )
+                    ],
+                    result: .call(Call(receiver: reference("card"), selector: "app.Describable.describe"))
+                )
+            ]
+        )
+
+        // When / Then. The claim is leaned on, and what is behind it is wrong
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("where the contract writes")
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

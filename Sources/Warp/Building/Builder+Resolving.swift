@@ -30,12 +30,21 @@ extension Builder {
         contractProcedures: [Name: ContractProcedure],
         unheld: [Claim: String]
     ) {
+        // The witnesses are judged against a table that already says which
+        // types the documents claim answer which contracts, so a contract
+        // named in a contract's own signature stands as one, and an answer
+        // that leans on a claim is held to what the documents say.
+        let claimed = claims.reduce(
+            into: contracts.keys.reduce(into: [Name: Set<Name>]()) { table, contract in table[contract] = [] }
+        ) { table, placed in
+            table[placed.held.contract, default: []].insert(placed.held.type)
+        }
         let witnessed = try witnesses(
             of: claims,
             asking: contracts,
             over: declaredTypes,
             among: signatures,
-            in: declaring
+            in: declaring.satisfying(claimed, unsettled: unsettled)
         )
         let table = declaring.satisfying(
             witnessed.answering.mapValues { answering in Set(answering.keys) },
