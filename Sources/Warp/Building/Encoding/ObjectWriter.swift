@@ -60,8 +60,17 @@ struct ObjectWriter {
             .array(compiled.leaned.keys.sorted().map { claim in
                 .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
             }),
-            .array(compiled.declared.map(name)),
-            .array(try compiled.table.map(judged)),
+            // The rows the document declares stand first, each under its
+            // spelling; the rows its bodies lifted stand behind, and what wrote
+            // each is the numbering's answer, so they carry no spelling.
+            .array([
+                .array(try compiled.table.prefix(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
+                    try judged(row, spelled: true)
+                }),
+                .array(try compiled.table.dropFirst(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
+                    try judged(row, spelled: false)
+                })
+            ]),
             keyed(compiled.answers, lowered),
             numbering,
             typeNumbering(compiled.typeNumbering),
@@ -539,9 +548,8 @@ private extension ObjectWriter {
 }
 
 private extension ObjectWriter {
-    func judged(_ row: Judged) throws(ObjectUnwritable) -> Value {
-        .array([
-            name(row.label),
+    func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
+        .array((spelled ? [name(row.label)] : []) + [
             try signature(row.signature),
             constness(row.constness),
             isolation(row.isolation),

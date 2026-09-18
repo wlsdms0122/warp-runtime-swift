@@ -53,18 +53,37 @@ struct ObjectReader {
         }
         let leaned = try leaned(fields.next())
 
-        // The spellings this document declares, read before the parts that
-        // stand on them: what a body's number reaches is the numbering's
-        // answer, and what the numbering may say is this list.
-        //
         // Every part is named as it is read, and the names run in the order
         // the writing lays them down. The order is the agreement with the
         // writing, so it is said here in sentences rather than left standing
         // in the order some initialiser happens to declare.
-        let declared = try Fields.ordered(fields.next(), of: "declared", name)
-        let table = try fields.list(judged)
+        //
+        // The rows the document declares stand first, each under its
+        // spelling, and those spellings are what the numbering counts from.
+        // The rows its bodies lifted stand behind and are spelled by the
+        // numbering, so they are read once it is.
+        var rows = try Fields(fields.next(), of: "table")
+        let declaredRows = try Fields.list(rows.next(), of: "declared rows") { written in try judged(written, spelled: nil) }
+        let liftedRows = try Fields.list(rows.next(), of: "lifted rows") { written in written }
+
+        try rows.end()
+
+        let declared = declaredRows.map(\.label)
+
+        // One row per spelling, in name order: what the numbering counts
+        // from and what a link looks a spelling up in both stand on it.
+        guard declared.ordered else {
+            throw ObjectRefused("the declared rows stand out of name order, or one spelling stands twice")
+        }
         let answers = try keyed(fields.next(), of: "answers", lowered)
         let numbering = try Numbering(written: fields.next(), declaring: declared)
+        let table = declaredRows + (try liftedRows.enumerated().map { index, written in
+            guard let writer = numbering.writer(of: index) else {
+                throw ObjectRefused("a lifted row stands where the numbering counts no closure")
+            }
+
+            return try judged(written, spelled: writer.by)
+        })
         let typeNumbering = try typeNumbering(fields.next())
         let variables = try fields.list(variable)
         let constants = try Fields.ordered(fields.next(), of: "constants", name)
@@ -147,11 +166,11 @@ struct ObjectReader {
 
     // The document a place inside this object is an address in.
     private func held(_ value: Value) throws -> Place.Document {
-        let read = try Fields.maybe(value, of: "place document") { written in
-            Identity(try Fields.bytes(written, of: "place document"))
-        }
-
-        return Place.Document(identity: read)
+        Place.Document(
+            identity: try Fields.maybe(value, of: "place document") { written in
+                Identity(try Fields.bytes(written, of: "place document"))
+            }
+        )
     }
 
     private func leaned(_ value: Value) throws -> [Claim: Place] {
@@ -665,9 +684,11 @@ private extension ObjectReader {
 }
 
 private extension ObjectReader {
-    func judged(_ value: Value) throws -> Judged {
+    // A declared row carries its spelling; a lifted row is handed the one
+    // its numbering answers.
+    func judged(_ value: Value, spelled: Name?) throws -> Judged {
         var fields = try Fields(value, of: "row")
-        let label = try name(fields.next())
+        let label = try spelled ?? name(fields.next())
         let signature = try signature(fields.next())
         let read = try Judged(
             label: label,

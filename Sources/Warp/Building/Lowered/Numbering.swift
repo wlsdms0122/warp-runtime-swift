@@ -112,6 +112,13 @@ struct Numbering: Sendable {
 
         try fields.end()
 
+        // A writing counts a name only where that name wrote one, so a count
+        // of none is a count no writing lays down, and one writing reads
+        // back as one.
+        guard counts.values.allSatisfy({ count in count > 0 }) else {
+            throw ObjectRefused("a numbering counts no closures for a name it counts")
+        }
+
         // A closure's number stands behind the spellings, so the last number
         // this numbering gives is the spellings and every closure counted
         // together. Counted here, because the door below reaches that number
