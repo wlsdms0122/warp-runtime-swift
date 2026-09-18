@@ -100,6 +100,17 @@ extension Builder {
 
         promised.binding(against: read, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
 
+        // A parameter the promise mentions twice is answered the same both
+        // times, or the answer is two things.
+        guard disagreeing.isEmpty else {
+            let named = disagreeing.keys.sorted().map { parameter in
+                "'\(parameter)' is answered as \(readings[parameter]?.rendered(in: table) ?? "?")"
+                    + " and as \(disagreeing[parameter]?.rendered(in: table) ?? "?")"
+            }
+
+            throw BuildError(named.joined(separator: ", "), at: place.part(resulting ? .result : .returns))
+        }
+
         for held in holding {
             for bound in held.bounds {
                 if let refusal = refusal(of: held.reading, holdingTo: bound, as: "the answer holds", in: table, fulfillment: fulfillment, at: place) {

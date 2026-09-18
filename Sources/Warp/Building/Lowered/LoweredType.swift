@@ -191,11 +191,6 @@ indirect enum LoweredType: Sendable {
         case let .parameter(name, _):
             return .reading(of: name, path: path.map(\.unmarked))
 
-        // Nothing ties a composition to another mention, so a walk through
-        // one reaches what a walk through `any` does.
-        case .composition:
-            return .any
-
         case let .reading(of, walked):
             return .reading(of: of, path: walked + path.map(\.unmarked))
 

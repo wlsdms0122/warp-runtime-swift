@@ -328,6 +328,55 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a value of a composition fits only a slot one of every membership's members fits")
+    func aCompositionValueIsHeldWhereItGoes() async throws {
+        // Given. `it` belongs to `A`, whose members are int and string, and is
+        // handed to a slot that takes bool
+        let sut = try Module(
+            constraints: ["A": [.int, .string]],
+            procedures: [
+                "flag": Procedure(
+                    signature: Signature(parameters: ["on": Parameter(type: .bool)], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(
+                    signature: Signature(parameters: ["it": Parameter(type: .composition(["A"]))], returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "flag", arguments: ["on": reference("it")]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError
+        }
+    }
+
+    @Test("a promise mentioning one parameter twice is answered the same both times")
+    func aPromiseReadTwoWaysRefuses() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])),
+                    body: [],
+                    result: .record(["a": .literal(.int(1)), "b": .literal(.string("x"))])
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("is answered as int and as string")
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

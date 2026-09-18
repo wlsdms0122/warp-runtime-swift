@@ -561,7 +561,13 @@ extension Builder {
                 )
             }
 
-            for bound in bounded.first ?? [] where table.constraint(bound) == nil && table.contracts[bound] == nil {
+            let names = bounded.first ?? []
+
+            guard Set(names).count == names.count else {
+                throw BuildError("`some \(parameter)` names one bound twice", at: place)
+            }
+
+            for bound in names where table.constraint(bound) == nil && table.contracts[bound] == nil {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
                         + " link declares as a membership or a contract",

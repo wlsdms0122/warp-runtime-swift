@@ -496,7 +496,7 @@ public struct Writer: Sendable {
             }
 
             if let constraints = bounded.first {
-                bounds[name] = .string(constraints.map(\.spelling).joined(separator: " & "))
+                bounds[name] = .string(constraints.sorted().map(\.spelling).joined(separator: " & "))
             }
         }
 

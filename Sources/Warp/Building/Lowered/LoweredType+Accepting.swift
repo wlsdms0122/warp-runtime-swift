@@ -70,8 +70,19 @@ extension LoweredType {
                 }
             }
 
-        case (_, .composition):
-            return true
+        // In the other direction a composition stands for some member of
+        // every membership it names, so it fits where one of those would;
+        // a contract alone names no type, and nothing is provable.
+        case let (_, .composition(bounds)):
+            return bounds.allSatisfy { bound in
+                switch bound {
+                case let .membership(row):
+                    table.constraints[row].contains { member in accepts(member, in: table, assuming: assuming) }
+
+                case .contract:
+                    true
+                }
+            }
 
         // `var` is a fact about a slot, and fitting is asked of the inner
         // type.
