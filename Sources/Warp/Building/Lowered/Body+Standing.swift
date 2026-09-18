@@ -61,7 +61,7 @@ extension Body {
             case let .named(number), let .member(number):
                 types.append(number)
 
-            case let .parameter(_, bounds):
+            case let .parameter(_, bounds), let .composition(bounds):
                 for bound in bounds {
                     guard case let .membership(number) = bound else { continue }
 

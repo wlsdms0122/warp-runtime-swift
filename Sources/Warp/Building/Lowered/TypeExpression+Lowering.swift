@@ -103,7 +103,7 @@ extension TypeExpression {
             }
 
             if table.satisfying[name] != nil {
-                return .parameter(label: nil, bounds: [.contract(name)])
+                return .composition([.contract(name)])
             }
 
             return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
@@ -122,7 +122,7 @@ extension TypeExpression {
                 return .undeclared(label: rendered, refusal: "'\(unfound)', which nothing declares as a membership or a contract")
             }
 
-            return .parameter(label: nil, bounds: bounds(names, in: table))
+            return .composition(bounds(names, in: table))
 
         case let .reading(of, path):
             return .reading(of: of, path: path)

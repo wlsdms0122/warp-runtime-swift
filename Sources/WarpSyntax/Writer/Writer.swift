@@ -238,7 +238,7 @@ public struct Writer: Sendable {
             return .string("some \(name)")
 
         case let .composition(names):
-            return .string(names.map(\.spelling).joined(separator: " & "))
+            return .string(names.sorted().map(\.spelling).joined(separator: " & "))
 
         // Written as the name it is where the element has one, and under its
         // own key where the element has none. An array of procedures is the

@@ -85,20 +85,28 @@ extension LoweredType {
             return .member(try membership(row))
 
         case let .parameter(label, bounds):
-            return .parameter(
-                label: label,
-                bounds: try bounds.map { bound in
-                    guard case let .membership(row) = bound else { return bound }
+            return .parameter(label: label, bounds: try bounds.renumbered(membership: membership))
 
-                    return .membership(try membership(row))
-                }
-            )
+        case let .composition(bounds):
+            return .composition(try bounds.renumbered(membership: membership))
 
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .reading, .undeclared:
             return self
+        }
+    }
+}
+
+extension Array where Element == LoweredType.Bound {
+    // The same bounds over the rows the transform answers: a membership
+    // stands on a row and a contract on a name.
+    func renumbered(membership: (Int) throws -> Int) rethrows -> [LoweredType.Bound] {
+        try map { bound in
+            guard case let .membership(row) = bound else { return bound }
+
+            return .membership(try membership(row))
         }
     }
 }

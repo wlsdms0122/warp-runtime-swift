@@ -159,7 +159,7 @@ final class LoweredTypeTable: Sendable {
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of.
-        case let .parameter(_, bounds):
+        case let .parameter(_, bounds), let .composition(bounds):
             return .settled(bounds.contains(.contract(name)))
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
@@ -200,7 +200,7 @@ final class LoweredTypeTable: Sendable {
         // it fits where every one of those would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is provable
         // and it passes the way an unbounded one does.
-        case let .parameter(_, bounds):
+        case let .parameter(_, bounds), let .composition(bounds):
             let memberships = bounds.compactMap { bound -> Int? in
                 guard case let .membership(constraint) = bound, !assuming.contains(constraint) else { return nil }
 

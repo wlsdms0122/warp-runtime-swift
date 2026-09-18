@@ -297,7 +297,34 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("which 'B' does not admit")
+            error is BuildError && "\(error)".contains("promises A & B")
+        }
+    }
+
+    @Test("a name declared as a composition holds only what every bound admits")
+    func aDeclaredCompositionIsJudgedAtTheBuild() async throws {
+        // Given
+        let sut = try Module(
+            constraints: ["A": [.int, .string], "B": [.string]],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .constant("held", declared: .composition(["A", "B"])),
+                            expression: .literal(.int(5))
+                        )
+                    ],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("holds A & B")
         }
     }
 

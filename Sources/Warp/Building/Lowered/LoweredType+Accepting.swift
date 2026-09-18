@@ -54,6 +54,25 @@ extension LoweredType {
         case (.parameter, _), (_, .parameter):
             return true
 
+        // A composition takes what is not provably outside any of its
+        // bounds: a membership refuses what none of its members admit, a
+        // contract refuses what the table settles as not answering. In the
+        // other direction a composition stands for some type nothing here
+        // lists.
+        case let (.composition(bounds), _):
+            return bounds.allSatisfy { bound in
+                switch bound {
+                case let .membership(row):
+                    table.admits(constraint: row, reading: other, assuming: [])
+
+                case let .contract(name):
+                    if case .settled(false) = table.answering(contract: name, reading: other) { false } else { true }
+                }
+            }
+
+        case (_, .composition):
+            return true
+
         // `var` is a fact about a slot, and fitting is asked of the inner
         // type.
         case let (.variable(inner), _):
@@ -372,7 +391,7 @@ extension LoweredType {
         // An unbounded type parameter is filled by the call, so nothing about
         // the candidates is knowable here. A bounded one takes only what some
         // member of each of its memberships could spell.
-        case let .parameter(_, bounds):
+        case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { bound in
                 guard case let .membership(constraint) = bound else { return true }
 

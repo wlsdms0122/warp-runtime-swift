@@ -41,10 +41,10 @@ extension LoweredType {
         switch (self, given) {
         // A composition has no name to be read under: what arrived is held
         // to its bounds where it arrived, wherever in the slot that was.
-        case let (.parameter(nil, bounds), _):
+        case let (.composition(bounds), _):
             holding.append((reading: given, bounds: bounds))
 
-        case let (.parameter(name?, _), _):
+        case let (.parameter(name, _), _):
             guard let already = bound[name] else {
                 bound[name] = given
 
@@ -148,7 +148,7 @@ extension LoweredType {
     func filling(_ bound: [Name: LoweredType]) -> LoweredType {
         switch self {
         case let .parameter(name, _):
-            return name.map { name in bound[name] ?? .any } ?? self
+            return bound[name] ?? .any
 
         // Nothing fills a walk through a parameter. It is named for a path only
         // the body that wrote it can read, and no call site says anything about

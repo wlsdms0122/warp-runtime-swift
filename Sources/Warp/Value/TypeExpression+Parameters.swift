@@ -11,15 +11,6 @@ import Foundation
 // is bounded by, and whether it has any at all. What a call puts in them is
 // read off the lowered declaration, where the readings are.
 extension TypeExpression {
-    // Every type parameter mentioned in here, each with every constraint
-    // name any occurrence carries: the occurrences below, read as one set
-    // per name.
-    func parameterConstraints(into table: inout [Name: Set<Name>]) {
-        var occurrences: [Name: Set<[Name]>] = [:]
-        parameterOccurrences(into: &occurrences)
-        table.merge(occurrences.constraints) { mine, theirs in mine.union(theirs) }
-    }
-
     // Every type parameter mentioned in here, each with the constraint names
     // every occurrence carries, occurrence by occurrence. What a signature
     // holds a name to is one set, so occurrences carrying two are two claims
@@ -85,9 +76,9 @@ public extension Signature {
             || (returns?.isGeneric ?? false)
     }
 
-    // The type parameters this signature declares, by mention, with every
-    // constraint name written on each. One name may be mentioned bare and
-    // bounded; the bound mention speaks for both.
+    // The type parameters this signature declares, by mention, with the
+    // constraint names each occurrence carries. One name may be mentioned
+    // bare and bounded; the bound mention speaks for both.
     //
     // A nested signature's parameters merge into the same table on purpose.
     // They are this signature's own slots: `map` takes `array<some Element>`
@@ -95,13 +86,6 @@ public extension Signature {
     // parameter filled by one call. Only a parameter behind a `named` type is
     // not collected, because the link refuses one anywhere but a procedure
     // signature and never fills one through the name.
-    func parameterConstraints(into table: inout [Name: Set<Name>]) {
-        var occurrences: [Name: Set<[Name]>] = [:]
-        parameterOccurrences(into: &occurrences)
-        table.merge(occurrences.constraints) { mine, theirs in mine.union(theirs) }
-    }
-
-    // The same, occurrence by occurrence.
     func parameterOccurrences(into table: inout [Name: Set<[Name]>]) {
         for parameter in parameters.values {
             parameter.declared.parameterOccurrences(into: &table)
@@ -184,7 +168,7 @@ extension TypeExpression {
     }
 }
 
-extension Dictionary where Key == Name, Value == Set<[Name]> {
+public extension Dictionary where Key == Name, Value == Set<[Name]> {
     // The occurrences read as one set of names per parameter.
     var constraints: [Name: Set<Name>] {
         mapValues { sets in Set(sets.flatMap { names in names }) }

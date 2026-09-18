@@ -76,7 +76,8 @@ extension Builder {
         to returns: TypeExpression?,
         resulting: Bool,
         at place: Place,
-        in table: LoweredTypeTable
+        in table: LoweredTypeTable,
+        fulfillment: Fulfillment?
     ) throws {
         guard let returns else { return }
 
@@ -92,8 +93,7 @@ extension Builder {
 
         // A composition the declaration promises holds the answer to its
         // bounds the way a slot holds what arrives, wherever in the promise
-        // it stands. What leans on a claim this table cannot see settles
-        // where the value arrives.
+        // it stands.
         var readings: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
         var holding: [(reading: LoweredType, bounds: [LoweredType.Bound])] = []
@@ -102,8 +102,8 @@ extension Builder {
 
         for held in holding {
             for bound in held.bounds {
-                if let refusal = refusal(of: held.reading, holdingTo: bound, as: "the answer", in: table, fulfillment: nil, at: place) {
-                    throw BuildError("answers \(refusal)", at: place.part(resulting ? .result : .returns))
+                if let refusal = refusal(of: held.reading, holdingTo: bound, as: "the answer holds", in: table, fulfillment: fulfillment, at: place) {
+                    throw BuildError(refusal, at: place.part(resulting ? .result : .returns))
                 }
             }
         }
@@ -136,7 +136,8 @@ extension Builder {
             to: returns,
             resulting: block.result != nil,
             at: place,
-            in: context.loweredTypes
+            in: context.loweredTypes,
+            fulfillment: fulfillment
         )
 
         return (inner.block, inner.calls)
@@ -198,7 +199,7 @@ extension Builder {
                 if let refusal = refusal(
                     of: reading,
                     holdingTo: bound,
-                    as: "'\(parameter)'",
+                    as: "'\(parameter)' is read as",
                     in: loweredTypes,
                     fulfillment: fulfillment,
                     at: place
@@ -235,14 +236,14 @@ extension Builder {
                 return nil
 
             case .settled(false):
-                return "\(label) is read as \(reading.rendered(in: loweredTypes)),"
+                return "\(label) \(reading.rendered(in: loweredTypes)),"
                     + " which does not answer every procedure '\(name)' asks"
             }
 
         case let .membership(row):
             guard !loweredTypes.admits(constraint: row, reading: reading, assuming: []) else { return nil }
 
-            return "\(label) is read as \(reading.rendered(in: loweredTypes)),"
+            return "\(label) \(reading.rendered(in: loweredTypes)),"
                 + " which '\(loweredTypes.constraintLabels[row])' does not admit"
         }
     }
@@ -283,8 +284,9 @@ extension Builder {
             return .refusal(named.joined(separator: ", "))
         }
 
-        var mentions: [Name: Set<Name>] = [:]
-        declared.parameterConstraints(into: &mentions)
+        var occurrences: [Name: Set<[Name]>] = [:]
+        declared.parameterOccurrences(into: &occurrences)
+        let mentions = occurrences.constraints
 
         if let refusal = constraintRefusal(
             mentions: mentions,
@@ -301,7 +303,7 @@ extension Builder {
                 if let refusal = refusal(
                     of: held.reading,
                     holdingTo: bound,
-                    as: "'\(held.slot)'",
+                    as: "'\(held.slot)' holds",
                     in: loweredTypes,
                     fulfillment: fulfillment,
                     at: place
@@ -1452,7 +1454,8 @@ extension Builder {
                     to: procedure.signature.returns,
                     resulting: written.result != nil,
                     at: place.part(.closure),
-                    in: context.loweredTypes
+                    in: context.loweredTypes,
+                    fulfillment: ask.fulfillment
                 )
 
                 body = inner.block

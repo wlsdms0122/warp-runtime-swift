@@ -46,10 +46,14 @@ indirect enum LoweredType: Sendable {
     case named(Int)
 
     // A type parameter the call fills, and what the signature held it to.
-    // The label is the spelling that ties one mention to another; a mention
-    // with none is a composition, a value of whatever type answers every
-    // bound, which no call fills and no other mention shares.
-    case parameter(label: Name?, bounds: [Bound])
+    // The label is the spelling that ties one mention to another.
+    case parameter(label: Name, bounds: [Bound])
+
+    // A value of whatever type answers every bound, which no call fills and
+    // no other mention shares: what a contract's name, or `A & B`, stands
+    // for where a type is written. Apart from a parameter, so that what
+    // fills a parameter cannot pass for what holds a value to its bounds.
+    case composition([Bound])
 
     // What a type parameter is held to. Two, because the two are answered
     // differently: a membership lists types and the table lowered them into
@@ -103,7 +107,7 @@ indirect enum LoweredType: Sendable {
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
-            .named, .parameter, .reading, .member, .undeclared:
+            .named, .parameter, .composition, .reading, .member, .undeclared:
             return self
         }
     }
@@ -124,7 +128,7 @@ indirect enum LoweredType: Sendable {
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
             .ranged, .array, .dictionary, .record, .procedure, .nullable,
-            .named, .parameter, .reading, .member, .undeclared:
+            .named, .parameter, .composition, .reading, .member, .undeclared:
             return self
         }
     }
@@ -164,7 +168,7 @@ indirect enum LoweredType: Sendable {
     // Whether what this stands for is settled at the call.
     var decidedAtCall: Bool {
         switch self {
-        case .parameter, .reading:
+        case .parameter, .composition, .reading:
             return true
 
         default:
@@ -184,12 +188,12 @@ indirect enum LoweredType: Sendable {
     // value, and where the walk landed is the same field either way.
     func reaching(_ path: [PathSegment]) -> LoweredType? {
         switch self {
-        case let .parameter(name?, _):
+        case let .parameter(name, _):
             return .reading(of: name, path: path.map(\.unmarked))
 
         // Nothing ties a composition to another mention, so a walk through
         // one reaches what a walk through `any` does.
-        case .parameter(nil, _):
+        case .composition:
             return .any
 
         case let .reading(of, walked):
@@ -352,6 +356,9 @@ extension LoweredType: Equatable {
 
         case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
             return myLabel == theirLabel && mine == theirs
+
+        case let (.composition(mine), .composition(theirs)):
+            return mine == theirs
 
         case let (.member(mine), .member(theirs)):
             return mine == theirs

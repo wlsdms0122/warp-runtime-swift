@@ -231,8 +231,11 @@ extension Builder {
         // membership's or a contract's, since a type is one thing and not a
         // bound on some other.
         case let .composition(names):
-            guard !names.isEmpty else {
-                throw BuildError("joins nothing with `&`, and a composition names what a value answers", at: place)
+            guard !names.isEmpty, Set(names).count == names.count else {
+                throw BuildError(
+                    "joins \(names.isEmpty ? "nothing" : "one name twice") with `&`, and a composition names what a value answers, each once",
+                    at: place
+                )
             }
 
             for name in names where table.constraint(name) == nil && table.contracts[name] == nil {

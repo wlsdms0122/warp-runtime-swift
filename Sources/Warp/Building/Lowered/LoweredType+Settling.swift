@@ -29,7 +29,7 @@ extension LoweredType {
 
         // Both ask the membership and neither settles: a value stands as what
         // it arrived as, and which member it matched is a question a cast asks.
-        case let .parameter(_, bounds):
+        case let .parameter(_, bounds), let .composition(bounds):
             return try bounds.reduce(value) { value, bound in
                 try standing(value, boundBy: bound, at: path(), in: table, assuming: assuming)
             }
@@ -102,7 +102,7 @@ extension LoweredType {
         // A parameter stands for what arrived and does not settle it, so an
         // unbounded one holds a null the way it holds anything. A bounded one
         // asks each membership, the way a member does.
-        case let .parameter(_, bounds):
+        case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { bound in
                 guard case let .membership(constraint) = bound else { return true }
 
@@ -167,7 +167,7 @@ extension LoweredType {
         // bounded one still asks each value for its membership, and a member
         // that takes every byte answers that question for all of them at
         // once.
-        case let .parameter(_, bounds):
+        case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { bound in
                 guard case let .membership(constraint) = bound else { return true }
 
@@ -310,16 +310,10 @@ extension LoweredType {
             return refinement.rendered
 
         case let .parameter(label, bounds):
-            let bounded = bounds.map { bound -> String in
-                switch bound {
-                case let .membership(row): table.constraintLabels[row].spelling
-                case let .contract(name): name.spelling
-                }
-            }.joined(separator: " & ")
+            return bounds.isEmpty ? "some \(label)" : "some \(label): \(bounds.rendered(in: table))"
 
-            guard let label else { return bounded }
-
-            return bounds.isEmpty ? "some \(label)" : "some \(label): \(bounded)"
+        case let .composition(bounds):
+            return bounds.rendered(in: table)
 
         case let .member(constraint):
             return table.constraintLabels[constraint].spelling
@@ -383,7 +377,7 @@ extension LoweredType {
         assuming: [Int]
     ) throws -> Value {
         switch self {
-        case .any, .reading, .parameter, .member:
+        case .any, .reading, .parameter, .composition, .member:
             return try settling(value, at: path(), in: table, assuming: assuming)
 
         // A value arrived where nothing was supposed to, so the arrival is the
@@ -807,5 +801,17 @@ extension LoweredType {
         default:
             return false
         }
+    }
+}
+
+extension Array where Element == LoweredType.Bound {
+    // The names joined with `&`, as a composition or a bound is spelled.
+    func rendered(in table: LoweredTypeTable) -> String {
+        map { bound -> String in
+            switch bound {
+            case let .membership(row): table.constraintLabels[row].spelling
+            case let .contract(name): name.spelling
+            }
+        }.joined(separator: " & ")
     }
 }

@@ -515,7 +515,10 @@ private extension ObjectWriter {
             return .array([.int(17), .int(row)])
 
         case let .parameter(label, bounds):
-            return .array([.int(18), ObjectWriter.maybe(label, name), .array(bounds.map(bound))])
+            return .array([.int(18), name(label), .array(bounds.map(bound))])
+
+        case let .composition(bounds):
+            return .array([.int(22), .array(bounds.map(bound))])
 
         case let .reading(of: read, path: path):
             return .array([.int(19), name(read), .array(path.map(segment))])
