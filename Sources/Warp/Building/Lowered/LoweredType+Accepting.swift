@@ -60,10 +60,12 @@ extension LoweredType {
         // other direction a composition stands for some type nothing here
         // lists.
         case let (.composition(bounds), _):
+            guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+
             return bounds.allSatisfy { bound in
                 switch bound {
                 case let .membership(row):
-                    table.admits(constraint: row, reading: other, assuming: [])
+                    table.admits(constraint: row, reading: other, assuming: [], asking: assuming + [(self, other)])
 
                 case let .contract(name):
                     if case .settled(false) = table.answering(contract: name, reading: other) { false } else { true }

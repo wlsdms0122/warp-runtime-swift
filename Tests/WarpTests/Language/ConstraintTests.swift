@@ -377,6 +377,30 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a membership reaching a composition that names it back is asked once")
+    func aRingThroughACompositionEnds() async throws {
+        // Given. `A` admits a list of `X`, and `X` is what belongs to `A` and `B`
+        let sut = try Module(
+            types: ["X": .composition(["A", "B"])],
+            constraints: ["A": [.array(.named("X"))], "B": [.string]],
+            procedures: [
+                "keep": Procedure(
+                    signature: Signature(parameters: ["of": Parameter(type: .named("A"))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(
+                    signature: Signature(parameters: ["it": Parameter(type: .named("X"))], returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "keep", arguments: ["of": reference("it")]))
+                )
+            ]
+        )
+
+        // When / Then. Refused or built, and the asking ends
+        _ = try? await builder.build([sut] + Module.standard, entry: entryName)
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

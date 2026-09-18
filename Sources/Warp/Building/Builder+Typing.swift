@@ -1485,6 +1485,17 @@ extension Builder {
                             at: place.part(.closure)
                         )
                     }
+
+                    if let refusal = refusal(
+                        holding: write.type,
+                        to: held,
+                        as: "writes '\(name)', which it captured, as",
+                        in: context.loweredTypes,
+                        fulfillment: ask.fulfillment,
+                        at: place.part(.closure)
+                    ) {
+                        throw BuildError(refusal, at: place.part(.closure))
+                    }
                 }
 
                 try held(
@@ -2069,12 +2080,25 @@ extension Builder {
                 ask: ask
             )
 
-            guard parameter.declared.lowered(in: context.loweredTypes).accepts(inner.reading, in: context.loweredTypes) else {
+            let declared = parameter.declared.lowered(in: context.loweredTypes)
+
+            guard declared.accepts(inner.reading, in: context.loweredTypes) else {
                 throw BuildError(
                     "hands \(inner.reading.rendered(in: context.loweredTypes)) where '\(asked.contract)'"
                         + " writes \(parameter.declared.rendered)",
                     at: place.argument(name.spelling)
                 )
+            }
+
+            if let refusal = refusal(
+                holding: inner.reading,
+                to: declared,
+                as: "hands",
+                in: context.loweredTypes,
+                fulfillment: ask.fulfillment,
+                at: place.argument(name.spelling)
+            ) {
+                throw BuildError(refusal, at: place.argument(name.spelling))
             }
 
             arguments[name] = inner.rewritten
