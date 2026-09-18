@@ -263,8 +263,10 @@ extension Builder {
         switch bound {
         case let .contract(name):
             switch loweredTypes.answering(contract: name, reading: reading) {
-            case let .leansOn(type):
-                fulfillment?.require(Claim(type: type, contract: name), at: place)
+            case let .leansOn(types):
+                for type in types {
+                    fulfillment?.require(Claim(type: type, contract: name), at: place)
+                }
 
                 return nil
 
@@ -2028,11 +2030,13 @@ extension Builder {
         )
 
         switch context.loweredTypes.answering(contract: asked.contract, reading: receiver.reading) {
-        case let .leansOn(type):
-            ask.fulfillment?.require(
-                Claim(type: type, contract: asked.contract),
-                at: place.part(.receiver)
-            )
+        case let .leansOn(types):
+            for type in types {
+                ask.fulfillment?.require(
+                    Claim(type: type, contract: asked.contract),
+                    at: place.part(.receiver)
+                )
+            }
 
         case .settled(true):
             break

@@ -95,7 +95,7 @@ public struct TypeReader: Decodable {
                 guard case let .named(name) = parsed else {
                     throw TypeFormError(
                         "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
-                            + " and `&` joins the names of contracts and memberships"
+                            + " and `&` joins the names of contracts and memberships, each a bare name"
                     )
                 }
 
