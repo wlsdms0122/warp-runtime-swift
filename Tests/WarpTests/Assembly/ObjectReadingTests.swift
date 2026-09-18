@@ -817,6 +817,46 @@ struct ObjectReadingTests {
     }
 
     // MARK: - Public
+    @Test("is refused where a numbering counts a declaration for no closures")
+    func aDeclarationCountedForNone() async throws {
+        // Given. One declaration writing one closure, with a second name
+        // counted for none beside it. A writing counts a name only where that
+        // name wrote one, so nothing it lays down carries this entry.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("made"),
+                        expression: .closure(
+                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                        )
+                    )],
+                    result: .apply(reference("made"), arguments: [:])
+                ),
+                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        guard case var .array(parts) = try await parts(of: sut),
+              case var .array(numbering) = parts[9],
+              case let .array(counts) = numbering[1],
+              counts.count == 1
+        else {
+            Issue.record("an object writes how many closures each declaration wrote")
+
+            return
+        }
+
+        numbering[1] = .array(counts + [.array([.string("app.other"), .int(0)])])
+        parts[9] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ObjectRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
     // MARK: - Private
     // The parts an object writes, with the format it is stamped with taken
     // off, so that a test bends what it means to bend.

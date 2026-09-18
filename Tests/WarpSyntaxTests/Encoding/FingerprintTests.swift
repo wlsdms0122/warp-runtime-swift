@@ -135,7 +135,9 @@ struct FingerprintTests {
             supplying: Supplying([used, module])
         )
 
-        return try #require(compiled[0].fingerprint)
+        let stored = try #require(compiled[0].fingerprint)
+        print("PROBE count=\(stored.bytes.count) stored=\(stored.rendered) behind=\(behind.map { $0.fingerprint?.rendered ?? "nil" })")
+        return stored
     }
 }
 
