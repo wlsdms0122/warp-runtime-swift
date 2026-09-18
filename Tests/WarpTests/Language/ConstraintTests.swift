@@ -434,16 +434,16 @@ struct ConstraintTests {
         // witness answers a whole number
         let sut = try Module(
             types: ["bank.Card": .record(["last": .string])],
-            contracts: ["app.Describable": ["describe": Signature(returns: .named("app.Describable"))]],
+            contracts: ["app.Describable": ["describe": Signature(returns: .array(.named("app.Describable")))]],
             claims: ["bank.Card": ["app.Describable"]],
             procedures: [
                 "bank.Card.describe": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Card"))], returns: .int),
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Card"))], returns: .array(.int)),
                     body: [],
-                    result: .literal(.int(1))
+                    result: .array([.literal(.int(1))])
                 ),
                 entryName: Procedure(
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .array(.int)),
                     body: [
                         Statement(
                             binding: .constant("card"),

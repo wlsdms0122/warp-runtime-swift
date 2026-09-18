@@ -351,6 +351,8 @@ extension Builder {
             }
         }
 
+        guard declared.isGeneric else { return .fits(slots: slots, returns: answering) }
+
         return .fits(
             slots: declared.lowered(in: loweredTypes, filling: substitution.readings),
             returns: answering?.filling(substitution.readings)

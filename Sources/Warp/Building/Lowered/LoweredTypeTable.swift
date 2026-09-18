@@ -146,6 +146,16 @@ final class LoweredTypeTable: Sendable {
         case leansOn([Name])
     }
 
+    // The bound a name stands for: a membership by its row, a contract by
+    // its name, and nothing where the name is neither.
+    func bound(named name: Name) -> LoweredType.Bound? {
+        if let row = constraintRow(named: name) {
+            return .membership(row)
+        }
+
+        return satisfying[name] != nil ? .contract(name) : nil
+    }
+
     // One-sided the way every judgment before the run is: only what is
     // provably outside is refused, and a reading nothing can be said about
     // passes here and is judged again where the value arrives.

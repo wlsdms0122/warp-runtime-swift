@@ -98,48 +98,48 @@ extension TypeExpression {
                 return .named(row)
             }
 
-            if let row = table.constraintRow(named: name) {
-                return .composition([.membership(row)])
+            guard let bound = table.bound(named: name) else {
+                return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
             }
 
-            if table.satisfying[name] != nil {
-                return .composition([.contract(name)])
-            }
-
-            return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
+            return .composition([bound])
 
         // A bound names a membership or a contract, and the two are separate
         // spaces, so each is looked for in both.
         case let .parameter(name, constraints):
-            if let unfound = unfound(constraints, in: table) {
-                return .undeclared(label: rendered, refusal: "'\(unfound)', which nothing declares as a membership or a contract")
+            switch bounds(constraints, in: table) {
+            case let .bounds(bounds): return .parameter(label: name, bounds: bounds)
+            case let .unfound(unfound): return .undeclared(label: rendered, refusal: "'\(unfound)', which nothing declares as a membership or a contract")
             }
-
-            return .parameter(label: name, bounds: bounds(constraints, in: table))
 
         case let .composition(names):
-            if let unfound = unfound(names, in: table) {
-                return .undeclared(label: rendered, refusal: "'\(unfound)', which nothing declares as a membership or a contract")
+            switch bounds(names, in: table) {
+            case let .bounds(bounds): return .composition(bounds)
+            case let .unfound(unfound): return .undeclared(label: rendered, refusal: "'\(unfound)', which nothing declares as a membership or a contract")
             }
-
-            return .composition(bounds(names, in: table))
 
         case let .reading(of, path):
             return .reading(of: of, path: path)
         }
     }
 
-    // The first name among these that is neither a membership nor a contract.
-    private func unfound(_ names: [Name], in table: LoweredTypeTable) -> Name? {
-        names.first { name in table.constraintRow(named: name) == nil && table.satisfying[name] == nil }
+    // What a list of names stands for: the bounds, in the one order a set of
+    // bounds is written in, or the first name that is neither a membership
+    // nor a contract.
+    private enum Bounded {
+        case bounds([LoweredType.Bound])
+        case unfound(Name)
     }
 
-    // The bounds a list of declared names stands for, in the one order a
-    // set of bounds is written in.
-    private func bounds(_ names: [Name], in table: LoweredTypeTable) -> [LoweredType.Bound] {
-        names.map { name in
-            table.constraintRow(named: name).map(LoweredType.Bound.membership) ?? .contract(name)
+    private func bounds(_ names: [Name], in table: LoweredTypeTable) -> Bounded {
+        var bounds: [LoweredType.Bound] = []
+
+        for name in names {
+            guard let bound = table.bound(named: name) else { return .unfound(name) }
+
+            bounds.append(bound)
         }
-        .sorted()
+
+        return .bounds(bounds.sorted())
     }
 }

@@ -143,6 +143,17 @@ extension Builder {
             return .waits("\(claim.spelled) says " + reason)
         }
 
+        // A value handed on once is followed by the name that holds it, and
+        // where a contract stands a value is held under no name.
+        guard !Builder.handedOnce(.named(type), in: table) else {
+            throw BuildError(
+                "says '\(type)' answers '\(contract)', and a value written `linear`"
+                    + " is followed by the name that holds it. Where a contract stands"
+                    + " nothing follows one",
+                at: claim.place
+            )
+        }
+
         var answering: [Name: Name] = [:]
 
         for (procedure, signature) in asked.held.sorted(by: { $0.key < $1.key }) {
@@ -247,20 +258,40 @@ extension Builder {
                     + " where the contract writes \(answer.rendered)"
         }
 
-        // A contract the answer is held to is answered by what every document
-        // says, and this is where what documents say is gathered: an answer
-        // no document says satisfies the contract does not answer it.
-        if case let .composition(bounds) = promised {
-            for bound in bounds {
+        // A contract the answer is held to, wherever in the promise it
+        // stands, is answered by what every document says, and this is where
+        // what documents say is gathered: an answer no document says
+        // satisfies the contract does not answer it. What a table still
+        // being filled cannot say is written down for the link to say.
+        var readings: [Name: LoweredType] = [:]
+        var disagreeing: [Name: LoweredType] = [:]
+        var holding: [Substitution.Held] = []
+
+        promised.binding(against: answered, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table.loweredTypes)
+
+        for held in holding {
+            for bound in held.bounds {
                 guard case let .contract(name) = bound,
-                      case let .leansOn(types) = table.loweredTypes.answering(contract: name, reading: answered),
-                      let unheld = types.first(where: { held in table.loweredTypes.settles(contract: name, arrived: held) != true })
+                      case let .leansOn(types) = table.loweredTypes.answering(contract: name, reading: held.reading)
                 else {
                     continue
                 }
 
-                return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                        + " asks, and answers '\(unheld)', which no document says satisfies '\(name)'"
+                for leaned in types {
+                    switch table.loweredTypes.settles(contract: name, arrived: leaned) {
+                    case true?:
+                        continue
+
+                    case nil:
+                        guard let unsettled = table.loweredTypes.unsettled else { fallthrough }
+
+                        unsettled.require(folded: Claim(type: leaned, contract: name))
+
+                    case false?:
+                        return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
+                                + " asks, and answers '\(leaned)', which no document says satisfies '\(name)'"
+                    }
+                }
             }
         }
 
