@@ -198,6 +198,35 @@ struct ConstraintTests {
         }
     }
 
+    @Test("one name whose occurrences carry different bounds refuses at the build")
+    func twoBoundsOnOneNameRefuseAtTheBuild() async throws {
+        // Given. The bound is written inline, so two slots writing different
+        // bounds for one name are two claims about one thing
+        let sut = try Module(
+            constraints: ["A": [.int], "B": [.string]],
+            procedures: [
+                "keep": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "left": Parameter(type: .parameter(name: "T", constraints: ["A"])),
+                            "right": Parameter(type: .parameter(name: "T", constraints: ["B"]))
+                        ]
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                ),
+                entryName: Procedure(signature: Signature(), body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("One name is held to one set of bounds")
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

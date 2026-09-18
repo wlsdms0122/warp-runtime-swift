@@ -111,39 +111,33 @@ extension TypeExpression {
         // A bound names a membership or a contract, and the two are separate
         // spaces, so each is looked for in both.
         case let .parameter(name, constraints):
-            return bounds(constraints, in: table).map { bounds in .parameter(label: name, bounds: bounds) }
-                ?? .undeclared(
-                    label: rendered,
-                    refusal: "a bound, which nothing declares as a membership or a contract"
-                )
+            if let unfound = unfound(constraints, in: table) {
+                return .undeclared(label: rendered, refusal: "'\(unfound)', which nothing declares as a membership or a contract")
+            }
+
+            return .parameter(label: name, bounds: bounds(constraints, in: table))
 
         case let .composition(names):
-            return bounds(names, in: table).map { bounds in .parameter(label: nil, bounds: bounds) }
-                ?? .undeclared(
-                    label: rendered,
-                    refusal: "a name, which nothing declares as a membership or a contract"
-                )
+            if let unfound = unfound(names, in: table) {
+                return .undeclared(label: rendered, refusal: "'\(unfound)', which nothing declares as a membership or a contract")
+            }
+
+            return .parameter(label: nil, bounds: bounds(names, in: table))
 
         case let .reading(of, path):
             return .reading(of: of, path: path)
         }
     }
 
-    // The bounds a list of names stands for, or nothing where one of them
-    // is neither a membership nor a contract.
-    private func bounds(_ names: [Name], in table: LoweredTypeTable) -> [LoweredType.Bound]? {
-        var bounds: [LoweredType.Bound] = []
+    // The first name among these that is neither a membership nor a contract.
+    private func unfound(_ names: [Name], in table: LoweredTypeTable) -> Name? {
+        names.first { name in table.constraintRow(named: name) == nil && table.satisfying[name] == nil }
+    }
 
-        for name in names {
-            if let row = table.constraintRow(named: name) {
-                bounds.append(.membership(row))
-            } else if table.satisfying[name] != nil {
-                bounds.append(.contract(name))
-            } else {
-                return nil
-            }
+    // The bounds a list of declared names stands for.
+    private func bounds(_ names: [Name], in table: LoweredTypeTable) -> [LoweredType.Bound] {
+        names.map { name in
+            table.constraintRow(named: name).map(LoweredType.Bound.membership) ?? .contract(name)
         }
-
-        return bounds
     }
 }

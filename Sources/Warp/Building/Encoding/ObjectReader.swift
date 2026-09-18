@@ -308,7 +308,15 @@ private extension ObjectReader {
                 path: try Fields.list(fields.next(), of: "path", segment)
             )
 
-        case 23: read = .composition(try Fields.ordered(fields.next(), of: "composition", name))
+        case 23:
+            let names = try Fields.ordered(fields.next(), of: "composition", name)
+
+            guard !names.isEmpty else {
+                throw ObjectRefused("'composition' joins nothing")
+            }
+
+            read = .composition(names)
+
         default:
             throw ObjectRefused("'type' names a kind this reads none of")
         }

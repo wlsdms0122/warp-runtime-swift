@@ -231,6 +231,10 @@ extension Builder {
         // membership's or a contract's, since a type is one thing and not a
         // bound on some other.
         case let .composition(names):
+            guard !names.isEmpty else {
+                throw BuildError("joins nothing with `&`, and a composition names what a value answers", at: place)
+            }
+
             for name in names where table.constraint(name) == nil && table.contracts[name] == nil {
                 throw BuildError(
                     "joins '\(name)' with `&`, and `&` joins the names of memberships"
@@ -525,19 +529,36 @@ extension Builder {
     }
 
     // Whether a signature's bounded parameters could ever be judged: every
-    // name a bound names has to be one somebody declared. A bound names a
-    // membership or a contract, and the two are separate spaces no name is
-    // in both of, so a mention reaches whichever declares it.
+    // name a bound names has to be one somebody declared, and one name is
+    // held to one set of them. A bound names a membership or a contract, and
+    // the two are separate spaces no name is in both of, so a mention reaches
+    // whichever declares it. Each occurrence carries its bounds separately,
+    // so occurrences carrying different sets for one name are two claims
+    // about one thing.
     private func judgeConstraints(
         of signature: Signature,
         at place: Place,
         in table: TypeTable
     ) throws {
-        var bounds: [Name: Set<Name>] = [:]
-        signature.parameterConstraints(into: &bounds)
+        var occurrences: [Name: Set<[Name]>] = [:]
+        signature.parameterOccurrences(into: &occurrences)
 
-        for (parameter, names) in bounds.sorted { $0.key < $1.key } {
-            for bound in names.sorted() where table.constraint(bound) == nil && table.contracts[bound] == nil {
+        for (parameter, sets) in occurrences.sorted { $0.key < $1.key } {
+            let bounded = sets.filter { names in !names.isEmpty }
+
+            guard bounded.count <= 1 else {
+                let spelled = bounded
+                    .map { names in names.map(\.spelling).joined(separator: " & ") }
+                    .sorted()
+
+                throw BuildError(
+                    "`some \(parameter)` is bounded by \(spelled.joined(separator: " in one place and ")) in another."
+                        + " One name is held to one set of bounds",
+                    at: place
+                )
+            }
+
+            for bound in bounded.first ?? [] where table.constraint(bound) == nil && table.contracts[bound] == nil {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
                         + " link declares as a membership or a contract",

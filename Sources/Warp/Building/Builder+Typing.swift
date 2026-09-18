@@ -163,40 +163,70 @@ extension Builder {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
             guard let reading = readings[parameter] else { continue }
 
-            for bound in names.sorted() {
-                // A bound names a membership or a contract, and the two ask
-                // different questions of the same reading: what a membership
-                // admits is a set of types, what a contract asks is a set of
-                // procedures the reading's own type answers.
-                if loweredTypes.satisfying[bound] != nil {
-                    switch loweredTypes.answering(contract: bound, reading: reading) {
-                    case let .leansOn(type):
-                        fulfillment?.require(Claim(type: type, contract: bound), at: place)
+            for name in names.sorted() {
+                // A bound names a membership or a contract, and the two are
+                // separate spaces, so it is looked for in each. One nothing
+                // declares was refused where the declaration was judged.
+                let bound: LoweredType.Bound
 
-                    case .settled(true):
-                        break
-
-                    case .settled(false):
-                        return "'\(parameter)' is read as \(reading.rendered(in: loweredTypes)),"
-                            + " which does not answer every procedure '\(bound)' asks"
-                    }
-
+                if loweredTypes.satisfying[name] != nil {
+                    bound = .contract(name)
+                } else if let row = loweredTypes.constraintRow(named: name) {
+                    bound = .membership(row)
+                } else {
                     continue
                 }
 
-                guard
-                    let row = loweredTypes.constraintRow(named: bound),
-                    !loweredTypes.admits(constraint: row, reading: reading, assuming: [])
-                else {
-                    continue
+                if let refusal = refusal(
+                    of: reading,
+                    holdingTo: bound,
+                    as: "'\(parameter)'",
+                    in: loweredTypes,
+                    fulfillment: fulfillment,
+                    at: place
+                ) {
+                    return refusal
                 }
-
-                return "'\(parameter)' is read as \(reading.rendered(in: loweredTypes)),"
-                    + " which '\(bound)' does not admit"
             }
         }
 
         return nil
+    }
+
+    // Why a reading is provably outside one bound, or nothing where it is
+    // not. A membership and a contract ask different questions of the same
+    // reading: what a membership admits is a set of types, what a contract
+    // asks is a set of procedures the reading's own type answers.
+    private func refusal(
+        of reading: LoweredType,
+        holdingTo bound: LoweredType.Bound,
+        as label: String,
+        in loweredTypes: LoweredTypeTable,
+        fulfillment: Fulfillment?,
+        at place: Place
+    ) -> String? {
+        switch bound {
+        case let .contract(name):
+            switch loweredTypes.answering(contract: name, reading: reading) {
+            case let .leansOn(type):
+                fulfillment?.require(Claim(type: type, contract: name), at: place)
+
+                return nil
+
+            case .settled(true):
+                return nil
+
+            case .settled(false):
+                return "\(label) is read as \(reading.rendered(in: loweredTypes)),"
+                    + " which does not answer every procedure '\(name)' asks"
+            }
+
+        case let .membership(row):
+            guard !loweredTypes.admits(constraint: row, reading: reading, assuming: []) else { return nil }
+
+            return "\(label) is read as \(reading.rendered(in: loweredTypes)),"
+                + " which '\(loweredTypes.constraintLabels[row])' does not admit"
+        }
     }
 
     // The judgment every call shares, whichever surface writes it. A call
@@ -219,10 +249,10 @@ extension Builder {
         fulfillment: Fulfillment?,
         at place: Place
     ) -> Judgment {
-        // A declaration with nothing to fill is read as the link lowered it.
-        // Lowering it again per call site is the same answer paid for again,
-        // and this is the site every call goes through.
-        guard declared.isGeneric else {
+        // A declaration with nothing to fill and nothing to hold is read as
+        // the link lowered it. Lowering it again per call site is the same
+        // answer paid for again, and this is the site every call goes through.
+        guard declared.isGeneric || !bound.holding.isEmpty else {
             return .fits(slots: slots, returns: answering)
         }
 
@@ -248,6 +278,21 @@ extension Builder {
             return .refusal(refusal)
         }
 
+        for held in bound.holding {
+            for bound in held.bounds {
+                if let refusal = refusal(
+                    of: held.reading,
+                    holdingTo: bound,
+                    as: "'\(held.slot)'",
+                    in: loweredTypes,
+                    fulfillment: fulfillment,
+                    at: place
+                ) {
+                    return .refusal(refusal)
+                }
+            }
+        }
+
         return .fits(
             slots: declared.lowered(in: loweredTypes, filling: bound.readings),
             returns: answering?.filling(bound.readings)
@@ -269,10 +314,11 @@ extension Builder {
     ) -> Bound {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
+        var holding: [(slot: Name, reading: LoweredType, bounds: [LoweredType.Bound])] = []
 
-        for name in call.arguments.keys.sorted() {
-            guard let slot = slots.first(where: { slot in slot.name == name }), let reading = sent[name] else {
-                continue
+        func read(_ slot: Slot, as reading: LoweredType) {
+            if case let .parameter(nil, bounds) = slot.type.slotUnwrapped {
+                holding.append((slot: slot.name, reading: reading, bounds: bounds))
             }
 
             slot.type.binding(
@@ -283,22 +329,21 @@ extension Builder {
             )
         }
 
-        guard
-            let received,
-            let name = signature.receiver,
-            let slot = slots.first(where: { slot in slot.name == name })
-        else {
-            return Bound(readings: bound, disagreeing: disagreeing)
+        for name in call.arguments.keys.sorted() {
+            guard let slot = slots.first(where: { slot in slot.name == name }), let reading = sent[name] else {
+                continue
+            }
+
+            read(slot, as: reading)
         }
 
-        slot.type.binding(
-            against: received,
-            into: &bound,
-            disagreeing: &disagreeing,
-            in: loweredTypes
-        )
+        if let received,
+           let name = signature.receiver,
+           let slot = slots.first(where: { slot in slot.name == name }) {
+            read(slot, as: received)
+        }
 
-        return Bound(readings: bound, disagreeing: disagreeing)
+        return Bound(readings: bound, disagreeing: disagreeing, holding: holding)
     }
 
     // What a call answers: the declaration's returns, filled from the operands

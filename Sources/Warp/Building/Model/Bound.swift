@@ -24,6 +24,11 @@ struct Bound: Sendable {
     // lets a refusal name them.
     let disagreeing: [Name: LoweredType]
 
+    // What arrived at each slot declared as a composition, beside what the
+    // composition holds it to. Nothing fills a composition and no name ties
+    // it to another slot, so it is judged slot by slot rather than read.
+    let holding: [(slot: Name, reading: LoweredType, bounds: [LoweredType.Bound])]
+
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private

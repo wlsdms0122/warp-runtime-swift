@@ -46,6 +46,37 @@ extension TypeExpression {
         }
     }
 
+    // Every type parameter mentioned in here, each with the constraint names
+    // every occurrence carries, occurrence by occurrence. What a signature
+    // holds a name to is one set, so occurrences carrying two are two claims
+    // about one name, and a judgment reads them apart here to say so.
+    func parameterOccurrences(into table: inout [Name: Set<[Name]>]) {
+        switch self {
+        case let .parameter(name, constraints):
+            table[name, default: []].insert(constraints)
+
+        case .reading, .composition:
+            return
+
+        case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
+            element.parameterOccurrences(into: &table)
+
+        case let .record(fields):
+            for field in fields.values {
+                field.parameterOccurrences(into: &table)
+            }
+
+        case let .procedure(signature, _, _):
+            signature?.parameterOccurrences(into: &table)
+
+        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
+            inner.parameterOccurrences(into: &table)
+
+        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
+            return
+        }
+    }
+
     // Whether anything in here is a type parameter. A declaration without one
     // is read the way it always was, so nothing pays for a feature it does not
     // use.
@@ -96,6 +127,15 @@ public extension Signature {
         }
 
         returns?.parameterConstraints(into: &table)
+    }
+
+    // The same, occurrence by occurrence.
+    func parameterOccurrences(into table: inout [Name: Set<[Name]>]) {
+        for parameter in parameters.values {
+            parameter.declared.parameterOccurrences(into: &table)
+        }
+
+        returns?.parameterOccurrences(into: &table)
     }
 
     // This signature with each type parameter's occurrences carrying the

@@ -243,13 +243,13 @@ struct ObjectWriter {
             return .array([.int(20), name(spelling)])
 
         case let .parameter(spelling, constraints):
-            return .array([.int(21), name(spelling), .array(constraints.map(name))])
+            return .array([.int(21), name(spelling), .array(constraints.sorted().map(name))])
 
         case let .reading(of: read, path: path):
             return .array([.int(22), name(read), .array(path.map(segment))])
 
         case let .composition(names):
-            return .array([.int(23), .array(names.map(name))])
+            return .array([.int(23), .array(names.sorted().map(name))])
         }
     }
 
