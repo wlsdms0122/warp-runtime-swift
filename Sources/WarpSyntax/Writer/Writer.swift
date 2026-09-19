@@ -478,27 +478,23 @@ public struct Writer: Sendable {
     // bound differently is two claims about one thing: a signature the link
     // refuses has no document.
     private func bounds(of signature: Signature) throws -> Value? {
-        var occurrences: [Name: Set<[Name]>] = [:]
-        signature.parameterOccurrences(into: &occurrences)
+        let held: [Name: [Name]]
 
-        var bounds: [Name: Value] = [:]
+        switch signature.parameterBounds {
+        case let .held(bounds):
+            held = bounds
 
-        for (name, sets) in occurrences.sorted(by: { $0.key < $1.key }) {
-            let bounded = sets.filter { names in !names.isEmpty }
-
-            guard bounded.count <= 1 else {
-                throw WritingError(
-                    "'some \(name)' is bounded by"
-                        + " \(bounded.map { names in names.map(\.spelling).joined(separator: " & ") }.sorted().joined(separator: " in one place and "))"
-                        + " in another. One name is held to one set of bounds, so there is no"
-                        + " `bounds` to write"
-                )
-            }
-
-            if let constraints = bounded.first {
-                bounds[name] = .string(constraints.sorted().map(\.spelling).joined(separator: " & "))
-            }
+        case let .disagreeing(name, sets):
+            throw WritingError(
+                "'some \(name)' is bounded by \(Signature.ParameterBounds.spelled(sets))"
+                    + " in another. One name is held to one set of bounds, so there is no"
+                    + " `bounds` to write"
+            )
         }
+
+        let bounds = held
+            .filter { _, constraints in !constraints.isEmpty }
+            .mapValues { constraints in Value.string(constraints.sorted().map(\.spelling).joined(separator: " & ")) }
 
         return bounds.isEmpty ? nil : .dictionary(bounds)
     }

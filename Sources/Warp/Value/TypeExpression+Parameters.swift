@@ -74,11 +74,10 @@ public extension Signature {
             || (returns?.isGeneric ?? false)
     }
 
-    // The type parameters this signature declares, each with the constraint
-    // names every occurrence carries, occurrence by occurrence. What a
-    // signature holds a name to is one set, so occurrences carrying two are
-    // two claims about one name, and a judgment reads them apart here to say
-    // so.
+    // The bounds each type parameter this signature declares is held to: the
+    // set a bounded mention carries, or none where every mention is bare.
+    // What a signature holds a name to is one set, so two mentions carrying
+    // two sets are two claims about one name, and this says which name.
     //
     // A nested signature's parameters merge into the same table on purpose.
     // They are this signature's own slots: `map` takes `array<some Element>`
@@ -86,12 +85,31 @@ public extension Signature {
     // parameter filled by one call. Only a parameter behind a `named` type is
     // not collected, because the link refuses one anywhere but a procedure
     // signature and never fills one through the name.
-    func parameterOccurrences(into table: inout [Name: Set<[Name]>]) {
+    var parameterBounds: ParameterBounds {
+        var bounds: [Name: [Name]] = [:]
+        var disagreeing: (name: Name, sets: [[Name]])?
+
         parameterOccurrences { name, constraints in
-            table[name, default: []].insert(constraints.sorted())
+            guard let held = bounds[name], !held.isEmpty, !constraints.isEmpty else {
+                if !constraints.isEmpty || bounds[name] == nil {
+                    bounds[name] = constraints
+                }
+
+                return
+            }
+
+            if disagreeing == nil, held.sorted() != constraints.sorted() {
+                disagreeing = (name, [held, constraints])
+            }
         }
+
+        guard let disagreeing else { return .held(bounds) }
+
+        return .disagreeing(disagreeing.name, disagreeing.sets)
     }
 
+    // Every type parameter mentioned in this signature, occurrence by
+    // occurrence, with the constraint names that occurrence carries.
     func parameterOccurrences(_ visit: (Name, [Name]) -> Void) {
         for parameter in parameters.values {
             parameter.declared.parameterOccurrences(visit)
@@ -174,19 +192,19 @@ extension TypeExpression {
     }
 }
 
-extension Signature {
-    // The type parameters this signature declares, each with the bounds a
-    // bounded occurrence carries, read off a signature already judged to
-    // hold one name to one set. A name mentioned only bare has none.
-    var parameterBounds: [Name: [Name]] {
-        var bounds: [Name: [Name]] = [:]
+public extension Signature {
+    // What a signature holds its type parameters to: one set of bounds per
+    // name, or the name two mentions bound two ways and the two sets.
+    enum ParameterBounds: Equatable {
+        case held([Name: [Name]])
+        case disagreeing(Name, [[Name]])
 
-        parameterOccurrences { name, constraints in
-            if !constraints.isEmpty || bounds[name] == nil {
-                bounds[name] = constraints
-            }
+        // The two sets, spelled for a sentence saying they differ.
+        public static func spelled(_ sets: [[Name]]) -> String {
+            sets
+                .map { names in names.sorted().map(\.spelling).joined(separator: " & ") }
+                .sorted()
+                .joined(separator: " in one place and ")
         }
-
-        return bounds
     }
 }

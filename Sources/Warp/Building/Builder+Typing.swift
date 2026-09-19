@@ -327,8 +327,12 @@ extension Builder {
             return .refusal(named.joined(separator: ", "))
         }
 
+        guard case let .held(bounds) = declared.parameterBounds else {
+            return .refusal("holds one name to two sets of bounds")
+        }
+
         if let refusal = constraintRefusal(
-            mentions: declared.parameterBounds,
+            mentions: bounds,
             readings: substitution.readings,
             in: loweredTypes,
             fulfillment: fulfillment,

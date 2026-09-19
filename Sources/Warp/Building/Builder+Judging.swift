@@ -544,26 +544,21 @@ extension Builder {
         at place: Place,
         in table: TypeTable
     ) throws {
-        var occurrences: [Name: Set<[Name]>] = [:]
-        signature.parameterOccurrences(into: &occurrences)
+        let bounds: [Name: [Name]]
 
-        for (parameter, sets) in occurrences.sorted { $0.key < $1.key } {
-            let bounded = sets.filter { names in !names.isEmpty }
+        switch signature.parameterBounds {
+        case let .held(held):
+            bounds = held
 
-            guard bounded.count <= 1 else {
-                let spelled = bounded
-                    .map { names in names.map(\.spelling).joined(separator: " & ") }
-                    .sorted()
+        case let .disagreeing(parameter, sets):
+            throw BuildError(
+                "`some \(parameter)` is bounded by \(Signature.ParameterBounds.spelled(sets)) in another."
+                    + " One name is held to one set of bounds",
+                at: place
+            )
+        }
 
-                throw BuildError(
-                    "`some \(parameter)` is bounded by \(spelled.joined(separator: " in one place and ")) in another."
-                        + " One name is held to one set of bounds",
-                    at: place
-                )
-            }
-
-            let names = bounded.first ?? []
-
+        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) where !names.isEmpty {
             guard Set(names).count == names.count, names == names.sorted() else {
                 throw BuildError("`some \(parameter)` names its bounds once each and in name order", at: place)
             }
