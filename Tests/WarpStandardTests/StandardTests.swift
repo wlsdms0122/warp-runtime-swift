@@ -20,16 +20,16 @@ struct StandardTests {
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("every procedure that ships is builtin, written in Warp, or the one that is neither")
+    @Test("every procedure that ships is builtin or written in Warp")
     func everyProcedureIsPlaced() throws {
-        // Given. What the bundles declare, and how the two lists cut them
+        // Given. What the bundles declare, and how the one list cuts them
         let shipped = Set(Module.standard.flatMap(\.procedures.keys))
 
-        // Then. A name in `builtin` that nothing declares is a list gone stale,
-        // and a name in neither list is one nobody decided about
+        // Then. A name in `builtin` that nothing declares is a list gone stale
         #expect(Module.builtin.subtracting(shipped).isEmpty)
         #expect(Module.builtin.count == 25)
-        #expect(Module.builtin.union(Module.derived).union(Module.unwritten) == shipped)
+        #expect(Module.builtin.union(Module.derived) == shipped)
+        #expect(!shipped.contains("std.text.regex"))
     }
 
     @Test("a procedure this package calls derived has a body here")

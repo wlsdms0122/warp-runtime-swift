@@ -148,7 +148,7 @@ struct ConditionTests {
         // where names resolve.
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard,
+                [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard + Module.regex,
                 entry: entryName
             )
         }
@@ -196,7 +196,7 @@ struct ConditionTests {
             bindings: bindings,
             in: try await Builder().build(
                 [try Module(procedures: [entryName: Procedure(body: [], result: .literal(.null))])]
-                    + Module.standard,
+                    + Module.standard + Module.regex,
                 entry: entryName
             )
         )

@@ -29,11 +29,6 @@ public extension Module {
                 signature: Signature(of: SpellingQuery.self, receiver: .of, returns: .string),
                 implementation: .query(SpellingQuery())
             ),
-            "std.text.regex": Procedure(
-                description: "Whether a string matches a pattern.",
-                signature: Signature(of: RegexQuery.self, receiver: .of, returns: .bool),
-                implementation: .query(RegexQuery())
-            ),
             "std.text.characters": Procedure(
                 description: "The text as an array of its characters.",
                 signature: Signature(

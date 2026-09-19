@@ -18,10 +18,6 @@ public extension Module {
     //
     // `trimmed` stands here for a smaller reason: nothing names the characters
     // it removes, so a body written in Warp would have to invent the list.
-    //
-    // One is in neither set. `regex` cannot be written in Warp and is asked
-    // of no implementation, since what a pattern means differs between the
-    // engines a host would reach for.
     static let builtin: Set<Name> = [
         "std.logic.equal",
 
@@ -39,14 +35,10 @@ public extension Module {
         "std.concurrent.all", "std.concurrent.first"
     ]
 
-    // What is in neither set: not required of an implementation, and not
-    // written in Warp here either.
-    static let unwritten: Set<Name> = ["std.text.regex"]
-
     // The procedures that are written in Warp from the builtin ones. Named by
     // what is left rather than listed, so a procedure added to a bundle lands
-    // here unless it is put in one of the two above, and never in none of them.
+    // here unless it is put in the set above, and never in neither.
     static var derived: Set<Name> {
-        Set(standard.flatMap(\.procedures.keys)).subtracting(builtin).subtracting(unwritten)
+        Set(standard.flatMap(\.procedures.keys)).subtracting(builtin)
     }
 }
