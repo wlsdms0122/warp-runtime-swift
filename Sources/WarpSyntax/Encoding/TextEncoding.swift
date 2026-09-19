@@ -58,19 +58,21 @@ public enum TextEncoding {
     }
 
     public static func value(from text: String) throws -> Value {
-        // Whether this is a document at all is answered before anything in
-        // it is, so text that is something else is refused as that.
-        guard text.hasPrefix(name) else {
+        // The first line is read on its own and before the rest: whether
+        // this is a document at all, and laid out how, is answered before
+        // anything in it is, so a later format is refused as that and not
+        // as whatever its body says that this reader has no name for.
+        let scalars = text.unicodeScalars
+        let end = scalars.firstIndex(of: "\n") ?? scalars.endIndex
+        let header = String(scalars[..<end])
+
+        guard header.hasPrefix(name) else {
             throw refused("the text does not begin as a warp document begins")
         }
 
-        var tokens = try tokenized(text)[...]
+        var head = try tokenized(header)[...]
 
-        guard case .bare(name) = tokens.popFirst() else {
-            throw refused("the text does not begin as a warp document begins")
-        }
-
-        guard case let .bare(version) = tokens.popFirst() else {
+        guard case .bare(name) = head.popFirst(), case let .bare(version) = head.popFirst(), head.isEmpty else {
             throw refused("the text does not say how it is laid out")
         }
 
@@ -97,6 +99,7 @@ public enum TextEncoding {
             )
         }
 
+        var tokens = try tokenized(String(scalars[end...]))[...]
         let value = try read(from: &tokens)
 
         guard tokens.isEmpty else {
@@ -188,11 +191,17 @@ public enum TextEncoding {
     // What ends a bare token: a delimiter, or a quote.
     private static let enders = delimiters.union(["\""])
 
+    // A character as a person reads it in a refusal: itself, or a control
+    // character the way the writer spells one.
+    private static func shown(_ scalar: Unicode.Scalar) -> String {
+        scalar.value < 0x20 ? String(format: "\\u%04x", scalar.value) : String(scalar)
+    }
+
     // A delimiter follows a token, or nothing does.
     private static func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
         guard let next = reading.first, !delimiters.contains(next) else { return }
 
-        throw refused("a token runs straight into \(Character(next)), and whitespace or a bracket separates the two")
+        throw refused("a token runs straight into \(shown(next)), and whitespace or a bracket separates the two")
     }
 
     private static func quoted(from reading: inout ArraySlice<Unicode.Scalar>) throws -> String {
@@ -253,7 +262,7 @@ public enum TextEncoding {
             return scalar
 
         default:
-            throw refused("nothing is written \\\(character)")
+            throw refused("nothing is written \\\(shown(character))")
         }
     }
 
