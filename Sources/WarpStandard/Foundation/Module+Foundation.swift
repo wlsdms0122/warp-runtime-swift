@@ -29,7 +29,11 @@ public extension Module {
             "std.Numeric": [.int, .double],
             // What may stand left and right of an ordering. Numbers among
             // themselves, and strings among themselves.
-            "std.Comparable": [.int, .double, .string]
+            "std.Comparable": [.int, .double, .string],
+            // What has a count: text, a list (bytes included, being one in a
+            // compact spelling) and a map (a record included, being one
+            // under a layout).
+            "std.Collection": [.string, .array(.any), .dictionary(.any)]
         ],
         procedures: [:],
 

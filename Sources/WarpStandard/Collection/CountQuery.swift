@@ -8,8 +8,7 @@
 import Foundation
 import Warp
 
-// How many. Answers nil for types that have no count, which is what makes
-// `x.count` read as absent rather than fail when `x` is a number.
+// How many, of what `std.Collection` admits.
 struct CountQuery: Query {
     // What this takes: the thing counted, and nothing else.
     enum Parameters: Int, ParameterSet {
@@ -17,7 +16,7 @@ struct CountQuery: Query {
 
         var name: Name { "of" }
 
-        var declared: Parameter { Parameter(type: .any) }
+        var declared: Parameter { Parameter(type: .named("std.Collection")) }
     }
 
     // MARK: - Property
