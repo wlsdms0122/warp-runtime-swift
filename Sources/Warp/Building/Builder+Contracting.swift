@@ -132,6 +132,17 @@ extension Builder {
             return .waits("\(claim.spelled) says " + reason)
         }
 
+        guard let asked = contracts[contract] else {
+            let reason = "'\(contract)' is not a contract this link declares,"
+                + " so there are no procedures for '\(type)' to answer"
+
+            guard types[contract] == nil, table.constraint(contract) == nil else {
+                throw BuildError(reason, at: claim.place)
+            }
+
+            return .waits("\(claim.spelled) says " + reason)
+        }
+
         // A value written `linear` is followed by the name that holds it, and
         // a contract standing where a type is written holds a value under no
         // name of its own.
@@ -142,17 +153,6 @@ extension Builder {
                     + " standing where a type is written holds a value under no name",
                 at: claim.place
             )
-        }
-
-        guard let asked = contracts[contract] else {
-            let reason = "'\(contract)' is not a contract this link declares,"
-                + " so there are no procedures for '\(type)' to answer"
-
-            guard types[contract] == nil, table.constraint(contract) == nil else {
-                throw BuildError(reason, at: claim.place)
-            }
-
-            return .waits("\(claim.spelled) says " + reason)
         }
 
         var answering: [Name: Name] = [:]

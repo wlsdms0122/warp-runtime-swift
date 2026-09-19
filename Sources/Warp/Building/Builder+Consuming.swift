@@ -91,6 +91,10 @@ extension Builder {
     ) -> Bool? {
         guard !assuming.contains(name) else { return nil }
 
+        // A contract holds a value under no name of its own, and nothing
+        // follows a value handed on once but the name that holds it.
+        guard table.loweredTypes.satisfying[name] == nil else { return false }
+
         guard let members = table.constraint(name), !members.isEmpty else { return false }
 
         let answers = members.compactMap { member in
