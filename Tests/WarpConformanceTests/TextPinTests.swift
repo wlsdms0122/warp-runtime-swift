@@ -12,25 +12,27 @@ import WarpSyntax
 
 // A text case is read by one reader on both sides, so a reader taking a
 // spelling for the wrong value would agree with itself. What breaks that
-// circle is a bytes case holding the same value: the specification says every
-// value a text case reads appears in some bytes case, and this asks.
-@Suite("Every value a text case reads is pinned by bytes")
+// circle is a bytes case holding the same spelling: the specification says
+// every scalar and every name a text case reads appears in some bytes case,
+// and this asks. A container's shape is not a spelling.
+@Suite("Every scalar and every name a text case reads is pinned by bytes")
 struct TextPinTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
     @Test("every scalar and every name a text case reads appears in a bytes case")
     func everyTextValueIsPinned() throws {
+        let cases = try Case.all()
         var pinned: [Spelling] = []
         var unpinned: [String] = []
 
-        for sut in try Case.all() {
+        for sut in cases {
             guard case let .encoded(.binary, .spells(value)) = sut.asked else { continue }
 
             Self.walk(value) { spelling in pinned.append(spelling) }
         }
 
-        for sut in try Case.all() {
+        for sut in cases {
             guard case let .encoded(.text, reading) = sut.asked else { continue }
 
             let value: Value
