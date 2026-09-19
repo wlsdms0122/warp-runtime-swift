@@ -85,11 +85,10 @@ struct CallOperation: Sendable {
             let name = slot.name
             let isReceiver = name == callee.signature.receiver
 
-            // What the call wrote under this name, and what the slot takes:
-            // the receiver written in front stands under the name the callee
-            // receives by, and the build has refused that name by name.
-            let written = try argument(name)
-            let given = isReceiver ? receiver : written
+            // What the slot takes: the receiver written in front stands under
+            // the name the callee receives by, and the build has refused that
+            // name by name, so nothing is asked for under it.
+            let given = isReceiver ? receiver : try argument(name)
 
             if case .inout = slot.type {
                 guard case let .reference(address)? = given else {
