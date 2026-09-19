@@ -22,7 +22,8 @@ import Warp
 // One value, one spelling. The writer lays a text out one way (sorted keys,
 // two spaces an indent), so a text that has been through it is the same bytes
 // everywhere. Layout is free on the way in: the reader takes keys in any order
-// and any whitespace between tokens. What it does not take is a second
+// and any whitespace between tokens, and a key written bare or quoted is one
+// key either way. What it does not take is a second
 // spelling of a value, `1.50` for `1.5` or `\u0041` for `A`, since those are
 // two texts for one value rather than two layouts of one text.
 public enum TextEncoding {
@@ -154,7 +155,7 @@ public enum TextEncoding {
                 var bare = ""
 
                 while let character = reading.first,
-                      !" \n\r\t[]{}\"".unicodeScalars.contains(character) {
+                      !Self.delimiters.contains(character), character != "\"" {
                     bare.unicodeScalars.append(character)
                     reading.removeFirst()
                 }
@@ -178,9 +179,13 @@ public enum TextEncoding {
         return tokens
     }
 
+    // What ends a token, besides the text ending. A bare token also ends at a
+    // quote, which is then refused as running into it.
+    private static let delimiters = Set(" \n\r\t[]{}".unicodeScalars)
+
     // Whitespace or a bracket follows a string or bytes, or nothing does.
     private static func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
-        guard let next = reading.first, !" \n\r\t[]{}".unicodeScalars.contains(next) else { return }
+        guard let next = reading.first, !delimiters.contains(next) else { return }
 
         throw refused("a quote runs straight into \(Character(next)), and whitespace separates the two")
     }
