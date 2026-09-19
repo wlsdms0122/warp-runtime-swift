@@ -528,9 +528,11 @@ struct ConstraintTests {
         _ = try await builder.build([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a contract answered by a value handed on once is not carried inside another type")
-    func aLinearAnswererIsNotNested() async throws {
-        // Given
+    @Test("a type handed on once answers no contract")
+    func aLinearTypeAnswersNoContract() async throws {
+        // Given. A contract standing where a type is written holds a value
+        // under no name, and nothing follows a value handed on once but the
+        // name that holds it
         let sut = try Module(
             types: ["app.Handle": .linear(.record(["name": .string]))],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
@@ -541,11 +543,6 @@ struct ConstraintTests {
                     body: [],
                     result: .literal(.string("a handle"))
                 ),
-                "app.tellAll": Procedure(
-                    signature: Signature(parameters: ["them": Parameter(type: .array(.named("app.Describable")))], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
-                ),
                 entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
@@ -554,7 +551,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("inside another type")
+            error is BuildError && "\(error)".contains("is handed on once and answers no contract")
         }
     }
 

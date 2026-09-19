@@ -132,6 +132,18 @@ extension Builder {
             return .waits("\(claim.spelled) says " + reason)
         }
 
+        // A value written `linear` is followed by the name that holds it, and
+        // a contract standing where a type is written holds a value under no
+        // name of its own.
+        guard !Builder.handedOnce(.named(type), in: table) else {
+            throw BuildError(
+                "'\(type)' is handed on once and answers no contract. A value written"
+                    + " `linear` is followed by the name that holds it, and a contract"
+                    + " standing where a type is written holds a value under no name",
+                at: claim.place
+            )
+        }
+
         guard let asked = contracts[contract] else {
             let reason = "'\(contract)' is not a contract this link declares,"
                 + " so there are no procedures for '\(type)' to answer"

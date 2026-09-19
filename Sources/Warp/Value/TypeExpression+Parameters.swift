@@ -174,39 +174,3 @@ public extension Dictionary where Key == Name, Value == Set<[Name]> {
         mapValues { sets in Set(sets.flatMap { names in names }) }
     }
 }
-
-extension TypeExpression {
-    // Whether a name stands inside another type here: in a list, a map or a
-    // record, through whatever marks stand in front of it. A procedure type's
-    // slots are slots, so a name standing in one is not inside.
-    func nests(_ name: Name) -> Bool {
-        nests(name, inside: false)
-    }
-
-    private func nests(_ name: Name, inside: Bool) -> Bool {
-        switch self {
-        case let .named(held):
-            return inside && held == name
-
-        case let .composition(names):
-            return inside && names.contains(name)
-
-        case let .array(element), let .dictionary(element):
-            return element.nests(name, inside: true)
-
-        case let .record(fields):
-            return fields.values.contains { field in field.nests(name, inside: true) }
-
-        case let .procedure(signature, _, _):
-            return signature?.parameters.values.contains { parameter in parameter.declared.nests(name, inside: inside) } == true
-                || signature?.returns?.nests(name, inside: inside) == true
-
-        case let .nullable(inner), let .variable(inner), let .inout(inner), let .linear(inner),
-            let .consuming(inner), let .borrowing(inner):
-            return inner.nests(name, inside: inside)
-
-        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .parameter, .reading:
-            return false
-        }
-    }
-}
