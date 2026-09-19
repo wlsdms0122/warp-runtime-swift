@@ -46,8 +46,11 @@ struct ConformanceTests {
 
         case let .encoded(encoded, reading):
             switch reading {
+            // `reads` says as well that this is not the writer's layout,
+            // or the case would be `spells` and ask the writer too.
             case let .reads(expected):
                 #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
+                #expect(try encoded.written(expected) != encoded.data, "\(sut.name): is the writer's layout, and reads where it would spell")
 
             case let .spells(expected):
                 #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
@@ -323,7 +326,7 @@ struct Case: Sendable, CustomStringConvertible {
         self.name = name
         self.note = note
 
-        // One of `answers`, `reads` or `refuses`, and exactly one. The slot
+        // One of `answers`, `reads`, `spells` or `refuses`, and exactly one. The slot
         // groups them so that this is a question about one record instead of
         // a rule about sibling keys, but a record is not a choice, so the
         // count is still counted here. A case edited from one to the other
@@ -334,7 +337,7 @@ struct Case: Sendable, CustomStringConvertible {
             expect.count == 1,
             let (held, expected) = expect.entries.first
         else {
-            throw ConformanceError("a case expects exactly one of `answers`, `reads` and `refuses`")
+            throw ConformanceError("a case expects exactly one of `answers`, `reads`, `spells` and `refuses`")
         }
 
         // A case asks about a program, about bytes or about text, and a case
