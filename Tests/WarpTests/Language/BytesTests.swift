@@ -150,6 +150,16 @@ struct BytesTests {
         }
     }
 
+    @Test("a value answers its bytes in either spelling")
+    func bytesAreReadFromEitherSpelling() {
+        #expect(Value.bytes([104, 105]).bytes == [104, 105])
+        #expect(Value.array([.int(104), .int(105)]).bytes == [104, 105])
+        #expect(Value.array([]).bytes == [])
+        #expect(Value.array([.int(104), .int(300)]).bytes == nil)
+        #expect(Value.array([.double(1)]).bytes == nil)
+        #expect(Value.string("hi").bytes == nil)
+    }
+
     @Test("the equation is read at the build, by the elements")
     func acceptanceReadsTheElements() {
         #expect(TypeExpression.array(.int).accepts(.array(.byteElement)))

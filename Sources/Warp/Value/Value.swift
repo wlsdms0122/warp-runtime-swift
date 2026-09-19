@@ -253,6 +253,32 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
+    // The bytes a value is, in either spelling: the compact one as it is, and
+    // an array of whole numbers inside a byte's range read out one by one.
+    // Nil for anything else. The other half of the equation `elements`
+    // holds, for a procedure that wants the bytes rather than an element.
+    public var bytes: [UInt8]? {
+        switch self {
+        case let .bytes(bytes):
+            return bytes
+
+        case let .array(elements):
+            var bytes: [UInt8] = []
+            bytes.reserveCapacity(elements.count)
+
+            for element in elements {
+                guard case let .int(number) = element, let byte = UInt8(exactly: number) else { return nil }
+
+                bytes.append(byte)
+            }
+
+            return bytes
+
+        default:
+            return nil
+        }
+    }
+
     // The elements at these positions, in the spelling this value is. Nil for
     // what has no elements to take, the way `elements` answers nil.
     //
