@@ -37,10 +37,19 @@ struct ConformanceTests {
             #expect(answered == expected, "\(sut.name): \(sut.note)")
 
         case let .reads(expected):
-            let bytes = try #require(sut.bytes)
+            switch sut.subject {
+            case let .bytes(bytes):
+                #expect(try BinaryEncoding.value(from: Data(bytes)) == expected, "\(sut.name): \(sut.note)")
+                #expect(Array(try BinaryEncoding.data(from: expected)) == bytes, "\(sut.name): \(sut.note)")
 
-            #expect(try BinaryEncoding.value(from: Data(bytes)) == expected, "\(sut.name): \(sut.note)")
-            #expect(Array(try BinaryEncoding.data(from: expected)) == bytes, "\(sut.name): \(sut.note)")
+            // One way. A text is one of many layouts of its value, so what
+            // the writer lays out is asked of the case files themselves.
+            case let .text(text):
+                #expect(try TextEncoding.value(from: text) == expected, "\(sut.name): \(sut.note)")
+
+            case .program:
+                Issue.record("\(sut.name): a program answers, it does not read")
+            }
 
         case let .refuses(stage):
             let reached = try await reached(sut)
@@ -79,10 +88,11 @@ struct ConformanceTests {
     // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async throws -> Case.Stage? {
-        // Bytes are read and nothing else. There is no program to build until
-        // the reading answers one, so the one stage they reach is where they
-        // are read.
-        if let bytes = sut.bytes {
+        // Bytes and text are read and nothing else. There is no program to
+        // build until the reading answers one, so the one stage they reach is
+        // where they are read.
+        switch sut.subject {
+        case let .bytes(bytes):
             do {
                 _ = try BinaryEncoding.value(from: Data(bytes))
             } catch {
@@ -90,6 +100,18 @@ struct ConformanceTests {
             }
 
             return nil
+
+        case let .text(text):
+            do {
+                _ = try TextEncoding.value(from: text)
+            } catch {
+                return .load
+            }
+
+            return nil
+
+        case .program:
+            break
         }
 
         let builder = Builder()
@@ -139,7 +161,7 @@ struct Case: Sendable, CustomStringConvertible {
     // Which types a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
-    static let version = 4
+    static let version = 5
     static let earliest = 2
 
     static let versionKey: Name = "test"
@@ -156,8 +178,16 @@ struct Case: Sendable, CustomStringConvertible {
 
         // Those bytes are that value. Both ways: reading them answers it, and
         // writing it answers them, since a writer that agrees with no reader
-        // and a reader that agrees with no writer each pass half of this.
+        // and a reader that agrees with no writer each pass half of this. A
+        // text reads one way, since one value has many layouts in text.
         case reads(Value)
+    }
+
+    // What a case asks about: a document, or the bytes or the text of one.
+    enum Subject: Sendable {
+        case program(Value)
+        case bytes([UInt8])
+        case text(String)
     }
 
     // A module the runner brings. The declarations are held apart from the rest
@@ -210,16 +240,10 @@ struct Case: Sendable, CustomStringConvertible {
 
     let note: String
 
-    // The document this case asks about, where it asks about one. Exactly one
-    // of this and `bytes` is there.
-    let program: Value?
+    let subject: Subject
 
     let arguments: [Name: Value]
     let expectation: Expectation
-
-    // Bytes for a document, where the case asks about an encoding rather than
-    // about a program. Exactly one of this and `program` is there.
-    let bytes: [UInt8]?
 
     // The module this case asks the runner to bring, which is what a host does
     // for every program: the document names what it needs and the code arrives
@@ -269,22 +293,26 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("a case is a name, a note, a subject and what should happen")
         }
 
-        // A case asks about a program or about bytes, and a case holding both
-        // would be two cases sharing one answer.
-        switch (written["program"], written["bytes"]) {
-        case let (program?, nil):
-            self.program = program
-            self.bytes = nil
+        // A case asks about a program, about bytes or about text, and a case
+        // holding two would be two cases sharing one answer.
+        switch (written["program"], written["bytes"], written["text"]) {
+        case let (program?, nil, nil):
+            self.subject = .program(program)
 
-        case let (nil, .bytes(bytes)?):
-            self.program = nil
-            self.bytes = bytes
+        case let (nil, .bytes(bytes)?, nil):
+            self.subject = .bytes(bytes)
 
-        case (nil, .some):
+        case (nil, .some, nil):
             throw ConformanceError("the bytes a case asks about are written as bytes")
 
+        case let (nil, nil, .string(text)?):
+            self.subject = .text(text)
+
+        case (nil, nil, .some):
+            throw ConformanceError("the text a case asks about is written as a string")
+
         default:
-            throw ConformanceError("a case asks about exactly one of a `program` and `bytes`")
+            throw ConformanceError("a case asks about exactly one of a `program`, `bytes` and `text`")
         }
 
         self.name = name
@@ -335,18 +363,19 @@ struct Case: Sendable, CustomStringConvertible {
             )
         }
 
-        // What a case asks about decides what it may expect. Bytes do not run,
-        // and a program is not read out of bytes here: the case is warpt text
-        // and the runner was handed the tree.
-        switch (self.bytes, self.expectation) {
-        case (nil, .reads):
-            throw ConformanceError("only bytes read as a value")
+        // What a case asks about decides what it may expect. Bytes and text
+        // do not run, and a program is not read out of either here: the case
+        // is warpt text and the runner was handed the tree.
+        switch (self.subject, self.expectation) {
+        case (.program, .reads):
+            throw ConformanceError("only bytes and text read as a value")
 
-        case (.some, .answers):
-            throw ConformanceError("bytes do not run, so they answer nothing")
+        case (.bytes, .answers), (.text, .answers):
+            throw ConformanceError("bytes and text do not run, so they answer nothing")
 
-        case let (.some, .refuses(stage)) where stage != .load:
-            throw ConformanceError("bytes are refused where they are read, and not at \(stage)")
+        case let (.bytes, .refuses(stage)) where stage != .load,
+             let (.text, .refuses(stage)) where stage != .load:
+            throw ConformanceError("bytes and text are refused where they are read, and not at \(stage)")
 
         default:
             break
@@ -437,7 +466,9 @@ struct Case: Sendable, CustomStringConvertible {
     // and nothing that runs programs reaches this without having read which of
     // the two it holds.
     func document() throws -> Value {
-        guard let program else { throw ConformanceError("'\(name)' asks about bytes and not a program") }
+        guard case let .program(program) = subject else {
+            throw ConformanceError("'\(name)' asks about an encoding and not a program")
+        }
 
         return program
     }
