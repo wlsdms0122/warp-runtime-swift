@@ -317,6 +317,39 @@ struct TypeNotationTests {
         )
     }
 
+    @Test("the record form holds only an element with no spelling of its own")
+    func recordFormIsForNamelessElements() throws {
+        // Given. An array of records has no string spelling, so the record
+        // form is the one way to write it.
+        let sut = try loader.loadDocument([
+            "procedures": [
+                "entry": [
+                    "parameters": ["rows": ["type": ["array": ["id": "string"]]]],
+                    "body": [["let": "seen", "value": ["ref": "rows"]]]
+                ]
+            ]
+        ])
+
+        // Then
+        #expect(
+            sut.procedures["entry"]?.signature.parameters["rows"]?.type
+                == .array(.record(["id": .string]))
+        )
+
+        // An element with a spelling is written `array<string>`, and the
+        // record form around it is refused rather than read as the same type.
+        #expect(throws: ReadingError.self) {
+            try loader.loadDocument([
+                "procedures": [
+                    "entry": [
+                        "parameters": ["rows": ["type": ["array": "string"]]],
+                        "body": [["let": "seen", "value": ["ref": "rows"]]]
+                    ]
+                ]
+            ])
+        }
+    }
+
     @Test("a declared type is enforced at the call boundary")
     func declaredTypeIsEnforced() async throws {
         // Given

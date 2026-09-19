@@ -432,14 +432,26 @@ public struct TypeReader: Decodable {
 
         // An array or a dictionary of something with no spelling of its own,
         // told apart the same way. `array<string>` is written as the name it
-        // is; an array of procedures has no name, so it is written here.
+        // is; an array of procedures has no name, so it is written here. The
+        // writer answers whether the element has a name, so the two forms
+        // never overlap.
         if
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
             let holding = Holding(rawValue: key.stringValue)
         {
-            return holding.holding(try keyed.decode(TypeReader.self, forKey: key).type)
+            let element = try keyed.decode(TypeReader.self, forKey: key).type
+
+            if case let .string(spelling) = try Writer().value(of: element) {
+                throw ReadingError(
+                    "element '\(spelling)' has a spelling of its own."
+                        + " Write `\(holding.rawValue)<\(spelling)>`",
+                    at: decoder.steps
+                )
+            }
+
+            return holding.holding(element)
         }
 
         guard
