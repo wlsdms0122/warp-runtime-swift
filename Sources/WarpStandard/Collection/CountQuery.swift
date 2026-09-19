@@ -24,6 +24,10 @@ struct CountQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
+        // A list in either spelling. Bytes have a length the way text has a
+        // count, and unlike text, no Unicode question about what "one" means.
+        if let elements = question.receiver?.elements { return .int(elements.count) }
+
         switch question.receiver {
         case let .string(text):
             return .int(text.count)
@@ -33,11 +37,6 @@ struct CountQuery: Query {
 
         case let .dictionary(held):
             return .int(held.count)
-
-        // A list in either spelling. Bytes have a length the way text has a
-        // count, and unlike text, no Unicode question about what "one" means.
-        case .array, .bytes:
-            return question.receiver?.elements.map { elements in .int(elements.count) }
 
         default:
             return nil
