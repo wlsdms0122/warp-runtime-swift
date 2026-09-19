@@ -77,6 +77,25 @@ struct WriterTests {
         #expect(once == twice)
     }
 
+    @Test("a named record is data wherever it stands, written plainly and read back so")
+    func aNamedRecordIsNeverQuoted() throws {
+        // Given. A field named for a form key, under a name that makes the
+        // record data
+        let point = try Value.holding([(name: Name("value"), value: Value.int(1))], named: "Point")
+
+        // Then. The writer leaves it as it is, the reader reads it as itself,
+        // and the escape around it is refused as a second spelling
+        #expect(try Writer.spelling(of: point, reserving: ExpressionReader.formKeys) == .plainly)
+        guard case .literal(let read) = try ExpressionReader.read(point), read == point else {
+            Issue.record("the named record was not read as itself")
+
+            return
+        }
+        #expect(throws: (any Error).self) {
+            try ExpressionReader.read(.dictionary(["value": point]))
+        }
+    }
+
     @Test("a canonical document is written back exactly as it was")
     func aCanonicalDocumentIsWrittenBackUnchanged() async throws {
         // Given. `canonical` is written in the types themselves, so reading it

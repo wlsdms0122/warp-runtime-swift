@@ -321,7 +321,7 @@ public extension Writer {
     // Quoting one would put something in the text that reading it back could
     // not answer with, which is the same reason a natively implemented procedure has
     // no document.
-    private enum Spelling {
+    enum Spelling {
         case plainly
         case quoted
     }
@@ -344,13 +344,20 @@ public extension Writer {
         return taken
     }
 
-    private static func spelling(
+    // Whether data is written as itself or under `{ value: }`. The reader asks
+    // this too, with nothing reserved beyond the form keys, so what it refuses
+    // as a second spelling is exactly what no writer would have quoted.
+    static func spelling(
         of value: Value,
         reserving reserved: Set<Name>,
         constructs: Set<Name> = []
     ) throws -> Spelling {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
+            return .plainly
+
+        // A named record is data wherever it stands, and is read as such.
+        case let .record(record) where record.name != nil:
             return .plainly
 
         case let .array(elements):

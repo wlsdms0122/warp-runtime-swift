@@ -150,7 +150,7 @@ public struct ExpressionReader: Decodable {
         if record.names.contains("as") || record.names.contains("as?") { return try cast(in: record, at: steps, in: decoder) }
         if record.names.contains(Self.closureKey) { return try closure(in: record, at: steps, in: decoder) }
         if record.names.contains("call") { return try call(in: record, at: steps, in: decoder) }
-        if record.names.contains("value") { return try literal(in: record) }
+        if record.names.contains("value") { return try literal(in: record, in: decoder) }
 
         return try template(in: record, at: steps, in: decoder)
     }
@@ -315,7 +315,7 @@ public struct ExpressionReader: Decodable {
         }
     }
 
-    private static func literal(in record: Value.Dictionary) throws -> Expression {
+    private static func literal(in record: Value.Dictionary, in decoder: Decoder?) throws -> Expression {
         guard record.count == 1, let payload = record["value"] else {
             throw ExpressionFormError(
                 "a record with `value` must be exactly { value: <data> }."
@@ -324,13 +324,22 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        // Only a record can look like a form, and a named one is data
-        // wherever it stands, so data holding no other record is written as
-        // itself, and the escape around it is a second spelling of the same
-        // literal. A bare null is the one exception: in a slot that may be
-        // left out it reads as the slot left out, so null written is written
-        // here.
-        guard payload == .null || couldReadAsAForm(payload) else {
+        // Data no writer would have quoted is written as itself, and the
+        // escape around it is a second spelling of the same literal. Asked of
+        // the writer's own judgment, with everything this notation reserves and
+        // every construct key, since this walk does not know whether it stands
+        // under a statement's `value`. A bare null is the one exception: in a
+        // slot that may be left out it reads as the slot left out, so null
+        // written is written here.
+        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
+        let registry = decoder?.userInfo[.constructRegistry] as? ConstructRegistry
+        let quoted = try Writer.spelling(
+            of: payload,
+            reserving: Self.formKeys.union(notation.condition?.keys ?? []),
+            constructs: Set(registry?.keys ?? [])
+        ) == .quoted
+
+        guard payload == .null || quoted else {
             throw ExpressionFormError(
                 "{ value: } quotes data that could be read as a form, and data"
                     + " with no record in it cannot be. Write it as itself"
@@ -338,22 +347,6 @@ public struct ExpressionReader: Decodable {
         }
 
         return .literal(payload)
-    }
-
-    private static func couldReadAsAForm(_ value: Value) -> Bool {
-        switch value {
-        case let .record(record):
-            return record.name == nil
-
-        case .dictionary:
-            return true
-
-        case let .array(elements):
-            return elements.contains(where: couldReadAsAForm)
-
-        case .null, .bool, .int, .double, .string, .bytes, .procedure:
-            return false
-        }
     }
 
     private static func template(
