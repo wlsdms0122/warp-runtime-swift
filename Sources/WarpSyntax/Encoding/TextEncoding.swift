@@ -19,10 +19,12 @@ import Warp
 // forget, no colons; a record is `{ key value … }` and an array is `[ value …
 // ]`.
 //
-// One document, one text. The writer is canonical (sorted keys, one layout, one
-// spelling per value) and the reader accepts exactly the canonical writing: a
-// text that is not what the writer would write for the value it spells is not a
-// document, byte for byte the same promise the binary keeps.
+// One value, one spelling. The writer lays a text out one way (sorted keys,
+// two spaces an indent), so a text that has been through it is the same bytes
+// everywhere. Layout is free on the way in: the reader takes keys in any order
+// and any whitespace between tokens. What it does not take is a second
+// spelling of a value, `1.50` for `1.5` or `\u0041` for `A`, since those are
+// two texts for one value rather than two layouts of one text.
 public enum TextEncoding {
     // MARK: - Property
     // The first tokens of every document: which encoding, laid out how. The
