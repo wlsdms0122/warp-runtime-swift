@@ -123,7 +123,7 @@ struct LoadGateTests {
     func indexReferenceTypoRejected() {
         // Given
         let fixture: Value = [
-            "parameters": ["items": ["type": "array"]],
+            "parameters": ["items": ["type": "array<any>"]],
             "body": [["let": "pick", "value": ["ref": "items[${typoooo}]"]]]
         ]
 
@@ -139,7 +139,7 @@ struct LoadGateTests {
         // Given. `[]` is an author mistake, rejected at parse instead of being
         // carried into the model
         let fixture: Value = [
-            "parameters": ["items": ["type": "array"]],
+            "parameters": ["items": ["type": "array<any>"]],
             "body": [["let": "pick", "value": ["ref": "items[]"]]]
         ]
 
@@ -154,7 +154,7 @@ struct LoadGateTests {
         // Given. There is one way a name gets into a body. A value a run
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [
-            "parameters": ["run": ["type": "dictionary"]],
+            "parameters": ["run": ["type": "dictionary<any>"]],
             "body": [["let": "whoami", "value": ["ref": "run.id"]]]
         ]
         let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run.id"]]]]

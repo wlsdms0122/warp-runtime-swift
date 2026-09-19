@@ -224,6 +224,15 @@ public struct TypeReader: Decodable {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
             }
 
+            // A list or a map says what it holds. `array<any>` is a list of
+            // anything, and the bare word is not a second spelling of it.
+            guard !Self.holdingKeys.contains(text) else {
+                throw TypeFormError(
+                    "type '\(text)' says nothing of what it holds. Write `\(text)<any>`"
+                        + " for one of anything"
+                )
+            }
+
             let name = try named(text)
 
             return Self.builtins[name] ?? .named(name)
@@ -507,10 +516,6 @@ public struct TypeReader: Decodable {
         "bytes": .bytes,
         // Whole or fraction, for a slot that means both.
         "number": .number,
-        // Bare, these mean "a list of anything" and "a map of anything". The
-        // most a declaration could say before it could say more.
-        "array": .array(.any),
-        "dictionary": .dictionary(.any),
         "procedure": .procedure(nil)
     ]
 

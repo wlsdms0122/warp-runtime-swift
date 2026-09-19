@@ -20,7 +20,9 @@ struct TypeNotationTests {
     @Test("a built-in reads as its own name, applied or not")
     func builtinsParse() throws {
         #expect(try TypeReader.parse("string") == .string)
-        #expect(try TypeReader.parse("array") == .array(.any))
+        #expect(try TypeReader.parse("array<any>") == .array(.any))
+        #expect(throws: (any Error).self) { try TypeReader.parse("array") }
+        #expect(throws: (any Error).self) { try TypeReader.parse("dictionary") }
         #expect(try TypeReader.parse("array<string>") == .array(.string))
         #expect(try TypeReader.parse("dictionary<array<int>>") == .dictionary(.array(.int)))
         #expect(try TypeReader.parse("procedure") == .procedure(nil))
