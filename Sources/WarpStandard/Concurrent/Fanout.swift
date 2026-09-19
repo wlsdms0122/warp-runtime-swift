@@ -93,22 +93,6 @@ struct Fanout: Sendable {
         return winner
     }
 
-    // One closure run once per element, answered in the collection's order.
-    func map<P: NativeProcedure>(
-        _ invocation: Invocation<P>,
-        over material: Value,
-        by handed: Value
-    ) async throws -> Value {
-        let pieces = try mapped(over: material, by: handed)
-        let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
-
-        let failures = failures(among: outcomes)
-
-        guard failures.isEmpty else { throw failure(among: failures) }
-
-        return try answered(outcomes, keyed: false)
-    }
-
     // MARK: - Private
     // One piece per name, in the order the names stand.
     private func pieces(of held: Value.Dictionary) throws -> [Piece] {
@@ -150,39 +134,6 @@ struct Fanout: Sendable {
         case let value:
             throw ExecutionError(
                 "\(name) asks a record or an array of closures, and was sent \(value.type)"
-            )
-        }
-    }
-
-    // The pieces of `map`: the collection sets how many, the one closure is
-    // every piece's body. Each call is offered the element and where it sat,
-    // and the closure's own signature says which of those it reads.
-    private func mapped(over material: Value, by handed: Value) throws -> [Piece] {
-        // Through the one projection that owns the bytes equation, so a fan-out
-        // walks bytes the way `each` does. Read straight from the projection
-        // rather than out of a copy of it. A fan-out makes a piece for every
-        // element by definition, so what this saves is the one intermediate
-        // array and not the making of the elements.
-        guard let elements = material.elements else {
-            throw ExecutionError("\(name) walks an array, and was sent \(material.type)")
-        }
-
-        guard case let .procedure(by) = handed else {
-            // Unset and set-to-something-else are different mistakes, and the
-            // message says which one was made.
-            guard handed != .null else {
-                throw ExecutionError("\(name) asks a closure under 'by', and none arrived")
-            }
-
-            throw ExecutionError("\(name) asks a closure under 'by', and was sent \(handed.type)")
-        }
-
-        return elements.enumerated().map { position, element in
-            Piece(
-                key: nil,
-                position: position,
-                closure: by,
-                arguments: [(name: "item", value: element), (name: "index", value: .int(position))]
             )
         }
     }
