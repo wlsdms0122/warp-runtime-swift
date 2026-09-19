@@ -61,7 +61,9 @@ public enum TextEncoding {
             throw refused("the text does not begin as a warp document begins")
         }
 
-        guard case let .bare(version) = tokens.popFirst(), let claimed = Int(version) else {
+        // The one spelling of a whole number, here as in a value: `warpt 01`
+        // would be a second text for a document the reader already has one for.
+        guard case let .bare(version) = tokens.popFirst(), case let .int(claimed) = Int.reading(spelling: version) else {
             throw refused("the text does not say how it is laid out")
         }
 
