@@ -34,14 +34,16 @@ struct CountQuery: Query {
         case let .dictionary(held):
             return .int(held.count)
 
-        // What is indexed (an array, or bytes through the one projection that
-        // owns the equation) is counted the same way. Bytes have a length the
-        // way text has a count, and unlike text, no Unicode question about what
-        // "one" means.
-        default:
-            guard let elements = question.receiver?.elements else { return nil }
-
+        case let .array(elements):
             return .int(elements.count)
+
+        // Bytes have a length the way text has a count, and unlike text, no
+        // Unicode question about what "one" means.
+        case let .bytes(bytes):
+            return .int(bytes.count)
+
+        default:
+            return nil
         }
     }
 

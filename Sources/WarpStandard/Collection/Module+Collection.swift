@@ -15,7 +15,7 @@ public extension Module {
         description: "Procedures about arrays and records. A string counts and contains too.",
         procedures: [
             "std.collection.count": Procedure(
-                description: "How many, for a type that has a count.",
+                description: "How many, of what std.Collection admits.",
                 signature: Signature(of: CountQuery.self, receiver: .of, returns: .int),
                 implementation: .query(CountQuery())
             ),

@@ -17,7 +17,7 @@ public extension Module {
     static let foundation: [Module] = [nativeFoundation]
 
     private static let nativeFoundation = try! Module(
-        description: "The shared ground: what counts as a number, and what orders.",
+        description: "The shared ground: what counts as a number, what orders, and what has a count.",
         types: [
             // One element of bytes. A whole number a range refines, not a kind
             // of its own. Declared here so `bytes` and `array<byte>` can say
