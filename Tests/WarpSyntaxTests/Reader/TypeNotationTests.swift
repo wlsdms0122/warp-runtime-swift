@@ -176,7 +176,7 @@ struct TypeNotationTests {
         let sut = try await loader.loadProcedure([
             "receiver": "of",
             "bounds": ["T": "Comparable"],
-            "parameters": ["of": "some T", "value": "some T"],
+            "parameters": ["of": ["type": "some T"], "value": ["type": "some T"]],
             "returns": "some T",
             "result": ["ref": "of"]
         ])
@@ -206,7 +206,7 @@ struct TypeNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Comparable"],
-                "parameters": ["of": "int"],
+                "parameters": ["of": ["type": "int"]],
                 "result": ["ref": "of"]
             ])
         }
@@ -215,7 +215,7 @@ struct TypeNotationTests {
         await #expect(throws: ReadingError.self) {
             try await loader.loadProcedure([
                 "bounds": ["T": "array<int>"],
-                "parameters": ["of": "some T"],
+                "parameters": ["of": ["type": "some T"]],
                 "result": ["ref": "of"]
             ])
         }
@@ -231,7 +231,7 @@ struct TypeNotationTests {
                         "type": [
                             "procedure": [
                                 "bounds": ["T": "Comparable"],
-                                "parameters": ["item": "some T"],
+                                "parameters": ["item": ["type": "some T"]],
                                 "returns": "bool"
                             ]
                         ]
@@ -249,11 +249,11 @@ struct TypeNotationTests {
         let sut = try await loader.loadProcedure([
             "bounds": ["Element": "Comparable"],
             "parameters": [
-                "of": "array<some Element>",
+                "of": ["type": "array<some Element>"],
                 "by": [
                     "type": [
                         "procedure": [
-                            "parameters": ["item": "some Element"],
+                            "parameters": ["item": ["type": "some Element"]],
                             "returns": "bool"
                         ]
                     ]
@@ -301,7 +301,7 @@ struct TypeNotationTests {
             "types": ["Task": ["id": "string", "done": "bool"]],
             "procedures": [
                 "entry": [
-                    "parameters": ["tasks": "array<Task>"],
+                    "parameters": ["tasks": ["type": "array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]]
                 ]
             ]
@@ -322,7 +322,7 @@ struct TypeNotationTests {
             "types": ["Task": ["id": "string"]],
             "procedures": [
                 "entry": [
-                    "parameters": ["tasks": "array<Task>"],
+                    "parameters": ["tasks": ["type": "array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
                     "result": ["result": ["ref": "seen"]]
                 ]

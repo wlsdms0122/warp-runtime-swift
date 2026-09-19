@@ -34,7 +34,7 @@ struct LoadGateTests {
         // { some() }` is the form, and that is `conditional`, so the envelope reads
         // `when:` as the unknown key it is.
         let fixture: Value = [
-            "parameters": ["kind": "string"],
+            "parameters": ["kind": ["type": "string"]],
             "body": [
                 [
                     "let": "only-a",
@@ -123,7 +123,7 @@ struct LoadGateTests {
     func indexReferenceTypoRejected() {
         // Given
         let fixture: Value = [
-            "parameters": ["items": "array"],
+            "parameters": ["items": ["type": "array"]],
             "body": [["let": "pick", "value": ["ref": "items[${typoooo}]"]]]
         ]
 
@@ -139,7 +139,7 @@ struct LoadGateTests {
         // Given. `[]` is an author mistake, rejected at parse instead of being
         // carried into the model
         let fixture: Value = [
-            "parameters": ["items": "array"],
+            "parameters": ["items": ["type": "array"]],
             "body": [["let": "pick", "value": ["ref": "items[]"]]]
         ]
 
@@ -154,7 +154,7 @@ struct LoadGateTests {
         // Given. There is one way a name gets into a body. A value a run
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [
-            "parameters": ["run": "dictionary"],
+            "parameters": ["run": ["type": "dictionary"]],
             "body": [["let": "whoami", "value": ["ref": "run.id"]]]
         ]
         let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run.id"]]]]

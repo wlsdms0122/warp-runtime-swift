@@ -132,7 +132,7 @@ struct ConditionTests {
     func invalidRegexRejectedAtLink() async {
         // Given
         let fixture: Value = [
-            "parameters": ["title": "string"],
+            "parameters": ["title": ["type": "string"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -171,7 +171,7 @@ struct ConditionTests {
     func doubleOperatorKeysRejected() {
         // Given
         let fixture: Value = [
-            "parameters": ["k": "string"],
+            "parameters": ["k": ["type": "string"]],
             "body": [
                 [
                     "value": ["conditional": [

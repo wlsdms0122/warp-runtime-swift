@@ -22,7 +22,7 @@ struct ConditionalTests {
         // Given. An arm is statements alone: what it keeps it writes to an
         // outer variable, and the conditional itself answers nothing
         let spec = try await loader.loadProcedure([
-            "parameters": ["kind": "string"],
+            "parameters": ["kind": ["type": "string"]],
             "body": [
                 ["var": "pick"],
                 [

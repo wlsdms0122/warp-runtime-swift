@@ -33,7 +33,7 @@ struct LeaveTests {
     func returningAnswers() async throws {
         // Given
         let sut = try await loader.loadProcedure([
-            "parameters": ["procedure": "string"],
+            "parameters": ["procedure": ["type": "string"]],
             "returns": "string",
             "body": [
                 ["var": "early", "value": "kept going"],
@@ -100,7 +100,7 @@ struct LeaveTests {
         // Given. A round cut short wrote nothing further outward, which is what
         // skipping it means. So only the rounds that finished are seen.
         let sut = try await loader.loadProcedure([
-            "parameters": ["names": "array<string>"],
+            "parameters": ["names": ["type": "array<string>"]],
             "body": [
                 ["var": "seen", "value": ""],
                 [
@@ -256,7 +256,7 @@ struct LeaveTests {
         // *written* are not around where it runs.
         #expect {
             try loader.loadProcedure([
-                "parameters": ["names": "array<string>"],
+                "parameters": ["names": ["type": "array<string>"]],
                 "body": [
                     [
                         "let": "walked",
@@ -271,7 +271,7 @@ struct LeaveTests {
                                         "arguments": [
                                             "by": [
                                                 "closure": [
-                                                    "parameters": ["item": "string"],
+                                                    "parameters": ["item": ["type": "string"]],
                                                     "body": [["value": ["break": Value.null]]]
                                                 ]
                                             ]
@@ -348,7 +348,7 @@ struct LeaveTests {
                     ],
                     "result": ["ref": "used"]
                 ],
-                "wants": ["parameters": ["it": "int"], "returns": "int", "result": ["ref": "it"]]
+                "wants": ["parameters": ["it": ["type": "int"]], "returns": "int", "result": ["ref": "it"]]
             ]
         ]
 

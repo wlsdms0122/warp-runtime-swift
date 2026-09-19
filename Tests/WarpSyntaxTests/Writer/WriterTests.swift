@@ -118,7 +118,7 @@ struct WriterTests {
         // document only if the writing side kept a spelling.
         let loader = Loader()
         let module = try await loader.loadProcedure([
-            "parameters": ["ready": "bool"],
+            "parameters": ["ready": ["type": "bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -153,7 +153,7 @@ struct WriterTests {
             ],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": "array<string>", "procedure": "string"],
+                    "parameters": ["names": ["type": "array<string>"], "procedure": ["type": "string"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -227,7 +227,7 @@ struct WriterTests {
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try await loader.loadProcedure([
-            "parameters": ["procedure": "string"],
+            "parameters": ["procedure": ["type": "string"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -396,7 +396,7 @@ struct WriterTests {
             return
         }
 
-        #expect(parameters["item"] == .string("some T"))
+        #expect(parameters["item"] == .dictionary(["type": .string("some T")]))
     }
 
     @Test("a construct binding a name its statement did not give has no document")
@@ -572,7 +572,7 @@ struct WriterTests {
             "entry": [
                 "description": "every construct, once",
                 "parameters": [
-                    "names": "array<string>",
+                    "names": ["type": "array<string>"],
                     "procedure": ["type": "string", "default": "hey", "description": "what to match"],
                     "kind": ["type": "string", "enum": ["a", "b"]]
                 ],
@@ -649,7 +649,7 @@ struct WriterTests {
                         "let": "called",
                         "value": ["apply": [
                             "procedure": [
-                                "closure": ["parameters": ["n": "int"], "result": ["ref": "n"]]
+                                "closure": ["parameters": ["n": ["type": "int"]], "result": ["ref": "n"]]
                             ],
                             "arguments": ["n": 1]
                         ]
@@ -660,19 +660,19 @@ struct WriterTests {
             "typed": [
                 "receiver": "of",
                 "parameters": [
-                    "of": "string",
+                    "of": ["type": "string"],
                     "how": [
                         "type": [
                             "const procedure": [
                                 "receiver": "it",
-                                "parameters": ["it": "int"],
+                                "parameters": ["it": ["type": "int"]],
                                 "returns": "bool"
                             ]
                         ]
                     ],
-                    "anything": "procedure",
-                    "parameter": "some Element",
-                    "bounded": "some T",
+                    "anything": ["type": "procedure"],
+                    "parameter": ["type": "some Element"],
+                    "bounded": ["type": "some T"],
                     "shaped": ["type": ["done": "bool", "id": "string"]]
                 ],
                 "returns": "never",
@@ -694,7 +694,7 @@ struct WriterTests {
             "procedures": [
                 "entry": [
                     "parameters": [
-                        "procedure": "string",
+                        "procedure": ["type": "string"],
                         "counted": ["type": "int", "default": 1, "description": "how many"],
                         "kind": ["type": "string", "enum": ["a", "b"]]
                     ],
@@ -715,7 +715,7 @@ struct WriterTests {
             "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": "string", "ready": "bool"],
+                    "parameters": ["procedure": ["type": "string"], "ready": ["type": "bool"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -767,7 +767,7 @@ struct WriterTests {
             "imports": ["test.fail", "std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": "array<string>"],
+                    "parameters": ["names": ["type": "array<string>"]],
                     "body": [
                         ["var": "seen", "value": 0],
                         [
@@ -814,7 +814,7 @@ struct WriterTests {
             "imports": ["std.collection.count", "std.math.lessThan"],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": "array<string>"],
+                    "parameters": ["names": ["type": "array<string>"]],
                     "returns": "any",
                     "body": [
                         [
@@ -859,7 +859,7 @@ struct WriterTests {
             "imports": ["std.collection.filter", "std.text.joined", "std.logic.notEqual", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": "string", "names": "array<string>"],
+                    "parameters": ["procedure": ["type": "string"], "names": ["type": "array<string>"]],
                     "body": [
                         ["let": "shouted", "value": ["call": ["procedure": "shout", "of": ["ref": "procedure"]]]],
                         [
@@ -870,7 +870,7 @@ struct WriterTests {
                                 "arguments": [
                                     "by": [
                                         "closure": [
-                                            "parameters": ["item": "string"],
+                                            "parameters": ["item": ["type": "string"]],
                                             "returns": "bool",
                                             "result": [
                                                 "call": [
@@ -888,7 +888,7 @@ struct WriterTests {
                             "let": "called",
                             "value": ["apply": [
                                 "procedure": [
-                                    "closure": ["parameters": ["n": "int"], "result": ["ref": "n"]]
+                                    "closure": ["parameters": ["n": ["type": "int"]], "result": ["ref": "n"]]
                                 ],
                                 "arguments": ["n": 1]
                             ]
@@ -902,15 +902,15 @@ struct WriterTests {
                 ],
                 "shout": [
                     "receiver": "of",
-                    "parameters": ["of": "string"],
+                    "parameters": ["of": ["type": "string"]],
                     "returns": "string",
                     "result": ["ref": "of"]
                 ],
                 "typed": [
                     "parameters": [
-                        "how": ["type": ["const procedure": ["parameters": ["it": "int"], "returns": "bool"]]],
+                        "how": ["type": ["const procedure": ["parameters": ["it": ["type": "int"]], "returns": "bool"]]],
                         "anything": ["type": "procedure"],
-                        "parameter": "some Element"
+                        "parameter": ["type": "some Element"]
                     ],
                     "returns": "never",
                     "result": ["ref": "anything"]

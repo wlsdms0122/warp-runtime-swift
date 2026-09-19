@@ -35,7 +35,7 @@ struct CallTests {
                     "result": ["result": ["ref": "call.pair"]]
                 ],
                 "callee": [
-                    "parameters": ["base": "int", "bump": ["type": "int", "default": 1]],
+                    "parameters": ["base": ["type": "int"], "bump": ["type": "int", "default": 1]],
                     "body": [
                         [
                             "let": "echo",
@@ -70,7 +70,7 @@ struct CallTests {
                     ]
                 ],
                 "callee": [
-                    "parameters": ["base": "int"],
+                    "parameters": ["base": ["type": "int"]],
                     "body": [["let": "echo", "value": ["ref": "base"]]]
                 ]
             ]
@@ -120,7 +120,7 @@ struct CallTests {
             "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": "string"],
+                    "parameters": ["procedure": ["type": "string"]],
                     "body": [
                         [
                             "let": "said",
@@ -131,7 +131,7 @@ struct CallTests {
                 ],
                 "shout": [
                     "receiver": "of",
-                    "parameters": ["of": "string"],
+                    "parameters": ["of": ["type": "string"]],
                     "returns": "string",
                     "body": [],
                     "result": ["format": "${of}!", "with": ["of": ["ref": "of"]]]

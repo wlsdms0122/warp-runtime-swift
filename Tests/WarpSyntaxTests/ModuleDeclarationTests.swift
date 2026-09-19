@@ -208,20 +208,20 @@ struct ModuleDeclarationTests {
                 ],
                 "app.tell": [
                     "receiver": "it",
-                    "parameters": ["it": "some T"],
+                    "parameters": ["it": ["type": "some T"]],
                     "bounds": ["T": "app.Describable"],
                     "returns": "string",
                     "result": ["call": ["of": ["ref": "it"], "procedure": "app.Describable.describe"]]
                 ],
                 "bank.Account.describe": [
                     "receiver": "of",
-                    "parameters": ["of": "bank.Account"],
+                    "parameters": ["of": ["type": "bank.Account"]],
                     "returns": "string",
                     "result": "an account"
                 ],
                 "bank.Card.describe": [
                     "receiver": "of",
-                    "parameters": ["of": "bank.Card"],
+                    "parameters": ["of": ["type": "bank.Card"]],
                     "returns": "string",
                     "result": "a card"
                 ]

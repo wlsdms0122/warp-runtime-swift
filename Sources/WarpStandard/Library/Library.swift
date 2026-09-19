@@ -46,8 +46,12 @@ enum Library {
                   ]
                   description "Writes one element onto the end of the array a variable holds, in place."
                   parameters {
-                    to "inout array<some Element>"
-                    value "some Element"
+                    to {
+                      type "inout array<some Element>"
+                    }
+                    value {
+                      type "some Element"
+                    }
                   }
                   receiver "to"
                   result null
@@ -119,8 +123,12 @@ enum Library {
                   ]
                   description "Whether an array holds a value."
                   parameters {
-                    of "array<some Element>"
-                    value "some Element"
+                    of {
+                      type "array<some Element>"
+                    }
+                    value {
+                      type "some Element"
+                    }
                   }
                   receiver "of"
                   result {
@@ -196,7 +204,9 @@ enum Library {
                   ]
                   description "The elements after the first."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                   }
                   receiver "of"
                   result {
@@ -274,7 +284,9 @@ enum Library {
                   ]
                   description "The elements before the last."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                   }
                   receiver "of"
                   result {
@@ -370,12 +382,16 @@ enum Library {
                   ]
                   description "The elements a procedure answers true for."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                     value {
                       type {
                         "const procedure" {
                           parameters {
-                            item "some Element"
+                            item {
+                              type "some Element"
+                            }
                           }
                           returns "bool"
                         }
@@ -401,7 +417,9 @@ enum Library {
                 "std.collection.first" {
                   description "The first element, or nothing."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                   }
                   receiver "of"
                   result {
@@ -433,7 +451,9 @@ enum Library {
                   ]
                   description "The last element, or nothing."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                   }
                   receiver "of"
                   result {
@@ -508,12 +528,16 @@ enum Library {
                   ]
                   description "Each element answered by a procedure, in order."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                     value {
                       type {
                         "const procedure" {
                           parameters {
-                            item "some Element"
+                            item {
+                              type "some Element"
+                            }
                           }
                           returns "some Answer"
                         }
@@ -558,8 +582,12 @@ enum Library {
                   ]
                   description "The elements with one more at the front."
                   parameters {
-                    of "array<some Element>"
-                    value "some Element"
+                    of {
+                      type "array<some Element>"
+                    }
+                    value {
+                      type "some Element"
+                    }
                   }
                   receiver "of"
                   result {
@@ -634,14 +662,22 @@ enum Library {
                   ]
                   description "The elements folded into one, starting from a value."
                   parameters {
-                    from "some Carried"
-                    of "array<some Element>"
+                    from {
+                      type "some Carried"
+                    }
+                    of {
+                      type "array<some Element>"
+                    }
                     value {
                       type {
                         "const procedure" {
                           parameters {
-                            carried "some Carried"
-                            item "some Element"
+                            carried {
+                              type "some Carried"
+                            }
+                            item {
+                              type "some Element"
+                            }
                           }
                           returns "some Carried"
                         }
@@ -729,7 +765,9 @@ enum Library {
                   ]
                   description "The elements back to front."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1077,7 +1115,9 @@ enum Library {
                   }
                   description "The elements in order, for numbers or for strings."
                   parameters {
-                    of "array<some Element>"
+                    of {
+                      type "array<some Element>"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1164,7 +1204,9 @@ enum Library {
                   ]
                   description "What a record holds, by its names in order."
                   parameters {
-                    of "dictionary<some Entry>"
+                    of {
+                      type "dictionary<some Entry>"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1285,14 +1327,20 @@ enum Library {
                       type {
                         "isolated procedure" {
                           parameters {
-                            index "int"
-                            item "some Element"
+                            index {
+                              type "int"
+                            }
+                            item {
+                              type "some Element"
+                            }
                           }
                           returns "some Answer"
                         }
                       }
                     }
-                    over "array<some Element>"
+                    over {
+                      type "array<some Element>"
+                    }
                   }
                   receiver "over"
                   result {
@@ -1408,7 +1456,9 @@ enum Library {
                 "std.logic.not" {
                   description "The opposite of a truth."
                   parameters {
-                    of "bool"
+                    of {
+                      type "bool"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1588,7 +1638,9 @@ enum Library {
                         }
                       }
                     }
-                    of "bool"
+                    of {
+                      type "bool"
+                    }
                     then {
                       type {
                         "const procedure" {
@@ -1658,7 +1710,9 @@ enum Library {
                   }
                   description "The number without its sign."
                   parameters {
-                    of "some N"
+                    of {
+                      type "some N"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1672,8 +1726,12 @@ enum Library {
                   }
                   description "Whether this one is larger, by the one order."
                   parameters {
-                    of "some T"
-                    value "some T"
+                    of {
+                      type "some T"
+                    }
+                    value {
+                      type "some T"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1727,8 +1785,12 @@ enum Library {
                   }
                   description "The larger of two of a kind, by the one order."
                   parameters {
-                    of "some T"
-                    value "some T"
+                    of {
+                      type "some T"
+                    }
+                    value {
+                      type "some T"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1772,8 +1834,12 @@ enum Library {
                   }
                   description "The smaller of two of a kind, by the one order."
                   parameters {
-                    of "some T"
-                    value "some T"
+                    of {
+                      type "some T"
+                    }
+                    value {
+                      type "some T"
+                    }
                   }
                   receiver "of"
                   result {
@@ -1977,8 +2043,12 @@ enum Library {
                   ]
                   description "Whether a string holds another inside it."
                   parameters {
-                    of "string"
-                    value "string"
+                    of {
+                      type "string"
+                    }
+                    value {
+                      type "string"
+                    }
                   }
                   receiver "of"
                   result false
@@ -2016,9 +2086,15 @@ enum Library {
                   ]
                   description "Every occurrence of a piece swapped for another."
                   parameters {
-                    of "string"
-                    value "string"
-                    with "string"
+                    of {
+                      type "string"
+                    }
+                    value {
+                      type "string"
+                    }
+                    with {
+                      type "string"
+                    }
                   }
                   receiver "of"
                   result {
@@ -2355,8 +2431,12 @@ enum Library {
                   ]
                   description "The text cut on a separator."
                   parameters {
-                    of "string"
-                    value "string"
+                    of {
+                      type "string"
+                    }
+                    value {
+                      type "string"
+                    }
                   }
                   receiver "of"
                   result {
@@ -2500,8 +2580,12 @@ enum Library {
                   ]
                   description "Whether a string begins with another."
                   parameters {
-                    of "string"
-                    value "string"
+                    of {
+                      type "string"
+                    }
+                    value {
+                      type "string"
+                    }
                   }
                   receiver "of"
                   result true

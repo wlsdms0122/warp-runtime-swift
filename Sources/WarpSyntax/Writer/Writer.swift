@@ -345,12 +345,6 @@ public struct Writer: Sendable {
             written["description"] = .string(description)
         }
 
-        // The shorthand where nothing but the type was said. Written because the
-        // pair has to round-trip through the shorthand as well as around it.
-        if written.count == 1, case let .string(only)? = written["type"] {
-            return .string(only)
-        }
-
         return .dictionary(written)
     }
 

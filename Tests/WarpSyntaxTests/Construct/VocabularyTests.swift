@@ -41,7 +41,7 @@ struct VocabularyTests {
             ]
         )
         let sut = try await loader.loadProcedure([
-            "parameters": ["names": "array<string>"],
+            "parameters": ["names": ["type": "array<string>"]],
             "body": [
                 ["var": "verdict"],
                 ["let": "head", "value": ["call": ["procedure": "std.collection.first", "of": ["ref": "names"]]]],
@@ -72,7 +72,7 @@ struct VocabularyTests {
         // Given. Nothing is privileged, so the standard module is a file like
         // any other and leaving it out means leaving out what it declares
         let sut = try await loader.loadProcedure([
-            "parameters": ["names": "array<string>"],
+            "parameters": ["names": ["type": "array<string>"]],
             "body": [
                 ["let": "said", "value": ["call": ["procedure": "std.collection.count"]]]
             ]

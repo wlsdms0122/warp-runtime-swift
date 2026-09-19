@@ -49,6 +49,10 @@ public struct Notation: Sendable {
     // understood, and which procedures it spends.
     public let interpolation: Interpolation?
 
+    // Whether a parameter may be written as a bare type, `int` for
+    // `{ type: int }`. A document writes the record.
+    public let bareParameter: Bool
+
     // What these spellings spend no matter which constructs exist. A template is
     // written in a value slot and every construct has one, so offering it owes
     // these wherever the notation is used.
@@ -72,10 +76,12 @@ public struct Notation: Sendable {
     // MARK: - Initializer
     public init(
         condition: (any ConditionSpelling)? = nil,
-        interpolation: Interpolation? = nil
+        interpolation: Interpolation? = nil,
+        bareParameter: Bool = false
     ) {
         self.condition = condition
         self.interpolation = interpolation
+        self.bareParameter = bareParameter
     }
 
     // MARK: - Public

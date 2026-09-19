@@ -31,7 +31,7 @@ struct NotationGateTests {
         // Given / When / Then
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
-                "parameters": ["subject": Value.string(written)],
+                "parameters": ["subject": ["type": Value.string(written)]],
                 "body": [["let": "done", "value": "end"]]
             ])
         }

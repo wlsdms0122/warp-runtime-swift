@@ -73,7 +73,7 @@ struct NotationTests {
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": "string"],
+                    "parameters": ["procedure": ["type": "string"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -109,7 +109,7 @@ struct NotationTests {
         // never was a condition type, which is what keeps the spellings
         // optional wherever a condition is asked for.
         let sut = try await Loader.testing.loadProcedure([
-            "parameters": ["ready": "bool"],
+            "parameters": ["ready": ["type": "bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -205,7 +205,7 @@ struct NotationTests {
                 "imports": ["std.text.joined", "std.text.text"],
                 "procedures": [
                     "entry": [
-                        "parameters": ["procedure": "string"],
+                        "parameters": ["procedure": ["type": "string"]],
                         "body": [
                             [
                                 "let": "line",
@@ -225,7 +225,7 @@ struct NotationTests {
         // Given, which procedures a template lowers to is the notation's answer, and
         // the reader carries none of its own
         let sut = try await Loader.testing.loadProcedure([
-            "parameters": ["procedure": "string"],
+            "parameters": ["procedure": ["type": "string"]],
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "procedure"]]]]
             ]
@@ -252,7 +252,7 @@ struct NotationTests {
         // beside it would be a message nobody wrote, and the same document
         // would be a cast in one notation and a send in the next.
         let written: Value = [
-            "parameters": ["flag": "any"],
+            "parameters": ["flag": ["type": "any"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -289,7 +289,7 @@ struct NotationTests {
             "imports": [],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": "string"],
+                    "parameters": ["procedure": ["type": "string"]],
                     "body": [
                         ["let": "asked", "value": ["of": ["ref": "procedure"], "is": "hey"]]
                     ],

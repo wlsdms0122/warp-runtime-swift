@@ -8,8 +8,8 @@
 import Foundation
 import Warp
 
-// A parameter, written either as a bare type name or as a record. The shorthand
-// is the notation's convenience. The document format has one spelling.
+// A parameter, written as a record. A notation may offer a bare type where a
+// parameter is wanted; a document has the one spelling.
 public struct ParameterReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case type
@@ -23,10 +23,19 @@ public struct ParameterReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        // The shorthand: a bare type where a parameter is wanted. Anything a
-        // type can be spelled as works here, so `array<string>` is as short as
-        // `string` is.
+        // The shorthand: a bare type where a parameter is wanted, where the
+        // notation offers it. Anything a type can be spelled as works there,
+        // so `array<string>` is as short as `string` is.
         if let single = try? decoder.singleValueContainer().decode(String.self) {
+            let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+
+            guard notation.bareParameter else {
+                throw ReadingError(
+                    "a parameter is written as a record, { type: \(single) } at the least",
+                    at: decoder.steps
+                )
+            }
+
             do {
                 self.parameter = Parameter(type: try TypeReader.parse(single))
             } catch let error as TypeFormError {

@@ -24,7 +24,7 @@ struct SignatureTests {
         let sut = try await Loader.testing.loadDocument([
             "procedures": [
                 "keep": [
-                    "parameters": ["subject": [:], "labelled": "any"],
+                    "parameters": ["subject": [:], "labelled": ["type": "any"]],
                     "body": [["let": "done", "value": ["ref": "subject"]]]
                 ]
             ]
