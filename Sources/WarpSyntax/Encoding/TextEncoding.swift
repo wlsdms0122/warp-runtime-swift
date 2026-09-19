@@ -162,17 +162,15 @@ public enum TextEncoding {
 
                 // `x` straight into a quote is the bytes spelling. One token,
                 // because the quote is a delimiter and not text. Any other
-                // bare token ends at whitespace or a bracket, so one running
-                // into a quote is not a layout of two tokens.
+                // bare token ends at whitespace or a bracket.
                 if bare == "x", reading.first == "\"" {
                     reading.removeFirst()
                     tokens.append(.bytes(try hexed(from: &reading)))
-                    try separated(reading)
-                } else if reading.first == "\"" {
-                    throw refused("\(bare) runs straight into a quote, and whitespace separates the two")
                 } else {
                     tokens.append(.bare(bare))
                 }
+
+                try separated(reading)
             }
         }
 
@@ -183,11 +181,13 @@ public enum TextEncoding {
     // quote, which is then refused as running into it.
     private static let delimiters = Set(" \n\r\t[]{}".unicodeScalars)
 
-    // Whitespace or a bracket follows a string or bytes, or nothing does.
+    // Whitespace or a bracket follows a token, or nothing does. A bare token
+    // ends at a quote and a quoted one at its closing quote, so what stands
+    // right after either is a token running into it.
     private static func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
         guard let next = reading.first, !delimiters.contains(next) else { return }
 
-        throw refused("a quote runs straight into \(Character(next)), and whitespace separates the two")
+        throw refused("a token runs straight into \(Character(next)), and whitespace separates the two")
     }
 
     private static func quoted(from reading: inout ArraySlice<Unicode.Scalar>) throws -> String {
