@@ -26,10 +26,10 @@ struct ObjectWritingTests {
     func survivesBeingWritten(_ sut: Case) async throws {
         // Given. A case the build refuses has no object to write, and that it
         // is refused is the runner's question rather than this one.
-        guard case let .answers(expected) = sut.expectation else { return }
+        guard case let .program(program) = sut.asked, case let .answers(expected) = program.expectation else { return }
 
         let builder = Builder(fingerprinting: Fingerprint.of)
-        let modules = try await sut.modules()
+        let modules = try await program.modules()
         let compiled = try await builder.compile(modules)
 
         // When. Each object written to bytes and read back out of them. A
@@ -52,7 +52,7 @@ struct ObjectWritingTests {
         // And the program those objects build answers what the written ones
         // do, which is the whole of what an object is for.
         let image = try builder.link(read, entry: "entry", supplying: Supplying(modules))
-        let answered = try await Executor().run(image, arguments: sut.arguments)
+        let answered = try await Executor().run(image, arguments: program.arguments)
 
         #expect(answered == expected, "\(sut.name): \(sut.note)")
     }

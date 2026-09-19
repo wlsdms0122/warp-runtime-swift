@@ -30,31 +30,34 @@ struct ConformanceTests {
     // MARK: - Test
     @Test("every case in the specification", arguments: try Case.all())
     func specificationCase(_ sut: Case) async throws {
-        switch sut.expectation {
-        case let .answers(expected):
-            let answered = try await run(sut)
+        switch sut.asked {
+        case let .program(program):
+            switch program.expectation {
+            case let .answers(expected):
+                let answered = try await run(program)
 
-            #expect(answered == expected, "\(sut.name): \(sut.note)")
+                #expect(answered == expected, "\(sut.name): \(sut.note)")
 
-        case let .reads(expected):
-            switch sut.subject {
-            case let .bytes(bytes):
+            case let .refuses(stage):
+                let reached = try await reached(program)
+
+                #expect(reached == stage, "\(sut.name): \(sut.note)")
+            }
+
+        case let .encoded(encoded, reading):
+            switch (encoded, reading) {
+            case let (.binary(bytes), .reads(expected)):
                 #expect(try BinaryEncoding.value(from: Data(bytes)) == expected, "\(sut.name): \(sut.note)")
                 #expect(Array(try BinaryEncoding.data(from: expected)) == bytes, "\(sut.name): \(sut.note)")
 
             // One way. A text is one of many layouts of its value, so what
             // the writer lays out is asked of the case files themselves.
-            case let .text(text):
+            case let (.text(text), .reads(expected)):
                 #expect(try TextEncoding.value(from: text) == expected, "\(sut.name): \(sut.note)")
 
-            case .program:
-                Issue.record("\(sut.name): a program answers, it does not read")
+            case (_, .refuses):
+                #expect(throws: (any Error).self, "\(sut.name): \(sut.note)") { try encoded.read() }
             }
-
-        case let .refuses(stage):
-            let reached = try await reached(sut)
-
-            #expect(reached == stage, "\(sut.name): \(sut.note)")
         }
     }
 
@@ -77,7 +80,7 @@ struct ConformanceTests {
 
     // MARK: - Public
     // MARK: - Private
-    private func run(_ sut: Case) async throws -> Value {
+    private func run(_ sut: Case.Program) async throws -> Value {
         let builder = Builder()
         let image = try await builder.build(try sut.modules(), entry: "entry")
 
@@ -87,33 +90,7 @@ struct ConformanceTests {
     // How far a case got before it was refused. The stage is part of the answer:
     // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
-    private func reached(_ sut: Case) async throws -> Case.Stage? {
-        // Bytes and text are read and nothing else. There is no program to
-        // build until the reading answers one, so the one stage they reach is
-        // where they are read.
-        switch sut.subject {
-        case let .bytes(bytes):
-            do {
-                _ = try BinaryEncoding.value(from: Data(bytes))
-            } catch {
-                return .load
-            }
-
-            return nil
-
-        case let .text(text):
-            do {
-                _ = try TextEncoding.value(from: text)
-            } catch {
-                return .load
-            }
-
-            return nil
-
-        case .program:
-            break
-        }
-
+    private func reached(_ sut: Case.Program) async throws -> Case.Stage? {
         let builder = Builder()
         let vocabulary = try await sut.brought
         let module: Module
@@ -122,7 +99,7 @@ struct ConformanceTests {
         // document that does not read is the answer to this question and a
         // vocabulary that does not read is a case nobody can ask.
         do {
-            module = try Loader().load(try sut.document(), identity: nil)
+            module = try Loader().load(sut.document, identity: nil)
         } catch {
             return .load
         }
@@ -172,22 +149,68 @@ struct Case: Sendable, CustomStringConvertible {
         case run
     }
 
+    // What a program may expect: to run and answer, or to be refused at a stage.
     enum Expectation: Sendable {
         case answers(Value)
         case refuses(Stage)
-
-        // Those bytes are that value. Both ways: reading them answers it, and
-        // writing it answers them, since a writer that agrees with no reader
-        // and a reader that agrees with no writer each pass half of this. A
-        // text reads one way, since one value has many layouts in text.
-        case reads(Value)
     }
 
-    // What a case asks about: a document, or the bytes or the text of one.
-    enum Subject: Sendable {
-        case program(Value)
-        case bytes([UInt8])
+    // A document in one of its encodings, which is read and nothing else.
+    enum Encoded: Sendable {
+        case binary([UInt8])
         case text(String)
+
+        func read() throws -> Value {
+            switch self {
+            case let .binary(bytes): try BinaryEncoding.value(from: Data(bytes))
+            case let .text(text): try TextEncoding.value(from: text)
+            }
+        }
+
+        // The version a case carrying this says.
+        var version: Int {
+            switch self {
+            case .binary: 4
+            case .text: 5
+            }
+        }
+    }
+
+    // What an encoding may expect: to read as a value, or to be refused where
+    // it is read, which is the one stage it reaches. Bytes read both ways,
+    // since a writer that agrees with no reader and a reader that agrees with
+    // no writer each pass half of it; a text reads one way, since one value
+    // has many layouts in text.
+    enum Reading: Sendable {
+        case reads(Value)
+        case refuses
+    }
+
+    // A document the runner reads, builds and runs, with what it is given and
+    // what the runner brings.
+    struct Program: Sendable {
+        let document: Value
+        let arguments: [Name: Value]
+
+        // The module this case asks the runner to bring, which is what a host
+        // does for every program: the document names what it needs and the
+        // code arrives at the link. A case cannot write host code, so it
+        // writes what the link needs to know about it, and every runner can
+        // build that much. Nil where the case asks for none.
+        let vocabulary: Vocabulary?
+
+        let expectation: Expectation
+
+        // The version a case carrying this says.
+        var version: Int { vocabulary == nil ? 2 : 3 }
+    }
+
+    // What a case asks: a program and what it should do, or an encoding and
+    // what it should read as. Each half carries only what it can expect, so
+    // no check outside the type keeps them apart.
+    enum Asked: Sendable {
+        case program(Program)
+        case encoded(Encoded, Reading)
     }
 
     // A module the runner brings. The declarations are held apart from the rest
@@ -240,17 +263,7 @@ struct Case: Sendable, CustomStringConvertible {
 
     let note: String
 
-    let subject: Subject
-
-    let arguments: [Name: Value]
-    let expectation: Expectation
-
-    // The module this case asks the runner to bring, which is what a host does
-    // for every program: the document names what it needs and the code arrives
-    // at the link. A case cannot write host code, so it writes what the link
-    // needs to know about it, and every runner can build that much. Nil where
-    // the case asks for none.
-    let vocabulary: Vocabulary?
+    let asked: Asked
 
     var description: String { name }
 
@@ -293,20 +306,71 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("a case is a name, a note, a subject and what should happen")
         }
 
+        self.name = name
+        self.note = note
+
+        // One of `answers`, `reads` or `refuses`, and exactly one. The slot
+        // groups them so that this is a question about one record instead of
+        // a rule about sibling keys, but a record is not a choice, so the
+        // count is still counted here. A case edited from one to the other
+        // and left holding both would otherwise start asking a different
+        // question than it reads as, and nobody would be told.
+        guard
+            case let .dictionary(expect)? = written["expect"],
+            expect.count == 1,
+            let (held, expected) = expect.entries.first
+        else {
+            throw ConformanceError("a case expects exactly one of `answers`, `reads` and `refuses`")
+        }
+
         // A case asks about a program, about bytes or about text, and a case
-        // holding two would be two cases sharing one answer.
+        // holding two would be two cases sharing one answer. What it asks
+        // about decides what it may expect: an encoding is read and nothing
+        // else, so it reads as a value or is refused where it is read, and a
+        // program runs, so it answers or is refused at a stage.
         switch (written["program"], written["bytes"], written["text"]) {
-        case let (program?, nil, nil):
-            self.subject = .program(program)
+        case let (document?, nil, nil):
+            let arguments: [Name: Value]
+
+            if case let .dictionary(given)? = written["arguments"] {
+                arguments = Dictionary(uniqueKeysWithValues: given.entries.map { entry in (entry.name, entry.value) })
+            } else {
+                arguments = [:]
+            }
+
+            let expectation: Expectation
+
+            switch held {
+            case "answers":
+                expectation = .answers(expected)
+
+            case "refuses":
+                expectation = .refuses(try Self.stage(expected))
+
+            case "reads":
+                throw ConformanceError("a program answers or is refused; only bytes and text read as a value")
+
+            default:
+                throw ConformanceError("a case expects what it answers or where it is refused, and not `\(held)`")
+            }
+
+            self.asked = .program(
+                Program(
+                    document: document,
+                    arguments: arguments,
+                    vocabulary: try Self.supplied(in: written["vocabulary"]),
+                    expectation: expectation
+                )
+            )
 
         case let (nil, .bytes(bytes)?, nil):
-            self.subject = .bytes(bytes)
+            self.asked = .encoded(.binary(bytes), try Self.reading(held, expected))
 
         case (nil, .some, nil):
             throw ConformanceError("the bytes a case asks about are written as bytes")
 
         case let (nil, nil, .string(text)?):
-            self.subject = .text(text)
+            self.asked = .encoded(.text(text), try Self.reading(held, expected))
 
         case (nil, nil, .some):
             throw ConformanceError("the text a case asks about is written as a string")
@@ -315,70 +379,56 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("a case asks about exactly one of a `program`, `bytes` and `text`")
         }
 
-        self.name = name
-        self.note = note
-
-        if case let .dictionary(arguments)? = written["arguments"] {
-            self.arguments = Dictionary(
-                uniqueKeysWithValues: arguments.entries.map { entry in (entry.name, entry.value) }
-            )
-        } else {
-            self.arguments = [:]
+        // An encoding is read and nothing is run, so nothing is given and
+        // nothing is brought. A case writing either asked something the
+        // runner would not ask, and it is refused rather than left unasked.
+        if case .encoded = self.asked {
+            for key: Name in ["arguments", "vocabulary"] where written[key] != nil {
+                throw ConformanceError("a case about an encoding writes `\(key)`, which only a program is given")
+            }
         }
 
-        // One of `answers` or `refuses`, and exactly one. The slot groups them
-        // so that this is a question about one record instead of a rule about
-        // two sibling keys, but a record is not a choice, so the count is still
-        // counted here. A case edited from one to the other and left holding
-        // both would otherwise start asking a different question than it reads
-        // as, and nobody would be told.
-        guard
-            case let .dictionary(expect)? = written["expect"],
-            expect.count == 1,
-            let (held, expected) = expect.entries.first
-        else {
-            throw ConformanceError("a case expects exactly one of `answers` or `refuses`")
+        // A case says the earliest test it needs. Saying a later one would
+        // turn away a runner that could have asked it, and an earlier one
+        // would have that runner refuse it as no case at all.
+        let needed = switch self.asked {
+        case let .program(program): program.version
+        case let .encoded(encoded, _): encoded.version
         }
 
-        self.vocabulary = try Self.supplied(in: written["vocabulary"])
+        guard version == needed else {
+            throw ConformanceError("this case says test \(version), and what it writes is test \(needed)")
+        }
+    }
 
+    // MARK: - Public
+    private static func stage(_ expected: Value) throws -> Stage {
+        guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
+            throw ConformanceError("\(expected) is not a stage a program is refused at")
+        }
+
+        return stage
+    }
+
+    // What an encoding expects. Refused where it is read, which is the one
+    // stage it reaches, so no other stage may be written beside it.
+    private static func reading(_ held: Name, _ expected: Value) throws -> Reading {
         switch held {
+        case "reads":
+            return .reads(expected)
+
         case "refuses":
-            guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
-                throw ConformanceError("\(expected) is not a stage a program is refused at")
+            guard try stage(expected) == .load else {
+                throw ConformanceError("bytes and text are refused where they are read, and not at \(expected)")
             }
 
-            self.expectation = .refuses(stage)
+            return .refuses
 
         case "answers":
-            self.expectation = .answers(expected)
-
-        case "reads":
-            self.expectation = .reads(expected)
-
-        default:
-            throw ConformanceError(
-                "a case expects what it answers, what its bytes read as,"
-                    + " or where it is refused, and not `\(held)`"
-            )
-        }
-
-        // What a case asks about decides what it may expect. Bytes and text
-        // do not run, and a program is not read out of either here: the case
-        // is warpt text and the runner was handed the tree.
-        switch (self.subject, self.expectation) {
-        case (.program, .reads):
-            throw ConformanceError("only bytes and text read as a value")
-
-        case (.bytes, .answers), (.text, .answers):
             throw ConformanceError("bytes and text do not run, so they answer nothing")
 
-        case let (.bytes, .refuses(stage)) where stage != .load,
-             let (.text, .refuses(stage)) where stage != .load:
-            throw ConformanceError("bytes and text are refused where they are read, and not at \(stage)")
-
         default:
-            break
+            throw ConformanceError("a case expects what its bytes or text read as, or that they are refused, and not `\(held)`")
         }
     }
 
@@ -417,8 +467,8 @@ struct Case: Sendable, CustomStringConvertible {
                 name: entry.name,
                 declaration: declaration,
                 answers: record["answers"] ?? .null,
-                runs: try Self.flag(record["runs"], "runs", of: entry.name, or: false),
-                isolated: try Self.flag(record["isolated"], "isolated", of: entry.name, or: true),
+                runs: try Self.flag(record, "runs", of: entry.name, or: false),
+                isolated: try Self.flag(record, "isolated", of: entry.name, or: true),
                 failing: try Self.failing(record["failing"], of: entry.name)
             )
         }
@@ -445,20 +495,11 @@ struct Case: Sendable, CustomStringConvertible {
     // The cases live beside the specification they belong to rather than inside
     // this package, because they are not this implementation's. The day there
     // is a second implementation they move with `spec/` and this file stays.
-    // MARK: - Internal
-    // Every module this case stands on: what the host was asked to bring, the
-    // case's own document, and the standard vocabulary. The case describes the
-    // vocabulary it asked for, so building it is the case's own answer and not
-    // a runner's.
-    func modules() async throws -> [Module] {
-        try await brought + [try Loader().load(try document(), identity: nil)] + Module.standard
-    }
-
     // A key the runner reads beside a declaration is a bool or is not written.
     // Anything else is refused rather than read as one of the two: a case that
     // wrote `runs 1` asked a question no runner can answer the same way.
-    private static func flag(_ written: Value?, _ key: String, of procedure: Name, or absent: Bool) throws -> Bool {
-        switch written {
+    private static func flag(_ record: Value.Dictionary, _ key: Name, of procedure: Name, or absent: Bool) throws -> Bool {
+        switch record[key] {
         case nil: return absent
         case let .bool(flag)?: return flag
         case let other?:
@@ -482,15 +523,50 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
-    // The document this case asks about. A case that asks about bytes has none,
-    // and nothing that runs programs reaches this without having read which of
-    // the two it holds.
-    func document() throws -> Value {
-        guard case let .program(program) = subject else {
-            throw ConformanceError("'\(name)' asks about an encoding and not a program")
-        }
+    static func all() throws -> [Case] {
+        let directory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // WarpConformanceTests
+            .deletingLastPathComponent()   // Tests
+            .deletingLastPathComponent()   // warp-runtime-swift
+            .deletingLastPathComponent()   // runtime
+            .deletingLastPathComponent()   // the repository
+            .appendingPathComponent("spec")
+            .appendingPathComponent("conformance")
 
-        return program
+        // The cases are the ones named like cases, and everything else in the
+        // folder is somebody else's business. A `.DS_Store`, a `.orig` left by
+        // a merge, a copy someone kept while editing. A runner that refused to
+        // start over any of those would be putting "is this folder tidy" and
+        // "is this implementation the language" behind one red light, and the
+        // second question is the only one it was built to ask.
+        //
+        // The cost is real and is accepted: a case saved under a name this
+        // misses is not asked, and nothing here says so. What catches that is
+        // the same thing that catches a case deleted outright. It is a file in
+        // a diff, and the dumper that writes these names them.
+        let files = try FileManager.default
+            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
+            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
+
+        return try files.map { file in
+            try Case(
+                from: try TextEncoding.value(from: try Data(contentsOf: file)),
+                in: String(file.lastPathComponent.dropLast(".test.warpt".count))
+            )
+        }
+    }
+
+    // MARK: - Private
+}
+
+extension Case.Program {
+    // Every module this case stands on: what the host was asked to bring, the
+    // case's own document, and the standard vocabulary. The case describes the
+    // vocabulary it asked for, so building it is the case's own answer and not
+    // a runner's.
+    func modules() async throws -> [Module] {
+        try await brought + [try Loader().load(document, identity: nil)] + Module.standard
     }
 
     // The vocabulary the case asked the runner for, as a module standing in
@@ -531,7 +607,7 @@ struct Case: Sendable, CustomStringConvertible {
     // The host's side of one asked-for procedure. Which door it answers through
     // is the claim it makes: the one that answers without running is handed no
     // way to reach outside, and the other is.
-    private func supplied(_ one: Supplied, declaring signature: Signature) throws -> Procedure {
+    private func supplied(_ one: Case.Supplied, declaring signature: Signature) throws -> Procedure {
         Procedure(
             signature: signature,
             implementation: door(one, reading: try places(signature.parameters.count))
@@ -562,7 +638,7 @@ struct Case: Sendable, CustomStringConvertible {
 
     // Which door it answers through, which is the claim it makes about
     // reaching outside the run.
-    private func door(_ one: Supplied, reading places: any ParameterSet.Type) -> Implementation {
+    private func door(_ one: Case.Supplied, reading places: any ParameterSet.Type) -> Implementation {
         func made<Parameters: ParameterSet>(_: Parameters.Type) -> Implementation {
             one.runs
                 ? .effect(
@@ -584,41 +660,6 @@ struct Case: Sendable, CustomStringConvertible {
         return made(places)
     }
 
-    static func all() throws -> [Case] {
-        let directory = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()   // WarpConformanceTests
-            .deletingLastPathComponent()   // Tests
-            .deletingLastPathComponent()   // warp-runtime-swift
-            .deletingLastPathComponent()   // runtime
-            .deletingLastPathComponent()   // the repository
-            .appendingPathComponent("spec")
-            .appendingPathComponent("conformance")
-
-        // The cases are the ones named like cases, and everything else in the
-        // folder is somebody else's business. A `.DS_Store`, a `.orig` left by
-        // a merge, a copy someone kept while editing. A runner that refused to
-        // start over any of those would be putting "is this folder tidy" and
-        // "is this implementation the language" behind one red light, and the
-        // second question is the only one it was built to ask.
-        //
-        // The cost is real and is accepted: a case saved under a name this
-        // misses is not asked, and nothing here says so. What catches that is
-        // the same thing that catches a case deleted outright. It is a file in
-        // a diff, and the dumper that writes these names them.
-        let files = try FileManager.default
-            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
-            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
-
-        return try files.map { file in
-            try Case(
-                from: try TextEncoding.value(from: try Data(contentsOf: file)),
-                in: String(file.lastPathComponent.dropLast(".test.warpt".count))
-            )
-        }
-    }
-
-    // MARK: - Private
 }
 
 struct ConformanceError: Error, CustomStringConvertible {

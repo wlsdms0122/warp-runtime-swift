@@ -40,13 +40,13 @@ struct ObjectMutantTests {
     func everyMutantIsAnswered(_ sut: Case) async throws {
         // Given. A case the build refuses has no object to mutate, and that
         // it is refused is the runner's question rather than this one.
-        guard case .answers = sut.expectation else { return }
+        guard case let .program(program) = sut.asked, case .answers = program.expectation else { return }
 
         let builder = Builder(fingerprinting: Fingerprint.of)
-        let supplying = try await Supplying(sut.modules())
-        let behind = try await builder.compile(try sut.brought + Module.standard, against: [], supplying: supplying)
+        let supplying = try await Supplying(program.modules())
+        let behind = try await builder.compile(try program.brought + Module.standard, against: [], supplying: supplying)
         let own = try await builder.compile(
-            [try Loader().load(try sut.document(), identity: nil)],
+            [try Loader().load(program.document, identity: nil)],
             against: behind,
             supplying: supplying
         )
@@ -89,7 +89,7 @@ struct ObjectMutantTests {
 
             ran += 1
 
-            if await running(image, arguments: sut.arguments, of: sut, at: path) { answered += 1 }
+            if await running(image, arguments: program.arguments, of: sut, at: path) { answered += 1 }
         }
 
         // Then. Mutants reached the run, and the run reached an end. A walk
