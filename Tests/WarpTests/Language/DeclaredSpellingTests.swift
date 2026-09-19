@@ -412,8 +412,8 @@ struct DeclaredSpellingTests {
 
     @Test("a bundle mentioning the shared constraints needs std in the link")
     func aBundleNeedsTheSharedGround() async throws {
-        // Given. Collection's `sorted` mentions `Comparable`, which only the
-        // foundation module declares
+        // Given. Collection's procedures mention `Collection` and
+        // `Comparable`, which only the foundation module declares
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -432,7 +432,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await builder.build([sut] + Module.collection, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("names 'std.Comparable', which no module in this link declares")
+            error is BuildError && "\(error)".contains("which no module in this link declares")
         }
 
         await #expect(throws: Never.self) {

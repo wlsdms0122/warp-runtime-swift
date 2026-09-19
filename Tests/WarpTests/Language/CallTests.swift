@@ -64,22 +64,20 @@ struct CallTests {
         #expect(outputs["echoed"] == .string("back"))
     }
 
-    @Test("a procedure that declines the type it was sent to reads as absence")
-    func decliningProcedureReadsAsAbsence() async throws {
-        // Given. `count` has nothing to say about an int, and a procedure saying
-        // nothing is the same answer as a field nobody set
+    @Test("a receiver outside what a procedure declares is refused at the build")
+    func receiverOutsideTheDeclarationIsRefused() async throws {
+        // Given. `count` declares `std.Collection`, and an int is no member
         let sut = Warp.Expression.call(
             Call(receiver: .literal(.int(7)), selector: "std.collection.count")
         )
 
-        // When
-        let answer = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe")
-        )
-
-        // Then
-        #expect(answer == .null)
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await answer(
+                of: [Statement(binding: .constant("probe"), expression: sut)],
+                result: reference("probe")
+            )
+        }
     }
 
     @Test("two declarations of one spelling are refused at link")
