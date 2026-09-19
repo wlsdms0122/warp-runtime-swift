@@ -148,6 +148,7 @@ public enum TextEncoding {
             case "\"":
                 reading.removeFirst()
                 tokens.append(.string(try quoted(from: &reading)))
+                try separated(reading)
 
             default:
                 var bare = ""
@@ -159,10 +160,15 @@ public enum TextEncoding {
                 }
 
                 // `x` straight into a quote is the bytes spelling. One token,
-                // because the quote is a delimiter and not text
+                // because the quote is a delimiter and not text. Any other
+                // bare token ends at whitespace or a bracket, so one running
+                // into a quote is not a layout of two tokens.
                 if bare == "x", reading.first == "\"" {
                     reading.removeFirst()
                     tokens.append(.bytes(try hexed(from: &reading)))
+                    try separated(reading)
+                } else if reading.first == "\"" {
+                    throw refused("\(bare) runs straight into a quote, and whitespace separates the two")
                 } else {
                     tokens.append(.bare(bare))
                 }
@@ -170,6 +176,13 @@ public enum TextEncoding {
         }
 
         return tokens
+    }
+
+    // Whitespace or a bracket follows a string or bytes, or nothing does.
+    private static func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
+        guard let next = reading.first, !" \n\r\t[]{}".unicodeScalars.contains(next) else { return }
+
+        throw refused("a quote runs straight into \(Character(next)), and whitespace separates the two")
     }
 
     private static func quoted(from reading: inout ArraySlice<Unicode.Scalar>) throws -> String {
