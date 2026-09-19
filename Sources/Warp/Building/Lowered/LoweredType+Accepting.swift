@@ -204,14 +204,6 @@ extension LoweredType {
         case let (_, .ranged(theirs)):
             return accepts(theirs.lowered, in: table, assuming: assuming)
 
-        // `bytes` and `array<byte>` are one type in two spellings, so each
-        // side reads by its elements.
-        case let (.array(mine), .bytes):
-            return mine.accepts(.byteElement, in: table, assuming: assuming)
-
-        case let (.bytes, .array(theirs)):
-            return LoweredType.byteElement.accepts(theirs, in: table, assuming: assuming)
-
         // The one conversion the language has, the way that cannot lose
         // anything.
         case (.double, .int):
@@ -411,7 +403,7 @@ extension LoweredType {
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.spells(candidate, in: table)
 
-        case .null, .never, .bytes, .array, .dictionary, .record, .procedure:
+        case .null, .never, .array, .dictionary, .record, .procedure:
             return false
         }
     }

@@ -250,7 +250,7 @@ extension Builder {
                 let concrete = switch resolved {
                 case let .named(name): contracts[name] == nil
                 case .parameter, .any, .never, .composition: false
-                case .null, .bool, .int, .double, .string, .bytes, .ranged, .array,
+                case .null, .bool, .int, .double, .string, .ranged, .array,
                     .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
                     .borrowing, .nullable, .reading: true
                 }

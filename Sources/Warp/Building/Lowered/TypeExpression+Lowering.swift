@@ -35,9 +35,6 @@ extension TypeExpression {
         case .string:
             return .string
 
-        case .bytes:
-            return .bytes
-
         case let .ranged(refinement):
             return .ranged(refinement)
 

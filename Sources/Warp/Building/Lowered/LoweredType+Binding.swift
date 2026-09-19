@@ -128,11 +128,6 @@ extension LoweredType {
         case let (.array(mine), .array(theirs)):
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
-        // `bytes` is `array<byte>` in a compact spelling, so an element
-        // parameter reads a byte from it. `first` on bytes answers one.
-        case (.array(let mine), .bytes):
-            mine.binding(against: .byteElement, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
-
         case let (.dictionary(mine), .dictionary(theirs)):
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 

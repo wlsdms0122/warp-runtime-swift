@@ -690,24 +690,6 @@ extension Builder {
 
                 resolved.append(segment)
 
-            // Bytes are an array of bytes in a compact spelling, so an index
-            // reads one. A `byte`, the range `std` names.
-            case let (.indexRef(inner, optionally), .bytes):
-                switch indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
-                case let .refused(reason):
-                    return .refused(reason)
-
-                case let .judged(innerResolved):
-                    if let refused = indexed(.byteElement) { return refused }
-
-                    resolved.append(.indexRef(innerResolved, optional: optionally))
-                }
-
-            case (.index, .bytes):
-                if let refused = indexed(.byteElement) { return refused }
-
-                resolved.append(segment)
-
             // A dictionary's names are data, so a key the run settles reads an
             // entry the way a written key does. Absence follows the mark, the
             // rule every entry reading shares.
@@ -2613,7 +2595,7 @@ extension Builder {
             return .string
 
         case .bytes:
-            return .bytes
+            return .array(.byteElement)
 
         // A procedure that already exists as a value says nothing about itself
         // that this walk can read.

@@ -45,12 +45,12 @@ struct CastAgreementTests {
         ],
         constraints: [
             "Comparable": [.int, .double, .string],
-            "Listed": [.array(.any), .bytes]
+            "Listed": [.array(.any), .array(.byteElement)]
         ]
     )
 
     private let loweredTypes: [TypeExpression] = [
-        .any, .never, .null, .bool, .int, .double, .string, .bytes,
+        .any, .never, .null, .bool, .int, .double, .string,
         .ranged(.whole(from: 0, to: .through(255))),
         .ranged(.whole(from: 300)),
         .ranged(.whole(to: .through(-1))),

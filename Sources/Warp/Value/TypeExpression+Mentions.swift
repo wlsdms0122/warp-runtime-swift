@@ -17,7 +17,7 @@ extension TypeExpression {
     // one reached is rooted at that same undeclared type.
     var mentions: Set<Name> {
         switch self {
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .ranged:
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged:
             []
 
         case let .array(element):

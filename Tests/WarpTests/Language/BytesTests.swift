@@ -108,7 +108,7 @@ struct BytesTests {
         )
 
         let loweredTypes: [TypeExpression] = [
-            .any, .int, .double, .string, .bool, .null, .never, .bytes,
+            .any, .int, .double, .string, .bool, .null, .never,
             .ranged(.whole(from: 0, to: .through(255))),
             .ranged(.whole()),
             .ranged(.whole(from: 0, to: .through(254))),
@@ -150,36 +150,15 @@ struct BytesTests {
         }
     }
 
-    @Test("a bytes slot takes an array of byte worths, and settles it compactly")
-    func aBytesSlotSettlesAnArray() throws {
-        #expect(
-            try TypeExpression.bytes.settling(.array([.int(104), .int(105)]), at: "value")
-                == .bytes([104, 105])
-        )
-
-        // The element judge is byte's own, so the miss names the element.
-        #expect {
-            try TypeExpression.bytes.settling(.array([.int(104), .int(300)]), at: "value")
-        } throws: { error in
-            "\(error)".contains("value[1]") && "\(error)".contains("outside int(0...255)")
-        }
-
-        // A fraction is not a byte, whatever it is worth. The int edge again.
-        #expect(throws: (any Error).self) {
-            try TypeExpression.bytes.settling(.array([.double(1)]), at: "value")
-        }
-    }
-
     @Test("the equation is read at the build, by the elements")
     func acceptanceReadsTheElements() {
-        #expect(TypeExpression.array(.int).accepts(.bytes))
-        #expect(TypeExpression.array(.any).accepts(.bytes))
-        #expect(TypeExpression.array(.double).accepts(.bytes))
-        #expect(TypeExpression.bytes.accepts(.array(.ranged(.whole(from: 0, to: .through(255))))))
-        #expect(TypeExpression.bytes.accepts(.array(.int)))
-        #expect(!TypeExpression.array(.string).accepts(.bytes))
-        #expect(!TypeExpression.bytes.accepts(.array(.string)))
-        #expect(!TypeExpression.bytes.accepts(.array(.double)))
+        #expect(TypeExpression.array(.int).accepts(.array(.byteElement)))
+        #expect(TypeExpression.array(.any).accepts(.array(.byteElement)))
+        #expect(TypeExpression.array(.double).accepts(.array(.byteElement)))
+        #expect(TypeExpression.array(.byteElement).accepts(.array(.int)))
+        #expect(!TypeExpression.array(.string).accepts(.array(.byteElement)))
+        #expect(!TypeExpression.array(.byteElement).accepts(.array(.string)))
+        #expect(!TypeExpression.array(.byteElement).accepts(.array(.double)))
     }
 
     @Test("an index reads one byte out as the int it is")

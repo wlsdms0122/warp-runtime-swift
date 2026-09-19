@@ -513,7 +513,6 @@ public struct TypeReader: Decodable {
         "int": .int,
         "double": .double,
         "string": .string,
-        "bytes": .bytes,
         "procedure": .procedure(nil)
     ]
 

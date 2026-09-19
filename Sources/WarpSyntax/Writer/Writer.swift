@@ -173,7 +173,6 @@ public struct Writer: Sendable {
         case .int: return .string("int")
         case .double: return .string("double")
         case .string: return .string("string")
-        case .bytes: return .string("bytes")
 
         // The range rides in the name's spelling (`int(0...255)`) the way the
         // reader takes it in. A bound with no spelling has nothing to ride in:
@@ -445,7 +444,7 @@ public struct Writer: Sendable {
         case let .borrowing(inner):
             return .borrowing(stripped(inner))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
             return type
         }
     }

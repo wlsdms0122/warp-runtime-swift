@@ -189,7 +189,7 @@ extension LoweredType {
         // byte it takes; the rest take no byte at all. Named rather than left
         // to a default, so that a kind added to the type language has to be
         // answered for here too.
-        case .never, .null, .bool, .double, .string, .bytes,
+        case .never, .null, .bool, .double, .string,
              .array, .dictionary, .record, .procedure, .undeclared:
             return false
         }
@@ -283,9 +283,6 @@ extension LoweredType {
 
         case .string:
             return "string"
-
-        case .bytes:
-            return "bytes"
 
         case let .ranged(refinement):
             return refinement.rendered
@@ -461,13 +458,6 @@ extension LoweredType {
                 throw ArgumentError("\(path()): \(number) is outside \(rendered(in: table))")
             }
 
-        // Bytes take their own spelling as themselves, and an array whose
-        // every element is a byte's worth, settled to the compact spelling
-        // the slot declared. The element judge is `byte`'s own, so what is
-        // outside says which element and by how much.
-        case .bytes:
-            return try settlingBytes(value, at: path(), in: table, assuming: assuming)
-
         // The scalars, plus the one widening the language has, one way only:
         // an int where a double is declared. Nothing narrows; an int slot
         // refuses every fraction, `2.0` included.
@@ -623,46 +613,6 @@ extension LoweredType {
                 }
             )
         )
-    }
-
-    private func settlingBytes(
-        _ value: Value,
-        at path: @autoclosure () -> String,
-        in table: LoweredTypeTable,
-        assuming: [Int]
-    ) throws -> Value {
-        switch value {
-        case .bytes:
-            return value
-
-        case let .array(elements):
-            let bytes = try elements.enumerated().map { index, item in
-                let settled = try LoweredType.byteElement.settling(
-                    item,
-                    at: "\(path())[\(index)]",
-                    in: table,
-                    assuming: assuming
-                )
-
-                // `byte`'s own judge stands between: what it settles is an
-                // int inside 0...255, which the canonical small form holds. A
-                // miss is this file's own, so what goes out says that rather
-                // than telling a caller the type they gave was wrong.
-                guard
-                    case let .int(number) = settled,
-                    let byte = UInt8(exactly: number)
-                else {
-                    throw ArgumentError("\(path())[\(index)]: did not settle as a byte")
-                }
-
-                return byte
-            }
-
-            return .bytes(bytes)
-
-        default:
-            throw mismatch(value, at: path(), in: table)
-        }
     }
 
     private func settlingProcedure(

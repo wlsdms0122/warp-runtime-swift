@@ -20,7 +20,6 @@ indirect enum LoweredType: Sendable {
     case int
     case double
     case string
-    case bytes
     case ranged(TypeExpression.Refinement)
     case array(LoweredType)
     case dictionary(LoweredType)
@@ -109,7 +108,7 @@ indirect enum LoweredType: Sendable {
         case let .variable(inner):
             return inner
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
+        case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
             .named, .parameter, .composition, .reading, .undeclared:
             return self
@@ -130,7 +129,7 @@ indirect enum LoweredType: Sendable {
         case let .variable(inner), let .inout(inner):
             return inner.slotUnwrapped
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
+        case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .nullable,
             .named, .parameter, .composition, .reading, .undeclared:
             return self
@@ -154,15 +153,11 @@ indirect enum LoweredType: Sendable {
         }
     }
 
-    // The spelling with its conditions dropped: a range is its kind, and
-    // bytes are `array<byte>` compacted.
+    // The spelling with its conditions dropped: a range is its kind.
     var unrefined: LoweredType {
         switch self {
         case let .ranged(refinement):
             return refinement.lowered
-
-        case .bytes:
-            return .array(.byteElement)
 
         default:
             return self
@@ -240,9 +235,6 @@ indirect enum LoweredType: Sendable {
         // entry the way an index reads an element.
         case let .dictionary(entry):
             return entry
-
-        case .bytes:
-            return .byteElement
 
         case let .named(row):
             return table.loweredTypes[row].element(in: table)
@@ -330,7 +322,7 @@ extension LoweredType: Equatable {
     static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
         switch (lhs, rhs) {
         case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
-            (.double, .double), (.string, .string), (.bytes, .bytes):
+            (.double, .double), (.string, .string):
             return true
 
         case let (.ranged(mine), .ranged(theirs)):

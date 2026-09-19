@@ -269,7 +269,7 @@ public struct Compiled: Sendable, Declaring {
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an object stand, and it moves when they move
     // and for no other reason.
-    static let format = 9
+    static let format = 10
 
     // Which Warp wrote it. An object is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a

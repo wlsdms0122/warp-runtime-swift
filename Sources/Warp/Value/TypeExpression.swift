@@ -39,7 +39,6 @@ public indirect enum TypeExpression: Sendable, Equatable {
     case int
     case double
     case string
-    case bytes
 
     // Whole or fraction, without saying which.
     //
@@ -226,9 +225,6 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case .string:
             return "string"
 
-        case .bytes:
-            return "bytes"
-
         case let .ranged(refinement):
             // The exact spelling: what is rendered here is written into
             // documents and compared as the type's identity, not a message.
@@ -325,6 +321,10 @@ extension TypeExpression {
     // cannot live behind the name.
     public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
+    // Bytes are an array of `std.byte`, the range `std` declares, and a
+    // procedure the host answers spells them the way a document does.
+    public static let bytes = TypeExpression.array(.named("std.byte"))
+
     // The type a slot's mark stands in front of, where it has one, and the type
     // itself otherwise. What arrives through `inout`, `consuming` or
     // `borrowing` is the inner type, and every question about what fits asks
@@ -337,7 +337,7 @@ extension TypeExpression {
         case let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
+        case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
             .nullable, .named, .parameter, .reading, .composition:
             return self
@@ -360,7 +360,7 @@ extension TypeExpression {
         case let .variable(inner):
             return inner
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
+        case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
             .consuming, .borrowing, .nullable, .named, .parameter, .reading, .composition:
             return self
@@ -371,9 +371,6 @@ extension TypeExpression {
         switch self {
         case let .ranged(refinement):
             return refinement.kind
-
-        case .bytes:
-            return .array(.byteElement)
 
         default:
             return self

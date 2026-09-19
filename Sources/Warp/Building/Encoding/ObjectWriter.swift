@@ -195,9 +195,6 @@ struct ObjectWriter {
         case .string:
             return .array([.int(6)])
 
-        case .bytes:
-            return .array([.int(7)])
-
         case let .ranged(refinement):
             return .array([.int(9), ranged(refinement)])
 
@@ -463,9 +460,6 @@ private extension ObjectWriter {
 
         case .string:
             return .array([.int(6)])
-
-        case .bytes:
-            return .array([.int(7)])
 
         case let .ranged(refinement):
             return .array([.int(9), ranged(refinement)])

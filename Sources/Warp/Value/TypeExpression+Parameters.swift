@@ -35,7 +35,7 @@ extension TypeExpression {
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             inner.parameterOccurrences(visit)
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
             return
         }
     }
@@ -62,7 +62,7 @@ extension TypeExpression {
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner.isGeneric
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .ranged, .named, .composition:
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition:
             return false
         }
     }
@@ -202,7 +202,7 @@ extension TypeExpression {
         case let .borrowing(inner):
             return .borrowing(inner.bounded(by: bounds))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
             return self
         }
     }

@@ -276,7 +276,6 @@ private extension ObjectReader {
         case 4: read = .int
         case 5: read = .double
         case 6: read = .string
-        case 7: read = .bytes
         case 9: read = .ranged(try ranged(fields.next()))
         case 10: read = .array(try expression(fields.next()))
         case 11: read = .dictionary(try expression(fields.next()))
@@ -608,7 +607,6 @@ private extension ObjectReader {
         case 4: read = .int
         case 5: read = .double
         case 6: read = .string
-        case 7: read = .bytes
         case 9: read = .ranged(try ranged(fields.next()))
         case 10: read = .array(try lowered(fields.next()))
         case 11: read = .dictionary(try lowered(fields.next()))

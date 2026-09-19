@@ -22,7 +22,7 @@ struct MembershipTests {
     func aMemberFitsTheMembership() async throws {
         // Given
         let sut = try Module(
-            constraints: ["app.Text": [.string, .bytes]],
+            constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     body: [],
@@ -47,7 +47,7 @@ struct MembershipTests {
     func anOutsiderRefuses() async throws {
         // Given
         let sut = try Module(
-            constraints: ["app.Text": [.string, .bytes]],
+            constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     body: [],
@@ -72,7 +72,7 @@ struct MembershipTests {
         // Given. `string` takes one of the two, so the whole membership does
         // not fit it
         let sut = try Module(
-            constraints: ["app.Text": [.string, .bytes]],
+            constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
@@ -98,7 +98,7 @@ struct MembershipTests {
         // Given
         func module(reading type: TypeExpression) async throws -> Module {
             try Module(
-                constraints: ["app.Text": [.string, .bytes]],
+                constraints: ["app.Text": [.string, .array(.byteElement)]],
                 procedures: [
                     entryName: Procedure(
                         signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
@@ -127,7 +127,7 @@ struct MembershipTests {
         // Given. The declaration is what the argument meets, and an argument
         // is what only the run can see
         let sut = try Module(
-            constraints: ["app.Text": [.string, .bytes]],
+            constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
