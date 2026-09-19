@@ -19,19 +19,15 @@ struct TextPinTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("every scalar and every record name a text case reads appears in a bytes case")
+    @Test("every scalar and every name a text case reads appears in a bytes case")
     func everyTextValueIsPinned() throws {
-        var pinned: [Value] = []
-        var pinnedNames: Set<Name> = []
+        var pinned: [Spelling] = []
         var unpinned: [String] = []
 
         for sut in try Case.all() {
             guard case let .encoded(.binary, .spells(value)) = sut.asked else { continue }
 
-            Self.walk(value) { scalar, name in
-                if let scalar { pinned.append(scalar) }
-                if let name { pinnedNames.insert(name) }
-            }
+            Self.walk(value) { spelling in pinned.append(spelling) }
         }
 
         for sut in try Case.all() {
@@ -44,9 +40,8 @@ struct TextPinTests {
             case .refuses: continue
             }
 
-            Self.walk(value) { scalar, name in
-                if let scalar, !pinned.contains(scalar) { unpinned.append("\(sut.name) reads \(scalar)") }
-                if let name, !pinnedNames.contains(name) { unpinned.append("\(sut.name) reads a record named \(name)") }
+            Self.walk(value) { spelling in
+                if !pinned.contains(spelling) { unpinned.append("\(sut.name) reads \(spelling)") }
             }
         }
 
@@ -54,20 +49,37 @@ struct TextPinTests {
     }
 
     // MARK: - Private
-    // Every scalar in a value, and every name a record carries.
-    private static func walk(_ value: Value, _ visit: (Value?, Name?) -> Void) {
+    // What a text spells and a reader could take wrongly: a scalar, or a
+    // name, whether a record's or a field's.
+    private enum Spelling: Equatable, CustomStringConvertible {
+        case scalar(Value)
+        case name(Name)
+
+        var description: String {
+            switch self {
+            case let .scalar(value): "\(value)"
+            case let .name(name): "the name \(name)"
+            }
+        }
+    }
+
+    private static func walk(_ value: Value, _ visit: (Spelling) -> Void) {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes, .procedure:
-            visit(value, nil)
+            visit(.scalar(value))
 
         case let .array(elements):
             elements.forEach { element in walk(element, visit) }
 
         case let .dictionary(entries):
-            entries.entries.forEach { entry in walk(entry.value, visit) }
+            entries.entries.forEach { entry in
+                visit(.name(entry.name))
+                walk(entry.value, visit)
+            }
 
         case let .record(record):
-            visit(nil, record.name)
+            if let name = record.name { visit(.name(name)) }
+            record.names.forEach { name in visit(.name(name)) }
             record.values.forEach { held in walk(held, visit) }
         }
     }
