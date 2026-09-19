@@ -168,8 +168,8 @@ struct Case: Sendable, CustomStringConvertible {
             }
         }
 
-        // The version a case carrying this says.
-        var version: Int {
+        // The earliest test a case carrying this needs.
+        var needs: Int {
             switch self {
             case .binary: 4
             case .text: 5
@@ -202,8 +202,8 @@ struct Case: Sendable, CustomStringConvertible {
 
         let expectation: Expectation
 
-        // The version a case carrying this says.
-        var version: Int { vocabulary == nil ? 2 : 3 }
+        // The earliest test a case carrying this needs.
+        var needs: Int { vocabulary == nil ? 2 : 3 }
     }
 
     // What a case asks: a program and what it should do, or an encoding and
@@ -331,14 +331,6 @@ struct Case: Sendable, CustomStringConvertible {
         // program runs, so it answers or is refused at a stage.
         switch (written["program"], written["bytes"], written["text"]) {
         case let (document?, nil, nil):
-            let arguments: [Name: Value]
-
-            if case let .dictionary(given)? = written["arguments"] {
-                arguments = Dictionary(uniqueKeysWithValues: given.entries.map { entry in (entry.name, entry.value) })
-            } else {
-                arguments = [:]
-            }
-
             let expectation: Expectation
 
             switch held {
@@ -358,7 +350,7 @@ struct Case: Sendable, CustomStringConvertible {
             self.asked = .program(
                 Program(
                     document: document,
-                    arguments: arguments,
+                    arguments: try Self.given(written["arguments"], of: name),
                     vocabulary: try Self.supplied(in: written["vocabulary"]),
                     expectation: expectation
                 )
@@ -384,8 +376,8 @@ struct Case: Sendable, CustomStringConvertible {
         // turn away a runner that could have asked it, and an earlier one
         // would have that runner refuse it as no case at all.
         let needed = switch self.asked {
-        case let .program(program): program.version
-        case let .encoded(encoded, _): encoded.version
+        case let .program(program): program.needs
+        case let .encoded(encoded, _): encoded.needs
         }
 
         guard version == needed else {
@@ -445,7 +437,7 @@ struct Case: Sendable, CustomStringConvertible {
     // is brought. A case writing either asked something the runner would not
     // ask, and it is refused rather than left unasked.
     private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
-        for key: Name in ["arguments", "vocabulary"] where written[key] != nil {
+        if let key = (["arguments", "vocabulary"] as [Name]).first(where: { key in written[key] != nil }) {
             throw ConformanceError("a case about an encoding writes `\(key)`, which only a program is given")
         }
 
@@ -531,6 +523,22 @@ struct Case: Sendable, CustomStringConvertible {
         )
 
         return Vocabulary(module: stripped, procedures: procedures)
+    }
+
+    // What the entry is given is a record or is not written. Anything else
+    // is refused rather than read as nothing given: a case that wrote
+    // `arguments 1` asked a question no runner can answer the same way.
+    private static func given(_ written: Value?, of name: String) throws -> [Name: Value] {
+        switch written {
+        case nil:
+            return [:]
+
+        case let .dictionary(given)?:
+            return Dictionary(uniqueKeysWithValues: given.entries.map { entry in (entry.name, entry.value) })
+
+        case let other?:
+            throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a record or is not written")
+        }
     }
 
     // A key the runner reads beside a declaration is a bool or is not written.
