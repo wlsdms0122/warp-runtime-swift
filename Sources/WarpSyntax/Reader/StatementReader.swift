@@ -256,6 +256,10 @@ public struct StatementReader: Decodable {
             }
         }
 
-        return try ExpressionReader(from: decoder).expression
+        return try ExpressionReader.read(
+            try ValueReader(from: decoder).value,
+            in: decoder,
+            slot: ExpressionReader.Slot(constructs: Set(registry.keys))
+        )
     }
 }

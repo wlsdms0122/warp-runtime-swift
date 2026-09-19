@@ -40,6 +40,8 @@ public struct ConditionReader: Decodable {
             return
         }
 
+        let slot = ExpressionReader.Slot(reserved: Set(spelling.keys))
+
         // A spelling is recognised by the key it is written under. Anything
         // else in this slot never was one. It is an expression, and reading it
         // as one is what keeps these spellings optional.
@@ -56,7 +58,7 @@ public struct ConditionReader: Decodable {
             Set(written.names).isDisjoint(with: ExpressionReader.formKeys),
             !Set(written.names).isDisjoint(with: spelling.keys)
         else {
-            self.condition = try ExpressionReader(from: decoder).expression
+            self.condition = try ExpressionReader.read(try ValueReader(from: decoder).value, in: decoder, slot: slot)
 
             return
         }

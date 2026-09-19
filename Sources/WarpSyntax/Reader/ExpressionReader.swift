@@ -61,11 +61,23 @@ public struct ExpressionReader: Decodable {
     // rather than in each of them.
     static let subjectKey: Name = "of"
 
+    // What the slot an expression stands in reserves beyond the form keys: a
+    // notation's condition keys under `when` and `while`, and the construct
+    // keys directly under a statement's `value`. The writer quotes data by
+    // these, and the reader refuses an escape the writer would not have
+    // written by the same ones, so the slot that knows hands them in.
+    struct Slot {
+        static let plain = Slot()
+
+        var reserved: Set<Name> = []
+        var constructs: Set<Name> = []
+    }
+
     public let expression: Expression
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        self.expression = try Self.read(try ValueReader(from: decoder).value, in: decoder)
+        self.expression = try Self.read(try ValueReader(from: decoder).value, in: decoder, slot: .plain)
     }
 
     // MARK: - Public
@@ -78,8 +90,8 @@ public struct ExpressionReader: Decodable {
     // is where a refusal from this grammar is given the address of the walk
     // that asked for it. A door around that boundary is a way to refuse with no
     // address at all, and one existed for exactly as long as this was public.
-    static func read(_ value: Value, in decoder: Decoder? = nil) throws -> Expression {
-        try read(value, at: decoder?.steps ?? [], in: decoder)
+    static func read(_ value: Value, in decoder: Decoder? = nil, slot: Slot = .plain) throws -> Expression {
+        try read(value, at: decoder?.steps ?? [], in: decoder, slot: slot)
     }
 
     // MARK: - Private
@@ -97,7 +109,8 @@ public struct ExpressionReader: Decodable {
     private static func read(
         _ value: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder?,
+        slot: Slot = .plain
     ) throws -> Expression {
         do {
             switch value {
@@ -112,7 +125,7 @@ public struct ExpressionReader: Decodable {
                 )
 
             case let .dictionary(fields):
-                return try read(record: fields, at: steps, in: decoder)
+                return try read(record: fields, at: steps, in: decoder, slot: slot)
 
             // A form is keys the notation reserved, and a name under which a
             // value stands is not one of them. So a value the document named
@@ -121,7 +134,7 @@ public struct ExpressionReader: Decodable {
                 return .literal(value)
 
             case let .record(record):
-                return try read(record: record.asDictionary, at: steps, in: decoder)
+                return try read(record: record.asDictionary, at: steps, in: decoder, slot: slot)
 
             // A document is text. Nothing it parses to is ever a procedure, so
             // this arm is unreachable rather than unwritten. A closure reaches
@@ -140,7 +153,8 @@ public struct ExpressionReader: Decodable {
     private static func read(
         record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder?,
+        slot: Slot
     ) throws -> Expression {
         let formKeys = Set(record.names).intersection(Self.formKeys)
 
@@ -150,7 +164,7 @@ public struct ExpressionReader: Decodable {
         if record.names.contains("as") || record.names.contains("as?") { return try cast(in: record, at: steps, in: decoder) }
         if record.names.contains(Self.closureKey) { return try closure(in: record, at: steps, in: decoder) }
         if record.names.contains("call") { return try call(in: record, at: steps, in: decoder) }
-        if record.names.contains("value") { return try literal(in: record, in: decoder) }
+        if record.names.contains("value") { return try literal(in: record, slot: slot) }
 
         return try template(in: record, at: steps, in: decoder)
     }
@@ -315,7 +329,7 @@ public struct ExpressionReader: Decodable {
         }
     }
 
-    private static func literal(in record: Value.Dictionary, in decoder: Decoder?) throws -> Expression {
+    private static func literal(in record: Value.Dictionary, slot: Slot) throws -> Expression {
         guard record.count == 1, let payload = record["value"] else {
             throw ExpressionFormError(
                 "a record with `value` must be exactly { value: <data> }."
@@ -326,17 +340,13 @@ public struct ExpressionReader: Decodable {
 
         // Data no writer would have quoted is written as itself, and the
         // escape around it is a second spelling of the same literal. Asked of
-        // the writer's own judgment, with everything this notation reserves and
-        // every construct key, since this walk does not know whether it stands
-        // under a statement's `value`. A bare null is the one exception: in a
-        // slot that may be left out it reads as the slot left out, so null
-        // written is written here.
-        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
-        let registry = decoder?.userInfo[.constructRegistry] as? ConstructRegistry
+        // the writer's own judgment, with what this slot reserves. A bare null
+        // is the one exception: in a slot that may be left out it reads as the
+        // slot left out, so null written is written here.
         let quoted = try Writer.spelling(
             of: payload,
-            reserving: Self.formKeys.union(notation.condition?.keys ?? []),
-            constructs: Set(registry?.keys ?? [])
+            reserving: Self.formKeys.union(slot.reserved),
+            constructs: slot.constructs
         ) == .quoted
 
         guard payload == .null || quoted else {
