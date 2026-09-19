@@ -108,26 +108,6 @@ struct BoundaryTests {
         #expect(try await answering("std.math.lessThan", .int(1), .int(2)) == .bool(true))
     }
 
-    @Test("a slot that means either number takes either, and nothing else")
-    func numberMeansBothAndOnlyBoth() {
-        // Given. It is the numeric `any`, not a third kind of number. Nothing
-        // is ever *of* it: a value is whole or it is a fraction.
-        let sut = TypeExpression.number
-
-        #expect(sut.accepts(.int))
-        #expect(sut.accepts(.double))
-        #expect(!sut.accepts(.string))
-        #expect(!sut.accepts(.bool))
-
-        // Where `any` would have taken those two as well, which is the whole
-        // difference: one said nothing and this one said two things.
-        #expect(TypeExpression.any.accepts(.string))
-
-        // A value nothing said anything about still fits, here as everywhere.
-        // Refusing it would refuse every value no declaration had reached.
-        #expect(sut.accepts(.any))
-    }
-
     @Test("a type parameter read two ways that do not fit is a refusal, not a shrug")
     func aDisagreeingHoleIsRefused() async throws {
         // Given. Appending a whole number to a list of text. The hole is read
@@ -239,7 +219,7 @@ struct BoundaryTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
-                    signature: Signature(parameters: ["counts": Parameter(type: .array(.number))]),
+                    signature: Signature(parameters: ["counts": Parameter(type: .array(.named("std.Numeric")))]),
                     body: [],
                     result: .call(
                         Call(

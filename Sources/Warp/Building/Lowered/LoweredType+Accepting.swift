@@ -217,15 +217,6 @@ extension LoweredType {
         case (.double, .int):
             return true
 
-        case (.number, .int), (.number, .double):
-            return true
-
-        // A value known only this loosely fits a slot that takes everything
-        // the looseness covers, and no slot that takes less.
-        case (_, .number):
-            return accepts(.int, in: table, assuming: assuming)
-                && accepts(.double, in: table, assuming: assuming)
-
         default:
             return self == other
         }
@@ -389,7 +380,7 @@ extension LoweredType {
         case .any, .reading, .string, .undeclared:
             return true
 
-        case .int, .double, .number:
+        case .int, .double:
             return numeral(candidate, in: table) != nil
 
         // A candidate has to be a value the range itself would admit.

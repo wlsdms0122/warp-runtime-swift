@@ -818,7 +818,7 @@ extension Builder {
     // The one machine that judges an index reference, wherever a walk meets
     // one. The outer reading, a stopped walk's leftovers. The inner path is a
     // path of its own; what it reads has to be able to be an index. `int` is
-    // one; `double` and `number` may hold a whole value the run accepts, so
+    // one; `double` and a bounded parameter may hold a whole value the run accepts, so
     // only the actual reading (the fold's, or the run's) refuses the fraction;
     // what the walk could not read might be anything. Everything else provably
     // is not, and a text-proven defect is refused here.
@@ -840,7 +840,7 @@ extension Builder {
 
         case let .reads(innerResolved, innerType):
             switch context.resolve(innerType) {
-            case .int, .ranged, .double, .number, .any, .never, .parameter:
+            case .int, .ranged, .double, .any, .never, .parameter:
                 return .judged(innerResolved)
 
             default:

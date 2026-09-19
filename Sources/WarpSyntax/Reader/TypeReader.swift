@@ -514,8 +514,6 @@ public struct TypeReader: Decodable {
         "double": .double,
         "string": .string,
         "bytes": .bytes,
-        // Whole or fraction, for a slot that means both.
-        "number": .number,
         "procedure": .procedure(nil)
     ]
 

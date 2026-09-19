@@ -52,7 +52,6 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // whole or it is a fraction, and this is what a slot says when either will
     // do. That makes it the numeric `any`, narrowed to the two types that
     // arithmetic can actually work with.
-    case number
 
     // A number the slot admits only inside the range. `int(0...255)`,
     // `double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
@@ -212,9 +211,6 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case .never:
             return "never"
 
-        case .number:
-            return "number"
-
         case .null:
             return "null"
 
@@ -341,7 +337,7 @@ extension TypeExpression {
         case let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
             .nullable, .named, .parameter, .reading, .composition:
             return self
@@ -364,7 +360,7 @@ extension TypeExpression {
         case let .variable(inner):
             return inner
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
             .consuming, .borrowing, .nullable, .named, .parameter, .reading, .composition:
             return self

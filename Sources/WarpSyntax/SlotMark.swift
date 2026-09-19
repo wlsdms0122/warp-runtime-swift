@@ -45,7 +45,7 @@ enum SlotMark: String, CaseIterable, Sendable {
         case .borrowing:
             return .borrowing
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number, .ranged,
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .ranged,
             .array, .dictionary, .record, .procedure, .linear, .nullable, .named, .parameter,
             .reading, .composition:
             return nil

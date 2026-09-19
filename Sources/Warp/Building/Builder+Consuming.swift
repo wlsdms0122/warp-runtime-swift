@@ -74,7 +74,7 @@ extension Builder {
         // None of these is one, and none of them carries one: a value handed on
         // once is followed by the name that holds it, and a name does not go
         // into a type.
-        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes,
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
             .ranged, .array, .dictionary, .record, .procedure, .reading:
             return false
         }

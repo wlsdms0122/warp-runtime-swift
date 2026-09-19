@@ -151,7 +151,7 @@ extension LoweredType {
         boundAssuming: [Int] = []
     ) -> Bool {
         switch self {
-        case .any, .reading, .int, .number:
+        case .any, .reading, .int:
             return true
 
         case let .variable(inner), let .inout(inner), let .nullable(inner):
@@ -218,8 +218,8 @@ extension LoweredType {
         case let .nullable(inner):
             return inner.numeral(candidate, in: table)
 
-        // `number`, a parameter a constraint bounds, and the slots that
-        // declare no numeric type at all: the slot does not name one kind,
+        // A parameter a constraint bounds, and the slots that declare no
+        // numeric type at all: the slot does not name one kind,
         // so a numeral is whichever kind's one spelling the text is.
         default:
             if let whole = Int(spelling: candidate) { return .int(whole) }
@@ -268,9 +268,6 @@ extension LoweredType {
 
         case .never:
             return "never"
-
-        case .number:
-            return "number"
 
         case .null:
             return "null"
@@ -368,17 +365,6 @@ extension LoweredType {
 
         case let .undeclared(_, refusal):
             throw UndeclaredTypeError("\(path()): declares \(refusal)")
-
-        // Either type arrives as itself. Settling to one of them would be the
-        // declaration picking, and it declined to.
-        case .number:
-            switch value {
-            case .int, .double:
-                return value
-
-            default:
-                throw mismatch(value, at: path(), in: table)
-            }
 
         // A declared record is nominal. A record arriving without a name
         // settles to the declared type and takes the name; one arriving

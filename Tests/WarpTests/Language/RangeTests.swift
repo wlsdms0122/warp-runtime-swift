@@ -52,7 +52,6 @@ struct RangeTests {
         #expect(byte.accepts(.int))
         #expect(byte.accepts(.ranged(.whole(from: 0, to: .through(1024)))))
         #expect(!byte.accepts(.double))
-        #expect(!byte.accepts(.number))
         #expect(!byte.accepts(.string))
 
         // Two ranges are both the text's fact, so bounds that cannot overlap
@@ -66,7 +65,6 @@ struct RangeTests {
         // The other way a member is an int, and widens the way one does.
         #expect(TypeExpression.int.accepts(byte))
         #expect(TypeExpression.double.accepts(byte))
-        #expect(TypeExpression.number.accepts(byte))
         #expect(!TypeExpression.string.accepts(byte))
     }
 

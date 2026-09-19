@@ -21,7 +21,6 @@ indirect enum LoweredType: Sendable {
     case double
     case string
     case bytes
-    case number
     case ranged(TypeExpression.Refinement)
     case array(LoweredType)
     case dictionary(LoweredType)
@@ -110,7 +109,7 @@ indirect enum LoweredType: Sendable {
         case let .variable(inner):
             return inner
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
             .named, .parameter, .composition, .reading, .undeclared:
             return self
@@ -131,7 +130,7 @@ indirect enum LoweredType: Sendable {
         case let .variable(inner), let .inout(inner):
             return inner.slotUnwrapped
 
-        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes,
             .ranged, .array, .dictionary, .record, .procedure, .nullable,
             .named, .parameter, .composition, .reading, .undeclared:
             return self
@@ -298,7 +297,7 @@ indirect enum LoweredType: Sendable {
     // Whether this names one of the kinds a value simply is.
     var isDecidedKind: Bool {
         switch self {
-        case .bool, .int, .double, .string, .null, .number, .array, .dictionary, .record:
+        case .bool, .int, .double, .string, .null, .array, .dictionary, .record:
             return true
 
         default:
@@ -331,7 +330,7 @@ extension LoweredType: Equatable {
     static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
         switch (lhs, rhs) {
         case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
-            (.double, .double), (.string, .string), (.bytes, .bytes), (.number, .number):
+            (.double, .double), (.string, .string), (.bytes, .bytes):
             return true
 
         case let (.ranged(mine), .ranged(theirs)):

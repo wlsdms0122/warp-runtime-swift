@@ -163,7 +163,7 @@ extension Builder {
         }
 
         switch type {
-        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes:
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes:
             return
 
         // The link's own note to itself, written where a declaration goes. A

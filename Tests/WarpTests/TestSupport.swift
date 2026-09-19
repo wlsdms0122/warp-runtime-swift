@@ -73,7 +73,7 @@ struct FailEffect: Effect {
 func mayFail(_ name: Name = "checked") -> Statement {
     Statement(
         binding: .constant(name),
-        expression: .cast(.literal(.int(0)), as: .number, optional: false)
+        expression: .cast(.literal(.int(0)), as: .ranged(.whole(from: 0, to: .through(255))), optional: false)
     )
 }
 

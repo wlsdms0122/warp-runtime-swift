@@ -108,7 +108,7 @@ struct BytesTests {
         )
 
         let loweredTypes: [TypeExpression] = [
-            .any, .int, .number, .double, .string, .bool, .null, .never, .bytes,
+            .any, .int, .double, .string, .bool, .null, .never, .bytes,
             .ranged(.whole(from: 0, to: .through(255))),
             .ranged(.whole()),
             .ranged(.whole(from: 0, to: .through(254))),

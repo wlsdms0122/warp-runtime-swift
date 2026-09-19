@@ -50,7 +50,7 @@ struct CastAgreementTests {
     )
 
     private let loweredTypes: [TypeExpression] = [
-        .any, .never, .null, .bool, .int, .double, .string, .number, .bytes,
+        .any, .never, .null, .bool, .int, .double, .string, .bytes,
         .ranged(.whole(from: 0, to: .through(255))),
         .ranged(.whole(from: 300)),
         .ranged(.whole(to: .through(-1))),
