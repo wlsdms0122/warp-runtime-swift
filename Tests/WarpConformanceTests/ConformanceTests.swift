@@ -217,13 +217,12 @@ struct Case: Sendable, CustomStringConvertible {
         case encoded(Encoded, Reading)
 
         // The earliest test a case asking this needs. The ladder is the table
-        // under *what a case is* in `spec/conformance.md`, and a rung is what
-        // a case asks about, not how its expectation is spelled.
+        // under *what a case is* in `spec/conformance.md`.
         var needs: Int {
             switch self {
             case let .program(program): program.needs
-            case .encoded(.binary, _): 4
-            case .encoded(.text, _): 5
+            case .encoded(.binary, .refuses): 4
+            case .encoded(.binary, _), .encoded(.text, _): 5
             }
         }
     }
