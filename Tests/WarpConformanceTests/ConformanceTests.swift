@@ -49,12 +49,9 @@ struct ConformanceTests {
             case let .reads(expected):
                 #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
 
-                // Bytes read both ways. A text is one of many layouts of its
-                // value, so what the writer lays out is asked of the case
-                // files themselves.
-                if case let .binary(bytes) = encoded {
-                    #expect(Array(try BinaryEncoding.data(from: expected)) == bytes, "\(sut.name): \(sut.note)")
-                }
+            case let .spells(expected):
+                #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
+                #expect(try encoded.written(expected) == encoded.data, "\(sut.name): \(sut.note)")
 
             case .refuses:
                 #expect(throws: (any Error).self, "\(sut.name): \(sut.note)") { try encoded.read() }
@@ -156,19 +153,34 @@ struct Case: Sendable, CustomStringConvertible {
         case refuses(Stage)
     }
 
-    // A document in one of its encodings, which is read and nothing else.
+    // A document in one of its encodings, as the bytes that arrived, which
+    // are read and nothing else.
     enum Encoded: Sendable {
-        case binary([UInt8])
-        case text(String)
+        case binary(Data)
+        case text(Data)
 
-        func read() throws -> Value {
+        var data: Data {
             switch self {
-            case let .binary(bytes): try BinaryEncoding.value(from: Data(bytes))
-            case let .text(text): try TextEncoding.value(from: text)
+            case let .binary(data), let .text(data): data
             }
         }
 
-        // The earliest test a case carrying this needs.
+        func read() throws -> Value {
+            switch self {
+            case let .binary(data): try BinaryEncoding.value(from: data)
+            case let .text(data): try TextEncoding.value(from: data)
+            }
+        }
+
+        func written(_ value: Value) throws -> Data {
+            switch self {
+            case .binary: try BinaryEncoding.data(from: value)
+            case .text: try TextEncoding.data(from: value)
+            }
+        }
+
+        // The earliest test a case carrying this needs. The ladder is the
+        // table under *what a case is* in `spec/conformance.md`.
         var needs: Int {
             switch self {
             case .binary: 4
@@ -177,14 +189,22 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
-    // What an encoding may expect: to read as a value, or to be refused where
-    // it is read, which is the one stage it reaches. Bytes read both ways,
-    // since a writer that agrees with no reader and a reader that agrees with
-    // no writer each pass half of it; a text reads one way, since one value
-    // has many layouts in text.
+    // What an encoding may expect: to read as a value; to read as a value
+    // that writes back as exactly this, which is what a writer is held to;
+    // or to be refused where it is read, which is the one stage it reaches.
     enum Reading: Sendable {
         case reads(Value)
+        case spells(Value)
         case refuses
+
+        // The earliest test a case carrying this needs. The ladder is the
+        // table under *what a case is* in `spec/conformance.md`.
+        var needs: Int {
+            switch self {
+            case .reads, .refuses: 4
+            case .spells: 5
+            }
+        }
     }
 
     // A document the runner reads, builds and runs, with what it is given and
@@ -202,7 +222,8 @@ struct Case: Sendable, CustomStringConvertible {
 
         let expectation: Expectation
 
-        // The earliest test a case carrying this needs.
+        // The earliest test a case carrying this needs. The ladder is the
+        // table under *what a case is* in `spec/conformance.md`.
         var needs: Int { vocabulary == nil ? 2 : 3 }
     }
 
@@ -340,7 +361,7 @@ struct Case: Sendable, CustomStringConvertible {
             case "refuses":
                 expectation = .refuses(try Self.stage(expected))
 
-            case "reads":
+            case "reads", "spells":
                 throw ConformanceError("a program answers or is refused; only bytes and text read as a value")
 
             default:
@@ -357,16 +378,21 @@ struct Case: Sendable, CustomStringConvertible {
             )
 
         case let (nil, .bytes(bytes)?, nil):
-            self.asked = try Self.encoded(.binary(bytes), expecting: held, expected, in: written)
+            self.asked = try Self.encoded(.binary(Data(bytes)), expecting: held, expected, in: written)
 
         case (nil, .some, nil):
             throw ConformanceError("the bytes a case asks about are written as bytes")
 
+        // A text is written as a string, or as bytes where the question is
+        // whether those bytes are text at all.
         case let (nil, nil, .string(text)?):
-            self.asked = try Self.encoded(.text(text), expecting: held, expected, in: written)
+            self.asked = try Self.encoded(.text(Data(text.utf8)), expecting: held, expected, in: written)
+
+        case let (nil, nil, .bytes(bytes)?):
+            self.asked = try Self.encoded(.text(Data(bytes)), expecting: held, expected, in: written)
 
         case (nil, nil, .some):
-            throw ConformanceError("the text a case asks about is written as a string")
+            throw ConformanceError("the text a case asks about is written as a string, or as bytes")
 
         default:
             throw ConformanceError("a case asks about exactly one of a `program`, `bytes` and `text`")
@@ -377,7 +403,7 @@ struct Case: Sendable, CustomStringConvertible {
         // would have that runner refuse it as no case at all.
         let needed = switch self.asked {
         case let .program(program): program.needs
-        case let .encoded(encoded, _): encoded.needs
+        case let .encoded(encoded, reading): max(encoded.needs, reading.needs)
         }
 
         guard version == needed else {
@@ -423,7 +449,6 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
-
     // MARK: - Private
     private static func stage(_ expected: Value) throws -> Stage {
         guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
@@ -451,6 +476,9 @@ struct Case: Sendable, CustomStringConvertible {
         case "reads":
             return .reads(expected)
 
+        case "spells":
+            return .spells(expected)
+
         case "refuses":
             guard try stage(expected) == .load else {
                 throw ConformanceError("bytes and text are refused where they are read, and not at \(expected)")
@@ -462,7 +490,7 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("bytes and text do not run, so they answer nothing")
 
         default:
-            throw ConformanceError("a case expects what its bytes or text read as, or that they are refused, and not `\(held)`")
+            throw ConformanceError("a case expects what its bytes or text read as, what they spell, or that they are refused, and not `\(held)`")
         }
     }
 
