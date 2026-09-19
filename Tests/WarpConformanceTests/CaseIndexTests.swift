@@ -46,12 +46,16 @@ struct CaseIndexTests {
 
     @Test("every page lists its cases in name order")
     func everyListingIsInOrder() throws {
-        // By scalar, the order every implementation sorts the same way.
+        // By scalar, the order every implementation sorts the same way. A
+        // page may group its cases under lead-ins, and each group is in order
+        // on its own.
         let unordered = Dictionary(grouping: try Self.listed(), by: \.page)
             .filter { entry in
-                let names = entry.value.map(\.name)
+                Dictionary(grouping: entry.value, by: \.group).values.contains { group in
+                    let names = group.map(\.name)
 
-                return names != names.sorted { one, other in one.unicodeScalars.lexicographicallyPrecedes(other.unicodeScalars) }
+                    return names != names.sorted { one, other in one.unicodeScalars.lexicographicallyPrecedes(other.unicodeScalars) }
+                }
             }
             .keys
             .sorted()
@@ -81,7 +85,7 @@ struct CaseIndexTests {
     // Every name written under a page's `Cases` heading, beside the page that
     // wrote it. The heading closes the section: a name written anywhere else on
     // the page is prose about one case rather than the page's listing of them.
-    private static func listed() throws -> [(page: String, name: String)] {
+    private static func listed() throws -> [(page: String, group: Int, name: String)] {
         try FileManager.default
             .contentsOfDirectory(at: specification, includingPropertiesForKeys: nil)
             .filter { file in file.pathExtension == "md" }
@@ -90,12 +94,28 @@ struct CaseIndexTests {
                 let page = file.lastPathComponent
                 let lines = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false)
 
-                guard let opened = lines.firstIndex(of: "## Cases") else { return [(page: String, name: String)]() }
+                guard let opened = lines.firstIndex(of: "## Cases") else { return [(page: String, group: Int, name: String)]() }
 
-                return lines[lines.index(after: opened)...]
-                    .prefix { line in !line.hasPrefix("## ") }
-                    .compactMap { line in named(line) }
-                    .map { name in (page: page, name: name) }
+                // A run of names is one group, and a line that is not a name
+                // between two runs starts another.
+                var group = 0
+                var listed: [(page: String, group: Int, name: String)] = []
+                var inRun = false
+
+                for line in lines[lines.index(after: opened)...].prefix(while: { line in !line.hasPrefix("## ") }) {
+                    if let name = named(line) {
+                        if !inRun {
+                            group += 1
+                            inRun = true
+                        }
+
+                        listed.append((page: page, group: group, name: name))
+                    } else if !line.isEmpty {
+                        inRun = false
+                    }
+                }
+
+                return listed
             }
     }
 
