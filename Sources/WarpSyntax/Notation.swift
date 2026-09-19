@@ -88,7 +88,7 @@ public struct Notation: Sendable {
     // Giving up the template. The procedures it stood for are still reachable by
     // sending them, which is the whole reason a spelling can be given up at all.
     public func removingInterpolation() -> Notation {
-        Notation(condition: condition, interpolation: nil)
+        Notation(condition: condition, interpolation: nil, bareParameter: bareParameter)
     }
 
     // MARK: - Private
