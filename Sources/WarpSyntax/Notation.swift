@@ -39,7 +39,7 @@ public struct Notation: Sendable {
 
     // How a condition slot may be written here, and nothing where a condition is
     // written as the expression it is.
-    public let condition: (any ConditionSpelling)?
+    public private(set) var condition: (any ConditionSpelling)?
 
     // What `{ format:, with: }` lowers to, and nothing where this notation does
     // not offer a template.
@@ -47,11 +47,11 @@ public struct Notation: Sendable {
     // The two keys stay reserved either way. That much is the document's, and
     // the specification says so. What varies is only whether a template is
     // understood, and which procedures it spends.
-    public let interpolation: Interpolation?
+    public private(set) var interpolation: Interpolation?
 
     // Whether a parameter may be written as a bare type, `int` for
     // `{ type: int }`. A document writes the record.
-    public let bareParameter: Bool
+    public private(set) var bareParameter: Bool
 
     // What these spellings spend no matter which constructs exist. A template is
     // written in a value slot and every construct has one, so offering it owes
@@ -88,7 +88,10 @@ public struct Notation: Sendable {
     // Giving up the template. The procedures it stood for are still reachable by
     // sending them, which is the whole reason a spelling can be given up at all.
     public func removingInterpolation() -> Notation {
-        Notation(condition: condition, interpolation: nil, bareParameter: bareParameter)
+        var copy = self
+        copy.interpolation = nil
+
+        return copy
     }
 
     // MARK: - Private
