@@ -256,18 +256,15 @@ public struct TypeReader: Decodable {
 
         let inner = String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
 
-        switch head {
-        case "array":
-            return .array(try parse(inner))
-
-        case "dictionary":
-            return .dictionary(try parse(inner))
-
-        default:
+        guard let holding = Holding(rawValue: head) else {
             throw TypeFormError(
-                "type '\(head)' takes no argument. Only `array<…>` and `dictionary<…>` do"
+                "type '\(head)' takes no argument. Only "
+                    + Holding.allCases.map { holding in "`\(holding.rawValue)<…>`" }.joined(separator: " and ")
+                    + " do"
             )
         }
+
+        return holding.holding(try parse(inner))
     }
 
     // Whether the reading takes this spelling back as the name it is. A name
