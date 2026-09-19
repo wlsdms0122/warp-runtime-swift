@@ -583,10 +583,10 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a name bound three ways is refused by its two first sets")
-    func aNameBoundThreeWaysIsRefusedByItsFirstTwo() async throws {
+    @Test("a name bound three ways is refused by the two sets first in name order")
+    func aNameBoundThreeWaysIsRefusedByItsTwoLeastSets() async throws {
         // Given. `T` is bound by `A`, `B` and `C` in three slots, so which
-        // two the sentence names is the text's fact and not the walk's
+        // two the sentence names is fixed by name order and not by the walk
         let sut = try Module(
             constraints: ["A": [.int], "B": [.string], "C": [.bool]],
             procedures: [

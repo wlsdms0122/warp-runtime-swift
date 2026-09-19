@@ -88,8 +88,9 @@ public extension Signature {
     var parameterBounds: ParameterBounds {
         var bounds: [Name: [Name]] = [:]
 
-        // Every set a disagreeing name was bound by, so which two are reported
-        // is the text's fact rather than a hash seed's.
+        // Every set a disagreeing name was bound by, so that the two reported
+        // are the two first in name order rather than the two a hash seed
+        // walked first.
         var disagreeing: [Name: [[Name]]] = [:]
 
         parameterOccurrences { name, constraints in
