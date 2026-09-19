@@ -94,9 +94,9 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         try hold.write(value, at: [])
     }
 
-    // Nil for an argument that is absent or null, rather than the empty string
-    // stringifying null would give: "unset" and "set to nothing" are different
-    // instructions to a caller.
+    // Nil for an argument that is absent or null. Null spells as `null`, and a
+    // caller asking for a string wants what was said rather than that word:
+    // "unset" and "set to nothing" are one instruction here.
     public func string(_ key: P.Parameters) -> String? {
         switch self[key] {
         case .null:
