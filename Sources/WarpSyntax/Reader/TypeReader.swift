@@ -47,7 +47,17 @@ public struct TypeReader: Decodable {
     // A built-in taking another type, written under its own key where the
     // inner type has no spelling of its own. `array<string>` is a name; an
     // array of procedures is not, and this is the form that carries it.
-    public static let holdingKeys = ["array", "dictionary"]
+    enum Holding: String, CaseIterable {
+        case array
+        case dictionary
+
+        func holding(_ inner: TypeExpression) -> TypeExpression {
+            switch self {
+            case .array: .array(inner)
+            case .dictionary: .dictionary(inner)
+            }
+        }
+    }
 
     public static func parse(_ written: String) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: .whitespaces)
@@ -226,7 +236,7 @@ public struct TypeReader: Decodable {
 
             // A list or a map says what it holds. `array<any>` is a list of
             // anything, and the bare word is not a second spelling of it.
-            guard !Self.holdingKeys.contains(text) else {
+            guard Holding(rawValue: text) == nil else {
                 throw TypeFormError(
                     "type '\(text)' says nothing of what it holds. Write `\(text)<any>`"
                         + " for one of anything"
@@ -282,7 +292,7 @@ public struct TypeReader: Decodable {
     public static func reserves(_ key: Name) -> Bool {
         readsAsAProcedure(key)
             || key.spelling == linearKey
-            || holdingKeys.contains(key.spelling)
+            || Holding(rawValue: key.spelling) != nil
     }
 
     // What a procedure form's key says, read front to back: a slot's mark if one
@@ -430,11 +440,9 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            holdingKeys.contains(key.stringValue)
+            let holding = Holding(rawValue: key.stringValue)
         {
-            let inner = try keyed.decode(TypeReader.self, forKey: key).type
-
-            return key.stringValue == "array" ? .array(inner) : .dictionary(inner)
+            return holding.holding(try keyed.decode(TypeReader.self, forKey: key).type)
         }
 
         guard
