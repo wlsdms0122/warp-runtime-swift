@@ -24,7 +24,7 @@ struct NestingBoundTests {
         // How many levels of this shape fit under the bound. A level of a
         // call opens two containers and its deepest argument a third; a level
         // of a closure opens five. Around them the document opens three and
-        // the literal at the bottom one.
+        // the reference at the bottom one.
         var levels: Int {
             switch self {
             case .call: (Envelope.nesting - 5) / 2
@@ -32,7 +32,8 @@ struct NestingBoundTests {
             }
         }
 
-        // The whole document, `deep` levels of the shape around a literal one.
+        // The whole document, `deep` levels of the shape around a reference to
+        // a constant one.
         func document(deep: Int) -> Value {
             let expression: Value
             let imports: Value
@@ -40,27 +41,32 @@ struct NestingBoundTests {
             switch self {
             case .call:
                 imports = ["std.math.plus"]
-                expression = (0 ..< deep).reduce(["value": .int(1)]) { inner, _ in
-                    ["call": ["procedure": "std.math.plus", "of": inner, "arguments": ["value": ["value": .int(1)]]]]
+                expression = (0 ..< deep).reduce(["ref": "one"]) { inner, _ in
+                    ["call": ["procedure": "std.math.plus", "of": inner, "arguments": ["value": ["ref": "one"]]]]
                 }
 
             case .closure:
                 imports = ["std.logic.select"]
-                expression = (0 ..< deep).reduce(["value": .int(1)]) { inner, _ in
+                expression = (0 ..< deep).reduce(["ref": "one"]) { inner, _ in
                     [
                         "call": [
                             "procedure": "std.logic.select",
-                            "of": ["value": .bool(true)],
+                            "of": ["ref": "yes"],
                             "arguments": [
                                 "then": ["closure": ["result": inner]],
-                                "else": ["closure": ["result": ["value": .int(0)]]]
+                                "else": ["closure": ["result": ["ref": "zero"]]]
                             ]
                         ]
                     ]
                 }
             }
 
-            return ["warp": .int(1), "imports": imports, "procedures": ["entry": ["result": expression]]]
+            return [
+                "warp": .int(1),
+                "imports": imports,
+                "const": ["one": .int(1), "zero": .int(0), "yes": .bool(true)],
+                "procedures": ["entry": ["result": expression]]
+            ]
         }
 
         func answer(deep: Int) -> Value {

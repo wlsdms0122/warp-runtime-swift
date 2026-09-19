@@ -449,7 +449,7 @@ struct LeaveTests {
             try loader.statement(from: [
                 "value": ["block": [
                     "body": [["value": ["return": 1]]],
-                    "result": ["value": 2]
+                    "result": 2
                 ]]
             ])
         } throws: { error in
