@@ -58,21 +58,19 @@ public enum TextEncoding {
     }
 
     public static func value(from text: String) throws -> Value {
-        // The first line is read on its own and before the rest: whether
-        // this is a document at all, and laid out how, is answered before
-        // anything in it is, so a later format is refused as that and not
-        // as whatever its body says that this reader has no name for.
-        let scalars = text.unicodeScalars
-        let end = scalars.firstIndex(of: "\n") ?? scalars.endIndex
-        let header = String(scalars[..<end])
+        // The first two tokens are read on their own and before the rest:
+        // whether this is a document at all, and laid out how, is answered
+        // before anything in it is, so a later format is refused as that and
+        // not as whatever its body says that this reader has no name for.
+        var reading = Array(text.unicodeScalars)[...]
 
-        guard header.hasPrefix(name) else {
+        guard bareToken(from: &reading) == name else {
             throw refused("the text does not begin as a warp document begins")
         }
 
-        var head = try tokenized(header)[...]
+        let version = bareToken(from: &reading)
 
-        guard case .bare(name) = head.popFirst(), case let .bare(version) = head.popFirst(), head.isEmpty else {
+        guard !version.isEmpty else {
             throw refused("the text does not say how it is laid out")
         }
 
@@ -99,7 +97,7 @@ public enum TextEncoding {
             )
         }
 
-        var tokens = try tokenized(String(scalars[end...]))[...]
+        var tokens = try tokenized(reading)[...]
         let value = try read(from: &tokens)
 
         guard tokens.isEmpty else {
@@ -130,9 +128,26 @@ public enum TextEncoding {
         case record(held: [Name: Value], key: Name?, name: Name?)
     }
 
-    private static func tokenized(_ text: String) throws -> [Token] {
+    // A bare token past any whitespace, or nothing where the text has none
+    // there. The header is read this way, since a header is two of them.
+    private static func bareToken(from reading: inout ArraySlice<Unicode.Scalar>) -> String {
+        while let character = reading.first, " \n\r\t".unicodeScalars.contains(character) {
+            reading.removeFirst()
+        }
+
+        var bare = ""
+
+        while let character = reading.first, !enders.contains(character) {
+            bare.unicodeScalars.append(character)
+            reading.removeFirst()
+        }
+
+        return bare
+    }
+
+    private static func tokenized(_ reading: ArraySlice<Unicode.Scalar>) throws -> [Token] {
         var tokens: [Token] = []
-        var reading = Array(text.unicodeScalars)[...]
+        var reading = reading
 
         while let character = reading.first {
             switch character {
