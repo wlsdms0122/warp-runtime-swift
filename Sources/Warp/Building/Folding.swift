@@ -81,7 +81,7 @@ struct Folding {
                         procedure: procedure,
                         const: procedure.implementation.isNativelyConst == true,
                         isolated: false,
-                        failing: procedure.implementation.nativelyFailing ?? .unstated,
+                        failing: procedure.implementation.nativelyFailing ?? .these([]),
                         builtin: module.builtin,
                         // A constant settles before the link's table exists, so
                         // a procedure that sends has no row to send to. It refuses

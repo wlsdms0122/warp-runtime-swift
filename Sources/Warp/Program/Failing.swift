@@ -13,8 +13,7 @@ import Foundation
 //
 // Derived for a body from what it casts, calls and rescues; declared by a
 // native procedure, which is the only one that can say. One that says nothing
-// leaves the question open, and every judgment reading this treats that as
-// "anything may come out".
+// fails nothing: the judge reads the empty set for it.
 public enum Failing: Sendable, Equatable {
     // No claim. What comes out of this is not knowable before the run.
     case unstated
