@@ -43,19 +43,12 @@ extension Builder {
 
             table[placed.held.contract]?.insert(placed.held.type)
         }
-        var table = declaring.satisfying(held, unsettled: unsettled)
-        var witnessed = try witnesses(
-            of: claims,
-            asking: contracts,
-            over: declaredTypes,
-            among: signatures,
-            in: table
-        )
+        var table: TypeTable
+        var witnessed: (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String])
 
         // The table the last pass was judged against holds exactly what the
         // witnesses hold up, so it is the table the link reads.
-        while witnessed.answering.mapValues({ answering in Set(answering.keys) }) != held {
-            held = witnessed.answering.mapValues { answering in Set(answering.keys) }
+        repeat {
             table = declaring.satisfying(held, unsettled: unsettled)
             witnessed = try witnesses(
                 of: claims,
@@ -64,7 +57,13 @@ extension Builder {
                 among: signatures,
                 in: table
             )
-        }
+
+            let answering = witnessed.answering.mapValues { answering in Set(answering.keys) }
+
+            guard answering != held else { break }
+
+            held = answering
+        } while true
 
         // The procedures the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
