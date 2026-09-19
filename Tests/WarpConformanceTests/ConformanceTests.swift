@@ -466,6 +466,12 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("a case about an encoding writes `\(key)`, which only a program is given")
         }
 
+        // The binary encoding is canonical, so bytes that read as a value
+        // write back as themselves, and a case about them says so.
+        if case .binary = encoded, held == "reads" {
+            throw ConformanceError("the binary encoding is canonical, so a case that reads bytes expects `spells`")
+        }
+
         return .encoded(encoded, try reading(held, expected))
     }
 
