@@ -484,12 +484,8 @@ public struct Writer: Sendable {
         case let .held(bounds):
             held = bounds
 
-        case let .disagreeing(name, sets):
-            throw WritingError(
-                "'some \(name)' is bounded by \(Signature.ParameterBounds.spelled(sets))"
-                    + " in another. One name is held to one set of bounds, so there is no"
-                    + " `bounds` to write"
-            )
+        case let .disagreeing(name, one, other):
+            throw WritingError(Signature.ParameterBounds.refusal(name, one, other) + ", so there is no `bounds` to write")
         }
 
         let bounds = held

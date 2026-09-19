@@ -583,6 +583,36 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a parameter names its bounds once each and in name order")
+    func aParameterNamesItsBoundsInOrder() async throws {
+        // Given. A signature assembled with `B & A`, which no reader writes
+        func module(bounds: [Name]) throws -> Module {
+            try Module(
+                constraints: ["A": [.int, .string], "B": [.string]],
+                procedures: [
+                    "keep": Procedure(
+                        signature: Signature(
+                            parameters: ["left": Parameter(type: .parameter(name: "T", constraints: bounds))],
+                            returns: .int
+                        ),
+                        body: [],
+                        result: .literal(.int(1))
+                    ),
+                    entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                ]
+            )
+        }
+
+        // When / Then
+        for bounds in [["B", "A"], ["A", "A"]] as [[Name]] {
+            await #expect {
+                try await builder.build([try module(bounds: bounds)] + Module.standard, entry: entryName)
+            } throws: { error in
+                error is BuildError && "\(error)".contains("`some T` names its bounds once each and in name order")
+            }
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

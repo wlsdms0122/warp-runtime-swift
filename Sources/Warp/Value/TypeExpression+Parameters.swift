@@ -87,7 +87,7 @@ public extension Signature {
     // signature and never fills one through the name.
     var parameterBounds: ParameterBounds {
         var bounds: [Name: [Name]] = [:]
-        var disagreeing: (name: Name, sets: [[Name]])?
+        var disagreeing: (name: Name, one: [Name], other: [Name])?
 
         parameterOccurrences { name, constraints in
             guard let held = bounds[name], !held.isEmpty, !constraints.isEmpty else {
@@ -99,13 +99,13 @@ public extension Signature {
             }
 
             if disagreeing == nil, held.sorted() != constraints.sorted() {
-                disagreeing = (name, [held, constraints])
+                disagreeing = (name, held, constraints)
             }
         }
 
         guard let disagreeing else { return .held(bounds) }
 
-        return .disagreeing(disagreeing.name, disagreeing.sets)
+        return .disagreeing(disagreeing.name, disagreeing.one, disagreeing.other)
     }
 
     // Every type parameter mentioned in this signature, occurrence by
@@ -197,14 +197,16 @@ public extension Signature {
     // name, or the name two mentions bound two ways and the two sets.
     enum ParameterBounds: Equatable {
         case held([Name: [Name]])
-        case disagreeing(Name, [[Name]])
+        case disagreeing(Name, [Name], [Name])
 
-        // The two sets, spelled for a sentence saying they differ.
-        public static func spelled(_ sets: [[Name]]) -> String {
-            sets
+        // The sentence a disagreement is refused with, wherever it is refused.
+        public static func refusal(_ name: Name, _ one: [Name], _ other: [Name]) -> String {
+            let spelled = [one, other]
                 .map { names in names.sorted().map(\.spelling).joined(separator: " & ") }
                 .sorted()
-                .joined(separator: " in one place and ")
+
+            return "`some \(name)` is bounded by \(spelled[0]) in one place and \(spelled[1]) in another."
+                + " One name is held to one set of bounds"
         }
     }
 }

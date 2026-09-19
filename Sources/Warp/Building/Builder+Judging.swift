@@ -544,25 +544,31 @@ extension Builder {
         at place: Place,
         in table: TypeTable
     ) throws {
+        // How each mention is written is judged mention by mention, so no
+        // one of them stands for the others.
+        var misspelled: Name?
+
+        signature.parameterOccurrences { parameter, names in
+            if misspelled == nil, Set(names).count != names.count || names != names.sorted() {
+                misspelled = parameter
+            }
+        }
+
+        if let misspelled {
+            throw BuildError("`some \(misspelled)` names its bounds once each and in name order", at: place)
+        }
+
         let bounds: [Name: [Name]]
 
         switch signature.parameterBounds {
         case let .held(held):
             bounds = held
 
-        case let .disagreeing(parameter, sets):
-            throw BuildError(
-                "`some \(parameter)` is bounded by \(Signature.ParameterBounds.spelled(sets)) in another."
-                    + " One name is held to one set of bounds",
-                at: place
-            )
+        case let .disagreeing(parameter, one, other):
+            throw BuildError(Signature.ParameterBounds.refusal(parameter, one, other), at: place)
         }
 
-        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) where !names.isEmpty {
-            guard Set(names).count == names.count, names == names.sorted() else {
-                throw BuildError("`some \(parameter)` names its bounds once each and in name order", at: place)
-            }
-
+        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
             for bound in names where table.constraint(bound) == nil && table.contracts[bound] == nil {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
