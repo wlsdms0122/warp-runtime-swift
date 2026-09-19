@@ -154,8 +154,7 @@ public enum TextEncoding {
             default:
                 var bare = ""
 
-                while let character = reading.first,
-                      !Self.delimiters.contains(character), character != "\"" {
+                while let character = reading.first, !Self.enders.contains(character) {
                     bare.unicodeScalars.append(character)
                     reading.removeFirst()
                 }
@@ -177,13 +176,13 @@ public enum TextEncoding {
         return tokens
     }
 
-    // What ends a token, besides the text ending. A bare token also ends at a
-    // quote, which is then refused as running into it.
+    // What may stand between two tokens, besides the text ending.
     private static let delimiters = Set(" \n\r\t[]{}".unicodeScalars)
 
-    // Whitespace or a bracket follows a token, or nothing does. A bare token
-    // ends at a quote and a quoted one at its closing quote, so what stands
-    // right after either is a token running into it.
+    // What ends a bare token: a delimiter, or a quote.
+    private static let enders = delimiters.union(["\""])
+
+    // A delimiter follows a token, or nothing does.
     private static func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
         guard let next = reading.first, !delimiters.contains(next) else { return }
 
