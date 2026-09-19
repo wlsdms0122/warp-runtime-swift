@@ -178,15 +178,6 @@ struct Case: Sendable, CustomStringConvertible {
             case .text: try TextEncoding.data(from: value)
             }
         }
-
-        // The earliest test a case carrying this needs. The ladder is the
-        // table under *what a case is* in `spec/conformance.md`.
-        var needs: Int {
-            switch self {
-            case .binary: 4
-            case .text: 5
-            }
-        }
     }
 
     // What an encoding may expect: to read as a value; to read as a value
@@ -196,15 +187,6 @@ struct Case: Sendable, CustomStringConvertible {
         case reads(Value)
         case spells(Value)
         case refuses
-
-        // The earliest test a case carrying this needs. The ladder is the
-        // table under *what a case is* in `spec/conformance.md`.
-        var needs: Int {
-            switch self {
-            case .reads, .refuses: 4
-            case .spells: 5
-            }
-        }
     }
 
     // A document the runner reads, builds and runs, with what it is given and
@@ -233,6 +215,17 @@ struct Case: Sendable, CustomStringConvertible {
     enum Asked: Sendable {
         case program(Program)
         case encoded(Encoded, Reading)
+
+        // The earliest test a case asking this needs. The ladder is the table
+        // under *what a case is* in `spec/conformance.md`, and a rung is what
+        // a case asks about, not how its expectation is spelled.
+        var needs: Int {
+            switch self {
+            case let .program(program): program.needs
+            case .encoded(.binary, _): 4
+            case .encoded(.text, _): 5
+            }
+        }
     }
 
     // A module the runner brings. The declarations are held apart from the rest
@@ -401,13 +394,8 @@ struct Case: Sendable, CustomStringConvertible {
         // A case says the earliest test it needs. Saying a later one would
         // turn away a runner that could have asked it, and an earlier one
         // would have that runner refuse it as no case at all.
-        let needed = switch self.asked {
-        case let .program(program): program.needs
-        case let .encoded(encoded, reading): max(encoded.needs, reading.needs)
-        }
-
-        guard version == needed else {
-            throw ConformanceError("this case says test \(version), and what it writes is test \(needed)")
+        guard version == self.asked.needs else {
+            throw ConformanceError("this case says test \(version), and what it writes is test \(self.asked.needs)")
         }
     }
 
