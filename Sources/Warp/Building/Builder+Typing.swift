@@ -2817,7 +2817,7 @@ extension Builder {
         where parameter.declared.isInout {
             guard let argument = call.handed(name, to: signature) else { continue }
 
-            let at = name == signature.receiver && call.receiver != nil
+            let at = name == signature.receiver
                 ? place.part(.receiver)
                 : place.argument(name.spelling)
 

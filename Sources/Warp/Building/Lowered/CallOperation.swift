@@ -87,16 +87,8 @@ struct CallOperation: Sendable {
 
             // What the call wrote under this name, and what the slot takes:
             // the receiver written in front stands under the name the callee
-            // receives by, and that name is never written by name.
+            // receives by, and the build has refused that name by name.
             let written = try argument(name)
-
-            if isReceiver, written != nil {
-                throw BuildError.unjudged(
-                    "'\(name)' sent to '\(callee.rendered)' by name, which is its receiver",
-                    at: place
-                )
-            }
-
             let given = isReceiver ? receiver : written
 
             if case .inout = slot.type {
