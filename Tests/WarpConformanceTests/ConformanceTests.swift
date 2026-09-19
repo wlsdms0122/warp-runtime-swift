@@ -417,17 +417,9 @@ struct Case: Sendable, CustomStringConvertible {
                 name: entry.name,
                 declaration: declaration,
                 answers: record["answers"] ?? .null,
-                runs: record["runs"] == .bool(true),
-                isolated: record["isolated"] != .bool(false),
-                failing: {
-                    guard case let .array(named)? = record["failing"] else { return [] }
-
-                    return named.compactMap { held in
-                        guard case let .string(type) = held else { return nil }
-
-                        return type
-                    }
-                }()
+                runs: try Self.flag(record["runs"], "runs", of: entry.name, or: false),
+                isolated: try Self.flag(record["isolated"], "isolated", of: entry.name, or: true),
+                failing: try Self.failing(record["failing"], of: entry.name)
             )
         }
 
@@ -460,6 +452,34 @@ struct Case: Sendable, CustomStringConvertible {
     // a runner's.
     func modules() async throws -> [Module] {
         try await brought + [try Loader().load(try document(), identity: nil)] + Module.standard
+    }
+
+    // A key the runner reads beside a declaration is a bool or is not written.
+    // Anything else is refused rather than read as one of the two: a case that
+    // wrote `runs 1` asked a question no runner can answer the same way.
+    private static func flag(_ written: Value?, _ key: String, of procedure: Name, or absent: Bool) throws -> Bool {
+        switch written {
+        case nil: return absent
+        case let .bool(flag)?: return flag
+        case let other?:
+            throw ConformanceError("'\(procedure)' writes `\(key)` as \(other), and it is a bool or is not written")
+        }
+    }
+
+    private static func failing(_ written: Value?, of procedure: Name) throws -> [String] {
+        guard let written else { return [] }
+
+        guard case let .array(named) = written else {
+            throw ConformanceError("'\(procedure)' writes `failing` as \(written), and it is an array of names")
+        }
+
+        return try named.map { held in
+            guard case let .string(type) = held else {
+                throw ConformanceError("'\(procedure)' fails with \(held), and what it fails with is named")
+            }
+
+            return type
+        }
     }
 
     // The document this case asks about. A case that asks about bytes has none,
