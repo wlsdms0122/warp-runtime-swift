@@ -555,6 +555,34 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a contract's procedure holds one name to one set of bounds")
+    func aContractProcedureHoldsOneNameToOneSet() async throws {
+        // Given. The contract's procedure bounds `T` by `A` in one slot and
+        // by `B` in another, which is two claims about one name
+        let sut = try Module(
+            constraints: ["A": [.int, .string], "B": [.string]],
+            contracts: [
+                "app.Pairing": [
+                    "pair": Signature(
+                        parameters: [
+                            "left": Parameter(type: .parameter(name: "T", constraints: ["A"])),
+                            "right": Parameter(type: .parameter(name: "T", constraints: ["B"]))
+                        ],
+                        returns: .int
+                    )
+                ]
+            ],
+            procedures: [entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("`some T` is bounded by A in one place and B in another")
+        }
+    }
+
     @Test("a parameter bounded by two memberships takes only what both admit")
     func twoBoundsOnOneParameterBothHold() async throws {
         // Given. `A` admits int and string, `B` admits string alone, and `T`

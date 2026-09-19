@@ -313,6 +313,14 @@ extension Builder {
                 }
             }
 
+            // A contract's procedures are declarations the way the module's
+            // own are, and what a call is judged against is what was judged.
+            for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
+                for (name, signature) in procedures.sorted(by: { $0.key < $1.key }) {
+                    try judge(signature, at: .contract(contract.spelling, in: .of(module)).key(name.spelling), in: table)
+                }
+            }
+
             for (name, constant) in module.constants.sorted { $0.key < $1.key } {
                 try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
             }
