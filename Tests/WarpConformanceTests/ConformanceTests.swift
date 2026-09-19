@@ -46,11 +46,8 @@ struct ConformanceTests {
 
         case let .encoded(encoded, reading):
             switch reading {
-            // `reads` says as well that this is not the writer's layout,
-            // or the case would be `spells` and ask the writer too.
             case let .reads(expected):
                 #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
-                #expect(try encoded.written(expected) != encoded.data, "\(sut.name): is the writer's layout, and reads where it would spell")
 
             case let .spells(expected):
                 #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
@@ -462,7 +459,16 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the binary encoding is canonical, so a case that reads bytes expects `spells`")
         }
 
-        return .encoded(encoded, try reading(held, expected))
+        let reading = try reading(held, expected)
+
+        // `reads` says as well that this is not the writer's layout, or the
+        // case would be `spells` and ask the writer too. A case is held to
+        // that where it is read, since it is the case that is wrong then.
+        if case let .reads(expected) = reading, (try? encoded.written(expected)) == encoded.data {
+            throw ConformanceError("a text in the writer's layout expects `spells`, and this one says `reads`")
+        }
+
+        return .encoded(encoded, reading)
     }
 
     // What an encoding expects. Refused where it is read, which is the one
