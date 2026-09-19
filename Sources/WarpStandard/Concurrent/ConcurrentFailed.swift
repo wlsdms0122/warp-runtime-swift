@@ -8,12 +8,13 @@
 import Foundation
 import Warp
 
-// Every piece's failure, keyed by the piece's label. One aggregate rather than
-// whichever failure finished first, because which one that is would be timing.
-// A rescue reads the same set of failures on every run.
+// Every piece's failure, keyed by the piece's label, each the envelope the
+// piece raised. One aggregate rather than whichever failure finished first,
+// because which one that is would be timing. A rescue reads the same set of
+// failures on every run, and reads each piece's own type and details.
 public struct ConcurrentFailed: RecoverableFailure {
     // MARK: - Property
-    public let failures: [Name: String]
+    public let failures: [Name: Value]
 
     public var type: String { Self.type }
 
@@ -25,21 +26,25 @@ public struct ConcurrentFailed: RecoverableFailure {
     public static let type = "concurrent_failed"
 
     public var details: [Name: Value] {
-        ["failures": .dictionary(failures.mapValues(Value.string))]
+        ["failures": .dictionary(failures)]
     }
 
     public var message: String {
         "concurrent pieces failed: "
             + failures
                 .sorted { left, right in left.key < right.key }
-                .map { piece, reason in "\(piece): \(reason)" }
+                .map { piece, envelope in
+                    guard case let .string(message)? = envelope["message"] else { return "\(piece)" }
+
+                    return "\(piece): \(message)"
+                }
                 .joined(separator: "; ")
     }
 
     public let trace: Trace?
 
     // MARK: - Initializer
-    public init(failures: [Name: String], trace: Trace? = nil) {
+    public init(failures: [Name: Value], trace: Trace? = nil) {
         self.failures = failures
         self.trace = trace
     }

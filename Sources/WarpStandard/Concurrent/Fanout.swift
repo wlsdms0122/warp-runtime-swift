@@ -299,7 +299,7 @@ struct Fanout: Sendable {
             return authorMistake.value
         }
 
-        return ConcurrentFailed(failures: failures.mapValues { error in "\(error)" })
+        return ConcurrentFailed(failures: failures.compactMapValues { error in (error as? any RecoverableFailure)?.payload })
     }
 
     private func answered(_ outcomes: [Outcome], keyed: Bool) throws -> Value {
