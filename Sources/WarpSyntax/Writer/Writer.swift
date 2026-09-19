@@ -343,6 +343,12 @@ public struct Writer: Sendable {
             written["description"] = .string(description)
         }
 
+        // The bare type, where the notation this is read by offers it and
+        // nothing but the type was said.
+        if readBy.bareParameter, written.count == 1, case let .string(only)? = written["type"] {
+            return .string(only)
+        }
+
         return .dictionary(written)
     }
 
