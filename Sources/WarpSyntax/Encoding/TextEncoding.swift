@@ -58,6 +58,12 @@ public enum TextEncoding {
     }
 
     public static func value(from text: String) throws -> Value {
+        // Whether this is a document at all is answered before anything in
+        // it is, so text that is something else is refused as that.
+        guard text.hasPrefix(name) else {
+            throw refused("the text does not begin as a warp document begins")
+        }
+
         var tokens = try tokenized(text)[...]
 
         guard case .bare(name) = tokens.popFirst() else {
@@ -186,7 +192,7 @@ public enum TextEncoding {
     private static func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
         guard let next = reading.first, !delimiters.contains(next) else { return }
 
-        throw refused("a token runs straight into \(Character(next)), and whitespace separates the two")
+        throw refused("a token runs straight into \(Character(next)), and whitespace or a bracket separates the two")
     }
 
     private static func quoted(from reading: inout ArraySlice<Unicode.Scalar>) throws -> String {
