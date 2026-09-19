@@ -364,28 +364,19 @@ struct Case: Sendable, CustomStringConvertible {
             )
 
         case let (nil, .bytes(bytes)?, nil):
-            self.asked = .encoded(.binary(bytes), try Self.reading(held, expected))
+            self.asked = try Self.encoded(.binary(bytes), expecting: held, expected, in: written)
 
         case (nil, .some, nil):
             throw ConformanceError("the bytes a case asks about are written as bytes")
 
         case let (nil, nil, .string(text)?):
-            self.asked = .encoded(.text(text), try Self.reading(held, expected))
+            self.asked = try Self.encoded(.text(text), expecting: held, expected, in: written)
 
         case (nil, nil, .some):
             throw ConformanceError("the text a case asks about is written as a string")
 
         default:
             throw ConformanceError("a case asks about exactly one of a `program`, `bytes` and `text`")
-        }
-
-        // An encoding is read and nothing is run, so nothing is given and
-        // nothing is brought. A case writing either asked something the
-        // runner would not ask, and it is refused rather than left unasked.
-        if case .encoded = self.asked {
-            for key: Name in ["arguments", "vocabulary"] where written[key] != nil {
-                throw ConformanceError("a case about an encoding writes `\(key)`, which only a program is given")
-            }
         }
 
         // A case says the earliest test it needs. Saying a later one would
@@ -401,13 +392,24 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
-    // MARK: - Public
+    // MARK: - Private
     private static func stage(_ expected: Value) throws -> Stage {
         guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
             throw ConformanceError("\(expected) is not a stage a program is refused at")
         }
 
         return stage
+    }
+
+    // An encoding is read and nothing is run, so nothing is given and nothing
+    // is brought. A case writing either asked something the runner would not
+    // ask, and it is refused rather than left unasked.
+    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
+        for key: Name in ["arguments", "vocabulary"] where written[key] != nil {
+            throw ConformanceError("a case about an encoding writes `\(key)`, which only a program is given")
+        }
+
+        return .encoded(encoded, try reading(held, expected))
     }
 
     // What an encoding expects. Refused where it is read, which is the one
