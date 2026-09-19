@@ -386,11 +386,11 @@ struct Bench {
         }
 
         var lines = [comparison.said(beside: heading), ""]
-            + notes.flatMap { note in [note, ""] }
-            + [
-                "| \(first) | " + headings.joined(separator: " | ") + " |",
-                "|---" + String(repeating: "|---", count: headings.count) + "|"
-            ]
+        lines += notes.flatMap { note in [note, ""] }
+        lines += [
+            "| \(first) | " + headings.joined(separator: " | ") + " |",
+            "|---" + String(repeating: "|---", count: headings.count) + "|"
+        ]
 
         for (label, row) in rows {
             let before = against?[label]
