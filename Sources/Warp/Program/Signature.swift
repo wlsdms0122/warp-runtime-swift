@@ -140,18 +140,15 @@ public struct Signature: Sendable, Equatable {
         TypeExpression.procedure(self).accepts(.procedure(given), in: types)
     }
 
-    // The expression a call hands under a parameter's name: the argument
-    // written under it, or the receiver where the parameter is the receiver
-    // and the call wrote one in front. One rule, asked wherever a call is
-    // read.
+    // The expression a call hands under a parameter's name: what stands in
+    // front where the parameter is the receiver, and the argument written
+    // under the name otherwise. One rule, asked wherever a call is read.
     public func handed(
         _ name: Name,
         receiver: Expression?,
         arguments: [Name: Expression]
     ) -> Expression? {
-        name == self.receiver
-            ? receiver ?? arguments[name]
-            : arguments[name]
+        name == self.receiver ? receiver : arguments[name]
     }
 
     // MARK: - Internal

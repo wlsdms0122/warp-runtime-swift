@@ -650,18 +650,15 @@ struct StandardTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(binding: .constant("sum"), expression: .call(Call(selector: "std.math.plus", arguments: [
-                                        "of": .literal(.int(2)),
+                        Statement(binding: .constant("sum"), expression: .call(Call(receiver: .literal(.int(2)), selector: "std.math.plus", arguments: [
                                         "value": .literal(.int(3))
                                     ]))
                         ),
-                        Statement(binding: .constant("product"), expression: .call(Call(selector: "std.math.times", arguments: [
-                                        "of": .literal(.int(4)),
+                        Statement(binding: .constant("product"), expression: .call(Call(receiver: .literal(.int(4)), selector: "std.math.times", arguments: [
                                         "value": .literal(.double(2.5))
                                     ]))
                         ),
-                        Statement(binding: .constant("quotient"), expression: .call(Call(selector: "std.math.dividedBy", arguments: [
-                                        "of": .literal(.int(7)),
+                        Statement(binding: .constant("quotient"), expression: .call(Call(receiver: .literal(.int(7)), selector: "std.math.dividedBy", arguments: [
                                         "value": .literal(.int(2))
                                     ]))
                         )
@@ -691,8 +688,7 @@ struct StandardTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(binding: .constant("gone"), expression: .call(Call(selector: "std.math.dividedBy", arguments: [
-                                        "of": .literal(.int(1)),
+                        Statement(binding: .constant("gone"), expression: .call(Call(receiver: .literal(.int(1)), selector: "std.math.dividedBy", arguments: [
                                         "value": .literal(.int(0))
                                     ]))
                         )
@@ -758,18 +754,15 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("parts"), expression: .call(Call(selector: "std.text.split", arguments: [
-                                        "of": .reference([.key("line")]),
+                        Statement(binding: .constant("parts"), expression: .call(Call(receiver: .reference([.key("line")]), selector: "std.text.split", arguments: [
                                         "value": .literal(.string(","))
                                     ]))
                         ),
-                        Statement(binding: .constant("rejoined"), expression: .call(Call(selector: "std.text.joined", arguments: [
-                                        "of": .reference([.key("parts")]),
+                        Statement(binding: .constant("rejoined"), expression: .call(Call(receiver: .reference([.key("parts")]), selector: "std.text.joined", arguments: [
                                         "value": .literal(.string(" / "))
                                     ]))
                         ),
-                        Statement(binding: .constant("fixed"), expression: .call(Call(selector: "std.text.replacing", arguments: [
-                                        "of": .reference([.key("rejoined")]),
+                        Statement(binding: .constant("fixed"), expression: .call(Call(receiver: .reference([.key("rejoined")]), selector: "std.text.replacing", arguments: [
                                         "value": .literal(.string("b")),
                                         "with": .literal(.string("B"))
                                     ]))
@@ -802,12 +795,9 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("many"), expression: .call(Call(selector: "std.collection.count", arguments: [
-                                        "of": .reference([.key("items")])
-                                    ]))
+                        Statement(binding: .constant("many"), expression: .call(Call(receiver: .reference([.key("items")]), selector: "std.collection.count"))
                         ),
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "std.text.split", arguments: [
-                                        "of": .reference([.key("many")]),
+                        Statement(binding: .constant("said"), expression: .call(Call(receiver: .reference([.key("many")]), selector: "std.text.split", arguments: [
                                         "value": .literal(.string(","))
                                     ]))
                         )

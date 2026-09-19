@@ -270,8 +270,9 @@ struct BakedTests {
             constants: [
                 "app.two": .call(
                     Call(
+                        receiver: .literal(.int(1)),
                         selector: "std.math.plus",
-                        arguments: ["of": .literal(.int(1)), "value": .literal(.int(1))]
+                        arguments: ["value": .literal(.int(1))]
                     )
                 )
             ],
@@ -335,9 +336,9 @@ struct BakedTests {
                     body: [],
                     result: .call(
                         Call(
+                            receiver: .reference([.key("value")]),
                             selector: "std.math.plus",
                             arguments: [
-                                "of": .reference([.key("value")]),
                                 "value": .literal(.int(number))
                             ]
                         )

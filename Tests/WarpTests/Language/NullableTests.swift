@@ -203,8 +203,8 @@ struct NullableTests {
                         // The written call omits `limit`; the type answers the
                         // omission with null, so the build takes the call.
                         Statement(binding: .constant("called"), expression: .call(Call(
-                                selector: "labelled",
-                                arguments: ["of": .reference([.key("procedure")])]
+                                receiver: .reference([.key("procedure")]),
+                                selector: "labelled"
                             ))
                         )
                     ],
@@ -543,8 +543,8 @@ struct IndexReferenceJudgmentTests {
         let sut = try Module(
             constants: [
                 "loud": .call(Call(
-                    selector: "shout",
-                    arguments: ["of": .literal(.string("hi"))]
+                    receiver: .literal(.string("hi")),
+                    selector: "shout"
                 ))
             ],
             procedures: [
@@ -701,9 +701,9 @@ struct IndexReferenceJudgmentTests {
                     signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
+                        receiver: .literal(.string("a")),
                         selector: "std.text.uppercased",
                         arguments: [
-                            "of": .literal(.string("a")),
                             "loudly": .literal(.bool(true))
                         ]
                     ))
@@ -835,9 +835,9 @@ struct IndexReferenceJudgmentTests {
                     ),
                     body: [],
                     result: .call(Call(
+                        receiver: .reference([.key("of")]),
                         selector: "std.text.uppercased",
                         arguments: [
-                            "of": .reference([.key("of")]),
                             "loudly": .literal(.bool(true))
                         ]
                     ))

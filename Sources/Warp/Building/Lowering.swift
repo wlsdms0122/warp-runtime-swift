@@ -773,6 +773,13 @@ struct Lowering {
             throw BuildError.unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
         }
 
+        if let receiver = asked.signature.receiver, call.arguments[receiver] != nil {
+            throw BuildError.unjudged(
+                "'\(receiver)' sent to '\(call.selector)' by name, which is its receiver",
+                at: place
+            )
+        }
+
         // The receiver is dropped from the arguments: it is read once here,
         // and the run hands what it read to whichever row it picked.
         return DispatchOperation(

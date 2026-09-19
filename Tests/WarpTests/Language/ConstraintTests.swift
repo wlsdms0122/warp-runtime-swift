@@ -1167,7 +1167,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("both in front and by name")
+            error is BuildError && "\(error)".contains("by name, which is its receiver")
         }
     }
 

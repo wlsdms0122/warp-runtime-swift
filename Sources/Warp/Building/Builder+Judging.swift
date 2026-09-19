@@ -588,12 +588,13 @@ extension Builder {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
-        // One parameter takes one argument. A receiver written in front of
-        // the dot and again by name is refused before either is read, since
-        // the one by name would be neither read nor run.
-        if let receiver = callee.signature.receiver, call.receiver != nil, call.arguments[receiver] != nil {
+        // The receiver is what stands in front of the dot, and that is the
+        // one place it is written. Its name under `arguments` is refused
+        // before anything is read, whether or not something stands in front.
+        if let receiver = callee.signature.receiver, call.arguments[receiver] != nil {
             throw BuildError(
-                "sending '\(call.selector)' with '\(receiver)' both in front and by name",
+                "sending '\(call.selector)' with '\(receiver)' by name, which is its"
+                    + " receiver and is written in front",
                 at: site.place.part(.arguments)
             )
         }

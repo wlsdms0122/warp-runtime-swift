@@ -30,9 +30,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "shout", arguments: [
-                                        "of": .reference([.key("procedure")])
-                                    ]))
+                        Statement(binding: .constant("said"), expression: .call(Call(receiver: .reference([.key("procedure")]), selector: "shout"))
                         )
                     ],
                     result: .record([
