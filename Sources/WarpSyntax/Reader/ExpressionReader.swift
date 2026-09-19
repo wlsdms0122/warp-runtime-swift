@@ -324,12 +324,13 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        // Only a record can look like a form, so data holding none is
-        // written as itself, and the escape around it is a second spelling
-        // of the same literal. A bare null is the one exception: in a slot
-        // that may be left out it reads as the slot left out, so null written
-        // is written here.
-        guard payload == .null || holdsARecord(payload) else {
+        // Only a record can look like a form, and a named one is data
+        // wherever it stands, so data holding no other record is written as
+        // itself, and the escape around it is a second spelling of the same
+        // literal. A bare null is the one exception: in a slot that may be
+        // left out it reads as the slot left out, so null written is written
+        // here.
+        guard payload == .null || couldReadAsAForm(payload) else {
             throw ExpressionFormError(
                 "{ value: } quotes data that could be read as a form, and data"
                     + " with no record in it cannot be. Write it as itself"
@@ -339,13 +340,16 @@ public struct ExpressionReader: Decodable {
         return .literal(payload)
     }
 
-    private static func holdsARecord(_ value: Value) -> Bool {
+    private static func couldReadAsAForm(_ value: Value) -> Bool {
         switch value {
-        case .record, .dictionary:
+        case let .record(record):
+            return record.name == nil
+
+        case .dictionary:
             return true
 
         case let .array(elements):
-            return elements.contains(where: holdsARecord)
+            return elements.contains(where: couldReadAsAForm)
 
         case .null, .bool, .int, .double, .string, .bytes, .procedure:
             return false
