@@ -140,6 +140,8 @@ extension TypeExpression {
             bounds.append(bound)
         }
 
-        return .bounds(bounds.sorted())
+        bounds.sort()
+
+        return .bounds(bounds)
     }
 }

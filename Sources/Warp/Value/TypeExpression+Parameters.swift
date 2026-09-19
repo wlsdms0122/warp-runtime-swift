@@ -11,31 +11,29 @@ import Foundation
 // is bounded by, and whether it has any at all. What a call puts in them is
 // read off the lowered declaration, where the readings are.
 extension TypeExpression {
-    // Every type parameter mentioned in here, each with the constraint names
-    // every occurrence carries, occurrence by occurrence. What a signature
-    // holds a name to is one set, so occurrences carrying two are two claims
-    // about one name, and a judgment reads them apart here to say so.
-    func parameterOccurrences(into table: inout [Name: Set<[Name]>]) {
+    // Every type parameter mentioned in here, occurrence by occurrence, with
+    // the constraint names that occurrence carries.
+    func parameterOccurrences(_ visit: (Name, [Name]) -> Void) {
         switch self {
         case let .parameter(name, constraints):
-            table[name, default: []].insert(constraints.sorted())
+            visit(name, constraints)
 
         case .reading, .composition:
             return
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
-            element.parameterOccurrences(into: &table)
+            element.parameterOccurrences(visit)
 
         case let .record(fields):
             for field in fields.values {
-                field.parameterOccurrences(into: &table)
+                field.parameterOccurrences(visit)
             }
 
         case let .procedure(signature, _, _):
-            signature?.parameterOccurrences(into: &table)
+            signature?.parameterOccurrences(visit)
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            inner.parameterOccurrences(into: &table)
+            inner.parameterOccurrences(visit)
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return
@@ -76,9 +74,11 @@ public extension Signature {
             || (returns?.isGeneric ?? false)
     }
 
-    // The type parameters this signature declares, by mention, with the
-    // constraint names each occurrence carries. One name may be mentioned
-    // bare and bounded; the bound mention speaks for both.
+    // The type parameters this signature declares, each with the constraint
+    // names every occurrence carries, occurrence by occurrence. What a
+    // signature holds a name to is one set, so occurrences carrying two are
+    // two claims about one name, and a judgment reads them apart here to say
+    // so.
     //
     // A nested signature's parameters merge into the same table on purpose.
     // They are this signature's own slots: `map` takes `array<some Element>`
@@ -87,11 +87,17 @@ public extension Signature {
     // not collected, because the link refuses one anywhere but a procedure
     // signature and never fills one through the name.
     func parameterOccurrences(into table: inout [Name: Set<[Name]>]) {
+        parameterOccurrences { name, constraints in
+            table[name, default: []].insert(constraints.sorted())
+        }
+    }
+
+    func parameterOccurrences(_ visit: (Name, [Name]) -> Void) {
         for parameter in parameters.values {
-            parameter.declared.parameterOccurrences(into: &table)
+            parameter.declared.parameterOccurrences(visit)
         }
 
-        returns?.parameterOccurrences(into: &table)
+        returns?.parameterOccurrences(visit)
     }
 
     // This signature with each type parameter's occurrences carrying the
@@ -168,9 +174,19 @@ extension TypeExpression {
     }
 }
 
-public extension Dictionary where Key == Name, Value == Set<[Name]> {
-    // The occurrences read as one set of names per parameter.
-    var constraints: [Name: Set<Name>] {
-        mapValues { sets in Set(sets.flatMap { names in names }) }
+extension Signature {
+    // The type parameters this signature declares, each with the bounds a
+    // bounded occurrence carries, read off a signature already judged to
+    // hold one name to one set. A name mentioned only bare has none.
+    var parameterBounds: [Name: [Name]] {
+        var bounds: [Name: [Name]] = [:]
+
+        parameterOccurrences { name, constraints in
+            if !constraints.isEmpty || bounds[name] == nil {
+                bounds[name] = constraints
+            }
+        }
+
+        return bounds
     }
 }

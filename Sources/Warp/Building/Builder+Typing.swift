@@ -209,7 +209,7 @@ extension Builder {
     // gathers readings for this. Judging against every name in a mention set
     // costs nothing when the set holds its one.
     func constraintRefusal(
-        mentions: [Name: Set<Name>],
+        mentions: [Name: [Name]],
         readings: [Name: LoweredType],
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment?,
@@ -218,7 +218,7 @@ extension Builder {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
             guard let reading = readings[parameter] else { continue }
 
-            for name in names.sorted() {
+            for name in names {
                 // One nothing declares was refused where the declaration was
                 // judged.
                 guard let bound = loweredTypes.bound(named: name) else { continue }
@@ -327,12 +327,8 @@ extension Builder {
             return .refusal(named.joined(separator: ", "))
         }
 
-        var occurrences: [Name: Set<[Name]>] = [:]
-        declared.parameterOccurrences(into: &occurrences)
-        let mentions = occurrences.constraints
-
         if let refusal = constraintRefusal(
-            mentions: mentions,
+            mentions: declared.parameterBounds,
             readings: substitution.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
