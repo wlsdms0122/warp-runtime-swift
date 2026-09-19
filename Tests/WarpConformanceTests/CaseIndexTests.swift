@@ -44,6 +44,21 @@ struct CaseIndexTests {
         #expect(twice.isEmpty, "named twice: \(twice.joined(separator: ", "))")
     }
 
+    @Test("every page lists its cases in name order")
+    func everyListingIsInOrder() throws {
+        // By scalar, the order every implementation sorts the same way.
+        let unordered = Dictionary(grouping: try Self.listed(), by: \.page)
+            .filter { entry in
+                let names = entry.value.map(\.name)
+
+                return names != names.sorted { one, other in one.unicodeScalars.lexicographicallyPrecedes(other.unicodeScalars) }
+            }
+            .keys
+            .sorted()
+
+        #expect(unordered.isEmpty, "not in name order: \(unordered.joined(separator: ", "))")
+    }
+
     // MARK: - Private
     private static let specification = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()   // WarpConformanceTests
