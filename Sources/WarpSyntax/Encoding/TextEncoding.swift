@@ -63,10 +63,23 @@ public enum TextEncoding {
             throw refused("the text does not begin as a warp document begins")
         }
 
+        guard case let .bare(version) = tokens.popFirst() else {
+            throw refused("the text does not say how it is laid out")
+        }
+
         // The one spelling of a whole number, here as in a value: `warpt 01`
         // would be a second text for a document the reader already has one for.
-        guard case let .bare(version) = tokens.popFirst(), case let .int(claimed) = Int.reading(spelling: version) else {
-            throw refused("the text does not say how it is laid out")
+        let claimed: Int
+
+        switch Int.reading(spelling: version) {
+        case let .int(read):
+            claimed = read
+
+        case .notOneSpelling:
+            throw refused("\(version) is not a format's one writing")
+
+        case .overflow:
+            throw refused("\(version) is a format past what an int holds")
         }
 
         guard claimed == format else {
@@ -377,9 +390,8 @@ public enum TextEncoding {
                     opened.append(.array(held))
 
                 case .record(var held, let key?, let name):
-                    // Unique because the keys arrived strictly ascending and
-                    // in NFC: byte order refuses a byte-equal duplicate, and
-                    // NFC leaves one name one byte spelling to be equal in.
+                    // Unique: the key was refused where it was read if the
+                    // record already held it.
                     held[key] = value
 
                     opened.append(.record(held: held, key: nil, name: name))
