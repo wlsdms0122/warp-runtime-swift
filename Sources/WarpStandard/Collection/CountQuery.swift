@@ -34,13 +34,10 @@ struct CountQuery: Query {
         case let .dictionary(held):
             return .int(held.count)
 
-        case let .array(elements):
-            return .int(elements.count)
-
-        // Bytes have a length the way text has a count, and unlike text, no
-        // Unicode question about what "one" means.
-        case let .bytes(bytes):
-            return .int(bytes.count)
+        // A list in either spelling. Bytes have a length the way text has a
+        // count, and unlike text, no Unicode question about what "one" means.
+        case .array, .bytes:
+            return question.receiver?.elements.map { elements in .int(elements.count) }
 
         default:
             return nil
