@@ -546,15 +546,15 @@ extension Builder {
     ) throws {
         // How each mention is written is judged mention by mention, so no
         // one of them stands for the others.
-        var misspelled: Name?
+        var misspelled: Set<Name> = []
 
         signature.parameterOccurrences { parameter, names in
-            if misspelled == nil, Set(names).count != names.count || names != names.sorted() {
-                misspelled = parameter
+            if Set(names).count != names.count || names != names.sorted() {
+                misspelled.insert(parameter)
             }
         }
 
-        if let misspelled {
+        if let misspelled = misspelled.min() {
             throw BuildError("`some \(misspelled)` names its bounds once each and in name order", at: place)
         }
 

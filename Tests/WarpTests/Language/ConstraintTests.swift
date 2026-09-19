@@ -583,6 +583,37 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a name bound three ways is refused by its two first sets")
+    func aNameBoundThreeWaysIsRefusedByItsFirstTwo() async throws {
+        // Given. `T` is bound by `A`, `B` and `C` in three slots, so which
+        // two the sentence names is the text's fact and not the walk's
+        let sut = try Module(
+            constraints: ["A": [.int], "B": [.string], "C": [.bool]],
+            procedures: [
+                "keep": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "x": Parameter(type: .parameter(name: "T", constraints: ["C"])),
+                            "y": Parameter(type: .parameter(name: "T", constraints: ["B"])),
+                            "z": Parameter(type: .parameter(name: "T", constraints: ["A"]))
+                        ],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("`some T` is bounded by A in one place and B in another")
+        }
+    }
+
     @Test("a parameter names its bounds once each and in name order")
     func aParameterNamesItsBoundsInOrder() async throws {
         // Given. A signature assembled with `B & A`, which no reader writes

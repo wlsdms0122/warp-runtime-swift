@@ -87,25 +87,40 @@ public extension Signature {
     // signature and never fills one through the name.
     var parameterBounds: ParameterBounds {
         var bounds: [Name: [Name]] = [:]
-        var disagreeing: (name: Name, one: [Name], other: [Name])?
+
+        // Every set a disagreeing name was bound by, so which two are reported
+        // is the text's fact rather than a hash seed's.
+        var disagreeing: [Name: [[Name]]] = [:]
 
         parameterOccurrences { name, constraints in
-            guard let held = bounds[name], !held.isEmpty, !constraints.isEmpty else {
-                if !constraints.isEmpty || bounds[name] == nil {
-                    bounds[name] = constraints
-                }
+            guard !constraints.isEmpty else {
+                if bounds[name] == nil { bounds[name] = [] }
 
                 return
             }
 
-            if disagreeing == nil, held.sorted() != constraints.sorted() {
-                disagreeing = (name, held, constraints)
+            guard let held = bounds[name], !held.isEmpty else {
+                bounds[name] = constraints
+
+                return
             }
+
+            let sorted = constraints.sorted()
+
+            guard held.sorted() != sorted else { return }
+
+            var sets = disagreeing[name] ?? [held.sorted()]
+
+            if !sets.contains(sorted) { sets.append(sorted) }
+
+            disagreeing[name] = sets
         }
 
-        guard let disagreeing else { return .held(bounds) }
+        guard let (name, sets) = disagreeing.min(by: { $0.key < $1.key }) else { return .held(bounds) }
 
-        return .disagreeing(disagreeing.name, disagreeing.one, disagreeing.other)
+        let ordered = sets.sorted { one, other in one.lexicographicallyPrecedes(other) }
+
+        return .disagreeing(name, ordered[0], ordered[1])
     }
 
     // Every type parameter mentioned in this signature, occurrence by
