@@ -40,18 +40,6 @@ public indirect enum TypeExpression: Sendable, Equatable {
     case double
     case string
 
-    // Whole or fraction, without saying which.
-    //
-    // It exists because arithmetic is the one place a declaration genuinely
-    // means both. Writing `any` there instead said nothing at all, so a sum of
-    // a number and a piece of text was found by running it. In a language whose
-    // whole claim is that what can be decided before running is.
-    //
-    // It is not a fourth number. Nothing is ever *of* this type: a value is
-    // whole or it is a fraction, and this is what a slot says when either will
-    // do. That makes it the numeric `any`, narrowed to the two types that
-    // arithmetic can actually work with.
-
     // A number the slot admits only inside the range. `int(0...255)`,
     // `double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
     // the value is a whole number or a fraction, and the bounds are judged
@@ -321,9 +309,9 @@ extension TypeExpression {
     // cannot live behind the name.
     public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
-    // Bytes are an array of `std.byte`, the range `std` declares, and a
-    // procedure the host answers spells them the way a document does.
-    public static let bytes = TypeExpression.array(.named("std.byte"))
+    // Bytes are an array of that element. What a procedure the host answers
+    // declares, without a link to name the range through.
+    public static let bytes = TypeExpression.array(.byteElement)
 
     // The type a slot's mark stands in front of, where it has one, and the type
     // itself otherwise. What arrives through `inout`, `consuming` or
