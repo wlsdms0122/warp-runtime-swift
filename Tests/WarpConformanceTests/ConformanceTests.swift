@@ -45,17 +45,18 @@ struct ConformanceTests {
             }
 
         case let .encoded(encoded, reading):
-            switch (encoded, reading) {
-            case let (.binary(bytes), .reads(expected)):
-                #expect(try BinaryEncoding.value(from: Data(bytes)) == expected, "\(sut.name): \(sut.note)")
-                #expect(Array(try BinaryEncoding.data(from: expected)) == bytes, "\(sut.name): \(sut.note)")
+            switch reading {
+            case let .reads(expected):
+                #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
 
-            // One way. A text is one of many layouts of its value, so what
-            // the writer lays out is asked of the case files themselves.
-            case let (.text(text), .reads(expected)):
-                #expect(try TextEncoding.value(from: text) == expected, "\(sut.name): \(sut.note)")
+                // Bytes read both ways. A text is one of many layouts of its
+                // value, so what the writer lays out is asked of the case
+                // files themselves.
+                if case let .binary(bytes) = encoded {
+                    #expect(Array(try BinaryEncoding.data(from: expected)) == bytes, "\(sut.name): \(sut.note)")
+                }
 
-            case (_, .refuses):
+            case .refuses:
                 #expect(throws: (any Error).self, "\(sut.name): \(sut.note)") { try encoded.read() }
             }
         }
@@ -392,6 +393,45 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
+    // MARK: - Public
+    // The cases live beside the specification they belong to rather than inside
+    // this package, because they are not this implementation's. The day there
+    // is a second implementation they move with `spec/` and this file stays.
+    static func all() throws -> [Case] {
+        let directory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // WarpConformanceTests
+            .deletingLastPathComponent()   // Tests
+            .deletingLastPathComponent()   // warp-runtime-swift
+            .deletingLastPathComponent()   // runtime
+            .deletingLastPathComponent()   // the repository
+            .appendingPathComponent("spec")
+            .appendingPathComponent("conformance")
+
+        // The cases are the ones named like cases, and everything else in the
+        // folder is somebody else's business. A `.DS_Store`, a `.orig` left by
+        // a merge, a copy someone kept while editing. A runner that refused to
+        // start over any of those would be putting "is this folder tidy" and
+        // "is this implementation the language" behind one red light, and the
+        // second question is the only one it was built to ask.
+        //
+        // The cost is real and is accepted: a case saved under a name this
+        // misses is not asked, and nothing here says so. What catches that is
+        // the same thing that catches a case deleted outright. It is a file in
+        // a diff, and the dumper that writes these names them.
+        let files = try FileManager.default
+            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
+            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
+
+        return try files.map { file in
+            try Case(
+                from: try TextEncoding.value(from: try Data(contentsOf: file)),
+                in: String(file.lastPathComponent.dropLast(".test.warpt".count))
+            )
+        }
+    }
+
+
     // MARK: - Private
     private static func stage(_ expected: Value) throws -> Stage {
         guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
@@ -434,7 +474,6 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
-    // MARK: - Public
     private static func supplied(in written: Value?) throws -> Vocabulary? {
         guard let written else { return nil }
 
@@ -494,9 +533,6 @@ struct Case: Sendable, CustomStringConvertible {
         return Vocabulary(module: stripped, procedures: procedures)
     }
 
-    // The cases live beside the specification they belong to rather than inside
-    // this package, because they are not this implementation's. The day there
-    // is a second implementation they move with `spec/` and this file stays.
     // A key the runner reads beside a declaration is a bool or is not written.
     // Anything else is refused rather than read as one of the two: a case that
     // wrote `runs 1` asked a question no runner can answer the same way.
@@ -525,44 +561,10 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
-    static func all() throws -> [Case] {
-        let directory = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()   // WarpConformanceTests
-            .deletingLastPathComponent()   // Tests
-            .deletingLastPathComponent()   // warp-runtime-swift
-            .deletingLastPathComponent()   // runtime
-            .deletingLastPathComponent()   // the repository
-            .appendingPathComponent("spec")
-            .appendingPathComponent("conformance")
-
-        // The cases are the ones named like cases, and everything else in the
-        // folder is somebody else's business. A `.DS_Store`, a `.orig` left by
-        // a merge, a copy someone kept while editing. A runner that refused to
-        // start over any of those would be putting "is this folder tidy" and
-        // "is this implementation the language" behind one red light, and the
-        // second question is the only one it was built to ask.
-        //
-        // The cost is real and is accepted: a case saved under a name this
-        // misses is not asked, and nothing here says so. What catches that is
-        // the same thing that catches a case deleted outright. It is a file in
-        // a diff, and the dumper that writes these names them.
-        let files = try FileManager.default
-            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
-            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
-
-        return try files.map { file in
-            try Case(
-                from: try TextEncoding.value(from: try Data(contentsOf: file)),
-                in: String(file.lastPathComponent.dropLast(".test.warpt".count))
-            )
-        }
-    }
-
-    // MARK: - Private
 }
 
 extension Case.Program {
+    // MARK: - Public
     // Every module this case stands on: what the host was asked to bring, the
     // case's own document, and the standard vocabulary. The case describes the
     // vocabulary it asked for, so building it is the case's own answer and not
@@ -606,6 +608,7 @@ extension Case.Program {
         }
     }
 
+    // MARK: - Private
     // The host's side of one asked-for procedure. Which door it answers through
     // is the claim it makes: the one that answers without running is handed no
     // way to reach outside, and the other is.
