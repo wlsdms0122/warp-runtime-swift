@@ -40,7 +40,7 @@ public struct Rendering {
     public func text() -> String {
         switch value {
         case .null:
-            return ""
+            return "null"
 
         case let .bool(bool):
             return bool ? "true" : "false"

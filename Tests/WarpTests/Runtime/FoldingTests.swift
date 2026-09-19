@@ -45,15 +45,16 @@ struct FoldingTests {
         #expect(value == .null)
     }
 
-    @Test("a null binding inside format is unfit")
-    func nullBindingInFormatThrowsUnfit() async {
-        // Given. Interpolating a name means the author assumed a value exists
+    @Test("a null binding inside format spells null")
+    func nullBindingInFormatSpellsNull() async throws {
+        // Given. Null has a spelling of its own, the one it has inside a container
         let reference = interpolated(literal("amount="), spelling(reference("maybe")))
 
-        // When / Then
-        await #expect(throws: ReferenceUnfit.self) {
-            try await sut.read(reference)
-        }
+        // When
+        let value = try await sut.read(reference)
+
+        // Then
+        #expect(value == .string("amount=null"))
     }
 
     @Test("a field nobody set reads as null where the author marked it")

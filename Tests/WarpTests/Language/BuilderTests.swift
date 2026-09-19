@@ -21,10 +21,14 @@ struct BuilderTests {
     @Test("a constant that cannot be settled says why, not that it is a cycle")
     func aRefusedConstantSaysWhy() async throws {
         // Given. `greeting` names nothing that is missing, so the only reason
-        // it fails is its own: `text` refuses to spell nothing
+        // it fails is its own: `dividedBy` refuses a zero divisor
         let sut = try Module(
             constants: [
-                "greeting": .call(Call(receiver: .literal(.null), selector: "std.text.text"))
+                "greeting": .call(Call(
+                    receiver: .literal(.int(1)),
+                    selector: "std.math.dividedBy",
+                    arguments: ["value": .literal(.int(0))]
+                ))
             ],
             procedures: [entryName: Procedure(body: [])]
         )

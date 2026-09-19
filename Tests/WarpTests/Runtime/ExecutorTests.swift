@@ -309,8 +309,8 @@ struct ExecutorTests {
         }
     }
 
-    @Test("interpolating a null stays an author mistake, and rescue does not absorb it")
-    func nullInsideTemplateIsAuthorMistake() async throws {
+    @Test("interpolating a null spells null, and nothing is there for a rescue to absorb")
+    func nullInsideTemplateSpellsNull() async throws {
         // Given. A skipped step binds null; reading it is fine, writing it into
         // text is not, and an author mistake passes through rescue
         let spec = try Module(
@@ -335,12 +335,12 @@ struct ExecutorTests {
                         ),
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: interpolated(
+                                        Statement(binding: .constant("spelled"), expression: interpolated(
                                                 literal("name="),
                                                 spelling(reference("maybe"))
                                             )
                                         )
-                                    ]), rescue: Block(body: [
+                                    ], result: reference("spelled")), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
                                         )
                                     ]), failure: "fragile")
@@ -354,10 +354,10 @@ struct ExecutorTests {
         )
 
         // When
-        // When / Then
-        await #expect(throws: ReferenceUnfit.self) {
-            try await run(spec, arguments: ["kind": .string("b")])
-        }
+        let outputs = try await run(spec, arguments: ["kind": .string("b")])
+
+        // Then
+        #expect(outputs["result"] == .string("name=null"))
     }
 
     @Test("abort throws carrying its rendered message")
