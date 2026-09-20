@@ -645,7 +645,7 @@ private extension ObjectReader {
                 path: try Fields.list(fields.next(), of: "path", segment)
             )
 
-        case 21: read = .undeclared(label: try fields.text(), refusal: try fields.text())
+        case 21: read = .undeclared(label: try fields.text(), because: try undeclared(fields.next()))
         case 22:
             let bounds = try Fields.ordered(fields.next(), of: "composition", bound)
 
@@ -656,6 +656,22 @@ private extension ObjectReader {
             read = .composition(bounds)
 
         default: throw ObjectRefused("'lowered type' names a kind this reads none of")
+        }
+
+        try fields.end()
+
+        return read
+    }
+
+    func undeclared(_ value: Value) throws -> LoweredType.Undeclared {
+        var fields = try Fields(value, of: "undeclared")
+        let read: LoweredType.Undeclared
+
+        switch try fields.tag() {
+        case 0: read = .type(try name(fields.next()))
+        case 1: read = .bound(try name(fields.next()))
+        case 2: read = .cycle
+        default: throw ObjectRefused("'undeclared' is undeclared for a reason this reads none of")
         }
 
         try fields.end()

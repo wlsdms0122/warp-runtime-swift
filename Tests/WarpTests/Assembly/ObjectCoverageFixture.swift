@@ -156,7 +156,7 @@ enum ObjectCoverageFixture {
         ("parameterNone", .parameter(label: "V", bounds: [])),
         ("reading", .reading(of: "a.sixteen", path: [.index(1, optional: true)])),
         ("composition", .composition([.membership(7), .contract("a.five")])),
-        ("undeclared", .undeclared(label: "W", refusal: "nothing declares it"))
+        ("undeclared", .undeclared(label: "W", because: .bound("a.thirteen")))
     ]
 
     // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and

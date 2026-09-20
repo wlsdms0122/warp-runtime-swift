@@ -360,8 +360,17 @@ extension LoweredType {
         case .never:
             throw ArgumentError("\(path()): declares never, and nothing is ever that")
 
-        case let .undeclared(_, refusal):
-            throw UndeclaredTypeError("\(path()): declares \(refusal)")
+        case let .undeclared(label, because):
+            switch because {
+            case let .type(name):
+                throw UndeclaredTypeError("\(path()): declares type '\(name)', which nothing declares")
+
+            case let .bound(name):
+                throw UndeclaredTypeError("\(path()): declares '\(name)', which nothing declares as a membership or a contract")
+
+            case .cycle:
+                throw UndeclaredTypeError("\(path()): declares type '\(label)', which names itself")
+            }
 
         // A declared record is nominal. A record arriving without a name
         // settles to the declared type and takes the name; one arriving

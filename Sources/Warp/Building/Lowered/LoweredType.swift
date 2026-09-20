@@ -89,13 +89,21 @@ indirect enum LoweredType: Sendable {
     case reading(of: Name, path: [PathSegment])
 
 
-    // A name the table does not answer: nothing declares it, or it names
-    // itself. Nothing can be said about it, so every judgment over readings
-    // lets it pass, and the value judge refuses it in the refusal's procedures.
-    // A table a host built by hand answers instead of failing to lower, and
-    // only the judgments that reach the name are touched by it. The link
-    // refuses such a name as it lowers the table, so a run never meets one.
-    case undeclared(label: String, refusal: String)
+    // A name the table does not answer, and why. Nothing can be said about
+    // it, so every judgment over readings lets it pass, and the value judge
+    // refuses it with the reason. A table a host built by hand answers instead
+    // of failing to lower, and only the judgments that reach the name are
+    // touched by it. The link refuses such a name as it lowers the table, so a
+    // run never meets one.
+    case undeclared(label: String, because: Undeclared)
+
+    // Why a name is not answered: nothing declares it as a type, nothing
+    // declares it as a membership or a contract, or it names itself.
+    enum Undeclared: Sendable, Equatable {
+        case type(Name)
+        case bound(Name)
+        case cycle
+    }
 
     // MARK: - Property
     // What a field a declaration wrote `var` holds. The mark is a fact about

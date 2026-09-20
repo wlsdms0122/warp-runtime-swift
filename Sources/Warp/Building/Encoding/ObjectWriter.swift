@@ -511,8 +511,16 @@ private extension ObjectWriter {
         case let .reading(of: read, path: path):
             return .array([.int(19), name(read), .array(path.map(segment))])
 
-        case let .undeclared(label, refusal):
-            return .array([.int(21), .string(label), .string(refusal)])
+        case let .undeclared(label, because):
+            return .array([.int(21), .string(label), undeclared(because)])
+        }
+    }
+
+    func undeclared(_ because: LoweredType.Undeclared) -> Value {
+        switch because {
+        case let .type(name): return .array([.int(0), self.name(name)])
+        case let .bound(name): return .array([.int(1), self.name(name)])
+        case .cycle: return .array([.int(2)])
         }
     }
 
