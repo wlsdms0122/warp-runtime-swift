@@ -265,32 +265,16 @@ public struct Compiled: Sendable, Declaring {
         document.identity
     }
 
-    // How an object is laid out, which is not how the language is versioned.
-    // What a program needs of its runtime is said in the document; this says
-    // only where the fields of an object stand, and it moves when they move
-    // and for no other reason.
-    static let format = 10
+    // How an object is laid out: the format under *objects* in the
+    // specification, which moves when the layout moves and for no other
+    // reason. Which Warp wrote it is not written, because what an object
+    // holds is the language's and any implementation of it reads any
+    // other's.
+    static let format = 1
 
-    // Which Warp wrote it. An object is what one implementation made of a
-    // document, and what it made moves when that implementation moves: what a
-    // body reaches decides constness, isolation and failure, and a declaration
-    // that wrote no answer is read off its body. A reading that took an
-    // object another build wrote would be reading a table laid out by rules
-    // it no longer holds.
-    //
-    // Declared and not derived. What an implementation is cannot be read off
-    // what it produces, so this is the one place a build says what it is, and
-    // what makes that safe is that nobody types the whole string: the release
-    // number is edited in `version`, the commit beside it is written where a
-    // release is cut, and a test holds this to the number that file holds.
-    //
-    // So what it tells apart is releases. Two builds between one release and the
-    // next write the same stamp and read each other's objects, and a reading
-    // cannot see that the rules moved under them: what a body reaches decides
-    // constness, isolation and failure, and moving how that is read leaves every
-    // byte where it was. Anyone changing those and reading an object from
-    // before builds again rather than reads.
-    public static let runtime = "warp-swift 0.1.0"
+    // The key an object says its format under, which is also what tells an
+    // object from a document at the door: a document says `warp`.
+    static let formatKey: Name = "object"
 
     // This object said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
@@ -313,7 +297,7 @@ public struct Compiled: Sendable, Declaring {
 
     // The same, saying why there is none where there is none.
     public func object() throws(ObjectUnwritable) -> Value {
-        .array([.int(Self.format), .string(Self.runtime), try ObjectWriter().value(of: self)])
+        try ObjectWriter().value(of: self)
     }
 
     // The same object, said as what it was worked out to be.
@@ -356,31 +340,7 @@ public struct Compiled: Sendable, Declaring {
     // and for the same reason: an object cannot work out what it is, because
     // that answer is about bytes and reading bytes is another package's.
     public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
-        var fields = try Fields(value, of: "object format")
-        let format = try fields.count()
-
-        guard format == Self.format else {
-            throw ObjectRefused(
-                "the object is laid out as format \(format), and this reads format \(Self.format)"
-            )
-        }
-
-        // Asked after the layout and before anything laid out by it. The layout
-        // says where this field stands, and what it says is whether the rest of
-        // them mean what this reading takes them to mean.
-        let runtime = try fields.text()
-
-        guard runtime == Self.runtime else {
-            throw ObjectRefused(
-                "the object was compiled by \(runtime), and this is \(Self.runtime)"
-            )
-        }
-
-        let written = try fields.next()
-
-        try fields.end()
-
-        self = try ObjectReader(of: identity, fingerprint: fingerprint).compiled(from: written)
+        self = try ObjectReader(of: identity, fingerprint: fingerprint).compiled(from: value)
     }
 
     // MARK: - Private

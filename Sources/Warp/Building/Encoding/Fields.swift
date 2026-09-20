@@ -240,3 +240,41 @@ extension Fields {
         }
     }
 }
+
+// The parts of an object, each under its key. A part is asked for by name
+// and once, and a key nothing asked for is a writing of something else.
+struct Keyed {
+    // MARK: - Property
+    private let of: String
+    private let written: Value.Dictionary
+    private var taken: Set<Name> = []
+
+    // MARK: - Initializer
+    init(_ value: Value, of part: String) throws {
+        guard case let .dictionary(written) = value else {
+            throw ObjectRefused("'\(part)' is not written as a record")
+        }
+
+        self.of = part
+        self.written = written
+    }
+
+    // MARK: - Internal
+    mutating func take(_ key: Name) throws -> Value {
+        guard let held = written[key] else {
+            throw ObjectRefused("'\(of)' writes no '\(key)'")
+        }
+
+        taken.insert(key)
+
+        return held
+    }
+
+    // That every key written has been read, for the reason a part's fields
+    // are counted.
+    func end() throws {
+        guard let left = written.names.first(where: { name in !taken.contains(name) }) else { return }
+
+        throw ObjectRefused("'\(of)' writes '\(left)', which this reads none of")
+    }
+}

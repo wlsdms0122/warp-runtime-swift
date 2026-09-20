@@ -16,7 +16,8 @@ import Foundation
 // runtime is refused before it is read rather than understood halfway.
 //
 // Every list a name keys is written in name order, so one object is one
-// value and one value is one writing of bytes.
+// value and one value is one writing of bytes. The layout is the language's,
+// under *objects* in the specification.
 struct ObjectWriter {
     // MARK: - Initializer
     init() { }
@@ -50,35 +51,42 @@ struct ObjectWriter {
         // that made it, or one a document nobody wrote down wrote. Either is
         // the one error thrown on the way down, and an object of what holds
         // it is not written.
-        return .array([
-            document(compiled.document),
-            .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
-            try keyed(compiled.types, type),
-            try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in .array(try types.map(type)) },
-            try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in try keyed(procedures, signature) },
-            keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
-            .array(compiled.leaned.keys.sorted().map { claim in
+        // The numbering the bodies count their calls and their types from:
+        // four lists under one key, since a body stands on both.
+        guard case let .array(counted) = numbering else {
+            throw ObjectUnwritable("a numbering is written as its lists")
+        }
+
+        return .dictionary(Value.Dictionary([
+            Compiled.formatKey: .int(Compiled.format),
+            "document": document(compiled.document),
+            "dependencies": .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
+            "types": try keyed(compiled.types, type),
+            "constraints": try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in .array(try types.map(type)) },
+            "contracts": try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in try keyed(procedures, signature) },
+            "claims": keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
+            "leaned": .array(compiled.leaned.keys.sorted().map { claim in
                 .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
             }),
-            // The rows the document declares stand first, each under its
-            // spelling; the rows its bodies lifted stand behind, and what wrote
-            // each is the numbering's answer, so they carry no spelling.
-            .array([
-                .array(try compiled.table.prefix(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
-                    try judged(row, spelled: true)
-                }),
-                .array(try compiled.table.dropFirst(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
-                    try judged(row, spelled: false)
-                })
+            // The rows the document declares stand under their spellings; the
+            // rows its bodies lifted stand apart, and what wrote each is the
+            // numbering's answer, so they carry no spelling.
+            "rows": .array(try compiled.table.prefix(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
+                try judged(row, spelled: true)
+            }),
+            "lifted": .array(try compiled.table.dropFirst(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
+                try judged(row, spelled: false)
+            }),
+            "answers": keyed(compiled.answers, lowered),
+            "numbering": .array(counted + [
+                .array(compiled.typeNumbering.types.map(name)),
+                .array(compiled.typeNumbering.memberships.map(name))
             ]),
-            keyed(compiled.answers, lowered),
-            numbering,
-            typeNumbering(compiled.typeNumbering),
-            .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
+            "variables": .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
                 .array([name(entry.name), try value(entry.value)])
             }),
-            .array(compiled.constants.map(name))
-        ])
+            "constants": .array(compiled.constants.map(name))
+        ]))
     }
 
     // A value written down: the data as it is, and a closure by what it is
@@ -196,54 +204,54 @@ struct ObjectWriter {
             return .array([.int(6)])
 
         case let .ranged(refinement):
-            return .array([.int(9), ranged(refinement)])
+            return .array([.int(7), ranged(refinement)])
 
         case let .array(element):
-            return .array([.int(10), try type(element)])
+            return .array([.int(8), try type(element)])
 
         case let .dictionary(element):
-            return .array([.int(11), try type(element)])
+            return .array([.int(9), try type(element)])
 
         case let .record(fields):
-            return .array([.int(12), try keyed(fields, type)])
+            return .array([.int(10), try keyed(fields, type)])
 
         case let .procedure(written, constness, isolation):
             return .array([
-                .int(13),
+                .int(11),
                 try ObjectWriter.maybe(written, signature),
                 self.constness(constness),
                 self.isolation(isolation)
             ])
 
         case let .variable(held):
-            return .array([.int(14), try type(held)])
+            return .array([.int(12), try type(held)])
 
         case let .inout(held):
-            return .array([.int(15), try type(held)])
+            return .array([.int(13), try type(held)])
 
         case let .linear(held):
-            return .array([.int(16), try type(held)])
+            return .array([.int(14), try type(held)])
 
         case let .consuming(held):
-            return .array([.int(17), try type(held)])
+            return .array([.int(15), try type(held)])
 
         case let .borrowing(held):
-            return .array([.int(18), try type(held)])
+            return .array([.int(16), try type(held)])
 
         case let .nullable(held):
-            return .array([.int(19), try type(held)])
+            return .array([.int(17), try type(held)])
 
         case let .named(spelling):
-            return .array([.int(20), name(spelling)])
+            return .array([.int(18), name(spelling)])
 
         case let .parameter(spelling, constraints):
-            return .array([.int(21), name(spelling), .array(constraints.sorted().map(name))])
+            return .array([.int(19), name(spelling), .array(constraints.sorted().map(name))])
 
         case let .reading(of: read, path: path):
-            return .array([.int(22), name(read), .array(path.map(segment))])
+            return .array([.int(20), name(read), .array(path.map(segment))])
 
         case let .composition(names):
-            return .array([.int(23), .array(names.sorted().map(name))])
+            return .array([.int(21), .array(names.sorted().map(name))])
         }
     }
 
@@ -462,20 +470,20 @@ private extension ObjectWriter {
             return .array([.int(6)])
 
         case let .ranged(refinement):
-            return .array([.int(9), ranged(refinement)])
+            return .array([.int(7), ranged(refinement)])
 
         case let .array(element):
-            return .array([.int(10), lowered(element)])
+            return .array([.int(8), lowered(element)])
 
         case let .dictionary(element):
-            return .array([.int(11), lowered(element)])
+            return .array([.int(9), lowered(element)])
 
         case let .record(record):
-            return .array([.int(12), loweredRecord(record)])
+            return .array([.int(10), loweredRecord(record)])
 
         case let .procedure(parameters, returns, constness, isolation):
             return .array([
-                .int(13),
+                .int(11),
                 ObjectWriter.maybe(parameters) { written in
                     .array(written.map { parameter in
                         .array([
@@ -491,28 +499,28 @@ private extension ObjectWriter {
             ])
 
         case let .variable(held):
-            return .array([.int(14), lowered(held)])
+            return .array([.int(12), lowered(held)])
 
         case let .inout(held):
-            return .array([.int(15), lowered(held)])
+            return .array([.int(13), lowered(held)])
 
         case let .nullable(held):
-            return .array([.int(16), lowered(held)])
+            return .array([.int(14), lowered(held)])
 
         case let .named(row):
-            return .array([.int(17), .int(row)])
+            return .array([.int(15), .int(row)])
 
         case let .parameter(label, bounds):
-            return .array([.int(18), name(label), .array(bounds.sorted().map(bound))])
+            return .array([.int(16), name(label), .array(bounds.sorted().map(bound))])
 
         case let .composition(bounds):
-            return .array([.int(22), .array(bounds.sorted().map(bound))])
+            return .array([.int(17), .array(bounds.sorted().map(bound))])
 
         case let .reading(of: read, path: path):
-            return .array([.int(19), name(read), .array(path.map(segment))])
+            return .array([.int(18), name(read), .array(path.map(segment))])
 
         case let .undeclared(label, because):
-            return .array([.int(21), .string(label), undeclared(because)])
+            return .array([.int(19), .string(label), undeclared(because)])
         }
     }
 
@@ -538,12 +546,6 @@ private extension ObjectWriter {
         .array([layout(record.layout), .array(record.fields.map(lowered))])
     }
 
-    func typeNumbering(_ numbering: LoweredTypeNumbering) -> Value {
-        .array([
-            .array(numbering.types.map(name)),
-            .array(numbering.memberships.map(name))
-        ])
-    }
 }
 
 private extension ObjectWriter {

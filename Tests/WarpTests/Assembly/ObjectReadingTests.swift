@@ -30,9 +30,9 @@ struct ObjectReadingTests {
     @Test("is refused where a count is written below zero")
     func aCountBelowZero() async throws {
         // Given. A real object whose frame counts its slots below zero.
-        guard case var .array(parts) = try await parts(),
-              case var .array(halves) = parts[7],
-              case var .array(table) = halves[0],
+        var parts = try await parts()
+
+        guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2]
@@ -46,8 +46,7 @@ struct ObjectReadingTests {
         implementation[2] = .array(frame)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        halves[0] = .array(table)
-        parts[7] = .array(halves)
+        parts = parts.writing("rows", with: .array(table))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -58,16 +57,17 @@ struct ObjectReadingTests {
     @Test("is refused where a name keys two entries")
     func aNameWrittenTwice() async throws {
         // Given. A real object whose declared types list repeats one entry.
-        guard case var .array(parts) = try await parts(),
-              case let .array(types) = parts[2],
+        var parts = try await parts()
+
+        guard case let .array(types) = parts["types"],
               let first = types.first
         else {
-            Issue.record("an object is written as a list of parts")
+            Issue.record("an object is written as its parts under their keys")
 
             return
         }
 
-        parts[2] = .array(types + [first])
+        parts = parts.writing("types", with: .array(types + [first]))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -75,31 +75,35 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a part is written short")
-    func aPartWrittenShort() async throws {
-        // Given. A real object with its last part dropped.
-        guard case let .array(parts) = try await parts() else {
-            Issue.record("an object is written as a list of parts")
-
-            return
-        }
+    @Test("is refused where a part is missing")
+    func aPartMissing() async throws {
+        // Given. A real object with one of its parts taken off.
+        let parts = try await parts()
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(Array(parts.dropLast())), of: nil)
+            try Compiled(written: stamped(parts.removing("constants")), of: nil)
         }
     }
 
-    @Test("is refused where a part is written long")
-    func aPartWrittenLong() async throws {
-        guard case let .array(parts) = try await parts() else {
-            Issue.record("an object is written as a list of parts")
-
-            return
-        }
+    @Test("is refused where a part this reads none of is written")
+    func aPartUnknown() async throws {
+        let parts = try await parts()
 
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts + [.null]), of: nil)
+            try Compiled(written: stamped(parts.writing("extra", with: .null)), of: nil)
+        }
+    }
+
+    @Test("is refused where it is a document")
+    func aDocument() async throws {
+        // Given. A record that says `warp` where an object says `object`. What
+        // tells the two apart at the door is what each says it is.
+        let parts = try await parts()
+
+        // When / Then.
+        #expect(throws: ObjectRefused.self) {
+            try Compiled(written: stamped(parts.removing(Compiled.formatKey).writing("warp", with: .int(1))), of: nil)
         }
     }
 
@@ -108,9 +112,10 @@ struct ObjectReadingTests {
         // Given. A real object whose type numbering lists one name twice. The
         // numbering answers by position, so a swallowed name moves every number
         // after it onto some other declaration.
-        guard case var .array(parts) = try await parts(),
-              case var .array(numbering) = parts[10],
-              case let .array(types) = numbering[0],
+        var parts = try await parts()
+
+        guard case var .array(numbering) = parts["numbering"],
+              case let .array(types) = numbering[2],
               let first = types.first
         else {
             Issue.record("an object writes its type numbering as a part")
@@ -118,8 +123,8 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[0] = .array(types + [first])
-        parts[10] = .array(numbering)
+        numbering[2] = .array(types + [first])
+        parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -142,9 +147,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(halves) = parts[7],
-              case var .array(table) = halves[0],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2],
@@ -160,8 +165,7 @@ struct ObjectReadingTests {
         implementation[2] = .array(frame)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        halves[0] = .array(table)
-        parts[7] = .array(halves)
+        parts = parts.writing("rows", with: .array(table))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -171,17 +175,13 @@ struct ObjectReadingTests {
 
     @Test("is refused where the format it is laid out as is not this one")
     func aFormatThisDoesNotRead() async throws {
-        // Given. A real object stamped with a format this does not lay out.
-        guard case let .array(parts) = try await parts() else {
-            Issue.record("an object is written as a list of parts")
+        // Given. A real object saying a format this does not lay out.
+        let parts = try await parts()
 
-            return
-        }
-
-        // When / Then. The fields behind the stamp are this reading's own, so
-        // what refuses is the stamp and nothing further in.
+        // When / Then. The parts behind the number are laid out by it, so what
+        // refuses is the number and nothing further in.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: .array([.int(Compiled.format + 1), .array(parts)]), of: nil)
+            try Compiled(written: stamped(parts.writing(Compiled.formatKey, with: .int(Compiled.format + 1))), of: nil)
         }
     }
 
@@ -199,8 +199,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(answers) = parts[8],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(answers) = parts["answers"],
               case var .array(entry) = answers[0],
               case var .array(answer) = entry[1],
               case var .array(record) = answer[1],
@@ -220,7 +221,7 @@ struct ObjectReadingTests {
         answer[1] = .array(record)
         entry[1] = .array(answer)
         answers[0] = .array(entry)
-        parts[8] = .array(answers)
+        parts = parts.writing("answers", with: .array(answers))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -230,9 +231,9 @@ struct ObjectReadingTests {
 
     @Test("is refused where a frame names fewer slots than it holds")
     func aFrameNamingTooFew() async throws {
-        guard case var .array(parts) = try await parts(),
-              case var .array(halves) = parts[7],
-              case var .array(table) = halves[0],
+        var parts = try await parts()
+
+        guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2],
@@ -248,8 +249,7 @@ struct ObjectReadingTests {
         implementation[2] = .array(frame)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        halves[0] = .array(table)
-        parts[7] = .array(halves)
+        parts = parts.writing("rows", with: .array(table))
 
         #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
@@ -276,9 +276,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(halves) = parts[7],
-              case var .array(table) = halves[0],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(body) = implementation[1],
@@ -299,8 +299,7 @@ struct ObjectReadingTests {
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        halves[0] = .array(table)
-        parts[7] = .array(halves)
+        parts = parts.writing("rows", with: .array(table))
 
         // When / Then. The row the call reaches is this document's own, so the
         // reading answers it and no link is needed.
@@ -314,9 +313,9 @@ struct ObjectReadingTests {
         // Given. A real object whose declared spelling is written in the
         // decomposed form. It reads alike and compares apart, so every order
         // and every lookup built on it would go quiet.
-        guard case var .array(parts) = try await parts(),
-              case var .array(halves) = parts[7],
-              case var .array(declared) = halves[0],
+        var parts = try await parts()
+
+        guard case var .array(declared) = parts["rows"],
               case var .array(row) = declared.first
         else {
             Issue.record("an object writes its declared rows as a part")
@@ -326,8 +325,7 @@ struct ObjectReadingTests {
 
         row[0] = .string("app.entr\u{0079}\u{0301}")
         declared[0] = .array(row)
-        halves[0] = .array(declared)
-        parts[7] = .array(halves)
+        parts = parts.writing("rows", with: .array(declared))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -347,8 +345,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case let .array(types) = parts[2],
+        var parts = try await parts(of: sut)
+
+        guard case let .array(types) = parts["types"],
               types.count == 2
         else {
             Issue.record("an object writes its declared types in name order")
@@ -356,7 +355,7 @@ struct ObjectReadingTests {
             return
         }
 
-        parts[2] = .array(types.reversed())
+        parts = parts.writing("types", with: .array(types.reversed()))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -391,9 +390,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(halves) = parts[7],
-              case var .array(table) = halves[0],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(body) = implementation[1],
@@ -414,8 +413,7 @@ struct ObjectReadingTests {
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        halves[0] = .array(table)
-        parts[7] = .array(halves)
+        parts = parts.writing("rows", with: .array(table))
 
         // When / Then. Refused, rather than reaching the run that reads it.
         #expect(throws: ObjectRefused.self) {
@@ -458,8 +456,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(claims) = parts[5],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(claims) = parts["claims"],
               case var .array(entry) = claims[0],
               case let .array(contracts) = entry[1],
               contracts.count == 2
@@ -471,7 +470,7 @@ struct ObjectReadingTests {
 
         entry[1] = .array(contracts.reversed())
         claims[0] = .array(entry)
-        parts[5] = .array(claims)
+        parts = parts.writing("claims", with: .array(claims))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -504,8 +503,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[9],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(numbering) = parts["numbering"],
               case let .array(closing) = numbering[1],
               closing.count == 2
         else {
@@ -515,7 +515,7 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array(closing.reversed())
-        parts[9] = .array(numbering)
+        parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -546,8 +546,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[9],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(numbering) = parts["numbering"],
               case let .array(sent) = numbering[0],
               sent.count == 2
         else {
@@ -557,7 +558,7 @@ struct ObjectReadingTests {
         }
 
         numbering[0] = .array(sent.reversed())
-        parts[9] = .array(numbering)
+        parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -584,13 +585,15 @@ struct ObjectReadingTests {
             .flatMap(\.variables)
             .first { entry in entry.value.holdsProcedure }
 
-        guard case var .array(parts) = try await parts(), let settled else {
+        var parts = try await parts()
+
+        guard let settled else {
             Issue.record("a module variable that starts as a closure settles one into a value")
 
             return
         }
 
-        parts[11] = .array([.array([.string(settled.name.spelling), settled.value])])
+        parts = parts.writing("variables", with: .array([.array([.string(settled.name.spelling), settled.value])]))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -619,8 +622,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[9]
+        var parts = try await parts(of: sut)
+
+        guard case var .array(numbering) = parts["numbering"]
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
@@ -631,7 +635,7 @@ struct ObjectReadingTests {
             .array([.string("app.entry"), .int(.max - 1)]),
             .array([.string("app.other"), .int(1)])
         ])
-        parts[9] = .array(numbering)
+        parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -659,8 +663,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[9],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(numbering) = parts["numbering"],
               case let .array(counts) = numbering[1],
               case let .array(entry) = counts.first,
               counts.count == 1
@@ -671,7 +676,7 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array([.array([entry[0], .int(4)])])
-        parts[9] = .array(numbering)
+        parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -700,8 +705,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[9]
+        var parts = try await parts(of: sut)
+
+        guard case var .array(numbering) = parts["numbering"]
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
@@ -712,7 +718,7 @@ struct ObjectReadingTests {
             .array([.string("app.entry"), .int(.max)]),
             .array([.string("app.other"), .int(.max)])
         ])
-        parts[9] = .array(numbering)
+        parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -757,40 +763,12 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where another Warp wrote it")
-    func anotherRuntime() async throws {
-        // Given. A real object, stamped as the work of a build this is not.
-        guard case let .array(parts) = try await parts() else {
-            Issue.record("an object is written as a list of parts")
-
-            return
-        }
-
-        let elsewhere: Value = .array([
-            .int(Compiled.format),
-            .string("warp-swift 99.0.0 (0000000)"),
-            .array(parts)
-        ])
-
-        // When / Then. Refused before anything laid out by this runtime's rules
-        // is read against them.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: elsewhere, of: nil)
-        }
-    }
-
     @Test("is refused where what it leaned on stands out of order")
     func dependenciesOutOfOrder() async throws {
         // Given. A real object whose two dependencies are written the other
         // way round. Both name the same pair, so a reading that took either
         // order would let two writings say one object.
-        guard case var .array(parts) = try await parts() else {
-            Issue.record("an object is written as a list of parts")
-
-            return
-        }
-
-        parts[1] = .array([.bytes([0x02]), .bytes([0x01])])
+        let parts = try await parts().writing("dependencies", with: .array([.bytes([0x02]), .bytes([0x01])]))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -802,13 +780,7 @@ struct ObjectReadingTests {
     func dependenciesRepeated() async throws {
         // Given. A real object naming one of them twice. What it leaned on is
         // a set, and a set written down twice is a writing no set makes.
-        guard case var .array(parts) = try await parts() else {
-            Issue.record("an object is written as a list of parts")
-
-            return
-        }
-
-        parts[1] = .array([.bytes([0x01]), .bytes([0x01])])
+        let parts = try await parts().writing("dependencies", with: .array([.bytes([0x01]), .bytes([0x01])]))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -838,8 +810,9 @@ struct ObjectReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try await parts(of: sut),
-              case var .array(numbering) = parts[9],
+        var parts = try await parts(of: sut)
+
+        guard case var .array(numbering) = parts["numbering"],
               case let .array(counts) = numbering[1],
               counts.count == 1
         else {
@@ -849,7 +822,7 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array(counts + [.array([.string("app.other"), .int(0)])])
-        parts[9] = .array(numbering)
+        parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
@@ -858,9 +831,9 @@ struct ObjectReadingTests {
     }
 
     // MARK: - Private
-    // The parts an object writes, with the format it is stamped with taken
-    // off, so that a test bends what it means to bend.
-    private func parts() async throws -> Value {
+    // The object as written, its parts under their keys, so a test bends
+    // what it means to bend.
+    private func parts() async throws -> Value.Dictionary {
         try await parts(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],
             procedures: [
@@ -873,21 +846,20 @@ struct ObjectReadingTests {
         ))
     }
 
-    private func parts(of module: Module) async throws -> Value {
+    private func parts(of module: Module) async throws -> Value.Dictionary {
         let compiled = try await builder.compile([module] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
-              case let .array(written) = mine.written,
-              written.count == 3
+              case let .dictionary(written) = mine.written
         else {
             throw ObjectMissing()
         }
 
-        return written[2]
+        return written
     }
 
-    private func stamped(_ parts: [Value]) -> Value {
-        .array([.int(Compiled.format), .string(Compiled.runtime), .array(parts)])
+    private func stamped(_ parts: Value.Dictionary) -> Value {
+        .dictionary(parts)
     }
 }
 

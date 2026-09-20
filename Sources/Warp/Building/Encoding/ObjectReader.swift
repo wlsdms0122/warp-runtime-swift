@@ -9,11 +9,10 @@ import Foundation
 
 // A value read back as the object it was written from.
 //
-// The order of the fields is the whole of the agreement with the writing
-// beside it, so this holds no names and asks the value for none. What holds
-// the two together is that they are compiled as a pair, and what tells a
-// reading that a writing was laid out by some other pair is the format
-// `Compiled` stamps before handing anything here.
+// The layout is the language's, under *objects* in the specification: the
+// parts stand under their keys, and inside a part the fields stand in the
+// order the page lays them down. What tells a reading that a writing was laid
+// out some other way is the format number, read before anything else.
 struct ObjectReader {
     // MARK: - Property
     // Which document this is reading an object of. Every identity a reading
@@ -35,39 +34,41 @@ struct ObjectReader {
 
     // MARK: - Internal
     func compiled(from value: Value) throws -> Compiled {
-        var fields = try Fields(value, of: "object")
+        var fields = try Keyed(value, of: "object")
 
-        let document = try document(fields.next())
-        let dependencies = try Fields.ordered(fields.next(), of: "dependencies") { written in
+        // The layout first, and before anything laid out by it: what this
+        // number says is whether the rest of the keys mean what this reading
+        // takes them to mean.
+        let format = try Fields.count(try fields.take(Compiled.formatKey), of: "object")
+
+        guard format == Compiled.format else {
+            throw ObjectRefused(
+                "the object is laid out as format \(format), and this reads format \(Compiled.format)"
+            )
+        }
+
+        let document = try document(fields.take("document"))
+        let dependencies = try Fields.ordered(fields.take("dependencies"), of: "dependencies") { written in
             Fingerprint(try Fields.bytes(written, of: "dependencies"))
         }
-        let types = try keyed(fields.next(), of: "types", expression)
-        let constraints = try keyed(fields.next(), of: "constraints") { written in
+        let types = try keyed(fields.take("types"), of: "types", expression)
+        let constraints = try keyed(fields.take("constraints"), of: "constraints") { written in
             try Fields.list(written, of: "constraints", expression)
         }
-        let contracts = try keyed(fields.next(), of: "contracts") { written in
+        let contracts = try keyed(fields.take("contracts"), of: "contracts") { written in
             try keyed(written, of: "contract", signature)
         }
-        let claims = try keyed(fields.next(), of: "claims") { written in
+        let claims = try keyed(fields.take("claims"), of: "claims") { written in
             Set(try Fields.ordered(written, of: "claims", name))
         }
-        let leaned = try leaned(fields.next())
+        let leaned = try leaned(fields.take("leaned"))
 
-        // Every part is named as it is read, and the names run in the order
-        // the writing lays them down. The order is the agreement with the
-        // writing, so it is said here in sentences rather than left standing
-        // in the order some initialiser happens to declare.
-        //
-        // The rows the document declares stand first, each under its
-        // spelling, and those spellings are what the numbering counts from.
-        // The rows its bodies lifted stand behind and are spelled by the
-        // numbering, so they are read once it is.
-        var rows = try Fields(fields.next(), of: "table")
-        let declaredRows = try Fields.list(rows.next(), of: "declared rows") { written in try judged(written, spelled: nil) }
-        let liftedRows = try Fields.list(rows.next(), of: "lifted rows") { written in written }
-
-        try rows.end()
-
+        // The rows the document declares stand under their spellings, and
+        // those spellings are what the numbering counts from. The rows its
+        // bodies lifted are spelled by the numbering, so they are read once
+        // it is.
+        let declaredRows = try Fields.list(fields.take("rows"), of: "rows") { written in try judged(written, spelled: nil) }
+        let liftedRows = try Fields.list(fields.take("lifted"), of: "lifted") { written in written }
         let declared = declaredRows.map(\.label)
 
         // One row per spelling, in name order: what the numbering counts
@@ -75,8 +76,12 @@ struct ObjectReader {
         guard declared.ordered else {
             throw ObjectRefused("the declared rows stand out of name order, or one spelling stands twice")
         }
-        let answers = try keyed(fields.next(), of: "answers", lowered)
-        let numbering = try Numbering(written: fields.next(), declaring: declared)
+        let answers = try keyed(fields.take("answers"), of: "answers", lowered)
+
+        // Four lists: what the document sends, how many closures each
+        // declaration wrote, the types its bodies stand on, the memberships.
+        var counted = try Fields(fields.take("numbering"), of: "numbering")
+        let numbering = try Numbering(written: .array([try counted.next(), try counted.next()]), declaring: declared)
         let table = declaredRows + (try liftedRows.enumerated().map { index, written in
             guard let writer = numbering.writer(of: index) else {
                 throw ObjectRefused("a lifted row stands where the numbering counts no closure")
@@ -84,9 +89,12 @@ struct ObjectReader {
 
             return try judged(written, spelled: writer.by)
         })
-        let typeNumbering = try typeNumbering(fields.next())
-        let variables = try fields.list(variable)
-        let constants = try Fields.ordered(fields.next(), of: "constants", name)
+        let typeNumbering = try typeNumbering(.array([try counted.next(), try counted.next()]))
+
+        try counted.end()
+
+        let variables = try Fields.list(fields.take("variables"), of: "variables", variable)
+        let constants = try Fields.ordered(fields.take("constants"), of: "constants", name)
         let read = try Compiled(
             document: document,
             types: types,
@@ -276,37 +284,37 @@ private extension ObjectReader {
         case 4: read = .int
         case 5: read = .double
         case 6: read = .string
-        case 9: read = .ranged(try ranged(fields.next()))
-        case 10: read = .array(try expression(fields.next()))
-        case 11: read = .dictionary(try expression(fields.next()))
-        case 12: read = .record(try keyed(fields.next(), of: "record", expression))
-        case 13:
+        case 7: read = .ranged(try ranged(fields.next()))
+        case 8: read = .array(try expression(fields.next()))
+        case 9: read = .dictionary(try expression(fields.next()))
+        case 10: read = .record(try keyed(fields.next(), of: "record", expression))
+        case 11:
             read = .procedure(
                 try fields.maybe(signature),
                 try constness(fields.next()),
                 try isolation(fields.next())
             )
 
-        case 14: read = .variable(try expression(fields.next()))
-        case 15: read = .inout(try expression(fields.next()))
-        case 16: read = .linear(try expression(fields.next()))
-        case 17: read = .consuming(try expression(fields.next()))
-        case 18: read = .borrowing(try expression(fields.next()))
-        case 19: read = .nullable(try expression(fields.next()))
-        case 20: read = .named(try name(fields.next()))
-        case 21:
+        case 12: read = .variable(try expression(fields.next()))
+        case 13: read = .inout(try expression(fields.next()))
+        case 14: read = .linear(try expression(fields.next()))
+        case 15: read = .consuming(try expression(fields.next()))
+        case 16: read = .borrowing(try expression(fields.next()))
+        case 17: read = .nullable(try expression(fields.next()))
+        case 18: read = .named(try name(fields.next()))
+        case 19:
             read = .parameter(
                 name: try name(fields.next()),
                 constraints: try Fields.ordered(fields.next(), of: "bounds", name)
             )
 
-        case 22:
+        case 20:
             read = .reading(
                 of: try name(fields.next()),
                 path: try Fields.list(fields.next(), of: "path", segment)
             )
 
-        case 23:
+        case 21:
             let names = try Fields.ordered(fields.next(), of: "composition", name)
 
             guard !names.isEmpty else {
@@ -607,11 +615,11 @@ private extension ObjectReader {
         case 4: read = .int
         case 5: read = .double
         case 6: read = .string
-        case 9: read = .ranged(try ranged(fields.next()))
-        case 10: read = .array(try lowered(fields.next()))
-        case 11: read = .dictionary(try lowered(fields.next()))
-        case 12: read = .record(try loweredRecord(fields.next()))
-        case 13:
+        case 7: read = .ranged(try ranged(fields.next()))
+        case 8: read = .array(try lowered(fields.next()))
+        case 9: read = .dictionary(try lowered(fields.next()))
+        case 10: read = .record(try loweredRecord(fields.next()))
+        case 11:
             read = .procedure(
                 parameters: try fields.maybe { written in
                     try Fields.list(written, of: "parameters") { parameter in
@@ -632,21 +640,21 @@ private extension ObjectReader {
                 isolation: try isolation(fields.next())
             )
 
-        case 14: read = .variable(try lowered(fields.next()))
-        case 15: read = .inout(try lowered(fields.next()))
-        case 16: read = .nullable(try lowered(fields.next()))
-        case 17: read = .named(try fields.count())
-        case 18:
+        case 12: read = .variable(try lowered(fields.next()))
+        case 13: read = .inout(try lowered(fields.next()))
+        case 14: read = .nullable(try lowered(fields.next()))
+        case 15: read = .named(try fields.count())
+        case 16:
             read = .parameter(label: try name(fields.next()), bounds: try Fields.ordered(fields.next(), of: "bounds", bound))
 
-        case 19:
+        case 18:
             read = .reading(
                 of: try name(fields.next()),
                 path: try Fields.list(fields.next(), of: "path", segment)
             )
 
-        case 21: read = .undeclared(label: try fields.text(), because: try undeclared(fields.next()))
-        case 22:
+        case 19: read = .undeclared(label: try fields.text(), because: try undeclared(fields.next()))
+        case 17:
             let bounds = try Fields.ordered(fields.next(), of: "composition", bound)
 
             guard !bounds.isEmpty else {

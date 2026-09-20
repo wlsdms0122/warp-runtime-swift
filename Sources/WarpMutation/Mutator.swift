@@ -36,9 +36,9 @@ public struct Mutator: Sendable {
         // A neighbour that is the value again is not one. An empty list
         // shortened is still empty, and a place left as it was asks the reading
         // what it already answered rather than anything new.
-        walk(value, at: "") { path, held in
+        walk(value, at: []) { steps, held in
             for mutated in self.mutations(ofPlace: held) where mutated != held {
-                mutations.append((path, replacing(path, in: value, with: mutated)))
+                mutations.append((Self.spelled(steps), replacing(steps[...], in: value, with: mutated)))
             }
         }
 
@@ -51,12 +51,27 @@ public struct Mutator: Sendable {
     public func placeCount(of value: Value) -> Int {
         var places = 0
 
-        walk(value, at: "") { _, _ in places += 1 }
+        walk(value, at: []) { _, _ in places += 1 }
 
         return places
     }
 
     // MARK: - Private
+    // One step down into a value: a position in a list, or a key in a record.
+    private enum Step {
+        case position(Int)
+        case key(Name)
+    }
+
+    private static func spelled(_ steps: [Step]) -> String {
+        steps.map { step in
+            switch step {
+            case let .position(position): String(position)
+            case let .key(key): key.spelling
+            }
+        }.joined(separator: "/")
+    }
+
     private func mutations(ofPlace value: Value) -> [Value] {
         switch value {
         case let .int(number):
@@ -66,6 +81,13 @@ public struct Mutator: Sendable {
             var mutations: [Value] = [.array(elements.dropLast()), .array([]), .int(0)]
 
             if let first = elements.first { mutations.append(.array(elements + [first])) }
+
+            return mutations
+
+        case let .dictionary(record):
+            var mutations: [Value] = [.dictionary(Value.Dictionary([:])), .array([]), .int(0)]
+
+            if let first = record.names.first { mutations.append(.dictionary(record.removing(first))) }
 
             return mutations
 
@@ -83,28 +105,43 @@ public struct Mutator: Sendable {
         }
     }
 
-    private func walk(_ value: Value, at path: String, _ visit: (String, Value) -> Void) {
-        visit(path, value)
+    private func walk(_ value: Value, at steps: [Step], _ visit: ([Step], Value) -> Void) {
+        visit(steps, value)
 
-        guard case let .array(elements) = value else { return }
+        switch value {
+        case let .array(elements):
+            for (position, element) in elements.enumerated() {
+                walk(element, at: steps + [.position(position)], visit)
+            }
 
-        for (position, element) in elements.enumerated() {
-            walk(element, at: path.isEmpty ? "\(position)" : "\(path).\(position)", visit)
+        case let .dictionary(record):
+            for entry in record.entries {
+                walk(entry.value, at: steps + [.key(entry.name)], visit)
+            }
+
+        default:
+            return
         }
     }
 
-    private func replacing(_ path: String, in value: Value, with mutated: Value) -> Value {
-        guard !path.isEmpty else { return mutated }
+    private func replacing(_ steps: ArraySlice<Step>, in value: Value, with mutated: Value) -> Value {
+        guard let step = steps.first else { return mutated }
 
-        return replacing(path.split(separator: ".").map { step in Int(step) ?? 0 }, in: value, with: mutated)
-    }
+        switch (step, value) {
+        case let (.position(position), .array(elements)) where elements.indices.contains(position):
+            var replaced = elements
 
-    private func replacing(_ positions: [Int], in value: Value, with mutated: Value) -> Value {
-        guard let position = positions.first else { return mutated }
-        guard case var .array(elements) = value, elements.indices.contains(position) else { return value }
+            replaced[position] = replacing(steps.dropFirst(), in: elements[position], with: mutated)
 
-        elements[position] = replacing(Array(positions.dropFirst()), in: elements[position], with: mutated)
+            return .array(replaced)
 
-        return .array(elements)
+        case let (.key(key), .dictionary(record)):
+            guard let held = record[key] else { return value }
+
+            return .dictionary(record.writing(key, with: replacing(steps.dropFirst(), in: held, with: mutated)))
+
+        default:
+            return value
+        }
     }
 }
