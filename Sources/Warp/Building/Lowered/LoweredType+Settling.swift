@@ -113,7 +113,12 @@ extension LoweredType {
         case .null, .nullable:
             return true
 
+        // A row the table has not laid yet is one asked while the table is
+        // being laid, and what it declares is settled once the table stands,
+        // by `parametersSettled(in:)`.
         case let .named(row):
+            guard row < table.loweredTypes.count else { return false }
+
             return table.loweredTypes[row].declaresNull(in: table)
 
         // A value of a composition is one of every membership's members, so
@@ -135,6 +140,58 @@ extension LoweredType {
     // null it holds. Without either, omission is a missing argument.
     func mustBeGiven(default fallback: Value?, in table: LoweredTypeTable) -> Bool {
         fallback == nil && !declaresNull(in: table)
+    }
+
+    // The same type with every procedure type's parameters asked again
+    // whether they must be given, against a table that now stands. A
+    // declared type is lowered while the table is being laid, when a name
+    // reaches no row yet and reads as declaring no null; what it declares
+    // is read here once every row is laid.
+    func parametersSettled(in table: LoweredTypeTable) -> LoweredType {
+        switch self {
+        case let .array(element):
+            return .array(element.parametersSettled(in: table))
+
+        case let .dictionary(entry):
+            return .dictionary(entry.parametersSettled(in: table))
+
+        case let .record(held):
+            return .record(
+                LoweredRecord(
+                    layout: held.layout,
+                    fields: held.fields.map { field in field.parametersSettled(in: table) }
+                )
+            )
+
+        case let .procedure(parameters, returns, constness, isolation):
+            return .procedure(
+                parameters: parameters?.map { parameter in
+                    let type = parameter.type.parametersSettled(in: table)
+
+                    return LoweredParameter(
+                        name: parameter.name,
+                        type: type,
+                        mustBeGiven: parameter.mustBeGiven && !type.declaresNull(in: table)
+                    )
+                },
+                returns: returns?.parametersSettled(in: table),
+                constness: constness,
+                isolation: isolation
+            )
+
+        case let .variable(inner):
+            return .variable(inner.parametersSettled(in: table))
+
+        case let .inout(inner):
+            return .inout(inner.parametersSettled(in: table))
+
+        case let .nullable(inner):
+            return .nullable(inner.parametersSettled(in: table))
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged,
+            .named, .parameter, .composition, .reading, .undeclared:
+            return self
+        }
     }
 
     // Whether every byte settles into this element declaration as itself,

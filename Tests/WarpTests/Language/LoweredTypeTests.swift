@@ -187,6 +187,43 @@ struct LoweredTypeTests {
         #expect(try await Executor().run(image) == .array([.int(11), .int(12)]))
     }
 
+    @Test("a procedure type declared beside the types it names reads what they declare")
+    func aProcedureTypeAmongDeclaredTypes() async throws {
+        // Given. A declared record holding a procedure type whose parameter
+        // names a declared nullable type, lowered while the table that holds
+        // both rows is still being laid.
+        let module = try Module(
+            types: [
+                "app.Maybe": .nullable(.int),
+                "app.Kinds": .record([
+                    "soft": .procedure(Signature(parameters: ["m": Parameter(type: .named("app.Maybe"))]), .unstated, .unstated)
+                ])
+            ],
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(parameters: ["k": Parameter(type: .named("app.Kinds"))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When
+        let compiled = try await Builder().compile([module] + Module.standard)
+        let table = try #require(compiled.first { one in one.declared.contains("app.entry") }).types
+
+        // Then. The parameter naming the nullable type need not be given.
+        guard case let .record(fields)? = table["app.Kinds"],
+              case let .procedure(soft?, _, _)? = fields["soft"]
+        else {
+            Issue.record("the declared record holds its procedure type")
+
+            return
+        }
+
+        #expect(soft.parameters["m"]?.mustBeGiven(in: TypeTable(types: module.types, constraints: [:])) == false)
+    }
+
     @Test("a parameter with a default is never required, whatever its type names")
     func aDefaultedParameterIsNeverRequired() {
         // Given: a type nothing declares, beside a default
