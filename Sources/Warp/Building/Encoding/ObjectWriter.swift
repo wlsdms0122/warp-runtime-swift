@@ -51,12 +51,6 @@ struct ObjectWriter {
         // that made it, or one a document nobody wrote down wrote. Either is
         // the one error thrown on the way down, and an object of what holds
         // it is not written.
-        // The numbering the bodies count their calls and their types from:
-        // four lists under one key, since a body stands on both.
-        guard case let .array(counted) = numbering else {
-            throw ObjectUnwritable("a numbering is written as its lists")
-        }
-
         return .dictionary(Value.Dictionary([
             Compiled.formatKey: .int(Compiled.format),
             "document": document(compiled.document),
@@ -78,7 +72,11 @@ struct ObjectWriter {
                 try judged(row, spelled: false)
             }),
             "answers": keyed(compiled.answers, lowered),
-            "numbering": .array(counted + [
+            // What the bodies count their calls and their types from: four
+            // lists under one key, since a body stands on both.
+            "numbering": .array([
+                numbering.sent,
+                numbering.closures,
                 .array(compiled.typeNumbering.types.map(name)),
                 .array(compiled.typeNumbering.memberships.map(name))
             ]),
@@ -248,10 +246,10 @@ struct ObjectWriter {
             return .array([.int(19), name(spelling), .array(constraints.sorted().map(name))])
 
         case let .reading(of: read, path: path):
-            return .array([.int(20), name(read), .array(path.map(segment))])
+            return .array([.int(21), name(read), .array(path.map(segment))])
 
         case let .composition(names):
-            return .array([.int(21), .array(names.sorted().map(name))])
+            return .array([.int(20), .array(names.sorted().map(name))])
         }
     }
 
@@ -526,9 +524,9 @@ private extension ObjectWriter {
 
     func undeclared(_ because: LoweredType.Undeclared) -> Value {
         switch because {
-        case let .type(name): return .array([.int(0), self.name(name)])
-        case let .bound(name): return .array([.int(1), self.name(name)])
-        case .cycle: return .array([.int(2)])
+        case let .noTypeNamed(name): return .array([.int(0), self.name(name)])
+        case let .noBoundNamed(name): return .array([.int(1), self.name(name)])
+        case .namesItself: return .array([.int(2)])
         }
     }
 

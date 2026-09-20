@@ -112,6 +112,7 @@ enum ObjectCoverageFixture {
         "nullable": .nullable(.int),
         "named": .named("a.one"),
         "parameter": .parameter(name: "T", constraints: ["a.four"]),
+        "composition": .composition(["a.five", "a.four"]),
         "reading": .reading(
             of: "a.fifteen",
             path: [
@@ -156,7 +157,9 @@ enum ObjectCoverageFixture {
         ("parameterNone", .parameter(label: "V", bounds: [])),
         ("reading", .reading(of: "a.sixteen", path: [.index(1, optional: true)])),
         ("composition", .composition([.membership(7), .contract("a.five")])),
-        ("undeclared", .undeclared(label: "W", because: .bound("a.thirteen")))
+        ("undeclaredBound", .undeclared(label: "W", because: .noBoundNamed("a.thirteen"))),
+        ("undeclaredType", .undeclared(label: "X", because: .noTypeNamed("a.fourteen"))),
+        ("undeclaredCycle", .undeclared(label: "Y", because: .namesItself))
     ]
 
     // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and

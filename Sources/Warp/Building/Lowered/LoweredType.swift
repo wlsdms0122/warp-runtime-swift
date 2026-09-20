@@ -100,9 +100,9 @@ indirect enum LoweredType: Sendable {
     // Why a name is not answered: nothing declares it as a type, nothing
     // declares it as a membership or a contract, or it names itself.
     enum Undeclared: Sendable, Equatable {
-        case type(Name)
-        case bound(Name)
-        case cycle
+        case noTypeNamed(Name)
+        case noBoundNamed(Name)
+        case namesItself
     }
 
     // MARK: - Property

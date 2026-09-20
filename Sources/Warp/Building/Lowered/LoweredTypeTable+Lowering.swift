@@ -87,7 +87,7 @@ extension LoweredTypeTable {
         let cycling = loweredTypes.indices.filter { row in end(of: row) == nil }
 
         for row in cycling {
-            loweredTypes[row] = .undeclared(label: labels[row].spelling, because: .cycle)
+            loweredTypes[row] = .undeclared(label: labels[row].spelling, because: .namesItself)
         }
 
         // The record a row names: the last row on the way to a record type.

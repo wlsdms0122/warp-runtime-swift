@@ -362,13 +362,13 @@ extension LoweredType {
 
         case let .undeclared(label, because):
             switch because {
-            case let .type(name):
+            case let .noTypeNamed(name):
                 throw UndeclaredTypeError("\(path()): declares type '\(name)', which nothing declares")
 
-            case let .bound(name):
+            case let .noBoundNamed(name):
                 throw UndeclaredTypeError("\(path()): declares '\(name)', which nothing declares as a membership or a contract")
 
-            case .cycle:
+            case .namesItself:
                 throw UndeclaredTypeError("\(path()): declares type '\(label)', which names itself")
             }
 

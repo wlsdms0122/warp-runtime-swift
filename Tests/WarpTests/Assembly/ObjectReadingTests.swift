@@ -50,7 +50,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -71,7 +71,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -82,7 +82,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts.removing("constants")), of: nil)
+            try Compiled(written: .dictionary(parts.removing("constants")), of: nil)
         }
     }
 
@@ -91,7 +91,7 @@ struct ObjectReadingTests {
         let parts = try await parts()
 
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts.writing("extra", with: .null)), of: nil)
+            try Compiled(written: .dictionary(parts.writing("extra", with: .null)), of: nil)
         }
     }
 
@@ -103,7 +103,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts.removing(Compiled.formatKey).writing("warp", with: .int(1))), of: nil)
+            try Compiled(written: .dictionary(parts.removing(Compiled.formatKey).writing("warp", with: .int(1))), of: nil)
         }
     }
 
@@ -128,7 +128,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -169,7 +169,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -181,7 +181,7 @@ struct ObjectReadingTests {
         // When / Then. The parts behind the number are laid out by it, so what
         // refuses is the number and nothing further in.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts.writing(Compiled.formatKey, with: .int(Compiled.format + 1))), of: nil)
+            try Compiled(written: .dictionary(parts.writing(Compiled.formatKey, with: .int(Compiled.format + 1))), of: nil)
         }
     }
 
@@ -225,7 +225,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -252,7 +252,7 @@ struct ObjectReadingTests {
         parts = parts.writing("rows", with: .array(table))
 
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -304,7 +304,7 @@ struct ObjectReadingTests {
         // When / Then. The row the call reaches is this document's own, so the
         // reading answers it and no link is needed.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -329,7 +329,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -359,7 +359,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -417,7 +417,7 @@ struct ObjectReadingTests {
 
         // When / Then. Refused, rather than reaching the run that reads it.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -474,7 +474,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -519,7 +519,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -562,7 +562,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -597,7 +597,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -639,7 +639,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -680,7 +680,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -722,7 +722,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -772,7 +772,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -784,7 +784,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -826,7 +826,7 @@ struct ObjectReadingTests {
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: stamped(parts), of: nil)
+            try Compiled(written: .dictionary(parts), of: nil)
         }
     }
 
@@ -856,10 +856,6 @@ struct ObjectReadingTests {
         }
 
         return written
-    }
-
-    private func stamped(_ parts: Value.Dictionary) -> Value {
-        .dictionary(parts)
     }
 }
 

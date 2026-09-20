@@ -89,6 +89,8 @@ public struct Mutator: Sendable {
 
             if let first = record.names.first { mutations.append(.dictionary(record.removing(first))) }
 
+            mutations.append(.dictionary(record.writing("mutated", with: .null)))
+
             return mutations
 
         case let .string(spelling):

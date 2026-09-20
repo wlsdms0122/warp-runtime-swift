@@ -81,7 +81,7 @@ struct ObjectReader {
         // Four lists: what the document sends, how many closures each
         // declaration wrote, the types its bodies stand on, the memberships.
         var counted = try Fields(fields.take("numbering"), of: "numbering")
-        let numbering = try Numbering(written: .array([try counted.next(), try counted.next()]), declaring: declared)
+        let numbering = try Numbering(sent: try counted.next(), closures: try counted.next(), declaring: declared)
         let table = declaredRows + (try liftedRows.enumerated().map { index, written in
             guard let writer = numbering.writer(of: index) else {
                 throw ObjectRefused("a lifted row stands where the numbering counts no closure")
@@ -89,7 +89,10 @@ struct ObjectReader {
 
             return try judged(written, spelled: writer.by)
         })
-        let typeNumbering = try typeNumbering(.array([try counted.next(), try counted.next()]))
+        let typeNumbering = try LoweredTypeNumbering(
+            ordered: try counted.list(name),
+            memberships: try counted.list(name)
+        )
 
         try counted.end()
 
@@ -308,13 +311,13 @@ private extension ObjectReader {
                 constraints: try Fields.ordered(fields.next(), of: "bounds", name)
             )
 
-        case 20:
+        case 21:
             read = .reading(
                 of: try name(fields.next()),
                 path: try Fields.list(fields.next(), of: "path", segment)
             )
 
-        case 21:
+        case 20:
             let names = try Fields.ordered(fields.next(), of: "composition", name)
 
             guard !names.isEmpty else {
@@ -676,9 +679,9 @@ private extension ObjectReader {
         let read: LoweredType.Undeclared
 
         switch try fields.tag() {
-        case 0: read = .type(try name(fields.next()))
-        case 1: read = .bound(try name(fields.next()))
-        case 2: read = .cycle
+        case 0: read = .noTypeNamed(try name(fields.next()))
+        case 1: read = .noBoundNamed(try name(fields.next()))
+        case 2: read = .namesItself
         default: throw ObjectRefused("'undeclared' is undeclared for a reason this reads none of")
         }
 
@@ -709,17 +712,6 @@ private extension ObjectReader {
             layout: held,
             judging: try Fields.list(fields.next(), of: "record", lowered)
         )
-
-        try fields.end()
-
-        return read
-    }
-
-    func typeNumbering(_ value: Value) throws -> LoweredTypeNumbering {
-        var fields = try Fields(value, of: "type numbering")
-        let types = try Fields.list(fields.next(), of: "type numbering", name)
-        let memberships = try Fields.list(fields.next(), of: "type numbering", name)
-        let read = try LoweredTypeNumbering(ordered: types, memberships: memberships)
 
         try fields.end()
 

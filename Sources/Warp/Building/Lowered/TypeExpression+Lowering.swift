@@ -93,7 +93,7 @@ extension TypeExpression {
             }
 
             guard let bound = table.bound(named: name) else {
-                return .undeclared(label: name.spelling, because: .type(name))
+                return .undeclared(label: name.spelling, because: .noTypeNamed(name))
             }
 
             return .composition([bound])
@@ -103,13 +103,13 @@ extension TypeExpression {
         case let .parameter(name, constraints):
             switch bounds(constraints, in: table) {
             case let .bounds(bounds): return .parameter(label: name, bounds: bounds)
-            case let .unfound(unfound): return .undeclared(label: rendered, because: .bound(unfound))
+            case let .unfound(unfound): return .undeclared(label: rendered, because: .noBoundNamed(unfound))
             }
 
         case let .composition(names):
             switch bounds(names, in: table) {
             case let .bounds(bounds): return .composition(bounds)
-            case let .unfound(unfound): return .undeclared(label: rendered, because: .bound(unfound))
+            case let .unfound(unfound): return .undeclared(label: rendered, because: .noBoundNamed(unfound))
             }
 
         case let .reading(of, path):
