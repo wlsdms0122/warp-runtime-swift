@@ -244,9 +244,15 @@ struct Case: Sendable, CustomStringConvertible {
         let arguments: [Name: Value]
         let expectation: Expectation
 
-        // The identity the object writes for its document, which is what it
-        // is read under.
+        // The identity the case reads the object under, where the case says
+        // one; the object's own where it says none. A caller keeps an object
+        // under a document and hands that back, and a case that hands back
+        // another asks whether the reading notices.
+        let document: Identity?
+
         var identity: Identity? {
+            if let document { return document }
+
             guard case let .array(held)? = written["document"], case let .bytes(bytes)? = held.first else { return nil }
 
             return Identity(bytes)
@@ -518,11 +524,20 @@ struct Case: Sendable, CustomStringConvertible {
                 throw ConformanceError("an object answers or is refused, and not `\(held)`")
             }
 
+            let document: Identity?
+
+            switch written["document"] {
+            case nil: document = nil
+            case let .bytes(bytes)?: document = Identity(bytes)
+            default: throw ConformanceError("the document a case reads an object under is written as bytes")
+            }
+
             self.asked = .object(
                 Object(
                     written: object,
                     arguments: try Self.given(written["arguments"], of: name),
-                    expectation: expectation
+                    expectation: expectation,
+                    document: document
                 )
             )
 
