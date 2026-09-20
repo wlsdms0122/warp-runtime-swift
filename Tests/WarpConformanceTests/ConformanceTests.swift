@@ -42,6 +42,27 @@ struct ConformanceTests {
                 let reached = try await reached(program)
 
                 #expect(reached == stage, "\(sut.name): \(sut.note)")
+
+            case let .builds(expected):
+                let built = try await built(program)
+
+                #expect(built == expected, "\(sut.name): \(sut.note)")
+            }
+
+        case let .object(object):
+            switch object.expectation {
+            case let .answers(expected):
+                let answered = try await run(object)
+
+                #expect(answered == expected, "\(sut.name): \(sut.note)")
+
+            case let .refuses(stage):
+                let reached = try await reached(object)
+
+                #expect(reached == stage, "\(sut.name): \(sut.note)")
+
+            case .builds:
+                Issue.record("\(sut.name): an object is read and not built")
             }
 
         case let .encoded(encoded, reading):
@@ -83,6 +104,66 @@ struct ConformanceTests {
         let image = try await builder.build(try sut.modules(), entry: "entry")
 
         return try await Executor().run(image, arguments: sut.arguments)
+    }
+
+    // The object the program's own document compiles to, against what the
+    // case asked the runner to bring and the standard vocabulary. Every
+    // object is keyed under the digest of its bytes and every document under
+    // the digest of its own, under *what a runner does* in `spec/conformance.md`.
+    private func built(_ sut: Case.Program) async throws -> Value {
+        let builder = Builder(fingerprinting: Fingerprint.of)
+        let supplying = try await Supplying(sut.modules())
+        let behind = try await builder.compile(try sut.brought + Module.standard, against: [], supplying: supplying)
+        let own = try await builder.compile(
+            [try Loader().load(sut.document, identity: try Identity.of(sut.document))],
+            against: behind,
+            supplying: supplying
+        )
+
+        guard own.count == 1 else { throw ConformanceError("\(own.count) documents compiled where one stood") }
+
+        return try own[0].object()
+    }
+
+    // An object read under the identity it writes, laid beside the standard
+    // vocabulary compiled the way a `builds` case sees it, and run.
+    private func run(_ sut: Case.Object) async throws -> Value {
+        let builder = Builder(fingerprinting: Fingerprint.of)
+        let supplying = try Supplying(Module.standard)
+        let behind = try await builder.compile(Module.standard, against: [], supplying: supplying)
+        let read = try Compiled(written: sut.written, of: sut.identity)
+        let image = try builder.link(behind + [read], entry: "entry", supplying: supplying)
+
+        return try await Executor().run(image, arguments: sut.arguments)
+    }
+
+    private func reached(_ sut: Case.Object) async throws -> Case.Stage? {
+        let builder = Builder(fingerprinting: Fingerprint.of)
+        let supplying = try Supplying(Module.standard)
+        let behind = try await builder.compile(Module.standard, against: [], supplying: supplying)
+        let read: Compiled
+
+        do {
+            read = try Compiled(written: sut.written, of: sut.identity)
+        } catch {
+            return .load
+        }
+
+        let image: Image
+
+        do {
+            image = try builder.link(behind + [read], entry: "entry", supplying: supplying)
+        } catch {
+            return .build
+        }
+
+        do {
+            _ = try await Executor().run(image, arguments: sut.arguments)
+        } catch {
+            return .run
+        }
+
+        return nil
     }
 
     // How far a case got before it was refused. The stage is part of the answer:
@@ -136,7 +217,7 @@ struct Case: Sendable, CustomStringConvertible {
     // Which types a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
-    static let version = 5
+    static let version = 6
     static let earliest = 2
 
     static let versionKey: Name = "test"
@@ -147,10 +228,29 @@ struct Case: Sendable, CustomStringConvertible {
         case run
     }
 
-    // What a program may expect: to run and answer, or to be refused at a stage.
+    // What a program may expect: to run and answer, to be refused at a stage,
+    // or to compile to exactly this object.
     enum Expectation: Sendable {
         case answers(Value)
         case refuses(Stage)
+        case builds(Value)
+    }
+
+    // An object the runner reads, links with the standard vocabulary and runs,
+    // with what the entry is given. What it leans on is written inside it, so
+    // it asks the runner to bring nothing.
+    struct Object: Sendable {
+        let written: Value
+        let arguments: [Name: Value]
+        let expectation: Expectation
+
+        // The identity the object writes for its document, which is what it
+        // is read under.
+        var identity: Identity? {
+            guard case let .array(held)? = written["document"], case let .bytes(bytes)? = held.first else { return nil }
+
+            return Identity(bytes)
+        }
     }
 
     // A document in one of its encodings, as the bytes that arrived, which
@@ -206,7 +306,11 @@ struct Case: Sendable, CustomStringConvertible {
 
         // The earliest test a case carrying this needs. The ladder is the
         // table under *what a case is* in `spec/conformance.md`.
-        var needs: Int { vocabulary == nil ? 2 : 3 }
+        var needs: Int {
+            if case .builds = expectation { return 6 }
+
+            return vocabulary == nil ? 2 : 3
+        }
     }
 
     // What a case asks: a program and what it should do, or an encoding and
@@ -215,6 +319,7 @@ struct Case: Sendable, CustomStringConvertible {
     enum Asked: Sendable {
         case program(Program)
         case encoded(Encoded, Reading)
+        case object(Object)
 
         // The earliest test a case asking this needs. The ladder is the table
         // under *what a case is* in `spec/conformance.md`.
@@ -223,6 +328,7 @@ struct Case: Sendable, CustomStringConvertible {
             case let .program(program): program.needs
             case .encoded(.binary, .refuses): 4
             case .encoded(.binary, _), .encoded(.text, _): 5
+            case .object: 6
             }
         }
     }
@@ -334,16 +440,18 @@ struct Case: Sendable, CustomStringConvertible {
             expect.count == 1,
             let (held, expected) = expect.entries.first
         else {
-            throw ConformanceError("a case expects exactly one of `answers`, `reads`, `spells` and `refuses`")
+            throw ConformanceError("a case expects exactly one of `answers`, `reads`, `spells`, `builds` and `refuses`")
         }
 
-        // A case asks about a program, about bytes or about text, and a case
-        // holding two would be two cases sharing one answer. What it asks
-        // about decides what it may expect: an encoding is read and nothing
-        // else, so it reads as a value or is refused where it is read, and a
-        // program runs, so it answers or is refused at a stage.
-        switch (written["program"], written["bytes"], written["text"]) {
-        case let (document?, nil, nil):
+        // A case asks about a program, about bytes, about text or about an
+        // object, and a case holding two would be two cases sharing one
+        // answer. What it asks about decides what it may expect: an encoding
+        // is read and nothing else, so it reads as a value or is refused where
+        // it is read; a program runs, so it answers or is refused at a stage,
+        // or it builds, and what it builds is an object; an object is read,
+        // linked and run, so it answers or is refused.
+        switch (written["program"], written["bytes"], written["text"], written["object"]) {
+        case let (document?, nil, nil, nil):
             let expectation: Expectation
 
             switch held {
@@ -353,11 +461,14 @@ struct Case: Sendable, CustomStringConvertible {
             case "refuses":
                 expectation = .refuses(try Self.stage(expected))
 
+            case "builds":
+                expectation = .builds(expected)
+
             case "reads", "spells":
-                throw ConformanceError("a program answers or is refused; only bytes and text read as a value")
+                throw ConformanceError("a program answers, builds or is refused; only bytes and text read as a value")
 
             default:
-                throw ConformanceError("a case expects what it answers or where it is refused, and not `\(held)`")
+                throw ConformanceError("a case expects what it answers, what it builds or where it is refused, and not `\(held)`")
             }
 
             self.asked = .program(
@@ -369,25 +480,54 @@ struct Case: Sendable, CustomStringConvertible {
                 )
             )
 
-        case let (nil, .bytes(bytes)?, nil):
+        case let (nil, .bytes(bytes)?, nil, nil):
             self.asked = try Self.encoded(.binary(Data(bytes)), expecting: held, expected, in: written)
 
-        case (nil, .some, nil):
+        case (nil, .some, nil, nil):
             throw ConformanceError("the bytes a case asks about are written as bytes")
 
         // A text is written as a string, or as bytes where the question is
         // whether those bytes are text at all.
-        case let (nil, nil, .string(text)?):
+        case let (nil, nil, .string(text)?, nil):
             self.asked = try Self.encoded(.text(Data(text.utf8)), expecting: held, expected, in: written)
 
-        case let (nil, nil, .bytes(bytes)?):
+        case let (nil, nil, .bytes(bytes)?, nil):
             self.asked = try Self.encoded(.text(Data(bytes)), expecting: held, expected, in: written)
 
-        case (nil, nil, .some):
+        case (nil, nil, .some, nil):
             throw ConformanceError("the text a case asks about is written as a string, or as bytes")
 
+        // An object leans on what is written inside it, so it asks the runner
+        // to bring nothing, and a case writing `vocabulary` asked a question
+        // the runner would not ask.
+        case let (nil, nil, nil, object?):
+            guard written["vocabulary"] == nil else {
+                throw ConformanceError("a case about an object writes `vocabulary`, which only a program is brought")
+            }
+
+            let expectation: Expectation
+
+            switch held {
+            case "answers":
+                expectation = .answers(expected)
+
+            case "refuses":
+                expectation = .refuses(try Self.stage(expected))
+
+            default:
+                throw ConformanceError("an object answers or is refused, and not `\(held)`")
+            }
+
+            self.asked = .object(
+                Object(
+                    written: object,
+                    arguments: try Self.given(written["arguments"], of: name),
+                    expectation: expectation
+                )
+            )
+
         default:
-            throw ConformanceError("a case asks about exactly one of a `program`, `bytes` and `text`")
+            throw ConformanceError("a case asks about exactly one of a `program`, `bytes`, `text` and `object`")
         }
 
         // A case says the earliest test it needs. Saying a later one would
