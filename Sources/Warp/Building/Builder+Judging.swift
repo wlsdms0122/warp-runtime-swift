@@ -694,7 +694,8 @@ extension Builder {
         }
 
         // A procedure may judge its own constant arguments before any run. A type
-        // cannot say that a regex pattern compiles, and the procedure can. It
+        // cannot say that a string a host parses is well formed, and the
+        // procedure can. It
         // happens here rather than while decoding, because a notation judging
         // arguments would have to know the vocabulary; judging belongs where
         // names resolve.

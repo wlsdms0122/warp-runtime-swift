@@ -20,9 +20,10 @@ import Foundation
 // not a failure, and it reads as absent the same as a field that was never
 // set.
 public protocol Query: NativeProcedure {
-    // Checks arguments that are already constant, at load. Type is the
-    // signature's business; this is for what a type cannot say. That a regex
-    // pattern compiles. An author typo surfaces before any run.
+    // Checks arguments that are already constant, at the build. Type is the
+    // signature's business; this is for what a type cannot say, such as
+    // whether a string a host parses is well formed. An author typo surfaces
+    // before any run.
     //
     // Asked through the door the procedure reads its arguments through, so a procedure
     // names a key here the way it names one when it answers. There is no run

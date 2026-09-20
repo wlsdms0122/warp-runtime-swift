@@ -108,9 +108,6 @@ struct ConditionTests {
         #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("title")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("hello"))]))
         ))
-        #expect(try await sut.evaluate(
-            .call(Call(receiver: .reference(path("title")), selector: "std.text.regex", arguments: ["value": .literal(.string("sp.c$"))]))
-        ))
         // Absence is not an empty collection. `contains` walks what it was
         // handed, the way every other collection procedure does, so asking it
         // of nothing is refused rather than answered false.
@@ -124,32 +121,6 @@ struct ConditionTests {
         await #expect(throws: ReferenceUnfit.self) {
             try await sut.evaluate(
                 .call(Call(receiver: .reference(path("n")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("3"))]))
-            )
-        }
-    }
-
-    @Test("an invalid regex pattern is rejected at link")
-    func invalidRegexRejectedAtLink() async {
-        // Given
-        let fixture: Value = [
-            "parameters": ["title": ["type": "string"]],
-            "body": [
-                [
-                    "value": ["conditional": [
-                        "when": ["of": ["ref": "title"], "regex": "[unclosed"],
-                        "then": [["let": "taken", "value": "x"]]
-                    ]
-                ]]
-            ]
-        ]
-
-        // When / Then. The pattern compiles before any run. Checking it while
-        // decoding would make the notation hold the vocabulary; it is checked
-        // where names resolve.
-        await #expect(throws: BuildError.self) {
-            try await Builder().build(
-                [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard + Module.regex,
-                entry: entryName
             )
         }
     }
@@ -196,7 +167,7 @@ struct ConditionTests {
             bindings: bindings,
             in: try await Builder().build(
                 [try Module(procedures: [entryName: Procedure(body: [], result: .literal(.null))])]
-                    + Module.standard + Module.regex,
+                    + Module.standard,
                 entry: entryName
             )
         )

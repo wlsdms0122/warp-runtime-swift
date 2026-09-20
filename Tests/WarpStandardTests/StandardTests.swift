@@ -29,7 +29,6 @@ struct StandardTests {
         #expect(Module.builtin.subtracting(shipped).isEmpty)
         #expect(Module.builtin.count == 25)
         #expect(Module.builtin.union(Module.derived) == shipped)
-        #expect(!shipped.contains("std.text.regex"))
     }
 
     @Test("a procedure this package calls derived has a body here")
