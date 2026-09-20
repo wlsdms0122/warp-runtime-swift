@@ -52,7 +52,7 @@ struct ObjectWriter {
         // the one error thrown on the way down, and an object of what holds
         // it is not written.
         return .dictionary(Value.Dictionary([
-            Compiled.formatKey: .int(Compiled.format),
+            ObjectLayout.formatKey: .int(ObjectLayout.format),
             "document": document(compiled.document),
             "dependencies": .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
             "types": try keyed(compiled.types, type),

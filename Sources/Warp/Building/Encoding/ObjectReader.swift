@@ -47,20 +47,20 @@ struct ObjectReader {
         // The layout first, and before anything laid out by it, the keys
         // included: what this number says is whether the rest of the record
         // means what this reading takes it to mean.
-        guard let stamped = Keyed.peek(value, Compiled.formatKey) else {
-            throw ObjectRefused("'object' writes no '\(Compiled.formatKey)'")
+        guard let stamped = Keyed.peek(value, ObjectLayout.formatKey) else {
+            throw ObjectRefused("'object' writes no '\(ObjectLayout.formatKey)'")
         }
 
         let format = try Fields.count(stamped, of: "object")
 
-        guard format == Compiled.format else {
+        guard format == ObjectLayout.format else {
             throw ObjectRefused(
-                "the object is laid out as format \(format), and this reads format \(Compiled.format)"
+                "the object is laid out as format \(format), and this reads format \(ObjectLayout.format)"
             )
         }
 
-        var fields = try Keyed(value, of: "object", keys: Compiled.parts)
-        _ = try fields.take(Compiled.formatKey)
+        var fields = try Keyed(value, of: "object", keys: ObjectLayout.parts)
+        _ = try fields.take(ObjectLayout.formatKey)
 
         let document = try document(fields.take("document"))
         let dependencies = try Fields.ordered(fields.take("dependencies"), of: "dependencies") { written in

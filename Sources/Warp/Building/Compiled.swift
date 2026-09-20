@@ -265,25 +265,6 @@ public struct Compiled: Sendable, Declaring {
         document.identity
     }
 
-    // How an object is laid out: the format under *objects* in the
-    // specification, which moves when the layout moves and for no other
-    // reason. Which Warp wrote it is not written, because what an object
-    // holds is the language's and any implementation of it reads any
-    // other's.
-    static let format = 1
-
-    // The key an object says its format under, which is also what tells an
-    // object from a document at the door: a document says `warp`.
-    static let formatKey: Name = "object"
-
-    // Every key an object carries, the format key among them: the layout
-    // under *objects* in the specification, which a reading holds a record to
-    // before it takes any.
-    static let parts: Set<Name> = [
-        formatKey, "document", "dependencies", "types", "constraints", "contracts", "claims", "leaned",
-        "rows", "lifted", "answers", "numbering", "typeNumbering", "variables", "constants"
-    ]
-
     // This object said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.

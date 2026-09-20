@@ -56,7 +56,7 @@ struct ObjectCoverageTests {
         }
 
         // Then
-        #expect(Set(written.names) == Compiled.parts)
+        #expect(Set(written.names) == ObjectLayout.parts)
     }
 
     // MARK: - Public
