@@ -107,6 +107,23 @@ struct LoweredTypeNumbering: Sendable {
         self.memberships = memberships.sorted()
     }
 
+    // Read back from an object, each list as it was written.
+    init(types: Value, memberships: Value) throws {
+        try self.init(
+            ordered: try Fields.list(types, of: "type numbering") { written in try Fields.name(written, of: "type numbering") },
+            memberships: try Fields.list(memberships, of: "type numbering") { written in try Fields.name(written, of: "type numbering") }
+        )
+    }
+
+    // The lists said as values, so an object carries what its bodies number
+    // their types from.
+    var written: (types: Value, memberships: Value) {
+        (
+            types: .array(types.map { name in .string(name.spelling) }),
+            memberships: .array(memberships.map { name in .string(name.spelling) })
+        )
+    }
+
     // MARK: - Public
     // Every number this gave, answered as the rows of one link.
     func rows(in loweredTypes: LoweredTypeTable) -> Rows {

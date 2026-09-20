@@ -78,7 +78,7 @@ public struct Mutator: Sendable {
             return [.int(-1), .int(.max), .int(number &+ 1), .string("not a number")]
 
         case let .array(elements):
-            var mutations: [Value] = [.array(elements.dropLast()), .array([]), .int(0)]
+            var mutations: [Value] = [.array(elements.dropLast()), .array([]), .int(0), .dictionary(Value.Dictionary([:]))]
 
             if let first = elements.first { mutations.append(.array(elements + [first])) }
 

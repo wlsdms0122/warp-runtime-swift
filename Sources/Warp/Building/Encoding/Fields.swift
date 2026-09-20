@@ -265,7 +265,9 @@ struct Keyed {
             throw ObjectRefused("'\(of)' writes no '\(key)'")
         }
 
-        taken.insert(key)
+        guard taken.insert(key).inserted else {
+            throw ObjectRefused("'\(of)' had '\(key)' read twice")
+        }
 
         return held
     }

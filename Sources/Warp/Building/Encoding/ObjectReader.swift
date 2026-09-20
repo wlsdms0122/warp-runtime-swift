@@ -89,16 +89,19 @@ struct ObjectReader {
 
             return try judged(written, spelled: writer.by)
         })
-        let typeNumbering = try LoweredTypeNumbering(
-            ordered: try counted.list(name),
-            memberships: try counted.list(name)
-        )
+        let typeNumbering = try LoweredTypeNumbering(types: try counted.next(), memberships: try counted.next())
 
         try counted.end()
 
         let variables = try Fields.list(fields.take("variables"), of: "variables", variable)
         let constants = try Fields.ordered(fields.take("constants"), of: "constants", name)
-        let read = try Compiled(
+
+        // Every key read before anything is stood up on them, so a key this
+        // reads none of is refused as itself and not as whatever it broke
+        // further in.
+        try fields.end()
+
+        return try Compiled(
             document: document,
             types: types,
             constraints: constraints,
@@ -115,10 +118,6 @@ struct ObjectReader {
             dependencies: dependencies,
             fingerprint: fingerprint
         )
-
-        try fields.end()
-
-        return read
     }
 
     // MARK: - Private

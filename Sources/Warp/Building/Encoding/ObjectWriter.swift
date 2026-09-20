@@ -77,8 +77,8 @@ struct ObjectWriter {
             "numbering": .array([
                 numbering.sent,
                 numbering.closures,
-                .array(compiled.typeNumbering.types.map(name)),
-                .array(compiled.typeNumbering.memberships.map(name))
+                compiled.typeNumbering.written.types,
+                compiled.typeNumbering.written.memberships
             ]),
             "variables": .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
                 .array([name(entry.name), try value(entry.value)])
