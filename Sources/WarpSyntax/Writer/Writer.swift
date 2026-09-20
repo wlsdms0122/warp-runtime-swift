@@ -75,7 +75,7 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [
             Envelope.versionKey: .int(Envelope.version),
             Envelope.importsKey: .array(
-                (draft.imports ?? draft.sends).sorted().map { name in .string(name.spelling) }
+                (draft.imports ?? draft.sends.union(draft.mentions)).sorted().map { name in .string(name.spelling) }
             ),
             ModuleReader.CodingKeys.procedures.name:
                 .dictionary(try draft.procedures.mapValues(value(of:)))

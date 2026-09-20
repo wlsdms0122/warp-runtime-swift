@@ -39,7 +39,7 @@ enum ObjectCoverageFixture {
             // The two closures behind the spellings belong to the declaration whose
             // body stands them up, which is the one with a body.
             numbering: Numbering(
-                imports: ["a.twelve"],
+                sends: ["a.twelve"],
                 declared: ["a.eleven", "a.ten"],
                 closures: ["a.eleven": 2]
             ),

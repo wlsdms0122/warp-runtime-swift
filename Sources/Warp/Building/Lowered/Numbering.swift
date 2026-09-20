@@ -54,7 +54,7 @@ struct Numbering: Sendable {
     private let runs: [(name: Name, count: Int)]
 
     // MARK: - Initializer
-    // A document's own. The imports, its own declarations, and the closures
+    // A document's own. What it sends, its own declarations, and the closures
     // those declarations wrote, each in name order: the numbering is the
     // document's fact and a set has no order to lend it.
     //
@@ -63,8 +63,8 @@ struct Numbering: Sendable {
     // before the rest, and which declarations are procedures is a fact of the graph,
     // so a number counted in that order would move when an unrelated module
     // joins the link.
-    init(imports: Set<Name>, declared: [Name], closures: [Name: Int] = [:]) {
-        let sent = imports.sorted()
+    init(sends: Set<Name>, declared: [Name], closures: [Name: Int] = [:]) {
+        let sent = sends.sorted()
         let counted = closures.filter { _, count in count > 0 }
 
         self.sent = sent.count
@@ -110,8 +110,8 @@ struct Numbering: Sendable {
     // declarations stand at the end of this list, behind what it sends.
     init(written value: Value, declaring declared: [Name]) throws {
         var fields = try Fields(value, of: "numbering")
-        let sent = try Fields.ordered(fields.next(), of: "numbering imports") { written in
-            try Fields.name(written, of: "numbering imports")
+        let sent = try Fields.ordered(fields.next(), of: "numbering sends") { written in
+            try Fields.name(written, of: "numbering sends")
         }
         let counts = try Self.read(try fields.next(), of: "numbering closures")
 
@@ -144,7 +144,7 @@ struct Numbering: Sendable {
         // stands up is a numbering that counting could have reached. A
         // beginning written down is a beginning that can disagree with the one
         // beside it; a count is not.
-        self.init(imports: Set(sent), declared: declared, closures: counts)
+        self.init(sends: Set(sent), declared: declared, closures: counts)
     }
 
     // MARK: - Public

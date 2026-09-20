@@ -90,7 +90,7 @@ struct DeclaredNameTests {
         // and that nothing calls, so it is not on the frontier. Its text still
         // has to compile
         let sut = try Module(
-            imports: ["std.control.abort"],
+            imports: ["app.Missing", "std.control.abort"],
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.int(1))),
                 "stray": Procedure(

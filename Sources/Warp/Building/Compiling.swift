@@ -191,7 +191,7 @@ struct Compiling {
     // after this.
     mutating func answering(_ origin: Int) {
         named[origin] = Answered.answering(
-            lowering.numbering[origin] ?? Numbering(imports: [], declared: []),
+            lowering.numbering[origin] ?? Numbering(sends: [], declared: []),
             rows: lowering.rows
         )
     }

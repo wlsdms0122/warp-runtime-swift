@@ -936,7 +936,7 @@ struct Lowering {
     // with nothing to number has none, and a call in a body it never held is
     // the link's own mistake.
     private func numbered(_ origin: Int) -> Numbering {
-        numbering[origin] ?? Numbering(imports: [], declared: [])
+        numbering[origin] ?? Numbering(sends: [], declared: [])
     }
 
 }

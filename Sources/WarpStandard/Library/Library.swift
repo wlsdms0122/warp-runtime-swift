@@ -15,6 +15,7 @@ enum Library {
             {
               description "Reading a collection by walking it, written from its count and its index."
               imports [
+                "std.Comparable"
                 "std.collection.appending"
                 "std.collection.count"
                 "std.collection.gathering"
@@ -1664,6 +1665,8 @@ enum Library {
             {
               description "Ordering the other way round, choosing between two, and dropping a sign. Written from lessThan."
               imports [
+                "std.Comparable"
+                "std.Numeric"
                 "std.math.lessThan"
                 "std.math.minus"
               ]

@@ -111,7 +111,7 @@ struct ObjectClosureTests {
                 )
             ],
             answers: [:],
-            numbering: Numbering(imports: [], declared: ["a.one"], closures: [:]),
+            numbering: Numbering(sends: [], declared: ["a.one"], closures: [:]),
             typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
             judging: [],
             dependencies: []

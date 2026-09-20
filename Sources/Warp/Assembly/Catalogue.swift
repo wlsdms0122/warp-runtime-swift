@@ -21,11 +21,11 @@ import Foundation
 // table and a row is brought in once, so a second copy is not a thing that can
 // be written.
 //
-// What a link needs is not what a document discloses. `imports` says what the
-// program can touch, which is the grant a caller reads before it allows
-// anything; a link needs that and also the types a signature names, which
-// touch nothing. So the needs are read off the module here, in both spellings,
-// and one table answers them: the kind rides on the reference.
+// What a link needs is what a document discloses, said with the kind on it.
+// `imports` is one list of spellings; a link asks which document declares a
+// procedure and which declares a type, and a procedure and a type may share a
+// spelling. So the needs are read off the module here, in both kinds, and one
+// table answers them: the kind rides on the reference.
 public struct Catalogue: Sendable {
     // MARK: - Property
     private let modules: [Module]

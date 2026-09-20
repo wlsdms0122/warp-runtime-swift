@@ -176,7 +176,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("sends [\"std.math.plus\"], which it does not import")
+            "\(error)".contains("uses [\"std.math.plus\"], which it does not import")
         }
     }
 
@@ -201,7 +201,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("imports [\"std.math.minus\"], which it does not call")
+            "\(error)".contains("imports [\"std.math.minus\"], which it does not use")
         }
     }
 
@@ -232,7 +232,7 @@ struct EnvelopeTests {
                 "procedures": ["entry": ["result": ["ref": "limit"]]]
             ])
         } throws: { error in
-            "\(error)".contains("sends [\"std.math.plus\"]")
+            "\(error)".contains("uses [\"std.math.plus\"]")
         }
     }
 

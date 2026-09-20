@@ -113,30 +113,31 @@ public struct Validator: Sendable {
     }
 
     // MARK: - Private
-    // What a module says it imports against what it sends. A caller reads the
-    // list to decide whether to grant the procedures before it links anything, so a
-    // list allowed to drift would be worse than none: it would be trusted and
-    // wrong.
+    // What a module says it imports against what it uses: the procedures it
+    // sends and the types, constraints and contracts it names. A caller reads
+    // the list to decide what to grant and what to lay in the link before it
+    // links anything, so a list allowed to drift would be worse than none: it
+    // would be trusted and wrong.
     private func declared(_ module: Module) throws {
-        let sends = module.sends
+        let used = Set(module.uses.map(\.name))
 
-        let undisclosed = sends.subtracting(module.imports).sorted().map(\.spelling)
+        let undisclosed = used.subtracting(module.imports).sorted().map(\.spelling)
         let unspent = module.imports
-            .filter { name in !sends.contains(name) }
+            .filter { name in !used.contains(name) }
             .sorted()
             .map(\.spelling)
 
         guard !undisclosed.isEmpty || !unspent.isEmpty else { return }
 
         // The two differences and not the two lists. They are different
-        // mistakes with different fixes (a procedure sent and not listed is the
-        // grant the list existed to disclose, and a procedure listed and not called
-        // asks for one the program has no use for) and a module sending thirty
-        // procedures would otherwise leave an author diffing two of them by eye to
-        // find the one that moved.
+        // mistakes with different fixes (a name used and not listed is the
+        // dependency the list existed to disclose, and a name listed and not
+        // used asks for one the program has no use for) and a module using
+        // thirty names would otherwise leave an author diffing two of them by
+        // eye to find the one that moved.
         let said = [
-            undisclosed.isEmpty ? nil : "sends \(undisclosed), which it does not import",
-            unspent.isEmpty ? nil : "imports \(unspent), which it does not call"
+            undisclosed.isEmpty ? nil : "uses \(undisclosed), which it does not import",
+            unspent.isEmpty ? nil : "imports \(unspent), which it does not use"
         ]
 
         throw ValidationError(

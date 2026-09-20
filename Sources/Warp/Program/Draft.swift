@@ -152,7 +152,7 @@ public struct Draft: Sendable {
     }
 
     // The types this names and does not itself declare.
-    var mentions: Set<Name> {
+    public var mentions: Set<Name> {
         read().mentions
     }
 

@@ -597,7 +597,7 @@ public struct Builder: Sendable {
         // document alone, so a body lowers to the same numbers whatever
         // else the caller put in the link.
         let numbering = Numbering(
-            imports: module.imports,
+            sends: module.sends,
             declared: declared,
             closures: module.closures
         )

@@ -28,16 +28,16 @@ public struct Module: Sendable {
     // what the module declares; this is what it asks of whatever it is linked
     // with, and a link that does not declare all of them cannot run it.
     //
-    // Exactly what it sends, always: a caller granting from this list would
-    // otherwise grant a procedure the program never uses, or link a program that
-    // sends one the list never mentioned. Which of those two the module is
-    // refused for is `Validator`'s to say.
+    // Exactly what it uses, always: every procedure it sends and every type,
+    // constraint and contract it names without declaring. A caller granting
+    // from this list would otherwise grant a procedure the program never
+    // uses, or lay a link that lacks a declaration the program leans on. Which
+    // of those the module is refused for is `Validator`'s to say.
     public let imports: Set<Name>
 
-    // The same fact said as lookups rather than as a grant: the procedures this
-    // calls, and every procedure and type it names and does not declare. Read
-    // where the module is made, since a link asks each module it is handed for
-    // them and the text they are read off does not move.
+    // The same fact said as lookups rather than as a grant, the kind riding on
+    // each. Read where the module is made, since a link asks each module it is
+    // handed for them and the text they are read off does not move.
     let sends: Set<Name>
     let uses: Set<Reference>
 
@@ -131,7 +131,7 @@ public struct Module: Sendable {
     // to) so a reader hands over what the text wrote and a drifting list is
     // refused. A caller assembling types in Swift has the module in hand and
     // nobody to disclose it to, so it says nothing and the module states the
-    // fact instead. Either way `imports` afterwards is what the module sends.
+    // fact instead. Either way `imports` afterwards is what the module uses.
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
@@ -172,7 +172,7 @@ public struct Module: Sendable {
         let reading = draft.read()
 
         self.sends = reading.sends
-        self.imports = draft.imports ?? reading.sends
+        self.imports = draft.imports ?? reading.sends.union(reading.mentions)
         self.uses = Set(reading.sends.map(Reference.procedure))
             .union(reading.mentions.map(Reference.type))
         self.closures = reading.closures

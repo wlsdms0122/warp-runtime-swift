@@ -181,7 +181,7 @@ struct TypeNotationTests {
             "parameters": ["of": ["type": "some T"], "value": ["type": "some T"]],
             "returns": "some T",
             "result": ["ref": "of"]
-        ])
+        ], importing: ["Comparable"])
 
         // Then. Every occurrence carries the bound the signature declared
         let signature = sut.procedures[entryName]?.signature
@@ -262,7 +262,7 @@ struct TypeNotationTests {
                 ]
             ],
             "result": ["ref": "of"]
-        ])
+        ], importing: ["Comparable"])
 
         // Then
         let parameters = sut.procedures[entryName]?.signature.parameters
