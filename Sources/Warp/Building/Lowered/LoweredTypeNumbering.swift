@@ -110,11 +110,15 @@ struct LoweredTypeNumbering: Sendable {
     // Read back from an object: the two lists, in this order.
     init(written value: Value) throws {
         var fields = try Fields(value, of: "type numbering")
-        let types = try Fields.list(fields.next(), of: "type numbering") { written in try Fields.name(written, of: "type numbering") }
-        let memberships = try Fields.list(fields.next(), of: "type numbering") { written in try Fields.name(written, of: "type numbering") }
+
+        self.types = try Fields.ordered(fields.next(), of: "type numbering types") { written in
+            try Fields.name(written, of: "type numbering types")
+        }
+        self.memberships = try Fields.ordered(fields.next(), of: "type numbering memberships") { written in
+            try Fields.name(written, of: "type numbering memberships")
+        }
 
         try fields.end()
-        try self.init(ordered: types, memberships: memberships)
     }
 
     // The two lists said as one value, so an object carries what its bodies

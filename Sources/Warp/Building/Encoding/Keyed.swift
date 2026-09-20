@@ -14,6 +14,7 @@ struct Keyed {
     // MARK: - Property
     private let part: String
     private let written: Value.Dictionary
+    private var taken: Set<Name> = []
 
     // MARK: - Initializer
     init(_ value: Value, of part: String, keys: Set<Name>) throws {
@@ -43,11 +44,23 @@ struct Keyed {
         return written[key]
     }
 
-    func take(_ key: Name) throws -> Value {
+    mutating func take(_ key: Name) throws -> Value {
         guard let held = written[key] else {
             throw ObjectRefused("'\(part)' writes no '\(key)'")
         }
 
+        taken.insert(key)
+
         return held
+    }
+
+    // That every key written has been taken. The record was held to the
+    // layout's keys when it was opened, so what is left is a part the layout
+    // names and this reading forgot, which is this reading's defect and not
+    // the object's; it is said here so the pair cannot drift apart quietly.
+    func end() throws {
+        guard let forgotten = written.names.first(where: { name in !taken.contains(name) }) else { return }
+
+        throw ObjectRefused("'\(part)' writes '\(forgotten)', which this reading left unread")
     }
 }

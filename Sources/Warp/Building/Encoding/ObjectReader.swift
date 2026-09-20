@@ -34,6 +34,10 @@ struct ObjectReader {
 
     // MARK: - Internal
     func compiled(from value: Value) throws -> Compiled {
+        guard case .dictionary = value else {
+            throw ObjectRefused("'object' is not written as a record")
+        }
+
         // A document says `warp` where an object says `object`, and one handed
         // here is refused for what it is.
         if Keyed.peek(value, Module.versionKey) != nil {
@@ -55,7 +59,7 @@ struct ObjectReader {
             )
         }
 
-        let fields = try Keyed(value, of: "object", keys: Compiled.parts)
+        var fields = try Keyed(value, of: "object", keys: Compiled.parts)
         _ = try fields.take(Compiled.formatKey)
 
         let document = try document(fields.take("document"))
@@ -105,6 +109,10 @@ struct ObjectReader {
 
         let variables = try Fields.led(fields.take("variables"), of: "variables", variable)
         let constants = try Fields.ordered(fields.take("constants"), of: "constants", name)
+
+        // Every part taken before anything stands on them: a part the layout
+        // names and nothing above took is a reading that would drop it.
+        try fields.end()
 
         return try Compiled(
             document: document,
