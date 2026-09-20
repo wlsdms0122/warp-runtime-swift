@@ -152,8 +152,14 @@ public struct Draft: Sendable {
     }
 
     // The types this names and does not itself declare.
-    public var mentions: Set<Name> {
+    var mentions: Set<Name> {
         read().mentions
+    }
+
+    // Every name this uses and does not itself declare, which is what `imports`
+    // says where a document wrote one.
+    public var uses: Set<Name> {
+        read().uses
     }
 
     // What reading a document once answers: what it declares, what it leans on
@@ -175,6 +181,10 @@ public struct Draft: Sendable {
         // What this declares, by the name a link resolves to it.
         let declaredProcedures: Set<Name>
         let declaredTypes: Set<Name>
+
+        // The two as one list of spellings, which is what a document's
+        // `imports` holds.
+        var uses: Set<Name> { sends.union(mentions) }
 
         // How many closure literals each declaration wrote, at whatever depth.
         // A closure inside a closure counts with the rest: what the number

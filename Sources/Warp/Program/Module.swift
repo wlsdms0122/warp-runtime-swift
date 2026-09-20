@@ -24,7 +24,7 @@ public struct Module: Sendable {
     // Metadata only. Which document a thing came out of is `identity`.
     public var description: String? { source.description }
 
-    // The procedures this module sends and does not declare. Everything else here is
+    // The names this module uses and does not declare. Everything else here is
     // what the module declares; this is what it asks of whatever it is linked
     // with, and a link that does not declare all of them cannot run it.
     //
@@ -33,6 +33,10 @@ public struct Module: Sendable {
     // from this list would otherwise grant a procedure the program never
     // uses, or lay a link that lacks a declaration the program leans on. Which
     // of those the module is refused for is `Validator`'s to say.
+    //
+    // Spellings and not kinds: a spelling here asks for whatever the link
+    // declares under it, so a module using the procedure and the type of one
+    // spelling lists it once. Which kinds it uses is `uses`.
     public let imports: Set<Name>
 
     // The same fact said as lookups rather than as a grant, the kind riding on
@@ -172,7 +176,7 @@ public struct Module: Sendable {
         let reading = draft.read()
 
         self.sends = reading.sends
-        self.imports = draft.imports ?? reading.sends.union(reading.mentions)
+        self.imports = draft.imports ?? reading.uses
         self.uses = Set(reading.sends.map(Reference.procedure))
             .union(reading.mentions.map(Reference.type))
         self.closures = reading.closures
