@@ -130,7 +130,7 @@ public struct Catalogue: Sendable {
                 let module = closed[index]
                 index += 1
 
-                for used in module.uses.sorted() {
+                for used in module.references.sorted() {
                     bring(declares[used])
                 }
             }

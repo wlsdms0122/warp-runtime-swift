@@ -11,7 +11,7 @@ import Foundation
 // laid down one at a time.
 //
 // A document reaches outside itself through the procedures it calls and the
-// types its signatures name, which is what `Module.uses` already holds: every
+// types its signatures name, which is what `Module.references` already holds: every
 // procedure and type it names and does not declare. So what a document was
 // compiled against is read off the document rather than tracked through the
 // compile.
@@ -39,7 +39,7 @@ struct DeclarerTable {
     func dependencies(of module: Module) -> [Fingerprint]? {
         var against: Set<Fingerprint> = []
 
-        for used in module.uses {
+        for used in module.references {
             // A name nothing here declares is left alone. The link refuses it,
             // and refusing here would be a second copy of a rule that has to be
             // right once.

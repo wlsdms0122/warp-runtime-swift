@@ -75,7 +75,7 @@ public struct ModuleGraph: Sendable {
                 reached.append((declaring, name))
             }
 
-            for used in module.uses.sorted() {
+            for used in module.references.sorted() {
                 need(used.name, of: declares[used])
             }
 

@@ -36,14 +36,14 @@ public struct Module: Sendable {
     //
     // Spellings and not kinds: a spelling here asks for whatever the link
     // declares under it, so a module using the procedure and the type of one
-    // spelling lists it once. Which kinds it uses is `uses`.
+    // spelling lists it once. Which kinds it uses is `references`.
     public let imports: Set<Name>
 
     // The same fact said as lookups rather than as a grant, the kind riding on
     // each. Read where the module is made, since a link asks each module it is
     // handed for them and the text they are read off does not move.
     let sends: Set<Name>
-    let uses: Set<Reference>
+    let references: Set<Reference>
 
     // How many closure literals each declaration wrote. A closure's number is
     // the document's fact, so it is settled with the document.
@@ -177,7 +177,7 @@ public struct Module: Sendable {
 
         self.sends = reading.sends
         self.imports = draft.imports ?? reading.uses
-        self.uses = Set(reading.sends.map(Reference.procedure))
+        self.references = Set(reading.sends.map(Reference.procedure))
             .union(reading.mentions.map(Reference.type))
         self.closures = reading.closures
         self.declaredProcedures = reading.declaredProcedures

@@ -119,7 +119,7 @@ public struct Validator: Sendable {
     // links anything, so a list allowed to drift would be worse than none: it
     // would be trusted and wrong.
     private func declared(_ module: Module) throws {
-        let used = Set(module.uses.map(\.name))
+        let used = Set(module.references.map(\.name))
 
         let undisclosed = used.subtracting(module.imports).sorted().map(\.spelling)
         let unspent = module.imports
