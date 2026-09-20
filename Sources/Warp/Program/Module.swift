@@ -29,10 +29,10 @@ public struct Module: Sendable {
     // with, and a link that does not declare all of them cannot run it.
     //
     // Exactly what it uses, always: every procedure it sends and every type,
-    // constraint and contract it names without declaring. A caller granting
-    // from this list would otherwise grant a procedure the program never
-    // uses, or lay a link that lacks a declaration the program leans on. Which
-    // of those the module is refused for is `Validator`'s to say.
+    // constraint and contract it names without declaring. A caller lays the
+    // link from this list, so a list saying less would be trusted and wrong,
+    // and one saying more asks for what the program has no use for. Which of
+    // those the module is refused for is `Validator`'s to say.
     //
     // Spellings and not kinds: a spelling here asks for whatever the link
     // declares under it, so a module using the procedure and the type of one

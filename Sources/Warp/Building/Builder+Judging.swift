@@ -695,10 +695,9 @@ extension Builder {
 
         // A procedure may judge its own constant arguments before any run. A type
         // cannot say that a string a host parses is well formed, and the
-        // procedure can. It
-        // happens here rather than while decoding, because a notation judging
-        // arguments would have to know the vocabulary; judging belongs where
-        // names resolve.
+        // procedure can. It happens here rather than while decoding, because a
+        // notation judging arguments would have to know the vocabulary; judging
+        // belongs where names resolve.
         // A procedure's own keys name its parameters, so what a call wrote by name
         // is asked for by key here, through the same door the procedure reads an
         // argument through when it answers.

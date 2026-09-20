@@ -80,13 +80,6 @@ public struct Draft: Sendable {
         self.procedures = procedures
     }
 
-    // The procedures this declares and does not itself declare a procedure for.
-    // Everything the program can do that touches anything, and a caller
-    // reading it is reading the bounds of what it is about to allow.
-    public var sends: Set<Name> {
-        read().sends
-    }
-
     // The same document with the imports it turned out to have. A module
     // settles them from what the text sends, and a writing of that module
     // takes the settled list.
@@ -149,11 +142,6 @@ public struct Draft: Sendable {
 
     var declaredTypes: Set<Name> {
         read().declaredTypes
-    }
-
-    // The types this names and does not itself declare.
-    var mentions: Set<Name> {
-        read().mentions
     }
 
     // Every name this uses and does not itself declare, which is what `imports`
@@ -307,31 +295,4 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Private
-    // The types named inside a body: what a local binding says it holds, what
-    // a cast asks for, and what a closure literal's own signature writes. A
-    // signature written inline is held to the same table the top level is, so
-    // what it names is asked for the same way.
-    private func mentions(subexpressions held: some Traversable) -> Set<Name> {
-        held.nodes
-            .reduce(into: Set<Name>()) { mentioned, found in
-                switch found {
-                case let .statement(statement):
-                    guard let declared = statement.binding?.declared else { return }
-
-                    mentioned.formUnion(declared.mentions)
-
-                case let .expression(expression):
-                    switch expression {
-                    case let .cast(_, type, _):
-                        mentioned.formUnion(type.mentions)
-
-                    case let .closure(procedure):
-                        mentioned.formUnion(procedure.signature.mentions)
-
-                    default:
-                        break
-                    }
-                }
-            }
-    }
 }
