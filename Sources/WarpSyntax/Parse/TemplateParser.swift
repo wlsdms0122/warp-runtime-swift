@@ -8,11 +8,12 @@
 import Foundation
 import Warp
 
-// The template dialect — `${a.b[0].c}` placeholders, `$$` escaping, `[i]`/`[${i}]`
-// index references. It lives on exactly two closed surfaces: `{ format: }`
-// templates and resource file bodies, both rendered against declared bindings
-// only. `parseRefPath` additionally spells the path inside `{ ref: }`. Procedure
-// values themselves never pass through here — a string in a procedure is a literal.
+// The template dialect. `${a.b[0].c}` placeholders, `$$` escaping,
+// `[i]`/`[${i}]` index references. It lives on exactly two closed surfaces: `{
+// format: }` templates and resource file bodies, both rendered against declared
+// bindings only. `parseRefPath` additionally spells the path inside `{ ref: }`.
+// Procedure values themselves never pass through here. A string in a procedure
+// is a literal.
 public struct TemplateParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
@@ -74,20 +75,20 @@ public struct TemplateParser: Sendable {
         var buffer = ""
         var depth = 0
 
-        // Whether the segment being read was reached through `?.` — the `?`
-        // is written at the end of the piece before the dot, so it is carried
-        // from one flush to the next.
+        // Whether the segment being read was reached through `?.`. The `?` is
+        // written at the end of the piece before the dot, so it is carried from
+        // one flush to the next.
         var optional = false
 
-        // Whether a dot has promised a name it has not delivered yet. An
-        // empty segment is a path the author never wrote, so a dot with
-        // nothing after it — another dot, a bracket, the end — is refused
-        // rather than silently dropped.
+        // Whether a dot has promised a name it has not delivered yet. An empty
+        // segment is a path the author never wrote, so a dot with nothing after
+        // it (another dot, a bracket, the end) is refused rather than silently
+        // dropped.
         var expectsKey = false
 
         @discardableResult
         func flushKey() throws -> Bool {
-            // What the author wrote, kept whole — a refusal quotes their
+            // What the author wrote, kept whole. A refusal quotes their
             // spelling, not a peeled copy of it.
             let written = buffer.trimmingCharacters(in: .whitespaces)
             var key = written
@@ -99,15 +100,15 @@ public struct TemplateParser: Sendable {
             var next = false
 
             if key.hasSuffix("?") {
-                // Trimmed again, because the `?` may have held a space off
-                // the name's end — `b ?` names `b`, not `b `.
+                // Trimmed again, because the `?` may have held a space off the
+                // name's end. `b ?` names `b`, not `b `.
                 key = String(key.dropLast()).trimmingCharacters(in: .whitespaces)
                 next = true
             }
 
             guard !key.contains("?") else {
                 throw TemplateSyntaxError(
-                    "'\(written)' — `?` is written once, at the end of a"
+                    "'\(written)'. `?` is written once, at the end of a"
                         + " segment, as `?.`"
                 )
             }
@@ -124,7 +125,7 @@ public struct TemplateParser: Sendable {
                     )
                 }
             } else {
-                segments.append(.key(key, optional: optional))
+                segments.append(.key(try name(key), optional: optional))
                 optional = false
                 expectsKey = false
                 appended = true
@@ -133,7 +134,7 @@ public struct TemplateParser: Sendable {
             if next {
                 guard !optional else {
                     throw TemplateSyntaxError(
-                        "`?` twice in a row marks nothing — write one `?.`"
+                        "`?` twice in a row marks nothing. Write one `?.`"
                     )
                 }
 
@@ -164,8 +165,8 @@ public struct TemplateParser: Sendable {
                 buffer.append(character)
 
                 if depth == 0 {
-                    // A `?` carried to a bracket is the author's `?[` — the
-                    // same mark `?.` puts on a name, on an index instead.
+                    // A `?` carried to a bracket is the author's `?[`. The same
+                    // mark `?.` puts on a name, on an index instead.
                     segments.append(try indexSegment(
                         buffer.trimmingCharacters(in: .whitespaces),
                         optional: optional
@@ -178,10 +179,10 @@ public struct TemplateParser: Sendable {
                 let appended = try flushKey()
 
                 // A dot follows a segment. The one state that says so is
-                // `expectsKey`: a previous dot still waiting for its name
-                // means the segment this dot closes is empty — however many
-                // dots in a row, wherever they stand — and a dot at the very
-                // head has nothing before it at all.
+                // `expectsKey`: a previous dot still waiting for its name means
+                // the segment this dot closes is empty (however many dots in a
+                // row, wherever they stand) and a dot at the very head has
+                // nothing before it at all.
                 guard !expectsKey else {
                     throw TemplateSyntaxError(
                         "a dot is written between segments, and nothing"
@@ -207,7 +208,7 @@ public struct TemplateParser: Sendable {
 
         guard !optional else {
             throw TemplateSyntaxError(
-                "the path ends on `?` — `?.` marks the segment after it,"
+                "the path ends on `?`. `?.` marks the segment after it,"
                     + " and nothing follows"
             )
         }
@@ -222,9 +223,9 @@ public struct TemplateParser: Sendable {
             throw TemplateSyntaxError("empty reference path")
         }
 
-        // What a mark on the head would claim is the path's own fact, said
-        // by the path — whichever spelling wrote it, and wherever a layer
-        // judges the same path later.
+        // What a mark on the head would claim is the path's own fact, said by
+        // the path, whichever spelling wrote it, and wherever a layer judges
+        // the same path later.
         if let refusal = segments.markedHead {
             throw TemplateSyntaxError(refusal)
         }
@@ -246,6 +247,16 @@ public struct TemplateParser: Sendable {
     }
 
     // MARK: - Private
+    // A segment's spelling as the name it stands for, said in this parser's
+    // own terms so an author reading a template's refusal reads one voice.
+    private func name(_ spelling: String) throws -> Name {
+        do {
+            return try Name(spelling)
+        } catch {
+            throw TemplateSyntaxError("\(error)")
+        }
+    }
+
     // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an empty
     // `[]` is an author mistake rejected at parse, not carried into the model.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {

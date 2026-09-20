@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // Variables, asked of the language rather than of a notation. Nothing here
-// spells `var:` or `set:` — those are how one front end writes a binding, and
+// spells `var:` or `set:`. Those are how one front end writes a binding, and
 // what is being tested is what a binding *is*.
 @Suite
 struct VariableTests {
@@ -19,7 +19,7 @@ struct VariableTests {
     // MARK: - Test
     @Test("a write inside a block outlives the block")
     func assignmentOutlivesItsBlock() async throws {
-        // Given — the one thing a constant binding cannot do
+        // Given. The one thing a constant binding cannot do
         let sut: [Statement] = [
             Statement(binding: .variable("verdict"), expression: .literal(.string("untouched"))),
             Statement(
@@ -67,7 +67,7 @@ struct VariableTests {
 
     @Test("a variable declared inside a block does not escape it")
     func declarationDoesNotEscape() {
-        // Given — the box is shared; which names exist is not
+        // Given. The box is shared; which names exist is not
         let sut: [Statement] = [
             Statement(
                 expression: .conditional(
@@ -87,7 +87,7 @@ struct VariableTests {
 
     @Test("a declaration inside a block shadows an outer variable instead of writing it")
     func declarationShadowsOuterVariable() async throws {
-        // Given — a declaration always introduces, so the inner name has a box
+        // Given. A declaration always introduces, so the inner name has a box
         // of its own
         let sut: [Statement] = [
             Statement(binding: .variable("verdict"), expression: .literal(.string("outer"))),
@@ -128,7 +128,7 @@ struct VariableTests {
 
     @Test("an assignment sees the value it is replacing")
     func assignmentReadsItsOwnPriorValue() async throws {
-        // Given — the expression is settled before the write lands, which is
+        // Given. The expression is settled before the write lands, which is
         // what makes an accumulator work at all
         let sut: [Statement] = [
             Statement(binding: .variable("text"), expression: .literal(.string("a"))),
@@ -168,7 +168,7 @@ struct VariableTests {
 
     @Test("a name reintroduced as a constant stops being writable")
     func constantReintroductionRevokesWriting() {
-        // Given — shadowing runs both ways: an inner constant of the same name
+        // Given. Shadowing runs both ways: an inner constant of the same name
         // is a different, fixed name, and the outer box is not reachable
         // through it
         let sut: [Statement] = [
@@ -189,7 +189,7 @@ struct VariableTests {
 
     @Test("a closure may write a variable it captured")
     func closureWritesWhatItCaptured() {
-        // Given — a variable's box is one thing under one name everywhere the
+        // Given. A variable's box is one thing under one name everywhere the
         // name is visible, and the closure's body is one of those places
         let sut: [Statement] = [
             Statement(binding: .variable("tally"), expression: .literal(.int(0))),
@@ -211,10 +211,10 @@ struct VariableTests {
 
     @Test("a closure owns the variables it declares")
     func closureOwnsItsVariables() async throws {
-        // Given — what is refused is reaching outward, not variables
+        // Given. What is refused is reaching outward, not variables
         let sut = [
-            Statement(binding: .constant("both"), expression: .dispatch(
-                    Dispatch(
+            Statement(binding: .constant("both"), expression: .call(
+                    Call(
                         receiver: .record([
                             "left": .closure(
                                 Procedure(
@@ -235,8 +235,8 @@ struct VariableTests {
             )
         ]
 
-        // When — `all` answers `any` by its declaration, so the shape the
-        // author expects is named before a dot reads it
+        // When. `all` answers `any` by its declaration, so the type the author
+        // expects is named before a dot reads it
         let answer = try await answer(
             of: sut + [
                 Statement(binding: .constant("read"), expression: .cast(
@@ -255,7 +255,7 @@ struct VariableTests {
 
     @Test("what crosses loop rounds is the variable and nothing else")
     func loopCarriesOnlyVariables() async throws {
-        // Given — the round writes a variable declared outside it and binds a
+        // Given. The round writes a variable declared outside it and binds a
         // constant that must not survive the round
         let sut: [Statement] = [
             Statement(binding: .variable("latest"), expression: .literal(.int(0))),
@@ -273,7 +273,7 @@ struct VariableTests {
         // When
         let answer = try await answer(of: sut, result: reference("latest"))
 
-        // Then — rounds 0/1/2 ran, and only `latest` came out
+        // Then. Rounds 0/1/2 ran, and only `latest` came out
         #expect(answer == .int(2))
         #expect(!validates(body: sut + [Statement(binding: .constant("read"), expression: reference("transient"))]))
     }

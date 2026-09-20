@@ -9,19 +9,19 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What the link writes into a body: which slot a name gets, which cells a
+// What the build writes into a body: which slot a name gets, which cells a
 // closure takes, when a loop puts a round back, and where an argument stands.
-@Suite("The link lowers a body into slots and rows")
+@Suite("The build lowers a body into slots and rows")
 struct LoweringTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Initializer
     // MARK: - Test
     @Test("a name declared again inside a block gets its own slot")
     func aShadowingDeclarationHasItsOwnSlot() async throws {
-        // Given — the inner `x` is a different name, so the outer one reads
-        // as it was after the block
+        // Given. The inner `x` is a different name, so the outer one reads as
+        // it was after the block
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -40,7 +40,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard case let .body(_, layout) = image.entry.implementation else {
@@ -55,7 +55,7 @@ struct LoweringTests {
 
     @Test("a closure's own declaration shadows what it captured")
     func aClosureReadsTheNearestName() async throws {
-        // Given — the closure declares `x` over the body's `x`; the nearest
+        // Given. The closure declares `x` over the body's `x`; the nearest
         // declaration is the one read, and the body's stays what it was. A
         // module's name may not be declared over, so the order between a
         // captured name and a module variable is never observed.
@@ -70,7 +70,7 @@ struct LoweringTests {
                                 result: .reference([.key("x")])
                             )
                         )),
-                        Statement(binding: .constant("got"), expression: .invoke(.reference([.key("held")]), arguments: [:]))
+                        Statement(binding: .constant("got"), expression: .apply(.reference([.key("held")]), arguments: [:]))
                     ],
                     result: .array([.reference([.key("x")]), .reference([.key("got")])])
                 )
@@ -78,15 +78,15 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .array([.int(1), .int(2)]))
     }
 
     @Test("a closure takes only the cells it reads")
-    func aClosureCapturesWhatItReads() throws {
-        // Given — three names in scope, one read
+    func aClosureCapturesWhatItReads() async throws {
+        // Given. Three names in scope, one read
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -98,19 +98,19 @@ struct LoweringTests {
                             Procedure(body: [], result: .reference([.key("b")]))
                         ))
                     ],
-                    result: .invoke(.reference([.key("held")]), arguments: [:])
+                    result: .apply(.reference([.key("held")]), arguments: [:])
                 )
             ]
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
             case let .body(body, _) = image.entry.implementation,
             case let .closure(row, captures) = body.instructions[3].code,
-            case let .body(_, inner) = row.implementation
+            case let .body(_, inner) = image.linked[row].implementation
         else {
             Issue.record("the closure was not lowered")
 
@@ -123,12 +123,12 @@ struct LoweringTests {
     }
 
     @Test("a loop keeps its round's slots only where its result reads them")
-    func aLoopKeepsOnlyWhereTheResultCouldTell() throws {
-        // Given — one loop whose result reads a body name; another whose
-        // result reads nothing the body bound
+    func aLoopKeepsOnlyWhereTheResultCouldTell() async throws {
+        // Given. One loop whose result reads a body name; another whose result
+        // reads nothing the body bound
         func loop(_ body: [Statement], result: Warp.Expression?) -> Warp.Expression {
             .loop(
-                while: .dispatch(Dispatch(
+                while: .call(Call(
                     receiver: .reference([.key("round"), .key("index")]),
                     selector: "std.math.lessThan",
                     arguments: ["value": .literal(.int(1))]
@@ -162,7 +162,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
@@ -181,12 +181,12 @@ struct LoweringTests {
 
     @Test("arguments stand at their parameter's position, and the receiver stands apart")
     func argumentsStandByPosition() async throws {
-        // Given — a call writing its arguments in the other order
+        // Given. A call writing its arguments in the other order
         let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.int(1)),
                         selector: "pair",
                         arguments: ["second": .literal(.int(3)), "first": .literal(.int(2))]
@@ -213,28 +213,28 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
             case let .body(body, _) = image.entry.implementation,
-            case let .send(send)? = body.result
+            case let .call(call)? = body.result
         else {
-            Issue.record("the send was not lowered")
+            Issue.record("the call was not lowered")
 
             return
         }
 
-        #expect(image.linked[send.procedure].slots.map(\.name) == ["first", "of", "second"])
-        #expect(send.receiver != nil)
-        #expect(send.arguments.map { argument in argument == nil } == [false, true, false])
+        #expect(image.linked[call.procedure].slots.map(\.name) == ["first", "of", "second"])
+        #expect(call.receiver != nil)
+        #expect(call.arguments.map { argument in argument == nil } == [false, true, false])
         #expect(try await Executor().run(image) == .array([.int(1), .int(2), .int(3)]))
     }
 
     @Test("a body reading a module variable does not answer without running")
-    func aBodyReadingAVariableIsNotPure() throws {
-        // Given — the variable's value is the run's, so folding the word at
-        // the link would fix a value nothing at the run could change
+    func aBodyReadingAVariableIsNotConst() async throws {
+        // Given. The variable's value is the run's, so folding the procedure at the
+        // link would fix a value nothing at the run could change
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [
@@ -248,33 +248,28 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
-        #expect(image["app.tally"]?.purity != .pure)
+        #expect(image["app.tally"]?.constness != .const)
     }
 
-    @Test("a variable handed in place to a pure word is settled like any argument")
-    func aHandedVariableIsSettledForAPureWord() async throws {
-        // Given — a record without a name, handed to a slot declaring one; the
-        // word answers it named, as it would had the record been passed by value
-        let module = try Module(
-            types: ["Tag": .record(["a": .int])],
+    @Test("a name is what it names, wherever a variable is handed in place")
+    func aHandedVariableReadsThroughNames() async throws {
+        // Given. `Count` is a name for `int`, and a name for a scalar is what
+        // it names: there is no representation to disagree about, so a variable
+        // holding an int is what an `inout Count` slot declares.
+        let sut = try Module(
+            types: ["Count": .int],
             procedures: [
                 "entry": Procedure(
-                    body: [
-                        Statement(binding: .variable("held"), expression: .record(["a": .literal(.int(1))]))
-                    ],
-                    result: .dispatch(Dispatch(
-                        receiver: .dispatch(Dispatch(selector: "app.tag", arguments: ["of": .reference([.key("held")])])),
-                        selector: "std.logic.equal",
-                        arguments: ["value": .literal(.record(Record(name: "Tag", ["a": .int(1)])))]
-                    ))
+                    body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
+                    result: .call(Call(selector: "app.bump", arguments: ["of": .reference([.key("n")])]))
                 ),
-                "app.tag": Procedure(
+                "app.bump": Procedure(
                     signature: Signature(
-                        parameters: ["of": Parameter(type: .inout(.named("Tag")))],
-                        returns: .named("Tag")
+                        parameters: ["of": Parameter(type: .inout(.named("Count")))],
+                        returns: .named("Count")
                     ),
                     body: [],
                     result: .reference([.key("of")])
@@ -282,68 +277,154 @@ struct LoweringTests {
             ]
         )
 
-        // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        // When / Then
+        let image = try await builder.build([sut] + Module.standard, entry: "entry")
 
-        // Then
+        #expect(try await Executor().run(image) == .int(1))
+    }
+
+    @Test("a name is what it names at whatever depth a type holds one")
+    func aHandedVariableReadsNamesAtDepth() async throws {
+        // Given. The alias sits inside a procedure's parameter rather than at
+        // the top of the slot. A name is what it names wherever it is written,
+        // so the walk reaches it there too.
+        let sut = try Module(
+            types: ["Count": .int],
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(binding: .variable("body"), expression: .closure(
+                            Procedure(
+                                signature: Signature(parameters: ["x": Parameter(type: .int)]),
+                                body: [],
+                                result: .literal(.null)
+                            )
+                        ))
+                    ],
+                    result: .call(Call(selector: "app.take", arguments: ["of": .reference([.key("body")])]))
+                ),
+                "app.take": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "of": Parameter(
+                                type: .inout(.procedure(
+                                    Signature(parameters: ["x": Parameter(type: .named("Count"))]),
+                                    .const,
+                                    .isolated
+                                ))
+                            )
+                        ],
+                        returns: .null
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect(throws: Never.self) {
+            try await builder.build([sut] + Module.standard, entry: "entry")
+        }
+    }
+
+    @Test("what is handed in place is the type the slot declares, and not one that fits it")
+    func aHandedVariableIsTheSlotsOwnType() async throws {
+        // Given. A variable holding an unnamed record, handed to a slot
+        // declaring `Tag`. By value the boundary would settle it and the procedure
+        // would answer it named; in place there is nothing to settle into. The
+        // procedure writes through the caller's box, so what the caller reads back
+        // is whatever the procedure left there.
+        func module(holding held: Warp.Expression) async throws -> Module {
+            try Module(
+                types: ["Tag": .record(["a": .int])],
+                procedures: [
+                    "entry": Procedure(
+                        body: [Statement(binding: .variable("held"), expression: held)],
+                        result: .call(Call(
+                            receiver: .call(Call(
+                                selector: "app.tag",
+                                arguments: ["of": .reference([.key("held")])]
+                            )),
+                            selector: "std.logic.equal",
+                            arguments: ["value": .literal(.record(Record(name: "Tag", ["a": .int(1)])))]
+                        ))
+                    ),
+                    "app.tag": Procedure(
+                        signature: Signature(
+                            parameters: ["of": Parameter(type: .inout(.named("Tag")))],
+                            returns: .named("Tag")
+                        ),
+                        body: [],
+                        result: .reference([.key("of")])
+                    )
+                ]
+            )
+        }
+
+        // When / Then. The unnamed record is refused, and the same record held
+        // as a `Tag` stands
+        await #expect(throws: BuildError.self) {
+            try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
+        }
+
+        let image = try await builder.build(
+            [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard,
+            entry: "entry"
+        )
+
         #expect(try await Executor().run(image) == .bool(true))
     }
 
-    @Test("a word folding through a written word is refused whichever is declared first")
-    func aWordFoldingThroughAWordIsRefusedInAnyOrder() throws {
-        // Given — `app.zeta` reads a constant through `alpha`, a written word
-        // declared before it in name order; while the words settle every
-        // written body stands as its refusal, so the order is not the text's
+    @Test("a constant folding through a written procedure is refused whichever is declared first")
+    func aConstantFoldingThroughAProcedureIsRefusedInAnyOrder() async throws {
+        // Given. `J` settles by calling `app.alpha`, a written procedure; while the
+        // constants settle every written body stands as its refusal, so the
+        // order is not the text's
         let module = try Module(
-            constants: ["K": .literal(.int(1))],
+            constants: [
+                "K": .literal(.int(1)),
+                "J": .call(Call(receiver: reference("K"), selector: "app.alpha"))
+            ],
             procedures: [
                 "entry": Procedure(body: [], result: .literal(.null)),
                 "app.alpha": Procedure(
                     signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("of")])
-                ),
-                "app.zeta": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
-                    body: [],
-                    result: .reference([.key("K"), .key("alpha")])
                 )
             ]
         )
 
         // When / Then
-        #expect {
-            try linker.link([module] + Module.standard, entry: "entry")
+        await #expect {
+            try await builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
-            "\(error)".contains("runs after the link")
+            "\(error)".contains("a circle with no start")
         }
     }
 
     @Test("an effect sent to a variable in place reads it as its receiver")
     func anEffectReadsItsHandedReceiver() async throws {
-        // Given — the receiver is handed in place, so the effect holds it,
-        // and it reads as the receiver too, the way any receiver does
+        // Given. The receiver is handed in place, so the effect holds it, and
+        // it reads as the receiver too, the way any receiver does
         let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
                     ],
-                    result: .dispatch(Dispatch(receiver: .reference([.key("held")]), selector: "app.echo"))
+                    result: .call(Call(receiver: .reference([.key("held")]), selector: "app.echo"))
                 ),
                 "app.echo": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .inout(.int))],
-                        returns: .int
-                    ),
+                    signature: Signature(of: EchoEffect.self, receiver: .of, returns: .int),
                     implementation: .effect(EchoEffect())
                 )
             ]
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .int(5))
@@ -355,10 +436,18 @@ struct LoweringTests {
 
 // Answers what it was sent to.
 private struct EchoEffect: Effect {
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .inout(.int)) }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         invocation.receiver ?? .null
     }
 

@@ -17,7 +17,7 @@ struct IdentityTests {
     // MARK: - Test
     @Test("the digest is the published one, so two implementations answer alike")
     func theDigestIsTheStandardOne() {
-        // Given — the vectors FIPS 180-4 publishes, and the empty input, which
+        // Given. The vectors FIPS 180-4 publishes, and the empty input, which
         // is the one every implementation gets wrong differently. A digest
         // agreeing with this file and with nothing else would be an identity
         // only this runtime could work out.
@@ -48,12 +48,12 @@ struct IdentityTests {
 
     @Test("one document is one identity, whichever way it was written down")
     func oneDocumentIsOneIdentity() throws {
-        // Given — the same document, and a text writing of it read back. A
+        // Given. The same document, and a text writing of it read back. A
         // notation is not part of what a program is, so nothing about how it
         // arrived may reach the answer.
-        let document = Value.object([
+        let document = Value.dictionary([
             "warp": .int(1),
-            "procedures": .object(["entry": .object(["body": .array([])])])
+            "procedures": .dictionary(["entry": .dictionary(["body": .array([])])])
         ])
 
         let throughText = try TextEncoding.value(from: try TextEncoding.text(from: document))
@@ -67,14 +67,14 @@ struct IdentityTests {
     @Test("two documents that say different things are two identities")
     func differentDocumentsDiffer() throws {
         // Given: two documents that declare different things.
-        let first = Value.object([
+        let first = Value.dictionary([
             "warp": .int(1),
-            "procedures": .object(["charge": .object(["body": .array([])])])
+            "procedures": .dictionary(["charge": .dictionary(["body": .array([])])])
         ])
 
-        let second = Value.object([
+        let second = Value.dictionary([
             "warp": .int(1),
-            "procedures": .object(["refund": .object(["body": .array([])])])
+            "procedures": .dictionary(["refund": .dictionary(["body": .array([])])])
         ])
 
         // Then

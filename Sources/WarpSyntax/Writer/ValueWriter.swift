@@ -8,18 +8,18 @@
 import Foundation
 import Warp
 
-// Data written the way a document spells it — `ValueReader` the other way round,
+// Data written the way a document spells it. `ValueReader` the other way round,
 // and the reason both live here: `Value` is the language's data type and knows
-// nothing about being written down, so the mapping belongs in one place and this
-// is it.
+// nothing about being written down, so the mapping belongs in one place and
+// this is it.
 //
 // The pair round-trips as far as the carrier can carry: a Codable carrier's
-// number grammar is its own, so a whole-worth fraction may come back as the
-// int of the same worth — worth survives the trip, and the kind survives
-// where the carrier can say it. The warp encodings are where the kind is the
-// text's own fact at every value. A procedure has no spelling, so writing one
-// refuses rather than putting something in the text that reading it back
-// could not answer with.
+// number grammar is its own, so a whole-worth fraction may come back as the int
+// of the same worth. Worth survives the trip, and the kind survives where the
+// carrier can say it. The warp encodings are where the kind is the text's own
+// fact at every value. A procedure has no spelling, so writing one refuses
+// rather than putting something in the text that reading it back could not
+// answer with.
 public struct ValueWriter: Encodable {
     // MARK: - Property
     public let value: Value
@@ -49,39 +49,28 @@ public struct ValueWriter: Encodable {
         case let .string(string):
             try container.encode(string)
 
-        // A Codable carrier has no compact spelling for bytes, and
-        // `bytes = array<byte>` says what to write instead: the array they
-        // are. It reads back as that array rather than as bytes, which is the
-        // same thing this carrier does to `1.0` — a spelling is a fact about
-        // the value, and a carrier that cannot hold one loses it. Refusing
-        // here instead would close the only way out for a value that never
-        // spelled itself bytes: an `array<int>` slot hands on what it was
-        // given, and what it was given may have been written `x"6869"`.
-        //
-        // Both spellings go out through the one projection that owns the
-        // equation, so neither can be written a way the other is not.
-        case .bytes, .array:
-            guard let elements = value.elements else {
-                preconditionFailure("a value with a collection's spelling had no elements")
-            }
+        // A Codable carrier has no compact spelling for bytes, and `bytes =
+        // array<byte>` says what to write instead: the array they are. It reads
+        // back as that array rather than as bytes, which is the same thing this
+        // carrier does to `1.0`. A spelling is a fact about the value, and a
+        // carrier that cannot hold one loses it. Refusing here instead would
+        // close the only way out for a value that never spelled itself bytes:
+        // an `array<int>` slot hands on what it was given, and what it was
+        // given may have been written `x"6869"`.
+        case let .bytes(bytes):
+            try container.encode(bytes.map { byte in ValueWriter(.int(Int(byte))) })
 
+        case let .array(elements):
             try container.encode(elements.map(ValueWriter.init))
 
-        // A carrier keys its fields by Swift's equality, which folds spellings
-        // the record keeps apart. In normal form C one name is one spelling,
-        // so a name outside it is refused here the way the encodings refuse
-        // it.
+        // A carrier keys its fields by Swift's equality, which folds
+        // spellings a value keeps apart. What a value holds is a name, and one
+        // name is one spelling, so the fold has nothing to fold.
         case let .record(record):
-            for entry in record.entries where !Name.isNormal(entry.name) {
-                throw EncodingError.invalidValue(
-                    Value.string(entry.name),
-                    .init(codingPath: encoder.codingPath, debugDescription: "the field name is not in normal form C")
-                )
-            }
+            try container.encode(carried(record.asDictionary))
 
-            try container.encode(
-                Dictionary(uniqueKeysWithValues: record.entries.map { entry in (entry.name, ValueWriter(entry.value)) })
-            )
+        case let .dictionary(held):
+            try container.encode(carried(held))
 
         // A body is code, and a document spells code as a procedure rather than
         // as data. Writing a marker would make a document that cannot be read
@@ -98,4 +87,11 @@ public struct ValueWriter: Encodable {
     }
 
     // MARK: - Private
+    private func carried(_ held: Value.Dictionary) -> [String: ValueWriter] {
+        Dictionary(
+            uniqueKeysWithValues: held.entries.map { entry in
+                (entry.name.spelling, ValueWriter(entry.value))
+            }
+        )
+    }
 }

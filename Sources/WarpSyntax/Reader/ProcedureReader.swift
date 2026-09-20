@@ -35,27 +35,28 @@ public struct ProcedureReader: Decodable {
         // A procedure's body and result are the same pair a block writes, so
         // they are joined by the same assembler and under the same rule.
         let block = try Block.reading(
-            body: try container
-                .decodeIfPresent(BodyReader.self, forKey: .body)?
+            body: try decoder.descendingIfPresent(to: CodingKeys.body)?
+                .read(BodyReader.self)
                 .statements ?? [],
-            result: try container
-                .decodeIfPresent(ExpressionReader.self, forKey: .result)?
+            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
+                .read(ExpressionReader.self)
                 .expression,
             at: decoder.steps
         )
 
-        // A procedure has no name of its own — it is named by the key its module
+        // A procedure has no name of its own. It is named by the key its module
         // declares it under.
         self.procedure = Procedure(
             description: try container.decodeIfPresent(String.self, forKey: .description),
             // Absent `parameters:` means an empty signature, not an absent
             // contract. `parameters:`, `receiver:`, `returns:` and `bounds:`
-            // are one signature — what a call may pass, which of those it is
+            // are one signature. What a call may pass, which of those it is
             // sent to, what comes back, and what each type parameter admits.
             signature: try BoundsReader.apply(
                 try container.decodeIfPresent([String: String].self, forKey: .bounds),
                 to: Signature(
-                    receiver: try container.decodeIfPresent(String.self, forKey: .receiver),
+                    receiver: try container.decodeIfPresent(String.self, forKey: .receiver)
+                        .map { spelling in try Name.read(spelling, at: decoder.steps) },
                     parameters: try container
                         .decodeIfPresent(SignatureReader.self, forKey: .parameters)?
                         .signature.parameters ?? [:],
@@ -71,7 +72,7 @@ public struct ProcedureReader: Decodable {
             body: block.body,
             // One expression, because a procedure answers one value. Several
             // named answers are one record, which is a thing an author writes
-            // rather than a shape this reader assembles. A document that
+            // rather than a type this reader assembles. A document that
             // declares none answers with nothing, as a block does.
             result: block.result
         )

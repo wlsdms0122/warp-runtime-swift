@@ -45,35 +45,36 @@ struct TypeTests {
             try sut.settling(.array([.string("a"), .int(1)]), at: "names")
         }
 
-        // Then — the index is in the message, so the author knows which one
+        // Then. The index is in the message, so the author knows which one
         #expect(error?.message.contains("names[1]") == true)
     }
 
-    @Test("a record declares its fields and tolerates more")
+    @Test("a record settles to the fields declared, and a value carrying more loses them")
     func recordDeclaresFields() throws {
-        // Given — what arrives is data from outside, and a payload gains fields
+        // Given. What arrives is data from outside, and a payload gains fields
         let sut = TypeExpression.record(["id": .string, "done": .bool])
 
         // When
         let settled = try sut.settling(
-            .object(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
+            .dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
             at: "task"
         )
 
         // Then
-        #expect(settled["extra"] == .int(1))
+        #expect(settled["extra"] == nil)
+        #expect(settled["id"] == .string("a"))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.object(["id": .string("a")]), at: "task")
+            try sut.settling(.dictionary(["id": .string("a")]), at: "task")
         }
     }
 
-    @Test("a name is identifiers joined by dots, and never a scalar's word", arguments: [
+    @Test("a name is identifiers joined by dots, and never a scalar's procedure", arguments: [
         ("Account", true), ("bank.Account", true), ("_x1", true),
         ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
     ])
     func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        #expect(Name.isName(name) == holds)
+        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
     }
 
     @Test("an alias of a declared record names the record on either side")
@@ -83,11 +84,11 @@ struct TypeTests {
         let sut = TypeExpression.named("Someone")
 
         // When
-        let bare = try sut.settling(.object(["name": .string("a")]), at: "who", in: types)
+        let bare = try sut.settling(.dictionary(["name": .string("a")]), at: "who", in: types)
         let aliased = try sut.settling(.record(Record(name: "Someone", ["name": .string("a")])), at: "who", in: types)
         let named = try sut.settling(.record(Record(name: "Person", ["name": .string("a")])), at: "who", in: types)
 
-        // Then — every one settles under the record's own name
+        // Then. Every one settles under the record's own name
         #expect(bare == .record(Record(name: "Person", ["name": .string("a")])))
         #expect(aliased == bare)
         #expect(named == bare)
@@ -101,7 +102,7 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .array([.object(["id": .string("a")])]),
+            .array([.dictionary(["id": .string("a")])]),
             at: "tasks",
             in: types
         )
@@ -110,14 +111,14 @@ struct TypeTests {
         #expect(settled == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.array([.object(["id": .int(1)])]), at: "tasks", in: types)
+            try sut.settling(.array([.dictionary(["id": .int(1)])]), at: "tasks", in: types)
         }
     }
 
     @Test("a type may name itself")
     func namedTypeMayRecur() throws {
-        // Given — kept rather than expanded at link, which is what makes a
-        // self-naming shape a shape instead of a regress
+        // Given. Kept rather than expanded at link, which is what makes a
+        // self-naming type a type and not a regress
         let types = TypeTable(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])]
         )
@@ -125,9 +126,9 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .object([
+            .dictionary([
                 "value": .int(1),
-                "children": .array([.object(["value": .int(2), "children": .array([])])])
+                "children": .array([.dictionary(["value": .int(2), "children": .array([])])])
             ]),
             at: "tree",
             in: types
@@ -137,8 +138,8 @@ struct TypeTests {
         #expect(settled["value"] == .int(1))
     }
 
-    @Test("the linker refuses a signature that names a shape nobody declared")
-    func unknownTypeIsALinkError() throws {
+    @Test("the builder refuses a signature that names a type nobody declared")
+    func unknownTypeIsABuildError() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -152,39 +153,40 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
-            try Linker().link([sut], entry: "entry")
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut], entry: "entry")
         }
     }
 
     @Test("a type reads back in the spelling it was declared with")
     func typesRenderAsWritten() {
         #expect(TypeExpression.array(.string).rendered == "array<string>")
-        #expect(TypeExpression.object(.named("Task")).rendered == "object<Task>")
+        #expect(TypeExpression.dictionary(.named("Task")).rendered == "dictionary<Task>")
         #expect(TypeExpression.array(.array(.int)).rendered == "array<array<int>>")
         #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: string, b: int }")
     }
 
     @Test("a call handed to a parameter it cannot fit is refused at link")
-    func mismatchedCallIsALinkError() {
-        // Given — nothing runs here. Both sides are declarations, and a
-        // declaration is text, so this is the half of checking the linker can do
+    func mismatchedCallIsABuildError() async {
+        // Given. Nothing runs here. Both sides are declarations, and a
+        // declaration is text, so this is the half of checking the builder can
+        // do
         let counts = Procedure(
             signature: Signature(returns: .int),
             body: [],
             result: .literal(.int(1))
         )
         let wants = Procedure(
-            signature: Signature(parameters: ["word": Parameter(type: .string)]),
+            signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
             body: []
         )
         let entry = Procedure(
             body: [
-                Statement(binding: .constant("said"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("said"), expression: .call(
+                        Call(
                             selector: "wants",
                             arguments: [
-                                "word": .dispatch(Dispatch(selector: "counts"))
+                                "procedure": .call(Call(selector: "counts"))
                             ]
                         )
                     )
@@ -193,8 +195,8 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
-            try Linker().link(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
@@ -202,23 +204,23 @@ struct TypeTests {
     }
 
     @Test("an undeclared answer is read off the body, and held to the same rule")
-    func undeclaredAnswerIsReadOffTheBody() throws {
-        // Given — `counts` declares nothing, and its body answers a whole
-        // number. The declaration stays as the author left it; what the link
-        // reads a call as is what the body hands back, so the same
-        // disagreement a declared answer earns is earned here.
+    func undeclaredAnswerIsReadOffTheBody() async throws {
+        // Given. `counts` declares nothing, and its body answers a whole
+        // number. The declaration stays as the author left it; what the build
+        // reads a call as is what the body hands back, so the same disagreement
+        // a declared answer earns is earned here.
         let counts = Procedure(body: [], result: .literal(.int(1)))
         let wants = Procedure(
-            signature: Signature(parameters: ["word": Parameter(type: .string)]),
+            signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
             body: []
         )
         let entry = Procedure(
             body: [
-                Statement(binding: .constant("said"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("said"), expression: .call(
+                        Call(
                             selector: "wants",
                             arguments: [
-                                "word": .dispatch(Dispatch(selector: "counts"))
+                                "procedure": .call(Call(selector: "counts"))
                             ]
                         )
                     )
@@ -227,44 +229,44 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect {
-            try Linker().link(
+        await #expect {
+            try await Builder().build(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
         } throws: { error in
-            error is LinkError && "\(error)".contains("holds int where string is declared")
+            error is BuildError && "\(error)".contains("holds int where string is declared")
         }
 
-        // And a body whose answer nothing can be read from says nothing —
-        // an answer worked out from its own is not one the text states.
-        let circling = Procedure(
+        // And a body whose answer nothing can be read from says nothing. An
+        // answer worked out from its own is not one the text states.
+        let cycling = Procedure(
             body: [],
-            result: .dispatch(Dispatch(selector: "counts"))
+            result: .call(Call(selector: "counts"))
         )
 
-        _ = try Linker().link(
-            [try Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
+        _ = try await Builder().build(
+            [try Module(procedures: ["entry": entry, "wants": wants, "counts": cycling])],
             entry: "entry"
         )
     }
 
-    @Test("an object slot takes a record whose fields all fit it")
-    func objectTakesAKnownRecord() {
-        // Given — a record is an object whose fields happen to be known, and
+    @Test("a dictionary slot takes a record whose fields all fit it")
+    func aDictionaryTakesAKnownRecord() {
+        // Given. A record is a dictionary whose fields happen to be known, and
         // knowing them is not a reason to refuse it
-        let sut = TypeExpression.object(.any)
+        let sut = TypeExpression.dictionary(.any)
 
         // When / Then
         #expect(sut.accepts(.record(["axes": .string, "depth": .int])))
-        #expect(TypeExpression.object(.string).accepts(.record(["axes": .string])))
-        #expect(!TypeExpression.object(.int).accepts(.record(["axes": .string])))
+        #expect(TypeExpression.dictionary(.string).accepts(.record(["axes": .string])))
+        #expect(!TypeExpression.dictionary(.int).accepts(.record(["axes": .string])))
     }
 
-    @Test("a record slot does not take a bare object")
-    func recordDoesNotTakeAnObject() {
-        // Given — a record names fields it requires; an object promises none
-        #expect(!TypeExpression.record(["axes": .string]).accepts(.object(.string)))
+    @Test("a record slot does not take a bare dictionary")
+    func aRecordDoesNotTakeADictionary() {
+        // Given. A record names fields it requires; a dictionary promises none
+        #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
     }
 
 }

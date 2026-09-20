@@ -26,7 +26,7 @@ struct ModuleNotationTests {
             "description": "a document is a module",
             "procedures": [
                 "verify": [
-                    "parameters": ["path": "string"],
+                    "parameters": ["path": ["type": "string"]],
                     "body": [["let": "done", "value": ["ref": "path"]]]
                 ],
                 "report": ["body": [["let": "done", "value": "reported"]]]
@@ -39,9 +39,8 @@ struct ModuleNotationTests {
 
     @Test("a top-level body is rejected, because a document is not a procedure")
     func topLevelBodyRejected() {
-        // Given — this was the whole shape of a document once, and it made
-        // every document an entry point with no way to write one that only
-        // declares
+        // Given. This was the whole of a document once, and it made every
+        // document an entry point with no way to write one that only declares
         let fixture: Value = ["body": [["let": "done", "value": "end"]]]
 
         // When / Then
@@ -52,7 +51,7 @@ struct ModuleNotationTests {
 
     @Test("a module that declares nothing is rejected")
     func emptyModuleRejected() {
-        // Given — it could never be linked into anything
+        // Given. It could never be linked into anything
         let fixture: Value = ["procedures": [:]]
 
         // When / Then
@@ -80,7 +79,7 @@ struct ModuleNotationTests {
 
     @Test("a procedure carries no name of its own")
     func procedureIsNamedByItsKey() {
-        // Given — the key is the name, so writing it twice invites the two to
+        // Given. The key is the name, so writing it twice invites the two to
         // disagree
         let fixture: Value = [
             "procedures": [
@@ -112,7 +111,7 @@ struct ModuleNotationTests {
 
     @Test("every procedure in a module is validated, not only the one that runs")
     func everyProcedureIsValidated() {
-        // Given — a document is checked against itself, and which one will be
+        // Given. A document is checked against itself, and which one will be
         // the entry is not known here
         let fixture: Value = [
             "procedures": [

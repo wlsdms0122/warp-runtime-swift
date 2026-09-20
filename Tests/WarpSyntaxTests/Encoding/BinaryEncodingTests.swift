@@ -19,15 +19,15 @@ struct BinaryEncodingTests {
     // MARK: - Test
     @Test("every kind of value survives the round trip")
     func everyKindComesBack() throws {
-        // Given — one of everything a document can hold, nested enough to make
+        // Given. One of everything a document can hold, nested enough to make
         // the walk mean something
-        let document = Value.object([
+        let document = Value.dictionary([
             "null": .null,
             "flags": .array([.bool(true), .bool(false)]),
             "counts": .array([.int(0), .int(-1), .int(Int.max), .int(Int.min)]),
             "ratio": .double(3.5),
             "name": .string("héllo, 世界"),
-            "empty": .object([:]),
+            "empty": .dictionary([:]),
             "nothing": .array([])
         ])
 
@@ -40,32 +40,34 @@ struct BinaryEncodingTests {
 
     @Test("the same document is the same bytes, whatever order it was built in")
     func equalDocumentsAreEqualBytes() throws {
-        // Given — two tables that hold the same fields, written into the
+        // Given. Two tables that hold the same fields, written into the
         // dictionary in opposite orders
-        var forward: [String: Value] = [:]
-        var backward: [String: Value] = [:]
+        var forward: [Name: Value] = [:]
+        var backward: [Name: Value] = [:]
 
-        for (index, key) in ["a", "b", "c", "d", "e"].enumerated() {
+        let keys: [Name] = ["a", "b", "c", "d", "e"]
+
+        for (index, key) in keys.enumerated() {
             forward[key] = .int(index)
         }
 
-        for (index, key) in ["a", "b", "c", "d", "e"].enumerated().reversed() {
+        for (index, key) in keys.enumerated().reversed() {
             backward[key] = .int(index)
         }
 
         // Then
         #expect(
-            try BinaryEncoding.data(from: .object(forward))
-                == BinaryEncoding.data(from: .object(backward))
+            try BinaryEncoding.data(from: .dictionary(forward))
+                == BinaryEncoding.data(from: .dictionary(backward))
         )
     }
 
     @Test("the bytes are the bytes the format says")
     func theGoldenBytes() throws {
-        // Given — a document small enough to lay out by hand. If this test
+        // Given. A document small enough to lay out by hand. If this test
         // moves, the format moved, and the format version had better move with
-        // it — a round-trip test alone would happily follow the code anywhere.
-        let document = Value.object([
+        // it. A round-trip test alone would happily follow the code anywhere.
+        let document = Value.dictionary([
             "a": .int(1),
             "b": .array([.bool(true), .null]),
             "c": .string("hi"),
@@ -92,7 +94,7 @@ struct BinaryEncodingTests {
 
     @Test("a whole number and a fraction are different bytes")
     func wholeAndFractionDiffer() throws {
-        // Given — the failure JSON invites: `1` and `1.0` as the same token
+        // Given. The failure JSON invites: `1` and `1.0` as the same token
         let whole = try BinaryEncoding.data(from: .int(1))
         let fraction = try BinaryEncoding.data(from: .double(1))
 
@@ -104,7 +106,7 @@ struct BinaryEncodingTests {
 
     @Test("bytes that do not begin as a document are refused")
     func aForeignHeaderIsRefused() throws {
-        // Given — JSON bytes, which is what will actually be handed to this
+        // Given. JSON bytes, which is what will actually be handed to this
         // reader by mistake
         for bytes in [Data("{}".utf8), Data(), Data([0x57, 0x41])] {
             #expect {
@@ -117,7 +119,7 @@ struct BinaryEncodingTests {
 
     @Test("a document laid out by a later format is refused, not guessed at")
     func aLaterFormatIsRefused() {
-        // Given — the header's version exists for exactly this reader
+        // Given. The header's version exists for exactly this reader
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x02, 0x00])
 
         #expect {
@@ -134,7 +136,7 @@ struct BinaryEncodingTests {
 
     @Test("bytes after the document are refused")
     func trailingBytesAreRefused() {
-        // Given — a null, and then a byte nobody asked for. Reading what fits
+        // Given. A null, and then a byte nobody asked for. Reading what fits
         // and ignoring the rest is how two readers run two different programs.
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x00, 0x00])
 
@@ -158,8 +160,8 @@ struct BinaryEncodingTests {
 
     @Test("a length that claims more than the document holds is refused")
     func aLyingLengthIsRefused() {
-        // Given — text claiming four gigabytes, in a document of six bytes.
-        // The refusal has to come before anything is set aside for the claim.
+        // Given. Text claiming four gigabytes, in a document of six bytes. The
+        // refusal has to come before anything is set aside for the claim.
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x05, 0xff, 0xff, 0xff, 0xff, 0x0f])
 
         #expect {
@@ -171,9 +173,9 @@ struct BinaryEncodingTests {
 
     @Test("nested claims cannot sum past the document")
     func nestedClaimsShareOneBudget() {
-        // Given — fifty records, each opened with four bytes and each claiming
-        // a hundred fields. Each claim alone fits the bytes that remain, which
-        // is how a check local to one claim approved all fifty and set aside
+        // Given. Fifty records, each opened with four bytes and each claiming a
+        // hundred fields. Each claim alone fits the bytes that remain, which is
+        // how a check local to one claim approved all fifty and set aside
         // memory for five thousand fields of a two-hundred-byte document.
         var bytes: [UInt8] = [0x57, 0x41, 0x52, 0x50, 0x01]
 
@@ -192,7 +194,7 @@ struct BinaryEncodingTests {
 
     @Test("a record with its keys out of order is refused")
     func aShuffledRecordIsRefused() {
-        // Given — "b" before "a": bytes the writer would never produce, so
+        // Given. "b" before "a": bytes the writer would never produce, so
         // reading them would mean two spellings of one document
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
@@ -210,7 +212,7 @@ struct BinaryEncodingTests {
 
     @Test("a record that names a field twice is refused")
     func aDuplicateKeyIsRefused() {
-        // Given — the same field twice with different values. Last-one-wins is
+        // Given. The same field twice with different values. Last-one-wins is
         // an answer, but it is the reader deciding what the writer meant.
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
@@ -228,10 +230,10 @@ struct BinaryEncodingTests {
 
     @Test("a field name outside normal form C is refused")
     func aDenormalKeyIsRefused() throws {
-        // Given — é as e-plus-mark: valid UTF-8, ascending order, and a second
+        // Given. É as e-plus-mark: valid UTF-8, ascending order, and a second
         // byte spelling for a name whose NFC form is one character. Accepting
         // it would let one name sort to two places and a record hold a field
-        // twice, losing one without a word.
+        // twice, losing one without a procedure.
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
             0x07, 0x01,
@@ -251,12 +253,12 @@ struct BinaryEncodingTests {
             0x02, 0xc3, 0xa9, 0x00          // "é" (NFC): null
         ])
 
-        #expect(try BinaryEncoding.value(from: normal) == .object(["é": .null]))
+        #expect(try BinaryEncoding.value(from: normal) == .dictionary(["é": .null]))
     }
 
     @Test("bytes that end inside bytes are refused")
     func truncatedBytesAreRefused() {
-        // Given — bytes claiming three and carrying one
+        // Given. Bytes claiming three and carrying one
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x08, 0x03, 0x6a])
 
         #expect {
@@ -266,19 +268,21 @@ struct BinaryEncodingTests {
         }
     }
 
-    @Test("a field name outside normal form C is refused on the way out too")
+    @Test("a field name outside normal form C never reaches the way out")
     func aDenormalKeyIsRefusedWhenWriting() {
-        #expect {
-            try BinaryEncoding.data(from: .object(["e\u{301}": .int(1)]))
-        } throws: { error in
-            "\(error)".contains("normal form")
+        // A record's keys are names, so there is no value carrying one for a
+        // writing to refuse: the refusal is at the door a name comes through.
+        let decomposed = "e\u{301}"
+
+        #expect(throws: NameRefused.self) {
+            try Name(decomposed)
         }
     }
 
     @Test("a number written longer than it is is refused")
     func aPaddedNumberIsRefused() {
-        // Given — zero written in two bytes. One value, one spelling; the
-        // second spelling is where byte equality and document equality part.
+        // Given. Zero written in two bytes. One value, one spelling; the second
+        // spelling is where byte equality and document equality part.
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x03, 0x80, 0x00])
 
         #expect {
@@ -290,7 +294,7 @@ struct BinaryEncodingTests {
 
     @Test("a number that does not fit in 64 bits is refused")
     func anOverflowingNumberIsRefused() {
-        // Given — eleven continuation bytes of all-ones
+        // Given. Eleven continuation bytes of all-ones
         let bytes = Data(
             [0x57, 0x41, 0x52, 0x50, 0x01, 0x03] + Array(repeating: UInt8(0xff), count: 11)
         )
@@ -304,10 +308,10 @@ struct BinaryEncodingTests {
 
     @Test("bytes that end in the middle of a value are refused")
     func truncationIsRefused() throws {
-        // Given — a healthy document cut at every possible place. Whatever byte
+        // Given. A healthy document cut at every possible place. Whatever byte
         // it loses, the answer is a refusal and never a smaller document.
         let bytes = try BinaryEncoding.data(
-            from: .object(["a": .array([.int(300), .string("hi"), .double(1.5)])])
+            from: .dictionary(["a": .array([.int(300), .string("hi"), .double(1.5)])])
         )
 
         for end in 5..<bytes.count {
@@ -319,7 +323,7 @@ struct BinaryEncodingTests {
 
     @Test("a document nested past following is an attack, not a program")
     func bottomlessNestingIsRefused() {
-        // Given — six hundred arrays each holding the next. No writer recursing
+        // Given. Six hundred arrays each holding the next. No writer recursing
         // over a real value produces this; a generator stamping two bytes does.
         let bytes = Data(
             [0x57, 0x41, 0x52, 0x50, 0x01]
@@ -336,7 +340,7 @@ struct BinaryEncodingTests {
 
     @Test("text that is not UTF-8 is refused")
     func foreignTextIsRefused() {
-        // Given — a lone continuation byte where text was claimed
+        // Given. A lone continuation byte where text was claimed
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x05, 0x01, 0x80])
 
         #expect {
@@ -348,7 +352,7 @@ struct BinaryEncodingTests {
 
     @Test("what a document cannot carry is refused on the way out")
     func theUnwritableIsRefusedWhenWriting() {
-        // Given — the value model's edges, not this encoding's: these bytes
+        // Given. The value model's edges, not this encoding's: these bytes
         // could be written, and the refusal is that no encoding may
         for value in [Value.double(.infinity), .double(.nan)] {
             #expect(throws: (any Error).self) {
@@ -366,7 +370,7 @@ struct BinaryEncodingTests {
 
     @Test("a fraction that cannot arrive is refused on the way in")
     func theUncarriableIsRefusedWhenReading() {
-        // Given — infinity's bit pattern, stamped by hand
+        // Given. Infinity's bit pattern, stamped by hand
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
             0x04, 0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00

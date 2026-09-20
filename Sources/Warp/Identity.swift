@@ -24,40 +24,29 @@ import Foundation
 // impossible to write down wrongly. Two callers holding the same document work
 // out the same answer without having agreed on anything but the language.
 //
-// Deriving it is `WarpSyntax`'s — the canonical bytes are the one form a
+// Deriving it is `WarpSyntax`'s. The canonical bytes are the one form a
 // document already has exactly one of, and reusing them is how a second
 // implementation gets this right by getting the wire right. This type is here
 // so that a place can carry one without the language learning how bytes are
 // written.
-public struct Identity: Sendable, Equatable, Hashable {
+public struct Identity: ContentAddress {
     // MARK: - Property
     public let bytes: [UInt8]
 
-    // How the identity reads where a person sees one: the first few bytes, the
-    // way every content-addressed thing is quoted in prose. Enough to tell two
-    // documents apart by eye and never enough to be mistaken for the whole.
-    public var short: String {
-        String(rendered.prefix(12))
-    }
-
-    public var rendered: String {
-        bytes.map { byte in String(format: "%02x", byte) }.joined()
-    }
-
     // MARK: - Initializer
-    // Not public. What makes an identity worth having is that it is derived and
-    // never declared, and a public door taking any bytes at all is a way to
-    // declare one — a caller could assemble a place addressing a document it
-    // never held. `Identity.of` is the only way in from outside, and it takes a
-    // document.
-    package init(_ bytes: [UInt8]) {
+    // What makes an identity worth having is that it is derived and never
+    // declared. This door cannot say so: what derives one reads a document as
+    // bytes, and reading bytes is another package's, so the door it needs is
+    // open to every caller.
+    //
+    // What keeps the rule is that the one place an identity arrives already
+    // written down is the reading of an object, and that reading is handed
+    // the identity the object was kept under and refuses any other. A
+    // number written in reaches no build.
+    public init(_ bytes: [UInt8]) {
         self.bytes = bytes
     }
 
     // MARK: - Public
     // MARK: - Private
-}
-
-extension Identity: CustomStringConvertible {
-    public var description: String { short }
 }

@@ -9,91 +9,120 @@ import Foundation
 import Testing
 @testable import Warp
 
-@Suite("A record holds its fields in name order")
+@Suite("A record stands on the layout it was made with")
 struct RecordTests {
-    @Test("entries stand in the byte order of their names whichever way they were given")
-    func entriesAreOrderedByBytes() {
+    // MARK: - Test
+    @Test("a layout orders its fields by their names' bytes whichever way they were given")
+    func aLayoutIsOrderedByBytes() throws {
         // Given
-        let byDictionary = Record(name: nil, ["b": .int(2), "a": .int(1), "c": .int(3)])
-        let byEntries = Record(name: nil, entries: [(name: "c", value: .int(3)), (name: "a", value: .int(1)), (name: "b", value: .int(2))])
+        let sut = try Layout(fields: ["b", "a", "c"])
 
         // When / Then
-        #expect(byDictionary.names == ["a", "b", "c"])
-        #expect(byEntries.names == ["a", "b", "c"])
-        #expect(byDictionary == byEntries)
-        #expect(byDictionary.values == [.int(1), .int(2), .int(3)])
+        #expect(sut.fields == ["a", "b", "c"])
+        #expect(sut.position(of: "b") == 1)
+        #expect(sut.position(of: "z") == nil)
     }
 
-    @Test("a field is found by its name, and a name not held answers nil")
-    func aFieldIsFoundByName() {
+    @Test("a layout naming one field twice is refused rather than fatal")
+    func aRepeatedFieldIsRefused() {
+        #expect(throws: ValueRefused.self) { try Layout(fields: ["a", "b", "a"]) }
+    }
+
+    @Test("a record built from fields holds them at their layout's places")
+    func fieldsStandWhereTheLayoutPutsThem() {
         // Given
-        let names = (0 ..< 40).map { index in "field\(index)" }
-        let sut = Record(name: nil, entries: names.reversed().map { name in (name: name, value: .string(name)) })
+        let sut = Record(name: nil, ["b": .int(2), "a": .int(1), "c": .int(3)])
 
         // When / Then
-        for name in names {
-            #expect(sut[name] == .string(name))
-        }
-        #expect(sut["field40"] == nil)
-        #expect(sut[""] == nil)
-        #expect(Record(name: nil, [:])["a"] == nil)
+        #expect(sut.names == ["a", "b", "c"])
+        #expect(sut.values == [.int(1), .int(2), .int(3)])
+        #expect(sut["b"] == .int(2))
+        #expect(sut["z"] == nil)
     }
 
-    @Test("later entries under one name win over earlier ones")
-    func laterEntriesWin() {
+    @Test("a layout handed the wrong number of values is refused")
+    func aLayoutIsFilledExactly() throws {
         // Given
-        let sut = Record(name: nil, entries: [(name: "a", value: .int(1)), (name: "b", value: .int(2)), (name: "a", value: .int(3))])
+        let layout = try Layout(fields: ["a", "b"])
 
         // When / Then
-        #expect(sut.count == 2)
-        #expect(sut["a"] == .int(3))
+        #expect(try Record(layout: layout, checking: [.int(1), .int(2)]).values == [.int(1), .int(2)])
+        #expect(throws: ValueRefused.self) { try Record(layout: layout, checking: [.int(1)]) }
+        #expect(throws: ValueRefused.self) { try Record(layout: layout, checking: [.int(1), .int(2), .int(3)]) }
     }
 
-    @Test("writing a field replaces a held one in place and puts a new one where it sorts")
-    func writingKeepsTheOrder() {
+    @Test("a field the layout does not name is refused rather than made")
+    func aFieldOutsideTheLayoutIsRefused() throws {
         // Given
         let sut = Record(name: "app.Point", ["a": .int(1), "c": .int(3)])
 
-        // When
-        let replaced = sut.writing("c", with: .int(30))
-        let inserted = sut.writing("b", with: .int(2))
-        let appended = sut.writing("d", with: .int(4))
-
-        // Then
-        #expect(replaced.entries.map(\.value) == [.int(1), .int(30)])
-        #expect(inserted.names == ["a", "b", "c"])
-        #expect(appended.names == ["a", "c", "d"])
-        #expect(inserted.name == "app.Point")
+        // When / Then
+        #expect(try sut.writing("c", with: .int(30)).values == [.int(1), .int(30)])
+        #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
     }
 
-    @Test("removing takes a held field out and leaves a record without it as it is")
-    func removingAField() {
+    @Test("a value that settled to a name keeps it, and is refused a field that name does not declare")
+    func writingHoldsASettledNameToItsDeclaration() throws {
         // Given
-        let sut = Record(name: "app.Point", ["a": .int(1), "b": .int(2)])
+        let sut = Value.record(Record(name: "app.Point", ["a": .int(1)]))
+
+        // When / Then. A declared field is written where it stands
+        #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "app.Point", ["a": .int(9)])))
+
+        // A name the declaration never had would make this something other
+        // than the type it settled to
+        #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
+        #expect(throws: ValueRefused.self) { try Value.int(1).writing("a", with: .int(2)) }
+    }
+
+    @Test("a value that settled to no name holds a new one as data")
+    func writingOutsideALayoutWithNoNameAnswersData() throws {
+        // Given
+        let sut = Value.record(Record(name: nil, ["a": .int(1)]))
 
         // When / Then
-        #expect(sut.removing("a").names == ["b"])
-        #expect(sut.removing("z") == sut)
-        #expect(sut.removing("a").name == "app.Point")
+        #expect(try sut.writing("b", with: .int(2)) == .dictionary(["a": .int(1), "b": .int(2)]))
     }
 
-    @Test("setting a field answers a new object, whatever name the receiver had")
-    func settingAnswersAnObject() throws {
+    @Test("a nameless record and the dictionary it equals are written the same way")
+    func equalValuesAreWrittenAlike() throws {
+        // Given. The contract says these are one value, so a door on top of it
+        // cannot tell them apart
+        let laid = Value.record(Record(name: nil, ["a": .int(1)]))
+        let held = Value.dictionary(["a": .int(1)])
+
+        // When / Then
+        #expect(laid == held)
+        #expect(try laid.writing("b", with: .int(2)) == (try held.writing("b", with: .int(2))))
+        #expect(try laid.writing("a", with: .int(9)) == (try held.writing("a", with: .int(9))))
+    }
+
+    @Test("a record's name is part of its layout")
+    func aNameIsPartOfTheLayout() {
         // Given
-        let question = Question(
-            receiver: .record(Record(name: "app.Point", ["a": .int(1)])),
-            arguments: ["key": .string("b"), "value": .int(2)]
-        )
+        let sut = Record(name: "app.Point", ["a": .int(1)])
 
-        // When
-        let answer = try MappingQuery(.setting).evaluate(question)
+        // When / Then
+        #expect(sut.name == "app.Point")
+        #expect(sut.named(nil).name == nil)
+        #expect(sut != Record(name: nil, ["a": .int(1)]))
+        #expect(sut != Record(name: "app.Vault", ["a": .int(1)]))
+    }
 
-        // Then
-        #expect(answer == .object(["a": .int(1), "b": .int(2)]))
+    @Test("a record's own name is compared as bytes, the way its fields are")
+    func aNameIsComparedAsBytes() throws {
+        // Given
+        let composed = Record(name: "app.Caf\u{E9}", ["a": .int(1)])
+        let decomposed = "app.Cafe\u{301}"
+
+        // When / Then. The decomposed spelling is no name, so there is no
+        // second record to compare with
+        #expect(throws: NameRefused.self) { try Name(decomposed) }
+        #expect(composed.name?.spelling == "app.Caf\u{E9}")
     }
 
     @Test("mapping values changes every value and nothing else")
-    func mappingValuesKeepsNamesAndOrder() throws {
+    func mappingValuesKeepsTheLayout() throws {
         // Given
         let sut = Record(name: "app.Point", ["y": .int(2), "x": .int(1)])
 
@@ -105,107 +134,21 @@ struct RecordTests {
         }
 
         // Then
-        #expect(doubled.name == "app.Point")
-        #expect(doubled.names == ["x", "y"])
+        #expect(doubled.layout == sut.layout)
         #expect(doubled.values == [.int(2), .int(4)])
     }
 
-    @Test("two spellings Swift calls equal are two fields")
-    func equivalentSpellingsAreTwoFields() {
+    @Test("a nameless record and a dictionary of the same fields are one value")
+    func aNamelessRecordEqualsADictionary() {
         // Given
-        let composed = "caf\u{E9}"
-        let decomposed = "cafe\u{301}"
-
-        // When
-        let sut = Record(name: nil, entries: [(name: composed, value: .int(1)), (name: decomposed, value: .int(2))])
-
-        // Then
-        #expect(composed == decomposed)
-        #expect(sut.count == 2)
-        #expect(sut[composed] == .int(1))
-        #expect(sut[decomposed] == .int(2))
-    }
-
-    @Test("a record's own name is compared as bytes, the way its fields are")
-    func aNameIsComparedAsBytes() {
-        // Given
-        let composed = Record(name: "app.Caf\u{E9}", ["a": .int(1)])
-        let decomposed = Record(name: "app.Cafe\u{301}", ["a": .int(1)])
-
-        // When / Then
-        #expect(composed != decomposed)
-        #expect(!Value.record(composed).matches(.record(decomposed)))
-        #expect(Record(name: nil, ["a": .int(1)]) != composed)
-    }
-
-    @Test("a literal a caller assembled is held to normal form C at the module")
-    func aLiteralIsHeldToNormalForm() {
-        // Given
-        let record = Record(name: nil, entries: [(name: "cafe\u{301}", value: .int(1))])
-
-        // When / Then
-        #expect {
-            try Module(
-                imports: [],
-                procedures: ["entry": Procedure(body: [], result: .literal(.record(record)))]
-            )
-        } throws: { error in
-            "\(error)".contains("not in normal form C")
-        }
-    }
-
-    @Test("a default a caller assembled is held to normal form C at the module")
-    func aDefaultIsHeldToNormalForm() {
-        // Given
-        let record = Record(name: "app.Cafe\u{301}", ["a": .int(1)])
-
-        // When / Then
-        #expect {
-            try Module(
-                imports: [],
-                procedures: [
-                    "entry": Procedure(
-                        signature: Signature(parameters: ["x": Parameter(type: .any, default: .record(record))]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            "\(error)".contains("not in normal form C")
-        }
-    }
-
-    @Test("setting refuses a key that is not one byte spelling")
-    func settingRefusesAKeyOutsideNormalForm() {
-        // Given
-        let question = Question(
-            receiver: .object(["a": .int(1)]),
-            arguments: ["key": .string("cafe\u{301}"), "value": .int(2)]
-        )
-
-        // When / Then
-        #expect {
-            try MappingQuery(.setting).evaluate(question)
-        } throws: { error in
-            "\(error)".contains("normal form C")
-        }
-    }
-
-    @Test("a record equals another by name and by every entry, and matches across numeric width")
-    func equalityAndMatching() {
-        // Given
-        let whole = Value.object(["a": .int(1), "b": .string("x")])
-        let fraction = Value.object(["a": .double(1), "b": .string("x")])
+        let record = Value.record(Record(name: nil, ["a": .int(1), "b": .string("x")]))
         let named = Value.record(Record(name: "app.T", ["a": .int(1), "b": .string("x")]))
+        let dictionary = Value.dictionary(["a": .int(1), "b": .string("x")])
 
         // When / Then
-        #expect(whole == Value.object(["b": .string("x"), "a": .int(1)]))
-        #expect(whole != fraction)
-        #expect(whole.matches(fraction))
-        #expect(whole != named)
-        #expect(!whole.matches(named))
-        #expect(whole["a"] == .int(1))
-        #expect(whole["z"] == nil)
+        #expect(record == dictionary)
+        #expect(named != dictionary)
+        #expect(record.matches(.dictionary(["a": .double(1), "b": .string("x")])))
+        #expect(record["a"] == .int(1))
     }
 }

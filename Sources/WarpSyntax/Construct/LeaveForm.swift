@@ -10,18 +10,18 @@ import Warp
 
 // `return:`, `break:` and `continue:`.
 //
-// Three forms rather than one under three words, because the table maps a word
-// to a form and reads back the same way. One form answering to three words could
-// be written down but not written out — asked which word means it, the table
-// would have three answers and no way to say which. Three forms also make each
-// word droppable on its own, which one would not.
+// Three forms rather than one under three keys, because the table maps a key
+// to a form and reads back the same way. One form answering to three procedures
+// could be written down but not written out. Asked which procedure means it, the
+// table would have three answers and no way to say which. Three forms also make
+// each procedure droppable on its own, which one would not.
 //
 //     { id: done,   return: { ref: answer } }
 //     { id: enough, break: }
 //     { id: skip,   continue: outer }
 public struct ReturnForm: ConstructForm {
     // MARK: - Property
-    public static let key = "return"
+    public static let key: Name = "return"
 
     private let value: Expression?
 
@@ -50,9 +50,9 @@ public struct ReturnForm: ConstructForm {
 
 public struct BreakForm: ConstructForm {
     // MARK: - Property
-    public static let key = "break"
+    public static let key: Name = "break"
 
-    private let target: String?
+    private let target: Name?
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -69,9 +69,9 @@ public struct BreakForm: ConstructForm {
 
 public struct ContinueForm: ConstructForm {
     // MARK: - Property
-    public static let key = "continue"
+    public static let key: Name = "continue"
 
-    private let target: String?
+    private let target: Name?
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -89,18 +89,18 @@ public struct ContinueForm: ConstructForm {
 extension BreakForm {
     // Which loop, or nothing for the nearest. A loop answers what it was going
     // to answer, so there is nothing to carry and what stands here is a name.
-    static func target(from decoder: Decoder, called word: String) throws -> String? {
+    static func target(from decoder: Decoder, called procedure: Name) throws -> Name? {
         switch try ValueReader(from: decoder).value {
         case .null:
             return nil
 
         case let .string(name):
-            return name
+            return try Name.read(name, at: decoder.steps)
 
         case let other:
             throw ReadingError(
-                "\(word) takes the name of a loop, or nothing for the"
-                    + " nearest one — got \(other.type)",
+                "\(procedure) takes the name of a loop, or nothing for the"
+                    + " nearest one. Got \(other.type)",
                 at: decoder.steps
             )
         }

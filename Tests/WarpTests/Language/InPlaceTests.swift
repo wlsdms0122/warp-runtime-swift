@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 @Suite("Writing in place")
 struct InPlaceTests {
@@ -23,8 +24,8 @@ struct InPlaceTests {
                     body: [
                         Statement(
                             binding: .assignment([.key("total")]),
-                            expression: .dispatch(
-                                Dispatch(
+                            expression: .call(
+                                Call(
                                     receiver: reference("total"),
                                     selector: "std.math.plus",
                                     arguments: ["value": .literal(.int(1))]
@@ -37,7 +38,7 @@ struct InPlaceTests {
             ]
         )
 
-        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // When
         let first = try await Executor().run(image)
@@ -50,7 +51,7 @@ struct InPlaceTests {
 
     @Test("a module variable is not visible to another document")
     func moduleVariableIsPrivateToItsDocument() throws {
-        // Given — the other document writes a name only the first declares
+        // Given. The other document writes a name only the first declares
         #expect {
             try Module(
                 imports: [],
@@ -83,8 +84,8 @@ struct InPlaceTests {
 
     @Test("a path handed in place is written as it is made, so a failing call has written")
     func handedPathIsWrittenBeforeFailure() async throws {
-        // Given — the callee writes through the path and then aborts; the
-        // write is in the caller's array all the same
+        // Given. The callee writes through the path and then aborts; the write
+        // is in the caller's array all the same
         let sut = try Module(
             imports: ["std.control.abort"],
             procedures: [
@@ -98,8 +99,8 @@ struct InPlaceTests {
                                 Block(
                                     body: [
                                         Statement(
-                                            expression: .dispatch(
-                                                Dispatch(
+                                            expression: .call(
+                                                Call(
                                                     selector: "poke",
                                                     arguments: ["count": .reference([.key("xs"), .index(1)])]
                                                 )
@@ -119,8 +120,8 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .assignment([.key("count")]), expression: .literal(.int(9))),
                         Statement(
-                            expression: .dispatch(
-                                Dispatch(receiver: .literal(.string("after")), selector: "std.control.abort")
+                            expression: .call(
+                                Call(receiver: .literal(.string("after")), selector: "std.control.abort")
                             )
                         )
                     ]
@@ -137,7 +138,7 @@ struct InPlaceTests {
 
     @Test("a var field holding an inline record is written through")
     func varFieldHoldingAnInlineRecordIsWrittenThrough() async throws {
-        // Given — a declared type whose `var` field holds a record nobody
+        // Given. A declared type whose `var` field holds a record nobody
         // declared, so the inner field is nobody's `var` and the path passes
         let sut = try Module(
             imports: [],
@@ -163,7 +164,7 @@ struct InPlaceTests {
 
     @Test("a module variable handed in place is one box, by the parameter and by its name")
     func moduleVariableHandedInPlaceIsOneBox() async throws {
-        // Given — a body handed a part of the module variable writes the part,
+        // Given. A body handed a part of the module variable writes the part,
         // then reads the whole by name
         let sut = try Module(
             imports: [],
@@ -172,7 +173,7 @@ struct InPlaceTests {
                 entryName: Procedure(
                     signature: Signature(returns: .array(.int)),
                     body: [],
-                    result: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
+                    result: .call(Call(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: ["first": Parameter(type: .inout(.int))], returns: .array(.int)),
@@ -188,8 +189,8 @@ struct InPlaceTests {
 
     @Test("a hold whose box no longer has the part refuses the read")
     func handedPathReadsWhatTheBoxHoldsNow() async throws {
-        // Given — the callee is handed the second element, then writes the
-        // whole array shorter by name, then reads the parameter
+        // Given. The callee is handed the second element, then writes the whole
+        // array shorter by name, then reads the parameter
         let sut = try Module(
             imports: [],
             variables: ["items": .array([.literal(.int(1)), .literal(.int(2))])],
@@ -197,7 +198,7 @@ struct InPlaceTests {
                 entryName: Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .dispatch(Dispatch(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
+                    result: .call(Call(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: ["second": Parameter(type: .inout(.int))], returns: .int),
@@ -217,8 +218,8 @@ struct InPlaceTests {
 
     @Test("an entry not written yet is handed in place and made by the write")
     func unwrittenEntryIsHandedInPlace() async throws {
-        // Given — the callee only writes its parameter, so the entry is
-        // never read before it is there
+        // Given. The callee only writes its parameter, so the entry is never
+        // read before it is there
         let sut = try Module(
             imports: [],
             procedures: [
@@ -227,10 +228,10 @@ struct InPlaceTests {
                     body: [
                         Statement(
                             binding: .variable("table"),
-                            expression: .cast(.record([:]), as: .object(.int), optional: false)
+                            expression: .cast(.record([:]), as: .dictionary(.int), optional: false)
                         ),
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "fill", arguments: ["slot": reference("table", "k")]))
+                            expression: .call(Call(selector: "fill", arguments: ["slot": reference("table", "k")]))
                         )
                     ],
                     result: reference("table", "k")
@@ -248,8 +249,8 @@ struct InPlaceTests {
     }
 
     @Test("a write into an inout parameter has to fit the declared type")
-    func writeIntoInoutParameterIsHeldToItsType() throws {
-        // Given — the body writes a string into a parameter declared inout int
+    func writeIntoInoutParameterIsHeldToItsType() async throws {
+        // Given. The body writes a string into a parameter declared inout int
         let sut = try Module(
             imports: [],
             procedures: [
@@ -257,7 +258,7 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
@@ -271,16 +272,16 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("first")
         }
     }
 
     @Test("a path handed in place has to read as the declared type")
-    func handedPathIsHeldToTheDeclaredType() throws {
-        // Given — an int element is handed to a parameter declared inout string
+    func handedPathIsHeldToTheDeclaredType() async throws {
+        // Given. An int element is handed to a parameter declared inout string
         let sut = try Module(
             imports: [],
             procedures: [
@@ -288,7 +289,7 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
@@ -302,16 +303,16 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("first")
         }
     }
 
     @Test("a part of a box handed in place is handed on like any local's")
-    func aHandedBoxIsSplitOnwards() throws {
-        // Given — a body handed `all` whole hands `all.items` on to another
+    func aHandedBoxIsSplitOnwards() async throws {
+        // Given. A body handed `all` whole hands `all.items` on to another
         // written body
         let sut = try Module(
             imports: ["other.grow"],
@@ -320,7 +321,7 @@ struct InPlaceTests {
                     signature: Signature(parameters: ["all": Parameter(type: .inout(.record(["items": .array(.int)])))]),
                     body: [
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "other.grow", arguments: ["list": reference("all", "items")]))
+                            expression: .call(Call(selector: "other.grow", arguments: ["list": reference("all", "items")]))
                         )
                     ],
                     result: .literal(.null)
@@ -339,14 +340,14 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try Linker().link([sut, other] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut, other] + Module.standard, entry: entryName)
         }
     }
 
     @Test("inout is written on a parameter and nowhere else")
-    func inoutOutsideAParameterRefuses() throws {
-        // Given — a declared type with an inout field
+    func inoutOutsideAParameterRefuses() async throws {
+        // Given. A declared type with an inout field
         let sut = try Module(
             imports: [],
             types: ["Box": .record(["held": .inout(.int)])],
@@ -354,16 +355,16 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("only a parameter is handed a variable in place")
         }
     }
 
     @Test("var is written on a declared type's field and nowhere else")
-    func varOutsideADeclaredFieldRefuses() throws {
-        // Given — a parameter typed var
+    func varOutsideADeclaredFieldRefuses() async throws {
+        // Given. A parameter typed var
         let sut = try Module(
             imports: [],
             procedures: [
@@ -376,8 +377,8 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("only a field of a declared type is written through")
         }
@@ -385,17 +386,34 @@ struct InPlaceTests {
 
     @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
     func anAssembledClosureClaimsNothing() throws {
-        // Given
-        let closure = Closure.assembled(answering: .int(1))
+        // Given. Assembled against the table it is judged against, so what is
+        // being asked is the claim and not which link made the row
+        let types = TypeTable()
+        let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
 
         // When / Then
         #expect(throws: ArgumentError.self) {
             try TypeExpression.procedure(nil, .unstated, .isolated)
-                .settling(.procedure(closure), at: "piece", in: TypeTable())
+                .settling(.procedure(closure), at: "piece", in: types)
         }
         #expect(throws: Never.self) {
             try TypeExpression.procedure(nil)
-                .settling(.procedure(closure), at: "piece", in: TypeTable())
+                .settling(.procedure(closure), at: "piece", in: types)
         }
+    }
+
+    @Test("a path write reaches a nameless record and the dictionary it equals the same way")
+    func aPathWriteReadsEitherSpelling() throws {
+        // Given. The contract says these are one value
+        let laid = Value.record(Record(name: nil, ["a": .int(1)]))
+        let held = Value.dictionary(["a": .int(1)])
+        let path: [Projection] = [.key("b")]
+
+        // When / Then
+        #expect(laid == held)
+        #expect(
+            try laid.writing(.int(2), at: path, under: "x.b")
+                == (try held.writing(.int(2), at: path, under: "x.b"))
+        )
     }
 }

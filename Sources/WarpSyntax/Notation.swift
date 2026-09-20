@@ -9,54 +9,58 @@ import Foundation
 import Warp
 
 // What a notation offers on top of the document, the way `ConstructRegistry`
-// says which construct words it offers.
+// says which construct keys it offers.
 //
 // A spelling stands in for something the language already has: a condition
 // written as an operator is a message, and so is a template. So a document has
-// two layers, and this is the switch between them — a notation brings its own
+// two layers, and this is the switch between them. A notation brings its own
 // spellings, and the canonical one brings none, which leaves a document writing
-// the shapes themselves.
+// the types themselves.
 //
 // **Nothing built in offers a spelling, and nothing here names one.** This
 // package reads documents; a document has no spellings, so a reader carrying a
 // table of them would be a reader with a notation's opinions. Which keys are
-// spelled, which words they reach, and what the record around them looks like
+// spelled, which procedures they reach, and what the record around them looks like
 // are all answered by whoever hands one of these over.
 //
 // That is worth insisting on because the lower layer is what travels. A program
 // read somewhere else needs that reader to agree about what it says, and each
 // spelling is one more rule the far side has to implement identically. A
-// notation that offers none owes no words for spellings it never spends.
+// notation that offers none owes no procedures for spellings it never spends.
 //
 public struct Notation: Sendable {
     // MARK: - Property
     // Nothing stood in for. Every condition is the expression it is written as,
-    // and text is put together by sending the words that put text together.
+    // and text is put together by sending the procedures that put text together.
     //
     // This is what a document is read with, and it is the only one this package
-    // ships — the others are notations, and a notation lives where it does.
+    // ships. The others are notations, and a notation lives where it does.
     public static let canonical = Notation()
 
     // How a condition slot may be written here, and nothing where a condition is
     // written as the expression it is.
-    public let condition: (any ConditionSpelling)?
+    public private(set) var condition: (any ConditionSpelling)?
 
     // What `{ format:, with: }` lowers to, and nothing where this notation does
     // not offer a template.
     //
-    // The two keys stay reserved either way — that much is the document's, and
+    // The two keys stay reserved either way. That much is the document's, and
     // the specification says so. What varies is only whether a template is
-    // understood, and which words it spends.
-    public let interpolation: Interpolation?
+    // understood, and which procedures it spends.
+    public private(set) var interpolation: Interpolation?
+
+    // Whether a parameter may be written as a bare type, `int` for
+    // `{ type: int }`. A document writes the record.
+    public private(set) var bareParameter: Bool
 
     // What these spellings spend no matter which constructs exist. A template is
     // written in a value slot and every construct has one, so offering it owes
     // these wherever the notation is used.
     //
-    // A condition's words are not here: a condition is read through `when` and
+    // A condition's procedures are not here: a condition is read through `when` and
     // `while`, so a notation with neither spends nothing on them however many it
     // offers. The forms that read one ask for them by name, below.
-    public var vocabulary: Set<String> {
+    public var vocabulary: Set<Name> {
         guard let interpolation else { return [] }
 
         return [interpolation.read, interpolation.joined]
@@ -65,24 +69,29 @@ public struct Notation: Sendable {
     // What a condition slot spends, for the forms that have one. Answered here
     // rather than assembled by each of them, so that whether a notation has a
     // condition spelling at all stays this type's business.
-    public var conditionVocabulary: Set<String> {
+    public var conditionVocabulary: Set<Name> {
         condition?.vocabulary ?? []
     }
 
     // MARK: - Initializer
     public init(
         condition: (any ConditionSpelling)? = nil,
-        interpolation: Interpolation? = nil
+        interpolation: Interpolation? = nil,
+        bareParameter: Bool = false
     ) {
         self.condition = condition
         self.interpolation = interpolation
+        self.bareParameter = bareParameter
     }
 
     // MARK: - Public
-    // Giving up the template. The words it stood for are still reachable by
+    // Giving up the template. The procedures it stood for are still reachable by
     // sending them, which is the whole reason a spelling can be given up at all.
     public func removingInterpolation() -> Notation {
-        Notation(condition: condition, interpolation: nil)
+        var copy = self
+        copy.interpolation = nil
+
+        return copy
     }
 
     // MARK: - Private

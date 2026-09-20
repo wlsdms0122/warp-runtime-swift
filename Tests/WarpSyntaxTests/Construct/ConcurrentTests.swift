@@ -11,8 +11,8 @@ import Testing
 @testable import WarpSyntax
 
 // Running at once, as a document spells it: closures handed to the
-// `std.concurrent` words. There is no construct here — a fan-out is a call,
-// and what makes it safe is what a closure already is.
+// `std.concurrent` procedures. There is no construct here. A fan-out is a call, and
+// what makes it safe is what a closure already is.
 @Suite
 struct ConcurrentTests {
     // MARK: - Property
@@ -23,7 +23,7 @@ struct ConcurrentTests {
     @Test("the environment's isolation boundary wraps every piece")
     func environmentIsolatesEachPiece() async throws {
         // Given
-        let spec = try loader.loadProcedure([
+        let spec = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "par",
@@ -43,15 +43,15 @@ struct ConcurrentTests {
         // When
         let outputs = try await run(spec, environment: boundary)
 
-        // Then — every piece walked through the environment's isolation boundary
+        // Then. Every piece walked through the environment's isolation boundary
         #expect(boundary.isolatedCount == 2)
-        #expect(outputs["result"] == .object(["left": .int(1), "right": .int(2)]))
+        #expect(outputs["result"] == .dictionary(["left": .int(1), "right": .int(2)]))
     }
 
     @Test("all-recoverable failures rescue")
     func allRecoverableFailuresRescue() async throws {
         // Given
-        let spec = try loader.loadProcedure([
+        let spec = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "par",
@@ -92,8 +92,8 @@ struct ConcurrentTests {
 
     @Test("one piece's author mistake propagates the composite")
     func anyFatalPiecePropagates() async throws {
-        // Given — one author mistake makes the composite an author mistake
-        let spec = try loader.loadProcedure([
+        // Given. One author mistake makes the composite an author mistake
+        let spec = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "par",
@@ -134,10 +134,10 @@ struct ConcurrentTests {
 
     @Test("map walks a collection and answers in its order")
     func mapWalksACollection() async throws {
-        // Given — the closure asks for the element under `item`, the same name
+        // Given. The closure asks for the element under `item`, the same name
         // the sequential walk reads it by
-        let sut = try loader.loadProcedure([
-            "parameters": ["names": "array<string>"],
+        let sut = try await loader.loadProcedure([
+            "parameters": ["names": ["type": "array<string>"]],
             "body": [
                 [
                     "let": "greeted",
@@ -147,7 +147,7 @@ struct ConcurrentTests {
                         "arguments": [
                             "by": [
                                 "closure": [
-                                    "parameters": ["item": "string"],
+                                    "parameters": ["index": ["type": "int"], "item": ["type": "string"]],
                                     "body": [
                                         [
                                             "let": "line",
@@ -180,7 +180,7 @@ struct ConcurrentTests {
     @Test("first answers whichever piece succeeds")
     func firstAnswersTheFirstSuccess() async throws {
         // Given
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "either",

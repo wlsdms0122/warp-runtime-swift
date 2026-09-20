@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The signature-level `bounds:` key — which constraint each type parameter is
+// The signature-level `bounds:` key, which constraint each type parameter is
 // bounded by, declared once where the parameter's name lives:
 //
 //   bounds: { N: Numeric }
@@ -18,7 +18,7 @@ import Warp
 // one bound is one claim however many slots mention the name.
 enum BoundsReader {
     // The signature with its bounds applied, and the check that every bound
-    // names a parameter some slot mentions — a bound on a name nobody wrote
+    // names a parameter some slot mentions. A bound on a name nobody wrote
     // binds nothing, which is a claim the author should hear about where they
     // wrote it.
     static func apply(
@@ -28,36 +28,56 @@ enum BoundsReader {
     ) throws -> Signature {
         guard let bounds, !bounds.isEmpty else { return signature }
 
-        // A bound is only ever a name — the membership lives in a declaration,
-        // not in a signature — so a shape here is refused where it was written
-        // rather than surfacing later as a name nothing declares. The same
-        // predicate the slot's `some T` spelling is held to.
-        for (parameter, constraint) in bounds.sorted(by: { $0.key < $1.key }) {
-            guard TypeReader.isName(constraint) else {
+        // A bound is the names of contracts and memberships, one or several
+        // joined with `&`, and never a type: the membership lives in a
+        // declaration, not in a signature. Read by the one reading every type
+        // spelling gets, so what `&` means here is what it means in a slot.
+        var named: [Name: [Name]] = [:]
+
+        for (parameter, bound) in bounds.sorted(by: { $0.key < $1.key }) {
+            let names: [Name]
+            let parsed: TypeExpression
+
+            do {
+                parsed = try TypeReader.parse(bound)
+            } catch let refused as TypeFormError {
+                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: steps)
+            }
+
+            switch parsed {
+            case let .named(name):
+                names = [name]
+
+            case let .composition(joined):
+                names = joined
+
+            default:
                 throw ReadingError(
                     "bounds bind '\(parameter)' to"
-                        + " '\(constraint)', which is not a constraint's name"
-                        + " — a membership is declared, never written in a"
+                        + " '\(bound)', which is not a constraint's name."
+                        + " A membership is declared, never written in a"
                         + " signature",
                     at: steps
                 )
             }
+
+            named[try Name.read(parameter, at: steps)] = names
         }
 
-        let bounded = signature.bounded(by: bounds)
+        let bounded = signature.bounded(by: named)
 
-        var mentioned: [String: Set<String>] = [:]
-        bounded.parameterConstraints(into: &mentioned)
+        var mentioned: Set<Name> = []
+        bounded.parameterOccurrences { name, _ in mentioned.insert(name) }
 
-        let unwritten = bounds.keys
-            .filter { name in mentioned[name] == nil }
+        let unwritten = named.keys
+            .filter { name in !mentioned.contains(name) }
             .sorted()
 
         guard unwritten.isEmpty else {
             throw ReadingError(
                 "bounds name"
-                    + " \(unwritten.joined(separator: ", ")), and no slot writes"
-                    + " `some \(unwritten.first ?? "")` — a bound rides on a"
+                    + " \(unwritten.map(\.spelling).joined(separator: ", ")), and no slot writes"
+                    + " `some \(unwritten.first?.spelling ?? "")`. A bound rides on a"
                     + " parameter some slot mentions",
                 at: steps
             )

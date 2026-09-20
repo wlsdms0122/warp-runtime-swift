@@ -15,18 +15,18 @@ import Foundation
 // its name stay the same, so a refusal names the variable it is about.
 struct Handle: Sendable {
     // MARK: - Property
-    let head: String
+    let head: Name
     let box: Variable
-    let path: [PathSegment]
+    let path: [Projection]
 
     // MARK: - Initializer
-    init(_ head: String, _ value: Value) {
+    init(_ head: Name, _ value: Value) {
         self.head = head
         self.box = Variable(value)
         self.path = []
     }
 
-    init(head: String, box: Variable, path: [PathSegment]) {
+    init(head: Name, box: Variable, path: [Projection]) {
         self.head = head
         self.box = box
         self.path = path
@@ -34,7 +34,7 @@ struct Handle: Sendable {
 
     // MARK: - Public
     // What the path holds. The link judged the path against the box's
-    // declared shape, so a part not there now is a box whose surroundings
+    // declared type, so a part not there now is a box whose scope
     // changed under the hold.
     func value() throws -> Value {
         try box.value.reading(at: path, under: rendered(path))
@@ -42,19 +42,19 @@ struct Handle: Sendable {
 
     // Writes the part a path below the hold names. The box is read once,
     // rewritten, and stored once, so nothing observes the value halfway.
-    func write(_ value: Value, at rest: [PathSegment]) throws {
+    func write(_ value: Value, at rest: [Projection]) throws {
         let whole = path + rest
 
         box.value = try box.value.writing(value, at: whole, under: rendered(whole))
     }
 
     // The same box, held through a longer path.
-    func extended(by rest: [PathSegment]) -> Handle {
+    func extended(by rest: [Projection]) -> Handle {
         Handle(head: head, box: box, path: path + rest)
     }
 
     // MARK: - Private
-    private func rendered(_ path: [PathSegment]) -> String {
-        ([.key(head)] + path).rendered
+    private func rendered(_ path: [Projection]) -> String {
+        ([.key(head)] + path.map(\.spelled)).rendered
     }
 }

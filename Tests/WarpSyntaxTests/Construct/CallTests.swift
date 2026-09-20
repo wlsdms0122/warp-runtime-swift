@@ -11,7 +11,7 @@ import Testing
 @testable import WarpSyntax
 
 // `call:` names a symbol, never a document. Naming the document would write a
-// linkage fact into the call site, which is the one thing dispatch decided an
+// linkage fact into the call site, which is the one thing call decided an
 // author should never have to write.
 @Suite
 struct CallTests {
@@ -35,7 +35,7 @@ struct CallTests {
                     "result": ["result": ["ref": "call.pair"]]
                 ],
                 "callee": [
-                    "parameters": ["base": "int", "bump": ["type": "int", "default": 1]],
+                    "parameters": ["base": ["type": "int"], "bump": ["type": "int", "default": 1]],
                     "body": [
                         [
                             "let": "echo",
@@ -51,12 +51,13 @@ struct CallTests {
         // When
         let outputs = try await run(sut, entry: "caller")
 
-        // Then — the omitted `bump` settled to its default at the callee boundary
-        #expect(outputs["result"] == .object(["base": .int(41), "bump": .int(1)]))
+        // Then. The omitted `bump` settled to its default at the callee
+        // boundary
+        #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .int(1)]))
     }
 
     @Test("a constant argument violating the callee signature is rejected at link")
-    func signatureViolationRejectsCall() throws {
+    func signatureViolationRejectsCall() async throws {
         // Given
         let sut = try loader.loadDocument([
             "procedures": [
@@ -69,22 +70,22 @@ struct CallTests {
                     ]
                 ],
                 "callee": [
-                    "parameters": ["base": "int"],
+                    "parameters": ["base": ["type": "int"]],
                     "body": [["let": "echo", "value": ["ref": "base"]]]
                 ]
             ]
         ])
 
-        // When / Then — nothing runs: the argument is a constant, so its type is
+        // When / Then. Nothing runs: the argument is a constant, so its type is
         // knowable before the run and the refusal happens there
-        #expect(throws: LinkError.self) {
-            try Linker().link([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut], entry: "caller")
         }
     }
 
-    @Test("a call names a word and not the document that declares it")
+    @Test("a call names a procedure and not the document that declares it")
     func callNamesASymbol() async throws {
-        // Given — the callee lives in a module the caller never mentions
+        // Given. The callee lives in a module the caller never mentions
         let caller = try loader.loadDocument([
             "imports": ["some-other-file.greet"],
             "procedures": [
@@ -97,8 +98,8 @@ struct CallTests {
         let elsewhere = try loader.loadDocument([
             "procedures": [
                 "some-other-file.greet": [
-                    "body": [["let": "word", "value": "hello"]],
-                    "result": ["said": ["ref": "word"]],
+                    "body": [["let": "procedure", "value": "hello"]],
+                    "result": ["said": ["ref": "procedure"]],
                     "returns": ["said": "string"]
                 ]
             ]
@@ -113,24 +114,24 @@ struct CallTests {
 
     @Test("a call writes what it is sent to")
     func callWritesItsReceiver() async throws {
-        // Given — `call` reaches a receiver the same way a spelling does, so a
+        // Given. `call` reaches a receiver the same way a spelling does, so a
         // document is not forced through `x.shout` to send to one
         let sut = try loader.loadDocument([
             "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": ["word": "string"],
+                    "parameters": ["procedure": ["type": "string"]],
                     "body": [
                         [
                             "let": "said",
-                            "value": ["call": ["procedure": "shout", "of": ["ref": "word"]]
+                            "value": ["call": ["procedure": "shout", "of": ["ref": "procedure"]]
                         ]]
                     ],
                     "result": ["result": ["ref": "said"]]
                 ],
                 "shout": [
                     "receiver": "of",
-                    "parameters": ["of": "string"],
+                    "parameters": ["of": ["type": "string"]],
                     "returns": "string",
                     "body": [],
                     "result": ["format": "${of}!", "with": ["of": ["ref": "of"]]]
@@ -139,15 +140,15 @@ struct CallTests {
         ])
 
         // When
-        let outputs = try await run(sut, arguments: ["word": .string("hey")])
+        let outputs = try await run(sut, arguments: ["procedure": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("hey!"))
     }
 
-    @Test("a call carries values only — a blocks key has no meaning to refuse quietly")
+    @Test("a call carries values only, and a blocks key has no meaning to refuse quietly")
     func aBlocksKeyIsRefusedAtDecode() {
-        // Given — a body a word is to run travels as a closure argument, so
+        // Given. A body a procedure is to run travels as a closure argument, so
         // `blocks:` names nothing. An unknown key is refused where it is
         // written rather than dropped.
         let sut: Value = [
@@ -176,13 +177,13 @@ struct CallTests {
 
     @Test("runaway recursive calls end by caller cancellation")
     func recursiveCallStopsOnCancellation() async throws {
-        // Given — the kernel carries no recursion guard (a reappearing name is not
-        // a cycle oracle); runaway calls end by caller cancellation, which must
-        // propagate through the call chain
+        // Given. The kernel carries no recursion guard (a reappearing name is
+        // not a cycle oracle); runaway calls end by caller cancellation, which
+        // must propagate through the call chain
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])
-        let image = try Linker().link([module], entry: "loopy")
+        let image = try await Builder().build([module], entry: "loopy")
         let sut = Executor()
 
         // When

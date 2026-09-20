@@ -18,6 +18,7 @@ public struct SignatureReader: Decodable {
             parameters: try decoder.singleValueContainer()
                 .decode([String: ParameterReader].self)
                 .mapValues(\.parameter)
+                .named(at: decoder.steps)
         )
     }
 

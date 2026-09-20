@@ -16,10 +16,10 @@ import Warp
 //   number the way a borrowed text format would.
 // - **The same document is the same bytes, both ways.** The writer sorts record
 //   keys and writes every number minimally, and the reader refuses bytes the
-//   writer would not have written — so byte equality and document equality are
+//   writer would not have written, so byte equality and document equality are
 //   the same question, which is what makes a document signable and cacheable.
 // - **What cannot arrive is refused before it arrives.** Truncation, trailing
-//   bytes, an unknown tag, a key out of order — each is a refusal with a name,
+//   bytes, an unknown tag, a key out of order. Each is a refusal with a name,
 //   not a value somebody guessed.
 //
 // The header carries the *encoding's* version, not the language's. What the
@@ -32,11 +32,6 @@ public enum BinaryEncoding {
     // file's layout does, and for no other reason.
     public static let magic: [UInt8] = [0x57, 0x41, 0x52, 0x50]
     public static let format: UInt8 = 1
-
-    // How deep a reader follows before calling the shape an attack rather than
-    // a program. A document is written by a writer that recursed the same way,
-    // so an honest one sits nowhere near this.
-    static let depth = 512
 
     private enum Tag: UInt8 {
         case null = 0x00
@@ -91,19 +86,56 @@ public enum BinaryEncoding {
     }
 
     // MARK: - Private
+    // A container part-written: what of it is still to go, and how deep its
+    // parts stand. The mirror of `Opened` on the reading side, and open for
+    // the same reason: what a container holds is written after it rather than
+    // inside it, so nothing here stands on a call frame.
+    private enum Writing {
+        case elements(ArraySlice<Value>, within: Int)
+        case fields(ArraySlice<(name: Name, value: Value)>, within: Int)
+    }
+
+    // One pass with an explicit stack, for the reason the reader has one: the
+    // depth of a document must never be the depth of the host's call stack.
+    // What a writer is handed is a value a caller built, and a caller that
+    // built a deep one is owed the refusal rather than the process.
+    //
     // `within` runs out where the reader's limit runs out, so the writer cannot
     // produce a document its own reader would refuse.
-    private static func write(_ value: Value, into bytes: inout Data, within depth: Int = depth) throws {
-        guard depth >= 0 else {
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "the value nests deeper than a document may"
-                )
-            )
-        }
+    private static func write(_ value: Value, into bytes: inout Data) throws {
+        var open: [Writing] = []
 
+        try write(value, into: &bytes, within: Envelope.nesting, opening: &open)
+
+        while let container = open.popLast() {
+            switch container {
+            case var .elements(rest, within):
+                guard let next = rest.popFirst() else { continue }
+
+                open.append(.elements(rest, within: within))
+
+                try write(next, into: &bytes, within: within, opening: &open)
+
+            case var .fields(rest, within):
+                guard let next = rest.popFirst() else { continue }
+
+                open.append(.fields(rest, within: within))
+
+                write(Array(next.name.spelling.utf8), into: &bytes)
+
+                try write(next.value, into: &bytes, within: within, opening: &open)
+            }
+        }
+    }
+
+    // One value's own bytes. What it holds is left open on the stack rather
+    // than written here, so nothing on this path calls itself.
+    private static func write(
+        _ value: Value,
+        into bytes: inout Data,
+        within depth: Int,
+        opening open: inout [Writing]
+    ) throws {
         switch value {
         case .null:
             bytes.append(Tag.null.rawValue)
@@ -118,7 +150,7 @@ public enum BinaryEncoding {
 
         case let .double(double):
             // The bytes could carry these; the document's value model cannot,
-            // in any encoding — so they are refused rather than becoming a
+            // in any encoding, so they are refused rather than becoming a
             // document only this encoding reads.
             guard double.isFinite else {
                 throw EncodingError.invalidValue(
@@ -145,12 +177,14 @@ public enum BinaryEncoding {
             write(raw, into: &bytes)
 
         case let .array(array):
+            try opening(value, within: depth)
+
             bytes.append(Tag.array.rawValue)
 
             write(UInt64(array.count), into: &bytes)
 
-            for element in array {
-                try write(element, into: &bytes, within: depth - 1)
+            if !array.isEmpty {
+                open.append(.elements(array[...], within: depth - 1))
             }
 
         // Sorted by their UTF-8 bytes, so that the same document is the same
@@ -159,41 +193,12 @@ public enum BinaryEncoding {
         // A record under a name is written under its own tag with the name in
         // front, so a reader that met the tag knows a name follows.
         case let .record(record):
-            if let name = record.name {
-                guard Name.isName(name) else {
-                    throw EncodingError.invalidValue(
-                        Value.string(name),
-                        .init(codingPath: [], debugDescription: "the record's name is not a type's name")
-                    )
-                }
+            try opening(value, within: depth)
+            try write(record.asDictionary, named: record.name, into: &bytes, within: depth, opening: &open)
 
-                bytes.append(Tag.namedRecord.rawValue)
-                write(Array(name.utf8), into: &bytes)
-            } else {
-                bytes.append(Tag.record.rawValue)
-            }
-
-            write(UInt64(record.count), into: &bytes)
-
-            // The record holds its entries in byte order, the order written.
-            for (key, value) in record.entries {
-                // A name outside NFC would give one name several byte
-                // spellings, and byte order would stop being an order on
-                // names — refused on the way out exactly as on the way in.
-                guard Name.isNormal(key) else {
-                    throw EncodingError.invalidValue(
-                        Value.string(key),
-                        .init(
-                            codingPath: [],
-                            debugDescription: "the field name is not in normal form C"
-                        )
-                    )
-                }
-
-                write(Array(key.utf8), into: &bytes)
-
-                try write(value, into: &bytes, within: depth - 1)
-            }
+        case let .dictionary(held):
+            try opening(value, within: depth)
+            try write(held, named: nil, into: &bytes, within: depth, opening: &open)
 
         case .procedure:
             throw EncodingError.invalidValue(
@@ -203,6 +208,52 @@ public enum BinaryEncoding {
                     debugDescription: "a procedure is code, and data is what a document spells"
                 )
             )
+        }
+    }
+
+    // A container opens within the bound or not at all, and what it holds is
+    // written one container deeper. Counted where a container opens, so an
+    // empty one past the bound is refused the same as a full one.
+    private static func opening(_ value: Value, within depth: Int) throws {
+        guard depth > 0 else {
+            throw EncodingError.invalidValue(
+                value,
+                .init(
+                    codingPath: [],
+                    debugDescription: "the value nests deeper than a document may"
+                )
+            )
+        }
+    }
+
+    // Fields under names, with the name of the layout they stood on where
+    // there was one.
+    private static func write(
+        _ held: Value.Dictionary,
+        named name: Name?,
+        into bytes: inout Data,
+        within depth: Int,
+        opening open: inout [Writing]
+    ) throws {
+        if let name {
+            guard name.isDeclarable else {
+                throw EncodingError.invalidValue(
+                    Value.string(name.spelling),
+                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
+                )
+            }
+
+            bytes.append(Tag.namedRecord.rawValue)
+            write(Array(name.spelling.utf8), into: &bytes)
+        } else {
+            bytes.append(Tag.record.rawValue)
+        }
+
+        write(UInt64(held.count), into: &bytes)
+
+        // Both spellings hold their fields in byte order, the order written.
+        if !held.isEmpty {
+            open.append(.fields(held.entries[...], within: depth - 1))
         }
     }
 
@@ -228,27 +279,23 @@ public enum BinaryEncoding {
     }
 
     // A container being put back together: what it still expects, what it holds
-    // so far, and — for a record — the key the next value belongs to and the
-    // last key seen, so order can be held without keeping the keys. A sum
-    // rather than two optionals, so "neither" and "both" are not states the
-    // code has to promise never to reach.
+    // so far, and (for a record) the key the next value belongs to and the last
+    // key seen, so order can be held without keeping the keys. A sum rather
+    // than two optionals, so "neither" and "both" are not states the code has
+    // to promise never to reach.
     private enum Opened {
         case array(expecting: Int, held: [Value])
-        case record(expecting: Int, held: [(name: String, value: Value)], key: String, previous: [UInt8], name: String?)
+        case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
     }
 
     // One pass over the bytes with an explicit stack, because the depth of a
-    // document must never be the depth of the host's call stack — the bytes are
+    // document must never be the depth of the host's call stack. The bytes are
     // the arriving side's, and the stack is ours. The limit that remains is the
     // format's own, and it bounds memory rather than saving the process.
     private static func read(from reading: inout Cursor) throws -> Value {
         var opened: [Opened] = []
 
         while true {
-            guard opened.count <= depth else {
-                throw refused("the document nests deeper than a reader must follow")
-            }
-
             guard let raw = reading.byte() else {
                 throw refused("the bytes end where a value should begin")
             }
@@ -302,6 +349,8 @@ public enum BinaryEncoding {
                 settled = .bytes(Array(raw))
 
             case .array:
+                try opening(opened)
+
                 let count = try length(from: &reading, of: "an array", costing: 1)
 
                 if count == 0 {
@@ -315,17 +364,15 @@ public enum BinaryEncoding {
                 }
 
             case .record, .namedRecord:
-                let name = tag == .namedRecord ? try text(from: &reading) : nil
+                try opening(opened)
 
-                if let name, !Name.isName(name) {
-                    throw refused("the record's name is not a type's name")
-                }
+                let name = try tag == .namedRecord ? Self.name(from: &reading) : nil
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
-                    settled = .record(Record(name: name, entries: []))
+                    settled = try .holding([], named: name)
                 } else {
-                    var held: [(name: String, value: Value)] = []
+                    var held: [(name: Name, value: Value)] = []
 
                     held.reserveCapacity(count)
 
@@ -360,7 +407,7 @@ public enum BinaryEncoding {
                     held.append((name: key, value: value))
 
                     if expecting == 1 {
-                        settled = .record(Record(name: name, entries: held))
+                        settled = try .holding(held, named: name)
                     } else {
                         let (next, raw) = try field(from: &reading, after: previous)
 
@@ -375,12 +422,12 @@ public enum BinaryEncoding {
 
     // The next field a record waits for. Strictly ascending, which refuses a
     // duplicate and a shuffle with the same sentence: these are bytes the
-    // writer would not write. NFC, so that byte order is an order on names —
-    // a name with a second byte spelling would sort to a second place.
+    // writer would not write. NFC, so that byte order is an order on names. A
+    // name with a second byte spelling would sort to a second place.
     private static func field(
         from reading: inout Cursor,
         after previous: [UInt8]?
-    ) throws -> (String, [UInt8]) {
+    ) throws -> (Name, [UInt8]) {
         let key = try text(from: &reading)
         let raw = Array(key.utf8)
 
@@ -388,11 +435,30 @@ public enum BinaryEncoding {
             throw refused("the record's keys are not written in order")
         }
 
-        guard Name.isNormal(key) else {
-            throw refused("the field name is not in normal form C")
+        do {
+            return (try Name(key), raw)
+        } catch let refusal as NameRefused {
+            throw refused(refusal.message)
+        }
+    }
+
+    // A record's own name, as the bytes wrote it.
+    private static func name(from reading: inout Cursor) throws -> Name {
+        let spelling = try text(from: &reading)
+
+        let name: Name
+
+        do {
+            name = try Name(spelling)
+        } catch let refusal as NameRefused {
+            throw refused(refusal.message)
         }
 
-        return (key, raw)
+        guard name.isDeclarable else {
+            throw refused("the record's name is not a type's name")
+        }
+
+        return name
     }
 
 
@@ -415,7 +481,7 @@ public enum BinaryEncoding {
     // A claimed length, charged against the one budget all claims share: the
     // bytes of the document itself. Each claimed thing costs at least `cost`
     // bytes to actually write, so however deeply the claimants nest, their
-    // claims cannot sum past the document — a check against only the bytes
+    // claims cannot sum past the document. A check against only the bytes
     // *remaining* was local to each claim, and five hundred nested containers
     // could each claim the whole document and have memory set aside for it.
     private static func length(
@@ -470,9 +536,17 @@ public enum BinaryEncoding {
     }
 
     // `unsigned(from:)` already held the 64-bit line, so the exact conversion
-    // to the word cannot miss — a truncating one here would say otherwise.
+    // to the procedure cannot miss. A truncating one here would say otherwise.
     private static func unzigzagged(_ unsigned: UInt64) -> Int {
         Int(Int64(bitPattern: unsigned >> 1 ^ (0 &- (unsigned & 1))))
+    }
+
+    // The same count the writer keeps: containers open on the path, and the
+    // one about to open is one more of them.
+    private static func opening(_ opened: [Opened]) throws {
+        guard opened.count < Envelope.nesting else {
+            throw refused("the document nests deeper than a reader must follow")
+        }
     }
 
     private static func refused(_ said: String) -> Error {

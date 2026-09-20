@@ -9,8 +9,8 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What a range may say. It began as one shape — whole numbers, both bounds
-// inside — and the two things it could not say were both things programs are
+// What a range may say. It began as one kind (whole numbers, both bounds
+// inside) and the two things it could not say were both things programs are
 // written against: a position below a length, and a ratio.
 //
 // So the condition names the kind it refines and the far bound says whether it
@@ -19,7 +19,7 @@ import Testing
 @Suite("A range is a condition on a number, and it says which number")
 struct RefinementTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Test
     @Test("a fraction range judges fractions, and the whole numbers it widens")
@@ -30,9 +30,9 @@ struct RefinementTests {
         #expect(try ratio.settling(.double(0), at: "value") == .double(0))
         #expect(try ratio.settling(.double(1), at: "value") == .double(1))
 
-        // A whole number arrives as the fraction it widens to — the one
-        // conversion the language has — so the bounds judge what the slot
-        // would hold, and the slot holds the fraction.
+        // A whole number arrives as the fraction it widens to (the one
+        // conversion the language has) so the bounds judge what the slot would
+        // hold, and the slot holds the fraction.
         #expect(try ratio.settling(.int(1), at: "value") == .double(1))
         #expect(try ratio.settling(.int(0), at: "value") == .double(0))
 
@@ -52,7 +52,7 @@ struct RefinementTests {
         #expect(try fraction.settling(.double(0.999), at: "value") == .double(0.999))
         #expect(throws: (any Error).self) { try fraction.settling(.double(1), at: "value") }
 
-        // And what it says, it says in its own spelling — the identity a
+        // And what it says, it says in its own spelling. The identity a
         // document is written with.
         #expect(whole.rendered == "int(0..<256)")
         #expect(fraction.rendered == "double(0.0..<1.0)")
@@ -86,8 +86,8 @@ struct RefinementTests {
     }
 
     @Test("a range whose bounds meet on an excluded edge admits nothing")
-    func anEmptyOpenRangeRefusesAtTheLink() throws {
-        // Given — the far bound is outside, so a floor standing on it leaves
+    func anEmptyOpenRangeRefusesAtTheLink() async throws {
+        // Given. The far bound is outside, so a floor standing on it leaves
         // nothing between them. A slot no call could fill is refused where it
         // was written, the way a range below its own floor is.
         let sut = try Module(
@@ -104,20 +104,19 @@ struct RefinementTests {
             ]
         )
 
-        #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
     @Test("a bound that is not a number admits nothing")
-    func aNanBoundAdmitsNothing() throws {
-        // Given — nothing compares to a nan, so every ordering question about
-        // a range bounded by one answers no and the range holds no value at
-        // all. A document cannot spell one; a declaration assembled in the
-        // host can, and a slot no call could fill is refused where it was
-        // written.
+    func aNanBoundAdmitsNothing() async throws {
+        // Given. Nothing compares to a nan, so every ordering question about a
+        // range bounded by one answers no and the range holds no value at all.
+        // A document cannot spell one; a declaration assembled in the host can,
+        // and a slot no call could fill is refused where it was written.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -132,18 +131,18 @@ struct RefinementTests {
             ]
         )
 
-        #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
     @Test("an infinite bound orders, so the range it bounds holds what is inside it")
     func anInfiniteBoundIsNotEmpty() throws {
-        // Given — `double(0.0...)` written the long way. An infinity compares
-        // like any other bound, so the question a range asks — is this number
-        // between them — has an answer, and half the fractions answer yes.
+        // Given. `double(0.0...)` written the long way. An infinity compares
+        // like any other bound, so the question a range asks (is this number
+        // between them) has an answer, and half the fractions answer yes.
         //
         // Asking for *finiteness* here refused it, and refused it at the
         // declaration, where an author has nothing to fix. What the range
@@ -163,14 +162,14 @@ struct RefinementTests {
 
     @Test("a range with no floor stands on the kind's own")
     func aMissingFloorIsTheKindsFloor() {
-        // Given — a ceiling on the smallest value the kind has, with the bound
+        // Given. A ceiling on the smallest value the kind has, with the bound
         // outside it. No number is below the smallest one, so nothing is
         // inside, and it is a slot no call could ever fill.
         //
         // What a missing floor means is the question: the judgment that admits
         // values reads it as open downward and answers against every value the
         // kind has, and the one that asks whether anything is inside read it as
-        // having nothing to say. One range, two answers — and this spelling is
+        // having nothing to say. One range, two answers, and this spelling is
         // one a document can write.
         #expect(TypeExpression.Refinement.whole(to: .upTo(Int.min)).admitsNothing)
         #expect(TypeExpression.Refinement.fraction(to: .upTo(-.infinity)).admitsNothing)
@@ -186,14 +185,14 @@ struct RefinementTests {
 
     @Test("two whole ranges meet as whole numbers, above where fractions can count")
     func wholeRangesMeetWithoutWidening() {
-        // Given — two ranges sharing exactly one number, chosen where a
-        // fraction cannot hold it: 9007199254740997 and 9007199254740996 are
-        // one fraction, so widening loses the gap between them.
+        // Given. Two ranges sharing exactly one number, chosen where a fraction
+        // cannot hold it: 9007199254740997 and 9007199254740996 are one
+        // fraction, so widening loses the gap between them.
         //
         // Widening is what the question across kinds needs, and it was being
         // paid for by every pair. Round-to-nearest-even picks the neighbour by
         // the tie, so the edge moved inward here, and a range pair that shares
-        // a value came out apart — a slot refused for a reason no author could
+        // a value came out apart. A slot refused for a reason no author could
         // find. `int` is sixty-four bits and this band is where timestamps sit.
         let mine = TypeExpression.Refinement.whole(to: .upTo(9007199254740997))
         let theirs = TypeExpression.Refinement.whole(from: 9007199254740996)
@@ -215,13 +214,13 @@ struct RefinementTests {
 
     @Test("a bound with no spelling is still written, so no two ranges read alike")
     func everyBoundIsSpelled() {
-        // Given — a range bounded by a nan beside one bounded by nothing. They
+        // Given. A range bounded by a nan beside one bounded by nothing. They
         // are refused for different reasons and an author reads the reason
-        // beside the range, so the two cannot come back in the same words.
+        // beside the range, so the two cannot come back in the same procedures.
         let unspellable = TypeExpression.ranged(.fraction(to: .through(.nan)))
         let unbounded = TypeExpression.ranged(.fraction())
 
-        // A range saying nothing is the kind, and one type reads one way —
+        // A range saying nothing is the kind, and one type reads one way.
         // `double(...)` would be a second spelling for what `double` is.
         #expect(unbounded.rendered == "double")
         #expect(unspellable.rendered != unbounded.rendered)
@@ -229,31 +228,31 @@ struct RefinementTests {
 
     @Test("a range a document cannot spell is said rather than written")
     func anUnspellableBoundIsNotWritten() {
-        // Given — an infinity is a bound the language admits on purpose: it
-        // orders like any other, and `double(0.0...)` written the long way is
-        // a range half the fractions are inside. What no document has is a
-        // spelling for it, and the words a message shows it in read back as
-        // an error rather than as the range.
+        // Given. An infinity is a bound the language admits on purpose: it
+        // orders like any other, and `double(0.0...)` written the long way is a
+        // range half the fractions are inside. What no document has is a
+        // spelling for it, and the procedures a message shows it in read back as an
+        // error rather than as the range.
         let unbounded = TypeExpression.Refinement.fraction(from: 0)
         let infinite = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
 
-        // Then — both are ranges the link takes, and only one is a document's
+        // Then. Both are ranges the build takes, and only one is a document's
         #expect(!unbounded.admitsNothing)
         #expect(!infinite.admitsNothing)
         #expect(unbounded.spellable)
         #expect(!infinite.spellable)
         #expect(!TypeExpression.Refinement.fraction(to: .through(.nan)).spellable)
 
-        // And a whole bound always is — its spelling is its digits
+        // And a whole bound always is. Its spelling is its digits
         #expect(TypeExpression.Refinement.whole(to: .upTo(.min)).spellable)
 
-        // The message still shows it, in this vocabulary's own words
+        // The message still shows it, in this vocabulary's own terms
         #expect(TypeExpression.ranged(infinite).rendered == "double(0.0...<infinity>)")
     }
 
     @Test("a fraction range reads bytes out, because it changes every one")
     func aFractionRangeUnpacksBytes() async throws {
-        // Given — the compact spelling crosses an `array<…>` slot whole only
+        // Given. The compact spelling crosses an `array<…>` slot whole only
         // where the element leaves every byte as it is. A fraction range takes
         // every byte and hands on a fraction, so the bytes are read out and
         // each arrives as what the declaration says it is.
@@ -300,7 +299,7 @@ struct RefinementTests {
         #expect(try await run(kept, arguments: ["blob": .bytes([1, 2])]) == .bytes([1, 2]))
     }
 
-    @Test("what only the run sees is judged at the boundary, in the range's words")
+    @Test("what only the run sees is judged at the boundary, in the range's procedures")
     func aFractionOutsideItsRangeRefusesAtTheBoundary() async throws {
         let sut = try Module(
             procedures: [

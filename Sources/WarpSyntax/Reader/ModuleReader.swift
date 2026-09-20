@@ -22,6 +22,8 @@ public struct ModuleReader: Decodable {
         case description
         case types
         case constraints
+        case contracts
+        case satisfies
         case const
         case variables = "var"
         case procedures
@@ -51,12 +53,12 @@ public struct ModuleReader: Decodable {
         // reading is addressed where it is, so being where the answer is is
         // the whole of what puts an author on the right line.
         let written = try container.superDecoder(forKey: .procedures)
-        let procedures = try written.read([String: ProcedureReader].self)
+        let procedures = try written.read([String: ProcedureReader].self).named(at: written.steps)
 
         guard !procedures.isEmpty else {
             throw ReadingError(
                 "a module that declares nothing can never be"
-                    + " linked into anything — write at least one procedure",
+                    + " linked into anything. Write at least one procedure",
                 at: written.steps
             )
         }
@@ -68,6 +70,14 @@ public struct ModuleReader: Decodable {
                 .mapValues(\.type),
             constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
                 .mapValues { members in members.map(\.type) },
+            contracts: try Self.record(
+                [String: ContractProcedureReader].self,
+                in: container,
+                forKey: .contracts
+            )
+                .mapValues { procedures in try procedures.mapValues(\.signature).named(at: []) },
+            claims: try Self.record([String].self, in: container, forKey: .satisfies)
+                .mapValues { contracts in try Set(contracts).named(at: []) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
             variables: try Self.record(ExpressionReader.self, in: container, forKey: .variables)
@@ -88,10 +98,12 @@ public struct ModuleReader: Decodable {
     // door sees the value rather than a container.
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>
-    ) throws -> Set<String>? {
+    ) throws -> Set<Name>? {
         guard try Envelope.declaresImports(in: container, forKey: .imports) else { return nil }
 
-        return Set(try container.superDecoder(forKey: .imports).read([String].self))
+        let written = try container.superDecoder(forKey: .imports)
+
+        return try Set(written.read([String].self)).named(at: written.steps)
     }
 
     // One of the slots a module declares a record of things under, read
@@ -102,42 +114,44 @@ public struct ModuleReader: Decodable {
         _ type: T.Type,
         in container: KeyedDecodingContainer<CodingKeys>,
         forKey key: CodingKeys
-    ) throws -> [String: T] {
+    ) throws -> [Name: T] {
         guard container.contains(key), try !container.decodeNil(forKey: key) else { return [:] }
 
-        return try container.superDecoder(forKey: key).read([String: T].self)
+        let written = try container.superDecoder(forKey: key)
+
+        return try written.read([String: T].self).named(at: written.steps)
     }
 
-    // A document says which language it is written for, and one that does not is
-    // not a document. Reading silence as the earliest would mean guessing at the
-    // one question that has to be answerable from the bytes alone — and it is
-    // what lets a file of some other shape entirely walk in and be turned away
-    // for its keys rather than for what it is.
+    // A document says which language it is written for, and one that does not
+    // is not a document. Reading silence as the earliest would mean guessing at
+    // the one question that has to be answerable from the bytes alone, and it
+    // is what lets a file of some other kind entirely walk in and be turned
+    // away for its keys rather than for what it is.
     //
-    // Anything outside the range this reader knows is refused rather than guessed
-    // at — below it, the document is claiming a language that never existed.
-    // Read through its own container, before anything else and before the keys
-    // are judged, because everything after it is read by rules a newer document
-    // may not be written to — including which keys exist. A later version adding
-    // a key would otherwise be turned away as malformed, and a reader has to
-    // tell "I am too old for this" (upgrade me) from "this is wrong" (fix the
-    // sender).
+    // Anything outside the range this reader knows is refused rather than
+    // guessed at. Below it, the document is claiming a language that never
+    // existed. Read through its own container, before anything else and before
+    // the keys are judged, because everything after it is read by rules a newer
+    // document may not be written to. Including which keys exist. A later
+    // version adding a key would otherwise be turned away as malformed, and a
+    // reader has to tell "I am too old for this" (upgrade me) from "this is
+    // wrong" (fix the sender).
     private static func checkVersion(in decoder: Decoder) throws {
         let envelope = try decoder.container(keyedBy: AnyCodingKey.self)
-        let key = AnyCodingKey(stringValue: Envelope.versionKey)
+        let key = AnyCodingKey(stringValue: Envelope.versionKey.spelling)
 
         // About the document and not about anything in it: what is missing is
         // the one thing that would have made this a document, and there is
         // nothing written here to stand on.
         guard envelope.contains(key), try !envelope.decodeNil(forKey: key) else {
             throw ReadingError(
-                "this is not a warp document — it does not say"
+                "this is not a warp document. It does not say"
                     + " which warp it is written for (`\(Envelope.versionKey)`)",
                 at: decoder.steps
             )
         }
 
-        // The rest is about the word that is written, so it is read standing on
+        // The rest is about the procedure that is written, so it is read standing on
         // it. Refusing from out here would put the answer at the document's
         // first character, which is a line the author has no reason to look at.
         let written = try envelope.superDecoder(forKey: key)

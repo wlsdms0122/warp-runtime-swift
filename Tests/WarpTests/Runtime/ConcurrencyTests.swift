@@ -8,10 +8,11 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // Running at once is vocabulary, not grammar. A closure is the one body that is
-// safe to run beside another — it captured values and writes no name it did not
-// declare — so `std.concurrent` takes closures, and a caller that leaves the
+// safe to run beside another (it captured values and writes no name it did not
+// declare) so `std.concurrent` takes closures, and a caller that leaves the
 // bundle out of the link has granted no concurrency at all.
 @Suite("Running at once")
 struct ConcurrencyTests {
@@ -21,8 +22,8 @@ struct ConcurrencyTests {
     @Test("all answers a record's closures under the record's keys")
     func allAnswersARecord() async throws {
         // Given
-        let sut = Statement(binding: .constant("both"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("both"), expression: .call(
+                Call(
                     receiver: .record([
                         "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
                         "right": .closure(Procedure(body: [], result: .literal(.int(2))))
@@ -36,14 +37,14 @@ struct ConcurrencyTests {
         let answer = try await answer(of: [sut], result: reference("both"))
 
         // Then
-        #expect(answer == .object(["left": .int(1), "right": .int(2)]))
+        #expect(answer == .dictionary(["left": .int(1), "right": .int(2)]))
     }
 
     @Test("all answers an array's closures in the array's order")
     func allAnswersAnArrayInOrder() async throws {
         // Given
-        let sut = Statement(binding: .constant("all"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("all"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(Procedure(body: [], result: .literal(.int(1)))),
                         .closure(Procedure(body: [], result: .literal(.int(2)))),
@@ -57,22 +58,25 @@ struct ConcurrencyTests {
         // When
         let answer = try await answer(of: [sut], result: reference("all"))
 
-        // Then — arrival order decided nothing
+        // Then. Arrival order decided nothing
         #expect(answer == .array([.int(1), .int(2), .int(3)]))
     }
 
     @Test("map walks a collection and answers in the collection's order")
     func mapAnswersInOrder() async throws {
-        // Given — the concurrent reading of what `each` walks
-        let sut = Statement(binding: .constant("kept"), expression: .dispatch(
-                Dispatch(
+        // Given. The concurrent reading of what `each` walks
+        let sut = Statement(binding: .constant("kept"), expression: .call(
+                Call(
                     receiver: .literal(.array([.int(1), .int(2), .int(3)])),
                     selector: "std.concurrent.map",
                     arguments: [
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any)]
+                                    parameters: [
+                                        "index": Parameter(type: .any),
+                                        "item": Parameter(type: .any)
+                                    ]
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -90,12 +94,13 @@ struct ConcurrencyTests {
         #expect(answer == .array([.int(1), .int(2), .int(3)]))
     }
 
-    @Test("a map call is offered where its element sat")
-    func mapOffersTheIndex() async throws {
-        // Given — the closure asks for `index` and not `item`, and the offer
-        // covers it: which of the two the author reads is the author's business
-        let sut = Statement(binding: .constant("placed"), expression: .dispatch(
-                Dispatch(
+    @Test("a closure a walk calls declares every name the walk hands over")
+    func mapHandsOverEveryName() async throws {
+        // Given. `std.concurrent.map` hands over `item` and `index`, and this
+        // closure declares only the second. A name nothing can receive is not
+        // one to hand over quietly
+        let sut = Statement(binding: .constant("placed"), expression: .call(
+                Call(
                     receiver: .literal(.array([.string("a"), .string("b")])),
                     selector: "std.concurrent.map",
                     arguments: [
@@ -113,27 +118,31 @@ struct ConcurrencyTests {
             )
         )
 
-        // When
-        let answer = try await answer(of: [sut], result: reference("placed"))
-
-        // Then
-        #expect(answer == .array([.int(0), .int(1)]))
+        // When / Then
+        await #expect {
+            try await answer(of: [sut], result: reference("placed"))
+        } throws: { error in
+            "\(error)".contains("not declared in the signature: item")
+        }
     }
 
     @Test("a null element is an element, not a missing argument")
     func mapCarriesNullElements() async throws {
-        // Given — the sequential walk hands a null element straight to its
-        // body, and running the same walk at once must not turn that into
-        // "nothing was given": what a word offers is what arrived
-        let sut = Statement(binding: .constant("kept"), expression: .dispatch(
-                Dispatch(
+        // Given. The sequential walk hands a null element straight to its body,
+        // and running the same walk at once must not turn that into "nothing
+        // was given": what a procedure offers is what arrived
+        let sut = Statement(binding: .constant("kept"), expression: .call(
+                Call(
                     receiver: .literal(.array([.int(1), .null, .int(3)])),
                     selector: "std.concurrent.map",
                     arguments: [
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any)]
+                                    parameters: [
+                                        "index": Parameter(type: .any),
+                                        "item": Parameter(type: .any)
+                                    ]
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -154,8 +163,8 @@ struct ConcurrencyTests {
     @Test("a map over nothing answers nothing, rather than failing")
     func mapOverNothingAnswersEmpty() async throws {
         // Given
-        let sut = Statement(binding: .constant("none"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("none"), expression: .call(
+                Call(
                     receiver: .literal(.array([])),
                     selector: "std.concurrent.map",
                     arguments: [
@@ -182,15 +191,16 @@ struct ConcurrencyTests {
 
     @Test("first answers one piece, and the failures beside it do not count")
     func firstAnswersTheSuccess() async throws {
-        // Given — one closure cannot succeed, and a first only needs one that can
-        let sut = Statement(binding: .constant("either"), expression: .dispatch(
-                Dispatch(
+        // Given. One closure cannot succeed, and a first only needs one that
+        // can
+        let sut = Statement(binding: .constant("either"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(
                             Procedure(
                                 body: [
-                                    Statement(binding: .constant("doomed"), expression: .dispatch(
-                                            Dispatch(
+                                    Statement(binding: .constant("doomed"), expression: .call(
+                                            Call(
                                                 selector: "app.fail",
                                                 arguments: ["recoverable": .literal(.bool(true))]
                                             )
@@ -220,18 +230,18 @@ struct ConcurrencyTests {
 
     @Test("first asks the pieces still running to stop")
     func firstCancelsTheRest() async throws {
-        // Given — one piece answers at once, the other waits far longer than the
-        // test does. Returning from the word awaits every sibling, so without
+        // Given. One piece answers at once, the other waits far longer than the
+        // test does. Returning from the procedure awaits every sibling, so without
         // the ask this would take the sibling's time, not the winner's.
         let waiting = CancellationWatch()
-        let sut = Statement(binding: .constant("either"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("either"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(Procedure(body: [], result: .literal(.string("answered")))),
                         .closure(
                             Procedure(
                                 body: [
-                                    Statement(binding: .constant("slow"), expression: .dispatch(Dispatch(selector: "app.wait"))
+                                    Statement(binding: .constant("slow"), expression: .call(Call(selector: "app.wait"))
                                     )
                                 ],
                                 result: reference("slow")
@@ -264,14 +274,14 @@ struct ConcurrencyTests {
     @Test("a first nothing wins fails like all does")
     func firstWithoutASuccessFails() async throws {
         // Given
-        let sut = Statement(binding: .constant("either"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("either"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(
                             Procedure(
                                 body: [
-                                    Statement(binding: .constant("doomed"), expression: .dispatch(
-                                            Dispatch(
+                                    Statement(binding: .constant("doomed"), expression: .call(
+                                            Call(
                                                 selector: "app.fail",
                                                 arguments: ["recoverable": .literal(.bool(true))]
                                             )
@@ -299,13 +309,13 @@ struct ConcurrencyTests {
 
     @Test("all reports every failure, keyed by the piece that failed")
     func allReportsEveryFailure() async throws {
-        // Given — two pieces fail. Which failures a rescue reads must be every
+        // Given. Two pieces fail. Which failures a rescue reads must be every
         // one of them, whichever finished first.
         let doomed = Warp.Expression.closure(
             Procedure(
                 body: [
-                    Statement(binding: .constant("doomed"), expression: .dispatch(
-                            Dispatch(
+                    Statement(binding: .constant("doomed"), expression: .call(
+                            Call(
                                 selector: "app.fail",
                                 arguments: ["recoverable": .literal(.bool(true))]
                             )
@@ -315,8 +325,8 @@ struct ConcurrencyTests {
                 result: reference("doomed")
             )
         )
-        let sut = Statement(binding: .constant("both"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("both"), expression: .call(
+                Call(
                     receiver: .record(["first": doomed, "second": doomed]),
                     selector: "std.concurrent.all"
                 )
@@ -340,8 +350,8 @@ struct ConcurrencyTests {
     @Test("a piece that is not a closure is refused, named by where it sat")
     func aValueAmongTheClosuresIsRefused() async throws {
         // Given
-        let sut = Statement(binding: .constant("both"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("both"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(Procedure(body: [], result: .literal(.int(1)))),
                         .literal(.int(2))
@@ -355,16 +365,16 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("piece [1]")
+            "\(error)".contains("the receiver of 'std.concurrent.all'[1]: expected isolated procedure, got int")
         }
     }
 
     @Test("map refuses material that is not a collection")
     func mapRefusesUnfitMaterial() async throws {
-        // Given — the material arrives as `any`, so only the run can judge
-        // it, and the boundary every word shares is what judges it
-        let sut = Statement(binding: .constant("walked"), expression: .dispatch(
-                Dispatch(
+        // Given. The material arrives as `any`, so only the run can judge it,
+        // and the boundary every procedure shares is what judges it
+        let sut = Statement(binding: .constant("walked"), expression: .call(
+                Call(
                     receiver: reference("subject"),
                     selector: "std.concurrent.map",
                     arguments: [
@@ -413,12 +423,14 @@ private actor CancellationWatch {
 }
 
 private struct WaitEffect: Effect {
+    typealias Parameters = NoParameters
+
     // MARK: - Property
     let watch: CancellationWatch
 
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
         do {
             try await Task.sleep(for: .seconds(30))
         } catch {

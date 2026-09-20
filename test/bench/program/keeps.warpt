@@ -75,7 +75,7 @@ warpt 1
       result {
         ref "round"
       }
-      returns "int"
+      returns "int?"
     }
   }
   warp 1

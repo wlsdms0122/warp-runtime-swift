@@ -10,22 +10,18 @@ import Foundation
 public struct Parameter: Sendable, Equatable {
     // MARK: - Property
     // What this takes, or nil where nothing was declared. `any` is a claim that
-    // any shape is welcome; nil is the absence of a claim. Neither is checked,
+    // any type is welcome; nil is the absence of a claim. Neither is checked,
     // and keeping them apart is what lets the ones written on purpose be told
     // from the ones nobody got around to.
     public let type: TypeExpression?
-    public let oneOf: [String]?
+    public let candidates: [String]?
     public let `default`: Value?
-    public let hint: String?
+    public let description: String?
 
-    // Whether a call must write this argument: the shape's one answer, for
+    // Whether a call must write this argument: the type's one answer, for
     // the call check, the boundary and path reachability alike.
     public func mustBeGiven(in types: TypeTable) -> Bool {
-        mustBeGiven(in: types.shapes)
-    }
-
-    func mustBeGiven(in table: ShapeTable) -> Bool {
-        declared.lowered(in: table).mustBeGiven(default: `default`, in: table)
+        declared.lowered(in: types.loweredTypes).mustBeGiven(defaulted: `default` != nil, in: types.loweredTypes)
     }
 
     // What this reads as where a type is needed regardless. An undeclared
@@ -35,14 +31,14 @@ public struct Parameter: Sendable, Equatable {
     // MARK: - Initializer
     public init(
         type: TypeExpression? = nil,
-        oneOf: [String]? = nil,
+        candidates: [String]? = nil,
         default: Value? = nil,
-        hint: String? = nil
+        description: String? = nil
     ) {
         self.type = type
-        self.oneOf = oneOf
+        self.candidates = candidates
         self.default = `default`
-        self.hint = hint
+        self.description = description
     }
 
     // MARK: - Public
@@ -50,26 +46,18 @@ public struct Parameter: Sendable, Equatable {
     // into the slot the run reads, and the value settled by it.
     public func taking(
         _ value: Value,
-        called name: String,
+        called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try lowered(named: name, in: types.shapes).taking(value, in: types.shapes)
-    }
-
-    public func checking(
-        receiver value: Value,
-        called name: String,
-        in types: TypeTable = .empty
-    ) throws -> Value {
-        try lowered(named: name, in: types.shapes).checking(receiver: value, in: types.shapes)
+        try lowered(named: name, in: types.loweredTypes).taking(value, in: types.loweredTypes)
     }
 
     public func checking(
         _ value: Value,
-        called name: String,
+        called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try lowered(named: name, in: types.shapes).checking(value, in: types.shapes)
+        try lowered(named: name, in: types.loweredTypes).checking(value, at: "input '\(name)'", in: types.loweredTypes)
     }
 
     // MARK: - Private

@@ -9,24 +9,36 @@ import Foundation
 
 extension Value {
     // This value with one part replaced: the part the path names, in a record
-    // by key and in an array by position. The rest is kept as it was. The
-    // link judged the path against the value's declared shape, and every
-    // index was read to a position before this, so a key not yet held is an
-    // entry of an object and is made. A part the value does not hold below
-    // that is refused as what it is: an entry not written yet, or a shape
-    // with no such part.
-    func writing(_ value: Value, at path: [PathSegment], under rendered: String) throws -> Value {
-        guard let segment = path.first else { return value }
+    // by the place the link put the field at, in a dictionary by name and in
+    // an array by position. The rest is kept as it was. The link judged the
+    // path against the value's declared type, and every index was read to a
+    // position before this. A dictionary's names are its own, so one not
+    // held yet is made.
+    func writing(_ value: Value, at path: [Projection], under rendered: String) throws -> Value {
+        guard let step = path.first else { return value }
 
         let rest = Array(path.dropFirst())
 
-        switch (self, segment) {
-        case let (.record(record), .key(name, _)):
+        switch (self, step) {
+        case let (.record(record), .field(position, name)):
+            guard record.values.indices.contains(position) else {
+                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
+            }
+
             return .record(
-                record.writing(name, with: try (record[name] ?? .null).writing(value, at: rest, under: rendered))
+                record.writing(at: position, with: try record.values[position].writing(value, at: rest, under: rendered))
             )
 
-        case let (.array(elements), .index(index, _)):
+        // A name written into what holds its names as data. The link judged
+        // the path, so a name that reaches here is one it allowed.
+        case let (_, .key(name)) where holdsFields:
+            do {
+                return try writing(name, with: try (self[name] ?? .null).writing(value, at: rest, under: rendered))
+            } catch let refused as ValueRefused {
+                throw ExecutionError("'\(rendered)' writes '\(name)', and \(refused.message)")
+            }
+
+        case let (.array(elements), .index(index)):
             guard elements.indices.contains(index) else {
                 throw ExecutionError(
                     "'\(rendered)' writes element \(index) of an array holding \(elements.count)"
@@ -39,13 +51,13 @@ extension Value {
 
         case (.null, _):
             throw ExecutionError(
-                "'\(rendered)' writes through \([segment].rendered), which holds nothing yet"
-                    + " — write the whole entry first"
+                "'\(rendered)' writes through \([step.spelled].rendered), which holds nothing yet."
+                    + " Write the whole entry first"
             )
 
         default:
             throw ExecutionError(
-                "'\(rendered)' writes \([segment].rendered) into \(type), which has no such part"
+                "'\(rendered)' writes \([step.spelled].rendered) into \(type), which has no such part"
             )
         }
     }

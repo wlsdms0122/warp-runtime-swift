@@ -9,18 +9,18 @@ import Foundation
 
 // How a procedure does what it declares. A body of statements, or native code.
 //
-// This is the whole of what separates a native word from a procedure: which
-// language the body is written in. Both are the same concept answered two ways,
-// so they share one container.
+// This is the whole of what separates a native procedure from one written as a
+// body: which language the body is written in. Both are the same concept
+// answered two ways, so they share one container.
 //
 // There is one kind of declaration, and this is the axis it varies on. A module
-// of native words links like any other, and a document calling one is doing what
-// a document calling a procedure does.
+// of native procedures links like any other, and a document calling one is
+// doing what a document calling a written body does.
 public enum Implementation: Sendable {
     case body(Block)
 
-    // Answers without running anything. Pure and synchronous, which is what
-    // lets it be asked inside a condition and inside a path.
+    // Answers without running anything. Const and synchronous, which is what
+    // lets it be asked inside a condition and while a constant settles.
     case query(any Query)
 
     // Answers by reaching outside the run. Asynchronous, so it cannot be asked
@@ -28,20 +28,47 @@ public enum Implementation: Sendable {
     case effect(any Effect)
 
     // MARK: - Property
-    // Whether this answers without running. For a body it is not knowable from
-    // the case alone — what it calls decides — so the linker computes it and
-    // this says only what a native declares about itself.
-    public var isNativelyPure: Bool? {
+    // The procedure behind this where it is written in native code, which is what
+    // declares its own constness, isolation and failing. Nil for a body, whose
+    // claims are what its code turns out to do.
+    var native: Native? {
         switch self {
-        case .query:
-            return true
-
-        case .effect:
-            return false
-
         case .body:
             return nil
+
+        case let .query(query):
+            return .query(query)
+
+        case let .effect(effect):
+            return .effect(effect)
         }
+    }
+
+    // What a native declares about itself, in the answers a builder works out
+    // for a body. Nil where nothing was declared, which is what a body is.
+    public var isNativelyConst: Bool? {
+        native.map { procedure in procedure.constness == .const }
+    }
+
+    public var isNativelyIsolated: Bool? {
+        native.map { procedure in procedure.isolation == .isolated }
+    }
+
+    public var nativelyFailing: Failing? {
+        native?.failing
+    }
+
+    // The places a native procedure reads its arguments at, with the name each
+    // place stands under. Nil for a body, which reads the names its own
+    // declaration gave it.
+    var nativeParameters: [(position: Int, name: Name)]? {
+        native?.parameters
+    }
+
+    // The procedures a native procedure sends, in the places it names them at. Nil for
+    // a body, whose sends are read off its text.
+    var nativeImports: [Native.Send]? {
+        native?.imports
     }
 
     public var block: Block? {

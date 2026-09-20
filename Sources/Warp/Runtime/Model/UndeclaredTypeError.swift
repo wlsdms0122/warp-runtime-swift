@@ -11,11 +11,11 @@ import Foundation
 //
 // Its own error because it is its own kind of wrong: every other refusal a
 // boundary raises says the value that arrived was not what was declared, and
-// this one says the *declaration* never named anything. The two look alike
-// from the outside — both stop a value at a boundary — and a reader that
-// cannot tell them apart will treat a typo as an answer.
+// this one says the *declaration* never named anything. The two look alike from
+// the outside (both stop a value at a boundary) and a reader that cannot tell
+// them apart will treat a typo as an answer.
 //
-// `as?` is that reader. It exists to read "the value is not that shape" as
+// `as?` is that reader. It exists to read "the value is not that type" as
 // null, which is the author saying they expected a mismatch; a name nothing
 // declares is not a mismatch they could have expected, and swallowing one
 // would turn a typo into a permanent, silent null.

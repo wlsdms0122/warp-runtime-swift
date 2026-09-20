@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What a value is. One case per `Value` case and nothing else — this answers
+// What a value is. One case per `Value` case and nothing else. This answers
 // about a value in hand, so there is no `any` here and nothing to compose.
 //
 // What a *declaration* says is `TypeExpression`. The two were one enumeration
@@ -22,7 +22,7 @@ public enum ValueType: String, Sendable, CaseIterable {
     case string
     case bytes
     case array
-    case object
+    case record
 
     // A value that can be called.
     case procedure

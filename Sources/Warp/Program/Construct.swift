@@ -7,12 +7,12 @@
 
 import Foundation
 
-// Which shape an expression is, without any of it.
+// Which type an expression is, without any of it.
 //
-// A place says which construct a statement writes, and the shape is the whole
-// of what it has to say — carrying the expression would put a program inside an
+// A place says which construct a statement writes, and the type is the whole
+// of what it has to say. Carrying the expression would put a program inside an
 // address. The cases are the language's own and no document's: what a text
-// spells a shape with is the notation's, and two texts spelling one shape two
+// spells a type with is the notation's, and two texts spelling one type two
 // ways arrive here as one case.
 public enum Construct: Sendable, Equatable {
     case literal
@@ -22,22 +22,21 @@ public enum Construct: Sendable, Equatable {
     case closure
     case cast
 
-    case invoke
+    case apply
     case block
     case conditional
     case loop
-    case iteration
     case attempt
-    case dispatch
+    case call
     case leave(Leave.Reach)
 
     // MARK: - Public
-    // What the language calls this shape. A document calls several of them
+    // What the language calls this construct. A document calls several of them
     // something else, and the reading that knows which is not this one.
     //
-    // Leaving reads as one word for all three reaches. Which loop a `leave`
-    // ends is carried in the case and spelled by whoever spells for a document
-    // — an address exists to reach the statement, and the statement is already
+    // Leaving renders as one name for all three reaches. Which loop a `leave`
+    // ends is carried in the case and spelled by whoever spells for a document.
+    // An address exists to reach the statement, and the statement is already
     // named a step above.
     public var rendered: String {
         switch self {
@@ -47,13 +46,12 @@ public enum Construct: Sendable, Equatable {
         case .record: "record"
         case .closure: "closure"
         case .cast: "cast"
-        case .invoke: "invoke"
+        case .apply: "apply"
         case .block: "block"
         case .conditional: "conditional"
         case .loop: "loop"
-        case .iteration: "iteration"
         case .attempt: "attempt"
-        case .dispatch: "dispatch"
+        case .call: "call"
         case .leave: "leave"
         }
     }

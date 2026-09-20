@@ -8,35 +8,34 @@
 import Foundation
 
 extension Double {
-    // The fraction as something to read, spelled where a document spells it
-    // and said in this vocabulary's own words where none does — only a host's
-    // hand brings an infinity or a nan here, and every surface that has to
-    // show one says it the same way rather than in whatever the host's
-    // formatter says today.
+    // The fraction as something to read, spelled where a document spells it and
+    // said in this vocabulary's own terms where none does. Only a host's hand
+    // brings an infinity or a nan here, and every surface that has to show one
+    // says it the same way rather than in whatever the host's formatter says
+    // today.
     //
     // Apart from `spelling` because the two are asked by different callers: a
     // message shows whatever it was handed, and a document may only carry what
     // reads back.
     var shown: String {
-        guard let spelling else {
+        guard isFinite else {
             guard !isNaN else { return "<not a number>" }
 
             return self > 0 ? "<infinity>" : "<-infinity>"
         }
 
-        return spelling
+        return spelling ?? "<unspellable>"
     }
 
     // The one spelling a document writes a fraction in, and every judge of a
-    // fraction's spelling — the writer, the boundary's oneOf, the link's
-    // candidate check — reads this one answer. Nil for what no document
-    // carries.
+    // fraction's spelling (the writer, the boundary's enum, the link's
+    // candidate check) reads this one answer. Nil for what no document carries.
     //
     // The digits are the host's shortest round-trip rendering; the *form* is
     // the document's own rule, assembled here so a host's presentation taste
-    // cannot leak into the grammar: writing d.ddd…×10^k, the point form when
-    // -5 < k < 16, otherwise the exponent form with an explicit sign and at
-    // least two digits — `1e-05`, `1e+16`.
+    // cannot leak into the grammar: writing d.ddd…×10^k, the point form when -5
+    // < k < 16, otherwise the exponent form with an explicit sign and at least
+    // two digits. `1e-05`, `1e+16`.
     public var spelling: String? {
         guard isFinite else { return nil }
 
@@ -49,9 +48,9 @@ extension Double {
         let plain = "\(magnitude)"
         let halves = plain.split(separator: "e", maxSplits: 1)
 
-        guard let shift = halves.count == 2 ? Int(halves[1]) : 0 else {
-            preconditionFailure("a finite fraction rendered an unreadable exponent")
-        }
+        // The exponent behind `e` is the host's own rendering, so no finite
+        // fraction takes this way out.
+        guard let shift = halves.count == 2 ? Int(halves[1]) : 0 else { return nil }
         let pieces = halves[0].split(separator: ".", maxSplits: 1)
         let whole = pieces[0]
         let fractional = pieces.count == 2 ? pieces[1] : ""

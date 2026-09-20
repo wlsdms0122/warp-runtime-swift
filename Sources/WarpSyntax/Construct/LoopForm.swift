@@ -9,8 +9,8 @@ import Foundation
 import Warp
 
 // Repetition governed by a condition: the body runs while `while` holds.
-// Nothing here bounds a body that never settles — an author bounds a loop with
-// a counter and a word, and a receiver stops one with cancellation.
+// Nothing here bounds a body that never settles. An author bounds a loop with a
+// counter and a procedure, and a receiver stops one with cancellation.
 public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case `while`
@@ -19,11 +19,11 @@ public struct LoopForm: ConstructForm {
     }
 
     // MARK: - Property
-    public static let key = "loop"
+    public static let key: Name = "loop"
 
     // The condition slot may be written in spellings a notation named itself, so
-    // the words behind them are owed wherever this form is registered and
-    // nowhere else. Which words those are is never this form's business.
+    // the procedures behind them are owed wherever this form is registered and
+    // nowhere else. Which procedures those are is never this form's business.
     public static let readsCondition = true
 
     // The body is decoded as a key that must be there, so a loop with nothing
@@ -37,12 +37,11 @@ public struct LoopForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "loop")
 
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        self.condition = try container.decode(ConditionReader.self, forKey: .while).condition
+        self.condition = try decoder.descending(to: CodingKeys.while).read(ConditionReader.self).condition
         self.body = try .reading(
-            body: try container.decode(BodyReader.self, forKey: .body).statements,
-            result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?
+            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).statements,
+            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
+                .read(ExpressionReader.self)
                 .expression,
             at: decoder.steps
         )

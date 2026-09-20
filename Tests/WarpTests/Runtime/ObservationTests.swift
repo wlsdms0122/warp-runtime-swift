@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // What a caller is told while a run happens.
 //
@@ -18,7 +19,7 @@ import Testing
 @Suite("What a run reports while it runs")
 struct ObservationTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -39,7 +40,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -54,7 +55,7 @@ struct ObservationTests {
 
     @Test("a statement inside a body is announced under the place it ran in")
     func nestedStatementsAreAnnounced() async throws {
-        // Given — observation follows the run, not the top level of the text
+        // Given. Observation follows the run, not the top level of the text
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
@@ -76,7 +77,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -87,19 +88,24 @@ struct ObservationTests {
 
     @Test("the same statement run twice is announced as two different places")
     func roundsAreToldApart() async throws {
-        // Given — the text says `step` once, and the run reaches it once a round
+        // Given. The text says `step` once, and the run reaches it once a round
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("walk"), expression: .iteration(
-                                over: .literal(.array([.int(1), .int(2)])),
-                                body: [
-                                    Statement(binding: .constant("step"), expression: reference("each", "item")
+                        Statement(binding: .constant("round"), expression: .loop(
+                                while: .call(
+                                    Call(
+                                        receiver: reference("round", "index"),
+                                        selector: "std.math.lessThan",
+                                        arguments: ["value": .literal(.int(2))]
                                     )
-                                ],
-                                element: "each"
+                                ),
+                                body: Block(body: [
+                                    Statement(binding: .constant("step"), expression: reference("round", "index"))
+                                ]),
+                                round: "round"
                             )
                         )
                     ]
@@ -108,32 +114,38 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
         // Then
-        #expect(await observer.events.contains(.completed("walk[0].step", .int(1))))
-        #expect(await observer.events.contains(.completed("walk[1].step", .int(2))))
+        #expect(await observer.events.contains(.completed("round[0].step", .int(0))))
+        #expect(await observer.events.contains(.completed("round[1].step", .int(1))))
     }
 
     @Test("a piece of a fan-out is announced under which piece it is")
     func piecesAreToldApart() async throws {
-        // Given
+        // Given. `std.concurrent.map` is written in Warp, so the walk that
+        // builds the pieces stands in the path too, and so does the closure
+        // of its own it runs each piece in. What tells the pieces apart is
+        // the number the fan-out put on each
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("both"), expression: .dispatch(
-                                Dispatch(
+                        Statement(binding: .constant("both"), expression: .call(
+                                Call(
                                     receiver: .literal(.array([.int(1), .int(2)])),
                                     selector: "std.concurrent.map",
                                     arguments: [
                                         "by": .closure(
                                             Procedure(
                                                 signature: Signature(
-                                                    parameters: ["item": Parameter(type: .any)]
+                                                    parameters: [
+                                                        "index": Parameter(type: .any),
+                                                        "item": Parameter(type: .any)
+                                                    ]
                                                 ),
                                                 body: [
                                                     Statement(binding: .constant("step"), expression: reference("item")
@@ -152,24 +164,24 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
         // Then
-        #expect(await observer.events.contains(.completed("both[0].step", .int(1))))
-        #expect(await observer.events.contains(.completed("both[1].step", .int(2))))
+        #expect(await observer.events.contains(.completed("both.std.concurrent.map[0].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(1))))
+        #expect(await observer.events.contains(.completed("both.std.concurrent.map[1].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(2))))
     }
 
     @Test("a call into a body keeps the statement that called it")
     func aCallPushesRatherThanReplaces() async throws {
-        // Given — a place is how the run got here, not where it ended up
+        // Given. A place is how the run got here, not where it ended up
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "helper"))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "helper"))
                         )
                     ]
                 ),
@@ -183,7 +195,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -193,17 +205,17 @@ struct ObservationTests {
 
     @Test("a refusal carries the place it happened, not the one it passed through")
     func aRefusalCarriesItsInnermostPlace() async throws {
-        // Given — the mistake is inside the body, two statements deep
+        // Given. The mistake is inside the body, two statements deep
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
                         // Nameless on both sides. `helper` declares no answer
-                        // and its body never finishes, so the link reads the
-                        // call as `never` too — and a statement that never
+                        // and its body never finishes, so the build reads the
+                        // call as `never` too, and a statement that never
                         // finishes takes no name, so the place is its position.
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "helper"))
+                            expression: .call(Call(selector: "helper"))
                         )
                     ]
                 ),
@@ -218,7 +230,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         await #expect(throws: Aborted.self) {
@@ -233,6 +245,46 @@ struct ObservationTests {
         }
     }
 
+    @Test("a refusal inside a closure says which of its writer's closures it was in")
+    func aRefusalNamesTheClosureItWasIn() async throws {
+        // Given. Two closures written by `entry`, and the second is the one
+        // that refuses when called
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("first"),
+                            expression: .closure(Procedure(body: [], result: .literal(.int(1))))
+                        ),
+                        Statement(
+                            binding: .constant("second"),
+                            expression: .closure(
+                                Procedure(
+                                    body: [
+                                        Statement(expression: refusing(literal("no")))
+                                    ]
+                                )
+                            )
+                        ),
+                        Statement(binding: .constant("called"), expression: .apply(reference("second"), arguments: [:]))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+
+        // Then
+        do {
+            _ = try await Executor().run(image)
+            Issue.record("the closure was expected to refuse")
+        } catch let error as Aborted {
+            #expect(error.trace?.rendered == "called.entry.closure[1].[0]")
+        }
+    }
+
     @Test("a statement that fails is announced as failed and not as completed")
     func failureIsAnnounced() async throws {
         // Given
@@ -241,7 +293,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("doomed"), expression: .dispatch(Dispatch(selector: "app.fail"))
+                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail"))
                         )
                     ]
                 )
@@ -249,7 +301,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
 
         _ = try? await Executor(observer: observer).run(image)
 
@@ -275,8 +327,8 @@ struct ObservationTests {
                         Statement(binding: .constant("fragile"), expression: .attempt(
                                 Block(
                                     body: [
-                                        Statement(binding: .constant("doomed"), expression: .dispatch(
-                                                Dispatch(
+                                        Statement(binding: .constant("doomed"), expression: .call(
+                                                Call(
                                                     selector: "app.fail",
                                                     arguments: [
                                                         "recoverable": .literal(.bool(true))
@@ -297,7 +349,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
         let answer = try await Executor(observer: observer).run(image)
 
         // Then
@@ -318,7 +370,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then
@@ -341,19 +393,19 @@ private actor RecordingObserver: ExecutionObserver {
 
     // MARK: - Initializer
     // MARK: - Public
-    func statementStarted(at trace: Trace) async {
+    func statementStarted(at trace: Trace) {
         events.append(.started(trace.rendered))
     }
 
-    func statementCompleted(at trace: Trace, result: Value) async {
+    func statementCompleted(at trace: Trace, result: Value) {
         events.append(.completed(trace.rendered, result))
     }
 
-    func statementFailed(at trace: Trace, error: any Error) async {
+    func statementFailed(at trace: Trace, error: any Error) {
         events.append(.failed(trace.rendered))
     }
 
-    func failureRescued(name: String, error: any Error) async {
+    func failureRescued(name: String, error: any Error) {
         events.append(.rescued(name))
     }
 

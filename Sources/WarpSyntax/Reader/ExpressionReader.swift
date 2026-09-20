@@ -8,78 +8,90 @@
 import Foundation
 import Warp
 
-// The expression grammar. `Expression` has shapes and no spelling; this is the
-// spelling — no front end may hide an expression inside a string, so any
-// notation that can write an object can write every expression:
+// The expression grammar. `Expression` has constructs and no spelling; this is the
+// spelling. No front end may hide an expression inside a string, so any
+// notation that can write a record can write every expression:
 //
-//   scalar             — a literal, and strings are always literal text
-//   { ref: a.b[0] }    — a name to resolve in the consuming scope
-//   { value: <data> }  — the escape for data that looks like a form. It builds
+//   scalar            . A literal, and strings are always literal text
+//   { ref: a.b[0] }   . A name to resolve in the consuming scope
+//   { value: <data> } . The escape for data that looks like a form. It builds
 //                        a plain literal: quotation is a fact about this
 //                        notation, not about the expression it writes
-//   { format:, with: } — closed interpolation: the template sees only its
+//   { format:, with: }. Closed interpolation: the template sees only its
 //                        declared bindings, nothing from the ambient scope
 //   { closure: <procedure> }
-//                      — a procedure written where a value is wanted. An
+//                     . A procedure written where a value is wanted. An
 //                        expression rather than a construct because that is
 //                        where one is needed: a closure is written as an
 //                        argument far more often than as a statement
-//   { call: <message> } — a message where a value is wanted. The same form a
+//   { call: <message> }. A message where a value is wanted. The same form a
 //                        statement writes, and here because the language puts
 //                        no such limit on it: every spelling that stands in for
-//                        a word builds one of these somewhere inside an
+//                        a procedure builds one of these somewhere inside an
 //                        expression, so a document that could only write one as
 //                        a statement could not say plainly what its own
 //                        spellings mean
-//   record / array     — elements are expressions
+//   record / array    . Elements are expressions
 //
-// A string is never re-parsed into anything live — the injection surface the
-// old `${}` grammar carried does not exist here.
+// A string is never re-parsed into anything live. The injection surface the old
+// `${}` grammar carried does not exist here.
 public struct ExpressionReader: Decodable {
     // MARK: - Property
-    // The object keys that make a record an expression form. A record that
-    // carries one of these as plain data must be quoted — `{ value: ... }`.
+    // The keys that make a record an expression form. A record that carries one
+    // of these as plain data must be quoted. `{ value: ... }`.
     //
-    // Fixed, where construct words are a `ConstructRegistry` a caller composes. The
+    // Fixed, where construct keys are a `ConstructRegistry` a caller composes.
     // asymmetry is deliberate, and this set is why: it is the quoting boundary.
-    // A construct word is read in statement position, where a document is already
+    // A construct key is read in statement position, where a document is already
     // writing code; these are read wherever data appears, so widening the set
     // turns records that were data into forms. Under a movable boundary the same
     // document means different things in different notations, and the way an author
     // finds out is a payload silently becoming a reference.
-    static let formKeys: Set<String> = [
+    static let formKeys: Set<Name> = [
         "ref", "value", "format", "with", closureKey, "call", "as", "as?",
     ]
 
     // The key a closure literal is written under. Named because a place read
-    // in a document's words asks for it, and a word spelled in two files is a
-    // word the two can come to disagree about.
-    static let closureKey = "closure"
+    // in a document's keys asks for it, and a key spelled in two files is a
+    // key the two can come to disagree about.
+    static let closureKey: Name = "closure"
 
-    // What a cast reads and what a message is sent to are written under one
-    // key, and the two readers meet only in the text — so the word is here
+    // What a cast reads and what a call is sent to are written under one
+    // key, and the two readers meet only in the text, so the key is here
     // rather than in each of them.
-    static let subjectKey = "of"
+    static let subjectKey: Name = "of"
+
+    // What the slot an expression stands in reserves beyond the form keys: a
+    // notation's condition keys under `when` and `while`, and the construct
+    // keys directly under a statement's `value`. The writer quotes data by
+    // these, and the reader refuses an escape the writer would not have
+    // written by the same ones, so the slot that knows hands them in.
+    struct Slot {
+        static let plain = Slot()
+
+        var reserved: Set<Name> = []
+        var constructs: Set<Name> = []
+    }
 
     public let expression: Expression
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        self.expression = try Self.read(try ValueReader(from: decoder).value, in: decoder)
+        self.expression = try Self.read(try ValueReader(from: decoder).value, in: decoder, slot: .plain)
     }
 
     // MARK: - Public
     // MARK: - Internal
     // The decoder comes along because one form needs more than the value: a
-    // closure carries statements, and which words a statement may write is the
+    // closure carries statements, and which procedures a statement may write is the
     // registry's answer, which travels in the decoder rather than in the data.
     //
     // Not public: a form reading an expression goes through `init(from:)`, which
     // is where a refusal from this grammar is given the address of the walk
     // that asked for it. A door around that boundary is a way to refuse with no
     // address at all, and one existed for exactly as long as this was public.
-    static func read(_ value: Value, in decoder: Decoder? = nil) throws -> Expression {
-        try read(value, at: decoder?.steps ?? [], in: decoder)
+    static func read(_ value: Value, in decoder: Decoder? = nil, slot: Slot = .plain) throws -> Expression {
+        try read(value, at: decoder?.steps ?? [], in: decoder, slot: slot)
     }
 
     // MARK: - Private
@@ -87,7 +99,7 @@ public struct ExpressionReader: Decodable {
     // like any other and it records where it is like any other. The decoder
     // stops at the key the expression is written under and everything below
     // that is this walk's own descent, which is why the steps travel here as
-    // well as in the decoder — a walk that carried only the decoder's would
+    // well as in the decoder. A walk that carried only the decoder's would
     // answer for a record ten fields deep with the address of the record.
     //
     // This is also where the grammar's refusal is given an address. It is
@@ -97,7 +109,8 @@ public struct ExpressionReader: Decodable {
     private static func read(
         _ value: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder?,
+        slot: Slot = .plain
     ) throws -> Expression {
         do {
             switch value {
@@ -111,11 +124,20 @@ public struct ExpressionReader: Decodable {
                     }
                 )
 
+            case let .dictionary(fields):
+                return try read(record: fields, at: steps, in: decoder, slot: slot)
+
+            // A form is keys the notation reserved, and a name under which a
+            // value stands is not one of them. So a value the document named
+            // is data, and reading it as a form would spend the name.
+            case let .record(record) where record.name != nil:
+                return .literal(value)
+
             case let .record(record):
-                return try read(object: record, at: steps, in: decoder)
+                return try read(record: record.asDictionary, at: steps, in: decoder, slot: slot)
 
             // A document is text. Nothing it parses to is ever a procedure, so
-            // this arm is unreachable rather than unwritten — a closure reaches
+            // this arm is unreachable rather than unwritten. A closure reaches
             // the language by being spelled, and spelling it is a form.
             case .procedure:
                 throw ExpressionFormError("a document cannot contain a procedure value")
@@ -125,231 +147,270 @@ public struct ExpressionReader: Decodable {
         }
     }
 
+    // One form, one function. What a form refuses with is written in that
+    // function alone, so the walk down through a nested call carries the
+    // frame of the call form and not the sentences of the five it is not.
     private static func read(
-        object: Record,
+        record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?,
+        slot: Slot
+    ) throws -> Expression {
+        let formKeys = Set(record.names).intersection(Self.formKeys)
+
+        guard !formKeys.isEmpty else { return try fields(in: record, at: steps, in: decoder) }
+
+        if record.names.contains("ref") { return try reference(in: record) }
+        if record.names.contains("as") || record.names.contains("as?") { return try cast(in: record, at: steps, in: decoder) }
+        if record.names.contains(Self.closureKey) { return try closure(in: record, at: steps, in: decoder) }
+        if record.names.contains("call") { return try call(in: record, at: steps, in: decoder) }
+        if record.names.contains("value") { return try literal(in: record, slot: slot) }
+
+        return try template(in: record, at: steps, in: decoder)
+    }
+
+    // No form key: an ordinary record of expressions. In the record's order,
+    // so that a record with two bad fields refuses the same one every run.
+    private static func fields(
+        in record: Value.Dictionary,
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        let formKeys = Set(object.names).intersection(Self.formKeys)
+        .record(
+            try record.entries.reduce(into: [Name: Expression]()) { fields, entry in
+                fields[entry.name] = try read(
+                    entry.value,
+                    at: steps + [.key(entry.name.spelling)],
+                    in: decoder
+                )
+            }
+        )
+    }
 
-        // No form key: an ordinary record of expressions.
-        guard !formKeys.isEmpty else {
-            // In the record's order, so that a record with two bad fields
-            // refuses the same one every run.
-            return .record(
-                try object.entries.reduce(into: [String: Expression]()) { fields, entry in
-                    fields[entry.name] = try read(
-                        entry.value,
-                        at: steps + [.key(entry.name)],
-                        in: decoder
+    private static func reference(in record: Value.Dictionary) throws -> Expression {
+        guard record.count == 1 else {
+            throw ExpressionFormError(
+                "a record with `ref` must be exactly { ref: <path> }."
+                    + " Wrap it in { value: ... } if the keys are plain data"
+                    + " (found keys: \(record.names))"
+            )
+        }
+
+        guard case let .string(rendered)? = record["ref"] else {
+            throw ExpressionFormError(
+                "{ ref: } takes a path string like a.b[0]"
+            )
+        }
+
+        do {
+            return .reference(try TemplateParser().parseRefPath(rendered))
+        } catch {
+            throw ExpressionFormError("{ ref: \(rendered) }: \(error)")
+        }
+    }
+
+    private static func cast(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard !(record.names.contains("as") && record.names.contains("as?")) else {
+            throw ExpressionFormError(
+                "a cast names one type. `as` and `as?` are the two ways to"
+                    + " read a mismatch, not two types to read"
+            )
+        }
+
+        let optional = record.names.contains("as?")
+        let key: Name = optional ? "as?" : "as"
+
+        guard record.count == 2, let written = record[key], let read = record[Self.subjectKey] else {
+            throw ExpressionFormError(
+                "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }."
+                    + " Wrap it in { value: ... } if the keys are plain data"
+                    + " (found keys: \(record.names))"
+            )
+        }
+
+        // A type has two spellings and a cast takes either: the string a
+        // built-in or a declared name is written as, and the mapping a
+        // record or a procedure signature is written as. Reading only the
+        // first would put a type out of a cast's reach for no reason but
+        // how it is written.
+        let type: TypeExpression
+
+        do {
+            if case let .string(spelling) = written {
+                type = try TypeReader.parse(spelling)
+            } else {
+                guard let decoder else {
+                    throw ExpressionFormError(
+                        "{ \(key): } written as a mapping cannot be read here."
+                            + " This surface reads a type by its name alone"
                     )
                 }
-            )
-        }
 
-        if object.names.contains("ref") {
-            guard object.count == 1 else {
-                throw ExpressionFormError(
-                    "a record with `ref` must be exactly { ref: <path> } —"
-                        + " wrap it in { value: ... } if the keys are plain data"
-                        + " (found keys: \(object.names))"
-                )
-            }
-
-            guard case let .string(rendered)? = object["ref"] else {
-                throw ExpressionFormError(
-                    "{ ref: } takes a path string like a.b[0]"
-                )
-            }
-
-            do {
-                return .reference(try TemplateParser().parseRefPath(rendered))
-            } catch {
-                throw ExpressionFormError("{ ref: \(rendered) } — \(error)")
-            }
-        }
-
-        if object.names.contains("as") || object.names.contains("as?") {
-            guard !(object.names.contains("as") && object.names.contains("as?")) else {
-                throw ExpressionFormError(
-                    "a cast names one shape — `as` and `as?` are the two ways to"
-                        + " read a mismatch, not two shapes to read"
-                )
-            }
-
-            let optional = object.names.contains("as?")
-            let key = optional ? "as?" : "as"
-
-            guard object.count == 2, let written = object[key], let read = object[Self.subjectKey] else {
-                throw ExpressionFormError(
-                    "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }"
-                        + " — wrap it in { value: ... } if the keys are plain data"
-                        + " (found keys: \(object.names))"
-                )
-            }
-
-            // A type has two spellings and a cast takes either: the string a
-            // built-in or a declared name is written as, and the mapping a
-            // record or a procedure signature is written as. Reading only the
-            // first would put a shape out of a cast's reach for no reason but
-            // how it is written.
-            let type: TypeExpression
-
-            do {
-                if case let .string(spelling) = written {
-                    type = try TypeReader.parse(spelling)
-                } else {
-                    guard let decoder else {
-                        throw ExpressionFormError(
-                            "{ \(key): } written as a mapping cannot be read here"
-                                + " — this surface reads a type by its name alone"
-                        )
-                    }
-
-                    type = try TypeReader(from: ValueDecoder(
-                        value: written,
-                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key)],
-                        steps: steps + [.key(key)],
-                        userInfo: decoder.userInfo
-                    ))
+                type = try TypeReader(from: ValueDecoder(below: decoder, key: key.spelling, holding: written, at: steps))
                     .type
-                }
-            } catch let error as TypeFormError {
-                throw ExpressionFormError("{ \(key): } — \(error.message)")
             }
+        } catch let error as TypeFormError {
+            throw ExpressionFormError("{ \(key): }: \(error.message)")
+        }
 
-            return .cast(
-                try Self.read(read, at: steps + [.key(Self.subjectKey)], in: decoder),
-                as: type,
-                optional: optional
+        return .cast(
+            try Self.read(read, at: steps + [.key(Self.subjectKey.spelling)], in: decoder),
+            as: type,
+            optional: optional
+        )
+    }
+
+    private static func closure(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard record.count == 1, let written = record[Self.closureKey] else {
+            throw ExpressionFormError(
+                "a record with `closure` must be exactly { closure: <procedure> }"
+                    + " (found keys: \(record.names))"
             )
         }
 
-        if object.names.contains(Self.closureKey) {
-            guard object.count == 1, let written = object[Self.closureKey] else {
-                throw ExpressionFormError(
-                    "a record with `closure` must be exactly { closure: <procedure> }"
-                        + " (found keys: \(object.names))"
-                )
-            }
+        guard let decoder else {
+            throw ExpressionFormError(
+                "{ closure: } cannot be read here. A closure carries statements,"
+                    + " and this surface reads expressions alone"
+            )
+        }
 
-            guard let decoder else {
-                throw ExpressionFormError(
-                    "{ closure: } cannot be read here — a closure carries statements,"
-                        + " and this surface reads expressions alone"
-                )
-            }
-
-            do {
-                return .closure(
-                    try ProcedureReader(from: ValueDecoder(
-                        value: written,
-                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: Self.closureKey)],
-                        steps: steps + [.key(Self.closureKey)],
-                        userInfo: decoder.userInfo
-                    ))
+        do {
+            return .closure(
+                try ProcedureReader(from: ValueDecoder(below: decoder, key: Self.closureKey.spelling, holding: written, at: steps))
                     .procedure
-                )
-            } catch let refusal as ReadingError {
-                // A reading that says where it is says it deeper than here, and
-                // folding it into this form's sentence would spend the address
-                // to say the words again.
-                throw refusal
-            } catch {
-                throw ExpressionFormError("{ closure: } — \(error)")
-            }
+            )
+        } catch let refusal as ReadingError {
+            // A reading that says where it is says it deeper than here, and
+            // folding it into this form's sentence would spend the address
+            // to say the procedures again.
+            throw refusal
+        } catch {
+            throw ExpressionFormError("{ closure: }: \(error)")
+        }
+    }
+
+    private static func call(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        guard record.count == 1, let written = record["call"] else {
+            throw ExpressionFormError(
+                "a record with `call` must be exactly { call: <call> }"
+                    + " (found keys: \(record.names))"
+            )
         }
 
-        if object.names.contains("call") {
-            guard object.count == 1, let written = object["call"] else {
-                throw ExpressionFormError(
-                    "a record with `call` must be exactly { call: <message> }"
-                        + " (found keys: \(object.names))"
-                )
-            }
+        guard let decoder else {
+            throw ExpressionFormError(
+                "{ call: } cannot be read here. A call may carry bodies,"
+                    + " and this surface reads expressions alone"
+            )
+        }
 
-            guard let decoder else {
-                throw ExpressionFormError(
-                    "{ call: } cannot be read here — a message may carry bodies,"
-                        + " and this surface reads expressions alone"
-                )
-            }
-
-            do {
-                // A message written where a value is wanted has no statement to
-                // take a name from, and nothing in a message wants one.
-                return try CallForm(from: ValueDecoder(
-                    value: written,
-                    codingPath: decoder.codingPath + [AnyCodingKey(stringValue: "call")],
-                    steps: steps + [.key("call")],
-                    userInfo: decoder.userInfo
-                ))
+        do {
+            // A message written where a value is wanted has no statement to
+            // take a name from, and nothing in a message wants one.
+            return try CallForm(from: ValueDecoder(below: decoder, key: "call", holding: written, at: steps))
                 .expression(boundTo: "")
-            } catch let refusal as ReadingError {
-                throw refusal
-            } catch {
-                throw ExpressionFormError("{ call: } — \(error)")
-            }
+        } catch let refusal as ReadingError {
+            throw refusal
+        } catch {
+            throw ExpressionFormError("{ call: }: \(error)")
+        }
+    }
+
+    private static func literal(in record: Value.Dictionary, slot: Slot) throws -> Expression {
+        guard record.count == 1, let payload = record["value"] else {
+            throw ExpressionFormError(
+                "a record with `value` must be exactly { value: <data> }."
+                    + " Wrap the whole record in { value: ... } if the keys are"
+                    + " plain data (found keys: \(record.names))"
+            )
         }
 
-        if object.names.contains("value") {
-            guard object.count == 1, let payload = object["value"] else {
-                throw ExpressionFormError(
-                    "a record with `value` must be exactly { value: <data> } —"
-                        + " wrap the whole record in { value: ... } if the keys are"
-                        + " plain data (found keys: \(object.names))"
-                )
-            }
+        // Data no writer would have quoted is written as itself, and the
+        // escape around it is a second spelling of the same literal. Asked of
+        // the writer's own judgment, with what this slot reserves. A bare null
+        // is the one exception: in a slot that may be left out it reads as the
+        // slot left out, so null written is written here.
+        let quoted = try Writer.spelling(
+            of: payload,
+            reserving: Self.formKeys.union(slot.reserved),
+            constructs: slot.constructs
+        ) == .quoted
 
-            return .literal(payload)
+        guard payload == .null || quoted else {
+            throw ExpressionFormError(
+                "{ value: } quotes data that could be read as a form, and data"
+                    + " with no record in it cannot be. Write it as itself"
+            )
         }
 
+        return .literal(payload)
+    }
+
+    private static func template(
+        in record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
-        // says a document may not write it — it does not hand the words back to
+        // says a document may not write it. It does not hand the procedures back to
         // mean something else, which is why the set of form keys is the same in
         // every notation whether or not each one is offered.
         let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
 
         guard let interpolation = notation.interpolation else {
             throw ExpressionFormError(
-                "this notation does not spell a template — put the text together"
-                    + " by sending the words that put text together"
+                "this notation does not spell a template. Put the text together"
+                    + " by sending the procedures that put text together"
             )
         }
 
-        guard object.names.contains("format") else {
-            // Only `with` remains — with is format's companion, meaningless alone.
+        guard record.names.contains("format") else {
+            // Only `with` remains, with is format's companion, meaningless
+            // alone.
             throw ExpressionFormError(
-                "`with` only accompanies `format` — wrap the record in"
+                "`with` only accompanies `format`. Wrap the record in"
                     + " { value: ... } if the keys are plain data"
-                    + " (found keys: \(object.names))"
+                    + " (found keys: \(record.names))"
             )
         }
 
-        guard Set(object.names).subtracting(["format", "with"]).isEmpty else {
+        guard Set(record.names).subtracting(["format", "with"]).isEmpty else {
             throw ExpressionFormError(
                 "a record with `format` must be exactly { format: <template>,"
-                    + " with: <bindings> } — wrap it in { value: ... } if the keys"
-                    + " are plain data (found keys: \(object.names))"
+                    + " with: <bindings> }. Wrap it in { value: ... } if the keys"
+                    + " are plain data (found keys: \(record.names))"
             )
         }
 
-        guard case let .string(template)? = object["format"] else {
+        guard case let .string(template)? = record["format"] else {
             throw ExpressionFormError("{ format: } takes a template string")
         }
 
-        let bindings: [String: Expression]
+        let bindings: [Name: Expression]
 
-        switch object["with"] {
+        switch record["with"] {
         case nil:
             bindings = [:]
 
-        case let .record(withRecord)?:
-            bindings = try withRecord.entries.reduce(into: [String: Expression]()) { bound, entry in
+        case let .dictionary(withRecord)?:
+            bindings = try withRecord.entries.reduce(into: [Name: Expression]()) { bound, entry in
                 bound[entry.name] = try read(
                     entry.value,
-                    at: steps + [.key("with"), .key(entry.name)],
+                    at: steps + [.key("with"), .key(entry.name.spelling)],
                     in: decoder
                 )
             }
@@ -366,7 +427,7 @@ public struct ExpressionReader: Decodable {
         do {
             segments = try TemplateParser().parse(template)
         } catch {
-            throw ExpressionFormError("{ format: } template — \(error)")
+            throw ExpressionFormError("{ format: } template: \(error)")
         }
 
         // The format surface is closed: every placeholder must name a declared
@@ -377,16 +438,16 @@ public struct ExpressionReader: Decodable {
         return try lowered(segments, over: bindings, spending: interpolation)
     }
 
-    // A template as the words that build it. Interpolation is a spelling rather
+    // A template as the procedures that build it. Interpolation is a spelling rather
     // than a thing the language has: each piece becomes a literal or a value
     // asked how it reads, and the pieces are written one after another.
     //
     // Lowering here is what makes a placeholder an ordinary reference. It is
     // checked, linked and refused the way every other reference is, instead of
-    // being a shape only the template walk knew how to read.
+    // being a type only the template walk knew how to read.
     private static func lowered(
         _ segments: [TemplateSegment],
-        over bindings: [String: Expression],
+        over bindings: [Name: Expression],
         spending interpolation: Interpolation
     ) throws -> Expression {
         let pieces: [Expression] = try segments.map { segment in
@@ -395,8 +456,8 @@ public struct ExpressionReader: Decodable {
                 return .literal(.string(literal))
 
             case let .ref(path):
-                return .dispatch(
-                    Dispatch(
+                return .call(
+                    Call(
                         receiver: try substituted(path, over: bindings),
                         selector: interpolation.read
                     )
@@ -410,22 +471,22 @@ public struct ExpressionReader: Decodable {
             return .literal(.string(only))
         }
 
-        return .dispatch(Dispatch(receiver: .array(pieces), selector: interpolation.joined))
+        return .call(Call(receiver: .array(pieces), selector: interpolation.joined))
     }
 
     // A placeholder names a binding and then drills into it, so what it reads is
     // the binding's expression with the rest of the path walked from there. A
     // binding that is itself a reference keeps one path rather than growing a
-    // dispatch around itself.
+    // call around itself.
     //
     // Every name in the path is substituted, not only the head. An index
     // reference is a path of its own inside this one, and leaving it as written
-    // would have it read from whatever scope the statement runs in — which is
+    // would have it read from whatever scope the statement runs in, which is
     // the one thing a closed template must never do, and which `validateClosed`
     // has already made the author declare a binding for.
     private static func substituted(
         _ path: [PathSegment],
-        over bindings: [String: Expression]
+        over bindings: [Name: Expression]
     ) throws -> Expression {
         guard let head = path.head, let bound = bindings[head] else {
             throw ExpressionFormError(
@@ -457,7 +518,7 @@ public struct ExpressionReader: Decodable {
     // index reference holds one; the rest name nothing.
     private static func closing(
         _ segment: PathSegment,
-        over bindings: [String: Expression]
+        over bindings: [Name: Expression]
     ) throws -> PathSegment {
         guard case let .indexRef(inner, optionally) = segment else { return segment }
 
@@ -473,7 +534,7 @@ public struct ExpressionReader: Decodable {
 
     private static func validateClosed(
         _ segments: [TemplateSegment],
-        over declared: Set<String>
+        over declared: Set<Name>
     ) throws {
         for segment in segments {
             guard case let .ref(path) = segment else { continue }
@@ -482,8 +543,8 @@ public struct ExpressionReader: Decodable {
                 guard let head = referenced.head, declared.contains(head) else {
                     throw ExpressionFormError(
                         "{ format: } placeholder ${\(referenced.rendered)} names"
-                            + " '\(referenced.head ?? referenced.rendered)', which is"
-                            + " not declared in `with` — a format template sees only"
+                            + " '\(referenced.head?.spelling ?? referenced.rendered)', which is"
+                            + " not declared in `with`. A format template sees only"
                             + " its own bindings"
                     )
                 }

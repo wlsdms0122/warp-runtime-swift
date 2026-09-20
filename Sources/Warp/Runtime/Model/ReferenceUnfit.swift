@@ -13,7 +13,7 @@ public struct ReferenceUnfit: WarpError {
     public let reason: String
 
     public var message: String {
-        "reference unfit: { ref: \(path.rendered) } — \(reason)"
+        "reference unfit: { ref: \(path.rendered) }: \(reason)"
     }
 
     public let trace: Trace?

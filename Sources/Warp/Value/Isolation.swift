@@ -12,7 +12,7 @@ import Foundation
 // isolated procedures and calls no value. A closure adds one more: it writes
 // nothing it captured. What is isolated may run beside anything.
 //
-// Two-valued like `Purity`, and for the same reason: a slot asks for isolation
+// Two-valued like `Constness`, and for the same reason: a slot asks for isolation
 // or says nothing, and no slot asks for the lack of it.
 public enum Isolation: Sendable, Equatable {
     case unstated

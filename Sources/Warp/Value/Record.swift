@@ -7,170 +7,111 @@
 
 import Foundation
 
-// A record's fields, in the byte order of their names: the order the
-// canonical writing uses, so a field is found by comparing bytes and no name
-// is hashed. The order is the constructor's: whatever a caller hands in, what
-// is held is sorted, and one name holds one field. What the name means is
-// `Value.record`'s to say.
+// Fields at the places a `Layout` puts them. The names live in the layout, so
+// two records of one layout share one copy of them, and a field is read by
+// finding its place once rather than by carrying its name alongside its value.
 public struct Record: Sendable {
     // MARK: - Property
-    public let name: String?
+    public let layout: Layout
 
-    // In ascending byte order of `name`, as `Name.precedes` orders them.
-    public let entries: [(name: String, value: Value)]
+    // In the layout's order, one value per field.
+    public let values: [Value]
+
+    public var name: Name? {
+        layout.name
+    }
+
+    public var names: [Name] {
+        layout.fields
+    }
 
     public var count: Int {
-        entries.count
+        values.count
     }
 
     public var isEmpty: Bool {
-        entries.isEmpty
-    }
-
-    public var names: [String] {
-        entries.map(\.name)
-    }
-
-    public var values: [Value] {
-        entries.map(\.value)
+        values.isEmpty
     }
 
     // MARK: - Initializer
-    public init(name: String? = nil, _ fields: [String: Value]) {
-        self.name = name
-        self.entries = fields.map { field in (name: field.key, value: field.value) }
-            .sorted { one, other in Name.precedes(one.name, other.name) }
+    // A record of the fields a caller hands in, under a layout of their names.
+    init(name: Name?, _ fields: [Name: Value]) {
+        let ordered = fields.map { field in (name: field.key, value: field.value) }
+            .sorted { one, other in one.name < other.name }
+
+        self.layout = Layout(name: name, ordered: ordered.map(\.name))
+        self.values = ordered.map(\.value)
     }
 
-    // Entries in any order, later ones winning over earlier ones of the same
-    // name. One entry stands without a comparison.
-    public init(name: String? = nil, entries: [(name: String, value: Value)]) {
-        self.name = name
-
-        guard entries.count > 1 else {
-            self.entries = entries
-
-            return
+    // A layout filled from outside, where the values are as many as the
+    // layout names and stand in its order.
+    public init(layout: Layout, checking values: [Value]) throws {
+        guard values.count == layout.fields.count else {
+            throw ValueRefused(
+                "a layout of \(layout.fields.count) fields was handed \(values.count) values"
+            )
         }
 
-        var sorted = entries
-        sorted.sort { one, other in Name.precedes(one.name, other.name) }
-
-        var held: [(name: String, value: Value)] = []
-        held.reserveCapacity(sorted.count)
-
-        for entry in sorted {
-            if let last = held.last, Name.same(last.name, entry.name) {
-                held[held.count - 1] = entry
-            } else {
-                held.append(entry)
-            }
-        }
-
-        self.entries = held
+        self.init(layout: layout, values: values)
     }
 
-    // Entries already in order under distinct names, for a maker that walks
-    // them in order: a literal the link ordered, or another record's
-    // entries with their values changed. Every reading of a record stands
-    // on this order, so it is checked here rather than trusted: a pass over
-    // the names is less than the sort it stands in for.
-    init(name: String?, ordered entries: [(name: String, value: Value)]) {
-        precondition(
-            zip(entries, entries.dropFirst()).allSatisfy { one, other in Name.precedes(one.name, other.name) },
-            "a record's entries are ordered by name"
-        )
+    // The inner door: the maker already stands on the layout.
+    init(layout: Layout, values: [Value]) {
+        assert(layout.fields.count == values.count, "a record has one value per field its layout names")
 
-        self.name = name
-        self.entries = entries
+        self.layout = layout
+        self.values = values
     }
 
-    // Entries this record already holds, in the order it holds them, for
-    // the makers below that change a value, a name or one place and so
-    // cannot disturb the order.
-    private init(name: String?, keeping entries: [(name: String, value: Value)]) {
-        self.name = name
-        self.entries = entries
+    // This record's fields as names beside values, for a reader that walks
+    // names rather than a layout.
+    public var asDictionary: Value.Dictionary {
+        Value.Dictionary(ordered: zip(layout.fields, values).map { name, value in (name: name, value: value) })
     }
 
     // MARK: - Public
-    // The field of this name, or nil where none is held. A binary search
-    // over the names' bytes.
-    public subscript(field: String) -> Value? {
-        let (position, found) = position(of: field)
-
-        return found ? entries[position].value : nil
+    public subscript(field: Name) -> Value? {
+        layout.position(of: field).map { place in values[place] }
     }
 
-    // This record with one field written: the value replaced where the name
-    // is held, and the field put where it sorts where it is not.
-    public func writing(_ field: String, with value: Value) -> Record {
-        var written = entries
-        let (position, found) = position(of: field)
-
-        if found {
-            written[position].value = value
-        } else {
-            written.insert((name: field, value: value), at: position)
+    // This record with one field written. A layout says which fields there
+    // are, so a name it does not hold is not written but refused.
+    public func writing(_ field: Name, with value: Value) throws -> Record {
+        guard let place = layout.position(of: field) else {
+            throw ValueRefused("\(layout.name.map { name in "\(name) " } ?? "")has no field '\(field)'")
         }
 
-        return Record(name: name, keeping: written)
+        return writing(at: place, with: value)
     }
 
-    // This record without the field of this name, or as it is where none is
-    // held.
-    public func removing(_ field: String) -> Record {
-        let (position, found) = position(of: field)
+    // The same, at the place the layout puts the field.
+    func writing(at place: Int, with value: Value) -> Record {
+        var written = values
+        written[place] = value
 
-        guard found else { return self }
-
-        var written = entries
-        written.remove(at: position)
-
-        return Record(name: name, keeping: written)
+        return Record(layout: layout, values: written)
     }
 
     // This record with every value put through `transform`, under the same
-    // names in the same order, so nothing is sorted or searched.
-    public func mapValues(_ transform: (String, Value) throws -> Value) rethrows -> Record {
+    // layout.
+    public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Record {
         Record(
-            name: name,
-            keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
+            layout: layout,
+            values: try zip(layout.fields, values).map { field, value in try transform(field, value) }
         )
     }
 
     // This record under another name, with the same fields.
-    public func named(_ name: String?) -> Record {
-        Record(name: name, keeping: entries)
+    func named(_ name: Name?) -> Record {
+        Record(layout: Layout(name: name, ordered: layout.fields), values: values)
     }
 
     // MARK: - Private
-    // Where a name is, or where it would go: the first position whose name
-    // does not precede it, and whether the name there is it.
-    private func position(of field: String) -> (Int, Bool) {
-        var low = 0
-        var high = entries.count
-
-        while low < high {
-            let middle = (low + high) / 2
-
-            if Name.precedes(entries[middle].name, field) {
-                low = middle + 1
-            } else {
-                high = middle
-            }
-        }
-
-        return (low, low < entries.count && Name.same(entries[low].name, field))
-    }
 }
 
 extension Record: Equatable {
     public static func == (lhs: Record, rhs: Record) -> Bool {
-        Name.same(lhs.name, rhs.name)
-            && lhs.entries.count == rhs.entries.count
-            && zip(lhs.entries, rhs.entries).allSatisfy { one, other in
-                Name.same(one.name, other.name) && one.value == other.value
-            }
+        lhs.layout == rhs.layout
+            && zip(lhs.values, rhs.values).allSatisfy { mine, theirs in mine == theirs }
     }
 }

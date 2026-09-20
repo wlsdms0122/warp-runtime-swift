@@ -22,8 +22,8 @@ struct ModuleDeclarationTests {
     // MARK: - Test
     @Test("a spelling names the declaration written under it, in its own document too")
     func ownDeclarationIsSpelledQualified() async throws {
-        // Given — `first` calls its own `helper` as `first.helper`, and
-        // `second` declares a `helper` of its own, which is `second.helper`
+        // Given. `first` calls its own `helper` as `first.helper`, and `second`
+        // declares a `helper` of its own, which is `second.helper`
         let first = try loader.loadDocument([
             "procedures": [
                 "first.entry": [
@@ -49,11 +49,11 @@ struct ModuleDeclarationTests {
         let outputs = try await run([first, second], entry: "first.entry")
 
         // Then
-        #expect(outputs["result"] == .object(["said": .string("from first")]))
+        #expect(outputs["result"] == .dictionary(["said": .string("from first")]))
     }
 
-    @Test("a bare name for another module's word is refused at the link")
-    func aBareNameForAnotherModulesWordIsRefused() throws {
+    @Test("a bare name for another module's procedure is refused at the build")
+    func aBareNameForAnotherModulesProcedureIsRefused() async throws {
         // Given
         let caller = try loader.loadDocument([
             "imports": ["greet"],
@@ -74,8 +74,8 @@ struct ModuleDeclarationTests {
         ])
 
         // When / Then
-        #expect {
-            try Linker().link([caller, library], entry: "caller.entry")
+        await #expect {
+            try await Builder().build([caller, library], entry: "caller.entry")
         } throws: { error in
             "\(error)".contains("sends 'greet', which no module in this link declares")
         }
@@ -83,7 +83,7 @@ struct ModuleDeclarationTests {
 
     @Test("a spelling reaches the declaration under it, whichever document wrote it")
     func qualifiedNameReachesAcross() async throws {
-        // Given — `first` has a `helper` of its own and asks for the other one
+        // Given. `first` has a `helper` of its own and asks for the other one
         let first = try loader.loadDocument([
             "imports": ["second.helper"],
             "procedures": [
@@ -110,7 +110,7 @@ struct ModuleDeclarationTests {
         let outputs = try await run([first, second], entry: "first.entry")
 
         // Then
-        #expect(outputs["result"] == .object(["said": .string("from second")]))
+        #expect(outputs["result"] == .dictionary(["said": .string("from second")]))
     }
 
     @Test("a constant is a name bound to a value, settled before any run")
@@ -160,14 +160,14 @@ struct ModuleDeclarationTests {
 
         #expect(outputs["result"] == .string("https://example.com/api"))
 
-        #expect(throws: LinkError.self) {
-            try Linker().link([cyclic], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([cyclic], entry: entryName)
         }
     }
 
     @Test("a statement may not reintroduce a name the module bound")
     func constantsCannotBeShadowed() {
-        // Given — linking folds a reference to a constant into its value, so a
+        // Given. Compiling folds a reference to a constant into its value, so a
         // second reading of the same spelling could never be true
         let fixture: Value = [
             "const": ["limit": 3],
@@ -179,6 +179,61 @@ struct ModuleDeclarationTests {
             try loader.loadDocument(fixture).validated()
         }
     }
+
+    @Test("a document declares a contract, and a procedure reaches it through the contract's name")
+    func aDocumentDeclaresAContract() async throws {
+        // Given. Two types that describe themselves, and one procedure that knows
+        // neither
+        let sut = try loader.loadDocument([
+            "types": [
+                "bank.Account": ["balance": "int"],
+                "bank.Card": ["last": "string"]
+            ],
+            "contracts": [
+                "app.Describable": ["describe": ["returns": "string"]]
+            ],
+            "satisfies": [
+                "bank.Account": ["app.Describable"],
+                "bank.Card": ["app.Describable"]
+            ],
+            "procedures": [
+                "entry": [
+                    "body": [
+                        [
+                            "let": "card",
+                            "value": ["as": "bank.Card", "of": ["last": "42"]]
+                        ]
+                    ],
+                    "result": ["result": ["call": ["of": ["ref": "card"], "procedure": "app.tell"]]]
+                ],
+                "app.tell": [
+                    "receiver": "it",
+                    "parameters": ["it": ["type": "some T"]],
+                    "bounds": ["T": "app.Describable"],
+                    "returns": "string",
+                    "result": ["call": ["of": ["ref": "it"], "procedure": "app.Describable.describe"]]
+                ],
+                "bank.Account.describe": [
+                    "receiver": "of",
+                    "parameters": ["of": ["type": "bank.Account"]],
+                    "returns": "string",
+                    "result": "an account"
+                ],
+                "bank.Card.describe": [
+                    "receiver": "of",
+                    "parameters": ["of": ["type": "bank.Card"]],
+                    "returns": "string",
+                    "result": "a card"
+                ]
+            ]
+        ])
+
+        // When / Then
+        let outputs = try await run(sut, entry: "entry")
+
+        #expect(outputs["result"] == .string("a card"))
+    }
+
 }
 
 private extension Module {

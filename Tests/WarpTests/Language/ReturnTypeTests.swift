@@ -15,7 +15,7 @@ import Testing
 @Suite("What a procedure returns")
 struct ReturnTypeTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -38,10 +38,10 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try linker.link([sut], entry: entryName)
+        let image = try await builder.build([sut], entry: entryName)
         let answer = try await Executor().run(image)
 
-        // Then — settled to the declared representation, not merely waved past
+        // Then. Settled to the declared representation, not merely waved past
         #expect(answer == .int(3))
 
         // And a fraction is not that representation, whatever it is worth: a
@@ -58,11 +58,11 @@ struct ReturnTypeTests {
 
         await #expect(throws: (any Error).self) {
             try await Executor()
-                .run(try linker.link([narrowing], entry: entryName))
+                .run(try await builder.build([narrowing], entry: entryName))
         }
     }
 
-    @Test("a body that answers something else fails")
+    @Test("a body that answers something else is refused where both are written")
     func wrongReturnFails() async throws {
         // Given
         let sut = try Module(
@@ -74,21 +74,21 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3))
                         )
-                    ]
+                    ],
+                    result: .reference([.key("counted")])
                 )
             ]
         )
 
-        // When / Then
-        let image = try linker.link([sut], entry: entryName)
-
-        await #expect(throws: ArgumentError.self) {
-            try await Executor().run(image)
+        // When / Then. The body and the declaration beside it are one
+        // document's text, so nothing has to run to find them disagreeing
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: entryName)
         }
     }
 
-    @Test("a declared shape is settled on the way out, not only on the way in")
-    func declaredShapeSettlesOnTheWayOut() async throws {
+    @Test("a declared type is settled on the way out, not only on the way in")
+    func declaredTypeSettlesOnTheWayOut() async throws {
         // Given
         let sut = try Module(
             types: [
@@ -115,15 +115,15 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try linker.link([sut], entry: entryName)
+        let image = try await builder.build([sut], entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then
         #expect(answer == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
     }
 
-    @Test("an answer naming a shape nobody declared is refused at link")
-    func unknownReturnTypeIsALinkError() throws {
+    @Test("an answer naming a type nobody declared is refused at link")
+    func unknownReturnTypeIsABuildError() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -140,8 +140,8 @@ struct ReturnTypeTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
-            _ = try linker.link([sut], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            _ = try await builder.build([sut], entry: entryName)
         }
     }
 }

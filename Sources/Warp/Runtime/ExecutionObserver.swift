@@ -8,7 +8,7 @@
 import Foundation
 
 // What a run does, as the language sees it: statements bind, and failures are
-// either absorbed by an attempt or not. There is no "skipped" event — a
+// either absorbed by an attempt or not. There is no "skipped" event. A
 // condition that declines is an expression answering null, and the statement
 // that bound it completed like any other.
 public protocol ExecutionObserver: Sendable {

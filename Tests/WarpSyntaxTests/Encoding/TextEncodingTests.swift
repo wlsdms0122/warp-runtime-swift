@@ -21,14 +21,14 @@ struct TextEncodingTests {
     @Test("every kind of value survives the round trip")
     func everyKindComesBack() throws {
         // Given
-        let document = Value.object([
+        let document = Value.dictionary([
             "null": .null,
             "flags": .array([.bool(true), .bool(false)]),
             "counts": .array([.int(0), .int(-1), .int(Int.max), .int(Int.min)]),
             "ratio": .double(3.5),
             "name": .string("héllo, 世界"),
             "spaced key": .string("a\nb\t\"c\""),
-            "empty": .object([:]),
+            "empty": .dictionary([:]),
             "nothing": .array([])
         ])
 
@@ -38,10 +38,10 @@ struct TextEncodingTests {
 
     @Test("the text is the text the format says")
     func theGoldenText() throws {
-        // Given — the same document the binary golden holds, laid out for eyes.
+        // Given. The same document the binary golden holds, laid out for eyes.
         // If this test moves, the format moved, and the format version had
         // better move with it.
-        let document = Value.object([
+        let document = Value.dictionary([
             "a": .int(1),
             "b": .array([.bool(true), .null]),
             "c": .string("hi"),
@@ -71,7 +71,7 @@ struct TextEncodingTests {
 
     @Test("a whole number and a fraction are different tokens")
     func wholeAndFractionDiffer() throws {
-        // Given — the difference is grammar, not a reader's guess
+        // Given. The difference is grammar, not a reader's guess
         #expect(try TextEncoding.value(from: "warpt 1\n1\n") == .int(1))
         #expect(try TextEncoding.value(from: "warpt 1\n1.0\n") == .double(1))
         #expect(try TextEncoding.value(from: "warpt 1\n-3\n") == .int(-3))
@@ -97,7 +97,7 @@ struct TextEncodingTests {
     func anyLayoutReadsToTheOneValue() throws {
         // Given: the writer's text, and the same document laid out inline,
         // over-indented, and without the final newline
-        let document = Value.object(["a": .int(1), "b": .string("A")])
+        let document = Value.dictionary(["a": .int(1), "b": .string("A")])
         let canonical = try TextEncoding.text(from: document)
 
         for text in [
@@ -116,7 +116,7 @@ struct TextEncodingTests {
     func aShuffledKeyReads() throws {
         #expect(
             try TextEncoding.value(from: "warpt 1\n{\n  b 1\n  a 2\n}\n")
-                == .object(["a": .int(2), "b": .int(1)])
+                == .dictionary(["a": .int(2), "b": .int(1)])
         )
 
         #expect {
@@ -128,7 +128,7 @@ struct TextEncodingTests {
 
     @Test("a field name outside normal form C is refused")
     func aDenormalKeyIsRefused() {
-        // Given — é as e-plus-mark: valid UTF-8, ascending order, and a second
+        // Given. É as e-plus-mark: valid UTF-8, ascending order, and a second
         // byte spelling for a name the value model reads as é
         let text = "warpt 1\n{\n  \"\u{65}\u{301}\" 1\n}\n"
 
@@ -139,16 +139,16 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a key that is not a word is written in quotes, and read back")
+    @Test("a key that is not a procedure is written in quotes, and read back")
     func aQuotedKeyComesBack() throws {
         // Given
-        let document = Value.object(["spaced key": .int(1), "가나다": .int(2)])
+        let document = Value.dictionary(["spaced key": .int(1), "가나다": .int(2)])
 
         // When
         let text = try TextEncoding.text(from: document)
 
-        // Then — and a name outside ASCII is quoted too, because what counts
-        // as "a letter" beyond ASCII depends on whose Unicode tables a host
+        // Then, and a name outside ASCII is quoted too, because what counts as
+        // "a letter" beyond ASCII depends on whose Unicode tables a host
         // shipped, and the canonical layout cannot
         #expect(text.contains("\"spaced key\""))
         #expect(text.contains("\"가나다\""))
@@ -188,7 +188,7 @@ struct TextEncodingTests {
 
     @Test("text that ends inside a value is refused")
     func truncationIsRefused() {
-        // Given — every healthy prefix of an unhealthy ending
+        // Given. Every healthy prefix of an unhealthy ending
         for text in [
             "warpt 1\n[",
             "warpt 1\n{",
@@ -214,8 +214,8 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a bare word the format never assigned is refused")
-    func anUnknownWordIsRefused() {
+    @Test("a bare token the format never assigned is refused")
+    func anUnknownTokenIsRefused() {
         for text in ["warpt 1\nyes", "warpt 1\nnul", "warpt 1\n--1", "warpt 1\n1.5.5", "warpt 1\n1e"] {
             #expect(throws: (any Error).self) {
                 try TextEncoding.value(from: text)
@@ -237,7 +237,7 @@ struct TextEncodingTests {
         // is what tells a key from a value here
         #expect(
             try TextEncoding.value(from: "warpt 1\n{\n  null 1\n}\n")
-                == .object(["null": .int(1)])
+                == .dictionary(["null": .int(1)])
         )
     }
 
@@ -296,7 +296,7 @@ struct TextEncodingTests {
 
     @Test("a document nested past following is refused")
     func bottomlessNestingIsRefused() {
-        // Given — six hundred brackets, two keystrokes held down
+        // Given. Six hundred brackets, two keystrokes held down
         let text = "warpt 1\n"
             + String(repeating: "[", count: 600)
             + "null"
@@ -326,12 +326,12 @@ struct TextEncodingTests {
 
     @Test("bytes are lowercase hex, two digits each, and nothing else")
     func bytesSpellingIsHeld() throws {
-        // Given — the one spelling, both ways
+        // Given. The one spelling, both ways
         #expect(try TextEncoding.value(from: "warpt 1\nx\"\"\n") == .bytes([]))
         #expect(try TextEncoding.text(from: .bytes([0x00, 0xff])) == "warpt 1\nx\"00ff\"\n")
 
-        // And the spellings that are not it — refused by the grammar, with
-        // the grammar's own words, not left to the canonical backstop
+        // And the spellings that are not it. Refused by the grammar, with the
+        // grammar's own terms, not left to the canonical backstop
         for text in [
             "warpt 1\nx\"6A\"\n",    // uppercase
             "warpt 1\nx\"6a 73\"\n"  // spaced
@@ -356,12 +356,14 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a field name outside normal form C is refused on the way out too")
+    @Test("a field name outside normal form C never reaches the way out")
     func aDenormalKeyIsRefusedWhenWriting() {
-        #expect {
-            try TextEncoding.text(from: .object(["e\u{301}": .int(1)]))
-        } throws: { error in
-            "\(error)".contains("normal form")
+        // A record's keys are names, so there is no value carrying one for a
+        // writing to refuse: the refusal is at the door a name comes through.
+        let decomposed = "e\u{301}"
+
+        #expect(throws: NameRefused.self) {
+            try Name(decomposed)
         }
     }
 

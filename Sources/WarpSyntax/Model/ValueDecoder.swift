@@ -8,9 +8,9 @@
 import Foundation
 import Warp
 
-// Decodes Codable types directly from a Value tree. Serializing through JSON text
-// would collapse the scalar typing the loader fixed — `3.0` re-reads as int — so
-// the loader's Value is the decoding source itself, with no round trip.
+// Decodes Codable types directly from a Value tree. Serializing through JSON
+// text would collapse the scalar typing the loader fixed (`3.0` re-reads as
+// int) so the loader's Value is the decoding source itself, with no round trip.
 struct ValueDecoder: Decoder {
     private struct AnyKey: CodingKey {
         // MARK: - Property
@@ -34,19 +34,19 @@ struct ValueDecoder: Decoder {
 
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
-        let object: Record
+        let record: Value.Dictionary
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            object.names.compactMap { key in Key(stringValue: key) }
+            record.names.compactMap { key in Key(stringValue: key.spelling) }
         }
 
         // MARK: - Initializer
         // MARK: - Public
         func contains(_ key: Key) -> Bool {
-            object[key.stringValue] != nil
+            (try? Name(key.stringValue)).flatMap { name in record[name] } != nil
         }
 
         func decodeNil(forKey key: Key) throws -> Bool {
@@ -82,7 +82,7 @@ struct ValueDecoder: Decoder {
 
         // MARK: - Private
         private func value(forKey key: Key) throws -> Value {
-            guard let value = object[key.stringValue] else {
+            guard let name = try? Name(key.stringValue), let value = record[name] else {
                 throw ReadingError(
                     "no value for key '\(key.stringValue)'",
                     at: steps + [.key(key.stringValue)]
@@ -104,9 +104,9 @@ struct ValueDecoder: Decoder {
 
     private struct UnkeyedContainer: UnkeyedDecodingContainer {
         // MARK: - Property
-        // The projection, not a copy of it — the same shape every other
-        // walker of elements in this library holds, so a compact spelling is
-        // not made into a boxed element apiece before the first is read.
+        // The projection, not a copy of it. The same type every other walker
+        // of elements in this library holds, so a compact spelling is not made
+        // into a boxed element apiece before the first is read.
         let elements: AnyRandomAccessCollection<Value>
         let codingPath: [CodingKey]
         let steps: [Place.Step]
@@ -291,7 +291,7 @@ struct ValueDecoder: Decoder {
     let value: Value
     let codingPath: [CodingKey]
 
-    // Where the reading has reached, said in the document's own words.
+    // Where the reading has reached, said in the document's own terms.
     //
     // `codingPath` is the same walk in `Codable`'s terms, and it cannot answer
     // this: a coding key carries a number whenever its spelling reads as one,
@@ -306,12 +306,12 @@ struct ValueDecoder: Decoder {
     // MARK: - Initializer
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard case let .record(object) = value else {
-            throw ReadingError("expected object, found \(value.type)", at: steps)
+        guard let record = value.asDictionary else {
+            throw ReadingError("expected a record, found \(value.type)", at: steps)
         }
 
         return KeyedDecodingContainer(KeyedContainer(
-            object: object,
+            record: record,
             codingPath: codingPath,
             steps: steps,
             userInfo: userInfo
@@ -320,10 +320,10 @@ struct ValueDecoder: Decoder {
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         // Through the one projection that owns the `bytes = array<byte>`
-        // equation, so a compact spelling is walked where a long one is —
-        // the same equation the writer puts them out through. Asking for
-        // `Data` is still answered by `decode` below, which holds bytes to
-        // their own spelling so an int array cannot quietly become them.
+        // equation, so a compact spelling is walked where a long one is. The
+        // same equation the writer puts them out through. Asking for `Data` is
+        // still answered by `decode` below, which holds bytes to their own
+        // spelling so an int array cannot quietly become them.
         guard let elements = value.elements else {
             throw ReadingError("expected array, found \(value.type)", at: steps)
         }
@@ -340,11 +340,67 @@ struct ValueDecoder: Decoder {
         SingleContainer(value: value, codingPath: codingPath, steps: steps, userInfo: userInfo)
     }
 
+    // The reading under a key, standing on it. A keyed container answers the
+    // same question through a box and a protocol extension apiece, and a
+    // reading nested as deep as the wire admits spends its stack on those
+    // before it spends it on the document.
+    func descending(to key: String) throws -> ValueDecoder {
+        guard let held = try held(key) else {
+            throw ReadingError("no value for key '\(key)'", at: steps + [.key(key)])
+        }
+
+        return descending(to: key, holding: held)
+    }
+
+    // The same, and nothing where the key is not written or holds null.
+    func descendingIfPresent(to key: String) throws -> ValueDecoder? {
+        guard let held = try held(key), held != .null else { return nil }
+
+        return descending(to: key, holding: held)
+    }
+
+    // Every element, read where it stands.
+    func read<T: Decodable>(_ type: [T].Type) throws -> [T] {
+        guard let elements = value.elements else {
+            throw ReadingError("expected array, found \(value.type)", at: steps)
+        }
+
+        return try elements.enumerated().map { index, element in
+            try ValueDecoder(
+                value: element,
+                codingPath: codingPath + [AnyKey(intValue: index)],
+                steps: steps + [.index(index)],
+                userInfo: userInfo
+            )
+            .decode(T.self)
+        }
+    }
+
+    // A record of readers, read in the order the names sort in.
+    //
+    // `Dictionary` reads its keys in hash order, and the seed for that changes
+    // from one process to the next. Two entries that are both wrong would then
+    // be refused in either order, and the one line an author is given would not
+    // be the same line twice, which is the whole of what an address is for.
+    // Sorted rather than as-written because a document is a value by then and a
+    // value's record has no order to have kept.
+    func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
+        guard let record = value.asDictionary else {
+            throw ReadingError("expected a record, found \(value.type)", at: steps)
+        }
+
+        return try record.entries
+            .sorted { left, right in left.name.spelling < right.name.spelling }
+            .reduce(into: [String: T]()) { read, entry in
+                read[entry.name.spelling] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
+            }
+    }
+
     // The one place a Codable type is made from a value, shared by all three
     // containers so a special case cannot hold in one and not another.
     //
-    // Bytes have no container to walk — the one binary kind is handed over
-    // whole, and `Data` is the shape it is asked for as. Anything else asking
+    // Bytes have no container to walk. The one binary kind is handed over
+    // whole, and `Data` is the type it is asked for as. Anything else asking
     // for `Data` is refused here rather than allowed to fall through to Data's
     // own decoding, which reads an unkeyed list of small numbers and would
     // quietly turn an int array into bytes.
@@ -368,10 +424,44 @@ struct ValueDecoder: Decoder {
             throw ReadingError(refusal, at: steps)
         }
     }
+
+    // MARK: - Private
+    // Looked up where the value keeps it, so that a reader asking for its
+    // keys one after another does not rebuild a record as a dictionary once
+    // per key.
+    private func held(_ key: String) throws -> Value? {
+        guard value.holdsFields else {
+            throw ReadingError("expected a record, found \(value.type)", at: steps)
+        }
+
+        return (try? Name(key)).flatMap { name in value[name] }
+    }
+
+    private func descending(to key: String, holding held: Value) -> ValueDecoder {
+        ValueDecoder(
+            value: held,
+            codingPath: codingPath + [AnyKey(stringValue: key)],
+            steps: steps + [.key(key)],
+            userInfo: userInfo
+        )
+    }
+}
+
+extension ValueDecoder {
+    // A decoder one key below another, standing on a value the reader above
+    // already holds and at the steps that reader has walked.
+    init(below decoder: Decoder, key: String, holding held: Value, at steps: [Place.Step]) {
+        self.init(
+            value: held,
+            codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key)],
+            steps: steps + [.key(key)],
+            userInfo: decoder.userInfo
+        )
+    }
 }
 
 extension Decoder {
-    // Where this reading has reached, in the document's own words — nothing
+    // Where this reading has reached, in the document's own terms. Nothing
     // where the reading is not this package's, which is the honest answer for a
     // decoder whose descent nobody here watched.
     var steps: [Place.Step] { (self as? ValueDecoder)?.steps ?? [] }
@@ -387,7 +477,7 @@ extension Decoder {
     //
     // The boundary is not a second one. This is the same door
     // `ValueDecoder.decode` is, reached from a decoder handed over as the
-    // protocol — and where the decoder is somebody else's there is no door of
+    // protocol, and where the decoder is somebody else's there is no door of
     // ours to go through.
     func read<T: Decodable>(_ type: T.Type) throws -> T {
         guard let decoder = self as? ValueDecoder else { return try T(from: self) }
@@ -395,22 +485,48 @@ extension Decoder {
         return try decoder.decode(type)
     }
 
-    // A record of readers, read in the order the names sort in.
-    //
-    // `Dictionary` reads its keys in hash order, and the seed for that changes
-    // from one process to the next. Two entries that are both wrong would then
-    // be refused in either order, and the one line an author is given would not
-    // be the same line twice — which is the whole of what an address is for.
-    // Sorted rather than as-written because a document is a value by then and a
-    // value's record has no order to have kept.
     func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
-        let container = try container(keyedBy: AnyCodingKey.self)
+        guard let decoder = self as? ValueDecoder else {
+            let container = try container(keyedBy: AnyCodingKey.self)
 
-        return try container.allKeys
-            .map(\.stringValue)
-            .sorted()
-            .reduce(into: [String: T]()) { read, key in
-                read[key] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
-            }
+            return try container.allKeys
+                .map(\.stringValue)
+                .sorted()
+                .reduce(into: [String: T]()) { read, key in
+                    read[key] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
+                }
+        }
+
+        return try decoder.read(type)
+    }
+
+    func read<T: Decodable>(_ type: [T].Type) throws -> [T] {
+        guard let decoder = self as? ValueDecoder else { return try [T](from: self) }
+
+        return try decoder.read(type)
+    }
+
+    // The reading under a key, standing on it.
+    func descending(to key: some CodingKey) throws -> Decoder {
+        guard let decoder = self as? ValueDecoder else {
+            return try container(keyedBy: AnyCodingKey.self)
+                .superDecoder(forKey: AnyCodingKey(stringValue: key.stringValue))
+        }
+
+        return try decoder.descending(to: key.stringValue)
+    }
+
+    // The same, and nothing where the key is not written or holds null.
+    func descendingIfPresent(to key: some CodingKey) throws -> Decoder? {
+        guard let decoder = self as? ValueDecoder else {
+            let container = try container(keyedBy: AnyCodingKey.self)
+            let written = AnyCodingKey(stringValue: key.stringValue)
+
+            guard container.contains(written), try !container.decodeNil(forKey: written) else { return nil }
+
+            return try container.superDecoder(forKey: written)
+        }
+
+        return try decoder.descendingIfPresent(to: key.stringValue)
     }
 }

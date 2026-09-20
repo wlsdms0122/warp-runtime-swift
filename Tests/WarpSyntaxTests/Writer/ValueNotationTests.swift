@@ -25,8 +25,8 @@ struct ValueNotationTests {
             .double(3.5),
             .string("warp"),
             .array([.int(1), .string("two"), .null]),
-            .object(["id": .string("a"), "done": .bool(false)]),
-            .object(["nested": .array([.object(["deep": .int(1)])])])
+            .dictionary(["id": .string("a"), "done": .bool(false)]),
+            .dictionary(["nested": .array([.dictionary(["deep": .int(1)])])])
         ]
     )
     func writingRoundTrips(_ sut: Value) throws {
@@ -40,10 +40,10 @@ struct ValueNotationTests {
 
     @Test("bytes are written as the array they are, and come back as that array")
     func bytesAreWrittenAsTheArrayTheyAre() throws {
-        // Given — a Codable carrier has no compact spelling for bytes, and
+        // Given. A Codable carrier has no compact spelling for bytes, and
         // `bytes = array<byte>` says what to write instead. It reads back as
         // the array rather than as bytes, which is what this carrier does to
-        // `1.0` too — a spelling it cannot hold is a spelling it loses.
+        // `1.0` too. A spelling it cannot hold is a spelling it loses.
         let written = try JSONEncoder().encode(ValueWriter(.bytes([104, 105])))
 
         #expect(String(decoding: written, as: UTF8.self) == "[104,105]")
@@ -64,7 +64,7 @@ struct ValueNotationTests {
     @Test("a decoder walks bytes where it walks an array")
     func aDecoderWalksBytesWhereItWalksAnArray() throws {
         // The two spellings are one collection to anything reading elements
-        // out — and `Data` is still held to its own spelling, so an array of
+        // out, and `Data` is still held to its own spelling, so an array of
         // small numbers cannot quietly become bytes.
         func decoding<T: Decodable>(_ type: T.Type, from value: Value) throws -> T {
             try T(from: ValueDecoder(value: value, codingPath: [], steps: [], userInfo: [:]))
@@ -74,24 +74,24 @@ struct ValueNotationTests {
         #expect(try decoding([Int].self, from: .array([.int(1), .int(2)])) == [1, 2])
 
         // Asking for `Data` is answered by the containers, which hold bytes to
-        // their own spelling — an array of small numbers is refused there
-        // rather than let through to `Data`'s own decoding, which reads an
-        // unkeyed list and would quietly make bytes of it.
+        // their own spelling. An array of small numbers is refused there rather
+        // than let through to `Data`'s own decoding, which reads an unkeyed
+        // list and would quietly make bytes of it.
         struct Held: Decodable { let blob: Data }
 
-        #expect(try decoding(Held.self, from: .object(["blob": .bytes([1, 2])])).blob == Data([1, 2]))
+        #expect(try decoding(Held.self, from: .dictionary(["blob": .bytes([1, 2])])).blob == Data([1, 2]))
 
         #expect(throws: (any Error).self) {
-            try decoding(Held.self, from: .object(["blob": .array([.int(1), .int(2)])]))
+            try decoding(Held.self, from: .dictionary(["blob": .array([.int(1), .int(2)])]))
         }
     }
 
-    @Test("a foreign numeral past the word reads as the double the carrier holds")
-    func aForeignNumeralPastTheWordReadsAsDouble() throws {
-        // Given — a JSON number is a binary64 by the carrier's own nature:
-        // its digits cannot be told from a fraction, and whatever exactness
-        // the writing had was the carrier's to lose before this reader saw
-        // it; the warp encodings are where every size is exact
+    @Test("a foreign numeral past the int reads as the double the carrier holds")
+    func aForeignNumeralPastTheIntReadsAsDouble() throws {
+        // Given. A JSON number is a binary64 by the carrier's own nature: its
+        // digits cannot be told from a fraction, and whatever exactness the
+        // writing had was the carrier's to lose before this reader saw it; the
+        // warp encodings are where every size is exact
         #expect(
             try JSONDecoder().decode(ValueReader.self, from: Data("9223372036854775808".utf8)).value
                 == .double(9223372036854775808.0)
@@ -112,9 +112,9 @@ struct ValueNotationTests {
 
     @Test("a numeral keeps its kind across the Value bridge")
     func aBridgedNumberKeepsItsKind() throws {
-        // Given — the bridge holds the Value itself, so a fraction that
-        // happens to be whole must not be re-guessed from its spelling and
-        // come back an int
+        // Given. The bridge holds the Value itself, so a fraction that happens
+        // to be whole must not be re-guessed from its spelling and come back an
+        // int
         let whole = Value.double(5)
         let decoder = ValueDecoder(value: whole, codingPath: [], steps: [], userInfo: [:])
 

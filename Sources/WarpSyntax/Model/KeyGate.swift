@@ -49,8 +49,8 @@ public struct KeyGate {
 
         throw ReadingError(
             "\(context): unknown key(s)"
-                + " \(unknown.joined(separator: ", "))"
-                + " — known keys: \(known.sorted().joined(separator: ", "))",
+                + " \(unknown.joined(separator: ", "))."
+                + " Known keys: \(known.sorted().joined(separator: ", "))",
             at: written.steps
         )
     }

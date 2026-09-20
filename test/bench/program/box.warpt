@@ -1,0 +1,89 @@
+warpt 1
+{
+  imports [
+    "std.math.lessThan"
+    "std.math.plus"
+  ]
+  procedures {
+    entry {
+      body [
+        {
+          value 0
+          var "seen"
+        }
+        {
+          let "round"
+          value {
+            loop {
+              body [
+                {
+                  set "seen"
+                  value {
+                    call {
+                      arguments {
+                        value 1
+                      }
+                      procedure "counted"
+                    }
+                  }
+                }
+              ]
+              while {
+                call {
+                  arguments {
+                    value {
+                      ref "rounds"
+                    }
+                  }
+                  of {
+                    ref "round.index"
+                  }
+                  procedure "std.math.lessThan"
+                }
+              }
+            }
+          }
+        }
+      ]
+      parameters {
+        rounds "int"
+      }
+      result {
+        ref "seen"
+      }
+      returns "int"
+    }
+    counted {
+      body [
+        {
+          value 0
+          var "held"
+        }
+        {
+          set "held"
+          value {
+            call {
+              arguments {
+                value {
+                  ref "value"
+                }
+              }
+              of {
+                ref "held"
+              }
+              procedure "std.math.plus"
+            }
+          }
+        }
+      ]
+      parameters {
+        value "int"
+      }
+      result {
+        ref "held"
+      }
+      returns "int"
+    }
+  }
+  warp 1
+}

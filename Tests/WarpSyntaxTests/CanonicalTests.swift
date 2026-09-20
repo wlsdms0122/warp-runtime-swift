@@ -10,9 +10,9 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-// The document has two layers, and this suite is about the lower one: the shapes
+// The document has two layers, and this suite is about the lower one: the types
 // that stand one to one with the language, written without any spelling that
-// stands in for a word.
+// stands in for a procedure.
 //
 // It matters because the lower layer is what travels. A program that leaves the
 // machine it was written on arrives somewhere that has to read it, and every
@@ -25,16 +25,16 @@ struct CanonicalTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a branch reads a condition written as a plain call")
+    @Test("a conditional reads a condition written as a plain call")
     func branchReadsAPlainCondition() async throws {
-        // Given — `{ of: x, is: 1 }` is one way to arrive at a condition. The
+        // Given. `{ of: x, is: 1 }` is one way to arrive at a condition. The
         // slot asks for an expression, and this is another.
-        let sut = try loader.loadProcedure([
-            "parameters": ["count": "int"],
+        let sut = try await loader.loadProcedure([
+            "parameters": ["count": ["type": "int"]],
             "body": [
                 ["var": "pick"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": [
                             "call": [
                                 "procedure": "std.logic.equal",
@@ -62,7 +62,7 @@ struct CanonicalTests {
     @Test("a loop reads a condition written as a plain call")
     func loopReadsAPlainCondition() async throws {
         // Given
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],
                 [
@@ -100,16 +100,16 @@ struct CanonicalTests {
 
     @Test("a spelling and the call it stands for are the same program")
     func aSpellingMeansTheCallItStandsFor() async throws {
-        // Given — the same question asked both ways. This is what makes the
+        // Given. The same question asked both ways. This is what makes the
         // spellings a layer rather than a part of the language: what they lower
         // to is writable, so nothing is only reachable by spelling it.
-        func picking(on condition: Value) throws -> Module {
-            try loader.loadProcedure([
-                "parameters": ["word": "string"],
+        func picking(on condition: Value) async throws -> Module {
+            try await loader.loadProcedure([
+                "parameters": ["procedure": ["type": "string"]],
                 "body": [
                     ["var": "pick"],
                     [
-                        "value": ["branch": [
+                        "value": ["conditional": [
                             "when": condition,
                             "then": [["set": "pick", "value": "matched"]],
                             "else": [["set": "pick", "value": "missed"]]
@@ -120,23 +120,23 @@ struct CanonicalTests {
             ], importing: ["std.logic.equal"])
         }
 
-        let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
-        let plainly = try picking(on: [
+        let spelled = try await picking(on: ["of": ["ref": "procedure"], "equal": "hey"])
+        let plainly = try await picking(on: [
             "call": [
                 "procedure": "std.logic.equal",
-                "of": ["ref": "word"],
+                "of": ["ref": "procedure"],
                 "arguments": ["value": "hey"]
             ]
         ])
 
         // When
         let hit = (
-            try await run(spelled, arguments: ["word": .string("hey")]),
-            try await run(plainly, arguments: ["word": .string("hey")])
+            try await run(spelled, arguments: ["procedure": .string("hey")]),
+            try await run(plainly, arguments: ["procedure": .string("hey")])
         )
         let miss = (
-            try await run(spelled, arguments: ["word": .string("ho")]),
-            try await run(plainly, arguments: ["word": .string("ho")])
+            try await run(spelled, arguments: ["procedure": .string("ho")]),
+            try await run(plainly, arguments: ["procedure": .string("ho")])
         )
 
         // Then
@@ -148,15 +148,15 @@ struct CanonicalTests {
 
     @Test("a condition that is simply a name is read as one")
     func aBareReferenceIsACondition() async throws {
-        // Given — nothing about a condition says it must be a comparison. A
-        // boolean already is one, and demanding it be spelled as `{ of: x,
-        // is: true }` would be the notation making up a requirement.
-        let sut = try loader.loadProcedure([
-            "parameters": ["ready": "bool"],
+        // Given. Nothing about a condition says it must be a comparison. A
+        // boolean already is one, and demanding it be spelled as `{ of: x, is:
+        // true }` would be the notation making up a requirement.
+        let sut = try await loader.loadProcedure([
+            "parameters": ["ready": ["type": "bool"]],
             "body": [
                 ["var": "pick"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["ref": "ready"],
                         "then": [["set": "pick", "value": "go"]],
                         "else": [["set": "pick", "value": "wait"]]
@@ -175,7 +175,7 @@ struct CanonicalTests {
 
     @Test("a program that does not hold together is still one document")
     func anUnsoundDocumentIsStillADocument() throws {
-        // Given — a name nothing declares. What a text *is* and whether its
+        // Given. A name nothing declares. What a text *is* and whether its
         // program is any good are two questions, and the first is the one a
         // caller asks when it wants the file a refusal came from. Answering it
         // only for the texts that had nothing wrong with them would take the
@@ -188,7 +188,7 @@ struct CanonicalTests {
         // When
         let written = try loader.canonical(unsound, from: .testing)
 
-        // Then — which document this is comes off the canonical writing, so the
+        // Then, which document this is comes off the canonical writing, so the
         // same text twice is the same document
         #expect(written == (try loader.canonical(unsound, from: .testing)))
 

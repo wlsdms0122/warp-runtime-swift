@@ -1,0 +1,210 @@
+//
+//  Expression+Node.swift
+//  Warp
+//
+//  Created by JSilver
+//
+
+import Foundation
+
+// One walk over everything an expression holds, for every stage that has to
+// see all of it.
+//
+// Three of them ask for exactly this and differ only in what they keep: the
+// declaration scan wants the closure literals a body buries, the same scan
+// wants the types its casts name, and the check wants the selectors a module
+// sends. Written out per collector, one walk over the language is written three
+// times, and a case added to `Expression` reaches whichever copies somebody
+// remembered.
+//
+// Where a thing was found is the caller's to name. A stage that reports has a
+// place to extend, and a stage that only gathers has nothing to carry, so where
+// a thing is travels as a value the caller hands in, along with how to step
+// into one, and the caller wanting nowhere hands in nothing.
+//
+// A step is a `Place.Step` rather than a name, because a statement is found by
+// its name and by its position and only one of those is always there. Handing
+// the step over whole is what lets a caller keep both; a name would have made
+// this walk choose between them on every stage's behalf.
+
+// What a walk finds: a statement, or an expression. A stage keeps the one it is
+// after and the walk keeps neither. What is held where is a fact of the
+// language, and which of it matters is the stage's own question.
+public enum Node: Sendable {
+    case statement(Statement)
+    case expression(Expression)
+}
+
+// What can be walked for everything it holds. Three types answer it, and the
+// convenient ways to ask are written once here rather than three times over.
+// The same duplication this file exists to remove, at the smaller scale where
+// it is easy not to notice.
+public protocol Traversable {
+    // Everything held in here, each with where it was found.
+    func walked<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail) -> [(Trail, Node)]
+}
+
+public extension Traversable {
+    // Every expression held in here, each with where it was found.
+    func subexpressions<Trail>(
+        at trail: Trail,
+        stepping: (Trail, Place.Step) -> Trail
+    ) -> [(Trail, Expression)] {
+        walked(at: trail, stepping: stepping).compactMap { found -> (Trail, Expression)? in
+            guard case let .expression(expression) = found.1 else { return nil }
+
+            return (found.0, expression)
+        }
+    }
+
+    // The walk a stage that reports takes.
+    func subexpressions(at place: Place) -> [(Place, Expression)] {
+        subexpressions(at: place) { place, step in place.appending(step) }
+    }
+
+    // The walk a stage that only gathers takes. Nothing is carried, so nothing
+    // is spelled.
+    var subexpressions: [Expression] {
+        subexpressions(at: ()) { _, _ in () }.map(\.1)
+    }
+
+    // The same walk, keeping the statements too. What is held where is a
+    // fact of the language and a stage that reads both asks for both.
+    var nodes: [Node] {
+        walked(at: ()) { _, _ in () }.map(\.1)
+    }
+
+    // Every type a name in here says it holds, each with where it was said.
+    func declaring(at place: Place) -> [(Place, TypeExpression)] {
+        walked(at: place) { place, step in place.appending(step) }
+            .compactMap { found -> (Place, TypeExpression)? in
+                guard
+                    case let .statement(statement) = found.1,
+                    let declared = statement.binding?.declared
+                else { return nil }
+
+                return (found.0, declared)
+            }
+    }
+}
+
+extension Expression: Traversable {}
+extension Block: Traversable {}
+extension [Statement]: Traversable {}
+
+public extension Expression {
+    func walked<Trail>(
+        at trail: Trail,
+        stepping: (Trail, Place.Step) -> Trail
+    ) -> [(Trail, Node)] {
+        // A closure names its own place: the literal and the body it carries
+        // are found under one name, so a report says which closure without
+        // having to say it twice.
+        let here: Trail = if case .closure = self { stepping(trail, .part(.closure)) } else { trail }
+
+        func inner(_ expression: Expression, under part: Place.Part? = nil) -> [(Trail, Node)] {
+            expression.walked(
+                at: part.map { part in stepping(here, .part(part)) } ?? here,
+                stepping: stepping
+            )
+        }
+
+        // What a call is written with, walked in name order and each given its
+        // own place. Order because a `Dictionary` walks in whatever order its
+        // seed decided, and the stages downstream stop at the first refusal,
+        // which one an author is shown would be a fact of the run rather than
+        // of the text. Its own place because two of them reported from the same
+        // one would say a thing is wrong and not say which.
+        func arguments(_ children: [Name: Expression]) -> [(Trail, Node)] {
+            named(children, under: stepping(here, .part(.arguments)))
+        }
+
+        func named(_ children: [Name: Expression], under place: Trail) -> [(Trail, Node)] {
+            children.sorted { mine, theirs in mine.key < theirs.key }
+                .flatMap { name, child in
+                    child.walked(at: stepping(place, .key(name.spelling)), stepping: stepping)
+                }
+        }
+
+        let held: [(Trail, Node)] = switch self {
+        case .literal, .reference:
+            []
+
+        case let .closure(procedure):
+            procedure.block?.walked(at: here, stepping: stepping) ?? []
+
+        case let .cast(value, _, _):
+            inner(value, under: .receiver)
+
+        // A leave writes what it carries directly under its own construct,
+        // which the statement holding it already stepped into.
+        case let .leave(leave):
+            leave.value.map { value in inner(value) } ?? []
+
+        case let .array(array):
+            array.enumerated().flatMap { position, element in
+                element.walked(at: stepping(here, .index(position)), stepping: stepping)
+            }
+
+        case let .record(record):
+            named(record, under: here)
+
+        case let .apply(callee, written):
+            inner(callee, under: .callee) + arguments(written)
+
+        case let .call(call):
+            (call.receiver.map { receiver in inner(receiver, under: .receiver) } ?? [])
+                + arguments(call.arguments)
+
+        case let .block(block):
+            block.walked(at: here, stepping: stepping)
+
+        case let .conditional(condition, then, otherwise):
+            inner(condition, under: .condition(of: .conditional))
+                + then.walked(at: stepping(here, .part(.then)), stepping: stepping)
+                + (otherwise?.walked(at: stepping(here, .part(.otherwise)), stepping: stepping) ?? [])
+
+        case let .loop(condition, body, _):
+            inner(condition, under: .condition(of: .loop))
+                + body.walked(at: here, stepping: stepping)
+
+        case let .attempt(attempted, rescue, _):
+            attempted.walked(at: here, stepping: stepping)
+                + rescue.walked(at: stepping(here, .part(.rescue)), stepping: stepping)
+        }
+
+        return [(here, .expression(self))] + held
+    }
+}
+
+public extension Block {
+    func walked<Trail>(
+        at trail: Trail,
+        stepping: (Trail, Place.Step) -> Trail
+    ) -> [(Trail, Node)] {
+        body.walked(at: stepping(trail, .part(.body)), stepping: stepping)
+            + (result.map { result in
+                result.walked(at: stepping(trail, .part(.result)), stepping: stepping)
+            } ?? [])
+    }
+}
+
+public extension [Statement] {
+    // A statement is found under its own name (or, one run for its effect
+    // alone, under its position, which is the only thing there is to call it)
+    // and then under the construct it writes, the way a document nests it.
+    func walked<Trail>(
+        at trail: Trail,
+        stepping: (Trail, Place.Step) -> Trail
+    ) -> [(Trail, Node)] {
+        enumerated().flatMap { position, statement in
+            let here = stepping(trail, .statement(name: statement.name?.spelling, at: position))
+
+            return [(here, Node.statement(statement))]
+                + statement.expression.walked(
+                    at: stepping(here, .construct(statement.expression.construct)),
+                    stepping: stepping
+                )
+        }
+    }
+}

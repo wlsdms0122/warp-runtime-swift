@@ -9,27 +9,35 @@ import Foundation
 import Warp
 
 // Where the two positions a document writes an expression in stop being the
-// same. A statement is a name and one construct, so every shape the language has
+// same. A statement is a name and one construct, so every construct the language has
 // can be written there; inside another expression there is no name to give, so
-// only the shapes that need none can.
+// only the types that need none can.
 public extension Writer {
     // MARK: - Public
     func value(of statement: Statement) throws -> Value {
-        // The reader cannot produce a named branch, so this guards the caller
-        // that builds statements directly, with the validator's own words:
+        // The reader cannot produce a named conditional, so this guards the caller
+        // that builds statements directly, with the validator's own terms:
         // writing one silently would make a document that reads back as
         // something else.
-        if statement.binding != nil, statement.expression.takesNoName {
+        if statement.binding != nil, statement.expression.answersNothing {
             throw WritingError(
-                "a branch answers nothing, so its name could never bind"
-                    + " — it takes no name"
+                "a conditional answers nothing, so its name could never bind."
+                    + " It takes no name"
             )
         }
 
-        var written: [String: Value] = [:]
+        if statement.binding?.declared != nil, statement.expression.namesItsOwn {
+            throw WritingError(Expression.declarationOnABoundName)
+        }
+
+        var written: [Name: Value] = [:]
 
         if let binding = statement.binding {
             written[key(of: binding)] = .string(binding.spelled)
+
+            if let declared = binding.declared {
+                written[StatementReader.typeKey] = try value(of: declared)
+            }
         }
 
         // A variable holding null is what a bare `var` introduces, and the bare
@@ -38,14 +46,14 @@ public extension Writer {
             case .variable? = statement.binding,
             case .literal(.null) = statement.expression
         {
-            return .object(written)
+            return .dictionary(written)
         }
 
         let (key, body) = try construct(of: statement.expression, named: statement.binding?.spelled)
 
-        written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .object([key: body])
+        written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .dictionary([key: body])
 
-        return .object(written)
+        return .dictionary(written)
     }
 
     // Where the expression is going decides what may be written bare there. The
@@ -67,8 +75,8 @@ public extension Writer {
     // way deeper down. What `reserving` names is read at every depth.
     func value(
         of expression: Expression,
-        reserving reserved: Set<String> = [],
-        constructs: Set<String> = []
+        reserving reserved: Set<Name> = [],
+        constructs: Set<Name> = []
     ) throws -> Value {
         let reserved = reserved.union(ExpressionReader.formKeys)
 
@@ -78,19 +86,20 @@ public extension Writer {
         case let .literal(value):
             switch try Self.spelling(of: value, reserving: reserved, constructs: constructs) {
             case .plainly: return value
-            case .quoted: return .object(["value": value])
+            case .quoted: return .dictionary(["value": value])
             }
 
         case let .reference(path):
-            return .object(["ref": .string(path.rendered)])
+            return .dictionary(["ref": .string(path.rendered)])
 
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
 
-        // A record of expressions is not data, so `{ value: }` cannot rescue it
-        // — quoting one would say the fields are literals rather than things to
-        // evaluate. A record whose own field names are read as a form here has
-        // no document, and saying so beats writing one that means something else.
+        // A record of expressions is not data, so `{ value: }` cannot rescue
+        // it. Quoting one would say the fields are literals rather than things
+        // to evaluate. A record whose own field names are read as a form here
+        // has no document, and saying so beats writing one that means something
+        // else.
         case let .record(fields):
             let taken = Self.taken(Set(fields.keys), reserving: reserved, constructs: constructs)
 
@@ -101,33 +110,32 @@ public extension Writer {
                 )
             }
 
-            return .object(try fields.mapValues { field in try value(of: field) })
+            return .dictionary(try fields.mapValues { field in try value(of: field) })
 
         case let .closure(procedure):
-            return .object([ExpressionReader.closureKey: try value(of: procedure)])
+            return .dictionary([ExpressionReader.closureKey: try value(of: procedure)])
 
         // The mark rides on the key, the way `?.` rides on a segment: one
         // spelling says the mismatch refuses and the other says it reads as
-        // null, and the shape itself is written once either way.
+        // null, and the type itself is written once either way.
         case let .cast(read, type, optional):
-            return .object([
+            return .dictionary([
                 optional ? "as?" : "as": try value(of: type),
                 ExpressionReader.subjectKey: try value(of: read),
             ])
 
-        case let .dispatch(dispatch):
-            return .object(["call": try message(of: dispatch)])
+        case let .call(call):
+            return .dictionary(["call": try self.call(of: call)])
 
-        // Everything left is a construct, and this notation spells constructs in
-        // statement position only. Some of them need to be there — a loop, an
-        // iteration, a fan-out over a collection and an attempt each bind a name
-        // inside themselves and take it from the statement they are written as —
-        // and the rest are there because the expression grammar is a fixed set
-        // and they are not in it.
+        // Everything left is a construct, and this notation spells constructs
+        // in statement position only. Some of them need to be there (a loop and
+        // an attempt each bind a name inside themselves and take it from the
+        // statement they are written as) and the rest are there because the
+        // expression grammar is a fixed set and they are not in it.
         default:
             throw WritingError(
-                "\(Self.shape(of: expression)) has no spelling where a value is wanted"
-                    + " — this notation writes it as a statement"
+                "\(Self.construct(of: expression)) has no spelling where a value is wanted."
+                    + " This notation writes it as a statement"
             )
         }
     }
@@ -135,7 +143,7 @@ public extension Writer {
     // MARK: - Private
     // What the reading side would take for a condition rather than for data.
     // Nothing for a document, which has no notation to take it for one.
-    private var conditionKeys: Set<String> {
+    private var conditionKeys: Set<Name> {
         readBy.condition?.keys ?? []
     }
 
@@ -145,30 +153,29 @@ public extension Writer {
     private func construct(
         of expression: Expression,
         named id: String?
-    ) throws -> (String, Value) {
+    ) throws -> (Name, Value) {
         switch expression {
-        case let .dispatch(dispatch):
-            return (try spelling(CallForm.self), try message(of: dispatch))
+        case let .call(call):
+            return (try spelling(CallForm.self), try self.call(of: call))
 
-        case let .invoke(callee, arguments):
-            var written: [String: Value] = ["procedure": try value(of: callee)]
+        case let .apply(callee, arguments):
+            var written: [Name: Value] = ["procedure": try value(of: callee)]
 
             if !arguments.isEmpty {
-                written["arguments"] = .object(
+                written["arguments"] = .dictionary(
                     try arguments.mapValues { argument in try value(of: argument) }
                 )
             }
 
-            return (try spelling(InvokeForm.self), .object(written))
+            return (try spelling(ApplyForm.self), .dictionary(written))
 
         case let .block(block):
-            return (try spelling(GroupForm.self), .object(try fields(of: block, in: GroupForm.self)))
+            return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
 
-        // A name on a branch was already refused where the statement's
-        // envelope is written — `takesNoName`, the one predicate every door
-        // asks.
+        // A name on a conditional was already refused where the statement's envelope
+        // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
-            var written: [String: Value] = [
+            var written: [Name: Value] = [
                 "when": try value(of: condition, reserving: conditionKeys),
                 "then": .array(try then.map(value(of:)))
             ]
@@ -177,29 +184,18 @@ public extension Writer {
                 written["else"] = .array(try otherwise.map(value(of:)))
             }
 
-            return (try spelling(BranchForm.self), .object(written))
+            return (try spelling(ConditionalForm.self), .dictionary(written))
 
         case let .loop(condition, body, round):
             try named(round, matches: id, in: "loop", binding: "round")
 
-            var written: [String: Value] = [
+            var written: [Name: Value] = [
                 "while": try value(of: condition, reserving: conditionKeys)
             ]
 
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
 
-            return (try spelling(LoopForm.self), .object(written))
-
-        case let .iteration(material, body, element):
-            try named(element, matches: id, in: "each", binding: "element")
-
-            var written: [String: Value] = ["in": try value(of: material)]
-
-            written.merge(
-                try fields(of: Block(body: body), in: EachForm.self)
-            ) { one, _ in one }
-
-            return (try spelling(EachForm.self), .object(written))
+            return (try spelling(LoopForm.self), .dictionary(written))
 
         case let .leave(leave):
             switch leave.reach {
@@ -213,10 +209,10 @@ public extension Writer {
                 return (try spelling(ReturnForm.self), carried)
 
             case .construct:
-                return (try spelling(BreakForm.self), leave.target.map(Value.string) ?? .null)
+                return (try spelling(BreakForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
 
             case .round:
-                return (try spelling(ContinueForm.self), leave.target.map(Value.string) ?? .null)
+                return (try spelling(ContinueForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
             }
 
         case let .attempt(attempted, rescue, failure):
@@ -224,31 +220,31 @@ public extension Writer {
 
             var written = try fields(of: attempted, in: AttemptForm.self)
 
-            written["rescue"] = .object(try fields(of: rescue, in: nil))
+            written["rescue"] = .dictionary(try fields(of: rescue, in: nil))
 
-            return (try spelling(AttemptForm.self), .object(written))
+            return (try spelling(AttemptForm.self), .dictionary(written))
 
         // Whatever is left needs no name, so it is written as the expression it
-        // is under the word that says "this statement is just a value".
+        // is under the key that says "this statement is just a value".
         default:
             return (StatementReader.valueKey, try value(of: expression, constructs: Set(registry.keys)))
         }
     }
 
-    private func message(of dispatch: Dispatch) throws -> Value {
-        var written: [String: Value] = ["procedure": .string(dispatch.selector)]
+    private func call(of call: Call) throws -> Value {
+        var written: [Name: Value] = ["procedure": .string(call.selector.spelling)]
 
-        if let receiver = dispatch.receiver {
+        if let receiver = call.receiver {
             written[ExpressionReader.subjectKey] = try value(of: receiver)
         }
 
-        if !dispatch.arguments.isEmpty {
-            written["arguments"] = .object(
-                try dispatch.arguments.mapValues { argument in try value(of: argument) }
+        if !call.arguments.isEmpty {
+            written["arguments"] = .dictionary(
+                try call.arguments.mapValues { argument in try value(of: argument) }
             )
         }
 
-        return .object(written)
+        return .dictionary(written)
     }
 
     // The keys a block writes, with whoever reads it asked whether an empty
@@ -258,15 +254,15 @@ public extension Writer {
     // its own reader refuses.
     //
     // Every caller names its reader, and `nil` is a reader rather than a
-    // default — a rescue and a procedure are read by their own readers, which
+    // default. A rescue and a procedure are read by their own readers, which
     // take `body` as a key that may be absent. Said out loud because a way of
     // writing a block without saying who reads it is a way of skipping the
     // question, and skipping it is the failure this asks about.
     internal func fields(
         of block: Block,
         in form: (any ConstructForm.Type)?
-    ) throws -> [String: Value] {
-        var written: [String: Value] = [:]
+    ) throws -> [Name: Value] {
+        var written: [Name: Value] = [:]
 
         if form?.requiresBody == true || !block.body.isEmpty {
             written["body"] = .array(try block.body.map(value(of:)))
@@ -279,11 +275,11 @@ public extension Writer {
         return written
     }
 
-    private func spelling(_ form: any ConstructForm.Type) throws -> String {
+    private func spelling(_ form: any ConstructForm.Type) throws -> Name {
         guard let key = registry.key(for: form) else {
             throw WritingError(
-                "this notation registers no word for \(form) — a shape it gave up"
-                    + " the word for is one it can no longer write"
+                "this notation registers no key for \(form). A construct it gave"
+                    + " the key up for is one it can no longer write"
             )
         }
 
@@ -292,16 +288,16 @@ public extension Writer {
 
     // A construct takes the name it binds from the statement it is written as,
     // so one built with any other name has no document. It is reachable: a
-    // caller assembling the language's shapes directly is under no obligation to
+    // caller assembling the language's types directly is under no obligation to
     // make the two agree, and finds out here rather than at a run that reads a
     // name nothing bound.
     private func named(
-        _ bound: String,
+        _ bound: Name,
         matches id: String?,
         in construct: String,
         binding: String
     ) throws {
-        guard bound != id else { return }
+        guard bound.spelling != id else { return }
 
         throw WritingError(
             "a \(construct) binds its \(binding) under the name of the statement it is"
@@ -309,7 +305,7 @@ public extension Writer {
         )
     }
 
-    private func key(of binding: Statement.Binding) -> String {
+    private func key(of binding: Statement.Binding) -> Name {
         switch binding {
         case .constant: "let"
         case .variable: "var"
@@ -320,11 +316,12 @@ public extension Writer {
     // How data has to be written to come back as itself: as it stands, or
     // quoted because something in it would otherwise be read as a form.
     //
-    // The third answer is a refusal rather than a case. A procedure is code that
-    // has already closed over a scope, and a document holds neither — quoting
-    // one would put something in the text that reading it back could not answer
-    // with, which is the same reason a natively implemented word has no document.
-    private enum Spelling {
+    // The third answer is a refusal rather than a case. A procedure is code
+    // that has already closed over a scope, and a document holds neither.
+    // Quoting one would put something in the text that reading it back could
+    // not answer with, which is the same reason a natively implemented procedure has
+    // no document.
+    enum Spelling {
         case plainly
         case quoted
     }
@@ -332,12 +329,12 @@ public extension Writer {
     // The keys under which a record with these fields would be read as
     // something other than a record: a reserved key wherever it stands, and a
     // construct's key where the record is the one field under a statement's
-    // `value` — the reader's own two conditions, asked here as the writer.
+    // `value`. The reader's own two conditions, asked here as the writer.
     private static func taken(
-        _ keys: Set<String>,
-        reserving reserved: Set<String>,
-        constructs: Set<String>
-    ) -> Set<String> {
+        _ keys: Set<Name>,
+        reserving reserved: Set<Name>,
+        constructs: Set<Name>
+    ) -> Set<Name> {
         var taken = keys.intersection(reserved)
 
         if keys.count == 1 {
@@ -347,13 +344,20 @@ public extension Writer {
         return taken
     }
 
-    private static func spelling(
+    // Whether data is written as itself or under `{ value: }`. The reader asks
+    // this too, with nothing reserved beyond the form keys, so what it refuses
+    // as a second spelling is exactly what no writer would have quoted.
+    static func spelling(
         of value: Value,
-        reserving reserved: Set<String>,
-        constructs: Set<String> = []
+        reserving reserved: Set<Name>,
+        constructs: Set<Name> = []
     ) throws -> Spelling {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
+            return .plainly
+
+        // A named record is data wherever it stands, and is read as such.
+        case let .record(record) where record.name != nil:
             return .plainly
 
         case let .array(elements):
@@ -361,8 +365,10 @@ public extension Writer {
                 try spelling(of: element, reserving: reserved) == .plainly ? carried : .quoted
             }
 
-        case let .record(record):
-            guard taken(Set(record.names), reserving: reserved, constructs: constructs).isEmpty else {
+        case .record, .dictionary:
+            guard let record = value.asDictionary,
+                taken(Set(record.names), reserving: reserved, constructs: constructs).isEmpty
+            else {
                 return .quoted
             }
 
@@ -377,7 +383,7 @@ public extension Writer {
         }
     }
 
-    private static func shape(of expression: Expression) -> String {
+    private static func construct(of expression: Expression) -> String {
         switch expression {
         case .leave: "leaving"
         case .literal: "a literal"
@@ -385,13 +391,12 @@ public extension Writer {
         case .array: "an array"
         case .record: "a record"
         case .closure: "a closure"
-        case .invoke: "an invocation"
-        case .block: "a group"
-        case .conditional: "a branch"
+        case .apply: "a call of a value"
+        case .block: "a block"
+        case .conditional: "a conditional"
         case .loop: "a loop"
-        case .iteration: "an iteration"
         case .attempt: "an attempt"
-        case .dispatch: "a message"
+        case .call: "a call"
         case .cast: "a cast"
         }
     }

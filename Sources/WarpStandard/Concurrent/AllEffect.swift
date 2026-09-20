@@ -1,0 +1,30 @@
+//
+//  AllEffect.swift
+//  WarpStandard
+//
+//  Created by JSilver on 8/22/26.
+//
+
+import Foundation
+import Warp
+
+// Runs every closure and answers every answer. A record's under its keys, an
+// array's in its order.
+struct AllEffect: Effect {
+    typealias Parameters = FanoutReceiver
+
+    // MARK: - Property
+    // Every recoverable failure a piece raises is gathered into one, so this
+    // is the only way this procedure comes out however the pieces failed.
+    let failing = Failing.these([ConcurrentFailed.type])
+
+    private let fanout = Fanout("std.concurrent.all")
+
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await fanout.all(invocation)
+    }
+
+    // MARK: - Private
+}

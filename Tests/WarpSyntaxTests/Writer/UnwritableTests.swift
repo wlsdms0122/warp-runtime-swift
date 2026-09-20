@@ -10,15 +10,15 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-// The shapes a document has no way to say.
+// The pieces a document has no way to say.
 //
-// All of them are built rather than parsed — a document could not make one, so
+// All of them are built rather than parsed. A document could not make one, so
 // nothing here comes back from a reader. They are reachable because assembling
-// the language's shapes directly is a supported way to write a program, and
+// the language's types directly is a supported way to write a program, and
 // writing one out is what this whole direction exists for. What matters is that
 // each is refused: a document that came back meaning something else would be
 // worse than no document, because nothing downstream could tell.
-@Suite("A program shape with no document is refused rather than approximated")
+@Suite("A piece of a program with no document is refused rather than approximated")
 struct UnwritableTests {
     // MARK: - Property
     private let sut = Writer()
@@ -28,21 +28,21 @@ struct UnwritableTests {
     // MARK: - Test
     @Test("a procedure held as a value is not data")
     func aProcedureValueIsNotData() throws {
-        // Given — a closure has already taken a scope with it, and a document
+        // Given. A closure has already taken a scope with it, and a document
         // carries neither code nor the scope it closed over
         let held = Value.procedure(
             Closure.assembled()
         )
 
-        // When / Then — a program carrying one never reaches a writing: making
-        // a module is checking one, and this is one of the things it is not
+        // When / Then. A program carrying one never reaches a writing: making a
+        // module is checking one, and this is one of the things it is not
         #expect {
             try module(binding: .literal(held))
         } throws: { error in
             "\(error)".contains("not data")
         }
 
-        // And no deeper in either — a list of them is no more a program
+        // And no deeper in either. A list of them is no more a program
         #expect(throws: ValidationError.self) {
             try module(binding: .literal(.array([held])))
         }
@@ -56,7 +56,7 @@ struct UnwritableTests {
 
     @Test("a record whose fields are read as a form has no document")
     func aRecordThatWouldReadAsAFormIsRefused() {
-        // Given — a record of expressions cannot be quoted, because `{ value: }`
+        // Given. A record of expressions cannot be quoted, because `{ value: }`
         // says the fields are data rather than things to work out
         let sut = try? sut.value(
             of: module(binding: .record(["ref": .literal(.string("not-a-path"))]))
@@ -68,7 +68,7 @@ struct UnwritableTests {
 
     @Test("a declared type named like a built-in has no document")
     func aTypeNamedLikeABuiltinIsRefused() {
-        // Given — nothing stops a module declaring a type called `int`; a
+        // Given. Nothing stops a module declaring a type called `int`; a
         // document just reads the name it knows as the type it knows
         #expect(throws: WritingError.self) {
             try sut.value(of: TypeExpression.named("int"))
@@ -81,7 +81,7 @@ struct UnwritableTests {
 
     @Test("a nullable writes its trailing ?, and one with no spelling inside has no document")
     func aNullableSpellsOrRefuses() throws {
-        // Given — the trailing `?` needs a name in front of it, and a record
+        // Given. The trailing `?` needs a name in front of it, and a record
         // spells as a mapping rather than a name
         #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("int?"))
         #expect(
@@ -96,9 +96,9 @@ struct UnwritableTests {
 
     @Test("a range bounded by a fraction with no spelling has no document")
     func aRangeWithAnUnspellableBoundIsRefused() throws {
-        // Given — the bounds are the whole of what a range is written as, so a
+        // Given. The bounds are the whole of what a range is written as, so a
         // bound with no spelling leaves nothing to write. The language admits
-        // an infinity on purpose — it orders like any other bound — and what a
+        // an infinity on purpose (it orders like any other bound) and what a
         // message shows it in reads back as an error rather than as the range.
         #expect(
             try sut.value(of: TypeExpression.ranged(.whole(from: 0, to: .through(255))))
@@ -120,13 +120,13 @@ struct UnwritableTests {
 
     @Test("a record type shaped like a procedure type has no document")
     func aRecordTypeThatWouldReadAsAProcedureIsRefused() {
-        // Given — a record and a procedure are both written as a mapping, and
+        // Given. A record and a procedure are both written as a mapping, and
         // the key that tells them apart is the procedure's
         #expect(throws: WritingError.self) {
             try sut.value(of: TypeExpression.record(["procedure": .int]))
         }
 
-        // Two fields cannot be mistaken for one — the procedure form is a single
+        // Two fields cannot be mistaken for one. The procedure form is a single
         // key, so this stays a record
         #expect(throws: Never.self) {
             try sut.value(of: TypeExpression.record(["procedure": .int, "other": .bool]))
@@ -135,13 +135,13 @@ struct UnwritableTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One statement around whatever is under test, since none of these shapes
+    // One statement around whatever is under test, since none of these pieces
     // can be reached by writing a document.
     private func module(binding expression: Warp.Expression) throws -> Module {
         try Module(
             procedures: [
                 entryName: Procedure(
-                    signature: Signature(parameters: ["word": Parameter(type: .string)]),
+                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
                     body: [Statement(binding: .constant("probe"), expression: expression)]
                 )
             ]

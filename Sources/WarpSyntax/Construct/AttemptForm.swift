@@ -21,7 +21,7 @@ public struct AttemptForm: ConstructForm {
     }
 
     // MARK: - Property
-    public static let key = "attempt"
+    public static let key: Name = "attempt"
 
     // The attempted body is decoded as a key that must be there, so an attempt
     // at nothing is still written with an empty one. The rescue is a block of
@@ -35,17 +35,16 @@ public struct AttemptForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "attempt")
 
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
         self.attempted = try .reading(
-            body: try container.decode(BodyReader.self, forKey: .body).statements,
-            result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?
+            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).statements,
+            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
+                .read(ExpressionReader.self)
                 .expression,
             at: decoder.steps
         )
-        self.rescue = try container.decode(BlockReader.self, forKey: .rescue).block
+        self.rescue = try decoder.descending(to: CodingKeys.rescue).read(BlockReader.self).block
 
-        // An empty rescue would swallow a failure into null without a trace — if
+        // An empty rescue would swallow a failure into null without a trace. If
         // the alternate path produces nothing, the honest form is no attempt.
         guard !rescue.body.isEmpty || rescue.result != nil else {
             throw ReadingError(

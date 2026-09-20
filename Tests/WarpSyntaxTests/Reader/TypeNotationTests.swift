@@ -20,9 +20,11 @@ struct TypeNotationTests {
     @Test("a built-in reads as its own name, applied or not")
     func builtinsParse() throws {
         #expect(try TypeReader.parse("string") == .string)
-        #expect(try TypeReader.parse("array") == .array(.any))
+        #expect(try TypeReader.parse("array<any>") == .array(.any))
+        #expect(throws: (any Error).self) { try TypeReader.parse("array") }
+        #expect(throws: (any Error).self) { try TypeReader.parse("dictionary") }
         #expect(try TypeReader.parse("array<string>") == .array(.string))
-        #expect(try TypeReader.parse("object<array<int>>") == .object(.array(.int)))
+        #expect(try TypeReader.parse("dictionary<array<int>>") == .dictionary(.array(.int)))
         #expect(try TypeReader.parse("procedure") == .procedure(nil))
         #expect(try TypeReader.parse("never") == .never)
     }
@@ -46,8 +48,8 @@ struct TypeNotationTests {
                 == .ranged(.whole(from: Int.max))
         )
 
-        // A bound past the word is a whole number's one spelling of a number
-        // no int holds — refused as that fact, not as a spelling defect.
+        // A bound past the int is a whole number's one spelling of a number no
+        // int holds. Refused as that fact, not as a spelling defect.
         #expect {
             try TypeReader.parse("int(18446744073709551615...)")
         } throws: { error in
@@ -57,7 +59,7 @@ struct TypeNotationTests {
 
     @Test("the far bound may be left outside, and the kind under it is written")
     func openRangesAndFractionsParse() throws {
-        // `..<` says the far bound is outside — the half-open interval a
+        // `..<` says the far bound is outside. The half-open interval a
         // position below a length is written against.
         #expect(try TypeReader.parse("int(0..<256)") == .ranged(.whole(from: 0, to: .upTo(256))))
         #expect(try TypeReader.parse("int(..<0)") == .ranged(.whole(to: .upTo(0))))
@@ -89,7 +91,7 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0 ... 255)") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(a...b)") }
 
-        // `..<` says the far bound is outside, so there has to be one — and
+        // `..<` says the far bound is outside, so there has to be one, and
         // `..<` with nothing on either side says nothing twice.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0..<)") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(..<)") }
@@ -98,9 +100,9 @@ struct TypeNotationTests {
 
     @Test("every range writes back out as the one spelling it was read from")
     func rangesRoundTrip() throws {
-        // Given — `rendered` is the type's identity and what a document is
-        // written with, so a range that read one way and wrote another would
-        // be a shape a round trip changes.
+        // Given. `rendered` is the type's identity and what a document is
+        // written with, so a range that read one way and wrote another would be
+        // a type a round trip changes.
         for written in [
             "int(0...255)", "int(0...)", "int(...255)", "int(-10...-1)",
             "int(0..<256)", "int(..<0)",
@@ -111,15 +113,15 @@ struct TypeNotationTests {
         }
     }
 
-    @Test("a slot asks for purity by writing it in front")
-    func purityIsWrittenAndRead() throws {
+    @Test("a slot asks for constness by writing it in front")
+    func constnessIsWrittenAndRead() throws {
         // Given / When / Then
-        #expect(try TypeReader.parse("pure procedure") == .procedure(nil, .pure))
+        #expect(try TypeReader.parse("const procedure") == .procedure(nil, .const))
         #expect(try TypeReader.parse("procedure") == .procedure(nil, .unstated))
 
         // Only a procedure answers without running, so only a procedure is
-        // written pure.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("pure string") }
+        // written const.
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("const string") }
     }
 
     @Test("a type parameter is written some, and is not a declared name")
@@ -159,35 +161,45 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T?") }
     }
 
+    @Test("names joined with & read as a composition, in name order, and write back the same way")
+    func compositionsParse() throws {
+        #expect(try TypeReader.parse("app.B & app.A") == .composition(["app.A", "app.B"]))
+        #expect(try TypeReader.parse("array<app.A & app.B>") == .array(.composition(["app.A", "app.B"])))
+        #expect(try Writer().value(of: .composition(["app.A", "app.B"])) == .string("app.A & app.B"))
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.B?") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & array<int>") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.A") }
+    }
+
     @Test("a signature bounds its type parameters once, in bounds")
-    func aBoundIsDeclaredInTheSignature() throws {
-        // Given — the slots name the parameter, and the signature says what
-        // the name admits
-        let sut = try loader.loadProcedure([
+    func aBoundIsDeclaredInTheSignature() async throws {
+        // Given. The slots name the parameter, and the signature says what the
+        // name admits
+        let sut = try await loader.loadProcedure([
             "receiver": "of",
             "bounds": ["T": "Comparable"],
-            "parameters": ["of": "some T", "value": "some T"],
+            "parameters": ["of": ["type": "some T"], "value": ["type": "some T"]],
             "returns": "some T",
             "result": ["ref": "of"]
-        ])
+        ], importing: ["Comparable"])
 
-        // Then — every occurrence carries the bound the signature declared
+        // Then. Every occurrence carries the bound the signature declared
         let signature = sut.procedures[entryName]?.signature
 
         #expect(
             signature?.parameters["of"]?.type
-                == .parameter(name: "T", constraint: "Comparable")
+                == .parameter(name: "T", constraints: ["Comparable"])
         )
         #expect(
             signature?.parameters["value"]?.type
-                == .parameter(name: "T", constraint: "Comparable")
+                == .parameter(name: "T", constraints: ["Comparable"])
         )
-        #expect(signature?.returns == .parameter(name: "T", constraint: "Comparable"))
+        #expect(signature?.returns == .parameter(name: "T", constraints: ["Comparable"]))
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
-    func aBoundBelongsToTheSignature() throws {
-        // The slot names the parameter and nothing else — the constraint is
+    func aBoundBelongsToTheSignature() async throws {
+        // The slot names the parameter and nothing else. The constraint is
         // declared once, in the signature's `bounds`.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
@@ -196,24 +208,24 @@ struct TypeNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Comparable"],
-                "parameters": ["of": "int"],
+                "parameters": ["of": ["type": "int"]],
                 "result": ["ref": "of"]
             ])
         }
 
-        // A bound is a constraint's name, never a shape.
-        #expect(throws: ReadingError.self) {
-            try loader.loadProcedure([
+        // A bound is a constraint's name, never a type.
+        await #expect(throws: ReadingError.self) {
+            try await loader.loadProcedure([
                 "bounds": ["T": "array<int>"],
-                "parameters": ["of": "some T"],
+                "parameters": ["of": ["type": "some T"]],
                 "result": ["ref": "of"]
             ])
         }
 
-        // A nested procedure type carries no bounds of its own — its
-        // parameters are the declaring signature's slots, and the declaring
-        // signature owns their bounds. Two records binding one namespace
-        // would be two claims about one thing.
+        // A nested procedure type carries no bounds of its own. Its parameters
+        // are the declaring signature's slots, and the declaring signature owns
+        // their bounds. Two records binding one namespace would be two claims
+        // about one thing.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [
@@ -221,7 +233,7 @@ struct TypeNotationTests {
                         "type": [
                             "procedure": [
                                 "bounds": ["T": "Comparable"],
-                                "parameters": ["item": "some T"],
+                                "parameters": ["item": ["type": "some T"]],
                                 "returns": "bool"
                             ]
                         ]
@@ -233,31 +245,31 @@ struct TypeNotationTests {
     }
 
     @Test("a bound reaches the parameters a nested signature mentions")
-    func aBoundReachesNestedMentions() throws {
-        // Given — `some Element` sits under array<…> and inside a procedure
+    func aBoundReachesNestedMentions() async throws {
+        // Given. `some Element` sits under array<…> and inside a procedure
         // type's own slot; both are this signature's mentions of one name
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "bounds": ["Element": "Comparable"],
             "parameters": [
-                "of": "array<some Element>",
+                "of": ["type": "array<some Element>"],
                 "by": [
                     "type": [
                         "procedure": [
-                            "parameters": ["item": "some Element"],
+                            "parameters": ["item": ["type": "some Element"]],
                             "returns": "bool"
                         ]
                     ]
                 ]
             ],
             "result": ["ref": "of"]
-        ])
+        ], importing: ["Comparable"])
 
         // Then
         let parameters = sut.procedures[entryName]?.signature.parameters
 
         #expect(
             parameters?["of"]?.type
-                == .array(.parameter(name: "Element", constraint: "Comparable"))
+                == .array(.parameter(name: "Element", constraints: ["Comparable"]))
         )
 
         guard case let .procedure(.some(inner), _, _) = parameters?["by"]?.type else {
@@ -268,7 +280,7 @@ struct TypeNotationTests {
 
         #expect(
             inner.parameters["item"]?.type
-                == .parameter(name: "Element", constraint: "Comparable")
+                == .parameter(name: "Element", constraints: ["Comparable"])
         )
     }
 
@@ -284,14 +296,14 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("string<int>") }
     }
 
-    @Test("a module declares shapes its procedures name")
+    @Test("a module declares types its procedures name")
     func moduleDeclaresTypes() throws {
         // Given
         let sut = try loader.loadDocument([
             "types": ["Task": ["id": "string", "done": "bool"]],
             "procedures": [
                 "entry": [
-                    "parameters": ["tasks": "array<Task>"],
+                    "parameters": ["tasks": ["type": "array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]]
                 ]
             ]
@@ -305,14 +317,47 @@ struct TypeNotationTests {
         )
     }
 
-    @Test("a declared shape is enforced at the call boundary")
-    func declaredShapeIsEnforced() async throws {
+    @Test("the record form holds only an element with no spelling of its own")
+    func recordFormIsForNamelessElements() throws {
+        // Given. An array of records has no string spelling, so the record
+        // form is the one way to write it.
+        let sut = try loader.loadDocument([
+            "procedures": [
+                "entry": [
+                    "parameters": ["rows": ["type": ["array": ["id": "string"]]]],
+                    "body": [["let": "seen", "value": ["ref": "rows"]]]
+                ]
+            ]
+        ])
+
+        // Then
+        #expect(
+            sut.procedures["entry"]?.signature.parameters["rows"]?.type
+                == .array(.record(["id": .string]))
+        )
+
+        // An element with a spelling is written `array<string>`, and the
+        // record form around it is refused rather than read as the same type.
+        #expect(throws: ReadingError.self) {
+            try loader.loadDocument([
+                "procedures": [
+                    "entry": [
+                        "parameters": ["rows": ["type": ["array": "string"]]],
+                        "body": [["let": "seen", "value": ["ref": "rows"]]]
+                    ]
+                ]
+            ])
+        }
+    }
+
+    @Test("a declared type is enforced at the call boundary")
+    func declaredTypeIsEnforced() async throws {
         // Given
         let sut = try loader.loadDocument([
             "types": ["Task": ["id": "string"]],
             "procedures": [
                 "entry": [
-                    "parameters": ["tasks": "array<Task>"],
+                    "parameters": ["tasks": ["type": "array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
                     "result": ["result": ["ref": "seen"]]
                 ]
@@ -320,12 +365,12 @@ struct TypeNotationTests {
         ])
 
         // When / Then
-        let good = try await run(sut, arguments: ["tasks": .array([.object(["id": .string("a")])])])
+        let good = try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .string("a")])])])
 
         #expect(good["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["tasks": .array([.object(["id": .int(1)])])])
+            try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .int(1)])])])
         }
     }
 }

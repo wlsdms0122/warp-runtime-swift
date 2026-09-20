@@ -10,73 +10,113 @@ let package = Package(
     products: [
         .library(name: "Warp", targets: ["Warp"]),
         .library(name: "WarpSyntax", targets: ["WarpSyntax"]),
+        .library(name: "WarpStandard", targets: ["WarpStandard"]),
     ],
     targets: [
-        // The language as Swift holds it: the shapes a program is made of, and
-        // everything done to them — checking, linking, running, and the standard
-        // vocabulary. No dependencies and no `Decodable`, because a language
+        // The language as Swift holds it: the constructs a program is made of, and
+        // everything done to them. Checking, linking and running. No
+        // dependencies and no `Decodable`, because a language
         // that can decode itself has confused itself with one of its notations.
         //
-        // A caller that builds these shapes directly needs this and nothing
-        // else. That is not a trick — it is how a front end with a syntax of its
-        // own works, and how a program that never travels is run.
+        // What it compiles it can also say as one of its own values, which is
+        // a different thing from laying that value down as bytes: an object
+        // read back beside its document is the language reading itself, and
+        // the wire it travels on is the notation's.
+        //
+        // A caller that builds these directly needs this and nothing
+        // else. That is what a front end with a syntax of its own does, and
+        // what running a program that never travels takes.
         .target(
             name: "Warp"
         ),
+        // The vocabulary a program sends to: arithmetic, text, collections,
+        // logic, control and running at once. Procedures on top of the language
+        // rather than part of it, and the dependency graph is where that is
+        // said rather than claimed. `Value` belongs to the language, so a
+        // procedure here cannot ask for a representation of its own, and the
+        // language learns a procedure only through the contract a caller hands
+        // it.
+        .target(
+            name: "WarpStandard",
+            dependencies: [
+                "Warp",
+                "WarpSyntax"
+            ]
+        ),
         // What a document is: the bytes and the text one is carried in, which
-        // key names which shape, the spellings a notation may write instead,
-        // and the way back out. Data in, the language's own shapes out.
+        // key names which construct, the spellings a notation may write
+        // instead, and the way back out. Data in, the language's own values out.
         //
         // Optional, and the dependency graph is where that is said rather than
-        // claimed. A program only travels as a document, so this is what a
-        // program has to come through to leave one machine and arrive at another
-        // — and a program that stays where it was built never comes through here
-        // at all.
+        // claimed. A program travels as a document, so this is what a program
+        // comes through to leave one machine and arrive at another.
         //
         // The wire is written and read without learning what the tree means, so
         // an implementation in another language can speak it without also
-        // implementing what a procedure is. That is a fact about the format and
-        // it holds whatever this package is cut into: the one line worth cutting
-        // on is what a caller can leave out, and a caller that reads bytes needs
-        // all of this while a caller assembling shapes in Swift needs none of it.
+        // implementing what a procedure is. The line this package is cut on is
+        // what a caller can leave out: a caller that reads bytes needs all of
+        // this, and a caller assembling a program in Swift needs none of it.
         .target(
             name: "WarpSyntax",
             dependencies: [
                 "Warp"
             ]
         ),
+        // What a value looks like with one place of it replaced, over every
+        // place it holds. A test target cannot be depended on, and the two that
+        // ask this question stand on different sides of the package's own line:
+        // one reaches inside an object, the other only through the doors a
+        // caller has. So the instrument they share stands here rather than
+        // twice.
+        .target(
+            name: "WarpMutation",
+            dependencies: [
+                "Warp"
+            ]
+        ),
         // One test target per target, and the dependencies are the point: a test
         // that cannot import the syntax can only be saying something about the
-        // language. Where a behaviour is tested is then a fact anyone can read
-        // off the imports, rather than a claim.
-        //
-        // It was a claim for a while. Writing a `Value` in Swift was awkward
-        // enough that the syntax tests reached for the YAML front end to build
-        // fixtures, and the language tests reached for the syntax — so a parser
-        // change could fail a reader's test, and the linker had no test in its own
-        // target at all. Each layer writes its own fixtures now, in the shape that
-        // layer actually takes.
+        // language. Where a behaviour is tested is then a fact anyone reads off
+        // the imports rather than a claim. Each layer writes its own fixtures,
+        // in the form that layer takes.
         .testTarget(
             name: "WarpTests",
             dependencies: [
-                "Warp"
+                "Warp",
+                "WarpMutation",
+                "WarpStandard"
+            ]
+        ),
+        // The vocabulary's own tests reach the language too: a record under a
+        // nominal name is made where the link makes one, and no public door
+        // spells one, so the fixtures come from inside. Declared rather than
+        // taken through the target below it, so the imports stay the fact
+        // this package reads them as.
+        .testTarget(
+            name: "WarpStandardTests",
+            dependencies: [
+                "Warp",
+                "WarpStandard"
             ]
         ),
         .testTarget(
             name: "WarpSyntaxTests",
             dependencies: [
-                "WarpSyntax"
+                "WarpSyntax",
+                "WarpStandard"
             ]
         ),
         // The specification's cases, run against this implementation. It imports
-        // what any caller imports and nothing more — a runner that could see
-        // inside could pass by agreeing with the implementation rather than with
-        // the specification, which is the one thing it must not do.
+        // what any caller imports and nothing more: a runner that could see
+        // inside would pass by agreeing with the implementation rather than
+        // with the specification.
         .testTarget(
             name: "WarpConformanceTests",
             dependencies: [
                 "Warp",
-                "WarpSyntax"
+                "WarpMutation",
+                "WarpSyntax",
+                "WarpStandard"
             ]
         ),
     ],

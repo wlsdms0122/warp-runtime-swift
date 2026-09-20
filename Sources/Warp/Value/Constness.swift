@@ -1,0 +1,23 @@
+//
+//  Constness.swift
+//  Warp
+//
+//  Created by JSilver on 8/19/26.
+//
+
+import Foundation
+
+// What a slot requires of a procedure that stands in it.
+//
+// Which procedures answer without running is worked out for bodies and
+// declared by a native. This is how a slot asks for one: a procedure that runs
+// its argument inside a condition or a path needs an argument that can be run
+// there, and `procedure` alone does not say so.
+public enum Constness: Sendable, Equatable {
+    // No claim. Either kind fits, the way `any` fits any value.
+    case unstated
+
+    // Must answer without running. What stands here may be asked wherever a
+    // value is read rather than run.
+    case const
+}
