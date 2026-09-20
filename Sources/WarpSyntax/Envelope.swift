@@ -34,7 +34,7 @@ public enum Envelope {
     public static let version = 1
     public static let earliest = 1
 
-    public static let versionKey: Name = "warp"
+    public static let versionKey: Name = Module.versionKey
     public static let importsKey: Name = "imports"
 
     // How deep a document may nest. The bound is exact: every reader takes

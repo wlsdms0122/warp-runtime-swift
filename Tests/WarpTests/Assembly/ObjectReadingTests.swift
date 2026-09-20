@@ -101,9 +101,11 @@ struct ObjectReadingTests {
         // tells the two apart at the door is what each says it is.
         let parts = try await parts()
 
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: .dictionary(parts.removing(Compiled.formatKey).writing("warp", with: .int(1))), of: nil)
+        // When / Then. Refused as a document, by its own name.
+        #expect {
+            try Compiled(written: .dictionary(parts.removing(Compiled.formatKey).writing(Module.versionKey, with: .int(1))), of: nil)
+        } throws: { error in
+            "\(error)".contains("this is a document, and not an object")
         }
     }
 
@@ -114,8 +116,8 @@ struct ObjectReadingTests {
         // after it onto some other declaration.
         var parts = try await parts()
 
-        guard case var .array(numbering) = parts["numbering"],
-              case let .array(types) = numbering[2],
+        guard case var .array(numbering) = parts["typeNumbering"],
+              case let .array(types) = numbering[0],
               let first = types.first
         else {
             Issue.record("an object writes its type numbering as a part")
@@ -123,8 +125,8 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[2] = .array(types + [first])
-        parts = parts.writing("numbering", with: .array(numbering))
+        numbering[0] = .array(types + [first])
+        parts = parts.writing("typeNumbering", with: .array(numbering))
 
         // When / Then.
         #expect(throws: ObjectRefused.self) {

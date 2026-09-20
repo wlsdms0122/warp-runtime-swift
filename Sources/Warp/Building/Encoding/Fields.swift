@@ -213,6 +213,21 @@ extension Fields {
         }
     }
 
+    // A written list of entries each led by a name, the names in order and none
+    // twice, where what follows the name is read beside it. The third door for
+    // a list of names, for a part whose entries are pairs rather than names.
+    static func led<T>(
+        _ value: Value,
+        of part: String,
+        _ read: (Value) throws -> (name: Name, value: T)
+    ) throws -> [(name: Name, value: T)] {
+        let entries = try list(value, of: part, read)
+
+        try judged(entries.map(\.name), of: part)
+
+        return entries
+    }
+
     @discardableResult
     private static func judged<T: Comparable>(_ written: [T], of part: String) throws -> [T] {
         guard written.ordered else {
@@ -260,6 +275,12 @@ struct Keyed {
     }
 
     // MARK: - Internal
+    // Whether the key is written, asked before anything is taken where what
+    // the record is decides how it is read.
+    func holds(_ key: Name) -> Bool {
+        written[key] != nil
+    }
+
     mutating func take(_ key: Name) throws -> Value {
         guard let held = written[key] else {
             throw ObjectRefused("'\(of)' writes no '\(key)'")

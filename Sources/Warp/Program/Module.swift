@@ -193,3 +193,10 @@ public struct Module: Sendable {
 
     // MARK: - Private
 }
+
+public extension Module {
+    // The key a document says its language version under, which is what tells a
+    // document from anything else at a door: an object says `object` where a
+    // document says this.
+    static let versionKey: Name = "warp"
+}
