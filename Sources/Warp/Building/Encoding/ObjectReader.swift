@@ -36,22 +36,27 @@ struct ObjectReader {
     func compiled(from value: Value) throws -> Compiled {
         // A document says `warp` where an object says `object`, and one handed
         // here is refused for what it is.
-        if Keyed.holds(value, Module.versionKey) {
+        if Keyed.peek(value, Module.versionKey) != nil {
             throw ObjectRefused("this is a document, and not an object")
         }
 
-        let fields = try Keyed(value, of: "object", keys: Compiled.parts)
+        // The layout first, and before anything laid out by it, the keys
+        // included: what this number says is whether the rest of the record
+        // means what this reading takes it to mean.
+        guard let stamped = Keyed.peek(value, Compiled.formatKey) else {
+            throw ObjectRefused("'object' writes no '\(Compiled.formatKey)'")
+        }
 
-        // The layout first, and before anything laid out by it: what this
-        // number says is whether the rest of the keys mean what this reading
-        // takes them to mean.
-        let format = try Fields.count(try fields.take(Compiled.formatKey), of: "object")
+        let format = try Fields.count(stamped, of: "object")
 
         guard format == Compiled.format else {
             throw ObjectRefused(
                 "the object is laid out as format \(format), and this reads format \(Compiled.format)"
             )
         }
+
+        let fields = try Keyed(value, of: "object", keys: Compiled.parts)
+        _ = try fields.take(Compiled.formatKey)
 
         let document = try document(fields.take("document"))
         let dependencies = try Fields.ordered(fields.take("dependencies"), of: "dependencies") { written in

@@ -224,6 +224,35 @@ struct LoweredTypeTests {
         #expect(soft.parameters["m"]?.mustBeGiven(in: TypeTable(types: module.types, constraints: [:])) == false)
     }
 
+    @Test("a procedure type is the same whether a parameter that may be left out has a default or declares null")
+    func aParameterLeftOutEitherWay() {
+        // Given. Two procedure types whose one parameter need not be given:
+        // one because it declares null, one because it wrote a default.
+        let declaring = LoweredType.procedure(
+            parameters: [LoweredParameter(name: "x", type: .nullable(.int), defaulted: false)],
+            returns: nil,
+            constness: .unstated,
+            isolation: .unstated
+        )
+        let defaulting = LoweredType.procedure(
+            parameters: [LoweredParameter(name: "x", type: .nullable(.int), defaulted: true)],
+            returns: nil,
+            constness: .unstated,
+            isolation: .unstated
+        )
+        let requiring = LoweredType.procedure(
+            parameters: [LoweredParameter(name: "x", type: .int, defaulted: false)],
+            returns: nil,
+            constness: .unstated,
+            isolation: .unstated
+        )
+
+        // Then. What a call may leave out is what identity reads, and not how
+        // the declaration arranged it.
+        #expect(declaring.same(defaulting, in: .empty))
+        #expect(!declaring.same(requiring, in: .empty))
+    }
+
     @Test("a parameter with a default is never required, whatever its type names")
     func aDefaultedParameterIsNeverRequired() {
         // Given: a type nothing declares, beside a default

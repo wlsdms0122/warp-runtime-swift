@@ -478,7 +478,7 @@ extension LoweredType {
                 return mine.count == theirs.count
                     && zip(mine, theirs).allSatisfy { one, other in
                         one.name == other.name
-                            && one.defaulted == other.defaulted
+                            && one.mustBeGiven(in: table) == other.mustBeGiven(in: table)
                             && one.type.same(other.type, in: table, assuming: walked)
                     }
 

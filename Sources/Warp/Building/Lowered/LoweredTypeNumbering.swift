@@ -87,9 +87,9 @@ struct LoweredTypeNumbering: Sendable {
     }
 
     // MARK: - Property
-    // The declarations this numbered, in the order it numbered them. The order
-    // is the whole of what a caller cannot work out for itself, so it is read
-    // here rather than said twice.
+    // The declarations this numbered, in name order: which names stand here
+    // is what a caller cannot work out for itself, and the order is the
+    // language's, so a reading holds a list to it.
     let types: [Name]
     let memberships: [Name]
 
