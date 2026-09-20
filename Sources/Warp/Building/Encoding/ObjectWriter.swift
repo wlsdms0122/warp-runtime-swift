@@ -73,9 +73,9 @@ struct ObjectWriter {
             }),
             "answers": keyed(compiled.answers, lowered),
             // What the bodies number their calls from, and their types.
-            "numbering": .array([numbering.sent, numbering.closures]),
-            "typeNumbering": .array([compiled.typeNumbering.written.types, compiled.typeNumbering.written.memberships]),
-            "variables": .array(try compiled.variables.sorted { one, other in one.name < other.name }.map { (entry) throws(ObjectUnwritable) -> Value in
+            "numbering": numbering,
+            "typeNumbering": compiled.typeNumbering.written,
+            "variables": .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
                 .array([name(entry.name), try value(entry.value)])
             }),
             "constants": .array(compiled.constants.map(name))
@@ -482,7 +482,7 @@ private extension ObjectWriter {
                         .array([
                             name(parameter.name),
                             lowered(parameter.type),
-                            .bool(parameter.mustBeGiven)
+                            .bool(parameter.defaulted)
                         ])
                     })
                 },

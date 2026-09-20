@@ -276,6 +276,14 @@ public struct Compiled: Sendable, Declaring {
     // object from a document at the door: a document says `warp`.
     static let formatKey: Name = "object"
 
+    // Every key an object carries, the format key among them: the layout
+    // under *objects* in the specification, which a reading holds a record to
+    // before it takes any.
+    static let parts: Set<Name> = [
+        formatKey, "document", "dependencies", "types", "constraints", "contracts", "claims", "leaned",
+        "rows", "lifted", "answers", "numbering", "typeNumbering", "variables", "constants"
+    ]
+
     // This object said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.

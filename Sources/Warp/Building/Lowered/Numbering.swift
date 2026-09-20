@@ -96,23 +96,26 @@ struct Numbering: Sendable {
     // asks where that declaration's run begins.
     // The spellings this document declares are written once, beside the
     // table, so only what it sends and what it counted stand here.
-    func written(dropping declared: Int) -> (sent: Value, closures: Value)? {
+    func written(dropping declared: Int) -> Value? {
         guard case let .document(spellings, _) = space else { return nil }
 
-        return (
-            sent: .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
-            closures: .array(runs.map { run in .array([.string(run.name.spelling), .int(run.count)]) })
-        )
+        return .array([
+            .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
+            .array(runs.map { run in .array([.string(run.name.spelling), .int(run.count)]) })
+        ])
     }
 
     // Read back beside the spellings the document declares, because what a
     // body's number reaches is answered from here rather than from those: the
     // declarations stand at the end of this list, behind what it sends.
-    init(sent: Value, closures: Value, declaring declared: [Name]) throws {
-        let sent = try Fields.ordered(sent, of: "numbering imports") { written in
+    init(written value: Value, declaring declared: [Name]) throws {
+        var fields = try Fields(value, of: "numbering")
+        let sent = try Fields.ordered(fields.next(), of: "numbering imports") { written in
             try Fields.name(written, of: "numbering imports")
         }
-        let counts = try Self.read(closures, of: "numbering closures")
+        let counts = try Self.read(try fields.next(), of: "numbering closures")
+
+        try fields.end()
 
         // A writing counts a name only where that name wrote one, so a count
         // of none is a count no writing lays down, and one writing reads

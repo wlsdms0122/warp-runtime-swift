@@ -107,21 +107,23 @@ struct LoweredTypeNumbering: Sendable {
         self.memberships = memberships.sorted()
     }
 
-    // Read back from an object, each list as it was written.
-    init(types: Value, memberships: Value) throws {
-        try self.init(
-            ordered: try Fields.list(types, of: "type numbering") { written in try Fields.name(written, of: "type numbering") },
-            memberships: try Fields.list(memberships, of: "type numbering") { written in try Fields.name(written, of: "type numbering") }
-        )
+    // Read back from an object: the two lists, in this order.
+    init(written value: Value) throws {
+        var fields = try Fields(value, of: "type numbering")
+        let types = try Fields.list(fields.next(), of: "type numbering") { written in try Fields.name(written, of: "type numbering") }
+        let memberships = try Fields.list(fields.next(), of: "type numbering") { written in try Fields.name(written, of: "type numbering") }
+
+        try fields.end()
+        try self.init(ordered: types, memberships: memberships)
     }
 
-    // The lists said as values, so an object carries what its bodies number
-    // their types from.
-    var written: (types: Value, memberships: Value) {
-        (
-            types: .array(types.map { name in .string(name.spelling) }),
-            memberships: .array(memberships.map { name in .string(name.spelling) })
-        )
+    // The two lists said as one value, so an object carries what its bodies
+    // number their types from.
+    var written: Value {
+        .array([
+            .array(types.map { name in .string(name.spelling) }),
+            .array(memberships.map { name in .string(name.spelling) })
+        ])
     }
 
     // MARK: - Public

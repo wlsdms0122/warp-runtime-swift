@@ -201,7 +201,7 @@ extension LoweredType {
                     LoweredParameter(
                         name: parameter.name,
                         type: parameter.type.filling(bound),
-                        mustBeGiven: parameter.mustBeGiven
+                        defaulted: parameter.defaulted
                     )
                 },
                 returns: returns?.filling(bound),

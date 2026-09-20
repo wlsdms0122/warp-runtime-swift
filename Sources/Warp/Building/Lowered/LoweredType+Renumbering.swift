@@ -61,7 +61,7 @@ extension LoweredType {
                     LoweredParameter(
                         name: parameter.name,
                         type: try parameter.type.renumbered(type: type, membership: membership),
-                        mustBeGiven: parameter.mustBeGiven
+                        defaulted: parameter.defaulted
                     )
                 },
                 returns: try returns?.renumbered(type: type, membership: membership),

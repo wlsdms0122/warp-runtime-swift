@@ -21,7 +21,7 @@ public struct Parameter: Sendable, Equatable {
     // Whether a call must write this argument: the type's one answer, for
     // the call check, the boundary and path reachability alike.
     public func mustBeGiven(in types: TypeTable) -> Bool {
-        declared.lowered(in: types.loweredTypes).mustBeGiven(default: `default`, in: types.loweredTypes)
+        declared.lowered(in: types.loweredTypes).mustBeGiven(defaulted: `default` != nil, in: types.loweredTypes)
     }
 
     // What this reads as where a type is needed regardless. An undeclared

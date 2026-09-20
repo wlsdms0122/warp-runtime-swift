@@ -34,13 +34,13 @@ struct ObjectReader {
 
     // MARK: - Internal
     func compiled(from value: Value) throws -> Compiled {
-        var fields = try Keyed(value, of: "object")
-
         // A document says `warp` where an object says `object`, and one handed
         // here is refused for what it is.
-        if fields.holds(Module.versionKey) {
+        if Keyed.holds(value, Module.versionKey) {
             throw ObjectRefused("this is a document, and not an object")
         }
+
+        let fields = try Keyed(value, of: "object", keys: Compiled.parts)
 
         // The layout first, and before anything laid out by it: what this
         // number says is whether the rest of the keys mean what this reading
@@ -86,10 +86,7 @@ struct ObjectReader {
 
         // What the document sends and how many closures each declaration
         // wrote, which is what its bodies number their calls from.
-        var counted = try Fields(fields.take("numbering"), of: "numbering")
-        let numbering = try Numbering(sent: try counted.next(), closures: try counted.next(), declaring: declared)
-
-        try counted.end()
+        let numbering = try Numbering(written: fields.take("numbering"), declaring: declared)
         let table = declaredRows + (try liftedRows.enumerated().map { index, written in
             guard let writer = numbering.writer(of: index) else {
                 throw ObjectRefused("a lifted row stands where the numbering counts no closure")
@@ -99,18 +96,10 @@ struct ObjectReader {
         })
         // The types its bodies stand on and the memberships, which is what
         // they number their types from.
-        var typed = try Fields(fields.take("typeNumbering"), of: "typeNumbering")
-        let typeNumbering = try LoweredTypeNumbering(types: try typed.next(), memberships: try typed.next())
-
-        try typed.end()
+        let typeNumbering = try LoweredTypeNumbering(written: fields.take("typeNumbering"))
 
         let variables = try Fields.led(fields.take("variables"), of: "variables", variable)
         let constants = try Fields.ordered(fields.take("constants"), of: "constants", name)
-
-        // Every key read before anything is stood up on them, so a key this
-        // reads none of is refused as itself and not as whatever it broke
-        // further in.
-        try fields.end()
 
         return try Compiled(
             document: document,
@@ -640,7 +629,7 @@ private extension ObjectReader {
                         let taken = LoweredParameter(
                             name: try name(held.next()),
                             type: try lowered(held.next()),
-                            mustBeGiven: try held.flag()
+                            defaulted: try held.flag()
                         )
 
                         try held.end()

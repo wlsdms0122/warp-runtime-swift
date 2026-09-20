@@ -62,7 +62,7 @@ extension LoweredTypeTable {
         )
 
         var loweredTypes = labels.map { label in (types[label] ?? .any).lowered(in: index) }
-        var members = constraintLabels.map { label in
+        let members = constraintLabels.map { label in
             (constraints[label] ?? []).map { member in member.lowered(in: index) }
         }
 
@@ -89,20 +89,6 @@ extension LoweredTypeTable {
         for row in cycling {
             loweredTypes[row] = .undeclared(label: labels[row].spelling, because: .namesItself)
         }
-
-        // Every row laid, so what a procedure type's parameter declares can be
-        // read off the row it names.
-        let laid = LoweredTypeTable(
-            loweredTypes: loweredTypes,
-            constraints: members,
-            labels: labels,
-            constraintLabels: constraintLabels,
-            recordRows: [],
-            of: linkage
-        )
-
-        loweredTypes = loweredTypes.map { row in row.parametersSettled(in: laid) }
-        members = members.map { member in member.map { held in held.parametersSettled(in: laid) } }
 
         // The record a row names: the last row on the way to a record type.
         let recordRows = loweredTypes.indices.map { start -> Int? in

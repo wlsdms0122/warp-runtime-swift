@@ -174,7 +174,7 @@ extension LoweredType {
             // declare more only where the name stands unfilled: a name
             // nothing hands it and a call must fill is one no call could.
             guard given.allSatisfy({ slot in
-                !slot.mustBeGiven || required.contains { parameter in parameter.name == slot.name }
+                !slot.mustBeGiven(in: table) || required.contains { parameter in parameter.name == slot.name }
             }) else {
                 return false
             }
@@ -478,7 +478,7 @@ extension LoweredType {
                 return mine.count == theirs.count
                     && zip(mine, theirs).allSatisfy { one, other in
                         one.name == other.name
-                            && one.mustBeGiven == other.mustBeGiven
+                            && one.defaulted == other.defaulted
                             && one.type.same(other.type, in: table, assuming: walked)
                     }
 

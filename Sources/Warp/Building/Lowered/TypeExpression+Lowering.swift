@@ -58,7 +58,7 @@ extension TypeExpression {
             return .procedure(
                 parameters: signature?.ordered(
                     { name, parameter in
-                        parameter.lowered(named: name, as: parameter.declared.lowered(in: table), in: table)
+                        parameter.lowered(named: name, as: parameter.declared.lowered(in: table))
                     },
                     standing: { parameter in parameter.name }
                 ),

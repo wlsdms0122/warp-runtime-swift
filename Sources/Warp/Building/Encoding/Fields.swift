@@ -256,18 +256,26 @@ extension Fields {
     }
 }
 
-// The parts of an object, each under its key. A part is asked for by name
-// and once, and a key nothing asked for is a writing of something else.
+// The parts of an object, each under its key. The record is held to the
+// layout's keys as it is opened, none missing and none the layout does not
+// name, so a part asked for afterwards is there.
 struct Keyed {
     // MARK: - Property
     private let of: String
     private let written: Value.Dictionary
-    private var taken: Set<Name> = []
 
     // MARK: - Initializer
-    init(_ value: Value, of part: String) throws {
+    init(_ value: Value, of part: String, keys: Set<Name>) throws {
         guard case let .dictionary(written) = value else {
             throw ObjectRefused("'\(part)' is not written as a record")
+        }
+
+        if let stray = written.names.first(where: { name in !keys.contains(name) }) {
+            throw ObjectRefused("'\(part)' writes '\(stray)', which this reads none of")
+        }
+
+        if let missing = keys.sorted().first(where: { name in written[name] == nil }) {
+            throw ObjectRefused("'\(part)' writes no '\(missing)'")
         }
 
         self.of = part
@@ -275,29 +283,19 @@ struct Keyed {
     }
 
     // MARK: - Internal
-    // Whether the key is written, asked before anything is taken where what
-    // the record is decides how it is read.
-    func holds(_ key: Name) -> Bool {
-        written[key] != nil
+    // Whether the key is written, asked before the record is held to a layout
+    // where what the record is decides which layout that is.
+    static func holds(_ value: Value, _ key: Name) -> Bool {
+        guard case let .dictionary(written) = value else { return false }
+
+        return written[key] != nil
     }
 
-    mutating func take(_ key: Name) throws -> Value {
+    func take(_ key: Name) throws -> Value {
         guard let held = written[key] else {
             throw ObjectRefused("'\(of)' writes no '\(key)'")
         }
 
-        guard taken.insert(key).inserted else {
-            throw ObjectRefused("'\(of)' had '\(key)' read twice")
-        }
-
         return held
-    }
-
-    // That every key written has been read, for the reason a part's fields
-    // are counted.
-    func end() throws {
-        guard let left = written.names.first(where: { name in !taken.contains(name) }) else { return }
-
-        throw ObjectRefused("'\(of)' writes '\(left)', which this reads none of")
     }
 }

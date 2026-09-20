@@ -665,7 +665,7 @@ extension Builder {
             .union(call.receiver == nil ? [] : [declared.receiver].compactMap { $0 })
 
         let missing = slots
-            .filter { slot in slot.mustBeGiven && !supplied.contains(slot.name) }
+            .filter { slot in slot.parameter.mustBeGiven(in: context.loweredTypes) && !supplied.contains(slot.name) }
             .map(\.name)
             .sorted()
 

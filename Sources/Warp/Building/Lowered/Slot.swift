@@ -21,7 +21,6 @@ final class Slot: Sendable {
 
     var name: Name { parameter.name }
     var type: LoweredType { parameter.type }
-    var mustBeGiven: Bool { parameter.mustBeGiven }
 
     // MARK: - Initializer
     init(_ parameter: LoweredParameter, default: Value?, candidates: [Candidate]?) {
@@ -150,8 +149,8 @@ extension Parameter {
     // This declaration as a lowered procedure type holds it, over the type it
     // lowered to. The one place a parameter's lowering is worked out, whether
     // a procedure type or a boundary's slot is what asks.
-    func lowered(named name: Name, as type: LoweredType, in table: LoweredTypeTable) -> LoweredParameter {
-        LoweredParameter(name: name, type: type, mustBeGiven: type.mustBeGiven(default: `default`, in: table))
+    func lowered(named name: Name, as type: LoweredType) -> LoweredParameter {
+        LoweredParameter(name: name, type: type, defaulted: `default` != nil)
     }
 
     func lowered(named name: Name, in table: LoweredTypeTable) -> Slot {
@@ -167,7 +166,7 @@ extension Parameter {
 
     private func slot(named name: Name, holding type: LoweredType, in table: LoweredTypeTable) -> Slot {
         Slot(
-            lowered(named: name, as: type, in: table),
+            lowered(named: name, as: type),
             default: `default`,
             candidates: candidates.map { written in
                 written.map { spelling in Candidate(spelling, in: type, reading: table) }
