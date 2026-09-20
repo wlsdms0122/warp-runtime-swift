@@ -60,9 +60,6 @@ struct ConformanceTests {
                 let reached = try await reached(object)
 
                 #expect(reached == stage, "\(sut.name): \(sut.note)")
-
-            case .builds:
-                Issue.record("\(sut.name): an object is read and not built")
             }
 
         case let .encoded(encoded, reading):
@@ -240,9 +237,16 @@ struct Case: Sendable, CustomStringConvertible {
     // with what the entry is given. What it leans on is written inside it, so
     // it asks the runner to bring nothing.
     struct Object: Sendable {
+        // What an object may expect: it is read, linked and run, so it answers
+        // or is refused at a stage, and builds nothing.
+        enum Outcome: Sendable {
+            case answers(Value)
+            case refuses(Stage)
+        }
+
         let written: Value
         let arguments: [Name: Value]
-        let expectation: Expectation
+        let expectation: Outcome
 
         // The identity the case reads the object under, where the case says
         // one; the object's own where it says none. A caller keeps an object
@@ -511,7 +515,7 @@ struct Case: Sendable, CustomStringConvertible {
                 throw ConformanceError("a case about an object writes `vocabulary`, which only a program is brought")
             }
 
-            let expectation: Expectation
+            let expectation: Object.Outcome
 
             switch held {
             case "answers":
