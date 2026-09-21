@@ -25,15 +25,14 @@ struct BakedTests {
         // When. The document that arrives is the only one compiled.
         let image = try await builder.link(
             baked + (try builder.compile([arriving], against: baked, supplying: Supplying(Module.standard))),
-            entry: entry,
             supplying: Supplying(Module.standard)
         )
 
         // Then. It runs, and answers what the same world linked whole answers.
-        let whole = try await builder.build(Module.standard + [arriving], entry: entry)
+        let whole = try await builder.build(Module.standard + [arriving])
 
-        #expect(try await Executor().run(image, arguments: ["value": .int(41)]) == .int(42))
-        #expect(try await Executor().run(whole, arguments: ["value": .int(41)]) == .int(42))
+        #expect(try await Executor().run(image, entry: entry, arguments: ["value": .int(41)]) == .int(42))
+        #expect(try await Executor().run(whole, entry: entry, arguments: ["value": .int(41)]) == .int(42))
     }
 
     @Test("documents compiled together are ordered by what they reach")
@@ -66,10 +65,10 @@ struct BakedTests {
             against: baked,
             supplying: Supplying(Module.standard)
         )
-        let image = try builder.link(baked + compiled, entry: "app.twice", supplying: Supplying(Module.standard))
+        let image = try builder.link(baked + compiled, supplying: Supplying(Module.standard))
 
         // Then.
-        #expect(try await Executor().run(image, arguments: ["value": .int(40)]) == .int(42))
+        #expect(try await Executor().run(image, entry: "app.twice", arguments: ["value": .int(40)]) == .int(42))
     }
 
     @Test("a procedure nothing compiled answers is refused where it is sent")
@@ -110,7 +109,7 @@ struct BakedTests {
         // When / Then. The table a link makes has no answer for the name, so
         // it is refused rather than answered by whichever was laid down last.
         await #expect {
-            try await builder.link(baked + one + two, entry: entry, supplying: Supplying(Module.standard))
+            try await builder.link(baked + one + two, supplying: Supplying(Module.standard))
         } throws: { error in
             "\(error)".contains("'app.add1' is declared by")
                 && "\(error)".contains("Two declarations of a name have no way to be told apart")
@@ -192,7 +191,7 @@ struct BakedTests {
         // When / Then. The objects alone say which procedures are native and
         // nothing more, so a link brought none of the code cannot run them.
         await #expect {
-            try await builder.link(baked + compiled, entry: entry, supplying: Supplying([]))
+            try await builder.link(baked + compiled, supplying: Supplying([]))
         } throws: { error in
             "\(error)".contains("is implemented in native code and this link was handed none")
         }
@@ -210,7 +209,6 @@ struct BakedTests {
         await #expect {
             try await builder.link(
                 baked,
-                entry: "app.counted",
                 supplying: Supplying([try counting(isolated: false)] + Module.standard)
             )
         } throws: { error in
@@ -229,7 +227,6 @@ struct BakedTests {
         await #expect {
             try await builder.link(
                 baked,
-                entry: "app.counted",
                 supplying: Supplying([try reading(under: "value")] + Module.standard)
             )
         } throws: { error in

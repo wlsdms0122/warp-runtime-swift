@@ -119,7 +119,7 @@ struct RangeTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("outside int(0...255)")
         }
@@ -148,7 +148,7 @@ struct RangeTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("outside int(0...255)")
         }
@@ -172,7 +172,7 @@ struct RangeTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
@@ -204,7 +204,7 @@ struct RangeTests {
 
         // When / Then
         await #expect {
-            try await builder.build([module(candidates: ["300", "999"])] + Module.standard, entry: entryName)
+            try await builder.build([module(candidates: ["300", "999"])] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
@@ -212,7 +212,7 @@ struct RangeTests {
         // A live candidate does not excuse a dead one: `300` is a member no
         // call could ever match, and the refusal names it.
         await #expect {
-            try await builder.build([module(candidates: ["0", "300"])] + Module.standard, entry: entryName)
+            try await builder.build([module(candidates: ["0", "300"])] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'300'")
         }
@@ -221,7 +221,7 @@ struct RangeTests {
         // numbers that already have one, so neither is a candidate an int slot
         // can spell. The enum admits nothing and refuses.
         await #expect {
-            try await builder.build([module(candidates: ["+1", "007"])] + Module.standard, entry: entryName)
+            try await builder.build([module(candidates: ["+1", "007"])] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }

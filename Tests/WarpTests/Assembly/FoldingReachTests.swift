@@ -27,10 +27,10 @@ struct FoldingReachTests {
         )
 
         // When. It is built with the vocabulary it names.
-        let image = try await builder.build(Module.standard + [document], entry: "app.entry")
+        let image = try await builder.build(Module.standard + [document])
 
         // Then. The answer is in the image before anything runs.
-        #expect(try await Executor().run(image) == .int(5))
+        #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
     }
 
     @Test("a constant refuses to settle from a procedure a caller brought")
@@ -54,7 +54,7 @@ struct FoldingReachTests {
         // When and then. What the procedure answers is its code's, and the
         // compiled document says nothing about which code that was.
         await #expect(throws: BuildError.self) {
-            try await builder.build(Module.standard + [brought, document], entry: "app.entry")
+            try await builder.build(Module.standard + [brought, document])
         }
     }
 
@@ -90,7 +90,7 @@ struct FoldingReachTests {
         // When and then. The refusal is about what the fold reaches, not about
         // what the constant wrote, so one written name away is still refused.
         await #expect(throws: BuildError.self) {
-            try await builder.build(Module.standard + [brought, between, document], entry: "app.entry")
+            try await builder.build(Module.standard + [brought, between, document])
         }
     }
 
@@ -123,7 +123,7 @@ struct FoldingReachTests {
 
         // When and then. The box is the fold's run's, and a link holds values.
         await #expect {
-            try await builder.build(Module.standard + [maker, document], entry: "app.entry")
+            try await builder.build(Module.standard + [maker, document])
         } throws: { error in
             "\(error)".contains("run that folded it")
         }
@@ -156,7 +156,7 @@ struct FoldingReachTests {
 
         // When and then. A variable's start passes the gate a constant does.
         await #expect {
-            try await builder.build(Module.standard + [maker, document], entry: "app.entry")
+            try await builder.build(Module.standard + [maker, document])
         } throws: { error in
             "\(error)".contains("run that folded it")
         }
@@ -176,7 +176,7 @@ struct FoldingReachTests {
         // When and then. That body is being resolved beside the constants it
         // may read, so running it would be a circle with no start.
         await #expect(throws: BuildError.self) {
-            try await builder.build(Module.standard + [document], entry: "app.entry")
+            try await builder.build(Module.standard + [document])
         }
     }
 

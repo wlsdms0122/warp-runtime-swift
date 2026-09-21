@@ -77,11 +77,11 @@ struct ReachTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(image.reached.isSuperset(of: [entryName, "app.tell", "bank.Account.describe", "bank.Card.describe"]))
-        #expect(!image.reached.contains("app.aside"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.tell", "bank.Account.describe", "bank.Card.describe"]))
+        #expect(try !image.reached(from: entryName).contains("app.aside"))
     }
 
     @Test("a procedure a closure calls is reached, written in a body or folded into a constant")
@@ -112,11 +112,11 @@ struct ReachTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(image.reached.isSuperset(of: [entryName, "app.leaf", "app.deep"]))
-        #expect(!image.reached.contains("app.aside"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.leaf", "app.deep"]))
+        #expect(try !image.reached(from: entryName).contains("app.aside"))
     }
 
     @Test("a procedure a closure a variable starts out holding calls is reached")
@@ -139,11 +139,11 @@ struct ReachTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(image.reached.isSuperset(of: [entryName, "app.deep"]))
-        #expect(!image.reached.contains("app.aside"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.deep"]))
+        #expect(try !image.reached(from: entryName).contains("app.aside"))
     }
 
     @Test("a closure a variable nobody reached reads starts out holding is not entered")
@@ -165,10 +165,10 @@ struct ReachTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(image.reached == [entryName])
+        #expect(try image.reached(from: entryName) == [entryName])
     }
 
     @Test("what a native procedure declares it sends is reached")
@@ -193,11 +193,11 @@ struct ReachTests {
         )
 
         // When
-        let image = try await builder.build([sut, sending] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut, sending] + Module.standard)
 
         // Then
-        #expect(image.reached.isSuperset(of: [entryName, "app.twice", "std.math.times"]))
-        #expect(!image.reached.contains("std.math.plus"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.twice", "std.math.times"]))
+        #expect(try !image.reached(from: entryName).contains("std.math.plus"))
     }
 }
 

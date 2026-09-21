@@ -39,7 +39,7 @@ struct InPlaceTests {
             ]
         )
 
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // When
         let first = try await Executor().run(image)
@@ -280,7 +280,7 @@ struct InPlaceTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("first")
         }
@@ -312,7 +312,7 @@ struct InPlaceTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("first")
         }
@@ -350,7 +350,7 @@ struct InPlaceTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut, other] + Module.standard, entry: entryName)
+            try await Builder().build([sut, other] + Module.standard)
         }
     }
 
@@ -365,7 +365,7 @@ struct InPlaceTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("only a parameter is handed a variable in place")
         }
@@ -388,7 +388,7 @@ struct InPlaceTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("only a field of a declared type is written through")
         }

@@ -355,8 +355,7 @@ struct LeaveTests {
         // When / Then
         await #expect {
             try await Builder().build(
-                [try loader.loadDocument(sut)] + Module.standard,
-                entry: entryName
+                [try loader.loadDocument(sut)] + Module.standard
             )
         } throws: { error in
             "\(error)".contains("holds null where int is declared")
@@ -501,8 +500,7 @@ struct LeaveTests {
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [Name: Value] = [:]) async throws -> Value {
         let image = try await Builder().build(
-            [module] + Module.standard + [.testing],
-            entry: entryName
+            [module] + Module.standard + [.testing]
         )
 
         return try await Executor().run(image, arguments: arguments)

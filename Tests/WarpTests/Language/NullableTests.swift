@@ -77,7 +77,7 @@ struct NullableTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("holds int?")
         }
@@ -131,7 +131,7 @@ struct NullableTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("reads through null")
         }
@@ -240,7 +240,7 @@ struct NullableTests {
         )
 
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("does not declare")
         }
@@ -267,7 +267,7 @@ struct NullableTests {
         )
 
         await #expect {
-            try await builder.build([hidingAny] + Module.standard, entry: entryName)
+            try await builder.build([hidingAny] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("writes `?`")
         }
@@ -291,7 +291,7 @@ struct NullableTests {
         )
 
         await #expect {
-            try await builder.build([hidingNullable] + Module.standard, entry: entryName)
+            try await builder.build([hidingNullable] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("writes `?`")
         }
@@ -352,7 +352,7 @@ struct NullableTests {
         )
 
         await #expect {
-            try await builder.build([onAField] + Module.standard, entry: entryName)
+            try await builder.build([onAField] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("read with `.`")
         }
@@ -379,7 +379,7 @@ struct NullableTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("Absence is read with `?[`")
@@ -464,7 +464,7 @@ struct NullableTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("never null")
         }
@@ -585,7 +585,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("a circle with no start")
         }
@@ -741,7 +741,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("loudly")
         }
@@ -810,7 +810,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("does not declare")
         }
@@ -838,7 +838,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("expected int")
         }
@@ -877,7 +877,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then. `loudly` names no parameter of uppercased
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("loudly")
         }
@@ -904,7 +904,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("only an array or a dictionary is indexed")
         }
@@ -1044,7 +1044,7 @@ struct ParameterReceiverTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("which declares nothing")
         }
@@ -1110,7 +1110,7 @@ struct ParameterReceiverTests {
         // When / Then. Written the same way twice, and written two ways, link
         // alike
         for marking in [false, true] {
-            _ = try await builder.build([module(marking: marking)] + Module.standard, entry: entryName)
+            _ = try await builder.build([module(marking: marking)] + Module.standard)
         }
     }
 
@@ -1165,7 +1165,7 @@ struct ParameterReceiverTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("one unknown is one unknown, whichever parameter it was read through")
@@ -1213,7 +1213,7 @@ struct ParameterReceiverTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a type read out of a body is not a declaration anybody can write")
@@ -1241,7 +1241,7 @@ struct ParameterReceiverTests {
         )
 
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("read out of a body")
         }

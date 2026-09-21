@@ -71,11 +71,46 @@ public struct Executor: Sendable {
 
     // MARK: - Public
     // Running takes an image, not a procedure, so "ran something that was never
-    // linked" is not a state this type can be put in.
+    // linked" is not a state this type can be put in. Which declaration it
+    // starts from is named here: an image is every declaration the link
+    // judged, and a run starts from any public one. There is no default,
+    // since guessing which procedure was meant would be an opinion nobody
+    // gave.
     public func run(
         _ image: Image,
+        entry: Name,
         arguments: [Name: Value] = [:]
     ) async throws -> Value {
+        // A name is its declared spelling and nothing else, so the entry is
+        // looked up as the caller wrote it.
+        guard let start = image.rows[entry] else {
+            // A spelling only a private declaration wears is declared, and by
+            // nothing the caller may name.
+            guard !image.concealed.contains(entry) else {
+                throw ExecutionError(
+                    "entry '\(entry)' is private to the document that declares it, and a run"
+                        + " starts only from a public declaration"
+                )
+            }
+
+            throw ExecutionError(
+                "entry '\(entry)' is not declared by any module in this link."
+                    + " A name is its declared spelling. Declared:"
+                    + " \(image.rows.keys.sorted().map(\.spelling).joined(separator: ", "))"
+            )
+        }
+
+        let entry = image.linked[start]
+
+        // A run starts from outside the link, and only a public declaration
+        // is named from there.
+        guard entry.access.reachesCaller else {
+            throw ExecutionError(
+                "entry '\(entry.label)' is \(entry.access.rawValue), and a run starts"
+                    + " only from a public declaration"
+            )
+        }
+
         let executor = Executor(
             observer: observer,
             environment: environment,
@@ -87,8 +122,6 @@ public struct Executor: Sendable {
                 started.map { name, value in Handle(name, value) }
             }
         )
-        let entry = image.entry
-
         guard case let .body(body, frame) = entry.implementation else {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }

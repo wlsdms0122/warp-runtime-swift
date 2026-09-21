@@ -133,11 +133,11 @@ struct AnsweringTests {
         }
 
         // When / Then. One way out, and the dot is judged against it
-        _ = try await builder.build([module(leaving: false)] + Module.standard, entry: entryName)
+        _ = try await builder.build([module(leaving: false)] + Module.standard)
 
         // Two, and what holds both says nothing about a field
         await #expect {
-            try await builder.build([module(leaving: true)] + Module.standard, entry: entryName)
+            try await builder.build([module(leaving: true)] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("which declares nothing")
         }
@@ -165,7 +165,7 @@ struct AnsweringTests {
         )
 
         // When / Then. Nothing is claimed, so nothing is refused
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
 
         // And a dot on it refuses, because `any` is what saying nothing looks
         // like at a call site. Where the same type with the cycle broken
@@ -193,10 +193,10 @@ struct AnsweringTests {
         }
 
         await #expect(throws: BuildError.self) {
-            try await builder.build([reading(cycling: true)] + Module.standard, entry: entryName)
+            try await builder.build([reading(cycling: true)] + Module.standard)
         }
 
-        _ = try await builder.build([reading(cycling: false)] + Module.standard, entry: entryName)
+        _ = try await builder.build([reading(cycling: false)] + Module.standard)
     }
 
     @Test("an answer naming a type parameter is filled at the call, or fills with nothing")
@@ -238,15 +238,13 @@ struct AnsweringTests {
         // there, so the caller reads that record and is held to it
         _ = try await builder.build(
             [module(reading: [.key("said"), .key("inner")], answering: [.key("of")])]
-                + Module.standard,
-            entry: entryName
+                + Module.standard
         )
 
         await #expect {
             try await builder.build(
                 [module(reading: [.key("said"), .key("missing")], answering: [.key("of")])]
-                    + Module.standard,
-                entry: entryName
+                    + Module.standard
             )
         } throws: { error in
             error is BuildError && "\(error)".contains("does not declare")
@@ -259,8 +257,7 @@ struct AnsweringTests {
                 [module(
                     reading: [.key("said"), .key("inner")],
                     answering: [.key("of"), .key("inner")]
-                )] + Module.standard,
-                entry: entryName
+                )] + Module.standard
             )
         } throws: { error in
             error is BuildError && "\(error)".contains("which declares nothing")
@@ -280,10 +277,10 @@ struct AnsweringTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(image.entry.signature.returns == nil)
+        #expect(image[entryName]!.signature.returns == nil)
     }
 
     // MARK: - Public

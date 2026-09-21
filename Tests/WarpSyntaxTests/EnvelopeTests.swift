@@ -317,7 +317,7 @@ struct EnvelopeTests {
 
         // And the build still holds it to that. The procedure has to be there
         await #expect(throws: BuildError.self) {
-            try await Builder().build([module], entry: entryName)
+            try await Builder().build([module])
         }
     }
 

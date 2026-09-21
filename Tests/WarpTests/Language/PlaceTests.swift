@@ -125,7 +125,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -162,7 +162,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -210,7 +210,7 @@ struct PlaceTests {
         }
 
         let link = await #expect(throws: BuildError.self) {
-            try await Builder().build([linked] + Module.standard, entry: entryName)
+            try await Builder().build([linked] + Module.standard)
         }
 
         // Then
@@ -265,8 +265,7 @@ struct PlaceTests {
 
         let bound = await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [module(sending: "nowhere", with: .literal(.int(1)))] + Module.standard,
-                entry: entryName
+                [module(sending: "nowhere", with: .literal(.int(1)))] + Module.standard
             )
         }
 
@@ -275,8 +274,7 @@ struct PlaceTests {
                 [module(
                     sending: "helper",
                     with: .cast(.literal(.int(1)), as: .int, optional: false)
-                )] + Module.standard,
-                entry: entryName
+                )] + Module.standard
             )
         }
 
@@ -316,7 +314,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: "wallet.entry")
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -390,7 +388,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -410,7 +408,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -501,7 +499,7 @@ struct PlaceTests {
         }
 
         let link = await #expect(throws: BuildError.self) {
-            try await Builder().build([declared] + Module.standard, entry: entryName)
+            try await Builder().build([declared] + Module.standard)
         }
 
         // Then
@@ -529,7 +527,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([held, sent, caller] + Module.standard, entry: entryName)
+            try await Builder().build([held, sent, caller] + Module.standard)
         }
 
         // Then. The place is the declaration that cannot be added
@@ -555,7 +553,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([module, module, caller] + Module.standard, entry: entryName)
+            try await Builder().build([module, module, caller] + Module.standard)
         }
 
         // Then. What is wrong is the second copy, not anything inside it
@@ -578,7 +576,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([held, sent, caller] + Module.standard, entry: entryName)
+            try await Builder().build([held, sent, caller] + Module.standard)
         }
 
         // Then
@@ -599,7 +597,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([type, membership, caller] + Module.standard, entry: entryName)
+            try await Builder().build([type, membership, caller] + Module.standard)
         }
 
         // Then
@@ -621,7 +619,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -647,7 +645,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -678,7 +676,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
 
         // Then
@@ -700,7 +698,7 @@ struct PlaceTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([declaring(), declaring(), caller] + Module.standard, entry: entryName)
+            try await Builder().build([declaring(), declaring(), caller] + Module.standard)
         }
 
         // Then

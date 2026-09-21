@@ -104,7 +104,7 @@ struct NestingBoundTests {
 
         // When. Read, built and run.
         let module = try Loader().load(document, identity: nil)
-        let image = try await Builder().build([module] + Module.standard, entry: "entry")
+        let image = try await Builder().build([module] + Module.standard)
 
         // Then. It answers.
         #expect(try await Executor().run(image) == shape.answer(deep: shape.levels))

@@ -53,7 +53,7 @@ struct NeverTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("what follows it here would never run")
         }
@@ -77,7 +77,7 @@ struct NeverTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("binds nothing and takes no name")
         }
@@ -196,7 +196,7 @@ struct NeverTests {
         )
 
         await #expect {
-            try await Builder().build([refusing] + Module.standard, entry: entryName)
+            try await Builder().build([refusing] + Module.standard)
         } throws: { error in
             "\(error)".contains("holds string")
         }
@@ -312,7 +312,7 @@ struct NeverTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("holds string")
         }
@@ -337,7 +337,7 @@ struct NeverTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("never finishes before it")
         }

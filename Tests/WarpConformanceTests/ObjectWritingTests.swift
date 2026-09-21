@@ -51,8 +51,8 @@ struct ObjectWritingTests {
 
         // And the program those objects build answers what the written ones
         // do, which is the whole of what an object is for.
-        let image = try builder.link(read, entry: "entry", supplying: Supplying(modules))
-        let answered = try await Executor().run(image, arguments: program.arguments)
+        let image = try builder.link(read, supplying: Supplying(modules))
+        let answered = try await Executor().run(image, entry: "entry", arguments: program.arguments)
 
         #expect(answered == expected, "\(sut.name): \(sut.note)")
     }

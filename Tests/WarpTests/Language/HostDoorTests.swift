@@ -15,7 +15,7 @@ struct HostDoorTests {
     @Test("settling against a declared type builds the value on that type's layout")
     func settlingByDeclarationNamesTheValue() async throws {
         // Given
-        let image = try await Builder().build([sut], entry: "entry")
+        let image = try await Builder().build([sut])
 
         // When
         let settled = try image.settling(.dictionary(["balance": .int(1)]), as: "bank.Account")
@@ -34,7 +34,7 @@ struct HostDoorTests {
     @Test("a declaration the build does not have refuses")
     func anUndeclaredNameIsRefused() async throws {
         // Given
-        let image = try await Builder().build([sut], entry: "entry")
+        let image = try await Builder().build([sut])
 
         // When / Then
         #expect(throws: ValueRefused.self) {
@@ -45,7 +45,7 @@ struct HostDoorTests {
     @Test("a value the declaration does not admit refuses at the door")
     func aValueOutsideTheDeclarationIsRefused() async throws {
         // Given
-        let image = try await Builder().build([sut], entry: "entry")
+        let image = try await Builder().build([sut])
 
         // When / Then
         #expect(throws: (any Error).self) {
@@ -56,7 +56,7 @@ struct HostDoorTests {
     @Test("a field the declaration never named is not carried past the door")
     func anUndeclaredFieldDoesNotRideThrough() async throws {
         // Given
-        let image = try await Builder().build([sut], entry: "entry")
+        let image = try await Builder().build([sut])
 
         // When
         let settled = try image.settling(
@@ -73,7 +73,7 @@ struct HostDoorTests {
     func aRecordSettlesIntoADictionaryAsData() async throws {
         // Given. A name is proved where a slot declares one, and a `dictionary`
         // slot declares none
-        let image = try await Builder().build([sut], entry: "entry")
+        let image = try await Builder().build([sut])
         let named = try image.settling(.dictionary(["balance": .int(1)]), as: "bank.Account")
 
         // When

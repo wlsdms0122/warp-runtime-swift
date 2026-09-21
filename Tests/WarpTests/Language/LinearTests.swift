@@ -31,7 +31,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -47,7 +47,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("still holds 'handle' where it ends")
         }
@@ -68,7 +68,7 @@ struct LinearTests {
         // When / Then. The second send reads a name that holds nothing, which
         // is what the reading walk calls it before this one is asked
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -95,7 +95,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("in one arm and not in the other")
         }
@@ -126,7 +126,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("inside a loop, which happens no fixed number of times")
         }
@@ -148,7 +148,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("says nothing about what it does with a value written `linear`")
         }
@@ -174,7 +174,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -194,7 +194,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("only a declared type is handed on once")
         }
@@ -214,7 +214,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries 'app.Handle' inside another type")
         }
@@ -238,7 +238,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -258,7 +258,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("still holds 'handle' where it ends")
         }
@@ -290,7 +290,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("borrowed 'of' rather than taking it")
         }
@@ -320,7 +320,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("answers 'of', and it borrowed 'of' rather than taking it")
         }
@@ -351,7 +351,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("keeps 'of' in a box")
         }
@@ -378,7 +378,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("No value of the type written here is")
         }
@@ -408,7 +408,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("says nothing about what it does with it")
         }
@@ -445,7 +445,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("answers 'of', and it borrowed 'of' rather than taking it")
         }
@@ -469,7 +469,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("hands 'handle' on a second time")
         }
@@ -506,7 +506,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("captures 'of' in a closure, and it borrowed 'of'")
         }
@@ -537,7 +537,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries 'of' inside a list or a record")
         }
@@ -556,7 +556,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries 'handle' inside a list or a record")
         }
@@ -570,7 +570,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("writes what 'app.open' answers inside a list or a record")
         }
@@ -589,7 +589,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries 'handle' inside a list or a record")
         }
@@ -611,7 +611,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("still holds 'held' where it ends")
         }
@@ -631,7 +631,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries 'handle' inside a list or a record")
         }
@@ -651,7 +651,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("hands 'handle' on a second time")
         }
@@ -678,7 +678,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("still holds 'held' where it ends")
         }
@@ -699,7 +699,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("beside int, which is not")
         }
@@ -723,7 +723,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("writes what this reads as 'app.Handle' inside a list")
         }
@@ -749,7 +749,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -771,7 +771,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("is handed on exactly once, and may answer nothing")
         }
@@ -817,7 +817,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("does not write `returns`")
         }
@@ -850,7 +850,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("does not write `returns`")
         }
@@ -901,7 +901,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("does not write `returns`")
         }
@@ -930,7 +930,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("writes a procedure answering app.Handle")
         }
@@ -954,7 +954,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries a body answering a value handed on exactly once")
         }
@@ -987,7 +987,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries a body answering a value handed on exactly once")
         }
@@ -1021,7 +1021,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("carries a body answering a value handed on exactly once")
         }
@@ -1054,7 +1054,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("still holds 'own' where it ends")
         }
@@ -1086,7 +1086,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -1135,7 +1135,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -1187,7 +1187,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("leaves while still holding 'own'")
         }
@@ -1234,7 +1234,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("in one arm and not in the other")
         }
@@ -1291,8 +1291,7 @@ struct LinearTests {
         // from the arm and the arm beside it says what is held
         await #expect(throws: Never.self) {
             try await Builder().build(
-                [try holding(body: body(rescueEnds: true), result: .literal(.null))] + Module.standard,
-                entry: entryName
+                [try holding(body: body(rescueEnds: true), result: .literal(.null))] + Module.standard
             )
         }
 
@@ -1300,8 +1299,7 @@ struct LinearTests {
         // and the arm beside it has not
         await #expect {
             try await Builder().build(
-                [try holding(body: body(rescueEnds: false), result: .literal(.null))] + Module.standard,
-                entry: entryName
+                [try holding(body: body(rescueEnds: false), result: .literal(.null))] + Module.standard
             )
         } throws: { error in
             "\(error)".contains("in one arm and not in the other")
@@ -1331,7 +1329,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("writes `?` on app.Handle, which is handed on exactly once")
         }
@@ -1358,7 +1356,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("does not write `returns`")
         }
@@ -1381,7 +1379,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("inside a list or a record")
         }
@@ -1413,7 +1411,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("by naming the type that is one")
         }
@@ -1449,7 +1447,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -1484,7 +1482,7 @@ struct LinearTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -1529,7 +1527,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("borrowed 'of' rather than taking it")
         }
@@ -1559,7 +1557,7 @@ struct LinearTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("says nothing about what it does with it")
         }

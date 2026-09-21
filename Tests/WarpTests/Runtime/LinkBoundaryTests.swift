@@ -29,15 +29,13 @@ struct LinkBoundaryTests {
         // numbered in the order they sort, so one more name ahead of `Thing`
         // moves what its number stands for
         let mine = try await Builder().build(
-            try world(declaring: ["app.Thing": .record(["a": .int])]),
-            entry: "entry"
+            try world(declaring: ["app.Thing": .record(["a": .int])])
         )
         let theirs = try await Builder().build(
             try world(declaring: [
                 "app.Alpha": .record(["z": .string]),
                 "app.Thing": .record(["a": .int])
-            ]),
-            entry: "entry"
+            ])
         )
 
         // When. A procedure value leaves the run that made it

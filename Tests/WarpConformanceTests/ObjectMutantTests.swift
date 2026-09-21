@@ -78,7 +78,7 @@ struct ObjectMutantTests {
             let image: Image
 
             do {
-                image = try builder.link(behind + [read], entry: "entry", supplying: supplying)
+                image = try builder.link(behind + [read], supplying: supplying)
             } catch is WarpError {
                 continue
             } catch {
@@ -114,7 +114,7 @@ struct ObjectMutantTests {
         let raced: Result<Value, any Error>?? = await withTaskGroup(of: Result<Value, any Error>?.self) { racing in
             racing.addTask {
                 do {
-                    return .success(try await Executor().run(image, arguments: arguments))
+                    return .success(try await Executor().run(image, entry: "entry", arguments: arguments))
                 } catch {
                     return .failure(error)
                 }

@@ -42,7 +42,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -69,7 +69,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -167,7 +167,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'Scalar' does not admit")
         }
@@ -198,7 +198,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("names 'Sortable', which no module in this link declares")
         }
@@ -227,7 +227,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("One name is held to one set of bounds")
         }
@@ -260,10 +260,10 @@ struct ConstraintTests {
         }
 
         // When / Then
-        _ = try await builder.build([try module(handing: .string("x"))] + Module.standard, entry: entryName)
+        _ = try await builder.build([try module(handing: .string("x"))] + Module.standard)
 
         await #expect {
-            try await builder.build([try module(handing: .int(1))] + Module.standard, entry: entryName)
+            try await builder.build([try module(handing: .int(1))] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("which 'B' does not admit")
         }
@@ -279,7 +279,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("a member is a concrete type")
         }
@@ -303,7 +303,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("promises A & B")
         }
@@ -331,7 +331,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("holds A & B")
         }
@@ -360,7 +360,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
         }
@@ -382,7 +382,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("is answered as int and as string")
         }
@@ -410,7 +410,7 @@ struct ConstraintTests {
         )
 
         // When / Then. Refused or built, and the asking ends
-        _ = try? await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try? await builder.build([sut] + Module.standard)
     }
 
     @Test("null is not a value of a contract standing as a type")
@@ -435,7 +435,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
         }
@@ -471,7 +471,7 @@ struct ConstraintTests {
 
         // When / Then. The claim is leaned on, and what is behind it is wrong
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("where the contract writes")
         }
@@ -514,7 +514,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
         }
@@ -541,7 +541,7 @@ struct ConstraintTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a type handed on once answers no contract")
@@ -565,7 +565,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("is handed on once and answers no contract")
         }
@@ -593,7 +593,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("`some T` is bounded by A in one place and B in another")
         }
@@ -624,7 +624,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("`some T` is bounded by A in one place and B in another")
         }
@@ -653,7 +653,7 @@ struct ConstraintTests {
         // When / Then
         for bounds in [["B", "A"], ["A", "A"]] as [[Name]] {
             await #expect {
-                try await builder.build([try module(bounds: bounds)] + Module.standard, entry: entryName)
+                try await builder.build([try module(bounds: bounds)] + Module.standard)
             } throws: { error in
                 error is BuildError && "\(error)".contains("`some T` names its bounds once each and in name order")
             }
@@ -687,10 +687,10 @@ struct ConstraintTests {
         }
 
         // When / Then. A string is inside both; a whole number is outside `B`
-        _ = try await builder.build([try module(handing: .string("x"))] + Module.standard, entry: entryName)
+        _ = try await builder.build([try module(handing: .string("x"))] + Module.standard)
 
         await #expect {
-            try await builder.build([try module(handing: .int(1))] + Module.standard, entry: entryName)
+            try await builder.build([try module(handing: .int(1))] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("which 'B' does not admit")
         }
@@ -730,7 +730,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'Scalar' does not admit")
         }
@@ -754,7 +754,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("both a type and a constraint")
@@ -779,7 +779,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
@@ -810,7 +810,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("A type parameter lives in a signature")
         }
@@ -842,7 +842,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("A type parameter lives in a signature")
         }
@@ -872,7 +872,7 @@ struct ConstraintTests {
 
             // When / Then
             await #expect {
-                try await builder.build([sut] + Module.standard, entry: entryName)
+                try await builder.build([sut] + Module.standard)
             } throws: { error in
                 error is BuildError && "\(error)".contains("through nothing but names")
             }
@@ -892,7 +892,7 @@ struct ConstraintTests {
         )
 
         await #expect(throws: Never.self) {
-            try await builder.build([tree] + Module.standard, entry: entryName)
+            try await builder.build([tree] + Module.standard)
         }
     }
 
@@ -915,7 +915,7 @@ struct ConstraintTests {
 
             // When / Then
             await #expect {
-                try await builder.build([sut] + Module.standard, entry: entryName)
+                try await builder.build([sut] + Module.standard)
             } throws: { error in
                 error is BuildError && "\(error)".contains("a member is a concrete type")
             }
@@ -951,7 +951,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("enum admits nothing")
         }
@@ -981,7 +981,7 @@ struct ConstraintTests {
 
         for dead in ["1", "1e0", "1.50", "1e-5"] {
             await #expect("\(dead)") {
-                try await builder.build([module(candidates: ["2.0", dead])] + Module.standard, entry: entryName)
+                try await builder.build([module(candidates: ["2.0", dead])] + Module.standard)
             } throws: { error in
                 error is BuildError && "\(error)".contains("'\(dead)'")
             }
@@ -990,7 +990,7 @@ struct ConstraintTests {
         // The spellings a document itself writes are alive. The exponent form
         // included, sign and padding and all.
         await #expect(throws: Never.self) {
-            try await builder.build([module(candidates: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
+            try await builder.build([module(candidates: ["1.0", "1.5", "1e-05"])] + Module.standard)
         }
     }
 
@@ -1074,7 +1074,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("a member is a concrete type")
         }
@@ -1116,7 +1116,7 @@ struct ConstraintTests {
         )
 
         await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -1141,7 +1141,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("does not declare")
@@ -1169,7 +1169,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("string has no name there to read")
@@ -1199,7 +1199,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("by name, which is its receiver")
         }
@@ -1233,7 +1233,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("names 'Nope', which no module in this link declares")
         }
@@ -1264,7 +1264,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("receiver names 'of'")
         }
@@ -1371,7 +1371,7 @@ struct ConstraintTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 }

@@ -56,7 +56,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -93,7 +93,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -141,7 +141,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -183,7 +183,7 @@ struct InferenceTests {
 
         // When / Then. Refused as the nullable it is
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("holds int?")
         }
@@ -304,7 +304,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -350,7 +350,7 @@ struct InferenceTests {
         // When / Then. `task.done` is a bool, and the walk read that from the
         // type rather than from the value
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -390,7 +390,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -436,7 +436,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -486,7 +486,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a declared answer is checked against what the body actually names")
@@ -535,7 +535,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("what a map answers is typed by the closure it was given")
@@ -590,7 +590,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -643,7 +643,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -669,7 +669,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -695,7 +695,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -722,7 +722,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a dot on any is refused, because any declares nothing to read")
@@ -747,7 +747,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("declares nothing")
         }
@@ -780,7 +780,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("no module in this link declares")
         }
@@ -813,7 +813,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("`any` is the absence of one")
         }
@@ -848,7 +848,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a cast between two types that name themselves does not chase them forever")
@@ -881,7 +881,7 @@ struct InferenceTests {
 
         // When / Then. It terminates; whether it refuses as needless is the
         // sameness rule's business, not this one's
-        _ = try? await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try? await builder.build([sut] + Module.standard)
     }
 
     @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")
@@ -906,7 +906,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("no value is both")
         }
@@ -947,7 +947,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("already is")
         }
@@ -979,7 +979,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("no value is")
         }
@@ -1022,7 +1022,7 @@ struct InferenceTests {
 
         // When / Then. The second says nothing the first did not
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("already is")
         }
@@ -1054,7 +1054,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("no module in this link declares")
         }
@@ -1080,7 +1080,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a nullable and null share null, so a cast between them stands")
@@ -1103,7 +1103,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("two nullables share null, so a cast between them stands")
@@ -1129,7 +1129,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a dictionary and a record are one value read two ways, so a cast between them stands")
@@ -1159,7 +1159,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("the reading a cast hands on is the name the author wrote")
@@ -1201,7 +1201,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("already is")
         }
@@ -1236,7 +1236,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a cast between types no value is both is refused")
@@ -1261,7 +1261,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("no value is both")
         }
@@ -1359,7 +1359,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a cast is not called needless where what it reads holds any inside")
@@ -1391,7 +1391,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a cast keeps the name the author wrote, not the type it stands for")
@@ -1423,11 +1423,11 @@ struct InferenceTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
         guard
-            case let .body(body, _) = image.entry.implementation,
+            case let .body(body, _) = image[entryName]!.implementation,
             let read = body.instructions.first(where: { instruction in instruction.label == "read" }),
             case let .cast(_, type, _) = read.code
         else {
@@ -1468,7 +1468,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a field the record does not declare is refused, ?. or not")
@@ -1495,7 +1495,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("does not declare")
         }
@@ -1519,7 +1519,7 @@ struct InferenceTests {
         )
 
         await #expect {
-            try await builder.build([optional] + Module.standard, entry: entryName)
+            try await builder.build([optional] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("does not declare")
         }
@@ -1587,7 +1587,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -1637,7 +1637,7 @@ struct InferenceTests {
         )
 
         // When / Then. Links, because `b` is an int by the time it is read
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a rescue reads what the body may have written before it failed")
@@ -1689,7 +1689,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -1742,7 +1742,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -1796,7 +1796,7 @@ struct InferenceTests {
 
         // When / Then. `a` reads `string?` after enough rounds
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -1860,7 +1860,7 @@ struct InferenceTests {
         // When / Then. `held` reads `string?`, and the plain string slot says
         // so
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -1912,7 +1912,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("an arm that refuses does not cost the arm that writes its say")
@@ -1964,7 +1964,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -2004,7 +2004,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -2051,7 +2051,7 @@ struct InferenceTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("never finishes")
         }

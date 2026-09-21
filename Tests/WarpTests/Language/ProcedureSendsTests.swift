@@ -26,8 +26,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
-            )])] + [.sending, .shouting] + Module.standard,
-            entry: "entry"
+            )])] + [.sending, .shouting] + Module.standard
         )
 
         // When
@@ -45,8 +44,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(receiver: .literal(.string("hi")), selector: "app.announce"))
-            )])] + [.sending, .shouting] + Module.standard,
-            entry: "entry"
+            )])] + [.sending, .shouting] + Module.standard
         )
 
         // When
@@ -61,8 +59,7 @@ struct ProcedureSendsTests {
         // Given / When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.strayed],
-                entry: "entry"
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.strayed]
             )
         }
     }
@@ -78,7 +75,7 @@ struct ProcedureSendsTests {
 
         // When / Then
         let refusal = await #expect(throws: BuildError.self) {
-            try await Builder().build([document, .reaching] + Module.standard, entry: "entry")
+            try await Builder().build([document, .reaching] + Module.standard)
         }
 
         #expect(refusal?.message.contains("is private to the document that declares it") == true)
@@ -90,8 +87,7 @@ struct ProcedureSendsTests {
         // `app.shout`, which does not
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.contradicting, .shouting],
-                entry: "entry"
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.contradicting, .shouting]
             )
         }
     }
@@ -103,8 +99,7 @@ struct ProcedureSendsTests {
         // calls
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.claims, .ticketing],
-                entry: "entry"
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.claims, .ticketing]
             )
         }
     }
@@ -117,8 +112,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.counted"))
-            )])] + [.counting, .ticketing],
-            entry: "entry"
+            )])] + [.counting, .ticketing]
         )
 
         // When
@@ -176,8 +170,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.picking"))
-            )])] + [.picking, .picked],
-            entry: "entry"
+            )])] + [.picking, .picked]
         )
 
         // When
@@ -192,8 +185,7 @@ struct ProcedureSendsTests {
         // Given / When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.misnaming, .picked],
-                entry: "entry"
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.misnaming, .picked]
             )
         }
     }
@@ -207,8 +199,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.overhanding"))
-            )])] + [.overhanding, .picked],
-            entry: "entry"
+            )])] + [.overhanding, .picked]
         )
 
         // When / Then
@@ -223,8 +214,7 @@ struct ProcedureSendsTests {
         // the one to keep
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.doubling, .picked],
-                entry: "entry"
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.doubling, .picked]
             )
         }
     }
@@ -238,8 +228,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.receiving"))
-            )])] + [.receiving, .greeted],
-            entry: "entry"
+            )])] + [.receiving, .greeted]
         )
 
         // When / Then
@@ -257,8 +246,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.mistyping"))
-            )])] + [.mistyping, .spoken],
-            entry: "entry"
+            )])] + [.mistyping, .spoken]
         )
 
         // When / Then. The same refusal a call written in a document earns, and
@@ -277,8 +265,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.unreceiving"))
-            )])] + [.unreceiving, .picked],
-            entry: "entry"
+            )])] + [.unreceiving, .picked]
         )
 
         // When / Then
@@ -296,8 +283,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nulling"))
-            )])] + [.nulling, .plain],
-            entry: "entry"
+            )])] + [.nulling, .plain]
         )
 
         // When / Then
@@ -316,8 +302,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nullingToAnEffect"))
-            )])] + [.nullingToAnEffect, .plainlyRunning],
-            entry: "entry"
+            )])] + [.nullingToAnEffect, .plainlyRunning]
         )
 
         // When / Then
@@ -336,8 +321,7 @@ struct ProcedureSendsTests {
                 access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nullingToAReceiver"))
-            )])] + [.nullingToAReceiver, .reporting],
-            entry: "entry"
+            )])] + [.nullingToAReceiver, .reporting]
         )
 
         // When / Then

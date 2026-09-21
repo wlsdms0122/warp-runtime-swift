@@ -167,8 +167,7 @@ struct ConditionTests {
             bindings: bindings,
             in: try await Builder().build(
                 [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
-                    + Module.standard,
-                entry: entryName
+                    + Module.standard
             )
         )
     }

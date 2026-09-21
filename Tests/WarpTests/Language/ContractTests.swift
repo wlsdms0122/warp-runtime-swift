@@ -71,7 +71,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("procedures.entry.result")
                 && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
@@ -101,7 +101,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("A contract's procedure and a declaration cannot take one spelling")
         }
@@ -133,7 +133,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("'style', which 'app.Describable' does not name")
         }
@@ -162,7 +162,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".hasPrefix("procedures.entry.result: the module at 0 in this link")
                 && "\(error)".contains("declares 'bank.Account.describe', which is named for")
@@ -200,7 +200,7 @@ struct ContractTests {
         // When / Then. The spelling is that document's procedure, so a contract
         // arriving beside it reserves nothing
         await #expect(throws: Never.self) {
-            try await Builder().build([held, asking] + Module.standard, entry: entryName)
+            try await Builder().build([held, asking] + Module.standard)
         }
     }
 
@@ -217,7 +217,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
         }
@@ -285,7 +285,7 @@ struct ContractTests {
         // When / Then
         let modules = [charting, banking, adapting, program] + Module.standard
 
-        await #expect(throws: Never.self) { try await Builder().build(modules, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(modules) }
     }
 
     @Test("two documents saying one type answers one contract is one claim")
@@ -316,7 +316,7 @@ struct ContractTests {
         // When / Then. A claim holds nothing but the pair, so the second says
         // what the first said and nothing is in question.
         await #expect(throws: Never.self) {
-            try await Builder().build([held, again] + Module.standard, entry: entryName)
+            try await Builder().build([held, again] + Module.standard)
         }
     }
 
@@ -332,7 +332,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("'app.Scalar' is not a contract this link declares")
         }
@@ -348,7 +348,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("asks nothing, so every type satisfies it")
         }
@@ -365,7 +365,7 @@ struct ContractTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("cannot be a type, a membership and a contract at once")
         }

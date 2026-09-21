@@ -65,7 +65,7 @@ struct MembershipTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -92,7 +92,7 @@ struct MembershipTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -119,10 +119,10 @@ struct MembershipTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([try module(reading: .string)] + Module.standard, entry: entryName)
+            try await Builder().build([try module(reading: .string)] + Module.standard)
         }
         await #expect(throws: BuildError.self) {
-            try await Builder().build([try module(reading: .int)] + Module.standard, entry: entryName)
+            try await Builder().build([try module(reading: .int)] + Module.standard)
         }
     }
 

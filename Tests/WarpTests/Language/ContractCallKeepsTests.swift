@@ -102,8 +102,8 @@ struct ContractCallKeepsTests {
         )
 
         // When
-        let image = try await Builder().build([sut] + Module.standard, entry: "app.entry")
-        let answered = try await Executor().run(image, arguments: [:])
+        let image = try await Builder().build([sut] + Module.standard)
+        let answered = try await Executor().run(image, entry: "app.entry", arguments: [:])
 
         // Then. The second round is the last whole one, and what it bound is
         // what the result reads. The third bound 2 and then left.

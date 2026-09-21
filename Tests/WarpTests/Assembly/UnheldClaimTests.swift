@@ -77,7 +77,7 @@ struct UnheldClaimTests {
         // contract, and the program that never handed the type where the
         // contract is asked is not the one to hear about it.
         #expect(closed.contains { module in module.claims.isEmpty == false })
-        await #expect(throws: Never.self) { try await Builder().build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(closed) }
     }
 
     @Test("a good claim beside an unheld one in the same document")
@@ -152,7 +152,7 @@ struct UnheldClaimTests {
 
         // Then. The pair the program leans on is answered, and the one beside
         // it that nothing can answer refuses nobody.
-        await #expect(throws: Never.self) { try await Builder().build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(closed) }
     }
 
     @Test("an unheld claim refuses at the call that leaned on it")
@@ -209,7 +209,7 @@ struct UnheldClaimTests {
         // where the type was handed over, which is the document an author is
         // reading.
         await #expect {
-            try await Builder().build([asking, typed, claims, program] + Module.standard, entry: entryName)
+            try await Builder().build([asking, typed, claims, program] + Module.standard)
         } throws: { error in
             "\(error)".contains("procedures.app.main.result")
                 && "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
@@ -289,7 +289,7 @@ struct UnheldClaimTests {
             compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
-        #expect(throws: Never.self) { try Builder().link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
-        await #expect(throws: Never.self) { try await Builder().build(modules, entry: entryName) }
+        #expect(throws: Never.self) { try Builder().link(compiled, supplying: Supplying(Module.standard)) }
+        await #expect(throws: Never.self) { try await Builder().build(modules) }
     }
 }

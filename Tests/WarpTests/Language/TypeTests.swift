@@ -155,7 +155,7 @@ struct TypeTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut], entry: "entry")
+            try await Builder().build([sut])
         }
     }
 
@@ -198,8 +198,7 @@ struct TypeTests {
         // When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])],
-                entry: "entry"
+                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])]
             )
         }
     }
@@ -232,8 +231,7 @@ struct TypeTests {
         // When / Then
         await #expect {
             try await Builder().build(
-                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])],
-                entry: "entry"
+                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])]
             )
         } throws: { error in
             error is BuildError && "\(error)".contains("holds int where string is declared")
@@ -247,8 +245,7 @@ struct TypeTests {
         )
 
         _ = try await Builder().build(
-            [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])],
-            entry: "entry"
+            [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])]
         )
     }
 

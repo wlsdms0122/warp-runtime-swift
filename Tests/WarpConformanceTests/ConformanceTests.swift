@@ -98,9 +98,9 @@ struct ConformanceTests {
     // MARK: - Private
     private func run(_ sut: Case.Program) async throws -> Value {
         let builder = Builder()
-        let image = try await builder.build(try sut.modules(), entry: "entry")
+        let image = try await builder.build(try sut.modules())
 
-        return try await Executor().run(image, arguments: sut.arguments)
+        return try await Executor().run(image, entry: "entry", arguments: sut.arguments)
     }
 
     // The object the program's own document compiles to, against what the
@@ -129,9 +129,9 @@ struct ConformanceTests {
         let supplying = try Supplying(Module.standard)
         let behind = try await builder.compile(Module.standard, against: [], supplying: supplying)
         let read = try Compiled(written: sut.written, of: sut.identity)
-        let image = try builder.link(behind + [read], entry: "entry", supplying: supplying)
+        let image = try builder.link(behind + [read], supplying: supplying)
 
-        return try await Executor().run(image, arguments: sut.arguments)
+        return try await Executor().run(image, entry: "entry", arguments: sut.arguments)
     }
 
     private func reached(_ sut: Case.Object) async throws -> Case.Stage? {
@@ -149,13 +149,13 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try builder.link(behind + [read], entry: "entry", supplying: supplying)
+            image = try builder.link(behind + [read], supplying: supplying)
         } catch {
             return .build
         }
 
         do {
-            _ = try await Executor().run(image, arguments: sut.arguments)
+            _ = try await Executor().run(image, entry: "entry", arguments: sut.arguments)
         } catch {
             return .run
         }
@@ -185,13 +185,13 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try await builder.build(modules, entry: "entry")
+            image = try await builder.build(modules)
         } catch {
             return .build
         }
 
         do {
-            _ = try await Executor().run(image, arguments: sut.arguments)
+            _ = try await Executor().run(image, entry: "entry", arguments: sut.arguments)
         } catch {
             return .run
         }

@@ -102,10 +102,10 @@ func run(
 ) async throws -> Value {
     let builder = Builder()
 
-    let image = try await builder.build(try modules.map { module in try module.publishing(entry) } + vocabulary, entry: entry)
+    let image = try await builder.build(try modules.map { module in try module.publishing(entry) } + vocabulary)
 
     return try await Executor(environment: environment)
-        .run(image, arguments: arguments)
+        .run(image, entry: entry, arguments: arguments)
 }
 
 // One module, for a test that wrote its whole graph as one.
@@ -404,5 +404,13 @@ extension Folding {
         } catch {
             return .unfit(reason: "\(error)")
         }
+    }
+}
+
+
+// A test's image runs from the test's entry unless the test names another.
+extension Executor {
+    func run(_ image: Image, arguments: [Name: Value] = [:]) async throws -> Value {
+        try await run(image, entry: entryName, arguments: arguments)
     }
 }

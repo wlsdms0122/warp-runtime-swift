@@ -208,8 +208,7 @@ struct ClosureNotationTests {
         // When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try loader.loadDocument(fixture)] + Module.standard,
-                entry: entryName
+                [try loader.loadDocument(fixture)] + Module.standard
             )
         }
     }
@@ -247,8 +246,7 @@ struct ClosureNotationTests {
 
         // When / Then
         _ = try await Builder().build(
-            [try loader.loadDocument(fixture)] + Module.standard,
-            entry: entryName
+            [try loader.loadDocument(fixture)] + Module.standard
         )
     }
 }

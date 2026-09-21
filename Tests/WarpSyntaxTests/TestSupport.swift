@@ -201,10 +201,10 @@ func run(
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
 ) async throws -> [Name: Value] {
-    let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary, entry: entry)
+    let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary)
 
     let answer = try await Executor(environment: environment)
-        .run(image, arguments: arguments)
+        .run(image, entry: entry, arguments: arguments)
 
     // This notation spells several named outputs, which the reader lowers to
     // one record, so a test that asks about `outputs["x"]` is asking about a
@@ -313,5 +313,13 @@ extension Folding {
         }
 
         return answer
+    }
+}
+
+
+// A test's image runs from the test's entry unless the test names another.
+extension Executor {
+    func run(_ image: Image, arguments: [Name: Value] = [:]) async throws -> Value {
+        try await run(image, entry: entryName, arguments: arguments)
     }
 }

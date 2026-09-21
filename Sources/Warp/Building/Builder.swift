@@ -7,19 +7,19 @@
 
 import Foundation
 
-// Takes every module this run was given and one name to start from, and answers
-// with an image, or refuses.
+// Takes every module this link was given and answers with an image, or
+// refuses.
 //
 // A build is handed its whole module graph at once. The procedures a program can
 // call are the procedures the caller put in front of it, so what to build is the
 // caller's statement and joining the names up is this. A module's `imports` says what it
-// asks for and never where to find it, and the entry is an argument rather than
-// a name written into a document.
+// asks for and never where to find it. Which declaration a run starts from is
+// the run's argument: an image is every declaration the link judged, and a
+// caller starts a run from any public one.
 //
-// Every declaration is judged, not the reached ones. A misspelled procedure in
-// an arm today's arguments never take is a defect whether or not this run walks
-// that way, and so is one in a declaration this entry never calls. The entry
-// says which declarations a run reaches and nothing about which ones hold.
+// Every declaration is judged. A misspelled procedure in an arm today's
+// arguments never take is a defect whether or not a run walks that way, and so
+// is one in a declaration no run calls.
 //
 // Every call goes through the same gate: a procedure the host installed and one
 // another document wrote are checked against a signature by the same code, and
@@ -38,7 +38,7 @@ import Foundation
 // the types of *constant* arguments. Calling a value is outside the promise
 // entirely, because a closure's callee is a run-time fact.
 //
-// Two stages, and the entry names nothing in the first. Compiling settles
+// Two stages. Compiling settles
 // everything a document says against the interfaces it reaches: resolving
 // (`Builder+Resolving`), the facts nobody declared (`Builder+Deriving`,
 // `Builder+Isolating`), judging (`Builder+Judging`, `Builder+Typing`) and
@@ -65,15 +65,11 @@ public struct Builder: Sendable {
     // MARK: - Public
     // Compiling and then linking, which is what building is.
     //
-    // What to build is the caller's statement (the whole graph at once) and
-    // `entry` names which declaration this run starts from. There is no
-    // default: guessing which procedure was meant would be an opinion nobody
-    // gave.
-    //
-    // A bundled vocabulary is one of those modules, and a caller that leaves it
+    // What to build is the caller's statement, the whole graph at once. A
+    // bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
-    public func build(_ modules: [Module], entry: Name) async throws -> Image {
-        try await link(compile(modules), entry: entry, supplying: Supplying(modules))
+    public func build(_ modules: [Module]) async throws -> Image {
+        try await link(compile(modules), supplying: Supplying(modules))
     }
 
     // Documents compiled and handed back, for a caller that means to build
@@ -735,8 +731,8 @@ public struct Builder: Sendable {
 
         // Every declaration this document makes, in name order, which is
         // the order its rows stand in. What a document says has to hold
-        // whether or not this entry walks that way, so which declarations
-        // are judged is not a question the entry answers.
+        // whether or not a run walks that way, so which declarations are
+        // judged is not a question any run answers.
         for symbol in holding {
             try await fulfillment.folding(symbol.place) {
                 let procedure = try await resolved(symbol)
@@ -792,20 +788,19 @@ public struct Builder: Sendable {
         )
     }
 
-    // Which row a run starts from, and which declarations it reaches. Nothing
-    // runs here: every declaration stands compiled already, and the answer is
-    // read off the code of the rows once the link has relocated them.
+    // The documents laid down as one table of rows. Nothing runs here: every
+    // declaration stands compiled already, and the rows are relocated into
+    // this link's numbering.
     //
     // What is judged here is what no document could answer about itself, and
-    // is the second judgement for that reason: the entry names a declaration,
-    // every claimed type answers the contract it is claimed under, and every
-    // constraint a document leaned on is held by some document beside it.
-    // `supplying` is the native code the documents named. An object says
-    // which of its procedures are native and holds none of the code, so the modules
-    // that declared them are handed over beside the objects.
+    // is the second judgement for that reason: every claimed type answers the
+    // contract it is claimed under, and every constraint a document leaned on
+    // is held by some document beside it. `supplying` is the native code the
+    // documents named. An object says which of its procedures are native and
+    // holds none of the code, so the modules that declared them are handed
+    // over beside the objects.
     public func link(
         _ compiled: [Compiled],
-        entry: Name,
         supplying natives: Supplying
     ) throws -> Image {
         try against(compiled)
@@ -813,37 +808,6 @@ public struct Builder: Sendable {
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
         let assembled = try Assembled(compiled)
-
-        // A name is its declared spelling and nothing else, so the entry is
-        // looked up as the caller wrote it.
-        guard let start = assembled.rows[entry] else {
-            // A spelling only a private declaration wears is declared, and by
-            // nothing the caller may name.
-            guard !assembled.concealed.contains(entry) else {
-                throw BuildError(
-                    "entry '\(entry)' is private to the document that declares it, and a run"
-                        + " starts only from a public declaration",
-                    at: nil
-                )
-            }
-
-            throw BuildError(
-                "entry '\(entry)' is not declared by any module in this link."
-                    + " A name is its declared spelling. Declared:"
-                    + " \(assembled.rows.keys.sorted().map(\.spelling).joined(separator: ", "))",
-                at: nil
-            )
-        }
-
-        // A run starts from outside the link, and only a public declaration
-        // is named from there.
-        guard assembled.table[start].judged.access.reachesCaller else {
-            throw BuildError(
-                "entry '\(entry)' is \(assembled.table[start].judged.access.rawValue), and a run starts"
-                    + " only from a public declaration",
-                at: .procedure(entry.spelling, in: assembled.documents[assembled.table[start].origin])
-            )
-        }
 
         // The types of this link, made from what its documents declared and
         // laid down in the order their blocks are. Which types answer which
@@ -897,16 +861,10 @@ public struct Builder: Sendable {
         let linked = try relocating.linked()
         let variables = try relocating.started(assembled.variables)
 
-        // Walked as rows, reported as spellings: a closure is a row without
-        // one and is walked through, and only what has one is reported.
-        let rows = try linked.table.reached(from: start, starting: variables, in: assembled.documents)
-        let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(entry.value) }.map(\.key))
-
         return Image(
             linked: linked.table,
-            start: start,
             rows: assembled.rows,
-            reached: spellings,
+            concealed: assembled.concealed,
             types: types,
             variables: variables,
             naming: assembled.naming

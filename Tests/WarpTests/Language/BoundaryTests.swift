@@ -53,7 +53,7 @@ struct BoundaryTests {
 
         // When / Then
         await #expect {
-            try await builder.build([module] + Module.standard, entry: "entry")
+            try await builder.build([module] + Module.standard)
         } throws: { error in
             "\(error)".contains("'N' is read as")
         }
@@ -98,7 +98,7 @@ struct BoundaryTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([module] + Module.standard, entry: "entry")
+            try await builder.build([module] + Module.standard)
         }
     }
 
@@ -135,7 +135,7 @@ struct BoundaryTests {
 
         // When / Then
         await #expect {
-            try await builder.build([module] + Module.standard, entry: "entry")
+            try await builder.build([module] + Module.standard)
         } throws: { error in
             "\(error)".contains("'Element' is read as")
                 && "\(error)".contains("int")
@@ -179,7 +179,7 @@ struct BoundaryTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([module] + Module.standard, entry: "entry")
+            try await builder.build([module] + Module.standard)
         }
     }
 
@@ -211,7 +211,7 @@ struct BoundaryTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([module] + Module.standard, entry: "entry")
+            try await builder.build([module] + Module.standard)
         }
     }
 
@@ -240,7 +240,7 @@ struct BoundaryTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([module] + Module.standard, entry: "entry")
+            try await builder.build([module] + Module.standard)
         }
     }
 
@@ -340,6 +340,6 @@ struct BoundaryTests {
         )
 
         return try await Executor()
-            .run(try builder.build([module] + Module.standard, entry: "entry"))
+            .run(try builder.build([module] + Module.standard))
     }
 }
