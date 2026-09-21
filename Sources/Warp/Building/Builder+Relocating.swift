@@ -181,7 +181,7 @@ final class Relocating {
     // and has no entry here.
     private let typeRows: [LoweredTypeNumbering.Rows]
 
-    private let contractProcedures: [Name: ContractProcedure]
+    private let contractProcedures: [Name: LoweredContractProcedure]
     private let loweredTypes: LoweredTypeTable
 
     // Which row each document's closures took. A closure is reached by a
@@ -216,7 +216,7 @@ final class Relocating {
         owned: [[Name: Int]],
         concealed: Set<Name>,
         typeNumbering: [LoweredTypeNumbering],
-        contractProcedures: [Name: ContractProcedure],
+        contractProcedures: [Name: LoweredContractProcedure],
         closures: [[Int]],
         loweredTypes: LoweredTypeTable
     ) {
@@ -259,7 +259,7 @@ final class Relocating {
             owned: assembled.owned,
             concealed: assembled.concealed,
             typeNumbering: assembled.typeNumbering,
-            contractProcedures: ContractProcedure.table(in: types),
+            contractProcedures: LoweredContractProcedure.table(in: types),
             closures: assembled.closures,
             loweredTypes: loweredTypes
         )
@@ -452,7 +452,7 @@ final class Relocating {
     // A call through a contract with the calls the rows answering it stand
     // for, one per type that answers.
     private func relocated(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
-        let spelling = ContractProcedure.spelling(
+        let spelling = LoweredContractProcedure.spelling(
             of: dispatch.contract,
             procedure: dispatch.procedure
         )

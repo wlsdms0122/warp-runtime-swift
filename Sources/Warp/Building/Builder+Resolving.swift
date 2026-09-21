@@ -28,7 +28,7 @@ extension Builder {
         unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
-        contractProcedures: [Name: ContractProcedure],
+        contractProcedures: [Name: LoweredContractProcedure],
         unheld: [Claim: String]
     ) {
         // The witnesses are judged against a table that says which types
@@ -71,7 +71,7 @@ extension Builder {
         // reach them. Read off the table the satisfaction was just written
         // into, so what a call reaches and what a judgment reads are one
         // reading rather than two.
-        let contractProcedures = ContractProcedure.table(in: table)
+        let contractProcedures = LoweredContractProcedure.table(in: table)
 
         // A contract's procedure and a declaration cannot take one spelling. A call
         // writing it lowers to the pick the contract makes, so the declaration
