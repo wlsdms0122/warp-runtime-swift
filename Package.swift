@@ -74,6 +74,16 @@ let package = Package(
                 "Warp"
             ]
         ),
+        // What every test target says the same way: an entry a test names
+        // outside its text is published there. A test target cannot be
+        // depended on, so the one copy stands here.
+        .target(
+            name: "WarpTestSupport",
+            dependencies: [
+                "Warp"
+            ],
+            path: "Tests/WarpTestSupport"
+        ),
         // One test target per target, and the dependencies are the point: a test
         // that cannot import the syntax can only be saying something about the
         // language. Where a behaviour is tested is then a fact anyone reads off
@@ -84,7 +94,8 @@ let package = Package(
             dependencies: [
                 "Warp",
                 "WarpMutation",
-                "WarpStandard"
+                "WarpStandard",
+                "WarpTestSupport"
             ]
         ),
         // The vocabulary's own tests reach the language too: a record under a
@@ -96,14 +107,16 @@ let package = Package(
             name: "WarpStandardTests",
             dependencies: [
                 "Warp",
-                "WarpStandard"
+                "WarpStandard",
+                "WarpTestSupport"
             ]
         ),
         .testTarget(
             name: "WarpSyntaxTests",
             dependencies: [
                 "WarpSyntax",
-                "WarpStandard"
+                "WarpStandard",
+                "WarpTestSupport"
             ]
         ),
         // The specification's cases, run against this implementation. It imports

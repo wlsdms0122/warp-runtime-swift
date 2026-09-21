@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 import WarpStandard
 
 // This target imports no notation, on purpose. Every other test in the
@@ -85,20 +86,6 @@ func reference(_ names: Name...) -> Warp.Expression {
 
 // MARK: - Running
 
-extension Module {
-    // This module with the entry made public, where it declares one. A test
-    // names the entry outside the text, so the text is not where the word is
-    // written.
-    func publishing(_ entry: Name) throws -> Module {
-        guard let procedure = procedures[entry] else { return self }
-
-        return try Module(
-            draft.with(procedures: procedures.merging([entry: procedure.with(access: .public)]) { _, new in new }),
-            identity: identity,
-            builtin: builtin
-        )
-    }
-}
 
 // The entry name these tests link against. Any name would do, which procedure a
 // run starts from is an argument, so there is nothing special about this one.
