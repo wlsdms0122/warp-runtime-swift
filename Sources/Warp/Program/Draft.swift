@@ -34,7 +34,7 @@ public struct Draft: Sendable {
     // answer to stand under it. Each procedure is a signature the implementing
     // declaration is held to, written without the receiver, which is the
     // implementing type itself.
-    public let contracts: [Name: [Name: Signature]]
+    public let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts each type this document names answers, by the name of
     // the type. A type answers a contract because a document says it does: the
@@ -65,7 +65,7 @@ public struct Draft: Sendable {
         imports: Set<Name>? = nil,
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
-        contracts: [Name: [Name: Signature]] = [:],
+        contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
@@ -265,8 +265,8 @@ public struct Draft: Sendable {
         }
 
         for procedures in contracts.values {
-            for signature in procedures.values {
-                named.formUnion(signature.mentions)
+            for asked in procedures.values {
+                named.formUnion(asked.signature.mentions)
             }
         }
 

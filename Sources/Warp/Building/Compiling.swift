@@ -24,7 +24,7 @@ struct Compiling {
     // MARK: - Property
     // What only the whole list answers, which a document has no say in.
     let types: TypeTable
-    let contractProcedures: [Name: ContractProcedure]
+    let contractProcedures: [Name: LoweredContractProcedure]
 
     // Which document each position is, for a refusal that names one.
     let documents: [Place.Document]
@@ -61,7 +61,7 @@ struct Compiling {
     // Nothing laid down yet.
     init(
         types: TypeTable,
-        contractProcedures: [Name: ContractProcedure],
+        contractProcedures: [Name: LoweredContractProcedure],
         naming documents: [Place.Document],
         spelling naming: [Closure.Document]
     ) {
@@ -85,7 +85,7 @@ struct Compiling {
     init(
         _ carried: Carried,
         types: TypeTable,
-        contractProcedures: [Name: ContractProcedure],
+        contractProcedures: [Name: LoweredContractProcedure],
         naming documents: [Place.Document],
         spelling naming: [Closure.Document]
     ) {

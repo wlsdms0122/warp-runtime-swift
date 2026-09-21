@@ -42,7 +42,7 @@ struct TypingContext: Sendable {
     // Every contract's procedures, under the spelling a call writes to reach one.
     // Beside the symbols rather than in them: a name here answers with no
     // declaration, and which declaration runs is the receiver's to say.
-    let contractProcedures: [Name: ContractProcedure]
+    let contractProcedures: [Name: LoweredContractProcedure]
 
     // The variables of the document being read, by name. A body reading one
     // answers by the run's state, so constness is read against these.
@@ -97,11 +97,11 @@ struct TypingContext: Sendable {
     // its row. A selector naming no row, a contract's procedure among them,
     // has none of these.
     func isConst(_ selector: Name) -> Bool {
-        declared(selector)?.constness == .const
+        declared(selector)?.constness == .const || contractProcedures[selector]?.constness == .const
     }
 
     func isIsolated(_ selector: Name) -> Bool {
-        declared(selector)?.isolation == .isolated
+        declared(selector)?.isolation == .isolated || contractProcedures[selector]?.isolation == .isolated
     }
 
     func failing(of selector: Name) -> Failing? {

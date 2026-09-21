@@ -252,7 +252,11 @@ public struct Builder: Sendable {
 
             for (offset, name) in document.declared.enumerated() where !hidden.contains(name) {
                 signatures[name] = Placed(
-                    Declared(signature: document.table[offset].signature, access: document.table[offset].access),
+                    Declared(
+                        signature: document.table[offset].signature,
+                        access: document.table[offset].access,
+                        facts: (document.table[offset].constness, document.table[offset].isolation)
+                    ),
                     at: .procedure(name.spelling, in: document.document),
                     of: position
                 )
@@ -313,7 +317,7 @@ public struct Builder: Sendable {
         over declared: (
             types: [Name: Placed<TypeExpression>],
             constraints: [Name: Placed<[TypeExpression]>],
-            contracts: [Name: Placed<[Name: Signature]>],
+            contracts: [Name: Placed<[Name: ContractProcedure]>],
             claims: [Placed<Claim>]
         ),
         against laid: Laid
@@ -594,8 +598,8 @@ public struct Builder: Sendable {
         // first, the documents standing before it after. One rule, so the two
         // judgements standing on it read the same declaration.
         let taking: @Sendable (Name) -> Signature? = {
-            [rows = compiling.lowering.rows, table = compiling.lowering.table] selector in
-            own[selector] ?? rows[selector].map { row in table[row].signature }
+            [rows = compiling.lowering.rows, table = compiling.lowering.table, asked = compiling.contractProcedures] selector in
+            own[selector] ?? rows[selector].map { row in table[row].signature } ?? asked[selector]?.signature
         }
 
         // Derived over this document's declarations, and read off the rows
@@ -608,16 +612,27 @@ public struct Builder: Sendable {
         var failing: [Name: Failing] = [:]
         let beyond: @Sendable (Name) -> Linked? = { [compiling] selector in compiling.declared(selector, from: origin) }
 
-        self.const(among: holding, settling: &const, reading: reading) { selector in beyond(selector)?.constness == .const }
-        self.isolated(among: holding, settling: &isolated, taking: taking) { selector in beyond(selector)?.isolation == .isolated }
+        // A call through a contract reaches whatever declaration the value
+        // turns out to be, so what it reads as is what the contract asked of
+        // every one of them.
+        let asked = compiling.contractProcedures
+        let answersWithoutRunning: @Sendable (Name) -> Bool = { selector in
+            beyond(selector)?.constness == .const || asked[selector]?.constness == .const
+        }
+        let touchesNothingShared: @Sendable (Name) -> Bool = { selector in
+            beyond(selector)?.isolation == .isolated || asked[selector]?.isolation == .isolated
+        }
+
+        self.const(among: holding, settling: &const, reading: reading, beyond: answersWithoutRunning)
+        self.isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared)
         self.failing(among: holding, settling: &failing) { selector in beyond(selector)?.failing }
 
         let ownNames = Set(holding.map(\.declared))
         let constant: @Sendable (Name) -> Bool = { [const] selector in
-            ownNames.contains(selector) ? const.contains(selector) : beyond(selector)?.constness == .const
+            ownNames.contains(selector) ? const.contains(selector) : answersWithoutRunning(selector)
         }
         let untouched: @Sendable (Name) -> Bool = { [isolated] selector in
-            ownNames.contains(selector) ? isolated.contains(selector) : beyond(selector)?.isolation == .isolated
+            ownNames.contains(selector) ? isolated.contains(selector) : touchesNothingShared(selector)
         }
 
         // Where this document numbers its calls from: what it looks for
@@ -849,7 +864,8 @@ public struct Builder: Sendable {
             table[entry.key] = Placed(
                 Declared(
                     signature: assembled.table[entry.value].judged.signature,
-                    access: assembled.table[entry.value].judged.access
+                    access: assembled.table[entry.value].judged.access,
+                    facts: (assembled.table[entry.value].judged.constness, assembled.table[entry.value].judged.isolation)
                 ),
                 at: .procedure(entry.key.spelling, in: compiled[origin].document),
                 of: origin

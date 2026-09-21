@@ -40,7 +40,7 @@ struct Lowering {
     // Every contract's procedures, under the spelling a call writes to reach one.
     // A selector in here names no row: it names the table of rows the run
     // picks from.
-    let contractProcedures: [Name: ContractProcedure]
+    let contractProcedures: [Name: LoweredContractProcedure]
 
     // The declared types as the run reads them, for a cast's type and a
     // closure's row.
@@ -77,7 +77,7 @@ struct Lowering {
     // MARK: - Initializer
     init(
         table: [Linked] = [],
-        contractProcedures: [Name: ContractProcedure] = [:],
+        contractProcedures: [Name: LoweredContractProcedure] = [:],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = table
@@ -91,7 +91,7 @@ struct Lowering {
     // are read again.
     init(
         _ carried: Carried,
-        contractProcedures: [Name: ContractProcedure],
+        contractProcedures: [Name: LoweredContractProcedure],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
@@ -789,7 +789,7 @@ struct Lowering {
 
     private mutating func lower(
         _ call: Call,
-        through asked: ContractProcedure,
+        through asked: LoweredContractProcedure,
         in scope: Names,
         on slots: Slots,
         label: Name,

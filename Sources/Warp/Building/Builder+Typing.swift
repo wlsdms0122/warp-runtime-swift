@@ -1562,7 +1562,7 @@ extension Builder {
                     given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures
                         .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
-                    taking: { selector in context.signature(of: selector) }
+                    taking: { selector in context.signature(of: selector) ?? context.contractProcedures[selector]?.signature }
                 )
             } ?? false
 
@@ -2032,7 +2032,7 @@ extension Builder {
     // contract asked is the whole of the judgment, and which body runs is
     // decided at the run by the name the receiver wears.
     private func inspected(
-        contract asked: ContractProcedure,
+        contract asked: LoweredContractProcedure,
         call: Call,
         at place: Place,
         in environment: [Name: Binding],

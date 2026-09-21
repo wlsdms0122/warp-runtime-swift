@@ -189,7 +189,7 @@ public struct Catalogue: Sendable {
                 for (type, contracts) in module.claims.sorted(by: { $0.key < $1.key }) {
                     for contract in contracts.sorted() {
                         for procedure in (asked[contract] ?? []).sorted() {
-                            let spelling = ContractProcedure.spelling(
+                            let spelling = LoweredContractProcedure.spelling(
                                 of: type,
                                 procedure: procedure
                             )

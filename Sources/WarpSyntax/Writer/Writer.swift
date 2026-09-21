@@ -101,8 +101,13 @@ public struct Writer: Sendable {
             written[ModuleReader.CodingKeys.contracts.name] = .dictionary(
                 try draft.contracts.mapValues { procedures in
                     .dictionary(
-                        try procedures.mapValues { procedure in
-                            .dictionary(try fields(of: procedure))
+                        try procedures.mapValues { asked in
+                            var written = try fields(of: asked.signature)
+
+                            if asked.constness == .const { written["const"] = .bool(true) }
+                            if asked.isolation == .isolated { written["isolated"] = .bool(true) }
+
+                            return .dictionary(written)
                         }
                     )
                 }

@@ -21,14 +21,14 @@ extension Builder {
     func lowered(
         _ declaring: TypeTable,
         claims: [Placed<Claim>],
-        contracts: [Name: Placed<[Name: Signature]>],
+        contracts: [Name: Placed<[Name: ContractProcedure]>],
         over declaredTypes: [Name: Placed<TypeExpression>],
         among signatures: [Name: Placed<Declared>],
         concealed: Set<Name> = [],
         unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
-        contractProcedures: [Name: ContractProcedure],
+        contractProcedures: [Name: LoweredContractProcedure],
         unheld: [Claim: String]
     ) {
         // The witnesses are judged against a table that says which types
@@ -71,7 +71,7 @@ extension Builder {
         // reach them. Read off the table the satisfaction was just written
         // into, so what a call reaches and what a judgment reads are one
         // reading rather than two.
-        let contractProcedures = ContractProcedure.table(in: table)
+        let contractProcedures = LoweredContractProcedure.table(in: table)
 
         // A contract's procedure and a declaration cannot take one spelling. A call
         // writing it lowers to the pick the contract makes, so the declaration
@@ -184,7 +184,7 @@ extension Builder {
     func types(
         declared: [Name: Placed<TypeExpression>],
         constraints members: [Name: Placed<[TypeExpression]>],
-        contracts: [Name: Placed<[Name: Signature]>],
+        contracts: [Name: Placed<[Name: ContractProcedure]>],
         of documents: [any Declaring],
         standing: [Int],
         numbered linkage: Linkage
@@ -319,8 +319,8 @@ extension Builder {
             // A contract's procedures are declarations the way the module's
             // own are, and what a call is judged against is what was judged.
             for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
-                for (name, signature) in procedures.sorted(by: { $0.key < $1.key }) {
-                    try judge(signature, at: .contract(contract.spelling, in: .of(module)).key(name.spelling), in: table)
+                for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
+                    try judge(asked.signature, at: .contract(contract.spelling, in: .of(module)).key(name.spelling), in: table)
                 }
             }
 

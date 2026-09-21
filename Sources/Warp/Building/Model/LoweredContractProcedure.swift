@@ -1,5 +1,5 @@
 //
-//  ContractProcedure.swift
+//  LoweredContractProcedure.swift
 //  Warp
 //
 //  Created by JSilver
@@ -13,7 +13,7 @@ import Foundation
 // A call that writes it names no declaration. What answers it is decided by
 // the value it is sent to, which is why it is gathered apart from the symbols:
 // everything in that table is one declaration, and this is a table of them.
-struct ContractProcedure: Sendable {
+struct LoweredContractProcedure: Sendable {
     // MARK: - Property
     let contract: Name
     let procedure: Name
@@ -22,6 +22,11 @@ struct ContractProcedure: Sendable {
     // receiver is whatever satisfies the contract, which is the whole reason
     // the procedure is in one.
     let signature: Signature
+
+    // What the contract asks of every declaration answering it beyond the
+    // signature, which is what a call through the contract reads as.
+    let constness: Constness
+    let isolation: Isolation
 
     // The same declaration as the run reads it, lowered once here. A procedure
     // in a contract declares no row, so this is the only place its lowering
@@ -44,17 +49,19 @@ struct ContractProcedure: Sendable {
     // answers every one of its procedures by a declaration named for the type
     // and the procedure, so the table saying which types answer says the whole
     // of it.
-    static func table(in types: TypeTable) -> [Name: ContractProcedure] {
-        types.contracts.reduce(into: [Name: ContractProcedure]()) { table, entry in
+    static func table(in types: TypeTable) -> [Name: LoweredContractProcedure] {
+        types.contracts.reduce(into: [Name: LoweredContractProcedure]()) { table, entry in
             let answering = types.loweredTypes.satisfying[entry.key] ?? []
 
-            for (procedure, signature) in entry.value {
-                table[spelling(of: entry.key, procedure: procedure)] = ContractProcedure(
+            for (procedure, asked) in entry.value {
+                table[spelling(of: entry.key, procedure: procedure)] = LoweredContractProcedure(
                     contract: entry.key,
                     procedure: procedure,
-                    signature: signature,
-                    slots: signature.lowered(in: types.loweredTypes),
-                    answers: signature.returns?.lowered(in: types.loweredTypes),
+                    signature: asked.signature,
+                    constness: asked.constness,
+                    isolation: asked.isolation,
+                    slots: asked.signature.lowered(in: types.loweredTypes),
+                    answers: asked.signature.returns?.lowered(in: types.loweredTypes),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in
                         held[type] = spelling(of: type, procedure: procedure)
                     }

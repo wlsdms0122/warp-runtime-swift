@@ -342,7 +342,7 @@ struct ContractTests {
     func anEmptyContractRefuses() async throws {
         // Given
         let sut = try Module(
-            contracts: ["app.Anything": [:]],
+            contracts: ["app.Anything": [:] as [Name: ContractProcedure]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
@@ -371,17 +371,17 @@ struct ContractTests {
         }
     }
 
-    @Test("a contract's procedure stands as an operand, because which declaration it reaches is the run's")
-    func aContractCallStandsAsAnOperand() async throws {
+    @Test("a contract's procedure stands as an operand where the contract asks const, and is refused where it asks nothing", arguments: [true, false])
+    func aContractCallStandsAsAnOperand(asked: Bool) async throws {
         // Given. An operand answers without running, and the build refuses one
-        // that calls a declaration answering only by running. A contract's
-        // procedure is not such a declaration: which one it reaches is the
-        // value's, so the build has nothing to say and the run judges what it
-        // picked.
+        // that calls a declaration answering only by running. A call through
+        // a contract reads as the contract asked of every declaration
+        // answering it: `const`, and the operand stands; nothing, and it may
+        // run, so it is refused.
         let sut = try Module(
             imports: ["std.text.uppercased"],
             types: ["bank.Account": .record(["balance": .int])],
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": ContractProcedure(signature: Signature(returns: .string), constness: asked ? .const : .unstated)]],
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 "bank.Account.describe": Procedure(
@@ -429,11 +429,14 @@ struct ContractTests {
             ]
         )
 
-        // When
-        let answer = try await run([sut])
-
-        // Then
-        #expect(answer == .string("AN ACCOUNT"))
+        // When / Then
+        if asked {
+            #expect(try await run([sut]) == .string("AN ACCOUNT"))
+        } else {
+            await #expect(throws: BuildError.self) {
+                try await run([sut])
+            }
+        }
     }
 
     // MARK: - Public

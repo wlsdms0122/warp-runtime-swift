@@ -18,7 +18,7 @@ protocol Declaring {
     var document: Place.Document { get }
     var types: [Name: TypeExpression] { get }
     var constraints: [Name: [TypeExpression]] { get }
-    var contracts: [Name: [Name: Signature]] { get }
+    var contracts: [Name: [Name: ContractProcedure]] { get }
 
     // Which contracts this document says each type answers. Not a type table
     // and gathered apart from the three: it declares no name, it says
