@@ -34,7 +34,7 @@ struct DeclaredNameTests {
         )
 
         // When
-        let answer = try await Executor().run(try Builder().build([sut] + Module.standard, entry: entryName))
+        let answer = try await Executor().run(try Builder().build([sut] + Module.standard))
 
         // Then
         #expect(answer == .double(1))
@@ -57,7 +57,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("holds int, and what it was given is string")
         }
@@ -83,7 +83,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect(throws: (any Error).self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -115,7 +115,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("app.Missing")
         }
@@ -139,7 +139,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("writes 'held' as string, and it holds int")
         }
@@ -163,7 +163,7 @@ struct DeclaredNameTests {
         )
 
         // When
-        let answer = try await Executor().run(try Builder().build([sut] + Module.standard, entry: entryName))
+        let answer = try await Executor().run(try Builder().build([sut] + Module.standard))
 
         // Then
         #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
@@ -187,7 +187,7 @@ struct DeclaredNameTests {
                 )
             ]
         )
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // When / Then
         await #expect {
@@ -217,7 +217,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("this construct binds the name")
         }
@@ -240,7 +240,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect(throws: (any Error).self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -266,7 +266,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("app.Missing")
         }
@@ -308,7 +308,7 @@ struct DeclaredNameTests {
         )
 
         // When
-        let answer = try await Executor().run(try Builder().build([sut] + Module.standard, entry: entryName))
+        let answer = try await Executor().run(try Builder().build([sut] + Module.standard))
 
         // Then. The procedure wrote a closure of its own into the caller's name
         #expect(answer == .int(9))
@@ -346,7 +346,7 @@ struct DeclaredNameTests {
 
         // When / Then
         await #expect(throws: (any Error).self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 }

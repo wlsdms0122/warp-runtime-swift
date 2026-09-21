@@ -121,7 +121,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try await builder.build([written] + Module.standard, entry: entryName)
+        let image = try await builder.build([written] + Module.standard)
 
         // Then. One table, and what separates them is only how each is written
         let shout = try #require(image["shout"])
@@ -201,7 +201,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing])
 
         // Then. `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
@@ -240,7 +240,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
         #expect(image["label"]?.constness == .const)
@@ -279,7 +279,7 @@ struct ReceiverTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("reads a dot on any, which declares nothing")
         }

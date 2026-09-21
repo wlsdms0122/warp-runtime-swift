@@ -72,11 +72,11 @@ struct StandardTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.math + Module.text + Module.foundation, entry: entryName)
+            try await builder.build([sut] + Module.math + Module.text + Module.foundation)
         }
 
         await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.collection + Module.logic + Module.math + Module.foundation, entry: entryName)
+            try await builder.build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
         }
     }
 
@@ -279,7 +279,7 @@ struct StandardTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut, .shouting] + Module.standard, entry: entryName)
+            try await builder.build([sut, .shouting] + Module.standard)
         }
     }
 
@@ -825,7 +825,7 @@ struct StandardTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -1044,7 +1044,7 @@ struct StandardTests {
 
         // When / Then. The conditional holds a string, and `wants` declares an int
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 }

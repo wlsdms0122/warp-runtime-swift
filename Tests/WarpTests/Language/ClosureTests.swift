@@ -96,11 +96,11 @@ struct ClosureTests {
         // When / Then
         if fits {
             await #expect(throws: Never.self) {
-                try await Builder().build([sut] + Module.standard, entry: entryName)
+                try await Builder().build([sut] + Module.standard)
             }
         } else {
             await #expect(throws: BuildError.self) {
-                try await Builder().build([sut] + Module.standard, entry: entryName)
+                try await Builder().build([sut] + Module.standard)
             }
         }
     }
@@ -158,7 +158,7 @@ struct ClosureTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -206,7 +206,7 @@ struct ClosureTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut, .shouting] + Module.standard, entry: entryName)
+            try await Builder().build([sut, .shouting] + Module.standard)
         }
     }
 

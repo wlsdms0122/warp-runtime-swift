@@ -151,7 +151,7 @@ struct SignatureTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([spec] + Module.standard, entry: entryName)
+            try await Builder().build([spec] + Module.standard)
         }
     }
 

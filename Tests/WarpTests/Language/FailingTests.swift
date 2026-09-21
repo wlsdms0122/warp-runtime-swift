@@ -40,7 +40,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // Then
         #expect(image[entryName]?.failing == .these([]))
@@ -67,7 +67,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // Then
         #expect(image["app.reach"]?.failing == .these(["aborted"]))
@@ -89,7 +89,7 @@ struct FailingTests {
                 )
             ]
         )
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // When / Then
         let aborted = await #expect(throws: Aborted.self) {
@@ -114,7 +114,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // Then. The optional spelling reads the mismatch as null instead
         #expect(image[entryName]?.failing == .these(["cast_refused"]))
@@ -150,7 +150,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // Then
         #expect(image[entryName]?.failing == .these(["cast_refused"]))
@@ -180,7 +180,7 @@ struct FailingTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("attempts a body that cannot fail")
         }
@@ -212,7 +212,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
 
         // Then. The rescue caught an unknown, and what is left is the rescue's
         #expect(image[entryName]?.failing == .these([]))

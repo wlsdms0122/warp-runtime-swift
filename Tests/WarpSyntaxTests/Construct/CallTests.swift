@@ -79,7 +79,7 @@ struct CallTests {
         // When / Then. Nothing runs: the argument is a constant, so its type is
         // knowable before the run and the refusal happens there
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut], entry: "caller")
+            try await Builder().build([sut])
         }
     }
 
@@ -183,12 +183,12 @@ struct CallTests {
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["access": "public", "body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])
-        let image = try await Builder().build([module], entry: "loopy")
+        let image = try await Builder().build([module])
         let sut = Executor()
 
         // When
         let task = Task {
-            try await sut.run(image)
+            try await sut.run(image, entry: "loopy")
         }
 
         try await Task.sleep(for: .milliseconds(50))

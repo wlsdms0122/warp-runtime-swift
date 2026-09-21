@@ -152,7 +152,7 @@ struct ConstnessTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([handed] + Module.standard, entry: entryName)
+            try await Builder().build([handed] + Module.standard)
         }
     }
 
@@ -285,7 +285,7 @@ struct ConstnessTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([handed] + Module.standard, entry: entryName)
+            try await Builder().build([handed] + Module.standard)
         }
     }
 
@@ -338,7 +338,7 @@ struct ConstnessTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([handed] + Module.standard, entry: entryName)
+            try await Builder().build([handed] + Module.standard)
         }
     }
 
@@ -361,7 +361,7 @@ struct ConstnessTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([handed] + Module.standard, entry: entryName)
+            try await Builder().build([handed] + Module.standard)
         }
     }
 

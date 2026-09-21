@@ -197,7 +197,7 @@ struct ControlFlowTests {
         // Then. The reading is the body's string, nullable for the exit no
         // round reached, and not the entry's int joined into anything
         #expect(answered == .nullable(.string))
-        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard)
         #expect(try await Executor().run(image) == .string("s"))
     }
 

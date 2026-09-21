@@ -74,6 +74,6 @@ struct CatalogueClaimTests {
         // Then. The claim stands in the link, so the pair the program leans on
         // is answered.
         #expect(closed.contains { module in module.claims.isEmpty == false })
-        await #expect(throws: Never.self) { try await Builder().build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(closed) }
     }
 }

@@ -463,7 +463,7 @@ struct ValidationTests {
 
         // And the build agrees the two spellings are one declaration
         await #expect(throws: Never.self) {
-            try await Builder().build([sut], entry: "wallet.pay")
+            try await Builder().build([sut])
         }
     }
 

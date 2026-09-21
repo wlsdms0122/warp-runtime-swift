@@ -142,7 +142,7 @@ struct LoweredTypeTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
         let row = try #require(image["std.math.lessThan"])
         let ordered = try #require(image.loweredTypes.constraintRow(named: "std.Comparable"))
 
@@ -183,7 +183,7 @@ struct LoweredTypeTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         #expect(try await Executor().run(image) == .array([.int(11), .int(12)]))
@@ -371,7 +371,7 @@ struct LoweredTypeTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard, entry: entryName)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("through nothing but names")
         }
@@ -413,8 +413,8 @@ struct LoweredTypeTests {
                 )
             ]
         )
-        let made = try await Executor().run(try builder.build([maker] + Module.standard, entry: "entry"))
-        let taking = try await builder.build([taker] + Module.standard, entry: "entry")
+        let made = try await Executor().run(try builder.build([maker] + Module.standard))
+        let taking = try await builder.build([taker] + Module.standard)
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -447,8 +447,8 @@ struct LoweredTypeTests {
                 )
             ]
         )
-        let made = try await Executor().run(try builder.build([maker], entry: "entry"))
-        let taking = try await builder.build([taker], entry: "entry")
+        let made = try await Executor().run(try builder.build([maker]))
+        let taking = try await builder.build([taker])
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -470,7 +470,7 @@ struct LoweredTypeTests {
                 )
             ]
         )
-        let made = try await Executor().run(try builder.build([maker] + Module.standard, entry: "entry"))
+        let made = try await Executor().run(try builder.build([maker] + Module.standard))
 
         // When / Then
         #expect {

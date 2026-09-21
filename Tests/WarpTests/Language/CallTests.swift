@@ -96,8 +96,7 @@ struct CallTests {
 
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard,
-                entry: "entry"
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard
             )
         }
     }

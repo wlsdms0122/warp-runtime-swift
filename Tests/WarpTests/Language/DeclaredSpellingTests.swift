@@ -53,7 +53,7 @@ struct DeclaredSpellingTests {
         )
 
         // When
-        let image = try await builder.build([sut, store] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut, store] + Module.standard)
 
         // Then. The declaration is under the declared spelling alone
         #expect(image.types.resolve("store.Task") == .record(["id": .string]))
@@ -117,7 +117,7 @@ struct DeclaredSpellingTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut, one, two], entry: entryName)
+            try await builder.build([sut, one, two])
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("names type 'Limit', which no module in this link declares")
@@ -175,7 +175,7 @@ struct DeclaredSpellingTests {
 
         // When / Then
         await #expect {
-            try await builder.build([one, two], entry: entryName)
+            try await builder.build([one, two])
         } throws: { error in
             error is BuildError && "\(error)".contains("declared more than once")
         }
@@ -235,7 +235,7 @@ struct DeclaredSpellingTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -325,7 +325,7 @@ struct DeclaredSpellingTests {
         // caller listed the modules cannot change the conclusion
         for modules in [[membership, type], [type, membership]] {
             await #expect {
-                try await builder.build(modules, entry: entryName)
+                try await builder.build(modules)
             } throws: { error in
                 error is BuildError && "\(error)".contains("both a type and a constraint")
             }
@@ -389,7 +389,7 @@ struct DeclaredSpellingTests {
         )
 
         await #expect {
-            try await builder.build([arithmetic] + Module.standard, entry: entryName)
+            try await builder.build([arithmetic] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -441,13 +441,13 @@ struct DeclaredSpellingTests {
         // When / Then, without the foundation the constraint name resolves to
         // nothing, and the declaration that mentions it is refused
         await #expect {
-            try await builder.build([sut] + Module.collection, entry: entryName)
+            try await builder.build([sut] + Module.collection)
         } throws: { error in
             error is BuildError && "\(error)".contains("which no module in this link declares")
         }
 
         await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.collection + Module.logic + Module.math + Module.foundation, entry: entryName)
+            try await builder.build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
         }
     }
 }

@@ -34,7 +34,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try await Builder().build([sut, .shouting] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut, .shouting] + Module.standard)
 
         // Then
         #expect(image[entryName]?.isolation == .isolated)
@@ -60,7 +60,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try await Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut, .ticketing] + Module.standard)
 
         // Then. The procedure itself, and the body one hop away from it
         #expect(image["app.ticket"]?.isolation == .unstated)
@@ -113,7 +113,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try await Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut, .ticketing] + Module.standard)
 
         // Then
         #expect(image[entryName]?.constness == .const)

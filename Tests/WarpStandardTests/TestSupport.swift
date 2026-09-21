@@ -82,9 +82,9 @@ func run(
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
-    let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary, entry: entry)
+    let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary)
 
-    return try await Executor(environment: environment).run(image, arguments: arguments)
+    return try await Executor(environment: environment).run(image, entry: entry, arguments: arguments)
 }
 
 func run(
@@ -166,4 +166,12 @@ struct ShoutEffect: Effect {
     }
 
     // MARK: - Private
+}
+
+
+// A test's image runs from the test's entry unless the test names another.
+extension Executor {
+    func run(_ image: Image, arguments: [Name: Value] = [:]) async throws -> Value {
+        try await run(image, entry: entryName, arguments: arguments)
+    }
 }

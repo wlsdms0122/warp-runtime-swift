@@ -18,17 +18,13 @@ public struct Image: Sendable {
     // MARK: - Property
     public let linked: [Linked]
 
-    // The row a run starts from.
-    public let start: Int
-
-    // Every declared spelling, by row.
+    // Every declared spelling a caller may name, by row.
     public let rows: [Name: Int]
 
-    // Which declarations a run from the entry can reach, by declared
-    // spelling. Transitive, read off the rows' code; what one row reaches is
-    // `Linked.reaches`. A fact of the link for whoever asks it; the run reads
-    // rows by number and never asks.
-    public let reached: Set<Name>
+    // The spellings only a private declaration wears: declared, and by
+    // nothing outside its document. Read only after a spelling is not a row,
+    // to say which refusal it is.
+    let concealed: Set<Name>
 
     // Every type the linked modules declared. A named type survives into the
     // run as a row of the table's lowering rather than being expanded at
@@ -48,24 +44,32 @@ public struct Image: Sendable {
     // MARK: - Initializer
     init(
         linked: [Linked],
-        start: Int,
         rows: [Name: Int],
-        reached: Set<Name>,
+        concealed: Set<Name>,
         types: TypeTable,
         variables: [[(name: Name, value: Value)]],
         naming: [Closure.Document]
     ) {
         self.linked = linked
-        self.start = start
         self.rows = rows
-        self.reached = reached
+        self.concealed = concealed
         self.types = types
         self.variables = variables
         self.naming = naming
     }
 
     // MARK: - Public
-    public var entry: Linked { linked[start] }
+    // Which declarations a run starting from one can reach, by declared
+    // spelling. Transitive, read off the rows' code; what one row reaches is
+    // `Linked.reaches`. A fact of the link for whoever asks it; the run reads
+    // rows by number and never asks. Nothing under a spelling no row wears.
+    public func reached(from entry: Name) throws -> Set<Name> {
+        guard let start = rows[entry] else { return [] }
+
+        let walked = try linked.reached(from: start, starting: variables, in: [])
+
+        return Set(rows.lazy.filter { row in walked.contains(row.value) }.map(\.key))
+    }
 
     // The row under a declared spelling.
     public subscript(declared: Name) -> Linked? {

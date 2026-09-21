@@ -45,7 +45,7 @@ struct CatalogueTests {
 
         // Then. The build has both, and it links.
         #expect(closed.count == 2)
-        #expect(try await builder.build(closed, entry: entryName).rows[entryName] != nil)
+        #expect(try await builder.build(closed).rows[entryName] != nil)
     }
 
     @Test("a procedure a body sends brings the module that declares it")
@@ -73,7 +73,7 @@ struct CatalogueTests {
         // Then. `math` came for the procedure, and `foundation` came after it for
         // the constraint `math`'s own signatures mention.
         #expect(closed.count == 3)
-        #expect(try await builder.build(closed, entry: entryName).rows["std.math.plus"] != nil)
+        #expect(try await builder.build(closed).rows["std.math.plus"] != nil)
     }
 
     @Test("supply handed over as well as held is supply standing twice")
@@ -98,7 +98,7 @@ struct CatalogueTests {
         // Then. The build says so, rather than the catalogue quietly keeping
         // one of them.
         #expect(closed.count == 3)
-        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed) }
     }
 
     @Test("a caller cannot supply a granted procedure to a granted module")
@@ -125,7 +125,7 @@ struct CatalogueTests {
         // Then. The build meets both and refuses, rather than binding
         // `lib.run` to the procedure the program wrote.
         #expect(closed.count == 3)
-        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed) }
     }
 
     @Test("a name the catalogue does not declare is left to the build")
@@ -146,7 +146,7 @@ struct CatalogueTests {
 
         // Then. What comes back is what was asked for, and the refusal is the build's.
         #expect(closed.count == 1)
-        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed) }
     }
 
     @Test("the caller listing one module twice is not quietly folded")
@@ -158,7 +158,7 @@ struct CatalogueTests {
 
         // Then. Both copies stand, and the build says what is wrong with that.
         #expect(closed.count == 2)
-        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed) }
     }
 
     @Test("two modules declaring one name leave the catalogue no answer")
@@ -196,7 +196,7 @@ struct CatalogueTests {
         let closed = try Catalogue(Module.standard).closing([program])
 
         // Then. Whatever came, the build is satisfied by it.
-        await #expect(throws: Never.self) { try await builder.build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await builder.build(closed) }
     }
 
     @Test("a claim brings the documents that answer it")
@@ -249,7 +249,7 @@ struct CatalogueTests {
         // refuse a program that says nothing about the contract at all
         #expect(closed.count == 4)
         await #expect(throws: Never.self) {
-            try await builder.build(closed + Module.standard, entry: entryName)
+            try await builder.build(closed + Module.standard)
         }
     }
 
@@ -298,7 +298,7 @@ struct CatalogueTests {
         // Then
         #expect(closed.count == 3)
         await #expect(throws: Never.self) {
-            try await builder.build(closed + Module.standard, entry: entryName)
+            try await builder.build(closed + Module.standard)
         }
     }
 
@@ -355,7 +355,7 @@ struct CatalogueTests {
         // Then. The answer came, and so did the type its signature names
         #expect(closed.count == 5)
         await #expect(throws: Never.self) {
-            try await builder.build(closed + Module.standard, entry: entryName)
+            try await builder.build(closed + Module.standard)
         }
     }
 

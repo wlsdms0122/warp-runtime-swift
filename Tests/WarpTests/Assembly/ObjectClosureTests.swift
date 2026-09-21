@@ -134,7 +134,7 @@ struct ObjectClosureTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
+            try await builder.link(forged, supplying: Supplying(Module.standard))
         }
     }
 
@@ -146,7 +146,7 @@ struct ObjectClosureTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
+            try await builder.link(forged, supplying: Supplying(Module.standard))
         }
     }
 
@@ -165,10 +165,10 @@ struct ObjectClosureTests {
         }
 
         // When
-        let image = try await builder.link(read, entry: "app.two", supplying: Supplying(Module.standard))
+        let image = try await builder.link(read, supplying: Supplying(Module.standard))
 
         // Then
-        #expect(try await Executor().run(image) == .int(6))
+        #expect(try await Executor().run(image, entry: "app.two") == .int(6))
     }
 
     @Test("a closure an unwritten document folded out of another unwritten one runs the other's body")
@@ -197,10 +197,10 @@ struct ObjectClosureTests {
         )
 
         // When
-        let image = try await builder.build(Module.standard + [other, one], entry: "app.one")
+        let image = try await builder.build(Module.standard + [other, one])
 
         // Then
-        #expect(try await Executor().run(image) == .int(6))
+        #expect(try await Executor().run(image, entry: "app.one") == .int(6))
     }
 
     @Test("two documents nobody wrote down each read a closure of their own under one name")
@@ -211,10 +211,10 @@ struct ObjectClosureTests {
         let other = try await builder.compile([madeOf(6, entry: "app.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
 
         // When
-        let image = try await builder.link(one + other, entry: "app.two", supplying: Supplying(Module.standard))
+        let image = try await builder.link(one + other, supplying: Supplying(Module.standard))
 
         // Then
-        #expect(try await Executor().run(image) == .int(6))
+        #expect(try await Executor().run(image, entry: "app.two") == .int(6))
     }
 
     @Test("a closure folded in one compile is answered anew where its document is laid into another")
@@ -252,10 +252,10 @@ struct ObjectClosureTests {
         // When
         let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
         let against = try await builder.compile([folding], against: laid)
-        let image = try await builder.link(reordered + against, entry: "app.entry", supplying: Supplying(Module.standard))
+        let image = try await builder.link(reordered + against, supplying: Supplying(Module.standard))
 
         // Then
-        #expect(try await Executor().run(image) == .int(5))
+        #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
     }
 
     @Test("an object laid beside another compile of what it leaned on is refused")
@@ -274,7 +274,7 @@ struct ObjectClosureTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.link(changed + second, entry: "app.entry", supplying: Supplying(Module.standard))
+            try await builder.link(changed + second, supplying: Supplying(Module.standard))
         }
         #expect(throws: BuildError.self) {
             try builder.lay(changed + second, supplying: Supplying(Module.standard))
@@ -313,10 +313,10 @@ struct ObjectClosureTests {
         let compiled = try (await builder.compile([folding], against: try builder.lay(read, supplying: Supplying(Module.standard)))).map { document in
             try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
         }
-        let image = try await builder.link(read + compiled, entry: "app.entry", supplying: Supplying(Module.standard))
+        let image = try await builder.link(read + compiled, supplying: Supplying(Module.standard))
 
         // Then
-        #expect(try await Executor().run(image) == .int(5))
+        #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
     }
 
     @Test("a closure holding fewer cells than its frame is filled from is refused at the link")
@@ -331,7 +331,7 @@ struct ObjectClosureTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
+            try await builder.link(forged, supplying: Supplying(Module.standard))
         }
     }
 
@@ -381,7 +381,7 @@ struct ObjectClosureTests {
         // When / Then. Refused where a link answers it, and where a compile
         // lays a body holding it down to fold through
         await #expect(throws: BuildError.self) {
-            try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
+            try await builder.link(forged, supplying: Supplying(Module.standard))
         }
 
         let inBody = try holdingInBody(
@@ -538,8 +538,8 @@ struct ObjectClosureTests {
 
             return try Compiled(written: written, of: one.document.identity, fingerprint: one.fingerprint)
         }
-        let image = try await builder.link(read, entry: entry, supplying: Supplying(Module.standard))
+        let image = try await builder.link(read, supplying: Supplying(Module.standard))
 
-        return try await Executor().run(image)
+        return try await Executor().run(image, entry: entry)
     }
 }

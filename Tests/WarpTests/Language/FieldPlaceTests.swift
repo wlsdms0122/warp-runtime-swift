@@ -116,7 +116,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: entryName)
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         #expect(try steps(of: image) == [.field(1, "y", optional: false)])
@@ -285,8 +285,7 @@ struct FieldPlaceTests {
     // read what the build lowered.
     private func resultSteps(of procedure: Procedure) async throws -> [Step] {
         let image = try await builder.build(
-            [try Module(procedures: [entryName: procedure.with(access: .public)])] + Module.standard,
-            entry: entryName
+            [try Module(procedures: [entryName: procedure.with(access: .public)])] + Module.standard
         )
 
         return try steps(of: image)
@@ -294,7 +293,7 @@ struct FieldPlaceTests {
 
     private func steps(of image: Image) throws -> [Step] {
         guard
-            case let .body(body, _) = image.entry.implementation,
+            case let .body(body, _) = image[entryName]!.implementation,
             case let .local(address)? = body.result
         else {
             Issue.record("the entry does not answer with a path")

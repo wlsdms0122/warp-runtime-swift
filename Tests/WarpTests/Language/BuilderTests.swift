@@ -35,7 +35,7 @@ struct BuilderTests {
 
         // When / Then
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.place?.rendered == "constants.greeting")
@@ -65,7 +65,7 @@ struct BuilderTests {
 
         // When / Then
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.count")
@@ -94,7 +94,7 @@ struct BuilderTests {
 
         // When / Then
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.mode")
@@ -136,7 +136,7 @@ struct BuilderTests {
 
         // When / Then
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -160,7 +160,7 @@ struct BuilderTests {
 
         // When / Then
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.message.contains("null") == true)
@@ -196,7 +196,7 @@ struct BuilderTests {
 
         // When / Then
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -219,7 +219,7 @@ struct BuilderTests {
 
         // When / Then
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -459,7 +459,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: "caller")
+            try await builder.build([sut])
         }
     }
 
@@ -488,7 +488,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: "caller")
+            try await builder.build([sut])
         }
     }
 
@@ -515,7 +515,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: "caller")
+            try await builder.build([sut])
         }
     }
 
@@ -556,10 +556,10 @@ struct BuilderTests {
         )
 
         // When
-        let image = try await builder.build([caller, middle, leaf], entry: "caller")
+        let image = try await builder.build([caller, middle, leaf])
 
         // Then
-        #expect(image.reached == ["caller", "middle", "leaf"])
+        #expect(try image.reached(from: "caller") == ["caller", "middle", "leaf"])
     }
 
     @Test("a module left out of the link is a module that does not exist")
@@ -590,10 +590,10 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([caller], entry: "caller")
+            try await builder.build([caller])
         }
         await #expect(throws: Never.self) {
-            try await builder.build([caller, leaf], entry: "caller")
+            try await builder.build([caller, leaf])
         }
     }
 
@@ -624,7 +624,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([left, right], entry: "shared")
+            try await builder.build([left, right])
         }
     }
 
@@ -642,9 +642,12 @@ struct BuilderTests {
             ]
         )
 
-        // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: "absent")
+        // When / Then. The build judged every declaration; the run is what
+        // names one, and a name nothing declares is refused there.
+        let image = try await builder.build([sut])
+
+        await #expect(throws: ExecutionError.self) {
+            try await Executor().run(image, entry: "absent")
         }
     }
 
@@ -699,10 +702,10 @@ struct BuilderTests {
         )
 
         // When
-        let image = try await builder.build([sut], entry: "loopy")
+        let image = try await builder.build([sut])
 
         // Then
-        #expect(image.reached == ["loopy"])
+        #expect(try image.reached(from: "loopy") == ["loopy"])
     }
 
     @Test("an argument the callee never declared is refused")
@@ -736,7 +739,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: "caller")
+            try await builder.build([sut])
         }
     }
 
@@ -768,7 +771,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: "caller")
+            try await builder.build([sut])
         }
     }
 
@@ -808,7 +811,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: "caller")
+            try await builder.build([sut])
         }
     }
 
@@ -851,7 +854,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut], entry: "caller")
+        _ = try await builder.build([sut])
     }
 
     @Test("a body that settles an answer is held to it, declared or not")
@@ -885,7 +888,7 @@ struct BuilderTests {
 
         // When / Then
         await #expect {
-            try await builder.build([sut], entry: "caller")
+            try await builder.build([sut])
         } throws: { error in
             error is BuildError && "\(error)".contains("holds null where int is declared")
         }
@@ -907,10 +910,10 @@ struct BuilderTests {
         )
 
         // When
-        let image = try await builder.build([sut], entry: "alone")
+        let image = try await builder.build([sut])
 
         // Then
-        #expect(image.reached == ["alone"])
+        #expect(try image.reached(from: "alone") == ["alone"])
     }
 
     @Test("an undeclared selector is refused before what it answers is read")
@@ -936,7 +939,7 @@ struct BuilderTests {
         )
 
         let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
 
         #expect(error?.message == "sends 'plus', which no module in this link declares")
@@ -967,6 +970,6 @@ struct BuilderTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard, entry: "caller")
+        _ = try await builder.build([sut] + Module.standard)
     }
 }

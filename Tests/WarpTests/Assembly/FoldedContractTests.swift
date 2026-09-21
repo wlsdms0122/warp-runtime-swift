@@ -69,7 +69,7 @@ struct FoldedContractTests {
         }
 
         await #expect {
-            try await Builder().build(modules, entry: entryName)
+            try await Builder().build(modules)
         } throws: { error in
             "\(error)".contains("string does not answer every procedure 'app.Describable' asks")
         }
@@ -126,7 +126,7 @@ struct FoldedContractTests {
         )
 
         await #expect {
-            try await Builder().build([asking, typed, program] + Module.standard, entry: entryName)
+            try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
             "\(error)".contains("constants.app.zzz:")
                 && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
@@ -160,7 +160,7 @@ struct FoldedContractTests {
         // declaration was being settled when the fold turned it up.
         for link in [compiled, try await Builder().compile(modules)] {
             await #expect {
-                try await Builder().link(link, entry: entryName, supplying: Supplying(Module.standard))
+                try await Builder().link(link, supplying: Supplying(Module.standard))
             } throws: { error in
                 "\(error)".contains("constants.app.counted:")
                     && "\(error)".contains("no document in this link says 'bank.Plain' answers it")

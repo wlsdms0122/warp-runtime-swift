@@ -31,10 +31,9 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["greet": procedure.with(access: .public)]), .shouting] + Module.standard,
-            entry: "greet"
+            [try Module(procedures: ["greet": procedure.with(access: .public)]), .shouting] + Module.standard
         )
-        let outputs = try await Executor().run(image)
+        let outputs = try await Executor().run(image, entry: "greet")
 
         // Then
         #expect(outputs["greeting"] == .string("hello, world"))
@@ -84,8 +83,7 @@ struct SwiftAuthoringTests {
         // needs nothing.
         let image = try await builder.build(
             [try Module(procedures: ["entry": procedure.with(access: .public)])]
-                + Module.logic + Module.math + Module.collection + Module.foundation,
-            entry: "entry"
+                + Module.logic + Module.math + Module.collection + Module.foundation
         )
         let outputs = try await Executor().run(
             image,
@@ -115,10 +113,9 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["greet": procedure.with(access: .public)]), .shouting] + Module.standard,
-            entry: "greet"
+            [try Module(procedures: ["greet": procedure.with(access: .public)]), .shouting] + Module.standard
         )
-        let outputs = try await Executor().run(image)
+        let outputs = try await Executor().run(image, entry: "greet")
 
         // Then
         #expect(outputs["shout"] == .string("HEY"))
@@ -164,10 +161,9 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["speak": procedure.with(access: .public), "echo": echo]), .shouting] + Module.standard,
-            entry: "speak"
+            [try Module(procedures: ["speak": procedure.with(access: .public), "echo": echo]), .shouting] + Module.standard
         )
-        let outputs = try await Executor().run(image)
+        let outputs = try await Executor().run(image, entry: "speak")
 
         // Then
         #expect(outputs["counted"] == .int(1))

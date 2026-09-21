@@ -31,12 +31,12 @@ struct CompiledTests {
             ]
         )
 
-        // When. Compiled once, linked twice.
-        let compiled = try await compiled([sut] + Module.standard)
+        // When. Compiled once, linked once.
+        let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
 
-        // Then. Each image starts where it was asked to.
-        #expect(try builder.link(compiled, entry: "app.here", supplying: Supplying(Module.standard)).start == Assembled(compiled).rows["app.here"])
-        #expect(try builder.link(compiled, entry: "app.there", supplying: Supplying(Module.standard)).start == Assembled(compiled).rows["app.there"])
+        // Then. Each run starts where it was asked to.
+        #expect(try await Executor().run(image, entry: "app.here") == .int(1))
+        #expect(try await Executor().run(image, entry: "app.there") == .int(2))
     }
 
     @Test("what a document says holds whichever entry a caller names")
@@ -68,22 +68,22 @@ struct CompiledTests {
             ]
         )
 
-        let image = try await builder.link(try compiled([sut] + Module.standard), entry: entryName, supplying: Supplying(Module.standard))
+        let image = try await builder.link(try compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
 
-        #expect(image.reached.contains(entryName))
-        #expect(!image.reached.contains("app.aside"))
+        #expect(try image.reached(from: entryName).contains(entryName))
+        #expect(try !image.reached(from: entryName).contains("app.aside"))
     }
 
-    @Test("an entry no module declares is refused by the link and not by the compile")
-    func anUnknownEntryIsTheLinksRefusal() async throws {
+    @Test("an entry no module declares is refused by the run and not by the build")
+    func anUnknownEntryIsTheRunsRefusal() async throws {
         let sut = try Module(
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
         )
 
-        let compiled = try await compiled([sut] + Module.standard)
+        let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
 
-        await #expect(throws: BuildError.self) {
-            try await builder.link(compiled, entry: "app.nowhere", supplying: Supplying(Module.standard))
+        await #expect(throws: ExecutionError.self) {
+            try await Executor().run(image, entry: "app.nowhere")
         }
     }
 
@@ -215,7 +215,7 @@ struct CompiledTests {
         let held = try Module(types: ["a.Held": .int], procedures: [:])
 
         // When.
-        let loweredTypes = try await builder.link(compiled([naming, held]), entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes
+        let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes
 
         // Then. Each document's rows are a run of their own, in name order
         // inside it, laid down in the order the caller handed the documents
@@ -243,7 +243,7 @@ struct CompiledTests {
         #expect(compiledCall.calls.isEmpty)
 
         // And. Linking fills one call for every type that answers.
-        let image = try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
         let linkedCall = try dispatch(in: code(of: "app.tell", in: image))
 
         #expect(Set(linkedCall.calls.keys) == ["bank.Account", "bank.Card"])
@@ -330,7 +330,7 @@ struct CompiledTests {
             compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
-        _ = try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
+        _ = try builder.link(compiled, supplying: Supplying(Module.standard))
     }
 
     @Test("a claim answers a document that never names the one making it")
@@ -343,7 +343,7 @@ struct CompiledTests {
         // program points at the claim, so the order the caller listed them in
         // is what decides which side it lands on, and it decides nothing.
         await #expect(throws: Never.self) {
-            try await builder.build([typed, asking, claims, program] + Module.standard, entry: entryName)
+            try await builder.build([typed, asking, claims, program] + Module.standard)
         }
         await #expect(throws: Never.self) {
             try await incremental([typed, asking, claims, program] + Module.standard)
@@ -370,7 +370,7 @@ struct CompiledTests {
 
         // Then. The list refuses, naming the pair the program leaned on.
         await #expect {
-            try await builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
+            try await builder.link(compiled, supplying: Supplying(Module.standard))
         } throws: { error in
             "\(error)".contains("no document in this link says 'bank.Account' answers it")
         }
@@ -431,8 +431,8 @@ struct CompiledTests {
 
         // Then. It links, and refusing a claim as unanswered is the whole
         // list's to do rather than a compile's.
-        #expect(throws: Never.self) { try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
-        await #expect(throws: Never.self) { try await builder.build(modules, entry: entryName) }
+        #expect(throws: Never.self) { try builder.link(compiled, supplying: Supplying(Module.standard)) }
+        await #expect(throws: Never.self) { try await builder.build(modules) }
     }
 
     @Test("a document numbers its calls from itself, and the link answers with rows")
@@ -451,7 +451,7 @@ struct CompiledTests {
         #expect(try number != Assembled(compiled).rows["a.answers"])
 
         // And. The link answers with the row.
-        let image = try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
 
         #expect(try called(in: code(of: "b.asks", in: image)) == image.rows["a.answers"])
     }
@@ -514,7 +514,7 @@ struct CompiledTests {
         #expect(number == 0)
 
         // And. The link answers with the row of its own table.
-        let image = try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
 
         #expect(
             try cast(in: code(of: entryName, in: image)).row
@@ -540,8 +540,8 @@ struct CompiledTests {
 
         // Then. The row moved and the number the cast stands on did not.
         #expect(
-            try builder.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
-                != builder.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+            try builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+                != builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
         )
         #expect(
             try cast(in: code(of: entryName, in: alone)).row
@@ -578,8 +578,8 @@ struct CompiledTests {
 
         // And. The row it stands on moved and the number did not.
         #expect(
-            try builder.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
-                != builder.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+            try builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+                != builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
         )
         #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
     }
@@ -632,7 +632,7 @@ struct CompiledTests {
 
         // Then. The image runs to what the whole graph compiled at once
         // answers.
-        let image = try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
 
         #expect(try await Executor(environment: nil).run(image, arguments: [:]) == .int(7))
         #expect(try await run(modules, vocabulary: []) == .int(7))

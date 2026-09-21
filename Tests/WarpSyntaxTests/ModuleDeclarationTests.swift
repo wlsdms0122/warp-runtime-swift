@@ -75,7 +75,7 @@ struct ModuleDeclarationTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([caller, library], entry: "caller.entry")
+            try await Builder().build([caller, library])
         } throws: { error in
             "\(error)".contains("sends 'greet', which no module in this link declares")
         }
@@ -161,7 +161,7 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .string("https://example.com/api"))
 
         await #expect(throws: BuildError.self) {
-            try await Builder().build([cyclic], entry: entryName)
+            try await Builder().build([cyclic])
         }
     }
 

@@ -378,7 +378,7 @@ struct BytesTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         }
     }
 

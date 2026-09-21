@@ -41,7 +41,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -79,7 +79,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -117,7 +117,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -168,7 +168,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -200,7 +200,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -236,7 +236,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
         await #expect(throws: Aborted.self) {
@@ -281,7 +281,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
 
         // Then
         do {
@@ -309,7 +309,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing])
 
         _ = try? await Executor(observer: observer).run(image)
 
@@ -358,7 +358,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing])
         let answer = try await Executor(observer: observer).run(image)
 
         // Then
@@ -380,7 +380,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try await builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard)
         let answer = try await Executor().run(image)
 
         // Then

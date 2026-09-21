@@ -106,7 +106,7 @@ struct RefinementTests {
         )
 
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
@@ -134,7 +134,7 @@ struct RefinementTests {
         )
 
         await #expect {
-            try await builder.build([sut] + Module.standard, entry: entryName)
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }

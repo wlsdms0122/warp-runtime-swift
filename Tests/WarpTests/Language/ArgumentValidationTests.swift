@@ -22,7 +22,7 @@ struct ArgumentValidationTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([odd, Self.host], entry: "entry")
+            try await Builder().build([odd, Self.host])
         }
     }
 
@@ -35,7 +35,7 @@ struct ArgumentValidationTests {
         )
 
         // When / Then
-        _ = try await Builder().build([even, Self.host], entry: "entry")
+        _ = try await Builder().build([even, Self.host])
     }
 
     // MARK: - Private

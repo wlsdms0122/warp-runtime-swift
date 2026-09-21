@@ -41,10 +41,10 @@ struct LoweringTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
-        guard case let .body(_, layout) = image.entry.implementation else {
+        guard case let .body(_, layout) = image[entryName]!.implementation else {
             Issue.record("the entry was not lowered")
 
             return
@@ -80,7 +80,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         #expect(try await Executor().run(image) == .array([.int(1), .int(2)]))
@@ -107,11 +107,11 @@ struct LoweringTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         guard
-            case let .body(body, _) = image.entry.implementation,
+            case let .body(body, _) = image[entryName]!.implementation,
             case let .closure(row, captures) = body.instructions[3].code,
             case let .body(_, inner) = image.linked[row].implementation
         else {
@@ -166,11 +166,11 @@ struct LoweringTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         guard
-            case let .body(body, _) = image.entry.implementation,
+            case let .body(body, _) = image[entryName]!.implementation,
             case let .loop(_, _, _, told) = body.instructions[0].code,
             case let .loop(_, _, _, nested) = body.instructions[1].code
         else {
@@ -218,11 +218,11 @@ struct LoweringTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         guard
-            case let .body(body, _) = image.entry.implementation,
+            case let .body(body, _) = image[entryName]!.implementation,
             case let .call(call)? = body.result
         else {
             Issue.record("the call was not lowered")
@@ -253,7 +253,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         #expect(image["app.tally"]?.constness != .const)
@@ -284,7 +284,7 @@ struct LoweringTests {
         )
 
         // When / Then
-        let image = try await builder.build([sut] + Module.standard, entry: "entry")
+        let image = try await builder.build([sut] + Module.standard)
 
         #expect(try await Executor().run(image) == .int(1))
     }
@@ -331,7 +331,7 @@ struct LoweringTests {
 
         // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.standard, entry: "entry")
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -373,12 +373,11 @@ struct LoweringTests {
         // When / Then. The unnamed record is refused, and the same record held
         // as a `Tag` stands
         await #expect(throws: BuildError.self) {
-            try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
+            try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard)
         }
 
         let image = try await builder.build(
-            [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard,
-            entry: "entry"
+            [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard
         )
 
         #expect(try await Executor().run(image) == .bool(true))
@@ -406,7 +405,7 @@ struct LoweringTests {
 
         // When / Then
         await #expect {
-            try await builder.build([module] + Module.standard, entry: "entry")
+            try await builder.build([module] + Module.standard)
         } throws: { error in
             "\(error)".contains("a circle with no start")
         }
@@ -433,7 +432,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try await builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard)
 
         // Then
         #expect(try await Executor().run(image) == .int(5))

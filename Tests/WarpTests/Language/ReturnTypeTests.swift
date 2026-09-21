@@ -39,7 +39,7 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try await builder.build([sut], entry: entryName)
+        let image = try await builder.build([sut])
         let answer = try await Executor().run(image)
 
         // Then. Settled to the declared representation, not merely waved past
@@ -60,7 +60,7 @@ struct ReturnTypeTests {
 
         await #expect(throws: (any Error).self) {
             try await Executor()
-                .run(try await builder.build([narrowing], entry: entryName))
+                .run(try await builder.build([narrowing]))
         }
     }
 
@@ -86,7 +86,7 @@ struct ReturnTypeTests {
         // When / Then. The body and the declaration beside it are one
         // document's text, so nothing has to run to find them disagreeing
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: entryName)
+            try await builder.build([sut])
         }
     }
 
@@ -115,7 +115,7 @@ struct ReturnTypeTests {
         // When / Then. Two answers that disagree would join to `any`, and
         // `any` fits everything, so each is held on its own.
         let refusal = await #expect(throws: BuildError.self) {
-            try await builder.build([sut], entry: entryName)
+            try await builder.build([sut])
         }
 
         #expect(refusal?.message.contains("declaration promises int") == true)
@@ -150,7 +150,7 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try await builder.build([sut], entry: entryName)
+        let image = try await builder.build([sut])
         let answer = try await Executor().run(image)
 
         // Then
@@ -177,7 +177,7 @@ struct ReturnTypeTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            _ = try await builder.build([sut], entry: entryName)
+            _ = try await builder.build([sut])
         }
     }
 }

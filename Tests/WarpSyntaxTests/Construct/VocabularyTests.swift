@@ -80,7 +80,7 @@ struct VocabularyTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut], entry: entryName)
+            try await Builder().build([sut])
         }
     }
 

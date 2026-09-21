@@ -100,7 +100,7 @@ struct PlaceWrittenTests {
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await loader.reading { try await Builder().build([module], entry: entryName) }
+            try await loader.reading { try await Builder().build([module]) }
         }
 
         // Then. `call` is the key the author wrote, and `call` is what the
@@ -109,7 +109,7 @@ struct PlaceWrittenTests {
 
         // And unasked, the language answers in its own terms
         let untranslated = await #expect(throws: BuildError.self) {
-            try await Builder().build([module], entry: entryName)
+            try await Builder().build([module])
         }
 
         #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].call")
