@@ -213,9 +213,9 @@ struct ConformanceTests {
 struct Case: Sendable, CustomStringConvertible {
     // Which types a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
-    // may say something new is not the day a document may.
-    static let version = 7
-    static let earliest = 2
+    // may say something new is not the day a document may. Every change
+    // before the first release folds into this one.
+    static let version = 1
 
     static let versionKey: Name = "test"
 
@@ -318,15 +318,6 @@ struct Case: Sendable, CustomStringConvertible {
         let documents: [Value]
 
         let expectation: Expectation
-
-        // The earliest test a case carrying this needs. The ladder is the
-        // table under *what a case is* in `spec/conformance.md`.
-        var needs: Int {
-            if !documents.isEmpty { return 7 }
-            if case .builds = expectation { return 6 }
-
-            return vocabulary == nil ? 2 : 3
-        }
     }
 
     // What a case asks: a program and what it should do, or an encoding and
@@ -336,17 +327,6 @@ struct Case: Sendable, CustomStringConvertible {
         case program(Program)
         case encoded(Encoded, Reading)
         case object(Object)
-
-        // The earliest test a case asking this needs. The ladder is the table
-        // under *what a case is* in `spec/conformance.md`.
-        var needs: Int {
-            switch self {
-            case let .program(program): program.needs
-            case .encoded(.binary, .refuses): 4
-            case .encoded(.binary, _), .encoded(.text, _): 5
-            case .object: 6
-            }
-        }
     }
 
     // A module the runner brings. The declarations are held apart from the rest
@@ -428,10 +408,9 @@ struct Case: Sendable, CustomStringConvertible {
             )
         }
 
-        guard (Self.earliest ... Self.version).contains(version) else {
+        guard version == Self.version else {
             throw ConformanceError(
-                "this case is written for test \(version),"
-                    + " and this reads \(Self.earliest) through \(Self.version)"
+                "this case is written for test \(version), and this reads test \(Self.version)"
             )
         }
 
@@ -554,13 +533,6 @@ struct Case: Sendable, CustomStringConvertible {
 
         default:
             throw ConformanceError("a case asks about exactly one of a `program`, `bytes`, `text` and `object`")
-        }
-
-        // A case says the earliest test it needs. Saying a later one would
-        // turn away a runner that could have asked it, and an earlier one
-        // would have that runner refuse it as no case at all.
-        guard version == self.asked.needs else {
-            throw ConformanceError("this case says test \(version), and what it writes is test \(self.asked.needs)")
         }
     }
 
