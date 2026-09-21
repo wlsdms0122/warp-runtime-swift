@@ -11,6 +11,7 @@ import Warp
 public struct ProcedureReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case description
+        case access
         case parameters
         case receiver
         case returns
@@ -44,10 +45,25 @@ public struct ProcedureReader: Decodable {
             at: decoder.steps
         )
 
+        // One of three words, and a fourth is a document no reader can hold to
+        // a scope. Absent, the declaration is the link's.
+        let access = try container.decodeIfPresent(String.self, forKey: .access).map { spelling in
+            guard let access = Access(rawValue: spelling) else {
+                throw ReadingError(
+                    "access '\(spelling)' is none of "
+                        + Access.allCases.map { access in "`\(access.rawValue)`" }.joined(separator: ", "),
+                    at: decoder.steps
+                )
+            }
+
+            return access
+        }
+
         // A procedure has no name of its own. It is named by the key its module
         // declares it under.
         self.procedure = Procedure(
             description: try container.decodeIfPresent(String.self, forKey: .description),
+            access: access ?? .internal,
             // Absent `parameters:` means an empty signature, not an absent
             // contract. `parameters:`, `receiver:`, `returns:` and `bounds:`
             // are one signature. What a call may pass, which of those it is

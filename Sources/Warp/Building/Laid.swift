@@ -36,7 +36,7 @@ public struct Laid: Sendable {
     // declared by. What a document laid beside them declares is held against
     // this, and a spelling already in it is a spelling that document cannot
     // take.
-    let signatures: [Name: Placed<Signature>]
+    let signatures: [Name: Placed<Declared>]
 
     // The link these rows are numbered against. A compile against them
     // numbers the documents it lays beside them into the same one.

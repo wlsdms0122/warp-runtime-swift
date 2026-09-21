@@ -323,7 +323,21 @@ final class Relocating {
             place: .procedure(row.label.spelling, in: documents[row.origin]),
             loweredTypes: typeRows[row.origin]
         )
-        let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: standing)) }
+        let sends = try row.sends.map { sent in
+            let reached = try self.row(sent.row, in: standing)
+
+            // A procedure a caller brought has no body a compile could read,
+            // so what it sends is held here, where its sends first meet rows.
+            guard table[reached].access.reachesOtherDocuments || table[reached].origin == row.origin else {
+                throw BuildError(
+                    "'\(row.label)' sends '\(table[reached].label)', which is private to the"
+                        + " document that declares it",
+                    at: standing.place
+                )
+            }
+
+            return sent.reaching(reached)
+        }
 
         guard case let .body(body, frame) = row.implementation else {
             guard sends != row.sends else { return row }

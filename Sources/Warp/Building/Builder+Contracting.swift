@@ -41,7 +41,7 @@ extension Builder {
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: Signature]>],
         over types: [Name: Placed<TypeExpression>],
-        among space: [Name: Placed<Signature>],
+        among space: [Name: Placed<Declared>],
         in table: TypeTable
     ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
         // Every contract, answered or not. The entry is what says a name is a
@@ -114,7 +114,7 @@ extension Builder {
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: Signature]>],
         over types: [Name: Placed<TypeExpression>],
-        among space: [Name: Placed<Signature>],
+        among space: [Name: Placed<Declared>],
         in table: TypeTable
     ) throws -> Holding {
         let (type, contract) = (claim.held.type, claim.held.contract)
@@ -169,11 +169,23 @@ extension Builder {
                 )
             }
 
+            // A contract is how a document that never names this declaration
+            // calls it, so a private one backs no claim. Refused where it is
+            // declared, since that is the declaration that cannot stand here.
+            guard witness.held.access.reachesOtherDocuments else {
+                throw BuildError(
+                    "'\(spelling)' is private to its document and backs the claim that '\(type)'"
+                        + " answers '\(contract)'. A contract's procedure is called from any"
+                        + " document, so a private declaration answers none",
+                    at: witness.place
+                )
+            }
+
             // The reason and not a refusal: a refusal renders its own place,
             // and this sentence stands where the pair was leaned on.
             if let reason = answers(
                 signature,
-                as: witness.held,
+                as: witness.held.signature,
                 receiving: type,
                 of: contract,
                 procedure: procedure,

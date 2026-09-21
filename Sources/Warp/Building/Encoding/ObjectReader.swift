@@ -456,6 +456,15 @@ private extension ObjectReader {
         return read
     }
 
+    func access(_ value: Value) throws -> Access {
+        switch try integer(value) {
+        case 0: return .private
+        case 1: return .internal
+        case 2: return .public
+        default: throw ObjectRefused("'access' says none of private, internal and public")
+        }
+    }
+
     func constness(_ value: Value) throws -> Constness {
         switch try integer(value) {
         case 0: return .unstated
@@ -741,6 +750,7 @@ private extension ObjectReader {
         let read = try Judged(
             label: label,
             signature: signature,
+            access: try access(fields.next()),
             constness: try constness(fields.next()),
             isolation: try isolation(fields.next()),
             failing: try failing(fields.next()),

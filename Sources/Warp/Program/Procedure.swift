@@ -25,6 +25,10 @@ public struct Procedure: Sendable {
     public let signature: Signature
     public let implementation: Implementation
 
+    // Who may name this declaration: its own document, the link, or the caller
+    // as well. `internal` where the declaration said nothing.
+    public let access: Access
+
     // What the link derived about this body, where the link has seen it: a
     // closure literal is rewritten by the link to carry both, and the closure
     // value made from it carries them on into a slot that asks. A procedure a
@@ -40,6 +44,7 @@ public struct Procedure: Sendable {
     // MARK: - Initializer
     public init(
         description: String? = nil,
+        access: Access = .internal,
         signature: Signature = Signature(),
         implementation: Implementation,
         constness: Constness = .unstated,
@@ -47,6 +52,7 @@ public struct Procedure: Sendable {
         failing: Failing = .unstated
     ) {
         self.description = description
+        self.access = access
         self.signature = signature
         self.implementation = implementation
         self.constness = constness
@@ -58,12 +64,14 @@ public struct Procedure: Sendable {
     // document can spell.
     public init(
         description: String? = nil,
+        access: Access = .internal,
         signature: Signature = Signature(),
         body: [Statement],
         result: Expression? = nil
     ) {
         self.init(
             description: description,
+            access: access,
             signature: signature,
             implementation: .body(Block(body: body, result: result))
         )

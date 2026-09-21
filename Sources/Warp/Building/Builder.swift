@@ -244,13 +244,13 @@ public struct Builder: Sendable {
     // Every declaration a compiled document made, under the spelling it was
     // declared by and at the place it was written. What a document declares is
     // its own; where it stands among the documents is the caller's order.
-    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Signature>] {
-        var signatures: [Name: Placed<Signature>] = [:]
+    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Declared>] {
+        var signatures: [Name: Placed<Declared>] = [:]
 
         for (position, document) in compiled.enumerated() {
             for (offset, name) in document.declared.enumerated() {
                 signatures[name] = Placed(
-                    document.table[offset].signature,
+                    Declared(signature: document.table[offset].signature, access: document.table[offset].access),
                     at: .procedure(name.spelling, in: document.document),
                     of: position
                 )
@@ -372,7 +372,7 @@ public struct Builder: Sendable {
                 }
 
                 signatures[symbol.declared] = Placed(
-                    symbol.procedure.signature,
+                    Declared(signature: symbol.procedure.signature, access: symbol.procedure.access),
                     at: symbol.place,
                     of: symbol.handed
                 )
@@ -782,6 +782,16 @@ public struct Builder: Sendable {
             )
         }
 
+        // A run starts from outside the link, and only a public declaration
+        // is named from there.
+        guard assembled.table[start].judged.access == .public else {
+            throw BuildError(
+                "entry '\(entry)' is \(assembled.table[start].judged.access.rawValue), and a run starts"
+                    + " only from a public declaration",
+                at: .procedure(entry.spelling, in: assembled.documents[assembled.table[start].origin])
+            )
+        }
+
         // The types of this link, made from what its documents declared and
         // laid down in the order their blocks are. Which types answer which
         // contracts is read across the documents, so the rows a body stands on
@@ -795,11 +805,14 @@ public struct Builder: Sendable {
             standing: Array(compiled.indices),
             numbered: Linkage()
         )
-        let signatures = assembled.rows.reduce(into: [Name: Placed<Signature>]()) { table, entry in
+        let signatures = assembled.rows.reduce(into: [Name: Placed<Declared>]()) { table, entry in
             let origin = assembled.table[entry.value].origin
 
             table[entry.key] = Placed(
-                assembled.table[entry.value].judged.signature,
+                Declared(
+                    signature: assembled.table[entry.value].judged.signature,
+                    access: assembled.table[entry.value].judged.access
+                ),
                 at: .procedure(entry.key.spelling, in: compiled[origin].document),
                 of: origin
             )

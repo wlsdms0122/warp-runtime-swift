@@ -602,6 +602,7 @@ struct Lowering {
                 label: label,
                 origin: slots.origin,
                 signature: procedure.signature,
+                access: .private,
                 constness: procedure.constness,
                 isolation: procedure.isolation,
                 failing: procedure.failing,
@@ -839,6 +840,16 @@ struct Lowering {
         }
 
         let callee = table[row]
+
+        // A private declaration is named from its own document and nowhere
+        // else, and this call stands in the document being lowered.
+        guard callee.access.reachesOtherDocuments || callee.origin == slots.origin else {
+            throw BuildError(
+                "'\(call.selector)' is private to the document that declares it,"
+                    + " and this call stands in another",
+                at: place
+            )
+        }
 
         guard let stands = numbered(slots.origin).call(call.selector) else {
             throw BuildError.unjudged("a call to '\(call.selector)', which the document never asked for", at: place)

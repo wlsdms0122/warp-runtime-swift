@@ -23,7 +23,7 @@ extension Builder {
         claims: [Placed<Claim>],
         contracts: [Name: Placed<[Name: Signature]>],
         over declaredTypes: [Name: Placed<TypeExpression>],
-        among signatures: [Name: Placed<Signature>],
+        among signatures: [Name: Placed<Declared>],
         unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
