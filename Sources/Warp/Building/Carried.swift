@@ -21,6 +21,11 @@ struct Carried: Sendable {
     let table: [Linked]
     let rows: [Name: Int]
 
+    // Where each document's block begins, and the spellings its private
+    // declarations wear, which no table of names holds.
+    let blocks: [Int: Int]
+    let hidden: Set<Name>
+
     // Which row each number a document gave reaches.
     let named: [Int: [Int?]]
 
@@ -41,6 +46,8 @@ struct Carried: Sendable {
     static let none = Carried(
         table: [],
         rows: [:],
+        blocks: [:],
+        hidden: [],
         named: [:],
         numbering: [:],
         closureRows: [:],

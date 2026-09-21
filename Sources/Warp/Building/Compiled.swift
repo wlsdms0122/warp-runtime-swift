@@ -252,7 +252,7 @@ public struct Compiled: Sendable, Declaring {
     // is a name that quietly declares nothing.
     var declares: Set<Reference> {
         Set(
-            declared.map(Reference.procedure)
+            declared.enumerated().filter { offset, _ in table[offset].access.reachesOtherDocuments }.map { _, name in Reference.procedure(name) }
                 + types.keys.map(Reference.type)
                 + constraints.keys.map(Reference.type)
                 + contracts.keys.map(Reference.type)

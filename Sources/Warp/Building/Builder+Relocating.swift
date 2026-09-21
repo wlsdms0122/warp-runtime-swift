@@ -61,8 +61,8 @@ struct Answered: Sendable {
 
     // Which row each of one document's numbers stands for, worked out once per
     // number rather than once per body standing on one.
-    static func answering(_ numbering: Numbering, rows: [Name: Int]) -> [Int?] {
-        numbering.answers(rows: rows).map { answer -> Int? in
+    static func answering(_ numbering: Numbering, rows: [Name: Int], own: Int?) -> [Int?] {
+        numbering.answers(rows: rows, own: own).map { answer -> Int? in
             guard case let .row(row) = answer else { return nil }
 
             return row
@@ -168,6 +168,11 @@ final class Relocating {
     private let rows: [Name: Int]
     private let numbering: [Numbering]
 
+    // Where each document's block begins, and the spellings only private
+    // declarations wear.
+    private let starts: [Int]
+    private let hidden: Set<Name>
+
     // What each document's type numbers turned out to be in this link.
     //
     // Answered once per number rather than at every type met: a name is read
@@ -208,12 +213,16 @@ final class Relocating {
         documents: [Place.Document],
         naming: [Closure.Document],
         numbering: [Numbering],
+        starts: [Int],
+        hidden: Set<Name>,
         typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
         closures: [[Int]],
         loweredTypes: LoweredTypeTable
     ) {
         self.closures = closures
+        self.starts = starts
+        self.hidden = hidden
         self.table = table
         self.spelled = spelled
         self.rows = rows
@@ -247,6 +256,8 @@ final class Relocating {
             documents: assembled.documents,
             naming: assembled.naming,
             numbering: assembled.numbering,
+            starts: assembled.starts,
+            hidden: assembled.hidden,
             typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
             closures: assembled.closures,
@@ -323,21 +334,7 @@ final class Relocating {
             place: .procedure(row.label.spelling, in: documents[row.origin]),
             loweredTypes: typeRows[row.origin]
         )
-        let sends = try row.sends.map { sent in
-            let reached = try self.row(sent.row, in: standing)
-
-            // A procedure a caller brought has no body a compile could read,
-            // so what it sends is held here, where its sends first meet rows.
-            guard table[reached].access.reachesOtherDocuments || table[reached].origin == row.origin else {
-                throw BuildError(
-                    "'\(row.label)' sends '\(table[reached].label)', which is private to the"
-                        + " document that declares it",
-                    at: standing.place
-                )
-            }
-
-            return sent.reaching(reached)
-        }
+        let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: standing)) }
 
         guard case let .body(body, frame) = row.implementation else {
             guard sends != row.sends else { return row }
@@ -358,10 +355,20 @@ final class Relocating {
         switch numbering[standing.origin].row(
             number,
             rows: rows,
+            own: starts[standing.origin],
             closures: closures[standing.origin]
         ) {
         case let .row(row):
             return row
+
+        // A spelling only a private declaration wears is one this document
+        // cannot name: a call from another document and a native's declared
+        // send alike meet it here.
+        case let .unfound(.sent(declared)) where hidden.contains(declared):
+            throw BuildError(
+                "'\(declared)' is called here, and is private to the document that declares it",
+                at: standing.place
+            )
 
         case let .unfound(.sent(declared)):
             throw BuildError(

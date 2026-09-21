@@ -24,6 +24,7 @@ extension Builder {
         contracts: [Name: Placed<[Name: Signature]>],
         over declaredTypes: [Name: Placed<TypeExpression>],
         among signatures: [Name: Placed<Declared>],
+        hidden: Set<Name> = [],
         unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
@@ -55,6 +56,7 @@ extension Builder {
                 asking: contracts,
                 over: declaredTypes,
                 among: signatures,
+                hidden: hidden,
                 in: table
             )
 
@@ -151,7 +153,7 @@ extension Builder {
                     procedure: procedure
                 )
 
-                if let first = claimed[name] {
+                if let first = claimed[name], symbol.procedure.access.reachesOtherDocuments {
                     throw BuildError(
                         "'\(name)' is declared more than once in this link, by"
                             + " \(first.spelled) and \(symbol.spelled). Two declarations"
@@ -160,7 +162,9 @@ extension Builder {
                     )
                 }
 
-                claimed[name] = symbol
+                if symbol.procedure.access.reachesOtherDocuments {
+                    claimed[name] = symbol
+                }
 
                 symbols.append(symbol)
             }

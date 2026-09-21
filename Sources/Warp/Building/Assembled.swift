@@ -35,6 +35,12 @@ struct Assembled: Sendable {
     // Every declared spelling, by row.
     let rows: [Name: Int]
 
+    // Where each document's block begins, by origin; a document's own numbers
+    // answer by it. And the spellings its private declarations wear, which
+    // `rows` does not hold: nothing outside their documents names them.
+    let starts: [Int]
+    let hidden: Set<Name>
+
     // Which row each document's closures took, in the order that document
     // numbers them. A closure is a row like any other and no declared
     // spelling reaches it, so it stands here rather than in `rows`.
@@ -58,6 +64,8 @@ struct Assembled: Sendable {
 
         var table: [Row] = []
         var rows: [Name: Int] = [:]
+        var starts: [Int] = []
+        var hidden: Set<Name> = []
         var closures = [[Int]](repeating: [], count: documents.count)
         var named: [Place.Document] = []
         var naming: [Closure.Document] = []
@@ -77,7 +85,18 @@ struct Assembled: Sendable {
             let start = table.count
             let document = documents[origin].document
 
+            starts.append(start)
+
             for (offset, name) in documents[origin].declared.enumerated() {
+                // A private declaration takes no spelling from the link: its
+                // own document reaches it by the block, so two documents may
+                // each declare one under one spelling.
+                guard documents[origin].table[offset].access.reachesOtherDocuments else {
+                    hidden.insert(name)
+
+                    continue
+                }
+
                 // A name two documents declare is a table with no answer for
                 // that name, so it is refused where the table is made rather
                 // than answered by whichever was laid down last. Documents
@@ -115,6 +134,8 @@ struct Assembled: Sendable {
         self.naming = naming
         self.spelled = ClosureRows(naming: naming, numbering: numbering, closures: closures, documents: named)
         self.rows = rows
+        self.starts = starts
+        self.hidden = hidden
         self.closures = closures
         self.numbering = numbering
         self.typeNumbering = typeNumbering

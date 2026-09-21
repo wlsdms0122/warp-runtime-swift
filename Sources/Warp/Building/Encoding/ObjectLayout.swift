@@ -14,7 +14,7 @@ enum ObjectLayout {
     // The format, which moves when the layout moves and for no other reason.
     // Which Warp wrote an object is not written, because what an object holds
     // is the language's and any implementation of it reads any other's.
-    static let format = 1
+    static let format = 2
 
     // The key an object says its format under, which is also what tells an
     // object from a document at the door: a document says `warp`.

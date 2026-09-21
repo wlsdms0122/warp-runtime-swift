@@ -58,6 +58,15 @@ struct Lowering {
     // `rows` rather than in it.
     private(set) var closureRows: [Int: [Int]] = [:]
 
+    // Where each document's block begins. A document's own numbers answer by
+    // it.
+    private(set) var blocks: [Int: Int] = [:]
+
+    // The spellings of the private declarations held so far. Not in `rows`,
+    // since nothing outside their documents names them; here so a call that
+    // reaches one from outside is refused as what it is.
+    private(set) var hidden: Set<Name> = []
+
     // How many closures each declaration has been lowered so far, by the
     // document that declared it. A closure's number is its declaration's start
     // plus this, so nesting counts with the rest: a closure inside a closure is
@@ -86,6 +95,8 @@ struct Lowering {
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
+        self.blocks = carried.blocks
+        self.hidden = carried.hidden
         self.numbering = carried.numbering
         self.variables = carried.variables
         self.closureRows = carried.closureRows
@@ -126,9 +137,19 @@ struct Lowering {
     ) -> Range<Int> {
         let start = table.count
 
+        // A private declaration takes no spelling from the link: its own
+        // document reaches it by the block, and nothing else reaches it.
         for (offset, row) in block.enumerated() {
+            guard row.access.reachesOtherDocuments else {
+                hidden.insert(row.label)
+
+                continue
+            }
+
             rows[row.label] = start + offset
         }
+
+        blocks[origin] = start
 
         closureRows[origin] = lifted.indices.map { offset in start + block.count + offset }
 
@@ -183,6 +204,22 @@ struct Lowering {
         standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
 
         table[row] = Linked(declared, implementation: .body(body, slots.frame), sends: declared.sends)
+    }
+
+    // A document's own declarations by row: its block, which its declarations
+    // open and its lifted closures close.
+    func own(_ origin: Int) -> [Name: Int] {
+        guard let start = blocks[origin] else { return [:] }
+
+        var rows: [Name: Int] = [:]
+        var index = start
+
+        while index < table.count, table[index].origin == origin, table[index].nth == nil {
+            rows[table[index].label] = index
+            index += 1
+        }
+
+        return rows
     }
 
     // Lowers one expression read against a frame of constants, as a constant's
@@ -835,15 +872,18 @@ struct Lowering {
         label: Name,
         at place: Place
     ) throws -> CallOperation {
-        guard let row = rows[call.selector] else {
-            throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
+        guard let stands = numbered(slots.origin).call(call.selector) else {
+            throw BuildError.unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
         }
 
-        let callee = table[row]
+        // The document's own declaration by its block, another document's by
+        // its spelling. A spelling only a private declaration wears is one
+        // this document cannot name.
+        guard let row = reached(stands, on: slots) else {
+            guard hidden.contains(call.selector) else {
+                throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
+            }
 
-        // A private declaration is named from its own document and nowhere
-        // else, and this call stands in the document being lowered.
-        guard callee.access.reachesOtherDocuments || callee.origin == slots.origin else {
             throw BuildError(
                 "'\(call.selector)' is private to the document that declares it,"
                     + " and this call stands in another",
@@ -851,9 +891,7 @@ struct Lowering {
             )
         }
 
-        guard let stands = numbered(slots.origin).call(call.selector) else {
-            throw BuildError.unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
-        }
+        let callee = table[row]
 
         return try CallOperation(
             handing: { name in
@@ -935,6 +973,7 @@ struct Lowering {
         guard case let .row(row) = numbered(slots.origin).row(
             number,
             rows: rows,
+            own: blocks[slots.origin],
             closures: closureRows[slots.origin] ?? []
         ) else {
             return nil

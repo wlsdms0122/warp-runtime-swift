@@ -120,6 +120,8 @@ struct Compiling {
         Carried(
             table: lowering.table,
             rows: lowering.rows,
+            blocks: lowering.blocks,
+            hidden: lowering.hidden,
             named: named,
             numbering: lowering.numbering,
             closureRows: lowering.closureRows,
@@ -192,7 +194,8 @@ struct Compiling {
     mutating func answering(_ origin: Int) {
         named[origin] = Answered.answering(
             lowering.numbering[origin] ?? Numbering(sends: [], declared: []),
-            rows: lowering.rows
+            rows: lowering.rows,
+            own: lowering.blocks[origin]
         )
     }
 
@@ -215,14 +218,23 @@ struct Compiling {
             guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
                 unfound,
                 rows: lowering.rows,
+                own: lowering.blocks[origin],
                 closures: []
             ) else {
                 continue
             }
 
+            guard lowering.hidden.contains(declared) else {
+                throw BuildError(
+                    "'\(declared)' is sent by this document, and no document laid"
+                        + " beside it declares one",
+                    at: Place(in: documents[origin])
+                )
+            }
+
             throw BuildError(
-                "'\(declared)' is sent by this document, and no document laid"
-                    + " beside it declares one",
+                "'\(declared)' is sent by this document, and is private to the document"
+                    + " that declares it",
                 at: Place(in: documents[origin])
             )
         }
@@ -300,12 +312,14 @@ struct Compiling {
     }
 
     // One document's reading. Which names hold boxes is the document's own, so
-    // a context is made for the document whose body is being read.
-    func context(reading variables: Set<Name>) -> TypingContext {
+    // a context is made for the document whose body is being read, and so are
+    // the declarations it may name: its own by its block, private ones
+    // included, and every other document's by the spelling the link holds.
+    func context(reading variables: Set<Name>, of origin: Int) -> TypingContext {
         TypingContext(
             types: types,
             linked: lowering.table,
-            rows: lowering.rows,
+            rows: lowering.rows.merging(lowering.own(origin)) { _, own in own },
             answers: answers,
             const: const,
             isolated: isolated,

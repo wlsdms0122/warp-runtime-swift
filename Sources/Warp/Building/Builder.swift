@@ -248,7 +248,7 @@ public struct Builder: Sendable {
         var signatures: [Name: Placed<Declared>] = [:]
 
         for (position, document) in compiled.enumerated() {
-            for (offset, name) in document.declared.enumerated() {
+            for (offset, name) in document.declared.enumerated() where document.table[offset].access.reachesOtherDocuments {
                 signatures[name] = Placed(
                     Declared(signature: document.table[offset].signature, access: document.table[offset].access),
                     at: .procedure(name.spelling, in: document.document),
@@ -361,7 +361,10 @@ public struct Builder: Sendable {
         }
 
         for symbols in holding {
-            for symbol in symbols {
+            // A private declaration takes no spelling from the link, so it is
+            // neither held to a spelling another document took nor in the
+            // space another document resolves in.
+            for symbol in symbols where symbol.procedure.access.reachesOtherDocuments {
                 if let first = signatures[symbol.declared] {
                     throw BuildError(
                         "'\(symbol.declared)' is declared by \(first.spelled) and by"
@@ -390,6 +393,9 @@ public struct Builder: Sendable {
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
+            hidden: laid.carried.hidden.union(holding.flatMap { symbols in
+                symbols.filter { symbol in !symbol.procedure.access.reachesOtherDocuments }.map(\.declared)
+            }),
             unsettled: fulfillment
         )
 
@@ -463,15 +469,19 @@ public struct Builder: Sendable {
         var variables: [Name: Value] = [:]
 
         func context() -> TypingContext {
-            compiling.context(reading: reading)
+            compiling.context(reading: reading, of: origin)
         }
 
+        // This document's declarations by its block: what it declares is its
+        // own whoever else may name it.
         func row(of symbol: Symbol) throws -> Int {
-            guard let row = compiling.lowering.rows[symbol.declared] else {
+            guard let start = compiling.lowering.blocks[origin],
+                  let index = holding.firstIndex(where: { held in held.declared == symbol.declared })
+            else {
                 throw BuildError("'\(symbol.declared)' has no row in the table", at: symbol.place)
             }
 
-            return row
+            return start + index
         }
 
         // The names in scope before a body's first statement: its parameters,
@@ -784,7 +794,7 @@ public struct Builder: Sendable {
 
         // A run starts from outside the link, and only a public declaration
         // is named from there.
-        guard assembled.table[start].judged.access == .public else {
+        guard assembled.table[start].judged.access.reachesCaller else {
             throw BuildError(
                 "entry '\(entry)' is \(assembled.table[start].judged.access.rawValue), and a run starts"
                     + " only from a public declaration",
@@ -823,7 +833,8 @@ public struct Builder: Sendable {
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
-            among: signatures
+            among: signatures,
+            hidden: assembled.hidden
         )
         let types = lowered.types
 
