@@ -245,7 +245,7 @@ public struct TypeReader: Decodable {
 
             let name = try named(text)
 
-            return Self.builtins[name] ?? .named(name)
+            return TypeExpression.keywords[name] ?? .named(name)
         }
 
         let head = String(text[text.startIndex ..< open])
@@ -519,19 +519,6 @@ public struct TypeReader: Decodable {
 
         return excluding ? .upTo(bound) : .through(bound)
     }
-
-    private static let builtins: [Name: TypeExpression] = [
-        "any": .any,
-        // A declaration a call never comes back from. Written out loud because
-        // a procedure that always refuses is a procedure an author may declare.
-        "never": .never,
-        "null": .null,
-        "bool": .bool,
-        "int": .int,
-        "double": .double,
-        "string": .string,
-        "procedure": .procedure(nil)
-    ]
 
 }
 
