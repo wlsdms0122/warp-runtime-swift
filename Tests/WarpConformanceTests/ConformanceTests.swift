@@ -793,7 +793,8 @@ extension Case.Program {
             // because they are declarations. What arrives is read as a body, and
             // the implementation is swapped for the one the case described: a body
             // is what a document can write and a host procedure is what it cannot.
-            let declared = try loader.load(vocabulary.module, identity: try Identity.of(vocabulary.module))
+            let identity = try Identity.of(vocabulary.module)
+            let declared = try loader.load(vocabulary.module, identity: identity)
 
             let brought = try Module(
                 types: declared.types,
@@ -806,9 +807,10 @@ extension Case.Program {
                             throw ConformanceError("'\(one.name)' was asked for and did not read")
                         }
 
-                        return (one.name, try supplied(one, declaring: read.signature))
+                        return (one.name, try supplied(one, declaring: read))
                     }
-                )
+                ),
+                identity: identity
             )
 
             return [brought]
@@ -819,10 +821,11 @@ extension Case.Program {
     // The host's side of one asked-for procedure. Which door it answers through
     // is the claim it makes: the one that answers without running is handed no
     // way to reach outside, and the other is.
-    private func supplied(_ one: Case.Supplied, declaring signature: Signature) throws -> Procedure {
+    private func supplied(_ one: Case.Supplied, declaring read: Procedure) throws -> Procedure {
         Procedure(
-            signature: signature,
-            implementation: door(one, reading: try places(signature.parameters.count))
+            access: read.access,
+            signature: read.signature,
+            implementation: door(one, reading: try places(read.signature.parameters.count))
         )
     }
 
