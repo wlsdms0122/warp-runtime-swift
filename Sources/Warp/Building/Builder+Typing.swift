@@ -60,21 +60,40 @@ extension Builder {
             ask: .reading
         )
 
-        return join(walked.flow.answered, walked.reading)
+        return walked.flow.answered.map(\.reading).reduce(walked.reading) { joined, answered in join(joined, answered) }
     }
 
-    // What a body answers, held to the `returns` written beside it. A
-    // declaration and a closure literal each write both in one document, so
-    // each asks here rather than working the question out again further on.
+    // What a body answers, held to the `returns` written beside it: the
+    // result it reads and every `return` that carried something out, each
+    // at its own place. A declaration and a closure literal each write both
+    // in one document, so each asks here rather than working the question
+    // out again further on.
     //
     // A reading that opens to `any`, which is what applying a value reaches,
-    // stands and is settled where the value arrives. The refusal stands where
-    // the author can act on it: at the `result` when one is written, and at
-    // the `returns` when the body answers nothing at all.
+    // stands and is settled where the value arrives.
+    private func held(
+        reading read: LoweredType,
+        answered: [(reading: LoweredType, place: Place)],
+        to returns: TypeExpression?,
+        resulting: Bool,
+        at place: Place,
+        in table: LoweredTypeTable,
+        fulfillment: Fulfillment?
+    ) throws {
+        for one in answered {
+            try held(one.reading, to: returns, at: one.place, in: table, fulfillment: fulfillment)
+        }
+
+        try held(read, to: returns, at: place.part(resulting ? .result : .returns), in: table, fulfillment: fulfillment)
+    }
+
+    // One answer, held to the `returns`. The refusal stands where the author
+    // can act on it: at the `result` when one is written, at the `returns`
+    // when the body answers nothing at all, and at a `return` for what it
+    // carries.
     func held(
         _ read: LoweredType,
         to returns: TypeExpression?,
-        resulting: Bool,
         at place: Place,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment?
@@ -87,7 +106,7 @@ extension Builder {
             throw BuildError(
                 "answers \(read.rendered(in: table)), and its"
                     + " declaration promises \(returns)",
-                at: place.part(resulting ? .result : .returns)
+                at: place
             )
         }
 
@@ -104,7 +123,7 @@ extension Builder {
             fulfillment: fulfillment,
             at: place
         ) {
-            throw BuildError(refusal, at: place.part(resulting ? .result : .returns))
+            throw BuildError(refusal, at: place)
         }
     }
 
@@ -168,7 +187,8 @@ extension Builder {
         )
 
         try held(
-            join(inner.flow.answered, inner.reading),
+            reading: inner.reading,
+            answered: inner.flow.answered,
             to: returns,
             resulting: block.result != nil,
             at: place,
@@ -973,25 +993,19 @@ extension Builder {
         // Whether every way through leaves.
         var leaves = false
 
-        // What a `return` inside here carried out of the procedure. Nothing
-        // absorbs one (a loop ends its rounds and an attempt its body, and
-        // neither is what a `return` reaches) so this only ever gathers on the
-        // way up, and what it gathers is the other half of what the procedure
-        // answers: the result the block reads is one way out, and every
-        // `return` is another.
+        // What every `return` inside here carried out of the procedure, each
+        // with where it was written. Nothing absorbs one (a loop ends its
+        // rounds and an attempt its body, and neither is what a `return`
+        // reaches) so this only ever gathers on the way up, and what it
+        // gathers is the other half of what the procedure answers: the result
+        // the block reads is one way out, and every `return` is another. Kept
+        // apart rather than joined, so each is held to the declaration on its
+        // own: two that disagree join to `any`, and `any` fits everything.
         //
         // Beside `escaped` rather than folded into it: an escaped write is
         // about a name the body around this one holds, and this is about the
         // value the procedure hands its caller.
-        var answered: LoweredType?
-    }
-
-    // Two answers, either of which may not be there. The join, said once, for
-    // the places that gather what a body hands back.
-    private func joined(_ left: LoweredType?, _ right: LoweredType?) -> LoweredType? {
-        guard let right else { return left }
-
-        return join(left, right)
+        var answered: [(reading: LoweredType, place: Place)] = []
     }
 
     // The one statement of how a write lands. On what an earlier write left,
@@ -1187,7 +1201,7 @@ extension Builder {
                 guard leave.reach == .procedure else { return flowed }
 
                 var answering = flowed
-                answering.answered = joined(flowed.answered, carried ?? .null)
+                answering.answered = flowed.answered + [(carried ?? .null, place)]
 
                 return answering
             }
@@ -1494,7 +1508,8 @@ extension Builder {
                 }
 
                 try held(
-                    join(inner.flow.answered, inner.reading),
+                    reading: inner.reading,
+                    answered: inner.flow.answered,
                     to: procedure.signature.returns,
                     resulting: written.result != nil,
                     at: place.part(.closure),
@@ -2252,7 +2267,7 @@ extension Builder {
                 flowed.escaped[name] = join(flowed.escaped[name], type)
             }
 
-            flowed.answered = joined(flowed.answered, inner.flow.answered)
+            flowed.answered += inner.flow.answered
 
             // A statement no run comes back from ends the ways through this
             // body. What was written on the way to it leaves with it. One
@@ -2439,7 +2454,7 @@ extension Builder {
             flowed.escaped[name] = join(flowed.escaped[name], type)
         }
 
-        flowed.answered = joined(flowed.answered, second.answered)
+        flowed.answered += second.answered
 
         return second.leaves ? leaving(flowed) : flowed
     }
@@ -2458,7 +2473,7 @@ extension Builder {
             }
         }
 
-        flowed.answered = joined(taken.answered, declined.answered)
+        flowed.answered = taken.answered + declined.answered
 
         switch (taken.leaves, declined.leaves) {
         // A leaving flow holds its writes as escaped alone, gathered above.
