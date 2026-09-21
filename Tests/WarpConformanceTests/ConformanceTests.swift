@@ -175,7 +175,7 @@ struct ConformanceTests {
         // document that does not read is the answer to this question and a
         // vocabulary that does not read is a case nobody can ask.
         do {
-            module = try Loader().load(sut.document, identity: nil)
+            module = try Loader().load(sut.document, identity: try Identity.of(sut.document))
         } catch {
             return .load
         }
@@ -790,7 +790,7 @@ extension Case.Program {
     // vocabulary it asked for, so building it is the case's own answer and not
     // a runner's.
     func modules() async throws -> [Module] {
-        try await brought + beside + [try Loader().load(document, identity: nil)] + Module.standard
+        try await brought + beside + [try Loader().load(document, identity: try Identity.of(document))] + Module.standard
     }
 
     // The documents the case laid beside its program, read the way the
@@ -800,7 +800,7 @@ extension Case.Program {
         get throws {
             try documents.map { document in
                 do {
-                    return try Loader().load(document, identity: nil)
+                    return try Loader().load(document, identity: try Identity.of(document))
                 } catch {
                     throw ConformanceError("a document laid beside the program does not read: \(error)")
                 }
@@ -821,7 +821,7 @@ extension Case.Program {
             // because they are declarations. What arrives is read as a body, and
             // the implementation is swapped for the one the case described: a body
             // is what a document can write and a host procedure is what it cannot.
-            let declared = try loader.load(vocabulary.module, identity: nil)
+            let declared = try loader.load(vocabulary.module, identity: try Identity.of(vocabulary.module))
 
             let brought = try Module(
                 types: declared.types,
