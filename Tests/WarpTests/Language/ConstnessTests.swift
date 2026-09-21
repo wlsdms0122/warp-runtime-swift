@@ -143,6 +143,7 @@ struct ConstnessTests {
             procedures: [
                 "asking": asking,
                 entryName: Procedure(
+                    access: .public,
                     body: [Statement(binding: .constant("given"), expression: .closure(reading))],
                     result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
                 )
@@ -165,6 +166,7 @@ struct ConstnessTests {
             procedures: [
                 "asking": asking,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("answering"),
@@ -210,6 +212,7 @@ struct ConstnessTests {
             procedures: [
                 "asking": asking,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .variable("answering", declared: .procedure(Signature(returns: .string), .const)),
@@ -252,6 +255,7 @@ struct ConstnessTests {
             procedures: [
                 "asking": asking,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .variable("answering"),
@@ -302,6 +306,7 @@ struct ConstnessTests {
                 "asking": asking,
                 "relaying": relaying,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("answering"),
@@ -351,7 +356,7 @@ struct ConstnessTests {
                 then: [Statement(binding: .constant("kept"), expression: .literal(.int(1)))],
                 else: nil
             )],
-            procedures: [entryName: Procedure(body: [], result: reference("standing"))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: reference("standing"))]
         )
 
         // When / Then
@@ -368,6 +373,7 @@ struct ConstnessTests {
             procedures: [
                 "asking": asking,
                 entryName: Procedure(
+                    access: .public,
                     body: [Statement(binding: .constant("given"), expression: .closure(body))],
                     result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
                 )

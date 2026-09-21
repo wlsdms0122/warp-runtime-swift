@@ -181,7 +181,7 @@ struct CallTests {
         // not a cycle oracle); runaway calls end by caller cancellation, which
         // must propagate through the call chain
         let module = try loader.loadDocument([
-            "procedures": ["loopy": ["body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
+            "procedures": ["loopy": ["access": "public", "body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])
         let image = try await Builder().build([module], entry: "loopy")
         let sut = Executor()

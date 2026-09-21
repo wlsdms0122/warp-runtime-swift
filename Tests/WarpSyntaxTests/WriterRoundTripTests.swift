@@ -42,7 +42,7 @@ struct WriterRoundTripTests {
 
         for (name, expression) in constructs {
             let module = try Module(
-                procedures: [entryName: Procedure(body: [Statement(binding: .constant(name), expression: expression)])]
+                procedures: [entryName: Procedure(access: .public, body: [Statement(binding: .constant(name), expression: expression)])]
             )
 
             // When
@@ -61,7 +61,7 @@ struct WriterRoundTripTests {
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",

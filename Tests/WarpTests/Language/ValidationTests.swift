@@ -28,6 +28,7 @@ struct ValidationTests {
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("got"), expression: .block(Block(
                                     body: [statement],
@@ -59,6 +60,7 @@ struct ValidationTests {
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .assignment([.key("limit")]), expression: .literal(.int(9)))
                         ]
@@ -80,6 +82,7 @@ struct ValidationTests {
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [Statement(binding: .constant("got"), expression: expression)],
                         result: reference("limit")
                     )
@@ -110,7 +113,7 @@ struct ValidationTests {
                     "apply": .closure(procedure),
                     "limit": .literal(.int(3))
                 ],
-                procedures: [entryName: Procedure(body: [])]
+                procedures: [entryName: Procedure(access: .public, body: [])]
             )
         }
 
@@ -139,7 +142,7 @@ struct ValidationTests {
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
-                procedures: [entryName: Procedure(body: [])],
+                procedures: [entryName: Procedure(access: .public, body: [])],
                 identity: Identity([0x01])
             )
         }
@@ -346,6 +349,7 @@ struct ValidationTests {
                 imports: claimed,
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("counted"), expression: .call(Call(
                                     receiver: .literal(.array([.int(1)])),
@@ -370,6 +374,7 @@ struct ValidationTests {
                 imports: ["std.math.minus"],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("counted"), expression: .call(Call(
                                     receiver: .literal(.array([.int(1)])),
@@ -398,6 +403,7 @@ struct ValidationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("counted"), expression: .call(Call(
                                 receiver: .literal(.array([.int(1)])),
@@ -419,6 +425,7 @@ struct ValidationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "greet"))
                         )
@@ -441,6 +448,7 @@ struct ValidationTests {
             imports: [],
             procedures: [
                 "wallet.pay": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("charged"), expression: .call(Call(selector: "wallet.fee"))
                         )
@@ -475,6 +483,7 @@ struct ValidationTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [Statement(binding: .constant("held"), expression: .literal(carried))]
                     )
                 ]
@@ -486,6 +495,7 @@ struct ValidationTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("held"), expression: .closure(Procedure(body: []))
                             )

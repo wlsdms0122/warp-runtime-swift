@@ -41,6 +41,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("store.Task")),
                     body: [],
                     result: .call(Call(
@@ -106,6 +107,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("Limit")),
                     body: [],
                     result: .literal(.int(1))
@@ -140,6 +142,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("one.Limit")),
                     body: [],
                     result: .literal(.int(1))
@@ -160,7 +163,7 @@ struct DeclaredSpellingTests {
         let one = try Module(
             types: ["Limit": .int],
             procedures: [
-                entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
@@ -195,6 +198,7 @@ struct DeclaredSpellingTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(
@@ -218,6 +222,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
@@ -256,6 +261,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("Limit")),
                     body: [],
                     result: .literal(.int(3))
@@ -277,6 +283,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["absent": Parameter(type: .any, default: .null)]
                     ),
@@ -304,7 +311,7 @@ struct DeclaredSpellingTests {
         let membership = try Module(
             constraints: ["Limit": [.int]],
             procedures: [
-                entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let type = try Module(
@@ -343,6 +350,7 @@ struct DeclaredSpellingTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .string),
                     body: [
                         Statement(binding: .constant("kept"), expression: .call(Call(
@@ -368,6 +376,7 @@ struct DeclaredSpellingTests {
             constraints: ["Numeric": [.string]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
@@ -393,6 +402,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
@@ -417,6 +427,7 @@ struct DeclaredSpellingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(

@@ -161,6 +161,7 @@ struct NotationTests {
         let module = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["procedure": Parameter(type: .bool)]),
                     body: [
                         Statement(expression: .conditional(
@@ -320,6 +321,7 @@ struct NotationTests {
         try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
                     body: [
                         Statement(expression: .conditional(

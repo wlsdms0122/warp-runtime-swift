@@ -31,7 +31,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
+            [try Module(procedures: ["greet": procedure.public]), .shouting] + Module.standard,
             entry: "greet"
         )
         let outputs = try await Executor().run(image)
@@ -83,7 +83,7 @@ struct SwiftAuthoringTests {
         // one, and the bundles that bundle leans on. The control flow beside it
         // needs nothing.
         let image = try await builder.build(
-            [try Module(procedures: ["entry": procedure])]
+            [try Module(procedures: ["entry": procedure.public])]
                 + Module.logic + Module.math + Module.collection + Module.foundation,
             entry: "entry"
         )
@@ -115,7 +115,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
+            [try Module(procedures: ["greet": procedure.public]), .shouting] + Module.standard,
             entry: "greet"
         )
         let outputs = try await Executor().run(image)
@@ -164,7 +164,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["speak": procedure, "echo": echo]), .shouting] + Module.standard,
+            [try Module(procedures: ["speak": procedure.public, "echo": echo]), .shouting] + Module.standard,
             entry: "speak"
         )
         let outputs = try await Executor().run(image)

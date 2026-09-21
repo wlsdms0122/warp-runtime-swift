@@ -74,6 +74,7 @@ struct RangeTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["level": Parameter(type: .ranged(.whole(from: 0, to: .through(255))))]
                     ),
@@ -106,6 +107,7 @@ struct RangeTests {
                     result: .literal(.null)
                 ),
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         selector: "paint",
@@ -129,6 +131,7 @@ struct RangeTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "level": Parameter(
@@ -157,6 +160,7 @@ struct RangeTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["level": Parameter(type: .ranged(.whole(from: 9, to: .through(1))))]
                     ),
@@ -182,6 +186,7 @@ struct RangeTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(
                             parameters: [
                                 "level": Parameter(
@@ -228,6 +233,7 @@ struct RangeTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["value": Parameter(type: .named("std.byte"))]
                     ),
@@ -253,6 +259,7 @@ struct RangeTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["level": Parameter(type: .ranged(.whole(from: -10, to: .through(10))))]
                     ),
@@ -280,6 +287,7 @@ struct RangeTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["level": Parameter(type: .ranged(.whole(from: 0, to: .through(255))))]
                     ),

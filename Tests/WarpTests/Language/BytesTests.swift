@@ -177,6 +177,7 @@ struct BytesTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["data": Parameter(type: .bytes)]
                     ),
@@ -237,6 +238,7 @@ struct BytesTests {
             let sut = try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(
                             parameters: ["data": Parameter(type: .bytes)]
                         ),
@@ -263,6 +265,7 @@ struct BytesTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["data": Parameter(type: .any)]
                     ),
@@ -292,6 +295,7 @@ struct BytesTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["data": Parameter(type: .bytes)]
                     ),
@@ -330,6 +334,7 @@ struct BytesTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [],
                         result: .call(Call(
                             receiver: .literal(receiver),
@@ -360,6 +365,7 @@ struct BytesTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         receiver: .literal(.bytes([104])),
@@ -391,6 +397,7 @@ struct BytesTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         selector: "keep",
@@ -467,6 +474,7 @@ struct BytesTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         selector: "keep",

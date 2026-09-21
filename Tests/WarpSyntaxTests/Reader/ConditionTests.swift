@@ -166,7 +166,7 @@ struct ConditionTests {
         Folding(
             bindings: bindings,
             in: try await Builder().build(
-                [try Module(procedures: [entryName: Procedure(body: [], result: .literal(.null))])]
+                [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
                     + Module.standard,
                 entry: entryName
             )

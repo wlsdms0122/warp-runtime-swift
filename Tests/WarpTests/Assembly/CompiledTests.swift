@@ -26,8 +26,8 @@ struct CompiledTests {
         // Given. Two entries, neither reaching the other.
         let sut = try Module(
             procedures: [
-                "app.here": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "app.there": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "app.here": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "app.there": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
         )
 
@@ -44,7 +44,7 @@ struct CompiledTests {
         // Given. A declaration nothing reaches, calling a procedure nobody declares.
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
                 "app.stray": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
@@ -63,7 +63,7 @@ struct CompiledTests {
     func reachIsStillTheEntrysOwn() async throws {
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
                 "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
         )
@@ -77,7 +77,7 @@ struct CompiledTests {
     @Test("an entry no module declares is refused by the link and not by the compile")
     func anUnknownEntryIsTheLinksRefusal() async throws {
         let sut = try Module(
-            procedures: [entryName: Procedure(body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
         )
 
         let compiled = try await compiled([sut] + Module.standard)
@@ -185,6 +185,7 @@ struct CompiledTests {
             constants: ["held": .call(Call(selector: "a.answer"))],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .reference([.key("held")])
@@ -208,7 +209,7 @@ struct CompiledTests {
         let naming = try Module(
             types: ["z.Wraps": .named("a.Held"), "z.Also": .named("a.Held")],
             procedures: [
-                entryName: Procedure(signature: Signature(returns: .named("z.Wraps")), body: [], result: .literal(.int(1)))
+                entryName: Procedure(access: .public, signature: Signature(returns: .named("z.Wraps")), body: [], result: .literal(.int(1)))
             ]
         )
         let held = try Module(types: ["a.Held": .int], procedures: [:])
@@ -301,6 +302,7 @@ struct CompiledTests {
             program: try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(returns: .string),
                         body: [
                             Statement(
@@ -405,6 +407,7 @@ struct CompiledTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("bank.Account")),
                     body: [],
                     result: .cast(
@@ -609,6 +612,7 @@ struct CompiledTests {
             constants: ["held": .call(Call(selector: "a.answer"))],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .reference([.key("held")])
@@ -776,6 +780,7 @@ struct CompiledTests {
         let walking = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["items": Parameter(type: .array(.int))],
                         returns: .int
@@ -865,6 +870,7 @@ struct CompiledTests {
                 types: ["bank.Account": .record(["balance": .int])],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [],
                         result: .cast(
                             .record(["balance": .literal(.int(7))]),
@@ -920,6 +926,7 @@ struct CompiledTests {
                 ],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(
                                 binding: .constant("account"),
@@ -992,7 +999,7 @@ struct CompiledTests {
             ),
             try Module(
                 procedures: [
-                    entryName: Procedure(body: [], result: .call(Call(selector: "b.asks"))),
+                    entryName: Procedure(access: .public, body: [], result: .call(Call(selector: "b.asks"))),
                     "b.asks": Procedure(
                         signature: Signature(returns: .int),
                         body: [],

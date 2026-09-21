@@ -28,6 +28,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .bool),
                     body: [],
                     result: .call(Call(
@@ -54,6 +55,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
@@ -80,6 +82,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["left": Parameter(type: .any)],
                         returns: .bool
@@ -118,6 +121,7 @@ struct ConstraintTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(
@@ -150,6 +154,7 @@ struct ConstraintTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
@@ -183,6 +188,7 @@ struct ConstraintTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -215,7 +221,7 @@ struct ConstraintTests {
                     body: [],
                     result: .literal(.null)
                 ),
-                entryName: Procedure(signature: Signature(), body: [], result: .literal(.int(1)))
+                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -244,6 +250,7 @@ struct ConstraintTests {
                         result: .literal(.int(1))
                     ),
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(returns: .int),
                         body: [],
                         result: .call(Call(selector: "keep", arguments: ["items": .literal(.array([element]))]))
@@ -267,7 +274,7 @@ struct ConstraintTests {
         // Given
         let sut = try Module(
             constraints: ["A": [.int], "B": [.string], "Loop": [.composition(["A", "B"])]],
-            procedures: [entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
         )
 
         // When / Then
@@ -286,6 +293,7 @@ struct ConstraintTests {
             constraints: ["A": [.int, .string], "B": [.string]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .composition(["A", "B"])),
                     body: [],
                     result: .literal(.int(1))
@@ -308,6 +316,7 @@ struct ConstraintTests {
             constraints: ["A": [.int, .string], "B": [.string]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -341,6 +350,7 @@ struct ConstraintTests {
                     result: .literal(.int(1))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .composition(["A"]))], returns: .int),
                     body: [],
                     result: .call(Call(selector: "flag", arguments: ["on": reference("it")]))
@@ -362,6 +372,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])),
                     body: [],
                     result: .record(["a": .literal(.int(1)), "b": .literal(.string("x"))])
@@ -390,6 +401,7 @@ struct ConstraintTests {
                     result: .literal(.int(1))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .named("X"))], returns: .int),
                     body: [],
                     result: .call(Call(selector: "keep", arguments: ["of": reference("it")]))
@@ -413,6 +425,7 @@ struct ConstraintTests {
                     result: .literal(.int(1))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(selector: "app.tell", arguments: ["it": .literal(.null)]))
@@ -443,6 +456,7 @@ struct ConstraintTests {
                     result: .array([.literal(.int(1))])
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .array(.int)),
                     body: [
                         Statement(
@@ -481,6 +495,7 @@ struct ConstraintTests {
                     result: .cast(.record(["last": .literal(.string("x"))]), as: .named("bank.Card"), optional: false)
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .string),
                     body: [
                         Statement(
@@ -517,6 +532,7 @@ struct ConstraintTests {
                     result: .literal(.int(1))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(selector: "app.tell", arguments: ["it": .literal(.null)]))
@@ -543,7 +559,7 @@ struct ConstraintTests {
                     body: [],
                     result: .literal(.string("a handle"))
                 ),
-                entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -572,7 +588,7 @@ struct ConstraintTests {
                     )
                 ]
             ],
-            procedures: [entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
         )
 
         // When / Then
@@ -602,7 +618,7 @@ struct ConstraintTests {
                     body: [],
                     result: .literal(.int(1))
                 ),
-                entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -629,7 +645,7 @@ struct ConstraintTests {
                         body: [],
                         result: .literal(.int(1))
                     ),
-                    entryName: Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                 ]
             )
         }
@@ -661,6 +677,7 @@ struct ConstraintTests {
                         result: .literal(.int(1))
                     ),
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(returns: .int),
                         body: [],
                         result: .call(Call(selector: "keep", arguments: ["left": .literal(argument)]))
@@ -697,6 +714,7 @@ struct ConstraintTests {
                     result: .literal(.null)
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
@@ -726,6 +744,7 @@ struct ConstraintTests {
             constraints: ["Scalar": [.int, .string]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -750,6 +769,7 @@ struct ConstraintTests {
             constraints: ["Nothing": []],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -780,6 +800,7 @@ struct ConstraintTests {
                     result: reference("value")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -811,6 +832,7 @@ struct ConstraintTests {
             constraints: ["Scalar": [.int, .string]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -840,6 +862,7 @@ struct ConstraintTests {
                 types: types,
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(),
                         body: [],
                         result: .literal(.int(1))
@@ -860,6 +883,7 @@ struct ConstraintTests {
             types: ["Tree": .record(["children": .array(.named("Tree"))])],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -881,6 +905,7 @@ struct ConstraintTests {
                 constraints: ["Loop": [member]],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(),
                         body: [],
                         result: .literal(.int(1))
@@ -916,6 +941,7 @@ struct ConstraintTests {
                     result: .literal(.null)
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -940,6 +966,7 @@ struct ConstraintTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(
                             parameters: [
                                 "level": Parameter(type: .double, candidates: candidates)
@@ -974,6 +1001,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "level": Parameter(type: .double, candidates: ["0.0", "1.5"])
@@ -1002,6 +1030,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "level": Parameter(
@@ -1035,6 +1064,7 @@ struct ConstraintTests {
             constraints: ["Loose": [.named("Anything")]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -1071,6 +1101,7 @@ struct ConstraintTests {
                     result: .reference([.key("node"), .key("value")])
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["node": Parameter(type: .named("Node"))],
                         returns: .int
@@ -1097,6 +1128,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [
                         Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))])
@@ -1124,6 +1156,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [
                         Statement(binding: .constant("task"), expression: .literal(.string("a"))
@@ -1152,6 +1185,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
@@ -1178,6 +1212,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [
                         Statement(binding: .constant("kept"), expression: .closure(Procedure(
@@ -1219,6 +1254,7 @@ struct ConstraintTests {
                     result: reference("procedure")
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -1241,6 +1277,7 @@ struct ConstraintTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["items": Parameter(type: .array(.int))],
                         returns: .array(.int)
@@ -1318,6 +1355,7 @@ struct ConstraintTests {
                     ))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .bool),
                     body: [],
                     result: .call(Call(

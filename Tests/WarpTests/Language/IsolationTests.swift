@@ -26,6 +26,7 @@ struct IsolationTests {
             imports: ["app.shout"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(selector: "app.shout", arguments: ["text": .literal(.string("hi"))]))
                 )
@@ -46,6 +47,7 @@ struct IsolationTests {
             imports: ["app.ticket"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(selector: "app.reach"))
                 ),
@@ -73,6 +75,7 @@ struct IsolationTests {
             imports: ["app.ticket", "std.concurrent.all"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(
                         Call(
@@ -102,6 +105,7 @@ struct IsolationTests {
             imports: ["app.ticket"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(selector: "app.ticket"))
                 )

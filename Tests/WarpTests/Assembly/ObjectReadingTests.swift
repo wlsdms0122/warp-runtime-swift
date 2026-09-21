@@ -34,7 +34,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
-              case var .array(implementation) = row[6],
+              case var .array(implementation) = row[7],
               case var .array(frame) = implementation[2]
         else {
             Issue.record("an object writes a row's frame beside its body")
@@ -44,7 +44,7 @@ struct ObjectReadingTests {
 
         frame[0] = .int(-1)
         implementation[2] = .array(frame)
-        row[6] = .array(implementation)
+        row[7] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -142,6 +142,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(binding: .constant("n"), expression: .literal(.int(1)))],
                     result: reference("n")
@@ -153,7 +154,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
-              case var .array(implementation) = row[6],
+              case var .array(implementation) = row[7],
               case var .array(frame) = implementation[2],
               case let .int(size) = frame[0], size > 0,
               case let .array(parameters) = frame[1], parameters.isEmpty
@@ -165,7 +166,7 @@ struct ObjectReadingTests {
 
         frame[0] = .int(0)
         implementation[2] = .array(frame)
-        row[6] = .array(implementation)
+        row[7] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -195,6 +196,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .record(["a": .literal(.int(1)), "b": .literal(.string("s"))])
                 )
@@ -237,7 +239,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
-              case var .array(implementation) = row[6],
+              case var .array(implementation) = row[7],
               case var .array(frame) = implementation[2],
               case let .array(names) = frame[4],
               !names.isEmpty
@@ -249,7 +251,7 @@ struct ObjectReadingTests {
 
         frame[4] = .array(names.dropLast())
         implementation[2] = .array(frame)
-        row[6] = .array(implementation)
+        row[7] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -266,6 +268,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(selector: "app.twice", arguments: ["n": .literal(.int(2))]))
@@ -282,7 +285,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
-              case var .array(implementation) = row[6],
+              case var .array(implementation) = row[7],
               case var .array(body) = implementation[1],
               case var .array(result) = body[1],
               case var .array(operation) = result[0],
@@ -299,7 +302,7 @@ struct ObjectReadingTests {
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[6] = .array(implementation)
+        row[7] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -343,7 +346,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             types: ["app.One": .record(["x": .int]), "app.Two": .record(["y": .int])],
             procedures: [
-                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -374,6 +377,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [],
                     result: .loop(
@@ -396,7 +400,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
               case var .array(row) = table[0],
-              case var .array(implementation) = row[6],
+              case var .array(implementation) = row[7],
               case var .array(body) = implementation[1],
               case var .array(result) = body[1],
               case var .array(operation) = result[0],
@@ -413,7 +417,7 @@ struct ObjectReadingTests {
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[6] = .array(implementation)
+        row[7] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -436,7 +440,7 @@ struct ObjectReadingTests {
             ],
             claims: ["app.Box": ["app.One", "app.Two"]],
             procedures: [
-                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
                 "app.Box.one": Procedure(
                     signature: Signature(
                         receiver: "of",
@@ -487,6 +491,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made"),
@@ -533,6 +538,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(
@@ -580,7 +586,7 @@ struct ObjectReadingTests {
                 )
             ],
             procedures: [
-                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
         let settled = try await builder.compile([holding] + Module.standard)
@@ -611,6 +617,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made"),
@@ -653,6 +660,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made"),
@@ -694,6 +702,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made"),
@@ -734,7 +743,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             try Module(
                 procedures: [
-                    "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                 ]
             ).draft,
             identity: Identity([0x01, 0x02, 0x03])
@@ -799,6 +808,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made"),
@@ -840,6 +850,7 @@ struct ObjectReadingTests {
             types: ["app.Point": .record(["x": .int, "y": .int])],
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["p": Parameter(type: .any)], returns: .named("app.Point")),
                     body: [],
                     result: .cast(reference("p"), as: .named("app.Point"), optional: false)

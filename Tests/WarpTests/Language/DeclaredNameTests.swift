@@ -23,6 +23,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .double),
                     body: [
                         Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
@@ -45,6 +46,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("held", declared: .int), expression: .literal(.string("no")))
                     ],
@@ -67,6 +69,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("held", declared: .named("app.Missing")),
@@ -92,7 +95,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             imports: ["app.Missing", "std.control.abort"],
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
                 "stray": Procedure(
                     body: [
                         Statement(
@@ -124,6 +127,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("held", declared: .int), expression: .literal(.int(1))),
                         Statement(binding: .assignment([.key("held")]), expression: .literal(.string("no")))
@@ -149,6 +153,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
                     ],
@@ -171,6 +176,7 @@ struct DeclaredNameTests {
             types: ["app.Byte": .ranged(.whole(from: 0, to: .through(255)))],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("held", declared: .named("app.Byte")),
@@ -197,6 +203,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("walk", declared: .int),
@@ -222,6 +229,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("held", declared: .parameter(name: "T")), expression: .literal(.int(1)))
                     ],
@@ -253,7 +261,7 @@ struct DeclaredNameTests {
                     )
                 )
             ],
-            procedures: [entryName: Procedure(body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
         )
 
         // When / Then
@@ -272,6 +280,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -313,6 +322,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(

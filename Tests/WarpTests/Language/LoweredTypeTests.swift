@@ -130,6 +130,7 @@ struct LoweredTypeTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         receiver: .literal(.int(1)),
@@ -158,6 +159,7 @@ struct LoweredTypeTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         receiver: .literal(.array([.int(1), .int(2)])),
@@ -201,6 +203,7 @@ struct LoweredTypeTests {
             ],
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["k": Parameter(type: .named("app.Kinds"))], returns: .int),
                     body: [],
                     result: .literal(.int(1))
@@ -363,7 +366,7 @@ struct LoweredTypeTests {
         let sut = try Module(
             imports: [],
             types: ["app.A": .nullable(.named("app.B")), "app.B": .named("app.A")],
-            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
         // When / Then
@@ -394,6 +397,7 @@ struct LoweredTypeTests {
         let maker = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .closure(Procedure(body: [], result: .literal(.int(1))))
                 )
@@ -402,6 +406,7 @@ struct LoweredTypeTests {
         let taker = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["held": Parameter(type: .procedure(nil))]),
                     body: [],
                     result: .apply(.reference([.key("held")]), arguments: [:])
@@ -426,6 +431,7 @@ struct LoweredTypeTests {
         let maker = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .closure(Procedure(body: [], result: .literal(.int(1))))
                 )
@@ -434,6 +440,7 @@ struct LoweredTypeTests {
         let taker = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["held": Parameter(type: .procedure(nil))]),
                     body: [],
                     result: .apply(.reference([.key("held")]), arguments: [:])
@@ -457,6 +464,7 @@ struct LoweredTypeTests {
         let maker = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .closure(Procedure(body: [], result: .literal(.int(1))))
                 )

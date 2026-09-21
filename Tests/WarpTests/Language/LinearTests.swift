@@ -184,6 +184,7 @@ struct LinearTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .linear(.int))]),
                     body: [],
                     result: .literal(.null)
@@ -208,7 +209,7 @@ struct LinearTests {
                 "app.Handle": .linear(.record(["name": .string])),
                 "app.Batch": .record(["held": .array(.named("app.Handle"))])
             ],
-            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
         // When / Then
@@ -1580,6 +1581,7 @@ struct LinearTests {
             constraints: constraints,
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: parameters),
                     body: body,
                     result: result

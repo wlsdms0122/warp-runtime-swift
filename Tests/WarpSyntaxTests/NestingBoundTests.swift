@@ -65,7 +65,7 @@ struct NestingBoundTests {
                 "warp": .int(1),
                 "imports": imports,
                 "const": ["one": .int(1), "zero": .int(0), "yes": .bool(true)],
-                "procedures": ["entry": ["result": expression]]
+                "procedures": ["entry": ["access": "public", "result": expression]]
             ]
         }
 

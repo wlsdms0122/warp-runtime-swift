@@ -24,6 +24,7 @@ struct ReceiverTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "procedure": Parameter(type: .string)
@@ -70,6 +71,7 @@ struct ReceiverTests {
         let written = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.string("end"))
                         )
@@ -112,6 +114,7 @@ struct ReceiverTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "names": Parameter(type: .array(.string))
@@ -160,6 +163,7 @@ struct ReceiverTests {
                     ]
                 ),
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("a"), expression: .call(Call(selector: "clean"))
                         ),
@@ -199,6 +203,7 @@ struct ReceiverTests {
             procedures: [
                 "label": label,
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["names": Parameter(type: .array(.string))]
                     ),
@@ -223,6 +228,7 @@ struct ReceiverTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "subject": Parameter(type: .any)

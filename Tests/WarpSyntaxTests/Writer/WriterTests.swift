@@ -283,6 +283,7 @@ struct WriterTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("payload"), expression: .literal(.dictionary(["ref": .string("not-a-path")]))
                         )
@@ -353,7 +354,7 @@ struct WriterTests {
         let module = try Module(
             types: ["Predicate": .procedure(bounded, .unstated)],
             procedures: [
-                entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
         )
 
@@ -373,7 +374,7 @@ struct WriterTests {
         let variable = try Module(
             types: ["Loose": .parameter(name: "T", constraints: ["Scalar"])],
             procedures: [
-                entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
         )
 
@@ -386,6 +387,7 @@ struct WriterTests {
         let declaring = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: bounded,
                     body: [],
                     result: .literal(.bool(true))
@@ -428,6 +430,7 @@ struct WriterTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("walked"), expression: .loop(
                                 while: .literal(.bool(false)),
@@ -497,6 +500,7 @@ struct WriterTests {
         try! Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["payload": Parameter(type: .any)]),
                     body: [
                         Statement(binding: .constant("named"), expression: .cast(
@@ -521,6 +525,7 @@ struct WriterTests {
         try! Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
                     body: [
                         Statement(binding: .constant("joined"), expression: .call(
@@ -557,6 +562,7 @@ struct WriterTests {
         try! Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("payload"), expression: .literal(
                                 .dictionary(["ref": .string("not-a-path"), "deep": .array([

@@ -32,6 +32,7 @@ struct CatalogueTests {
         let users = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("Age")),
                     body: [],
                     result: .literal(.int(7))
@@ -52,6 +53,7 @@ struct CatalogueTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(
                         Call(
@@ -80,6 +82,7 @@ struct CatalogueTests {
         let users = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("Age")),
                     body: [],
                     result: .literal(.int(7))
@@ -111,7 +114,7 @@ struct CatalogueTests {
         let program = try Module(
             procedures: [
                 "app.w": Procedure(body: [], result: .literal(.string("program"))),
-                entryName: Procedure(body: [], result: .call(Call(selector: "lib.run")))
+                entryName: Procedure(access: .public, body: [], result: .call(Call(selector: "lib.run")))
             ]
         )
 
@@ -130,6 +133,7 @@ struct CatalogueTests {
         let users = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("Age")),
                     body: [],
                     result: .literal(.int(7))
@@ -179,6 +183,7 @@ struct CatalogueTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(
                         Call(receiver: .literal(.string("a")), selector: "std.text.uppercased")
@@ -224,6 +229,7 @@ struct CatalogueTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("bank.Account")),
                     body: [],
                     result: .cast(
@@ -273,6 +279,7 @@ struct CatalogueTests {
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("bank.Account")),
                     body: [],
                     result: .cast(
@@ -330,6 +337,7 @@ struct CatalogueTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("bank.Account")),
                     body: [],
                     result: .cast(

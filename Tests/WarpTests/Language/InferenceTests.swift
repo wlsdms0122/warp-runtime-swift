@@ -34,6 +34,7 @@ struct InferenceTests {
             procedures: [
                 "wants": wants,
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["names": Parameter(type: .array(.string))]
                     ),
@@ -70,6 +71,7 @@ struct InferenceTests {
             procedures: [
                 "wants": wants,
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["counts": Parameter(type: .array(.int))]
                     ),
@@ -116,6 +118,7 @@ struct InferenceTests {
             procedures: [
                 "wants": wants,
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["names": Parameter(type: .array(.string))]
                     ),
@@ -162,6 +165,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
@@ -188,6 +192,7 @@ struct InferenceTests {
         let running = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("kept"), expression: .loop(
                                 while: .literal(.bool(false)),
@@ -239,6 +244,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop)
@@ -272,6 +278,7 @@ struct InferenceTests {
                     result: .reference([.key("done")])
                 ),
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "counts"))
                         ),
@@ -313,6 +320,7 @@ struct InferenceTests {
             ],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "task": Parameter(type: .named("Task"))
@@ -353,6 +361,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "names": Parameter(type: .array(.string))
@@ -391,6 +400,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "counts": Parameter(type: .array(.int))
@@ -437,6 +447,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "flag": Parameter(type: .bool)
@@ -494,6 +505,7 @@ struct InferenceTests {
                     result: .reference([.key("done")])
                 ),
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "names": Parameter(type: .array(.string))
@@ -535,6 +547,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("kept"), expression: .call(
                                 Call(
@@ -589,6 +602,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "ready": Parameter(type: .bool)
@@ -639,6 +653,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "count": Parameter(type: .int)
@@ -664,6 +679,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "name": Parameter(type: .string)
@@ -689,6 +705,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "names": Parameter(type: .array(.string))
@@ -714,6 +731,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -744,6 +762,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -774,6 +793,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -808,6 +828,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "failed": Parameter(type: .record(["type": .string, "message": .string]))
@@ -839,6 +860,7 @@ struct InferenceTests {
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .named("Tree"))
@@ -870,6 +892,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "rows": Parameter(type: .array(.any))
@@ -897,6 +920,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -936,7 +960,7 @@ struct InferenceTests {
         // never` slipping through here would answer null forever
         let sut = try Module(
             procedures: [
-                "entry": Procedure(body: [], result: .literal(.int(0))),
+                "entry": Procedure(access: .public, body: [], result: .literal(.int(0))),
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
@@ -971,6 +995,7 @@ struct InferenceTests {
             types: ["Maybe": .nullable(.int)],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -1010,7 +1035,7 @@ struct InferenceTests {
         // held to its names; so is a cast
         let sut = try Module(
             procedures: [
-                "entry": Procedure(body: [], result: .literal(.int(0))),
+                "entry": Procedure(access: .public, body: [], result: .literal(.int(0))),
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
@@ -1042,6 +1067,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "count": Parameter(type: .int)
@@ -1064,6 +1090,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "count": Parameter(type: .nullable(.int))
@@ -1085,6 +1112,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "count": Parameter(type: .nullable(.int))
@@ -1111,6 +1139,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .dictionary(.string))
@@ -1145,6 +1174,7 @@ struct InferenceTests {
             types: ["Person": .record(["name": .string])],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -1186,6 +1216,7 @@ struct InferenceTests {
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -1216,6 +1247,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "procedure": Parameter(type: .string)
@@ -1254,6 +1286,7 @@ struct InferenceTests {
                     result: .reference([.key("held"), .key("b")])
                 ),
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
@@ -1285,6 +1318,7 @@ struct InferenceTests {
             ],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [],
                     result: .reference([.key("counted")])
@@ -1305,6 +1339,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -1336,6 +1371,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .record(["data": .any]))
@@ -1367,6 +1403,7 @@ struct InferenceTests {
             types: ["Person": .record(["name": .string])],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -1410,6 +1447,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "payload": Parameter(type: .any)
@@ -1441,6 +1479,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "task": Parameter(type: .record(["id": .string]))
@@ -1465,6 +1504,7 @@ struct InferenceTests {
         let optional = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "task": Parameter(type: .record(["id": .string]))
@@ -1495,6 +1535,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "ready": Parameter(type: .bool)
@@ -1559,6 +1600,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.null)
                         ),
@@ -1607,6 +1649,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))
                         ),
@@ -1660,6 +1703,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "ready": Parameter(type: .bool)
@@ -1716,6 +1760,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "ready": Parameter(type: .bool)
@@ -1765,6 +1810,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))
                         ),
@@ -1828,6 +1874,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.null)
                         ),
@@ -1876,6 +1923,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "ready": Parameter(type: .bool)
@@ -1926,6 +1974,7 @@ struct InferenceTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .attempt(
                                 Block(body: [], result: refusing(literal("no"))),
@@ -1976,6 +2025,7 @@ struct InferenceTests {
                     ]
                 ),
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "gives_up"))
                         ),

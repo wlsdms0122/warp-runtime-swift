@@ -25,6 +25,7 @@ struct MembershipTests {
             constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(selector: "app.hold", arguments: ["it": .literal(.string("a"))]))
                 ),
@@ -50,6 +51,7 @@ struct MembershipTests {
             constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(selector: "app.hold", arguments: ["it": .literal(.int(1))]))
                 ),
@@ -75,6 +77,7 @@ struct MembershipTests {
             constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
                     body: [],
                     result: .call(Call(selector: "app.narrow", arguments: ["it": reference("it")]))
@@ -101,6 +104,7 @@ struct MembershipTests {
                 constraints: ["app.Text": [.string, .array(.byteElement)]],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
                         body: [.init(binding: .constant("narrowed"), expression: .cast(
                             reference("it"),
@@ -130,6 +134,7 @@ struct MembershipTests {
             constraints: ["app.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
                     body: [],
                     result: reference("it")

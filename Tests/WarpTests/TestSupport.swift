@@ -85,6 +85,49 @@ func reference(_ names: Name...) -> Warp.Expression {
 
 // MARK: - Running
 
+extension Procedure {
+    // The same declaration, named from the caller too. What a test's entry is
+    // whatever it was written as.
+    var `public`: Procedure {
+        Procedure(
+            description: description,
+            access: .public,
+            signature: signature,
+            implementation: implementation,
+            constness: constness,
+            isolation: isolation,
+            failing: failing
+        )
+    }
+}
+
+extension Module {
+    // This module with the entry made public, where it declares one. A test
+    // that reads a document from text names the entry outside it, so the
+    // document is not where the word is written.
+    func publishing(_ entry: Name) throws -> Module {
+        guard let procedure = procedures[entry] else { return self }
+
+        let draft = self.draft
+
+        return try Module(
+            Draft(
+                description: draft.description,
+                imports: draft.imports,
+                types: draft.types,
+                constraints: draft.constraints,
+                contracts: draft.contracts,
+                claims: draft.claims,
+                constants: draft.constants,
+                variables: draft.variables,
+                procedures: draft.procedures.merging([entry: procedure.public]) { _, new in new }
+            ),
+            identity: identity,
+            builtin: builtin
+        )
+    }
+}
+
 // The entry name these tests link against. Any name would do, which procedure a
 // run starts from is an argument, so there is nothing special about this one.
 let entryName: Name = "entry"
@@ -100,7 +143,7 @@ func run(
 ) async throws -> Value {
     let builder = Builder()
 
-    let image = try await builder.build(modules + vocabulary, entry: entry)
+    let image = try await builder.build(try modules.map { module in try module.publishing(entry) } + vocabulary, entry: entry)
 
     return try await Executor(environment: environment)
         .run(image, arguments: arguments)
@@ -123,7 +166,8 @@ func run(
     )
 }
 
-// One procedure, linked alone or beside others.
+// One procedure, linked alone or beside others. It is the entry, so it is
+// public whatever the test wrote.
 func run(
     _ procedure: Procedure,
     beside others: [Name: Procedure] = [:],
@@ -133,7 +177,7 @@ func run(
     try await run(
         [
             try Module(
-                procedures: others.merging([entryName: procedure]) { _, new in new }
+                procedures: others.merging([entryName: procedure.public]) { _, new in new }
             )
         ],
         arguments: arguments,
@@ -369,6 +413,7 @@ extension Closure {
                 label: "assembled",
                 origin: 0,
                 signature: Signature(),
+                access: .internal,
                 constness: .unstated,
                 isolation: .unstated,
                 failing: .unstated,

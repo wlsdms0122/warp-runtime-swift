@@ -25,6 +25,7 @@ struct LoweringTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
                         Statement(binding: .constant("inner"), expression: .block(
@@ -62,6 +63,7 @@ struct LoweringTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
                         Statement(binding: .constant("held"), expression: .closure(
@@ -90,6 +92,7 @@ struct LoweringTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("a"), expression: .literal(.int(1))),
                         Statement(binding: .constant("b"), expression: .literal(.int(2))),
@@ -146,6 +149,7 @@ struct LoweringTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("told"), expression: loop(
                             [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
@@ -185,6 +189,7 @@ struct LoweringTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         receiver: .literal(.int(1)),
@@ -238,7 +243,7 @@ struct LoweringTests {
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [
-                "entry": Procedure(body: [], result: .literal(.null)),
+                "entry": Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.tally": Procedure(
                     signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
                     body: [],
@@ -263,6 +268,7 @@ struct LoweringTests {
             types: ["Count": .int],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
                     result: .call(Call(selector: "app.bump", arguments: ["of": .reference([.key("n")])]))
                 ),
@@ -292,6 +298,7 @@ struct LoweringTests {
             types: ["Count": .int],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("body"), expression: .closure(
                             Procedure(
@@ -340,6 +347,7 @@ struct LoweringTests {
                 types: ["Tag": .record(["a": .int])],
                 procedures: [
                     "entry": Procedure(
+                        access: .public,
                         body: [Statement(binding: .variable("held"), expression: held)],
                         result: .call(Call(
                             receiver: .call(Call(
@@ -387,7 +395,7 @@ struct LoweringTests {
                 "J": .call(Call(receiver: reference("K"), selector: "app.alpha"))
             ],
             procedures: [
-                "entry": Procedure(body: [], result: .literal(.null)),
+                "entry": Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.alpha": Procedure(
                     signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
                     body: [],
@@ -411,6 +419,7 @@ struct LoweringTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
                     ],

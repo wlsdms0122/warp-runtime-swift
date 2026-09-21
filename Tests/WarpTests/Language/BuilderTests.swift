@@ -30,7 +30,7 @@ struct BuilderTests {
                     arguments: ["value": .literal(.int(0))]
                 ))
             ],
-            procedures: [entryName: Procedure(body: [])]
+            procedures: [entryName: Procedure(access: .public, body: [])]
         )
 
         // When / Then
@@ -51,7 +51,7 @@ struct BuilderTests {
         // which is exactly the call that could not see this coming
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: []),
+                entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
                         parameters: [
@@ -76,7 +76,7 @@ struct BuilderTests {
         // Given
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: []),
+                entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
                         parameters: [
@@ -124,7 +124,7 @@ struct BuilderTests {
         // together, not about the set being empty
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: []),
+                entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
                         parameters: ["count": Parameter(type: .int, candidates: ["fast"])]
@@ -148,7 +148,7 @@ struct BuilderTests {
         // the declaration must admit it like any other value
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: []),
+                entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
                         parameters: ["procedure": Parameter(type: .string, default: .null)]
@@ -173,7 +173,7 @@ struct BuilderTests {
         // nested type names
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: []),
+                entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
                         parameters: [
@@ -207,7 +207,7 @@ struct BuilderTests {
         // Given. No call could ever fit it, so the declaration is the defect
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: []),
+                entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
                         parameters: ["mode": Parameter(type: .string, candidates: [])]
@@ -250,7 +250,7 @@ struct BuilderTests {
                     )
                 )
             ],
-            procedures: [entryName: Procedure(body: [], result: reference("xerus"))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: reference("xerus"))]
         )
 
         // When
@@ -279,6 +279,7 @@ struct BuilderTests {
                 ],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: [:])
                             )
@@ -319,7 +320,7 @@ struct BuilderTests {
                     )),
                     "zebra": .literal(.int(7))
                 ],
-                procedures: [entryName: Procedure(body: [])]
+                procedures: [entryName: Procedure(access: .public, body: [])]
             )
         }
 
@@ -351,6 +352,7 @@ struct BuilderTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: [:])
                         )
@@ -385,6 +387,7 @@ struct BuilderTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: [:])
                         )
@@ -418,7 +421,7 @@ struct BuilderTests {
                     )
                 )
             ],
-            procedures: [entryName: Procedure(body: [], result: reference("url"))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: reference("url"))]
         )
 
         // When
@@ -435,6 +438,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             expression: .conditional(equals(
@@ -465,6 +469,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("attempt"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("attempt"), expression: .call(Call(selector: "app.fail", arguments: [
@@ -493,6 +498,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
                         )
@@ -520,6 +526,7 @@ struct BuilderTests {
         let caller = try Module(
             procedures: [
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
                         )
@@ -562,6 +569,7 @@ struct BuilderTests {
         let caller = try Module(
             procedures: [
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(selector: "leaf"))
                         )
@@ -681,6 +689,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 "loopy": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("again"), expression: .call(Call(selector: "loopy"))
                         )
@@ -713,6 +722,7 @@ struct BuilderTests {
                     ]
                 ),
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
                                         "base": .literal(.int(1)),
@@ -747,6 +757,7 @@ struct BuilderTests {
                     ]
                 ),
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(selector: "callee"))
                         )
@@ -779,6 +790,7 @@ struct BuilderTests {
                     ]
                 ),
                 "caller": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "text": Parameter(type: .string)
@@ -821,6 +833,7 @@ struct BuilderTests {
                     ]
                 ),
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
                         ),
@@ -854,6 +867,7 @@ struct BuilderTests {
                     body: [Statement(binding: .constant("echo"), expression: .reference([.key("base")]))]
                 ),
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
                         ),
@@ -883,6 +897,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 "alone": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.string("end"))
                         )
@@ -903,6 +918,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("got"), expression: .call(
@@ -934,6 +950,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(

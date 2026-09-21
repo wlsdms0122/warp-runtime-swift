@@ -180,6 +180,7 @@ struct ControlFlowTests {
             imports: ["std.logic.notEqual"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("x", declared: .int), expression: .literal(.int(1))),
                         Statement(binding: .constant("probe"), expression: loop)

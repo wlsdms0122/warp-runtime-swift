@@ -25,6 +25,7 @@ struct ReturnTypeTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .int
                     ),
@@ -49,6 +50,7 @@ struct ReturnTypeTests {
         let narrowing = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(binding: .constant("counted"), expression: .literal(.double(3)))],
                     result: .reference([.key("counted")])
@@ -68,6 +70,7 @@ struct ReturnTypeTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .string
                     ),
@@ -98,6 +101,7 @@ struct ReturnTypeTests {
             ],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .array(.named("Task"))
                     ),
@@ -128,6 +132,7 @@ struct ReturnTypeTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .named("Nowhere")
                     ),

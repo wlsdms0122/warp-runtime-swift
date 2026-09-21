@@ -54,6 +54,7 @@ struct NullableTests {
                     result: .literal(.int(0))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "task": Parameter(
@@ -89,6 +90,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "task": Parameter(
@@ -117,6 +119,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [
                         Statement(binding: .constant("gone"), expression: .literal(.null))
@@ -141,6 +144,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["limit": Parameter(type: .nullable(.int))],
                         returns: .nullable(.int)
@@ -161,6 +165,7 @@ struct NullableTests {
         let plain = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["limit": Parameter(type: .int)],
                         returns: .int
@@ -195,6 +200,7 @@ struct NullableTests {
                     result: .reference([.key("of")])
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["procedure": Parameter(type: .string)],
                         returns: .string
@@ -225,6 +231,7 @@ struct NullableTests {
             constants: ["config": .record(["host": .literal(.string("a"))])],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .reference([.key("config"), .key("port")])
@@ -247,6 +254,7 @@ struct NullableTests {
             types: ["Loose": .any],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "value": Parameter(type: .nullable(.named("Loose")), default: .null)
@@ -270,6 +278,7 @@ struct NullableTests {
             types: ["Maybe": .nullable(.int)],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "value": Parameter(type: .nullable(.named("Maybe")), default: .null)
@@ -297,6 +306,7 @@ struct NullableTests {
             types: ["Task": .record(["name": .string])],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "task": Parameter(type: .nullable(.named("Task")), default: .null)
@@ -329,6 +339,7 @@ struct NullableTests {
         let onAField = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "task": Parameter(type: .record(["id": .string]))
@@ -354,6 +365,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .nullable(.array(.string)), default: .null)
@@ -381,6 +393,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .nullable(.array(.string)), default: .null)
@@ -408,6 +421,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .nullable(.array(.string)), default: .null)
@@ -433,6 +447,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(
@@ -465,6 +480,7 @@ struct NullableTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(
                             parameters: [
                                 "items": Parameter(
@@ -501,6 +517,7 @@ struct NullableTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .nullable(.array(.string)), default: .null),
@@ -558,6 +575,7 @@ struct IndexReferenceJudgmentTests {
                     result: .reference([.key("of")])
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .reference([.key("loud")])
@@ -591,6 +609,7 @@ struct IndexReferenceJudgmentTests {
                     result: .call(Call(receiver: reference("of"), selector: "std.collection.count"))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(receiver: reference("greeting"), selector: "shout"))
@@ -633,6 +652,7 @@ struct IndexReferenceJudgmentTests {
                 result: .call(Call(selector: "helper", arguments: [:]))
             ),
             entryName: Procedure(
+                access: .public,
                 signature: Signature(returns: .int),
                 body: [],
                 result: .call(Call(selector: "helper", arguments: [:]))
@@ -711,6 +731,7 @@ struct IndexReferenceJudgmentTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .reference([.key("f")])
@@ -734,6 +755,7 @@ struct IndexReferenceJudgmentTests {
             constants: ["C": .literal(.int(0))],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .array(.string)),
@@ -769,6 +791,7 @@ struct IndexReferenceJudgmentTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .array(.record(["id": .string]))),
@@ -800,6 +823,7 @@ struct IndexReferenceJudgmentTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .array(.string)),
@@ -843,6 +867,7 @@ struct IndexReferenceJudgmentTests {
                     ))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(),
                     body: [],
                     result: .literal(.int(1))
@@ -864,6 +889,7 @@ struct IndexReferenceJudgmentTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "procedure": Parameter(type: .string),
@@ -910,6 +936,7 @@ struct ParameterReceiverTests {
                     result: .reference([.key("of"), .key("count")])
                 ),
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
@@ -945,6 +972,7 @@ struct ParameterReceiverTests {
                     result: .reference([.key("held"), .key("count")])
                 ),
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
@@ -1000,6 +1028,7 @@ struct ParameterReceiverTests {
                     result: .reference([.key("held"), .key("count")])
                 ),
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
@@ -1063,6 +1092,7 @@ struct ParameterReceiverTests {
                         result: .reference([.key("held"), .key("count")])
                     ),
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(returns: .any),
                         body: [],
                         result: .call(Call(
@@ -1118,6 +1148,7 @@ struct ParameterReceiverTests {
                     result: .reference([.key("seen"), .key("deep")])
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
@@ -1166,6 +1197,7 @@ struct ParameterReceiverTests {
                     result: .reference([.key("seen"), .key("count")])
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
@@ -1196,6 +1228,7 @@ struct ParameterReceiverTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "of": Parameter(type: .reading(of: "T", path: [.key("inner")]))

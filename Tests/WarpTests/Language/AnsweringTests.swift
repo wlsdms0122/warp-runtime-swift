@@ -41,6 +41,7 @@ struct AnsweringTests {
                     result: .record(["total": .literal(.int(7))])
                 ),
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "counts"))
                         )
@@ -67,6 +68,7 @@ struct AnsweringTests {
                     result: .call(Call(selector: "innermost"))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "middle"))
                         )
@@ -116,6 +118,7 @@ struct AnsweringTests {
                         result: .record(["total": .literal(.int(7))])
                     ),
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(
                                     selector: "counts",
@@ -151,6 +154,7 @@ struct AnsweringTests {
                 "ping": Procedure(body: [], result: .call(Call(selector: "pong"))),
                 "pong": Procedure(body: [], result: .call(Call(selector: "ping"))),
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
                         )
@@ -177,6 +181,7 @@ struct AnsweringTests {
                             : .record(["total": .literal(.int(1))])
                     ),
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
                             )
@@ -213,6 +218,7 @@ struct AnsweringTests {
                         result: .reference(answer)
                     ),
                     entryName: Procedure(
+                        access: .public,
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(
                                     selector: "peek",
@@ -269,7 +275,7 @@ struct AnsweringTests {
         // and would put it in a document the writer hands back.
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.int(7)))
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(7)))
             ]
         )
 

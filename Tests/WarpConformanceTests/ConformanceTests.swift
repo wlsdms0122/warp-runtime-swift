@@ -110,7 +110,7 @@ struct ConformanceTests {
     private func built(_ sut: Case.Program) async throws -> Value {
         let builder = Builder(fingerprinting: Fingerprint.of)
         let supplying = try await Supplying(sut.modules())
-        let behind = try await builder.compile(try sut.brought + Module.standard, against: [], supplying: supplying)
+        let behind = try await builder.compile(try sut.brought + sut.beside + Module.standard, against: [], supplying: supplying)
         let own = try await builder.compile(
             [try Loader().load(sut.document, identity: try Identity.of(sut.document))],
             against: behind,
@@ -180,7 +180,7 @@ struct ConformanceTests {
             return .load
         }
 
-        let modules = vocabulary + [module] + Module.standard
+        let modules = try vocabulary + sut.beside + [module] + Module.standard
 
         let image: Image
 
@@ -214,7 +214,7 @@ struct Case: Sendable, CustomStringConvertible {
     // Which types a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
-    static let version = 6
+    static let version = 7
     static let earliest = 2
 
     static let versionKey: Name = "test"
@@ -312,11 +312,17 @@ struct Case: Sendable, CustomStringConvertible {
         // build that much. Nil where the case asks for none.
         let vocabulary: Vocabulary?
 
+        // The documents laid beside the program, each written as a document
+        // is. A rule about two documents is asked with the program and one of
+        // these. Empty where the case lays none.
+        let documents: [Value]
+
         let expectation: Expectation
 
         // The earliest test a case carrying this needs. The ladder is the
         // table under *what a case is* in `spec/conformance.md`.
         var needs: Int {
+            if !documents.isEmpty { return 7 }
             if case .builds = expectation { return 6 }
 
             return vocabulary == nil ? 2 : 3
@@ -486,6 +492,7 @@ struct Case: Sendable, CustomStringConvertible {
                     document: document,
                     arguments: try Self.given(written["arguments"], of: name),
                     vocabulary: try Self.supplied(in: written["vocabulary"]),
+                    documents: try Self.beside(written["documents"]),
                     expectation: expectation
                 )
             )
@@ -596,6 +603,22 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Private
+    // The documents a case lays beside its program. A list of records, each a
+    // document; anything else is a case no two runners would read alike.
+    private static func beside(_ written: Value?) throws -> [Value] {
+        guard let written else { return [] }
+
+        guard case let .array(documents) = written, documents.allSatisfy({ document in
+            if case .dictionary = document { return true }
+
+            return false
+        }) else {
+            throw ConformanceError("the documents a case lays beside its program are a list of documents")
+        }
+
+        return documents
+    }
+
     private static func stage(_ expected: Value) throws -> Stage {
         guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
             throw ConformanceError("\(expected) is not a stage a program is refused at")
@@ -767,7 +790,22 @@ extension Case.Program {
     // vocabulary it asked for, so building it is the case's own answer and not
     // a runner's.
     func modules() async throws -> [Module] {
-        try await brought + [try Loader().load(document, identity: nil)] + Module.standard
+        try await brought + beside + [try Loader().load(document, identity: nil)] + Module.standard
+    }
+
+    // The documents the case laid beside its program, read the way the
+    // program is. One that does not read is the case's own fault, since the
+    // question was about the program.
+    var beside: [Module] {
+        get throws {
+            try documents.map { document in
+                do {
+                    return try Loader().load(document, identity: nil)
+                } catch {
+                    throw ConformanceError("a document laid beside the program does not read: \(error)")
+                }
+            }
+        }
     }
 
     // The vocabulary the case asked the runner for, as a module standing in

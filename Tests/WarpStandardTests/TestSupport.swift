@@ -81,7 +81,7 @@ func run(
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
-    let image = try await Builder().build(modules + vocabulary, entry: entry)
+    let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary, entry: entry)
 
     return try await Executor(environment: environment).run(image, arguments: arguments)
 }
@@ -109,7 +109,7 @@ func run(
     vocabulary: [Module] = Module.standard
 ) async throws -> Value {
     try await run(
-        [try Module(procedures: others.merging([entryName: procedure]) { _, new in new })],
+        [try Module(procedures: others.merging([entryName: procedure.public]) { _, new in new })],
         arguments: arguments,
         vocabulary: vocabulary
     )
@@ -165,4 +165,47 @@ struct ShoutEffect: Effect {
     }
 
     // MARK: - Private
+}
+
+extension Procedure {
+    // The same declaration, named from the caller too. What a test's entry is
+    // whatever it was written as.
+    var `public`: Procedure {
+        Procedure(
+            description: description,
+            access: .public,
+            signature: signature,
+            implementation: implementation,
+            constness: constness,
+            isolation: isolation,
+            failing: failing
+        )
+    }
+}
+
+extension Module {
+    // This module with the entry made public, where it declares one. A test
+    // names the entry outside the module, so the module is not where the word
+    // is written.
+    func publishing(_ entry: Name) throws -> Module {
+        guard let procedure = procedures[entry] else { return self }
+
+        let draft = self.draft
+
+        return try Module(
+            Draft(
+                description: draft.description,
+                imports: draft.imports,
+                types: draft.types,
+                constraints: draft.constraints,
+                contracts: draft.contracts,
+                claims: draft.claims,
+                constants: draft.constants,
+                variables: draft.variables,
+                procedures: draft.procedures.merging([entry: procedure.public]) { _, new in new }
+            ),
+            identity: identity,
+            builtin: builtin
+        )
+    }
 }

@@ -23,6 +23,7 @@ struct ProcedureSendsTests {
         // Given
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
             )])] + [.sending, .shouting] + Module.standard,
@@ -41,6 +42,7 @@ struct ProcedureSendsTests {
         // Given
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(receiver: .literal(.string("hi")), selector: "app.announce"))
             )])] + [.sending, .shouting] + Module.standard,
@@ -59,7 +61,7 @@ struct ProcedureSendsTests {
         // Given / When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.strayed],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.strayed],
                 entry: "entry"
             )
         }
@@ -71,7 +73,7 @@ struct ProcedureSendsTests {
         // `app.shout`, which does not
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.contradicting, .shouting],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.contradicting, .shouting],
                 entry: "entry"
             )
         }
@@ -84,7 +86,7 @@ struct ProcedureSendsTests {
         // calls
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.claims, .ticketing],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.claims, .ticketing],
                 entry: "entry"
             )
         }
@@ -95,6 +97,7 @@ struct ProcedureSendsTests {
         // Given
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.counted"))
             )])] + [.counting, .ticketing],
@@ -153,6 +156,7 @@ struct ProcedureSendsTests {
         // the other way round
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.picking"))
             )])] + [.picking, .picked],
@@ -171,7 +175,7 @@ struct ProcedureSendsTests {
         // Given / When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.misnaming, .picked],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.misnaming, .picked],
                 entry: "entry"
             )
         }
@@ -183,6 +187,7 @@ struct ProcedureSendsTests {
         // thing about a send the build cannot read
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.overhanding"))
             )])] + [.overhanding, .picked],
@@ -201,7 +206,7 @@ struct ProcedureSendsTests {
         // the one to keep
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.doubling, .picked],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.doubling, .picked],
                 entry: "entry"
             )
         }
@@ -213,6 +218,7 @@ struct ProcedureSendsTests {
         // is not a thing the build can read off the declaration
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.receiving"))
             )])] + [.receiving, .greeted],
@@ -231,6 +237,7 @@ struct ProcedureSendsTests {
         // declared string
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.mistyping"))
             )])] + [.mistyping, .spoken],
@@ -250,6 +257,7 @@ struct ProcedureSendsTests {
         // as a receiver it never declared
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.unreceiving"))
             )])] + [.unreceiving, .picked],
@@ -268,6 +276,7 @@ struct ProcedureSendsTests {
         // the callee has nowhere to put one
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nulling"))
             )])] + [.nulling, .plain],
@@ -287,6 +296,7 @@ struct ProcedureSendsTests {
         // beside each kind of callee
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nullingToAnEffect"))
             )])] + [.nullingToAnEffect, .plainlyRunning],
@@ -306,6 +316,7 @@ struct ProcedureSendsTests {
         // the dot the value came from
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nullingToAReceiver"))
             )])] + [.nullingToAReceiver, .reporting],

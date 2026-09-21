@@ -23,6 +23,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "who": Parameter(type: .string)
@@ -54,6 +55,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "kind": Parameter(type: .string)
@@ -92,6 +94,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
@@ -127,6 +130,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
@@ -167,6 +171,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("broken"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("broken"), expression: .call(Call(selector: "app.fail", arguments: [
@@ -195,6 +200,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(true))
@@ -217,6 +223,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "n": Parameter(type: .int)
@@ -254,6 +261,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "data": Parameter(type: .dictionary(.any))
@@ -291,6 +299,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "data": Parameter(type: .dictionary(.any))
@@ -316,6 +325,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "kind": Parameter(type: .string)
@@ -366,6 +376,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "reason": Parameter(type: .string)
@@ -400,6 +411,7 @@ struct ExecutorTests {
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("bail"), expression: .attempt(Block(body: [
                                         Statement(

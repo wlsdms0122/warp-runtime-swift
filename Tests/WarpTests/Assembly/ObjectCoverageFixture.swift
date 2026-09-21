@@ -199,6 +199,7 @@ enum ObjectCoverageFixture {
         try Judged(
             label: label,
             signature: Signature(returns: .int),
+            access: .internal,
             constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
@@ -214,6 +215,7 @@ enum ObjectCoverageFixture {
         try Judged(
             label: label,
             signature: Signature(receiver: body ? "p" : nil, parameters: ["p": parameter], returns: .int),
+            access: .internal,
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
