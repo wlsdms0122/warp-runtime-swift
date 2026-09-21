@@ -83,7 +83,13 @@ struct Sending {
                 )
             }
 
-            guard !answersWithoutRunning || !answersOnlyByRunning(send.selector) else {
+            // A spelling no declaration standing here answers for is the
+            // link's to refuse, as undeclared or as another document's
+            // private; what it does is judged only with the declaration in
+            // hand.
+            let declared = taking(send.selector) != nil
+
+            guard !declared || !answersWithoutRunning || !answersOnlyByRunning(send.selector) else {
                 throw BuildError(
                     "'\(label)' answers without running and sends '\(send.selector)',"
                         + " which answers only by running",
@@ -91,7 +97,7 @@ struct Sending {
                 )
             }
 
-            guard !touchesNothingShared || !touchesSomethingShared(send.selector) else {
+            guard !declared || !touchesNothingShared || !touchesSomethingShared(send.selector) else {
                 throw BuildError(
                     "'\(label)' says it touches no name another body could touch at"
                         + " the same time, and sends '\(send.selector)', which does",

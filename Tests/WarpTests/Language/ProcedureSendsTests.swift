@@ -67,6 +67,23 @@ struct ProcedureSendsTests {
         }
     }
 
+    @Test("a procedure sending another document's private declaration is refused at the build")
+    func aSendReachingAPrivateDeclarationIsRefused() async {
+        // Given. A document declares `app.hidden` privately, and a procedure the
+        // caller brings declares it sends that spelling.
+        let document = try! Module(procedures: [
+            "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
+            "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
+        ])
+
+        // When / Then
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([document, .reaching] + Module.standard, entry: "entry")
+        }
+
+        #expect(refusal?.message.contains("is private to the document that declares it") == true)
+    }
+
     @Test("a query sending something that answers only by running is refused")
     func aQuerySendingAnEffectIsRefused() async {
         // Given. `app.shouting` claims it answers without running and sends
@@ -442,6 +459,26 @@ private struct StrayQuery: Query {
     // MARK: - Private
 }
 
+// Sends a spelling another document declares privately.
+private struct ReachingQuery: Query {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case hidden
+
+        var selector: Name { "app.hidden" }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        try await question.send(.hidden)
+    }
+
+    // MARK: - Private
+}
+
 // Claims it answers without running, and sends something that runs.
 private struct ShoutingQuery: Query {
     typealias Parameters = NoParameters
@@ -740,6 +777,15 @@ private extension Module {
             "app.stray": Procedure(
                 signature: Signature(of: StrayQuery.self, returns: .null),
                 implementation: .query(StrayQuery())
+            )
+        ]
+    )
+
+    static let reaching = try! Module(
+        procedures: [
+            "app.reach": Procedure(
+                signature: Signature(of: ReachingQuery.self, returns: .int),
+                implementation: .query(ReachingQuery())
             )
         ]
     )
