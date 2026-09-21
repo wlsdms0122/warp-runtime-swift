@@ -536,7 +536,7 @@ public struct Builder: Sendable {
                     at: symbol.place,
                     in: opening(declaration.signature),
                     answering: declaration.signature.returns,
-                    with: context(),
+                    with: context().bounding(declaration.signature.parameterBounds.table),
                     folding: folding,
                     origin: origin,
                     writing: fulfillment

@@ -48,8 +48,21 @@ struct TypingContext: Sendable {
     // answers by the run's state, so constness is read against these.
     let variables: Set<Name>
 
+    // What the procedure being read holds its type parameters to. A closure
+    // written in its body reads the same names, so a `some T` inside is the
+    // `T` the caller filled, bound the way the declaration bound it.
+    var bounds: [Name: [Name]] = [:]
+
     // MARK: - Initializer
     // MARK: - Public
+    // The same context, reading the body of a procedure bound this way.
+    func bounding(_ bounds: [Name: [Name]]) -> TypingContext {
+        var held = self
+        held.bounds = bounds
+
+        return held
+    }
+
     // What a call is written against: the whole signature rather than what it
     // answers, because a declaration with a type parameter in it does not
     // answer anything until a call site fills it, and what fills it is read

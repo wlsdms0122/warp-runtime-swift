@@ -79,6 +79,18 @@ public struct Procedure: Sendable {
 
     // MARK: - Public
     // The same declaration, named from another scope.
+    public func with(signature: Signature) -> Procedure {
+        Procedure(
+            description: description,
+            access: access,
+            signature: signature,
+            implementation: implementation,
+            constness: constness,
+            isolation: isolation,
+            failing: failing
+        )
+    }
+
     public func with(access: Access) -> Procedure {
         Procedure(
             description: description,

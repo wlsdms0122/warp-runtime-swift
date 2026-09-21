@@ -1463,7 +1463,11 @@ extension Builder {
         // has to compile. It sees what surrounds it plus what it declares.
         // Constness is read the same way a declaration's is. From what the body
         // calls.
-        case let .closure(procedure):
+        case let .closure(written):
+            // A closure's `some T` is the name the procedure around it filled,
+            // held to the bounds that procedure declared; its own signature
+            // writes none.
+            let procedure = written.with(signature: written.signature.bounded(by: context.bounds))
             var rewritten = expression
             var calls: [CallSite] = []
             var body = procedure.block
@@ -1475,7 +1479,7 @@ extension Builder {
                     in: environment.merging(self.environment(of: procedure.signature, in: context.loweredTypes)) {
                         _, new in new
                     },
-                    with: context,
+                    with: context.bounding(procedure.signature.parameterBounds.table),
                     ask: ask
                 )
 
@@ -1573,6 +1577,8 @@ extension Builder {
                         failing: failing(body, given: context.failing(of:))
                     )
                 )
+            } else if procedure.signature != written.signature {
+                rewritten = .closure(procedure)
             }
 
             return Inspection(

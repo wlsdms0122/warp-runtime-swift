@@ -215,6 +215,14 @@ public extension Signature {
         case held([Name: [Name]])
         case disagreeing(Name, [Name], [Name])
 
+        // The table where one is held; nothing where the signature disagrees
+        // with itself, which is refused where the signature is judged.
+        public var table: [Name: [Name]] {
+            guard case let .held(held) = self else { return [:] }
+
+            return held
+        }
+
         // The sentence a disagreement is refused with, wherever it is refused.
         public static func refusal(_ name: Name, _ one: [Name], _ other: [Name]) -> String {
             let spelled = [one, other]
