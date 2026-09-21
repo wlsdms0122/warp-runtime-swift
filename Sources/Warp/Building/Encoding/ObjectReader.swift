@@ -71,7 +71,7 @@ struct ObjectReader {
             try Fields.list(written, of: "constraints", expression)
         }
         let contracts = try keyed(fields.take("contracts"), of: "contracts") { written in
-            try keyed(written, of: "contract", signature)
+            try keyed(written, of: "contract", contractProcedure)
         }
         let claims = try keyed(fields.take("claims"), of: "claims") { written in
             Set(try Fields.ordered(written, of: "claims", name))
@@ -423,6 +423,19 @@ private extension ObjectReader {
         default:
             throw ObjectRefused("'path segment' steps in a way this reads none of")
         }
+
+        try fields.end()
+
+        return read
+    }
+
+    func contractProcedure(_ value: Value) throws -> ContractProcedure {
+        var fields = try Fields(value, of: "contract procedure")
+        let read = ContractProcedure(
+            signature: try signature(fields.next()),
+            constness: try constness(fields.next()),
+            isolation: try isolation(fields.next())
+        )
 
         try fields.end()
 

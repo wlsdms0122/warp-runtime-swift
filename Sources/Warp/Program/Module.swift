@@ -79,7 +79,7 @@ public struct Module: Sendable {
     // questions. A constraint is a closed set of types and a value of one is
     // one of them; a contract is an open set, and what puts a type in it is
     // that it declares the procedures. Only one of those can be judged by listing.
-    public var contracts: [Name: [Name: Signature]] { source.contracts }
+    public var contracts: [Name: [Name: ContractProcedure]] { source.contracts }
 
     // Which contracts each type this document names answers. A type answers a
     // contract because a document says it does, and this is where one says it.
@@ -146,7 +146,7 @@ public struct Module: Sendable {
         imports: Set<Name>? = nil,
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
-        contracts: [Name: [Name: Signature]] = [:],
+        contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],

@@ -28,7 +28,7 @@ public struct Compiled: Sendable, Declaring {
     // this document anywhere else.
     let types: [Name: TypeExpression]
     let constraints: [Name: [TypeExpression]]
-    let contracts: [Name: [Name: Signature]]
+    let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts it said each type answers, as it wrote them. The link
     // holds the claim to the declarations behind it, and which declarations
@@ -128,7 +128,7 @@ public struct Compiled: Sendable, Declaring {
         document: Place.Document,
         types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
-        contracts: [Name: [Name: Signature]],
+        contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
         declared: [Name],
@@ -172,7 +172,7 @@ public struct Compiled: Sendable, Declaring {
         document: Place.Document,
         types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
-        contracts: [Name: [Name: Signature]],
+        contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
         declared: [Name],

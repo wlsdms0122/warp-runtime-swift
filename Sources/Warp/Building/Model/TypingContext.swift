@@ -97,11 +97,11 @@ struct TypingContext: Sendable {
     // its row. A selector naming no row, a contract's procedure among them,
     // has none of these.
     func isConst(_ selector: Name) -> Bool {
-        declared(selector)?.constness == .const
+        declared(selector)?.constness == .const || contractProcedures[selector]?.constness == .const
     }
 
     func isIsolated(_ selector: Name) -> Bool {
-        declared(selector)?.isolation == .isolated
+        declared(selector)?.isolation == .isolated || contractProcedures[selector]?.isolation == .isolated
     }
 
     func failing(of selector: Name) -> Failing? {

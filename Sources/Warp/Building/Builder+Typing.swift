@@ -1562,7 +1562,7 @@ extension Builder {
                     given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures
                         .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
-                    taking: { selector in context.signature(of: selector) }
+                    taking: { selector in context.signature(of: selector) ?? context.contractProcedures[selector]?.signature }
                 )
             } ?? false
 

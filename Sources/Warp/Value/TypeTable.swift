@@ -30,7 +30,7 @@ public struct TypeTable: Sendable {
     // types. A membership is a closed set of types and a contract is the open
     // set of types that declare some procedures, so listing answers one and not
     // the other.
-    public let contracts: [Name: [Name: Signature]]
+    public let contracts: [Name: [Name: ContractProcedure]]
 
     // The same declarations as the run reads them, lowered once here. Every
     // judgment this table answers is asked of the lowered one.
@@ -57,7 +57,7 @@ public struct TypeTable: Sendable {
     public init(
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
-        contracts: [Name: [Name: Signature]] = [:]
+        contracts: [Name: [Name: ContractProcedure]] = [:]
     ) {
         self.init(types: types, constraints: constraints, contracts: contracts, of: Linkage())
     }
@@ -67,7 +67,7 @@ public struct TypeTable: Sendable {
     init(
         types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
-        contracts: [Name: [Name: Signature]] = [:],
+        contracts: [Name: [Name: ContractProcedure]] = [:],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = false,
         unsettled: Fulfillment? = nil,

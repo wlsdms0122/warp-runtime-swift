@@ -39,7 +39,7 @@ extension Builder {
     // type standing in it has every procedure behind it.
     func witnesses(
         of claims: [Placed<Claim>],
-        asking contracts: [Name: Placed<[Name: Signature]>],
+        asking contracts: [Name: Placed<[Name: ContractProcedure]>],
         over types: [Name: Placed<TypeExpression>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
@@ -113,7 +113,7 @@ extension Builder {
     // receiver filled in by the type itself.
     private func holding(
         _ claim: Placed<Claim>,
-        asking contracts: [Name: Placed<[Name: Signature]>],
+        asking contracts: [Name: Placed<[Name: ContractProcedure]>],
         over types: [Name: Placed<TypeExpression>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
@@ -159,7 +159,7 @@ extension Builder {
 
         var answering: [Name: Name] = [:]
 
-        for (procedure, signature) in asked.held.sorted(by: { $0.key < $1.key }) {
+        for (procedure, wanted) in asked.held.sorted(by: { $0.key < $1.key }) {
             let spelling = LoweredContractProcedure.spelling(of: type, procedure: procedure)
 
             // A private declaration is in no space another document resolves
@@ -186,7 +186,7 @@ extension Builder {
             // The reason and not a refusal: a refusal renders its own place,
             // and this sentence stands where the pair was leaned on.
             if let reason = answers(
-                signature,
+                wanted.signature,
                 as: witness.held.signature,
                 receiving: type,
                 of: contract,
@@ -195,6 +195,25 @@ extension Builder {
                 in: table
             ) {
                 return .waits("\(witness.spelled) declares '\(spelling)', which " + reason)
+            }
+
+            // What the contract asked beyond the signature, held where the
+            // witness's row stands. A declaration being compiled now has no
+            // row yet, and the link holds it when every row does.
+            if let facts = witness.held.facts {
+                if wanted.constness == .const, facts.constness != .const {
+                    return .waits(
+                        "\(witness.spelled) declares '\(spelling)', which runs, and '\(contract)'"
+                            + " asks '\(procedure)' to answer without running"
+                    )
+                }
+
+                if wanted.isolation == .isolated, facts.isolation != .isolated {
+                    return .waits(
+                        "\(witness.spelled) declares '\(spelling)', which touches a name another"
+                            + " body could touch at once, and '\(contract)' asks '\(procedure)' to touch none"
+                    )
+                }
             }
 
             answering[procedure] = spelling

@@ -23,6 +23,11 @@ struct LoweredContractProcedure: Sendable {
     // the procedure is in one.
     let signature: Signature
 
+    // What the contract asks of every declaration answering it beyond the
+    // signature, which is what a call through the contract reads as.
+    let constness: Constness
+    let isolation: Isolation
+
     // The same declaration as the run reads it, lowered once here. A procedure
     // in a contract declares no row, so this is the only place its lowering
     // could live.
@@ -48,13 +53,15 @@ struct LoweredContractProcedure: Sendable {
         types.contracts.reduce(into: [Name: LoweredContractProcedure]()) { table, entry in
             let answering = types.loweredTypes.satisfying[entry.key] ?? []
 
-            for (procedure, signature) in entry.value {
+            for (procedure, asked) in entry.value {
                 table[spelling(of: entry.key, procedure: procedure)] = LoweredContractProcedure(
                     contract: entry.key,
                     procedure: procedure,
-                    signature: signature,
-                    slots: signature.lowered(in: types.loweredTypes),
-                    answers: signature.returns?.lowered(in: types.loweredTypes),
+                    signature: asked.signature,
+                    constness: asked.constness,
+                    isolation: asked.isolation,
+                    slots: asked.signature.lowered(in: types.loweredTypes),
+                    answers: asked.signature.returns?.lowered(in: types.loweredTypes),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in
                         held[type] = spelling(of: type, procedure: procedure)
                     }

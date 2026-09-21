@@ -20,7 +20,7 @@ extension Builder {
     func declared(in documents: [any Declaring]) throws -> (
         types: [Name: Placed<TypeExpression>],
         constraints: [Name: Placed<[TypeExpression]>],
-        contracts: [Name: Placed<[Name: Signature]>],
+        contracts: [Name: Placed<[Name: ContractProcedure]>],
         claims: [Placed<Claim>]
     ) {
         // Where each name was written, gathered here and carried with what it
@@ -37,7 +37,7 @@ extension Builder {
         // happened to list the documents in.
         var declaredTypes: [Name: Placed<TypeExpression>] = [:]
         var declaredConstraints: [Name: Placed<[TypeExpression]>] = [:]
-        var declaredContracts: [Name: Placed<[Name: Signature]>] = [:]
+        var declaredContracts: [Name: Placed<[Name: ContractProcedure]>] = [:]
 
         for (origin, held) in documents.enumerated() {
             for (name, type) in held.types.sorted(by: { $0.key < $1.key }) {

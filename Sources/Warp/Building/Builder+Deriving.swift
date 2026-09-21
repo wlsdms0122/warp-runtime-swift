@@ -282,12 +282,11 @@ extension Builder {
             return record.values.lazy.compactMap { field in runs(in: field, given: context) }.first
 
         // A contract's procedure is answered by whatever type the value turns
-        // out to be, so which declaration this reaches is the run's answer and
-        // its constness with it. Only a call the build resolves to a declaration
-        // is judged here.
+        // out to be, so what a call through one reads as is what the contract
+        // asked of every declaration answering it.
         case let .call(call):
             guard
-                context.signature(of: call.selector) != nil,
+                context.signature(of: call.selector) != nil || context.contractProcedures[call.selector] != nil,
                 !context.isConst(call.selector)
             else {
                 return call.receiver.flatMap { receiver in runs(in: receiver, given: context) }

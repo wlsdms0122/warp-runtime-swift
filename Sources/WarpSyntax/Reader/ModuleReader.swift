@@ -75,7 +75,7 @@ public struct ModuleReader: Decodable {
                 in: container,
                 forKey: .contracts
             )
-                .mapValues { procedures in try procedures.mapValues(\.signature).named(at: []) },
+                .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
                 .mapValues { contracts in try Set(contracts).named(at: []) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)

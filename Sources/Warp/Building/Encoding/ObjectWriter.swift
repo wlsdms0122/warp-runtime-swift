@@ -57,7 +57,11 @@ struct ObjectWriter {
             "dependencies": .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
             "types": try keyed(compiled.types, type),
             "constraints": try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in .array(try types.map(type)) },
-            "contracts": try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in try keyed(procedures, signature) },
+            "contracts": try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
+                try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
+                    .array([try signature(asked.signature), constness(asked.constness), isolation(asked.isolation)])
+                }
+            },
             "claims": keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
             "leaned": .array(compiled.leaned.keys.sorted().map { claim in
                 .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
