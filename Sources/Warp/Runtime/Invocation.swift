@@ -64,9 +64,12 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Public
     // What an argument holds, named by the procedure's own key. An argument nobody
     // wrote and one written as null are the same fact here, the same as they
-    // are everywhere else.
+    // are everywhere else. The receiver is a parameter like the rest, so its
+    // key answers what was sent to it.
     public subscript(key: P.Parameters) -> Value {
-        settled[key.position]
+        guard key.name != callee.signature.receiver else { return receiver ?? .null }
+
+        return settled[key.position]
     }
 
     // What a parameter handed in place holds now.

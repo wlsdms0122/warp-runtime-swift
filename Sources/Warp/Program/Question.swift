@@ -56,7 +56,9 @@ public struct Question<P: NativeProcedure>: Sendable {
     // one was asked with no declaration behind it, so there are only names.
     public subscript(key: P.Parameters) -> Value {
         switch arguments {
-        case let .settled(settled, _, _):
+        case let .settled(settled, callee, _):
+            guard key.name != callee.signature.receiver else { return receiver ?? .null }
+
             return settled[key.position]
 
         case let .given(given):

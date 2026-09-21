@@ -65,6 +65,32 @@ struct ReceiverTests {
         #expect(outputs["result"] == .string("hey!"))
     }
 
+    @Test("a native procedure reads its receiver by the parameter's own key")
+    func receiverIsReadByItsKey() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    body: [],
+                    result: .record([
+                        "result": .call(Call(receiver: .literal(.int(20)), selector: "app.echo"))
+                    ])
+                ),
+                "app.echo": Procedure(
+                    signature: Signature(of: EchoQuery.self, receiver: .of, returns: .int),
+                    implementation: .query(EchoQuery())
+                )
+            ]
+        )
+
+        // When
+        let outputs = try await run(sut)
+
+        // Then
+        #expect(outputs["result"] == .int(20))
+    }
+
     @Test("a native procedure and a written one are declared the same way")
     func nativeAndWrittenDeclareAlike() async throws {
         // Given
@@ -258,4 +284,24 @@ struct ReceiverTests {
             "\(error)".contains("reads a dot on any, which declares nothing")
         }
     }
+}
+
+// Answers what it was sent to, read by the receiver's own key.
+private struct EchoQuery: Query {
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .int) }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        question[.of]
+    }
+
+    // MARK: - Private
 }
