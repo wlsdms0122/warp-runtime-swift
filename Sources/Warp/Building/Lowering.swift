@@ -58,12 +58,9 @@ struct Lowering {
     // `rows` rather than in it.
     private(set) var closureRows: [Int: [Int]] = [:]
 
-    // Where each document's block begins. A document's own numbers answer by
-    // it.
-    private(set) var blocks: [Int: Int] = [:]
-
     // Each document's declarations by row, private ones included: what the
-    // document itself may name whoever else may.
+    // document itself may name whoever else may. A document's own numbers
+    // answer by it.
     private(set) var owned: [Int: [Name: Int]] = [:]
 
     // The spellings of the private declarations held so far. Not in `rows`,
@@ -99,7 +96,6 @@ struct Lowering {
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
-        self.blocks = carried.blocks
         self.owned = carried.owned
         self.hidden = carried.hidden
         self.numbering = carried.numbering
@@ -158,7 +154,6 @@ struct Lowering {
             rows[row.label] = start + offset
         }
 
-        blocks[origin] = start
         owned[origin] = own
 
         closureRows[origin] = lifted.indices.map { offset in start + block.count + offset }
@@ -972,7 +967,7 @@ struct Lowering {
         guard case let .row(row) = numbered(slots.origin).row(
             number,
             rows: rows,
-            own: blocks[slots.origin],
+            own: own(slots.origin),
             closures: closureRows[slots.origin] ?? []
         ) else {
             return nil

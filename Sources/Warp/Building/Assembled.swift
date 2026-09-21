@@ -35,10 +35,10 @@ struct Assembled: Sendable {
     // Every declared spelling, by row.
     let rows: [Name: Int]
 
-    // Where each document's block begins, by origin; a document's own numbers
-    // answer by it. And the spellings its private declarations wear, which
-    // `rows` does not hold: nothing outside their documents names them.
-    let starts: [Int]
+    // Each document's own declarations by row, private ones included, which
+    // its own numbers answer by. And the spellings the private ones wear,
+    // which `rows` does not hold: nothing outside their documents names them.
+    let owned: [[Name: Int]]
     let hidden: Set<Name>
 
     // Which row each document's closures took, in the order that document
@@ -64,7 +64,7 @@ struct Assembled: Sendable {
 
         var table: [Row] = []
         var rows: [Name: Int] = [:]
-        var starts: [Int] = []
+        var owned: [[Name: Int]] = []
         var hidden: Set<Name> = []
         var closures = [[Int]](repeating: [], count: documents.count)
         var named: [Place.Document] = []
@@ -85,13 +85,16 @@ struct Assembled: Sendable {
             let start = table.count
             let document = documents[origin].document
 
-            starts.append(start)
+            let concealed = documents[origin].hidden
+            var own: [Name: Int] = [:]
 
             for (offset, name) in documents[origin].declared.enumerated() {
+                own[name] = start + offset
+
                 // A private declaration takes no spelling from the link: its
-                // own document reaches it by the block, so two documents may
-                // each declare one under one spelling.
-                guard !documents[origin].hidden.contains(name) else {
+                // own document reaches it by its own rows, so two documents
+                // may each declare one under one spelling.
+                guard !concealed.contains(name) else {
                     hidden.insert(name)
 
                     continue
@@ -116,6 +119,7 @@ struct Assembled: Sendable {
                 rows[name] = start + offset
             }
 
+            owned.append(own)
             closures[origin] = documents[origin].lifted.map { row in start + row }
 
             for index in documents[origin].table.indices {
@@ -134,7 +138,7 @@ struct Assembled: Sendable {
         self.naming = naming
         self.spelled = ClosureRows(naming: naming, numbering: numbering, closures: closures, documents: named)
         self.rows = rows
-        self.starts = starts
+        self.owned = owned
         self.hidden = hidden
         self.closures = closures
         self.numbering = numbering

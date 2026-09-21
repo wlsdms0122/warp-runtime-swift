@@ -32,11 +32,11 @@ struct Sending {
     // Which declarations answer without running, where the build has worked it
     // out. Nil where nothing has: a folding table stands before the constness
     // pass, and a claim it cannot check it does not make.
-    private let const: Set<Name>?
+    private let const: (@Sendable (Name) -> Bool)?
 
     // Which declarations touch nothing another body could touch at the same
     // time, where the build has worked it out.
-    private let isolated: Set<Name>?
+    private let isolated: (@Sendable (Name) -> Bool)?
 
     // What a selector this document may send takes, where the build has the
     // declaration in hand. Nil for a spelling nothing standing so far declares,
@@ -46,8 +46,8 @@ struct Sending {
     // MARK: - Initializer
     init(
         numbering: Numbering,
-        const: Set<Name>? = nil,
-        isolated: Set<Name>? = nil,
+        const: (@Sendable (Name) -> Bool)? = nil,
+        isolated: (@Sendable (Name) -> Bool)? = nil,
         taking: @escaping @Sendable (Name) -> Signature?
     ) {
         self.numbering = numbering
@@ -147,12 +147,12 @@ struct Sending {
     private func answersOnlyByRunning(_ selector: Name) -> Bool {
         guard let const else { return false }
 
-        return !const.contains(selector)
+        return !const(selector)
     }
 
     private func touchesSomethingShared(_ selector: Name) -> Bool {
         guard let isolated else { return false }
 
-        return !isolated.contains(selector)
+        return !isolated(selector)
     }
 }

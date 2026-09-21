@@ -61,7 +61,7 @@ struct Answered: Sendable {
 
     // Which row each of one document's numbers stands for, worked out once per
     // number rather than once per body standing on one.
-    static func answering(_ numbering: Numbering, rows: [Name: Int], own: Int?) -> [Int?] {
+    static func answering(_ numbering: Numbering, rows: [Name: Int], own: [Name: Int]) -> [Int?] {
         numbering.answers(rows: rows, own: own).map { answer -> Int? in
             guard case let .row(row) = answer else { return nil }
 
@@ -168,9 +168,9 @@ final class Relocating {
     private let rows: [Name: Int]
     private let numbering: [Numbering]
 
-    // Where each document's block begins, and the spellings only private
+    // Each document's own declarations by row, and the spellings only private
     // declarations wear.
-    private let starts: [Int]
+    private let owned: [[Name: Int]]
     private let hidden: Set<Name>
 
     // What each document's type numbers turned out to be in this link.
@@ -213,7 +213,7 @@ final class Relocating {
         documents: [Place.Document],
         naming: [Closure.Document],
         numbering: [Numbering],
-        starts: [Int],
+        owned: [[Name: Int]],
         hidden: Set<Name>,
         typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
@@ -221,7 +221,7 @@ final class Relocating {
         loweredTypes: LoweredTypeTable
     ) {
         self.closures = closures
-        self.starts = starts
+        self.owned = owned
         self.hidden = hidden
         self.table = table
         self.spelled = spelled
@@ -256,7 +256,7 @@ final class Relocating {
             documents: assembled.documents,
             naming: assembled.naming,
             numbering: assembled.numbering,
-            starts: assembled.starts,
+            owned: assembled.owned,
             hidden: assembled.hidden,
             typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
@@ -355,7 +355,7 @@ final class Relocating {
         switch numbering[standing.origin].row(
             number,
             rows: rows,
-            own: starts[standing.origin],
+            own: owned[standing.origin],
             closures: closures[standing.origin]
         ) {
         case let .row(row):

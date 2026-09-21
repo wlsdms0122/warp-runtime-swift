@@ -30,11 +30,17 @@ extension Builder {
     // back. A document is settled against everything standing in front of it,
     // so taking that as a value would copy the whole graph's answer once per
     // document, and this call only ever adds its own.
+    //
+    // `beyond` answers for a selector this document does not declare: the
+    // row it names in the link, which carries its constness.
     func const(
         among symbols: [Symbol],
         settling const: inout Set<Name>,
-        reading variables: Set<Name>
+        reading variables: Set<Name>,
+        beyond: @escaping (Name) -> Bool
     ) {
+        let own = Set(symbols.map(\.declared))
+
         // The body beside the names its own declaration said hold a procedure
         // answering without running, since applying one of those is what the
         // body is judged on.
@@ -55,11 +61,13 @@ extension Builder {
         // here, and asking after those again is asking the whole graph once
         // per document.
         while true {
+            let settled = const
+            let given: (Name) -> Bool = { name in own.contains(name) ? settled.contains(name) : beyond(name) }
             let struck = bodies.compactMap { name, written in
                 const.contains(name)
                     && !isConst(
                         written.block,
-                        given: const,
+                        given: given,
                         reading: variables,
                         applying: written.applying
                     ) ? name : nil
@@ -80,7 +88,13 @@ extension Builder {
     // that says nothing about itself makes everything reaching it say nothing
     // too. Two procedures calling each other settle where nothing more is
     // added, which the finite set of declared names guarantees.
-    func failing(among symbols: [Symbol], settling failing: inout [Name: Failing]) {
+    func failing(
+        among symbols: [Symbol],
+        settling failing: inout [Name: Failing],
+        beyond: @escaping (Name) -> Failing?
+    ) {
+        let own = Set(symbols.map(\.declared))
+
         for symbol in symbols {
             failing[symbol.declared] = symbol.procedure.implementation.nativelyFailing ?? .these([])
         }
@@ -93,7 +107,8 @@ extension Builder {
             var grown = false
 
             for (name, block) in bodies {
-                let read = self.failing(block, given: failing)
+                let settled = failing
+                let read = self.failing(block, given: { selector in own.contains(selector) ? settled[selector] : beyond(selector) })
 
                 guard read != failing[name] else { continue }
 
@@ -107,7 +122,7 @@ extension Builder {
 
     // What may come out of a block: everything its statements and its result
     // may fail with.
-    func failing(_ block: Block, given failing: [Name: Failing]) -> Failing {
+    func failing(_ block: Block, given failing: (Name) -> Failing?) -> Failing {
         block.body
             .reduce(Failing.these([])) { carried, statement in
                 carried.joined(self.failing(statement.expression, given: failing))
@@ -115,13 +130,13 @@ extension Builder {
             .joined(block.result.map { result in self.failing(result, given: failing) } ?? .these([]))
     }
 
-    func failing(_ body: [Statement], given failing: [Name: Failing]) -> Failing {
+    func failing(_ body: [Statement], given failing: (Name) -> Failing?) -> Failing {
         body.reduce(Failing.these([])) { carried, statement in
             carried.joined(self.failing(statement.expression, given: failing))
         }
     }
 
-    func failing(_ expression: Expression, given failing: [Name: Failing]) -> Failing {
+    func failing(_ expression: Expression, given failing: (Name) -> Failing?) -> Failing {
         func read(_ inner: Expression) -> Failing {
             self.failing(inner, given: failing)
         }
@@ -149,7 +164,7 @@ extension Builder {
             return .unstated
 
         case let .call(call):
-            return (failing[call.selector] ?? .unstated)
+            return (failing(call.selector) ?? .unstated)
                 .joined(call.receiver.map(read) ?? .these([]))
                 .joined(
                     call.arguments.values.reduce(Failing.these([])) { carried, argument in
@@ -189,7 +204,7 @@ extension Builder {
     // what the block reaches.
     func isConst(
         _ block: Block,
-        given const: Set<Name>,
+        given const: (Name) -> Bool,
         reading variables: Set<Name>,
         applying procedures: Set<Name>
     ) -> Bool {
@@ -273,7 +288,7 @@ extension Builder {
         case let .call(call):
             guard
                 context.signature(of: call.selector) != nil,
-                !context.const.contains(call.selector)
+                !context.isConst(call.selector)
             else {
                 return call.receiver.flatMap { receiver in runs(in: receiver, given: context) }
                     ?? call.arguments.values.lazy
@@ -294,7 +309,7 @@ extension Builder {
 
     func isConst(
         _ expression: Expression,
-        given const: Set<Name>,
+        given const: (Name) -> Bool,
         reading variables: Set<Name>,
         applying procedures: Set<Name>
     ) -> Bool {
@@ -332,7 +347,7 @@ extension Builder {
             return record.values.allSatisfy(isConst)
 
         case let .call(call):
-            return const.contains(call.selector)
+            return const(call.selector)
                 && (call.receiver.map(isConst) ?? true)
                 && call.arguments.values.allSatisfy(isConst)
 

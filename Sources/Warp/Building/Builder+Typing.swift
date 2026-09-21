@@ -1530,7 +1530,7 @@ extension Builder {
             let const = body.map { block in
                 isConst(
                     block,
-                    given: context.const,
+                    given: context.isConst,
                     reading: reading,
                     applying: procedure.signature.constProcedures
                         .union(captured.filter { _, held in held.isConstProcedure }.keys)
@@ -1540,7 +1540,7 @@ extension Builder {
                 isIsolated(
                     block,
                     declaring: Set(procedure.signature.parameters.keys),
-                    given: context.isolated,
+                    given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures
                         .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
                     taking: { selector in context.signature(of: selector) }
@@ -1555,7 +1555,7 @@ extension Builder {
                         implementation: .body(body),
                         constness: const ? .const : .unstated,
                         isolation: isolated ? .isolated : .unstated,
-                        failing: failing(body, given: context.failing)
+                        failing: failing(body, given: context.failing(of:))
                     )
                 )
             }
@@ -1967,7 +1967,7 @@ extension Builder {
             // leaves it a body no run reaches, and the author wrote it
             // expecting otherwise: what they are told is which failures the
             // link found, which is none.
-            if failing(block, given: context.failing).failsNothing {
+            if failing(block, given: context.failing(of:)).failsNothing {
                 try refuse(
                     "attempts a body that cannot fail, so its rescue is a body"
                         + " no run reaches. What a rescue catches is what the"

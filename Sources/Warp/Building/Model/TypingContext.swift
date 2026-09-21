@@ -32,27 +32,12 @@ struct TypingContext: Sendable {
 
     // What the link read off a body whose declaration wrote no `returns`.
     // Only those, for the same reason: what a declaration wrote is on its row.
-    let answers: [Name: LoweredType]
+    let answers: [Int: LoweredType]
 
     // The same declarations as the run reads them, lowered once. Every
     // judgment the walk asks goes here, so the walk and the run judge by one
     // table and by one language.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
-
-    // Every declaration that answers without running, by resolved selector. A
-    // closure literal is judged against this, so what a body is written to call
-    // decides whether it fits a slot asking for constness.
-    let const: Set<Name>
-
-    // Which declarations touch no name another body could touch at the same
-    // time, worked out from the bodies the way constness is.
-    let isolated: Set<Name>
-
-    // What may come out of each declaration when the work goes wrong, worked
-    // out from the bodies the way constness is. A closure literal is judged
-    // against this, and so is every `attempt`: what a rescue is there for is
-    // what its body may fail with.
-    let failing: [Name: Failing]
 
     // Every contract's procedures, under the spelling a call writes to reach one.
     // Beside the symbols rather than in them: a name here answers with no
@@ -90,10 +75,24 @@ struct TypingContext: Sendable {
     // What it answers: what the link read off a body that declared none, else
     // what the declaration wrote.
     func answer(of selector: Name) -> LoweredType? {
-        if let read = answers[selector] { return read }
-        if let row = own[selector] ?? rows[selector] { return linked[row].returns }
+        if let row = own[selector] ?? rows[selector] { return answers[row] ?? linked[row].returns }
 
         return contractProcedures[selector]?.answers
+    }
+
+    // What the build derived of the declaration a selector names, read off
+    // its row. A selector naming no row, a contract's procedure among them,
+    // has none of these.
+    func isConst(_ selector: Name) -> Bool {
+        declared(selector)?.constness == .const
+    }
+
+    func isIsolated(_ selector: Name) -> Bool {
+        declared(selector)?.isolation == .isolated
+    }
+
+    func failing(of selector: Name) -> Failing? {
+        declared(selector)?.failing
     }
 
     // A named type stands for what it was declared as. Inference walks into

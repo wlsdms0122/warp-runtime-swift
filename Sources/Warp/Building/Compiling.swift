@@ -32,26 +32,11 @@ struct Compiling {
     // What a closure each document writes is spelled with.
     let naming: [Closure.Document]
 
-    // The facts nobody declared, over every declaration laid down so far.
-    var const: Set<Name> = []
-    var isolated: Set<Name> = []
-    var failing: [Name: Failing] = [:]
-
-    // The facts another document holds under spellings this one declares
-    // privately, taken out of the shared tables for the length of this
-    // document's compile.
-    struct Shadowed {
-        let const: Set<Name>
-        let isolated: Set<Name>
-        let failing: [Name: Failing]
-        let answers: [Name: LoweredType]
-    }
-
     // What the build read off a body whose declaration wrote no `returns`.
     // Only those: what a declaration wrote is on its row already, and a table
     // holding every spelling would hash every declared name to say what the
     // row says.
-    var answers: [Name: LoweredType] = [:]
+    var answers: [Int: LoweredType] = [:]
 
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
@@ -113,9 +98,6 @@ struct Compiling {
             contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )
-        self.const = carried.const
-        self.isolated = carried.isolated
-        self.failing = carried.failing
         self.answers = carried.answers
         self.named = carried.named
 
@@ -130,16 +112,12 @@ struct Compiling {
         Carried(
             table: lowering.table,
             rows: lowering.rows,
-            blocks: lowering.blocks,
             owned: lowering.owned,
             hidden: lowering.hidden,
             named: named,
             numbering: lowering.numbering,
             closureRows: lowering.closureRows,
             variables: lowering.variables,
-            const: const,
-            isolated: isolated,
-            failing: failing,
             answers: answers
         )
     }
@@ -168,17 +146,14 @@ struct Compiling {
             variables: document.variables.map(\.name)
         )
 
-        // A private declaration's facts are its own document's, which is
-        // compiled already; what stands here is what another document may
-        // name.
-        for judged in document.table[document.standing] where judged.access.reachesOtherDocuments {
-            if judged.constness == .const { const.insert(judged.label) }
-            if judged.isolation == .isolated { isolated.insert(judged.label) }
+        // What the build read off a body stands by the row it was read off.
+        let own = lowering.own(origin)
 
-            failing[judged.label] = judged.failing
+        for (name, answer) in read {
+            guard let row = own[name] else { continue }
+
+            answers[row] = answer
         }
-
-        answers.merge(read.filter { name, _ in !document.hidden.contains(name) }) { _, answer in answer }
     }
 
     // One document laid down: its declarations take the rows after the ones
@@ -202,45 +177,6 @@ struct Compiling {
         )
     }
 
-    // Takes the facts standing under these spellings out of the shared
-    // tables, and answers with them, so the document declaring the spellings
-    // privately is derived over its own and what it shadows comes back after.
-    mutating func shadowed(by hidden: Set<Name>) -> Shadowed {
-        let held = Shadowed(
-            const: const.intersection(hidden),
-            isolated: isolated.intersection(hidden),
-            failing: failing.filter { name, _ in hidden.contains(name) },
-            answers: answers.filter { name, _ in hidden.contains(name) }
-        )
-
-        const.subtract(hidden)
-        isolated.subtract(hidden)
-
-        for name in hidden {
-            failing[name] = nil
-            answers[name] = nil
-        }
-
-        return held
-    }
-
-    // The document's private facts leave the shared tables with it, and what
-    // they shadowed stands again.
-    mutating func restore(_ shadowed: Shadowed, hiding hidden: Set<Name>) {
-        const.subtract(hidden)
-        isolated.subtract(hidden)
-
-        for name in hidden {
-            failing[name] = nil
-            answers[name] = nil
-        }
-
-        const.formUnion(shadowed.const)
-        isolated.formUnion(shadowed.isolated)
-        failing.merge(shadowed.failing) { _, kept in kept }
-        answers.merge(shadowed.answers) { _, kept in kept }
-    }
-
     // Which row each number this document gave stands for. A number of its own
     // reaches a name it declared or one behind it, so the answer never moves
     // after this.
@@ -248,7 +184,7 @@ struct Compiling {
         named[origin] = Answered.answering(
             lowering.numbering[origin] ?? Numbering(sends: [], declared: []),
             rows: lowering.rows,
-            own: lowering.blocks[origin]
+            own: lowering.own(origin)
         )
     }
 
@@ -271,7 +207,7 @@ struct Compiling {
             guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
                 unfound,
                 rows: lowering.rows,
-                own: lowering.blocks[origin],
+                own: lowering.own(origin),
                 closures: []
             ) else {
                 continue
@@ -296,10 +232,20 @@ struct Compiling {
     // A type the build read off a body rather than out of a signature, held to
     // the document that wrote the body: the rows it stands on are numbered
     // beside the ones that document's bodies stand on.
+    // A body's answer stands by its row, which this document holds by now.
     mutating func read(_ answer: LoweredType, as declared: Name, of origin: Int) {
-        answers[declared] = answer
+        if let row = lowering.own(origin)[declared] {
+            answers[row] = answer
+        }
 
         lowering.stands(on: answer, of: origin)
+    }
+
+    // The row a selector names from this document: its own declaration first,
+    // then what the link holds under the spelling. What the build derived of
+    // a declaration stands on the row, so this is where a fact is read.
+    func declared(_ selector: Name, from origin: Int) -> Linked? {
+        (lowering.own(origin)[selector] ?? lowering.rows[selector]).map { row in lowering.table[row] }
     }
 
     // A body lowered into its row. Noted as well as written, because what
@@ -375,9 +321,6 @@ struct Compiling {
             rows: lowering.rows,
             own: lowering.own(origin),
             answers: answers,
-            const: const,
-            isolated: isolated,
-            failing: failing,
             contractProcedures: contractProcedures,
             variables: variables
         )

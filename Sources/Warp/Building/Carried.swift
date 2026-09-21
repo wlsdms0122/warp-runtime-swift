@@ -21,9 +21,8 @@ struct Carried: Sendable {
     let table: [Linked]
     let rows: [Name: Int]
 
-    // Where each document's block begins, and the spellings its private
-    // declarations wear, which no table of names holds.
-    let blocks: [Int: Int]
+    // Each document's own declarations by row, and the spellings the private
+    // ones wear, which no table of the link's names holds.
     let owned: [Int: [Name: Int]]
     let hidden: Set<Name>
 
@@ -38,25 +37,21 @@ struct Carried: Sendable {
 
     // What the documents proved about their own bodies, and what the build
     // read off one whose declaration wrote no `returns`.
-    let const: Set<Name>
-    let isolated: Set<Name>
-    let failing: [Name: Failing]
-    let answers: [Name: LoweredType]
+    // What the build read off a body whose declaration wrote no `returns`,
+    // by row. Everything else the build derived of a declaration stands on
+    // its row.
+    let answers: [Int: LoweredType]
 
     // Nothing laid down.
     static let none = Carried(
         table: [],
         rows: [:],
-        blocks: [:],
         owned: [:],
         hidden: [],
         named: [:],
         numbering: [:],
         closureRows: [:],
         variables: [:],
-        const: [],
-        isolated: [],
-        failing: [:],
         answers: [:]
     )
 }

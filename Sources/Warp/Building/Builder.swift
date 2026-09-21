@@ -248,7 +248,9 @@ public struct Builder: Sendable {
         var signatures: [Name: Placed<Declared>] = [:]
 
         for (position, document) in compiled.enumerated() {
-            for (offset, name) in document.declared.enumerated() where !document.hidden.contains(name) {
+            let hidden = document.hidden
+
+            for (offset, name) in document.declared.enumerated() where !hidden.contains(name) {
                 signatures[name] = Placed(
                     Declared(signature: document.table[offset].signature, access: document.table[offset].access),
                     at: .procedure(name.spelling, in: document.document),
@@ -596,17 +598,27 @@ public struct Builder: Sendable {
             own[selector] ?? rows[selector].map { row in table[row].signature }
         }
 
-        // The facts are held by spelling, and a private declaration's spelling
-        // is its own document's: another document's declaration under the
-        // same spelling is set aside while this document is derived and put
-        // back when it leaves, and this document's private facts leave with
-        // it. What stays in the shared tables is what any document may name.
-        let hidden = Set(holding.filter { symbol in !symbol.supplies }.map(\.declared))
-        let shadowed = compiling.shadowed(by: hidden)
+        // Derived over this document's declarations, and read off the rows
+        // the link holds for every other: what the build derives of a
+        // declaration stands on its row, so a document's own facts are its
+        // own until its rows stand, and a spelling another document declares
+        // privately is no row this one reaches.
+        var const: Set<Name> = []
+        var isolated: Set<Name> = []
+        var failing: [Name: Failing] = [:]
+        let beyond: @Sendable (Name) -> Linked? = { [compiling] selector in compiling.declared(selector, from: origin) }
 
-        const(among: holding, settling: &compiling.const, reading: reading)
-        isolated(among: holding, settling: &compiling.isolated, taking: taking)
-        failing(among: holding, settling: &compiling.failing)
+        self.const(among: holding, settling: &const, reading: reading) { selector in beyond(selector)?.constness == .const }
+        self.isolated(among: holding, settling: &isolated, taking: taking) { selector in beyond(selector)?.isolation == .isolated }
+        self.failing(among: holding, settling: &failing) { selector in beyond(selector)?.failing }
+
+        let ownNames = Set(holding.map(\.declared))
+        let constant: @Sendable (Name) -> Bool = { [const] selector in
+            ownNames.contains(selector) ? const.contains(selector) : beyond(selector)?.constness == .const
+        }
+        let untouched: @Sendable (Name) -> Bool = { [isolated] selector in
+            ownNames.contains(selector) ? isolated.contains(selector) : beyond(selector)?.isolation == .isolated
+        }
 
         // Where this document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
@@ -619,8 +631,8 @@ public struct Builder: Sendable {
         )
         let sending = Sending(
             numbering: numbering,
-            const: compiling.const,
-            isolated: compiling.isolated,
+            const: constant,
+            isolated: untouched,
             taking: taking
         )
 
@@ -638,9 +650,9 @@ public struct Builder: Sendable {
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
-                    const: compiling.const.contains(symbol.declared),
-                    isolated: compiling.isolated.contains(symbol.declared),
-                    failing: compiling.failing[symbol.declared] ?? .unstated,
+                    const: const.contains(symbol.declared),
+                    isolated: isolated.contains(symbol.declared),
+                    failing: failing[symbol.declared] ?? .unstated,
                     builtin: module.builtin,
                     sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
                     in: loweredTypes
@@ -743,8 +755,6 @@ public struct Builder: Sendable {
             of: origin,
             answering: read
         )
-
-        compiling.restore(shadowed, hiding: hidden)
 
         // Through the one door an object read back goes through, so what a
         // compile stands up is what a reading would take.
