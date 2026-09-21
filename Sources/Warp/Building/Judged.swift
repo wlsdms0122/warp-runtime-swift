@@ -36,6 +36,11 @@ struct Judged: Sendable {
     // MARK: - Property
     let label: Name
     let signature: Signature
+
+    // Who may name this row. A lifted closure is its document's and nothing
+    // names it, so it is private.
+    let access: Access
+
     let constness: Constness
     let isolation: Isolation
     let failing: Failing
@@ -55,6 +60,7 @@ struct Judged: Sendable {
     private init(
         label: Name,
         signature: Signature,
+        access: Access,
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
@@ -63,6 +69,7 @@ struct Judged: Sendable {
     ) {
         self.label = label
         self.signature = signature
+        self.access = access
         self.constness = constness
         self.isolation = isolation
         self.failing = failing
@@ -75,6 +82,7 @@ struct Judged: Sendable {
     init(
         label: Name,
         signature: Signature,
+        access: Access,
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
@@ -86,6 +94,7 @@ struct Judged: Sendable {
         self.init(
             label: label,
             signature: signature,
+            access: access,
             constness: constness,
             isolation: isolation,
             failing: failing,
@@ -117,6 +126,7 @@ struct Judged: Sendable {
 
         self.label = row.label
         self.signature = row.signature
+        self.access = row.access
         self.constness = row.constness
         self.isolation = row.isolation
         self.failing = row.failing
@@ -267,7 +277,7 @@ struct Judged: Sendable {
             return row(.body(body, frame), of: origin, nth: nth, foldable: true, in: table)
 
         case let .native(sending):
-            guard let brought = supplied[label] else {
+            guard let brought = supplied[label, at: document] else {
                 guard standing else { throw self.brought(nothing: document) }
 
                 // The door it answers through is the row's own: a native
@@ -311,6 +321,7 @@ struct Judged: Sendable {
             label: label,
             origin: origin,
             signature: signature,
+            access: access,
             constness: constness,
             isolation: isolation,
             failing: failing,

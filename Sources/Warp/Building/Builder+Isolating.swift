@@ -17,8 +17,11 @@ extension Builder {
     func isolated(
         among symbols: [Symbol],
         settling isolated: inout Set<Name>,
-        taking asked: @escaping (Name) -> Signature?
+        taking asked: @escaping (Name) -> Signature?,
+        beyond: @escaping (Name) -> Bool
     ) {
+        let own = Set(symbols.map(\.declared))
+
         let bodies = symbols.reduce(
             into: [Name: (block: Block, declaring: Set<Name>, applying: Set<Name>)]()
         ) { table, symbol in
@@ -41,12 +44,14 @@ extension Builder {
         // reads the same way: what was settled before it stands in front of
         // it and reaches nothing here.
         while true {
+            let settled = isolated
+            let given: (Name) -> Bool = { name in own.contains(name) ? settled.contains(name) : beyond(name) }
             let struck = bodies.compactMap { name, body in
                 isolated.contains(name)
                     && !isIsolated(
                         body.block,
                         declaring: body.declaring,
-                        given: isolated,
+                        given: given,
                         applying: body.applying,
                         taking: asked
                     )
@@ -70,7 +75,7 @@ extension Builder {
     func isIsolated(
         _ block: Block,
         declaring parameters: Set<Name>,
-        given isolated: Set<Name>,
+        given isolated: @escaping (Name) -> Bool,
         applying procedures: Set<Name>,
         taking asked: @escaping (Name) -> Signature?
     ) -> Bool {
@@ -83,7 +88,7 @@ extension Builder {
 
     // MARK: - Private
     private struct Isolating {
-        let isolated: Set<Name>
+        let isolated: (Name) -> Bool
 
         // What a callee takes, which is where a call handing something in
         // place says which slot it lands in. Asked rather than held, because
@@ -200,7 +205,7 @@ extension Builder {
 
             case let .call(call):
                 guard
-                    isolated.contains(call.selector),
+                    isolated(call.selector),
                     let signature = asked(call.selector)
                 else {
                     return false

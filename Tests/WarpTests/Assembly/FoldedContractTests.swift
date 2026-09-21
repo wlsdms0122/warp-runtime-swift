@@ -38,6 +38,7 @@ struct FoldedContractTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .reference([.key("app.counted")])
@@ -116,6 +117,7 @@ struct FoldedContractTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .reference([.key("app.zzz")])

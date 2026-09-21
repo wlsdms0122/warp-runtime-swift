@@ -58,6 +58,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(
                                 receiver: .literal(.array([.int(1)])),
@@ -86,6 +87,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("verdict"), expression: every(
                                 equals(.literal(.int(1)), .literal(.int(2))),
@@ -153,6 +155,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
                     body: [
                         Statement(binding: .constant("doubled"), expression: .call(Call(
@@ -222,6 +225,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
                     body: [],
                     result: .call(Call(
@@ -261,6 +265,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
                     body: [],
                     result: .call(Call(
@@ -291,6 +296,7 @@ struct StandardTests {
             let sut = try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [],
                         result: .call(Call(
                             receiver: .literal(receiver),
@@ -322,6 +328,7 @@ struct StandardTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [],
                         result: .call(Call(
                             receiver: .literal(receiver),
@@ -353,6 +360,7 @@ struct StandardTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [],
                         result: .call(Call(
                             receiver: .literal(.int(left)),
@@ -425,6 +433,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(
                         receiver: .literal(.array([
@@ -461,6 +470,7 @@ struct StandardTests {
             let sut = try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [],
                         result: .call(Call(
                             receiver: .literal(receiver),
@@ -486,6 +496,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["n": Parameter(type: .int)]),
                     body: [
                         Statement(binding: .constant("quotient"), expression: .call(Call(
@@ -530,6 +541,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "trail": Parameter(type: .array(.int)),
@@ -595,6 +607,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["counts": Parameter(type: .dictionary(.int))]),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
@@ -648,6 +661,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("sum"), expression: .call(Call(receiver: .literal(.int(2)), selector: "std.math.plus", arguments: [
                                         "value": .literal(.int(3))
@@ -686,6 +700,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("gone"), expression: .call(Call(receiver: .literal(.int(1)), selector: "std.math.dividedBy", arguments: [
                                         "value": .literal(.int(0))
@@ -709,6 +724,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "n": Parameter(type: .int)
@@ -747,6 +763,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "line": Parameter(type: .string)
@@ -788,6 +805,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "items": Parameter(type: .array(.string))
@@ -996,6 +1014,7 @@ struct StandardTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["ok": Parameter(type: .bool)]),
                     body: [
                         Statement(binding: .variable("either"), expression: .literal(.null)

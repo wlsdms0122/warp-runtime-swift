@@ -48,6 +48,9 @@ public final class Linked: Sendable {
 
     public let signature: Signature
 
+    // Who may name this row: its own document, the link, or the caller too.
+    public let access: Access
+
     // Where the receiver stands among the slots, which is where it stands
     // among the parameters: a lowering reads a parameter's type and leaves
     // the order alone.
@@ -91,6 +94,7 @@ public final class Linked: Sendable {
         label: Name,
         origin: Int,
         signature: Signature,
+        access: Access,
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
@@ -108,6 +112,7 @@ public final class Linked: Sendable {
         self.origin = origin
         self.nth = nth
         self.signature = signature
+        self.access = access
         self.receiverPosition = receiverPosition
         self.constness = constness
         self.isolation = isolation
@@ -132,6 +137,7 @@ public final class Linked: Sendable {
         self.origin = row.origin
         self.nth = row.nth
         self.signature = row.signature
+        self.access = row.access
         self.receiverPosition = row.receiverPosition
         self.constness = row.constness
         self.isolation = row.isolation
@@ -153,6 +159,7 @@ public final class Linked: Sendable {
         self.origin = row.origin
         self.nth = row.nth
         self.signature = row.signature
+        self.access = row.access
         self.receiverPosition = row.receiverPosition
         self.constness = row.constness
         self.isolation = row.isolation
@@ -187,6 +194,7 @@ public final class Linked: Sendable {
             label: label,
             origin: origin,
             signature: procedure.signature,
+            access: procedure.access,
             constness: const ? .const : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,

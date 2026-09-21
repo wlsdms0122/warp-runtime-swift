@@ -32,6 +32,7 @@ struct ReachTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("account"),
@@ -93,6 +94,7 @@ struct ReachTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("written"),
@@ -127,6 +129,7 @@ struct ReachTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .apply(reference("app.held"), arguments: [:])
                 ),
@@ -151,7 +154,7 @@ struct ReachTests {
                 "app.held": .closure(Procedure(body: [], result: .call(Call(selector: "app.deep"))))
             ],
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
                 "app.aside": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
@@ -174,6 +177,7 @@ struct ReachTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
                 )

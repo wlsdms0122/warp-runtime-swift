@@ -41,7 +41,8 @@ extension Builder {
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: Signature]>],
         over types: [Name: Placed<TypeExpression>],
-        among space: [Name: Placed<Signature>],
+        among space: [Name: Placed<Declared>],
+        concealed: Set<Name>,
         in table: TypeTable
     ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
         // Every contract, answered or not. The entry is what says a name is a
@@ -55,7 +56,7 @@ extension Builder {
         for claim in claims {
             let (type, contract) = (claim.held.type, claim.held.contract)
 
-            switch try holding(claim, asking: contracts, over: types, among: space, in: table) {
+            switch try holding(claim, asking: contracts, over: types, among: space, concealed: concealed, in: table) {
             case let .holds(answering):
                 gathered[contract]?[type] = answering
 
@@ -114,7 +115,8 @@ extension Builder {
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: Signature]>],
         over types: [Name: Placed<TypeExpression>],
-        among space: [Name: Placed<Signature>],
+        among space: [Name: Placed<Declared>],
+        concealed: Set<Name>,
         in table: TypeTable
     ) throws -> Holding {
         let (type, contract) = (claim.held.type, claim.held.contract)
@@ -160,7 +162,19 @@ extension Builder {
         for (procedure, signature) in asked.held.sorted(by: { $0.key < $1.key }) {
             let spelling = ContractProcedure.spelling(of: type, procedure: procedure)
 
+            // A private declaration is in no space another document resolves
+            // in, and a contract is how a document that never names a
+            // declaration calls it, so a private one backs no claim.
             guard let witness = space[spelling] else {
+                guard !concealed.contains(spelling) else {
+                    return .waits(
+                        "\(claim.spelled) says '\(type)' answers '\(contract)', which asks"
+                            + " '\(procedure)', and '\(spelling)' is private to the document that"
+                            + " declares it. A contract's procedure is called from any document,"
+                            + " so a private declaration answers none"
+                    )
+                }
+
                 return .waits(
                     "\(claim.spelled) says '\(type)' answers '\(contract)', which asks"
                         + " '\(procedure)', and nothing in this link declares '\(spelling)'."
@@ -173,7 +187,7 @@ extension Builder {
             // and this sentence stands where the pair was leaned on.
             if let reason = answers(
                 signature,
-                as: witness.held,
+                as: witness.held.signature,
                 receiving: type,
                 of: contract,
                 procedure: procedure,

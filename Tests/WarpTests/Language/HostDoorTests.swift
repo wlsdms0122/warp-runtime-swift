@@ -103,7 +103,7 @@ struct HostDoorTests {
             try Module(
                 imports: [],
                 types: ["bank.Account": .record(["balance": .int])],
-                procedures: ["entry": Procedure(implementation: .body(Block(body: [], result: .literal(.null))))]
+                procedures: ["entry": Procedure(access: .public, implementation: .body(Block(body: [], result: .literal(.null))))]
             )
         }
     }

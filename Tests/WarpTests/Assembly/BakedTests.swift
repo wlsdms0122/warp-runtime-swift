@@ -44,6 +44,7 @@ struct BakedTests {
             imports: ["app.add1"],
             procedures: [
                 "app.twice": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["value": Parameter(type: .int)], returns: .int),
                     body: [
                         Statement(
@@ -303,6 +304,7 @@ struct BakedTests {
         try Module(
             procedures: [
                 "app.counted": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [name: Parameter(type: .int)],
                         returns: .int
@@ -319,6 +321,7 @@ struct BakedTests {
         try Module(
             procedures: [
                 "app.counted": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     implementation: .query(CountingQuery(isolated: isolated))
                 )
@@ -332,6 +335,7 @@ struct BakedTests {
             imports: ["std.math.plus"],
             procedures: [
                 name: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["value": Parameter(type: .int)], returns: .int),
                     body: [],
                     result: .call(

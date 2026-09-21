@@ -20,6 +20,7 @@ struct InPlaceTests {
             variables: ["total": .literal(.int(0))],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -75,7 +76,7 @@ struct InPlaceTests {
                 imports: [],
                 constants: ["limit": .literal(.int(1))],
                 variables: ["limit": .literal(.int(2))],
-                procedures: [entryName: Procedure(body: [], result: reference("limit"))]
+                procedures: [entryName: Procedure(access: .public, body: [], result: reference("limit"))]
             )
         } throws: { error in
             "\(error)".contains("one name holds one thing")
@@ -90,6 +91,7 @@ struct InPlaceTests {
             imports: ["std.control.abort"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .array(.int)),
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1)), .literal(.int(2))])),
@@ -145,6 +147,7 @@ struct InPlaceTests {
             types: ["Outer": .record(["inner": .variable(.record(["a": .int]))])],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -171,6 +174,7 @@ struct InPlaceTests {
             variables: ["items": .array([.literal(.int(1)), .literal(.int(2))])],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .array(.int)),
                     body: [],
                     result: .call(Call(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
@@ -196,6 +200,7 @@ struct InPlaceTests {
             variables: ["items": .array([.literal(.int(1)), .literal(.int(2))])],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
@@ -224,6 +229,7 @@ struct InPlaceTests {
             imports: [],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -255,6 +261,7 @@ struct InPlaceTests {
             imports: [],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
@@ -286,6 +293,7 @@ struct InPlaceTests {
             imports: [],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
@@ -318,6 +326,7 @@ struct InPlaceTests {
             imports: ["other.grow"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["all": Parameter(type: .inout(.record(["items": .array(.int)])))]),
                     body: [
                         Statement(
@@ -351,7 +360,7 @@ struct InPlaceTests {
         let sut = try Module(
             imports: [],
             types: ["Box": .record(["held": .inout(.int)])],
-            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
         // When / Then
@@ -369,6 +378,7 @@ struct InPlaceTests {
             imports: [],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["count": Parameter(type: .variable(.int))]),
                     body: [],
                     result: .literal(.null)

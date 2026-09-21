@@ -82,6 +82,7 @@ struct LinkBoundaryTests {
                         ))
                     ),
                     "entry": Procedure(
+                        access: .public,
                         signature: Signature(returns: .any),
                         body: [],
                         result: .call(Call(selector: "app.hand"))

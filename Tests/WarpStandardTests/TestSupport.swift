@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 import Warp
+import WarpTestSupport
 import WarpStandard
 
 // What a test writes to reach a procedure: a program authored as Swift values, run
@@ -81,7 +82,7 @@ func run(
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
-    let image = try await Builder().build(modules + vocabulary, entry: entry)
+    let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary, entry: entry)
 
     return try await Executor(environment: environment).run(image, arguments: arguments)
 }
@@ -109,7 +110,7 @@ func run(
     vocabulary: [Module] = Module.standard
 ) async throws -> Value {
     try await run(
-        [try Module(procedures: others.merging([entryName: procedure]) { _, new in new })],
+        [try Module(procedures: others.merging([entryName: procedure.with(access: .public)]) { _, new in new })],
         arguments: arguments,
         vocabulary: vocabulary
     )

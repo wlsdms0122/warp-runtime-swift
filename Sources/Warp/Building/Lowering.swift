@@ -58,6 +58,16 @@ struct Lowering {
     // `rows` rather than in it.
     private(set) var closureRows: [Int: [Int]] = [:]
 
+    // Each document's declarations by row, private ones included: what the
+    // document itself may name whoever else may. A document's own numbers
+    // answer by it.
+    private(set) var owned: [Int: [Name: Int]] = [:]
+
+    // The spellings of the private declarations held so far, for the refusal
+    // alone: not in `rows`, since nothing outside their documents names them,
+    // and read only after a row lookup has failed, to say why it did.
+    private(set) var concealed: Set<Name> = []
+
     // How many closures each declaration has been lowered so far, by the
     // document that declared it. A closure's number is its declaration's start
     // plus this, so nesting counts with the rest: a closure inside a closure is
@@ -86,6 +96,8 @@ struct Lowering {
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
+        self.owned = carried.owned
+        self.concealed = carried.concealed
         self.numbering = carried.numbering
         self.variables = carried.variables
         self.closureRows = carried.closureRows
@@ -126,9 +138,23 @@ struct Lowering {
     ) -> Range<Int> {
         let start = table.count
 
+        // A private declaration takes no spelling from the link: its own
+        // document reaches it by the block, and nothing else reaches it.
+        var own: [Name: Int] = [:]
+
         for (offset, row) in block.enumerated() {
+            own[row.label] = start + offset
+
+            guard row.access.reachesOtherDocuments else {
+                concealed.insert(row.label)
+
+                continue
+            }
+
             rows[row.label] = start + offset
         }
+
+        owned[origin] = own
 
         closureRows[origin] = lifted.indices.map { offset in start + block.count + offset }
 
@@ -183,6 +209,11 @@ struct Lowering {
         standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
 
         table[row] = Linked(declared, implementation: .body(body, slots.frame), sends: declared.sends)
+    }
+
+    // A document's own declarations by row, as they were held.
+    func own(_ origin: Int) -> [Name: Int] {
+        owned[origin] ?? [:]
     }
 
     // Lowers one expression read against a frame of constants, as a constant's
@@ -602,6 +633,7 @@ struct Lowering {
                 label: label,
                 origin: slots.origin,
                 signature: procedure.signature,
+                access: .private,
                 constness: procedure.constness,
                 isolation: procedure.isolation,
                 failing: procedure.failing,
@@ -834,15 +866,22 @@ struct Lowering {
         label: Name,
         at place: Place
     ) throws -> CallOperation {
-        guard let row = rows[call.selector] else {
-            throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
-        }
-
-        let callee = table[row]
-
         guard let stands = numbered(slots.origin).call(call.selector) else {
             throw BuildError.unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
         }
+
+        // The document's own declaration by its block, another document's by
+        // its spelling. A spelling only a private declaration wears is one
+        // this document cannot name.
+        guard let row = reached(stands, on: slots) else {
+            guard concealed.contains(call.selector) else {
+                throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
+            }
+
+            throw BuildError.concealed(call.selector, at: place)
+        }
+
+        let callee = table[row]
 
         return try CallOperation(
             handing: { name in
@@ -924,6 +963,7 @@ struct Lowering {
         guard case let .row(row) = numbered(slots.origin).row(
             number,
             rows: rows,
+            own: own(slots.origin),
             closures: closureRows[slots.origin] ?? []
         ) else {
             return nil

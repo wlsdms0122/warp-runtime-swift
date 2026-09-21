@@ -23,7 +23,7 @@ struct FoldingReachTests {
             constants: [
                 "sum": .call(Call(receiver: .literal(.int(2)), selector: "std.math.plus", arguments: ["value": .literal(.int(3))]))
             ],
-            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: reference("sum"))]
+            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("sum"))]
         )
 
         // When. It is built with the vocabulary it names.
@@ -48,7 +48,7 @@ struct FoldingReachTests {
         let document = try Module(
             imports: ["app.seat"],
             constants: ["seat": .call(Call(selector: "app.seat"))],
-            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: reference("seat"))]
+            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
         )
 
         // When and then. What the procedure answers is its code's, and the
@@ -84,7 +84,7 @@ struct FoldingReachTests {
         let document = try Module(
             imports: ["app.row"],
             constants: ["row": .call(Call(selector: "app.row"))],
-            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: reference("row"))]
+            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))]
         )
 
         // When and then. The refusal is about what the fold reaches, not about
@@ -113,6 +113,7 @@ struct FoldingReachTests {
             constants: ["held": .call(Call(selector: "app.make"))],
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .apply(reference("held"), arguments: [:])
@@ -145,6 +146,7 @@ struct FoldingReachTests {
             variables: ["held": .call(Call(selector: "app.make"))],
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .apply(reference("held"), arguments: [:])
@@ -167,7 +169,7 @@ struct FoldingReachTests {
             constants: ["row": .call(Call(selector: "app.row"))],
             procedures: [
                 "app.row": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7))),
-                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: reference("row"))
+                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))
             ]
         )
 
@@ -195,7 +197,7 @@ struct FoldingReachTests {
         let document = try Module(
             imports: ["app.seat"],
             constants: ["seat": .call(Call(selector: "app.seat"))],
-            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: reference("seat"))]
+            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
         )
 
         // When and then. The row came back from an object rather than from the

@@ -83,6 +83,7 @@ struct PlaceTests {
                 constants: ["amount": .literal(.int(1))],
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         signature: Signature(parameters: ["amount": Parameter(type: .int)]),
                         body: []
                     )
@@ -116,7 +117,7 @@ struct PlaceTests {
         // spellings of where they are.
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: [
+                entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(Call(selector: "nowhere")))
                 ])
             ]
@@ -138,7 +139,7 @@ struct PlaceTests {
         // told a thing is wrong and not which of the three it is.
         let sut = try Module(
             procedures: [
-                entryName: Procedure(body: [
+                entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(
                             Call(selector: "helper", arguments: [
                                 "first": .literal(.int(1)),
@@ -178,7 +179,7 @@ struct PlaceTests {
         // far as an author following the procedures is concerned.
         let linked = try Module(
             procedures: [
-                entryName: Procedure(body: [
+                entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(
                             Call(selector: "helper", arguments: ["amount": .literal(.string("x"))])
                         )
@@ -195,7 +196,7 @@ struct PlaceTests {
         let load = #expect(throws: ValidationError.self) {
             try Module(
                 procedures: [
-                    entryName: Procedure(body: [
+                    entryName: Procedure(access: .public, body: [
                         Statement(binding: .constant("sent"), expression: .call(
                                 Call(
                                     selector: "helper",
@@ -233,7 +234,7 @@ struct PlaceTests {
         func module(sending selector: Name, with argument: Warp.Expression) throws -> Module {
             try Module(
                 procedures: [
-                    entryName: Procedure(body: [
+                    entryName: Procedure(access: .public, body: [
                         Statement(binding: .constant("guarded"), expression: .attempt(
                                 Block(body: [mayFail()]),
                                 rescue: Block(body: [
@@ -383,7 +384,7 @@ struct PlaceTests {
         // that key, which is what the document writes.
         let sut = try Module(
             types: ["wallet.Coin": .record(["amount": .named("Missing")])],
-            procedures: [entryName: Procedure(body: [])],
+            procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading,
         )
 
@@ -403,7 +404,7 @@ struct PlaceTests {
         // keys to go on.
         let sut = try Module(
             constraints: ["wallet.Spendable": []],
-            procedures: [entryName: Procedure(body: [])],
+            procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading,
         )
 
@@ -469,7 +470,7 @@ struct PlaceTests {
         // where each of them says it is.
         let declared = try Module(
             procedures: [
-                entryName: Procedure(body: [
+                entryName: Procedure(access: .public, body: [
                     Statement(
                         expression: .call(
                             Call(selector: "stop", arguments: ["message": .literal(.string("x"))])
@@ -491,7 +492,7 @@ struct PlaceTests {
         let load = #expect(throws: ValidationError.self) {
             try Module(
                 procedures: [
-                    entryName: Procedure(body: [
+                    entryName: Procedure(access: .public, body: [
                         Statement(expression: .leave(Leave(reach: .procedure))),
                         Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ])
@@ -524,7 +525,7 @@ struct PlaceTests {
 
         let held = try declaring("taxed", as: Identity([0x01]))
         let sent = try declaring("taxed", as: Identity([0x02]))
-        let caller = try Module(procedures: [entryName: Procedure(body: [])])
+        let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
         // When
         let error = await #expect(throws: BuildError.self) {
@@ -550,7 +551,7 @@ struct PlaceTests {
             identity: Identity([0x01]),
         )
 
-        let caller = try Module(procedures: [entryName: Procedure(body: [])])
+        let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
         // When
         let error = await #expect(throws: BuildError.self) {
@@ -573,7 +574,7 @@ struct PlaceTests {
 
         let held = try declaring(.int, as: Identity([0x01]))
         let sent = try declaring(.string, as: Identity([0x02]))
-        let caller = try Module(procedures: [entryName: Procedure(body: [])])
+        let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
         // When
         let error = await #expect(throws: BuildError.self) {
@@ -594,7 +595,7 @@ struct PlaceTests {
 
         let membership = try Module(constraints: ["pricing.Money": [.int]], procedures: [:], identity: Identity([0x02]))
 
-        let caller = try Module(procedures: [entryName: Procedure(body: [])])
+        let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
         // When
         let error = await #expect(throws: BuildError.self) {
@@ -614,7 +615,7 @@ struct PlaceTests {
         // order that makes an unsorted answer the likely one.
         let sut = try Module(
             constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
-            procedures: [entryName: Procedure(body: [])],
+            procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading,
         )
 
@@ -640,7 +641,7 @@ struct PlaceTests {
                 "zebra": reference("yak"),
                 "yak": reference("zebra")
             ],
-            procedures: [entryName: Procedure(body: [])],
+            procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading,
         )
 
@@ -671,7 +672,7 @@ struct PlaceTests {
                 "delta": reference("epsilon"),
                 "epsilon": .literal(.int(1))
             ],
-            procedures: [entryName: Procedure(body: [])],
+            procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading,
         )
 
@@ -695,7 +696,7 @@ struct PlaceTests {
             try Module(procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))])
         }
 
-        let caller = try Module(procedures: [entryName: Procedure(body: [])])
+        let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
         // When
         let error = await #expect(throws: BuildError.self) {
@@ -719,7 +720,7 @@ struct PlaceTests {
         in identity: Identity? = nil
     ) throws -> Module {
         try Module(
-            procedures: [entryName: Procedure(body: [statement])],
+            procedures: [entryName: Procedure(access: .public, body: [statement])],
             identity: identity
         )
     }

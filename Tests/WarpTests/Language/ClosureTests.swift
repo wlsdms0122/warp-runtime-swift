@@ -69,6 +69,7 @@ struct ClosureTests {
             procedures: [
                 "walking": walking,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("body"),
@@ -128,6 +129,7 @@ struct ClosureTests {
             procedures: [
                 "walking": walking,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("body"),
@@ -177,6 +179,7 @@ struct ClosureTests {
             procedures: [
                 "twice": twice,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("loud"), expression: .closure(
                                 Procedure(
@@ -225,6 +228,7 @@ struct ClosureTests {
             procedures: [
                 "twice": twice,
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("quiet"), expression: .closure(
                                 Procedure(body: [], result: .literal(.string("read")))

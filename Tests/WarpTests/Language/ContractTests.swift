@@ -178,7 +178,7 @@ struct ContractTests {
         let held = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
@@ -265,6 +265,7 @@ struct ContractTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -295,7 +296,7 @@ struct ContractTests {
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
-                entryName: Procedure(body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
@@ -326,7 +327,7 @@ struct ContractTests {
             types: ["bank.Account": .record(["balance": .int])],
             constraints: ["app.Scalar": [.int, .string]],
             claims: ["bank.Account": ["app.Scalar"]],
-            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
         // When / Then
@@ -342,7 +343,7 @@ struct ContractTests {
         // Given
         let sut = try Module(
             contracts: ["app.Anything": [:]],
-            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
         // When / Then
@@ -359,7 +360,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["app.Thing": .int],
             contracts: ["app.Thing": ["describe": Signature(returns: .string)]],
-            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
         // When / Then
@@ -411,6 +412,7 @@ struct ContractTests {
                     )
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .string),
                     body: [
                         Statement(
@@ -457,6 +459,7 @@ struct ContractTests {
                 result: .call(Call(receiver: reference("it"), selector: "app.Describable.describe"))
             ),
             entryName: Procedure(
+                access: .public,
                 signature: Signature(returns: .string),
                 body: [
                     Statement(
@@ -486,7 +489,7 @@ struct ContractTests {
                 "bank.Card": ["app.Describable"]
             ],
             procedures: [
-                entryName: Procedure(body: body, result: result),
+                entryName: Procedure(access: .public, body: body, result: result),
                 "app.tell": Procedure(
                     signature: Signature(
                         receiver: "it",

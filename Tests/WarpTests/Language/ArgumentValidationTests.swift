@@ -17,7 +17,7 @@ struct ArgumentValidationTests {
         // Given
         let odd = try Module(
             imports: ["app.even"],
-            procedures: ["entry": Procedure(body: [], result: even(.literal(.int(3))))]
+            procedures: ["entry": Procedure(access: .public, body: [], result: even(.literal(.int(3))))]
         )
 
         // When / Then
@@ -31,7 +31,7 @@ struct ArgumentValidationTests {
         // Given
         let even = try Module(
             imports: ["app.even"],
-            procedures: ["entry": Procedure(body: [], result: even(.literal(.int(2))))]
+            procedures: ["entry": Procedure(access: .public, body: [], result: even(.literal(.int(2))))]
         )
 
         // When / Then

@@ -139,6 +139,7 @@ struct PlaceWrittenTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
+                        access: .public,
                         body: [],
                         result: .loop(
                             while: .reference([.key("missing")]),

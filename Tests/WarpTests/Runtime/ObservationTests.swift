@@ -30,6 +30,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("first"), expression: .literal(.int(1))),
                         Statement(binding: .constant("second"), expression: .literal(.int(2)))
@@ -60,6 +61,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("outer"), expression: .block(
                                 Block(
@@ -93,6 +95,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("round"), expression: .loop(
                                 while: .call(
@@ -133,6 +136,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(
@@ -180,6 +184,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "helper"))
                         )
@@ -209,6 +214,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         // Nameless on both sides. `helper` declares no answer
                         // and its body never finishes, so the build reads the
@@ -252,6 +258,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("first"),
@@ -292,6 +299,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail"))
                         )
@@ -323,6 +331,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(
                                 Block(
@@ -363,6 +372,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [Statement(binding: .constant("only"), expression: .literal(.int(1)))],
                     result: reference("only")
                 )

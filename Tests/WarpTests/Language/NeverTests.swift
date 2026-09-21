@@ -41,6 +41,7 @@ struct NeverTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(expression: refusing(literal("done"))),
                         Statement(binding: .constant("after"), expression: .literal(.int(1)))
@@ -65,6 +66,7 @@ struct NeverTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("gone"), expression: refusing(literal("done")))
                     ],
@@ -102,6 +104,7 @@ struct NeverTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("x"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
@@ -149,6 +152,7 @@ struct NeverTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
@@ -174,6 +178,7 @@ struct NeverTests {
         let refusing = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
@@ -206,6 +211,7 @@ struct NeverTests {
             constants: ["C": .literal(.int(7))],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             expression: .leave(
@@ -288,6 +294,7 @@ struct NeverTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
@@ -319,6 +326,7 @@ struct NeverTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(expression: refusing(literal("done")))
                     ],

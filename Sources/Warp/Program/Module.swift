@@ -55,6 +55,11 @@ public struct Module: Sendable {
     let declaredProcedures: Set<Name>
     let declaredTypes: Set<Name>
 
+    // What this supplies to a link under a spelling another document may
+    // name: its types, and the procedures that are not private. One answer,
+    // read by everything that asks which module supplies a reference.
+    let supplies: Set<Reference>
+
     // Types this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type. A module declares, and what it declares differs only in
@@ -182,6 +187,9 @@ public struct Module: Sendable {
         self.closures = reading.closures
         self.declaredProcedures = reading.declaredProcedures
         self.declaredTypes = reading.declaredTypes
+        let hidden = Set(draft.procedures.filter { _, procedure in !procedure.access.reachesOtherDocuments }.keys)
+        self.supplies = Set(reading.declaredProcedures.subtracting(hidden).map(Reference.procedure))
+            .union(reading.declaredTypes.map(Reference.type))
 
         try Validator().validate(self)
     }

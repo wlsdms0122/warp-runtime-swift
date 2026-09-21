@@ -32,16 +32,11 @@ struct Compiling {
     // What a closure each document writes is spelled with.
     let naming: [Closure.Document]
 
-    // The facts nobody declared, over every declaration laid down so far.
-    var const: Set<Name> = []
-    var isolated: Set<Name> = []
-    var failing: [Name: Failing] = [:]
-
     // What the build read off a body whose declaration wrote no `returns`.
     // Only those: what a declaration wrote is on its row already, and a table
     // holding every spelling would hash every declared name to say what the
     // row says.
-    var answers: [Name: LoweredType] = [:]
+    var answers: [Int: LoweredType] = [:]
 
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
@@ -103,9 +98,6 @@ struct Compiling {
             contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )
-        self.const = carried.const
-        self.isolated = carried.isolated
-        self.failing = carried.failing
         self.answers = carried.answers
         self.named = carried.named
 
@@ -120,13 +112,12 @@ struct Compiling {
         Carried(
             table: lowering.table,
             rows: lowering.rows,
+            owned: lowering.owned,
+            concealed: lowering.concealed,
             named: named,
             numbering: lowering.numbering,
             closureRows: lowering.closureRows,
             variables: lowering.variables,
-            const: const,
-            isolated: isolated,
-            failing: failing,
             answers: answers
         )
     }
@@ -155,14 +146,14 @@ struct Compiling {
             variables: document.variables.map(\.name)
         )
 
-        for judged in document.table[document.standing] {
-            if judged.constness == .const { const.insert(judged.label) }
-            if judged.isolation == .isolated { isolated.insert(judged.label) }
+        // What the build read off a body stands by the row it was read off.
+        let own = lowering.own(origin)
 
-            failing[judged.label] = judged.failing
+        for (name, answer) in read {
+            guard let row = own[name] else { continue }
+
+            answers[row] = answer
         }
-
-        answers.merge(read) { _, answer in answer }
     }
 
     // One document laid down: its declarations take the rows after the ones
@@ -192,7 +183,8 @@ struct Compiling {
     mutating func answering(_ origin: Int) {
         named[origin] = Answered.answering(
             lowering.numbering[origin] ?? Numbering(sends: [], declared: []),
-            rows: lowering.rows
+            rows: lowering.rows,
+            own: lowering.own(origin)
         )
     }
 
@@ -215,26 +207,41 @@ struct Compiling {
             guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
                 unfound,
                 rows: lowering.rows,
+                own: lowering.own(origin),
                 closures: []
             ) else {
                 continue
             }
 
-            throw BuildError(
-                "'\(declared)' is sent by this document, and no document laid"
-                    + " beside it declares one",
-                at: Place(in: documents[origin])
-            )
+            guard lowering.concealed.contains(declared) else {
+                throw BuildError(
+                    "'\(declared)' is sent by this document, and no document laid"
+                        + " beside it declares one",
+                    at: Place(in: documents[origin])
+                )
+            }
+
+            throw BuildError.concealed(declared, at: Place(in: documents[origin]))
         }
     }
 
     // A type the build read off a body rather than out of a signature, held to
     // the document that wrote the body: the rows it stands on are numbered
     // beside the ones that document's bodies stand on.
+    // A body's answer stands by its row, which this document holds by now.
     mutating func read(_ answer: LoweredType, as declared: Name, of origin: Int) {
-        answers[declared] = answer
+        if let row = lowering.own(origin)[declared] {
+            answers[row] = answer
+        }
 
         lowering.stands(on: answer, of: origin)
+    }
+
+    // The row a selector names from this document: its own declaration first,
+    // then what the link holds under the spelling. What the build derived of
+    // a declaration stands on the row, so this is where a fact is read.
+    func declared(_ selector: Name, from origin: Int) -> Linked? {
+        (lowering.own(origin)[selector] ?? lowering.rows[selector]).map { row in lowering.table[row] }
     }
 
     // A body lowered into its row. Noted as well as written, because what
@@ -300,16 +307,16 @@ struct Compiling {
     }
 
     // One document's reading. Which names hold boxes is the document's own, so
-    // a context is made for the document whose body is being read.
-    func context(reading variables: Set<Name>) -> TypingContext {
+    // a context is made for the document whose body is being read, and so are
+    // the declarations it may name: its own by its block, private ones
+    // included, and every other document's by the spelling the link holds.
+    func context(reading variables: Set<Name>, of origin: Int) -> TypingContext {
         TypingContext(
             types: types,
             linked: lowering.table,
             rows: lowering.rows,
+            own: lowering.own(origin),
             answers: answers,
-            const: const,
-            isolated: isolated,
-            failing: failing,
             contractProcedures: contractProcedures,
             variables: variables
         )

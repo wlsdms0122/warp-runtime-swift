@@ -244,13 +244,15 @@ public struct Builder: Sendable {
     // Every declaration a compiled document made, under the spelling it was
     // declared by and at the place it was written. What a document declares is
     // its own; where it stands among the documents is the caller's order.
-    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Signature>] {
-        var signatures: [Name: Placed<Signature>] = [:]
+    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Declared>] {
+        var signatures: [Name: Placed<Declared>] = [:]
 
         for (position, document) in compiled.enumerated() {
-            for (offset, name) in document.declared.enumerated() {
+            let hidden = document.hidden
+
+            for (offset, name) in document.declared.enumerated() where !hidden.contains(name) {
                 signatures[name] = Placed(
-                    document.table[offset].signature,
+                    Declared(signature: document.table[offset].signature, access: document.table[offset].access),
                     at: .procedure(name.spelling, in: document.document),
                     of: position
                 )
@@ -361,7 +363,10 @@ public struct Builder: Sendable {
         }
 
         for symbols in holding {
-            for symbol in symbols {
+            // A private declaration takes no spelling from the link, so it is
+            // neither held to a spelling another document took nor in the
+            // space another document resolves in.
+            for symbol in symbols where symbol.supplies {
                 if let first = signatures[symbol.declared] {
                     throw BuildError(
                         "'\(symbol.declared)' is declared by \(first.spelled) and by"
@@ -372,7 +377,7 @@ public struct Builder: Sendable {
                 }
 
                 signatures[symbol.declared] = Placed(
-                    symbol.procedure.signature,
+                    Declared(signature: symbol.procedure.signature, access: symbol.procedure.access),
                     at: symbol.place,
                     of: symbol.handed
                 )
@@ -390,6 +395,9 @@ public struct Builder: Sendable {
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
+            concealed: laid.carried.concealed.union(holding.flatMap { symbols in
+                symbols.filter { symbol in !symbol.supplies }.map(\.declared)
+            }),
             unsettled: fulfillment
         )
 
@@ -463,11 +471,13 @@ public struct Builder: Sendable {
         var variables: [Name: Value] = [:]
 
         func context() -> TypingContext {
-            compiling.context(reading: reading)
+            compiling.context(reading: reading, of: origin)
         }
 
+        // This document's declarations by its block: what it declares is its
+        // own whoever else may name it.
         func row(of symbol: Symbol) throws -> Int {
-            guard let row = compiling.lowering.rows[symbol.declared] else {
+            guard let row = compiling.lowering.own(origin)[symbol.declared] else {
                 throw BuildError("'\(symbol.declared)' has no row in the table", at: symbol.place)
             }
 
@@ -526,7 +536,7 @@ public struct Builder: Sendable {
                     at: symbol.place,
                     in: opening(declaration.signature),
                     answering: declaration.signature.returns,
-                    with: context(),
+                    with: context().bounding(declaration.signature.parameterBounds.table),
                     folding: folding,
                     origin: origin,
                     writing: fulfillment
@@ -588,9 +598,27 @@ public struct Builder: Sendable {
             own[selector] ?? rows[selector].map { row in table[row].signature }
         }
 
-        const(among: holding, settling: &compiling.const, reading: reading)
-        isolated(among: holding, settling: &compiling.isolated, taking: taking)
-        failing(among: holding, settling: &compiling.failing)
+        // Derived over this document's declarations, and read off the rows
+        // the link holds for every other: what the build derives of a
+        // declaration stands on its row, so a document's own facts are its
+        // own until its rows stand, and a spelling another document declares
+        // privately is no row this one reaches.
+        var const: Set<Name> = []
+        var isolated: Set<Name> = []
+        var failing: [Name: Failing] = [:]
+        let beyond: @Sendable (Name) -> Linked? = { [compiling] selector in compiling.declared(selector, from: origin) }
+
+        self.const(among: holding, settling: &const, reading: reading) { selector in beyond(selector)?.constness == .const }
+        self.isolated(among: holding, settling: &isolated, taking: taking) { selector in beyond(selector)?.isolation == .isolated }
+        self.failing(among: holding, settling: &failing) { selector in beyond(selector)?.failing }
+
+        let ownNames = Set(holding.map(\.declared))
+        let constant: @Sendable (Name) -> Bool = { [const] selector in
+            ownNames.contains(selector) ? const.contains(selector) : beyond(selector)?.constness == .const
+        }
+        let untouched: @Sendable (Name) -> Bool = { [isolated] selector in
+            ownNames.contains(selector) ? isolated.contains(selector) : beyond(selector)?.isolation == .isolated
+        }
 
         // Where this document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
@@ -603,8 +631,8 @@ public struct Builder: Sendable {
         )
         let sending = Sending(
             numbering: numbering,
-            const: compiling.const,
-            isolated: compiling.isolated,
+            const: constant,
+            isolated: untouched,
             taking: taking
         )
 
@@ -622,9 +650,9 @@ public struct Builder: Sendable {
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
-                    const: compiling.const.contains(symbol.declared),
-                    isolated: compiling.isolated.contains(symbol.declared),
-                    failing: compiling.failing[symbol.declared] ?? .unstated,
+                    const: const.contains(symbol.declared),
+                    isolated: isolated.contains(symbol.declared),
+                    failing: failing[symbol.declared] ?? .unstated,
                     builtin: module.builtin,
                     sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
                     in: loweredTypes
@@ -774,11 +802,31 @@ public struct Builder: Sendable {
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.
         guard let start = assembled.rows[entry] else {
+            // A spelling only a private declaration wears is declared, and by
+            // nothing the caller may name.
+            guard !assembled.concealed.contains(entry) else {
+                throw BuildError(
+                    "entry '\(entry)' is private to the document that declares it, and a run"
+                        + " starts only from a public declaration",
+                    at: nil
+                )
+            }
+
             throw BuildError(
                 "entry '\(entry)' is not declared by any module in this link."
                     + " A name is its declared spelling. Declared:"
                     + " \(assembled.rows.keys.sorted().map(\.spelling).joined(separator: ", "))",
                 at: nil
+            )
+        }
+
+        // A run starts from outside the link, and only a public declaration
+        // is named from there.
+        guard assembled.table[start].judged.access.reachesCaller else {
+            throw BuildError(
+                "entry '\(entry)' is \(assembled.table[start].judged.access.rawValue), and a run starts"
+                    + " only from a public declaration",
+                at: .procedure(entry.spelling, in: assembled.documents[assembled.table[start].origin])
             )
         }
 
@@ -795,11 +843,14 @@ public struct Builder: Sendable {
             standing: Array(compiled.indices),
             numbered: Linkage()
         )
-        let signatures = assembled.rows.reduce(into: [Name: Placed<Signature>]()) { table, entry in
+        let signatures = assembled.rows.reduce(into: [Name: Placed<Declared>]()) { table, entry in
             let origin = assembled.table[entry.value].origin
 
             table[entry.key] = Placed(
-                assembled.table[entry.value].judged.signature,
+                Declared(
+                    signature: assembled.table[entry.value].judged.signature,
+                    access: assembled.table[entry.value].judged.access
+                ),
                 at: .procedure(entry.key.spelling, in: compiled[origin].document),
                 of: origin
             )
@@ -810,7 +861,8 @@ public struct Builder: Sendable {
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
-            among: signatures
+            among: signatures,
+            concealed: assembled.concealed
         )
         let types = lowered.types
 

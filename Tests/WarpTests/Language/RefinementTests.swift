@@ -93,6 +93,7 @@ struct RefinementTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "level": Parameter(type: .ranged(.whole(from: 5, to: .upTo(5))))
@@ -120,6 +121,7 @@ struct RefinementTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "ratio": Parameter(type: .ranged(.fraction(to: .through(.nan))))
@@ -259,6 +261,7 @@ struct RefinementTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "blob": Parameter(
@@ -282,6 +285,7 @@ struct RefinementTests {
         let kept = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "blob": Parameter(
@@ -304,6 +308,7 @@ struct RefinementTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: [
                             "ratio": Parameter(type: .ranged(.fraction(from: 0, to: .upTo(1))))

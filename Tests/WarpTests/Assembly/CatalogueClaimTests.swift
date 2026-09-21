@@ -50,6 +50,7 @@ struct CatalogueClaimTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(

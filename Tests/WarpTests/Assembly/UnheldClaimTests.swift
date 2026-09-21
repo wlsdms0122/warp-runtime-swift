@@ -52,6 +52,7 @@ struct UnheldClaimTests {
                     result: .call(Call(receiver: .reference([.key("it")]), selector: "app.tell"))
                 ),
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -128,6 +129,7 @@ struct UnheldClaimTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .string),
                     body: [
                         Statement(
@@ -186,6 +188,7 @@ struct UnheldClaimTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .string),
                     body: [
                         Statement(
@@ -267,6 +270,7 @@ struct UnheldClaimTests {
             ],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .reference([.key("app.counted")])

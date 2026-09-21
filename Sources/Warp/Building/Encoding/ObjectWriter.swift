@@ -317,6 +317,21 @@ struct ObjectWriter {
         ])
     }
 
+    // Ordered from the narrowest scope out, which is why the word a
+    // declaration wears when it says nothing is not the zero here.
+    private func access(_ access: Access) -> Value {
+        switch access {
+        case .private:
+            return .int(0)
+
+        case .internal:
+            return .int(1)
+
+        case .public:
+            return .int(2)
+        }
+    }
+
     private func constness(_ constness: Constness) -> Value {
         switch constness {
         case .unstated:
@@ -545,6 +560,7 @@ private extension ObjectWriter {
     func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
         .array((spelled ? [name(row.label)] : []) + [
             try signature(row.signature),
+            access(row.access),
             constness(row.constness),
             isolation(row.isolation),
             failing(row.failing),

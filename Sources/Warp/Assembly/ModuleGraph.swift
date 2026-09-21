@@ -54,10 +54,7 @@ public struct ModuleGraph: Sendable {
             // In no order. Which module answers a reference is the order the
             // caller handed the modules over, and inside one module no two of
             // these are the same reference, so nothing here reads an order.
-            let declared = module.declaredProcedures.map(Reference.procedure)
-                + module.declaredTypes.map(Reference.type)
-
-            for reference in declared {
+            for reference in module.supplies {
                 guard declares[reference] == nil else { continue }
 
                 declares[reference] = position

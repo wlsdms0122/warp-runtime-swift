@@ -55,7 +55,9 @@ public struct Draft: Sendable {
     // and read by the same spelling; unlike a constant, a body may write one.
     public let variables: [Name: Expression]
 
-    public let procedures: [Name: Procedure]
+    // Settable only from here, the way `imports` is, so `declaring(_:)`
+    // changes this one field of a copy.
+    public private(set) var procedures: [Name: Procedure]
 
     // MARK: - Initializer
     public init(
@@ -78,6 +80,14 @@ public struct Draft: Sendable {
         self.constants = constants
         self.variables = variables
         self.procedures = procedures
+    }
+
+    // The same document declaring these procedures instead.
+    public func declaring(_ procedures: [Name: Procedure]) -> Draft {
+        var held = self
+        held.procedures = procedures
+
+        return held
     }
 
     // The same document with the imports it turned out to have. A module

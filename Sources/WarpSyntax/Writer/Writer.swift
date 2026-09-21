@@ -149,6 +149,11 @@ public struct Writer: Sendable {
             written[ProcedureReader.CodingKeys.description.name] = .string(description)
         }
 
+        // Written where it says something a reader would not fill in.
+        if procedure.access != .internal {
+            written[ProcedureReader.CodingKeys.access.name] = .string(procedure.access.rawValue)
+        }
+
         // Stripped here, at the declaration, because this is the one place a
         // bound has a `bounds` to move to. Everything below the declaration
         // (slots, nested procedure types) writes types as they arrive and

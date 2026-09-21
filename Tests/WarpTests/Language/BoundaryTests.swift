@@ -38,6 +38,7 @@ struct BoundaryTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .call(
                         Call(
@@ -67,6 +68,7 @@ struct BoundaryTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .call(
                         Call(
@@ -117,6 +119,7 @@ struct BoundaryTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
                     body: [],
                     result: .call(
@@ -151,6 +154,7 @@ struct BoundaryTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["xs": Parameter(type: .array(.any))]),
                     body: [
                         Statement(binding: .constant("one"), expression: .call(
@@ -189,6 +193,7 @@ struct BoundaryTests {
             types: ["Tree": .record(["a": .int])],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["trees": Parameter(type: .array(.named("Tree")))]
                     ),
@@ -219,6 +224,7 @@ struct BoundaryTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["counts": Parameter(type: .array(.named("std.Numeric")))]),
                     body: [],
                     result: .call(
@@ -320,6 +326,7 @@ struct BoundaryTests {
         let module = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     body: [],
                     result: .call(
                         Call(

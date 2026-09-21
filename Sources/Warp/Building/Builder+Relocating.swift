@@ -61,8 +61,8 @@ struct Answered: Sendable {
 
     // Which row each of one document's numbers stands for, worked out once per
     // number rather than once per body standing on one.
-    static func answering(_ numbering: Numbering, rows: [Name: Int]) -> [Int?] {
-        numbering.answers(rows: rows).map { answer -> Int? in
+    static func answering(_ numbering: Numbering, rows: [Name: Int], own: [Name: Int]) -> [Int?] {
+        numbering.answers(rows: rows, own: own).map { answer -> Int? in
             guard case let .row(row) = answer else { return nil }
 
             return row
@@ -168,6 +168,11 @@ final class Relocating {
     private let rows: [Name: Int]
     private let numbering: [Numbering]
 
+    // Each document's own declarations by row, and the spellings only private
+    // declarations wear, read when a lookup fails to say why.
+    private let owned: [[Name: Int]]
+    private let concealed: Set<Name>
+
     // What each document's type numbers turned out to be in this link.
     //
     // Answered once per number rather than at every type met: a name is read
@@ -208,12 +213,16 @@ final class Relocating {
         documents: [Place.Document],
         naming: [Closure.Document],
         numbering: [Numbering],
+        owned: [[Name: Int]],
+        concealed: Set<Name>,
         typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
         closures: [[Int]],
         loweredTypes: LoweredTypeTable
     ) {
         self.closures = closures
+        self.owned = owned
+        self.concealed = concealed
         self.table = table
         self.spelled = spelled
         self.rows = rows
@@ -247,6 +256,8 @@ final class Relocating {
             documents: assembled.documents,
             naming: assembled.naming,
             numbering: assembled.numbering,
+            owned: assembled.owned,
+            concealed: assembled.concealed,
             typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
             closures: assembled.closures,
@@ -344,10 +355,17 @@ final class Relocating {
         switch numbering[standing.origin].row(
             number,
             rows: rows,
+            own: owned[standing.origin],
             closures: closures[standing.origin]
         ) {
         case let .row(row):
             return row
+
+        // A spelling only a private declaration wears is one this document
+        // cannot name: a call from another document and a native's declared
+        // send alike meet it here.
+        case let .unfound(.sent(declared)) where concealed.contains(declared):
+            throw BuildError.concealed(declared, at: standing.place)
 
         case let .unfound(.sent(declared)):
             throw BuildError(

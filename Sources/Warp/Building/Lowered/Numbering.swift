@@ -229,12 +229,21 @@ struct Numbering: Sendable {
 
     // Which row of a link the number stands for, read from the tables that
     // link built.
-    func row(_ number: Int, rows: [Name: Int], closures: [Int]) -> Answer {
+    //
+    // `own` is the document's own declarations by row. A number for one of
+    // them answers there: what the document declares is its own whoever else
+    // may name it, and a private declaration is in no table of the link's
+    // names.
+    func row(_ number: Int, rows: [Name: Int], own: [Name: Int], closures: [Int]) -> Answer {
         guard case let .document(spellings, standing) = space else { return .row(number) }
         guard number >= 0, number < spellings.count + standing else { return .unnumbered }
 
         guard number >= spellings.count else {
             let declared = spellings[number]
+
+            if number >= sent, let row = own[declared] {
+                return .row(row)
+            }
 
             return rows[declared].map(Answer.row) ?? .unfound(.sent(declared))
         }
@@ -256,11 +265,11 @@ struct Numbering: Sendable {
     //
     // The names only. The closures run after them and a link answers those by
     // the rows they took, which is a list it already holds.
-    func answers(rows: [Name: Int]) -> [Answer] {
+    func answers(rows: [Name: Int], own: [Name: Int]) -> [Answer] {
         guard case .document = space else { return [] }
 
         return (0..<opening).map { number in
-            row(number, rows: rows, closures: [])
+            row(number, rows: rows, own: own, closures: [])
         }
     }
 

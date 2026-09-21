@@ -88,7 +88,7 @@ extension Builder {
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,
-                with: context()
+                with: context().bounding(only.symbol.procedure.signature.parameterBounds.table)
             )
 
             // A reading naming a type parameter is handed on as it is. What a

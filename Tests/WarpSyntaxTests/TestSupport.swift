@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 @testable import WarpSyntax
 import WarpStandard
 
@@ -164,7 +165,9 @@ extension Loader {
             written = written.writing(Envelope.importsKey, with: .array([]))
         }
 
-        return try load(try canonical(.dictionary(written), from: notation), identity: nil)
+        // The entry is named outside the text, so the text is not where its
+        // word is written.
+        return try load(try canonical(.dictionary(written), from: notation), identity: nil).publishing(entryName)
     }
 
     // Most tests here are about one construct or one reader, not about the
@@ -198,7 +201,7 @@ func run(
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
 ) async throws -> [Name: Value] {
-    let image = try await Builder().build(modules + vocabulary, entry: entry)
+    let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary, entry: entry)
 
     let answer = try await Executor(environment: environment)
         .run(image, arguments: arguments)
@@ -286,6 +289,7 @@ extension Closure {
                 label: "assembled",
                 origin: 0,
                 signature: Signature(),
+                access: .internal,
                 constness: .unstated,
                 isolation: .unstated,
                 failing: .unstated,

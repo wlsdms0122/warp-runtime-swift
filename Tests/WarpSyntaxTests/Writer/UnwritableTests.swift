@@ -141,6 +141,7 @@ struct UnwritableTests {
         try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
                     body: [Statement(binding: .constant("probe"), expression: expression)]
                 )

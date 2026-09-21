@@ -66,6 +66,7 @@ struct ContractCallKeepsTests {
             claims: ["bank.Box": ["app.Show"]],
             procedures: [
                 "app.entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [Statement(
                         binding: .constant("box"),

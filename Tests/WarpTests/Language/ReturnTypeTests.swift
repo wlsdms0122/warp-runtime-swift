@@ -25,6 +25,7 @@ struct ReturnTypeTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .int
                     ),
@@ -49,6 +50,7 @@ struct ReturnTypeTests {
         let narrowing = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(binding: .constant("counted"), expression: .literal(.double(3)))],
                     result: .reference([.key("counted")])
@@ -68,6 +70,7 @@ struct ReturnTypeTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .string
                     ),
@@ -87,6 +90,37 @@ struct ReturnTypeTests {
         }
     }
 
+    @Test("a return carrying something else is refused where it is written")
+    func wrongReturnIsRefusedAtTheBuild() async throws {
+        // Given. The result fits; a `return` on one way through does not.
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            expression: .conditional(
+                                .literal(.bool(true)),
+                                then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.string("x")))))],
+                                else: nil
+                            )
+                        )
+                    ],
+                    result: .literal(.int(0))
+                )
+            ]
+        )
+
+        // When / Then. Two answers that disagree would join to `any`, and
+        // `any` fits everything, so each is held on its own.
+        let refusal = await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: entryName)
+        }
+
+        #expect(refusal?.message.contains("declaration promises int") == true)
+    }
+
     @Test("a declared type is settled on the way out, not only on the way in")
     func declaredTypeSettlesOnTheWayOut() async throws {
         // Given
@@ -98,6 +132,7 @@ struct ReturnTypeTests {
             ],
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .array(.named("Task"))
                     ),
@@ -128,6 +163,7 @@ struct ReturnTypeTests {
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
+                    access: .public,
                     signature: Signature(
                         returns: .named("Nowhere")
                     ),

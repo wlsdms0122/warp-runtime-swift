@@ -23,6 +23,7 @@ struct ProcedureSendsTests {
         // Given
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
             )])] + [.sending, .shouting] + Module.standard,
@@ -41,6 +42,7 @@ struct ProcedureSendsTests {
         // Given
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(receiver: .literal(.string("hi")), selector: "app.announce"))
             )])] + [.sending, .shouting] + Module.standard,
@@ -59,10 +61,27 @@ struct ProcedureSendsTests {
         // Given / When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.strayed],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.strayed],
                 entry: "entry"
             )
         }
+    }
+
+    @Test("a procedure sending another document's private declaration is refused at the build")
+    func aSendReachingAPrivateDeclarationIsRefused() async {
+        // Given. A document declares `app.hidden` privately, and a procedure the
+        // caller brings declares it sends that spelling.
+        let document = try! Module(procedures: [
+            "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
+            "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
+        ])
+
+        // When / Then
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([document, .reaching] + Module.standard, entry: "entry")
+        }
+
+        #expect(refusal?.message.contains("is private to the document that declares it") == true)
     }
 
     @Test("a query sending something that answers only by running is refused")
@@ -71,7 +90,7 @@ struct ProcedureSendsTests {
         // `app.shout`, which does not
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.contradicting, .shouting],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.contradicting, .shouting],
                 entry: "entry"
             )
         }
@@ -84,7 +103,7 @@ struct ProcedureSendsTests {
         // calls
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.claims, .ticketing],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.claims, .ticketing],
                 entry: "entry"
             )
         }
@@ -95,6 +114,7 @@ struct ProcedureSendsTests {
         // Given
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.counted"))
             )])] + [.counting, .ticketing],
@@ -153,6 +173,7 @@ struct ProcedureSendsTests {
         // the other way round
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.picking"))
             )])] + [.picking, .picked],
@@ -171,7 +192,7 @@ struct ProcedureSendsTests {
         // Given / When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.misnaming, .picked],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.misnaming, .picked],
                 entry: "entry"
             )
         }
@@ -183,6 +204,7 @@ struct ProcedureSendsTests {
         // thing about a send the build cannot read
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.overhanding"))
             )])] + [.overhanding, .picked],
@@ -201,7 +223,7 @@ struct ProcedureSendsTests {
         // the one to keep
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.doubling, .picked],
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.doubling, .picked],
                 entry: "entry"
             )
         }
@@ -213,6 +235,7 @@ struct ProcedureSendsTests {
         // is not a thing the build can read off the declaration
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.receiving"))
             )])] + [.receiving, .greeted],
@@ -231,6 +254,7 @@ struct ProcedureSendsTests {
         // declared string
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.mistyping"))
             )])] + [.mistyping, .spoken],
@@ -250,6 +274,7 @@ struct ProcedureSendsTests {
         // as a receiver it never declared
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.unreceiving"))
             )])] + [.unreceiving, .picked],
@@ -268,6 +293,7 @@ struct ProcedureSendsTests {
         // the callee has nowhere to put one
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nulling"))
             )])] + [.nulling, .plain],
@@ -287,6 +313,7 @@ struct ProcedureSendsTests {
         // beside each kind of callee
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nullingToAnEffect"))
             )])] + [.nullingToAnEffect, .plainlyRunning],
@@ -306,6 +333,7 @@ struct ProcedureSendsTests {
         // the dot the value came from
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
+                access: .public,
                 body: [],
                 result: .call(Call(selector: "app.nullingToAReceiver"))
             )])] + [.nullingToAReceiver, .reporting],
@@ -426,6 +454,26 @@ private struct StrayQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         try await question.send(.nowhere)
+    }
+
+    // MARK: - Private
+}
+
+// Sends a spelling another document declares privately.
+private struct ReachingQuery: Query {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case hidden
+
+        var selector: Name { "app.hidden" }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        try await question.send(.hidden)
     }
 
     // MARK: - Private
@@ -729,6 +777,15 @@ private extension Module {
             "app.stray": Procedure(
                 signature: Signature(of: StrayQuery.self, returns: .null),
                 implementation: .query(StrayQuery())
+            )
+        ]
+    )
+
+    static let reaching = try! Module(
+        procedures: [
+            "app.reach": Procedure(
+                signature: Signature(of: ReachingQuery.self, returns: .int),
+                implementation: .query(ReachingQuery())
             )
         ]
     )

@@ -12,8 +12,9 @@ import Foundation
 // What the writer lays down and the reader holds a record to, said once.
 enum ObjectLayout {
     // The format, which moves when the layout moves and for no other reason.
-    // Which Warp wrote an object is not written, because what an object holds
-    // is the language's and any implementation of it reads any other's.
+    // Every change before the first release folds into this one. Which Warp
+    // wrote an object is not written, because what an object holds is the
+    // language's and any implementation of it reads any other's.
     static let format = 1
 
     // The key an object says its format under, which is also what tells an

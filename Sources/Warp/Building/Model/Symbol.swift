@@ -31,6 +31,9 @@ struct Symbol: Sendable {
 
     let procedure: Procedure
 
+    // Whether this takes a spelling another document may name.
+    var supplies: Bool { procedure.access.reachesOtherDocuments }
+
     // Where this declaration's procedures are, in the document that wrote it.
     var place: Place { .procedure(declared.spelling, in: document) }
 

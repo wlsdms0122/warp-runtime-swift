@@ -40,6 +40,7 @@ struct ModuleGraphTests {
         let caller = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(receiver: .literal(.int(1)), selector: "lib.twice"))
                 )
@@ -61,6 +62,7 @@ struct ModuleGraphTests {
         let users = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(returns: .named("Age")),
                     body: [],
                     result: .literal(.int(7))
@@ -132,6 +134,7 @@ struct ModuleGraphTests {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(selector: "nobody.declares"))
                 )

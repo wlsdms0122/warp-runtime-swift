@@ -23,7 +23,8 @@ extension Builder {
         claims: [Placed<Claim>],
         contracts: [Name: Placed<[Name: Signature]>],
         over declaredTypes: [Name: Placed<TypeExpression>],
-        among signatures: [Name: Placed<Signature>],
+        among signatures: [Name: Placed<Declared>],
+        concealed: Set<Name> = [],
         unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
@@ -55,6 +56,7 @@ extension Builder {
                 asking: contracts,
                 over: declaredTypes,
                 among: signatures,
+                concealed: concealed,
                 in: table
             )
 
@@ -151,7 +153,7 @@ extension Builder {
                     procedure: procedure
                 )
 
-                if let first = claimed[name] {
+                if let first = claimed[name], symbol.supplies {
                     throw BuildError(
                         "'\(name)' is declared more than once in this link, by"
                             + " \(first.spelled) and \(symbol.spelled). Two declarations"
@@ -160,7 +162,9 @@ extension Builder {
                     )
                 }
 
-                claimed[name] = symbol
+                if symbol.supplies {
+                    claimed[name] = symbol
+                }
 
                 symbols.append(symbol)
             }

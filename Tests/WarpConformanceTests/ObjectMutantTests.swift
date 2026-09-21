@@ -44,9 +44,9 @@ struct ObjectMutantTests {
 
         let builder = Builder(fingerprinting: Fingerprint.of)
         let supplying = try await Supplying(program.modules())
-        let behind = try await builder.compile(try program.brought + Module.standard, against: [], supplying: supplying)
+        let behind = try await builder.compile(try program.brought + program.beside + Module.standard, against: [], supplying: supplying)
         let own = try await builder.compile(
-            [try Loader().load(program.document, identity: nil)],
+            [try Loader().load(program.document, identity: try Identity.of(program.document))],
             against: behind,
             supplying: supplying
         )

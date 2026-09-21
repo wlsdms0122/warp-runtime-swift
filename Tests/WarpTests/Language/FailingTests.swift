@@ -26,6 +26,7 @@ struct FailingTests {
             imports: ["std.math.plus"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(
                         Call(
@@ -52,6 +53,7 @@ struct FailingTests {
             imports: ["std.control.abort"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [],
                     result: .call(Call(selector: "app.reach"))
                 ),
@@ -80,6 +82,7 @@ struct FailingTests {
             imports: ["std.control.abort"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .any)]),
                     body: [],
                     result: .call(Call(receiver: reference("it"), selector: "std.control.abort"))
@@ -102,6 +105,7 @@ struct FailingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .any)]),
                     body: [],
                     result: .cast(reference("it"), as: .int, optional: false)
@@ -123,6 +127,7 @@ struct FailingTests {
             imports: ["std.control.abort"],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["it": Parameter(type: .any)]),
                     body: [
                         Statement(
@@ -157,6 +162,7 @@ struct FailingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     body: [
                         Statement(
                             binding: .constant("tried"),
@@ -186,6 +192,7 @@ struct FailingTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(
                         parameters: ["piece": Parameter(type: .procedure(nil))]
                     ),

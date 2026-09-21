@@ -16,7 +16,7 @@ struct ClosureWalkTests {
     private var row: Linked {
         get async throws {
             try await Builder().build(
-                [try Module(procedures: [entryName: Procedure(body: [])])] + Module.standard,
+                [try Module(procedures: [entryName: Procedure(access: .public, body: [])])] + Module.standard,
                 entry: entryName
             ).entry
         }

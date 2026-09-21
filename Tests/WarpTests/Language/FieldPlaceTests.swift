@@ -107,6 +107,7 @@ struct FieldPlaceTests {
             types: ["Point": .record(["x": .int, "y": .int])],
             procedures: [
                 entryName: Procedure(
+                    access: .public,
                     signature: Signature(parameters: ["point": Parameter(type: .named("Point"))]),
                     body: [],
             result: .reference([.key("point"), .key("y")])
@@ -284,7 +285,7 @@ struct FieldPlaceTests {
     // read what the build lowered.
     private func resultSteps(of procedure: Procedure) async throws -> [Step] {
         let image = try await builder.build(
-            [try Module(procedures: [entryName: procedure])] + Module.standard,
+            [try Module(procedures: [entryName: procedure.with(access: .public)])] + Module.standard,
             entry: entryName
         )
 
