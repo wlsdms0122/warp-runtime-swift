@@ -529,9 +529,11 @@ public struct Validator: Sendable {
         // The round state is bound before the condition is asked, which is what
         // lets `while` read how many rounds have passed.
         case let .loop(condition, body, round):
-            try introduced(round, beside: scope.constants, at: place)
+            if let round {
+                try introduced(round, beside: scope.constants, at: place)
+            }
 
-            let inner = visible.union([round])
+            let inner = visible.union(round.map { round in [round] } ?? [])
 
             try refuseConstructCondition(condition, at: place.part(.condition(of: .loop)))
             try validate(
@@ -551,7 +553,9 @@ public struct Validator: Sendable {
 
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
-            try introduced(failure, beside: scope.constants, at: place)
+            if let failure {
+                try introduced(failure, beside: scope.constants, at: place)
+            }
 
             try validate(
                 block,
@@ -570,7 +574,7 @@ public struct Validator: Sendable {
 
             try validate(
                 rescue,
-                visible: visible.union([failure]),
+                visible: visible.union(failure.map { failure in [failure] } ?? []),
                 variables: variables,
                 scope: scope,
                 at: place.part(.rescue)
@@ -718,8 +722,8 @@ public struct Validator: Sendable {
         guard scope.rounds.contains(target) else {
             throw ValidationError(
                 "names '\(target)', which is not a loop around it."
-                    + " The ones here are \(scope.rounds.reversed().map(\.spelling).joined(separator: ", "));"
-                    + " the nearest is '\(nearest)'",
+                    + " The ones here are \(scope.rounds.reversed().map { round in round?.spelling ?? "a nameless one" }.joined(separator: ", "));"
+                    + " the nearest is \(nearest.map { nearest in "'\(nearest)'" } ?? "nameless")",
                 at: place
             )
         }
@@ -783,9 +787,10 @@ public struct Validator: Sendable {
 // every place that breaks it has to say so.
 private struct Scope: Sendable {
     // MARK: - Property
-    // The loops around here, nearest last. A name reaches past the nearer ones,
-    // and nothing here means there is no loop to end.
-    let rounds: [Name]
+    // The loops around here, nearest last, a nameless one as nil. A name
+    // reaches past the nearer ones, and nothing here means there is no loop
+    // to end.
+    let rounds: [Name?]
 
     // The module's bound names, carried so every signature met on the way (a
     // closure's included) refuses a parameter that would take one's place:
@@ -801,7 +806,7 @@ private struct Scope: Sendable {
     }
 
     // MARK: - Public
-    func inside(_ round: Name) -> Scope {
+    func inside(_ round: Name?) -> Scope {
         Scope(rounds: rounds + [round], constants: constants)
     }
 

@@ -415,8 +415,8 @@ private actor RecordingObserver: ExecutionObserver {
         events.append(.failed(trace.rendered))
     }
 
-    func failureRescued(name: String, error: any Error) {
-        events.append(.rescued(name))
+    func failureRescued(name: String?, error: any Error) {
+        events.append(.rescued(name ?? ""))
     }
 
     // MARK: - Private

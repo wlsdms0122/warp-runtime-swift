@@ -38,9 +38,10 @@ indirect enum Operation: Sendable {
     // `keeps` is the range of body slots the result reads: the result reads
     // what the last finished round bound, so a round cut short is put back
     // before the result reads. Nil where the result reads none of them.
-    case loop(while: Operation, body: Body, round: Int, keeps: Range<Int>?)
+    // The round's slot, and the failure's, where the statement bound one.
+    case loop(while: Operation, body: Body, round: Int?, keeps: Range<Int>?)
 
-    case attempt(Body, rescue: Body, failure: Int)
+    case attempt(Body, rescue: Body, failure: Int?)
     case call(CallOperation)
 
     // A call through a contract: which row answers is the receiver's own name

@@ -139,19 +139,29 @@ struct NamelessTests {
         }
     }
 
-    @Test("a construct that binds through its name cannot be written nameless", arguments: [
-        ["value": ["loop": ["while": false, "body": [["let": "x", "value": 1]]]]] as Value,
-        ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
-    ])
-    func aBindingConstructRequiresAName(_ statement: Value) {
-        // Given, with no name there is nothing the body could read the round or
-        // the failure under, and an invented name would be a real name
-        // somewhere
-        #expect {
-            try loader.loadProcedure(["body": [statement]])
-        } throws: { error in
-            "\(error)".contains("cannot be written nameless")
+    @Test("a construct that binds through its name binds nothing when written nameless")
+    func aBindingConstructWrittenNamelessBindsNothing() throws {
+        // Given, a loop and an attempt with no naming key
+        let module = try loader.loadProcedure(["body": [
+            ["value": ["loop": ["while": false, "body": [["let": "x", "value": 1]]]]] as Value,
+            ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
+        ]])
+
+        // Then, each reads with no round and no failure to bind
+        guard case let .body(block) = module.procedures[entryName]?.implementation else {
+            Issue.record("expected a body")
+            return
         }
+
+        guard case let .loop(_, _, round) = block.body[0].expression,
+              case let .attempt(_, _, failure) = block.body[1].expression else {
+            Issue.record("expected a loop and an attempt")
+            return
+        }
+
+        #expect(block.body.allSatisfy { statement in statement.binding == nil })
+        #expect(round == nil)
+        #expect(failure == nil)
     }
 
     @Test("a naming key holding null is a broken name, not a nameless statement")

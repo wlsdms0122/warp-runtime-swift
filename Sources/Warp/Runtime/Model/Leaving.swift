@@ -39,8 +39,8 @@ struct Leaving: Error {
     // MARK: - Public
     // Whether a loop should take this. An unnamed one is for the nearest, so the
     // first loop it reaches answers it; a named one passes through every loop
-    // but the one it named.
-    func claimed(by round: Name) -> Bool {
+    // but the one it named, a nameless loop included.
+    func claimed(by round: Name?) -> Bool {
         guard reach != .procedure else { return false }
 
         return target == nil || target == round

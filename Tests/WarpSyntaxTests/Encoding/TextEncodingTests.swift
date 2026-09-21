@@ -376,6 +376,30 @@ struct TextEncodingTests {
         }
     }
 
+    @Test("a refusal says the line and column the reader stood at")
+    func aRefusalIsPlaced() {
+        // A value where a field name is due: the reader stands on the `2`.
+        #expect {
+            try TextEncoding.value(from: "warpt 1\n{\n  a 1\n  2\n}\n")
+        } throws: { error in
+            "\(error)".hasSuffix("a record writes a field name here, at line 4 column 3")
+        }
+
+        // Text that ends inside a record: the reader stands past the last line.
+        #expect {
+            try TextEncoding.value(from: "warpt 1\n{\n  a\n")
+        } throws: { error in
+            "\(error)".hasSuffix("the text ends where a value should begin, at line 4 column 1")
+        }
+
+        // A token the tokenizer refuses, before any value is read.
+        #expect {
+            try TextEncoding.value(from: "warpt 1\n[\n  \"a\"b\n]\n")
+        } throws: { error in
+            "\(error)".contains("at line 3 column 6")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

@@ -49,9 +49,7 @@ public protocol ConstructForm: Sendable, Decodable {
     // is not here; it is above.
     static func vocabulary(with notation: Notation) -> Set<Name>
 
-    // Throws when the form cannot be the statement it was written as. The one
-    // case today being a form that binds through the statement's name, handed
-    // no name to bind through.
+    // Throws when the form cannot be the statement it was written as.
     func expression(boundTo id: String?) throws -> Expression
 }
 
@@ -63,21 +61,8 @@ public extension ConstructForm {
     static func vocabulary(with notation: Notation) -> Set<Name> { [] }
 
     // The name a binding construct binds through. It is the statement's own,
-    // which is why these constructs cannot be written nameless: with no name,
-    // what the body binds would have to be invented, and an invented name is a
-    // real name somewhere. It refuses without an address: a form lowering what
-    // it read is past the decoder that knew where the reading was, and the
-    // statement this belongs to is what the reader that asked for the lowering
-    // is holding. So the sentence is said here and where it happened is said
-    // there.
-    func named(_ id: String?, in construct: String, binding: String) throws -> Name {
-        guard let id else {
-            throw ReadingError(
-                "a \(construct) binds its \(binding) under the"
-                    + " statement's name, so it cannot be written nameless"
-            )
-        }
-
-        return try Name.read(id, at: [])
+    // and a statement written nameless binds nothing through it.
+    func named(_ id: String?) throws -> Name? {
+        try id.map { id in try Name.read(id, at: []) }
     }
 }

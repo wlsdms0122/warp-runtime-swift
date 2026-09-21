@@ -137,11 +137,11 @@ extension Body.Node {
                 standing.stand(on: type)
 
             case let .loop(_, _, round, keeps):
-                standing.stand(on: round)
+                round.map { round in standing.stand(on: round) }
                 keeps.map { kept in standing.stand(over: kept) }
 
             case let .attempt(_, _, failure):
-                standing.stand(on: failure)
+                failure.map { failure in standing.stand(on: failure) }
 
             case let .call(call):
                 standing.stand(calling: call.procedure, handing: call.arguments.count)

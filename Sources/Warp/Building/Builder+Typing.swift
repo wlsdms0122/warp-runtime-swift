@@ -69,8 +69,8 @@ extension Builder {
     // in one document, so each asks here rather than working the question
     // out again further on.
     //
-    // A reading that opens to `any`, which is what applying a value reaches,
-    // stands and is settled where the value arrives.
+    // A reading that opens to `any` stands and is settled where the value
+    // arrives.
     private func held(
         reading read: LoweredType,
         answered: [(reading: LoweredType, place: Place)],
@@ -1592,11 +1592,12 @@ extension Builder {
                 .lowered(in: context.loweredTypes)
             )
 
-        // Which value is called is settled at run time, so nothing here can say
-        // what it answers. Its operands are data the const resolver reads (the
-        // check refuses a construct in one, and a program that came straight to
-        // the link meets the same predicate here) so nothing writes and there
-        // is no flow to carry.
+        // Which value is called is settled at the run, and what it answers is
+        // the slot's to say: a procedure type that wrote `returns` answers
+        // that, and one that wrote none opens to `any`. Its operands are data
+        // the const resolver reads (the check refuses a construct in one, and a
+        // program that came straight to the link meets the same predicate
+        // here) so nothing writes and there is no flow to carry.
         case let .apply(callee, arguments):
             guard case .judging = ask else {
                 return Inspection(rewritten: expression, reading: .any)
@@ -1633,10 +1634,18 @@ extension Builder {
                 calls += inner.calls
             }
 
+            let answers: LoweredType
+
+            if case let .procedure(_, returns?, _, _) = called.reading {
+                answers = returns
+            } else {
+                answers = .any
+            }
+
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
                 calls: calls,
-                reading: .any
+                reading: answers
             )
 
         // A call answers what its callee declared, which is the fact this whole
@@ -2526,27 +2535,33 @@ extension Builder {
     }
 
     // The environment a loop's insides read: the enclosing names plus the
-    // round. One maker, because the fixpoint and its asker both read it.
+    // round, where the loop binds one. One maker, because the fixpoint and
+    // its asker both read it.
     private func rounded(
         _ environment: [Name: Binding],
-        as round: Name
+        as round: Name?
     ) -> [Name: Binding] {
-        environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
+        guard let round else { return environment }
+
+        return environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
     }
 
     // The environment a rescue stands in: the entry, soaked with what the body
     // may have written before it failed (no write certain, none ruled out) plus
-    // the failure under its name.
+    // the failure under its name, where the attempt binds one.
     private func caught(
         soaking flow: Flow,
-        failure: Name,
+        failure: Name?,
         in environment: [Name: Binding],
         with context: TypingContext
     ) -> [Name: Binding] {
         var caught = environment
 
         apply(absorbed(flow), to: &caught)
-        caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
+
+        if let failure {
+            caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
+        }
 
         return caught
     }

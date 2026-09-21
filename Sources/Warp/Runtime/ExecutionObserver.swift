@@ -18,8 +18,8 @@ public protocol ExecutionObserver: Sendable {
 
     // The name is the one the failure was bound under while the rescue ran,
     // which is the statement's id wherever a notation writes rescue as an
-    // envelope.
-    func failureRescued(name: String, error: any Error) async
+    // envelope, and nothing for an attempt written nameless.
+    func failureRescued(name: String?, error: any Error) async
 }
 
 public extension ExecutionObserver {
@@ -32,6 +32,6 @@ public extension ExecutionObserver {
     func statementFailed(at trace: Trace, error: any Error) async {
     }
 
-    func failureRescued(name: String, error: any Error) async {
+    func failureRescued(name: String?, error: any Error) async {
     }
 }

@@ -588,18 +588,20 @@ public struct Executor: Sendable {
     private func loop(
         while condition: Operation,
         body: Body,
-        round: Int,
+        round: Int?,
         keeps: Range<Int>?,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let name = activation.frame.names[round]
+        let name = round.map { round in activation.frame.names[round] }
         var index = 0
 
         while true {
             // The condition reads the state before the round it would start,
             // and the result reads it as it stands when the loop ends.
-            activation.cells[round] = .value(.record(Record(layout: LoweredRecord.round.layout, values: [.int(index)])))
+            if let round {
+                activation.cells[round] = .value(.record(Record(layout: LoweredRecord.round.layout, values: [.int(index)])))
+            }
 
             guard try bool(try await evaluate(condition, in: &activation, at: trace)) else {
                 guard let result = body.result else { return .null }
@@ -633,7 +635,7 @@ public struct Executor: Sendable {
     private func attempt(
         _ body: Body,
         rescue: Body,
-        failure: Int,
+        failure: Int?,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -646,13 +648,18 @@ public struct Executor: Sendable {
             // did, not for what the procedure says.
             guard let recoverable = error as? any RecoverableFailure else { throw error }
 
-            await observer?.failureRescued(name: activation.frame.names[failure].spelling, error: error)
+            await observer?.failureRescued(
+                name: failure.map { failure in activation.frame.names[failure].spelling },
+                error: error
+            )
 
             // While the rescue runs, the failure is a value under the declared
-            // name. Its type needs no check here: `RecoverableFailure`
-            // assembles the payload itself, so `type` and `message` are there
-            // by construction rather than by inspection.
-            activation.cells[failure] = .value(recoverable.payload)
+            // name, where the attempt bound one. Its type needs no check here:
+            // `RecoverableFailure` assembles the payload itself, so `type` and
+            // `message` are there by construction rather than by inspection.
+            if let failure {
+                activation.cells[failure] = .value(recoverable.payload)
+            }
 
             return try await run(rescue, in: &activation, at: trace)
         }
