@@ -2535,27 +2535,33 @@ extension Builder {
     }
 
     // The environment a loop's insides read: the enclosing names plus the
-    // round. One maker, because the fixpoint and its asker both read it.
+    // round, where the loop binds one. One maker, because the fixpoint and
+    // its asker both read it.
     private func rounded(
         _ environment: [Name: Binding],
-        as round: Name
+        as round: Name?
     ) -> [Name: Binding] {
-        environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
+        guard let round else { return environment }
+
+        return environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
     }
 
     // The environment a rescue stands in: the entry, soaked with what the body
     // may have written before it failed (no write certain, none ruled out) plus
-    // the failure under its name.
+    // the failure under its name, where the attempt binds one.
     private func caught(
         soaking flow: Flow,
-        failure: Name,
+        failure: Name?,
         in environment: [Name: Binding],
         with context: TypingContext
     ) -> [Name: Binding] {
         var caught = environment
 
         apply(absorbed(flow), to: &caught)
-        caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
+
+        if let failure {
+            caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
+        }
 
         return caught
     }

@@ -717,16 +717,19 @@ struct Lowering {
     private mutating func lower(
         loop condition: Expression,
         body: Block,
-        round: Name,
+        round: Name?,
         in scope: Names,
         on slots: Slots,
         label: Name,
         at place: Place
     ) throws -> Operation {
         var inner = scope
-        let slot = slots.allocate(round)
-        inner.slots[round] = slot
-        slots.hold(slot, .record(.round))
+        let slot = round.map { round in slots.allocate(round) }
+
+        if let round, let slot {
+            inner.slots[round] = slot
+            slots.hold(slot, .record(.round))
+        }
 
         let taking = try lower(condition, in: inner, on: slots, label: label, at: place)
         let start = slots.size
@@ -753,7 +756,7 @@ struct Lowering {
     private mutating func lower(
         attempt block: Block,
         rescue: Block,
-        failure: Name,
+        failure: Name?,
         in scope: Names,
         on slots: Slots,
         label: Name,
@@ -761,8 +764,11 @@ struct Lowering {
     ) throws -> Operation {
         let attempted = try lower(block, in: scope, on: slots, label: label, at: place)
         var inner = scope
-        let slot = slots.allocate(failure)
-        inner.slots[failure] = slot
+        let slot = failure.map { failure in slots.allocate(failure) }
+
+        if let failure, let slot {
+            inner.slots[failure] = slot
+        }
 
         return .attempt(
             attempted,

@@ -292,16 +292,17 @@ public extension Writer {
     // make the two agree, and finds out here rather than at a run that reads a
     // name nothing bound.
     private func named(
-        _ bound: Name,
+        _ bound: Name?,
         matches id: String?,
         in construct: String,
         binding: String
     ) throws {
-        guard bound.spelling != id else { return }
+        guard bound?.spelling != id else { return }
 
         throw WritingError(
             "a \(construct) binds its \(binding) under the name of the statement it is"
-                + " written as, and this one binds '\(bound)' inside '\(id ?? "a nameless statement")'"
+                + " written as, and this one binds '\(bound?.spelling ?? "nothing")'"
+                + " inside '\(id ?? "a nameless statement")'"
         )
     }
 

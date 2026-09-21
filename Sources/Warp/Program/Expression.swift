@@ -74,8 +74,11 @@ public indirect enum Expression: Sendable {
     // to write (a counter and `std.control.abort` say it exactly) and stopping
     // one is the receiver's cancellation; a kernel budget would promise neither
     // side anything it can rely on.
-    case loop(while: Expression, body: Block, round: Name)
-    case attempt(Block, rescue: Block, failure: Name)
+    //
+    // The round is the statement's name, and a loop written nameless binds
+    // none; the same for an attempt's failure.
+    case loop(while: Expression, body: Block, round: Name?)
+    case attempt(Block, rescue: Block, failure: Name?)
     case call(Call)
 
     // Carrying on somewhere further out than the next statement. The one case

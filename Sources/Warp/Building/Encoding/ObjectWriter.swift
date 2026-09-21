@@ -700,12 +700,17 @@ private extension ObjectWriter {
                 .int(9),
                 try self.operation(condition),
                 try self.body(body),
-                .int(round),
+                ObjectWriter.maybe(round) { round in .int(round) },
                 ObjectWriter.maybe(keeps) { kept in .array([.int(kept.lowerBound), .int(kept.upperBound)]) }
             ])
 
         case let .attempt(body, rescue: rescue, failure: failure):
-            return .array([.int(10), try self.body(body), try self.body(rescue), .int(failure)])
+            return .array([
+                .int(10),
+                try self.body(body),
+                try self.body(rescue),
+                ObjectWriter.maybe(failure) { failure in .int(failure) }
+            ])
 
         case let .call(call):
             return .array([.int(11), try callOperation(call)])

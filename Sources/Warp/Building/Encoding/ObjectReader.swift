@@ -970,7 +970,7 @@ private extension ObjectReader {
             read = .loop(
                 while: try operation(fields.next()),
                 body: try body(fields.next()),
-                round: try fields.count(),
+                round: try fields.maybe(counted),
                 keeps: try fields.maybe { written in
                     var held = try Fields(written, of: "keeps")
                     let low = try held.count()
@@ -990,7 +990,7 @@ private extension ObjectReader {
             read = .attempt(
                 try body(fields.next()),
                 rescue: try body(fields.next()),
-                failure: try fields.count()
+                failure: try fields.maybe(counted)
             )
 
         case 11: read = .call(try callOperation(fields.next()))
