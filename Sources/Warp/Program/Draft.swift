@@ -80,21 +80,6 @@ public struct Draft: Sendable {
         self.procedures = procedures
     }
 
-    // The same document declaring these procedures instead.
-    public func with(procedures: [Name: Procedure]) -> Draft {
-        Draft(
-            description: description,
-            imports: imports,
-            types: types,
-            constraints: constraints,
-            contracts: contracts,
-            claims: claims,
-            constants: constants,
-            variables: variables,
-            procedures: procedures
-        )
-    }
-
     // The same document with the imports it turned out to have. A module
     // settles them from what the text sends, and a writing of that module
     // takes the settled list.

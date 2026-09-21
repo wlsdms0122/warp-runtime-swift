@@ -24,6 +24,7 @@ struct Carried: Sendable {
     // Where each document's block begins, and the spellings its private
     // declarations wear, which no table of names holds.
     let blocks: [Int: Int]
+    let owned: [Int: [Name: Int]]
     let hidden: Set<Name>
 
     // Which row each number a document gave reaches.
@@ -47,6 +48,7 @@ struct Carried: Sendable {
         table: [],
         rows: [:],
         blocks: [:],
+        owned: [:],
         hidden: [],
         named: [:],
         numbering: [:],

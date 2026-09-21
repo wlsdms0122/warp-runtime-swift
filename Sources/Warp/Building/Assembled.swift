@@ -91,7 +91,7 @@ struct Assembled: Sendable {
                 // A private declaration takes no spelling from the link: its
                 // own document reaches it by the block, so two documents may
                 // each declare one under one spelling.
-                guard documents[origin].table[offset].access.reachesOtherDocuments else {
+                guard !documents[origin].hidden.contains(name) else {
                     hidden.insert(name)
 
                     continue

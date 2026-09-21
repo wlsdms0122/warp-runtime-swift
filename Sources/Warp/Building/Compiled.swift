@@ -250,9 +250,15 @@ public struct Compiled: Sendable, Declaring {
     // there: a reader assembling it from the four tables is one more place to
     // fix when a fifth kind of declaration arrives, and forgetting that place
     // is a name that quietly declares nothing.
+    // The spellings its private declarations wear: rows of this document,
+    // and in no table of names another document reads.
+    var hidden: Set<Name> {
+        Set(declared.enumerated().filter { offset, _ in !table[offset].access.reachesOtherDocuments }.map(\.element))
+    }
+
     var declares: Set<Reference> {
         Set(
-            declared.enumerated().filter { offset, _ in table[offset].access.reachesOtherDocuments }.map { _, name in Reference.procedure(name) }
+            declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
                 + types.keys.map(Reference.type)
                 + constraints.keys.map(Reference.type)
                 + contracts.keys.map(Reference.type)

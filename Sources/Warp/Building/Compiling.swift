@@ -37,6 +37,16 @@ struct Compiling {
     var isolated: Set<Name> = []
     var failing: [Name: Failing] = [:]
 
+    // The facts another document holds under spellings this one declares
+    // privately, taken out of the shared tables for the length of this
+    // document's compile.
+    struct Shadowed {
+        let const: Set<Name>
+        let isolated: Set<Name>
+        let failing: [Name: Failing]
+        let answers: [Name: LoweredType]
+    }
+
     // What the build read off a body whose declaration wrote no `returns`.
     // Only those: what a declaration wrote is on its row already, and a table
     // holding every spelling would hash every declared name to say what the
@@ -121,6 +131,7 @@ struct Compiling {
             table: lowering.table,
             rows: lowering.rows,
             blocks: lowering.blocks,
+            owned: lowering.owned,
             hidden: lowering.hidden,
             named: named,
             numbering: lowering.numbering,
@@ -157,14 +168,17 @@ struct Compiling {
             variables: document.variables.map(\.name)
         )
 
-        for judged in document.table[document.standing] {
+        // A private declaration's facts are its own document's, which is
+        // compiled already; what stands here is what another document may
+        // name.
+        for judged in document.table[document.standing] where judged.access.reachesOtherDocuments {
             if judged.constness == .const { const.insert(judged.label) }
             if judged.isolation == .isolated { isolated.insert(judged.label) }
 
             failing[judged.label] = judged.failing
         }
 
-        answers.merge(read) { _, answer in answer }
+        answers.merge(read.filter { name, _ in !document.hidden.contains(name) }) { _, answer in answer }
     }
 
     // One document laid down: its declarations take the rows after the ones
@@ -186,6 +200,45 @@ struct Compiling {
             numbering: numbering,
             variables: ordered
         )
+    }
+
+    // Takes the facts standing under these spellings out of the shared
+    // tables, and answers with them, so the document declaring the spellings
+    // privately is derived over its own and what it shadows comes back after.
+    mutating func shadowed(by hidden: Set<Name>) -> Shadowed {
+        let held = Shadowed(
+            const: const.intersection(hidden),
+            isolated: isolated.intersection(hidden),
+            failing: failing.filter { name, _ in hidden.contains(name) },
+            answers: answers.filter { name, _ in hidden.contains(name) }
+        )
+
+        const.subtract(hidden)
+        isolated.subtract(hidden)
+
+        for name in hidden {
+            failing[name] = nil
+            answers[name] = nil
+        }
+
+        return held
+    }
+
+    // The document's private facts leave the shared tables with it, and what
+    // they shadowed stands again.
+    mutating func restore(_ shadowed: Shadowed, hiding hidden: Set<Name>) {
+        const.subtract(hidden)
+        isolated.subtract(hidden)
+
+        for name in hidden {
+            failing[name] = nil
+            answers[name] = nil
+        }
+
+        const.formUnion(shadowed.const)
+        isolated.formUnion(shadowed.isolated)
+        failing.merge(shadowed.failing) { _, kept in kept }
+        answers.merge(shadowed.answers) { _, kept in kept }
     }
 
     // Which row each number this document gave stands for. A number of its own

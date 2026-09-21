@@ -64,7 +64,7 @@ struct Lowering {
 
     // Each document's declarations by row, private ones included: what the
     // document itself may name whoever else may.
-    private var owned: [Int: [Name: Int]] = [:]
+    private(set) var owned: [Int: [Name: Int]] = [:]
 
     // The spellings of the private declarations held so far. Not in `rows`,
     // since nothing outside their documents names them; here so a call that
@@ -100,6 +100,7 @@ struct Lowering {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
         self.blocks = carried.blocks
+        self.owned = carried.owned
         self.hidden = carried.hidden
         self.numbering = carried.numbering
         self.variables = carried.variables

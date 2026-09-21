@@ -248,7 +248,7 @@ public struct Builder: Sendable {
         var signatures: [Name: Placed<Declared>] = [:]
 
         for (position, document) in compiled.enumerated() {
-            for (offset, name) in document.declared.enumerated() where document.table[offset].access.reachesOtherDocuments {
+            for (offset, name) in document.declared.enumerated() where !document.hidden.contains(name) {
                 signatures[name] = Placed(
                     Declared(signature: document.table[offset].signature, access: document.table[offset].access),
                     at: .procedure(name.spelling, in: document.document),
@@ -364,7 +364,7 @@ public struct Builder: Sendable {
             // A private declaration takes no spelling from the link, so it is
             // neither held to a spelling another document took nor in the
             // space another document resolves in.
-            for symbol in symbols where symbol.procedure.access.reachesOtherDocuments {
+            for symbol in symbols where symbol.supplies {
                 if let first = signatures[symbol.declared] {
                     throw BuildError(
                         "'\(symbol.declared)' is declared by \(first.spelled) and by"
@@ -394,7 +394,7 @@ public struct Builder: Sendable {
             over: declared.types,
             among: signatures,
             hidden: laid.carried.hidden.union(holding.flatMap { symbols in
-                symbols.filter { symbol in !symbol.procedure.access.reachesOtherDocuments }.map(\.declared)
+                symbols.filter { symbol in !symbol.supplies }.map(\.declared)
             }),
             unsettled: fulfillment
         )
@@ -596,6 +596,14 @@ public struct Builder: Sendable {
             own[selector] ?? rows[selector].map { row in table[row].signature }
         }
 
+        // The facts are held by spelling, and a private declaration's spelling
+        // is its own document's: another document's declaration under the
+        // same spelling is set aside while this document is derived and put
+        // back when it leaves, and this document's private facts leave with
+        // it. What stays in the shared tables is what any document may name.
+        let hidden = Set(holding.filter { symbol in !symbol.supplies }.map(\.declared))
+        let shadowed = compiling.shadowed(by: hidden)
+
         const(among: holding, settling: &compiling.const, reading: reading)
         isolated(among: holding, settling: &compiling.isolated, taking: taking)
         failing(among: holding, settling: &compiling.failing)
@@ -735,6 +743,8 @@ public struct Builder: Sendable {
             of: origin,
             answering: read
         )
+
+        compiling.restore(shadowed, hiding: hidden)
 
         // Through the one door an object read back goes through, so what a
         // compile stands up is what a reading would take.

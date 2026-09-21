@@ -153,7 +153,7 @@ extension Builder {
                     procedure: procedure
                 )
 
-                if let first = claimed[name], symbol.procedure.access.reachesOtherDocuments {
+                if let first = claimed[name], symbol.supplies {
                     throw BuildError(
                         "'\(name)' is declared more than once in this link, by"
                             + " \(first.spelled) and \(symbol.spelled). Two declarations"
@@ -162,7 +162,7 @@ extension Builder {
                     )
                 }
 
-                if symbol.procedure.access.reachesOtherDocuments {
+                if symbol.supplies {
                     claimed[name] = symbol
                 }
 

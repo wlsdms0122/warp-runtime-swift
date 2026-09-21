@@ -277,7 +277,7 @@ struct Judged: Sendable {
             return row(.body(body, frame), of: origin, nth: nth, foldable: true, in: table)
 
         case let .native(sending):
-            guard let brought = supplied[label] else {
+            guard let brought = supplied[label, at: document] else {
                 guard standing else { throw self.brought(nothing: document) }
 
                 // The door it answers through is the row's own: a native
