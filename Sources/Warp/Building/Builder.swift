@@ -475,13 +475,11 @@ public struct Builder: Sendable {
         // This document's declarations by its block: what it declares is its
         // own whoever else may name it.
         func row(of symbol: Symbol) throws -> Int {
-            guard let start = compiling.lowering.blocks[origin],
-                  let index = holding.firstIndex(where: { held in held.declared == symbol.declared })
-            else {
+            guard let row = compiling.lowering.own(origin)[symbol.declared] else {
                 throw BuildError("'\(symbol.declared)' has no row in the table", at: symbol.place)
             }
 
-            return start + index
+            return row
         }
 
         // The names in scope before a body's first statement: its parameters,
@@ -784,6 +782,16 @@ public struct Builder: Sendable {
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.
         guard let start = assembled.rows[entry] else {
+            // A spelling only a private declaration wears is declared, and by
+            // nothing the caller may name.
+            guard !assembled.hidden.contains(entry) else {
+                throw BuildError(
+                    "entry '\(entry)' is private to the document that declares it, and a run"
+                        + " starts only from a public declaration",
+                    at: nil
+                )
+            }
+
             throw BuildError(
                 "entry '\(entry)' is not declared by any module in this link."
                     + " A name is its declared spelling. Declared:"

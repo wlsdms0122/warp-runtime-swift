@@ -49,9 +49,7 @@ public struct Catalogue: Sendable {
         for (position, module) in modules.enumerated() {
             var collided: [(reference: Reference, first: Int)] = []
 
-            // A private declaration supplies nothing: no other module names it.
-            for reference in module.declaredProcedures.filter({ name in module.procedures[name]?.access.reachesOtherDocuments ?? true }).map(Reference.procedure)
-                + module.declaredTypes.map(Reference.type) {
+            for reference in module.supplies.sorted() {
                 guard let first = declares[reference] else {
                     declares[reference] = position
 

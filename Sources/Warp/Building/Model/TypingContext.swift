@@ -26,6 +26,10 @@ struct TypingContext: Sendable {
     let linked: [Linked]
     let rows: [Name: Int]
 
+    // The declarations of the document being read, by row, private ones
+    // included. Read before the link's spellings.
+    let own: [Name: Int]
+
     // What the link read off a body whose declaration wrote no `returns`.
     // Only those, for the same reason: what a declaration wrote is on its row.
     let answers: [Name: LoweredType]
@@ -72,13 +76,13 @@ struct TypingContext: Sendable {
     // The row a selector names. A walk that meets a call finds it here, once,
     // and hands the spelling on with the call so nothing finds it again.
     func declared(_ selector: Name) -> Linked? {
-        rows[selector].map { row in linked[row] }
+        (own[selector] ?? rows[selector]).map { row in linked[row] }
     }
 
     // What a selector takes: the slots of the row it stands on, or the ones a
     // contract lowered for its procedure, which stands on no row.
     func slots(of selector: Name) -> [Slot] {
-        if let row = rows[selector] { return linked[row].slots }
+        if let row = own[selector] ?? rows[selector] { return linked[row].slots }
 
         return contractProcedures[selector]?.slots ?? []
     }
@@ -87,7 +91,7 @@ struct TypingContext: Sendable {
     // what the declaration wrote.
     func answer(of selector: Name) -> LoweredType? {
         if let read = answers[selector] { return read }
-        if let row = rows[selector] { return linked[row].returns }
+        if let row = own[selector] ?? rows[selector] { return linked[row].returns }
 
         return contractProcedures[selector]?.answers
     }

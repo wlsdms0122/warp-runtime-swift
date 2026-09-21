@@ -319,7 +319,8 @@ struct Compiling {
         TypingContext(
             types: types,
             linked: lowering.table,
-            rows: lowering.rows.merging(lowering.own(origin)) { _, own in own },
+            rows: lowering.rows,
+            own: lowering.own(origin),
             answers: answers,
             const: const,
             isolated: isolated,

@@ -62,6 +62,10 @@ struct Lowering {
     // it.
     private(set) var blocks: [Int: Int] = [:]
 
+    // Each document's declarations by row, private ones included: what the
+    // document itself may name whoever else may.
+    private var owned: [Int: [Name: Int]] = [:]
+
     // The spellings of the private declarations held so far. Not in `rows`,
     // since nothing outside their documents names them; here so a call that
     // reaches one from outside is refused as what it is.
@@ -139,7 +143,11 @@ struct Lowering {
 
         // A private declaration takes no spelling from the link: its own
         // document reaches it by the block, and nothing else reaches it.
+        var own: [Name: Int] = [:]
+
         for (offset, row) in block.enumerated() {
+            own[row.label] = start + offset
+
             guard row.access.reachesOtherDocuments else {
                 hidden.insert(row.label)
 
@@ -150,6 +158,7 @@ struct Lowering {
         }
 
         blocks[origin] = start
+        owned[origin] = own
 
         closureRows[origin] = lifted.indices.map { offset in start + block.count + offset }
 
@@ -206,20 +215,9 @@ struct Lowering {
         table[row] = Linked(declared, implementation: .body(body, slots.frame), sends: declared.sends)
     }
 
-    // A document's own declarations by row: its block, which its declarations
-    // open and its lifted closures close.
+    // A document's own declarations by row, as they were held.
     func own(_ origin: Int) -> [Name: Int] {
-        guard let start = blocks[origin] else { return [:] }
-
-        var rows: [Name: Int] = [:]
-        var index = start
-
-        while index < table.count, table[index].origin == origin, table[index].nth == nil {
-            rows[table[index].label] = index
-            index += 1
-        }
-
-        return rows
+        owned[origin] ?? [:]
     }
 
     // Lowers one expression read against a frame of constants, as a constant's
