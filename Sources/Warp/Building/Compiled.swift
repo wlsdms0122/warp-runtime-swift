@@ -152,6 +152,7 @@ public struct Compiled: Sendable, Declaring {
         self.leaned = leaned
         self.declared = declared
         self.table = table
+        self.hidden = Set(declared.enumerated().filter { offset, _ in !table[offset].access.reachesOtherDocuments }.map(\.element))
         self.answers = answers
         self.numbering = numbering
         self.typeNumbering = typeNumbering
@@ -252,9 +253,7 @@ public struct Compiled: Sendable, Declaring {
     // is a name that quietly declares nothing.
     // The spellings its private declarations wear: rows of this document,
     // and in no table of names another document reads.
-    var hidden: Set<Name> {
-        Set(declared.enumerated().filter { offset, _ in !table[offset].access.reachesOtherDocuments }.map(\.element))
-    }
+    let hidden: Set<Name>
 
     var declares: Set<Reference> {
         Set(

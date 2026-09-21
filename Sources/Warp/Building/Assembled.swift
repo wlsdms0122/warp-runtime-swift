@@ -37,9 +37,10 @@ struct Assembled: Sendable {
 
     // Each document's own declarations by row, private ones included, which
     // its own numbers answer by. And the spellings the private ones wear,
-    // which `rows` does not hold: nothing outside their documents names them.
+    // which `rows` does not hold and a refusal reads to say why a lookup
+    // failed: nothing outside their documents names them.
     let owned: [[Name: Int]]
-    let hidden: Set<Name>
+    let concealed: Set<Name>
 
     // Which row each document's closures took, in the order that document
     // numbers them. A closure is a row like any other and no declared
@@ -65,7 +66,7 @@ struct Assembled: Sendable {
         var table: [Row] = []
         var rows: [Name: Int] = [:]
         var owned: [[Name: Int]] = []
-        var hidden: Set<Name> = []
+        var concealed: Set<Name> = []
         var closures = [[Int]](repeating: [], count: documents.count)
         var named: [Place.Document] = []
         var naming: [Closure.Document] = []
@@ -85,7 +86,7 @@ struct Assembled: Sendable {
             let start = table.count
             let document = documents[origin].document
 
-            let concealed = documents[origin].hidden
+            let withheld = documents[origin].hidden
             var own: [Name: Int] = [:]
 
             for (offset, name) in documents[origin].declared.enumerated() {
@@ -94,8 +95,8 @@ struct Assembled: Sendable {
                 // A private declaration takes no spelling from the link: its
                 // own document reaches it by its own rows, so two documents
                 // may each declare one under one spelling.
-                guard !concealed.contains(name) else {
-                    hidden.insert(name)
+                guard !withheld.contains(name) else {
+                    concealed.insert(name)
 
                     continue
                 }
@@ -139,7 +140,7 @@ struct Assembled: Sendable {
         self.spelled = ClosureRows(naming: naming, numbering: numbering, closures: closures, documents: named)
         self.rows = rows
         self.owned = owned
-        self.hidden = hidden
+        self.concealed = concealed
         self.closures = closures
         self.numbering = numbering
         self.typeNumbering = typeNumbering

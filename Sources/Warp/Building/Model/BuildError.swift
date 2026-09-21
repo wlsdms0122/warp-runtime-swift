@@ -57,4 +57,14 @@ extension BuildError {
     static func unjudged(_ what: String, at place: Place) -> BuildError {
         BuildError("the build lowered \(what) without judging it", at: place)
     }
+
+    // A spelling reached from outside the one document that may name it. Said
+    // once, wherever a lookup fails on one.
+    static func concealed(_ name: Name, at place: Place?) -> BuildError {
+        BuildError(
+            "'\(name)' is private to the document that declares it, and nothing outside"
+                + " that document names it",
+            at: place
+        )
+    }
 }

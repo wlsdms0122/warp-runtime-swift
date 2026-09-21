@@ -84,6 +84,14 @@ public struct Supplying: Sendable {
                         )
                     }
 
+                    guard hidden[identity]?[name] == nil else {
+                        throw BuildError(
+                            "'\(name)' is brought by two of the modules handed over under one document."
+                                + " Two procedures under one spelling have no way to be told apart",
+                            at: .procedure(name.spelling, in: .of(module))
+                        )
+                    }
+
                     hidden[identity, default: [:]][name] = brought
 
                     continue

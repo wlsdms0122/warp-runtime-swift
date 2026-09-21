@@ -113,7 +113,7 @@ struct Compiling {
             table: lowering.table,
             rows: lowering.rows,
             owned: lowering.owned,
-            hidden: lowering.hidden,
+            concealed: lowering.concealed,
             named: named,
             numbering: lowering.numbering,
             closureRows: lowering.closureRows,
@@ -213,7 +213,7 @@ struct Compiling {
                 continue
             }
 
-            guard lowering.hidden.contains(declared) else {
+            guard lowering.concealed.contains(declared) else {
                 throw BuildError(
                     "'\(declared)' is sent by this document, and no document laid"
                         + " beside it declares one",
@@ -221,11 +221,7 @@ struct Compiling {
                 )
             }
 
-            throw BuildError(
-                "'\(declared)' is sent by this document, and is private to the document"
-                    + " that declares it",
-                at: Place(in: documents[origin])
-            )
+            throw BuildError.concealed(declared, at: Place(in: documents[origin]))
         }
     }
 

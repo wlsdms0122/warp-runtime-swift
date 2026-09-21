@@ -395,7 +395,7 @@ public struct Builder: Sendable {
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
-            hidden: laid.carried.hidden.union(holding.flatMap { symbols in
+            concealed: laid.carried.concealed.union(holding.flatMap { symbols in
                 symbols.filter { symbol in !symbol.supplies }.map(\.declared)
             }),
             unsettled: fulfillment
@@ -804,7 +804,7 @@ public struct Builder: Sendable {
         guard let start = assembled.rows[entry] else {
             // A spelling only a private declaration wears is declared, and by
             // nothing the caller may name.
-            guard !assembled.hidden.contains(entry) else {
+            guard !assembled.concealed.contains(entry) else {
                 throw BuildError(
                     "entry '\(entry)' is private to the document that declares it, and a run"
                         + " starts only from a public declaration",
@@ -862,7 +862,7 @@ public struct Builder: Sendable {
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
-            hidden: assembled.hidden
+            concealed: assembled.concealed
         )
         let types = lowered.types
 

@@ -317,6 +317,8 @@ struct ObjectWriter {
         ])
     }
 
+    // Ordered from the narrowest scope out, which is why the word a
+    // declaration wears when it says nothing is not the zero here.
     private func access(_ access: Access) -> Value {
         switch access {
         case .private:

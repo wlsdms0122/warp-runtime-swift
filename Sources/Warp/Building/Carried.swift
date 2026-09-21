@@ -22,9 +22,9 @@ struct Carried: Sendable {
     let rows: [Name: Int]
 
     // Each document's own declarations by row, and the spellings the private
-    // ones wear, which no table of the link's names holds.
+    // ones wear, which no table of the link's names holds and a refusal reads.
     let owned: [Int: [Name: Int]]
-    let hidden: Set<Name>
+    let concealed: Set<Name>
 
     // Which row each number a document gave reaches.
     let named: [Int: [Int?]]
@@ -47,7 +47,7 @@ struct Carried: Sendable {
         table: [],
         rows: [:],
         owned: [:],
-        hidden: [],
+        concealed: [],
         named: [:],
         numbering: [:],
         closureRows: [:],

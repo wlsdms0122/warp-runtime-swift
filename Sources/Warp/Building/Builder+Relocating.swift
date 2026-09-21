@@ -169,9 +169,9 @@ final class Relocating {
     private let numbering: [Numbering]
 
     // Each document's own declarations by row, and the spellings only private
-    // declarations wear.
+    // declarations wear, read when a lookup fails to say why.
     private let owned: [[Name: Int]]
-    private let hidden: Set<Name>
+    private let concealed: Set<Name>
 
     // What each document's type numbers turned out to be in this link.
     //
@@ -214,7 +214,7 @@ final class Relocating {
         naming: [Closure.Document],
         numbering: [Numbering],
         owned: [[Name: Int]],
-        hidden: Set<Name>,
+        concealed: Set<Name>,
         typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
         closures: [[Int]],
@@ -222,7 +222,7 @@ final class Relocating {
     ) {
         self.closures = closures
         self.owned = owned
-        self.hidden = hidden
+        self.concealed = concealed
         self.table = table
         self.spelled = spelled
         self.rows = rows
@@ -257,7 +257,7 @@ final class Relocating {
             naming: assembled.naming,
             numbering: assembled.numbering,
             owned: assembled.owned,
-            hidden: assembled.hidden,
+            concealed: assembled.concealed,
             typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
             closures: assembled.closures,
@@ -364,11 +364,8 @@ final class Relocating {
         // A spelling only a private declaration wears is one this document
         // cannot name: a call from another document and a native's declared
         // send alike meet it here.
-        case let .unfound(.sent(declared)) where hidden.contains(declared):
-            throw BuildError(
-                "'\(declared)' is called here, and is private to the document that declares it",
-                at: standing.place
-            )
+        case let .unfound(.sent(declared)) where concealed.contains(declared):
+            throw BuildError.concealed(declared, at: standing.place)
 
         case let .unfound(.sent(declared)):
             throw BuildError(

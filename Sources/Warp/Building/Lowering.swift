@@ -63,10 +63,10 @@ struct Lowering {
     // answer by it.
     private(set) var owned: [Int: [Name: Int]] = [:]
 
-    // The spellings of the private declarations held so far. Not in `rows`,
-    // since nothing outside their documents names them; here so a call that
-    // reaches one from outside is refused as what it is.
-    private(set) var hidden: Set<Name> = []
+    // The spellings of the private declarations held so far, for the refusal
+    // alone: not in `rows`, since nothing outside their documents names them,
+    // and read only after a row lookup has failed, to say why it did.
+    private(set) var concealed: Set<Name> = []
 
     // How many closures each declaration has been lowered so far, by the
     // document that declared it. A closure's number is its declaration's start
@@ -97,7 +97,7 @@ struct Lowering {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
         self.owned = carried.owned
-        self.hidden = carried.hidden
+        self.concealed = carried.concealed
         self.numbering = carried.numbering
         self.variables = carried.variables
         self.closureRows = carried.closureRows
@@ -146,7 +146,7 @@ struct Lowering {
             own[row.label] = start + offset
 
             guard row.access.reachesOtherDocuments else {
-                hidden.insert(row.label)
+                concealed.insert(row.label)
 
                 continue
             }
@@ -874,15 +874,11 @@ struct Lowering {
         // its spelling. A spelling only a private declaration wears is one
         // this document cannot name.
         guard let row = reached(stands, on: slots) else {
-            guard hidden.contains(call.selector) else {
+            guard concealed.contains(call.selector) else {
                 throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
             }
 
-            throw BuildError(
-                "'\(call.selector)' is private to the document that declares it,"
-                    + " and this call stands in another",
-                at: place
-            )
+            throw BuildError.concealed(call.selector, at: place)
         }
 
         let callee = table[row]

@@ -24,7 +24,7 @@ extension Builder {
         contracts: [Name: Placed<[Name: Signature]>],
         over declaredTypes: [Name: Placed<TypeExpression>],
         among signatures: [Name: Placed<Declared>],
-        hidden: Set<Name> = [],
+        concealed: Set<Name> = [],
         unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
@@ -56,7 +56,7 @@ extension Builder {
                 asking: contracts,
                 over: declaredTypes,
                 among: signatures,
-                hidden: hidden,
+                concealed: concealed,
                 in: table
             )
 
