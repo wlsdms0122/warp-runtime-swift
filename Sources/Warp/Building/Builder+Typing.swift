@@ -69,8 +69,8 @@ extension Builder {
     // in one document, so each asks here rather than working the question
     // out again further on.
     //
-    // A reading that opens to `any`, which is what applying a value reaches,
-    // stands and is settled where the value arrives.
+    // A reading that opens to `any` stands and is settled where the value
+    // arrives.
     private func held(
         reading read: LoweredType,
         answered: [(reading: LoweredType, place: Place)],
@@ -1592,11 +1592,12 @@ extension Builder {
                 .lowered(in: context.loweredTypes)
             )
 
-        // Which value is called is settled at run time, so nothing here can say
-        // what it answers. Its operands are data the const resolver reads (the
-        // check refuses a construct in one, and a program that came straight to
-        // the link meets the same predicate here) so nothing writes and there
-        // is no flow to carry.
+        // Which value is called is settled at the run, and what it answers is
+        // the slot's to say: a procedure type that wrote `returns` answers
+        // that, and one that wrote none opens to `any`. Its operands are data
+        // the const resolver reads (the check refuses a construct in one, and a
+        // program that came straight to the link meets the same predicate
+        // here) so nothing writes and there is no flow to carry.
         case let .apply(callee, arguments):
             guard case .judging = ask else {
                 return Inspection(rewritten: expression, reading: .any)
@@ -1633,10 +1634,18 @@ extension Builder {
                 calls += inner.calls
             }
 
+            let answers: LoweredType
+
+            if case let .procedure(_, returns?, _, _) = called.reading {
+                answers = returns
+            } else {
+                answers = .any
+            }
+
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
                 calls: calls,
-                reading: .any
+                reading: answers
             )
 
         // A call answers what its callee declared, which is the fact this whole
