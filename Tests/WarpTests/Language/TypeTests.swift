@@ -198,7 +198,7 @@ struct TypeTests {
         // When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": entry.public, "wants": wants, "counts": counts])],
+                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])],
                 entry: "entry"
             )
         }
@@ -232,7 +232,7 @@ struct TypeTests {
         // When / Then
         await #expect {
             try await Builder().build(
-                [try Module(procedures: ["entry": entry.public, "wants": wants, "counts": counts])],
+                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])],
                 entry: "entry"
             )
         } throws: { error in
@@ -247,7 +247,7 @@ struct TypeTests {
         )
 
         _ = try await Builder().build(
-            [try Module(procedures: ["entry": entry.public, "wants": wants, "counts": cycling])],
+            [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])],
             entry: "entry"
         )
     }

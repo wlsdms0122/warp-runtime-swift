@@ -285,7 +285,7 @@ struct FieldPlaceTests {
     // read what the build lowered.
     private func resultSteps(of procedure: Procedure) async throws -> [Step] {
         let image = try await builder.build(
-            [try Module(procedures: [entryName: procedure.public])] + Module.standard,
+            [try Module(procedures: [entryName: procedure.with(access: .public)])] + Module.standard,
             entry: entryName
         )
 

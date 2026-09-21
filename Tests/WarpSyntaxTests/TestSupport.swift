@@ -315,22 +315,6 @@ extension Folding {
     }
 }
 
-extension Procedure {
-    // The same declaration, named from the caller too. What a test's entry is
-    // whatever it was written as.
-    var `public`: Procedure {
-        Procedure(
-            description: description,
-            access: .public,
-            signature: signature,
-            implementation: implementation,
-            constness: constness,
-            isolation: isolation,
-            failing: failing
-        )
-    }
-}
-
 extension Module {
     // This module with the entry made public, where it declares one. A test
     // that reads a document from text names the entry outside it, so the
@@ -350,7 +334,7 @@ extension Module {
                 claims: draft.claims,
                 constants: draft.constants,
                 variables: draft.variables,
-                procedures: draft.procedures.merging([entry: procedure.public]) { _, new in new }
+                procedures: draft.procedures.merging([entry: procedure.with(access: .public)]) { _, new in new }
             ),
             identity: identity,
             builtin: builtin
