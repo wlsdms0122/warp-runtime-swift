@@ -83,6 +83,16 @@ public struct Validator: Sendable {
             )
         }
 
+        // A claim is about a declared type. A value of a type the language
+        // names wears no name a run could read, so no declaration could answer
+        // a contract for it.
+        for name in module.claims.keys.sorted() where TypeExpression.keywords[name] != nil {
+            throw ValidationError(
+                "'\(name)' is a type the language names, and a claim is about a declared type",
+                at: .satisfies(name.spelling, in: .of(module))
+            )
+        }
+
         for name in module.procedures.keys.sorted() {
             guard let procedure = module.procedures[name] else { continue }
 

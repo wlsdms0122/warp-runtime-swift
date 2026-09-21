@@ -467,6 +467,37 @@ struct ValidationTests {
         }
     }
 
+    @Test("a claim about a type the language names is refused where the document is read")
+    func aClaimAboutABuiltinTypeIsRefused() throws {
+        // Given. A claim is about a declared type: a value of `int` wears no
+        // name a run could read, so no declaration could answer for it.
+        let sut = {
+            try Module(
+                imports: [],
+                contracts: ["app.Described": ["describe": Signature(returns: .string)]],
+                claims: ["int": ["app.Described"]],
+                procedures: [
+                    "int.describe": Procedure(
+                        signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .string),
+                        body: [],
+                        result: .literal(.string("int"))
+                    ),
+                    entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
+                ]
+            )
+        }
+
+        // Then
+        #expect(throws: ValidationError.self) {
+            do {
+                _ = try sut()
+            } catch {
+                #expect("\(error)".contains("a claim is about a declared type"), "\(error)")
+                throw error
+            }
+        }
+    }
+
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() throws {
         // Given. The one value type a program cannot carry. A closure is made

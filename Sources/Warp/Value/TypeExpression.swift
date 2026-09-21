@@ -304,6 +304,23 @@ extension TypeExpression: CustomStringConvertible {
 }
 
 extension TypeExpression {
+    // The types the language names, by the spelling a document writes each
+    // under. A spelling here is never a declaration's: what a document
+    // declares stands beside these, and a reader answers one of these before
+    // it looks for a declaration.
+    public static let keywords: [Name: TypeExpression] = [
+        "any": .any,
+        // A declaration a call never comes back from. Written out loud because
+        // a procedure that always refuses is a procedure an author may declare.
+        "never": .never,
+        "null": .null,
+        "bool": .bool,
+        "int": .int,
+        "double": .double,
+        "string": .string,
+        "procedure": .procedure(nil)
+    ]
+
     // What one element of bytes is. The range `std` names `byte`. Owned here
     // because the `bytes = array<byte>` equation reads it without a link, so it
     // cannot live behind the name.
