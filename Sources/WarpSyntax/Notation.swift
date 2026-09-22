@@ -78,6 +78,11 @@ public struct Notation: Sendable {
         qualifying?(name, space) ?? name
     }
 
+    // Whether the text read with this notation declares the name there.
+    public func declares(_ name: Name, as space: Space) -> Bool {
+        qualifying?(name, space) != nil
+    }
+
     // What these spellings spend no matter which constructs exist. A template
     // and a spelling are written in a value slot and every construct has one,
     // so offering either owes these wherever the notation is used.
