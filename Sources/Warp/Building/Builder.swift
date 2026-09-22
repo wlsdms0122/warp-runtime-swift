@@ -470,6 +470,11 @@ public struct Builder: Sendable {
         var constants: [Name: Value] = [:]
         var variables: [Name: Value] = [:]
 
+        // The constants with what each reads as: what seeds the environment a
+        // body is judged in, and what a body binds where it reads one at an
+        // index the run settles.
+        var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
+
         func context() -> TypingContext {
             compiling.context(reading: reading, of: origin)
         }
@@ -491,7 +496,7 @@ public struct Builder: Sendable {
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             environment(of: signature, in: loweredTypes)
-                .merging(constants.mapValues { value in .fixed(type(of: value, in: loweredTypes)) }) { _, constant in
+                .merging(typedConstants.mapValues { constant in .fixed(constant.type) }) { _, constant in
                     constant
                 }
                 .merging(
@@ -576,7 +581,7 @@ public struct Builder: Sendable {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, at: symbol.place)
+                try compiling.settle(try row(of: symbol), body: rewritten, constants: typedConstants, at: symbol.place)
             }
 
             return answer.procedure
@@ -700,6 +705,8 @@ public struct Builder: Sendable {
             leaning: fulfillment,
             in: context()
         )
+
+        typedConstants = constants.mapValues { value in (value: value, type: type(of: value, in: loweredTypes)) }
 
         variables = try await self.variables(
             of: module,

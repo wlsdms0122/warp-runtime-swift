@@ -908,16 +908,14 @@ extension Builder {
         at place: Place,
         folding: Folding
     ) async throws -> PathSegment {
-        guard case let .indexRef(inner, optionally) = segment else { return segment }
+        guard case let .indexRef(written, optionally) = segment else { return segment }
 
-        guard
-            case let .key(head, _)? = inner.first,
-            folding.holds(head)
-        else {
-            return .indexRef(
-                try await foldedIndexReferences(inner, at: place, folding: folding),
-                optional: optionally
-            )
+        // An index path indexed in turn by what only the run settles stays a
+        // path however it is headed: the run reads it.
+        let inner = try await foldedIndexReferences(written, at: place, folding: folding)
+
+        guard let head = folding.settled(inner) else {
+            return .indexRef(inner, optional: optionally)
         }
 
         let settled: Value
@@ -1250,13 +1248,12 @@ extension Builder {
 
                 // An inner index path may read a constant too. `items[C]` folds
                 // its index the way a whole constant path folds, so no constant
-                // name survives into the image.
+                // name survives into the image. One indexed by what only the run
+                // settles (`digits[ch]`) cannot fold: it stays a path, and the
+                // lowering binds the constant in the body for the run to read.
                 let settled = try await foldedIndexReferences(resolved, at: place, folding: folding)
 
-                guard
-                    case let .key(head, _)? = settled.first,
-                    folding.holds(head)
-                else {
+                guard let head = folding.settled(settled) else {
                     return Inspection(rewritten: .reference(settled), reading: read)
                 }
 

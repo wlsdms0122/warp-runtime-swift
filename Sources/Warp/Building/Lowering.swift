@@ -191,10 +191,11 @@ struct Lowering {
     mutating func settle(
         _ row: Int,
         body block: Block,
+        constants: [Name: (value: Value, type: LoweredType)],
         at place: Place
     ) throws {
         let declared = table[row]
-        let slots = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:])
+        let slots = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:], constants: constants)
         var scope = Names()
 
         for slot in declared.slots {
@@ -208,7 +209,7 @@ struct Lowering {
         standing[declared.origin, default: Standing()].types.formUnion(slots.types)
         standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
 
-        table[row] = Linked(declared, implementation: .body(body, slots.frame), sends: declared.sends)
+        table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame), sends: declared.sends)
     }
 
     // A document's own declarations by row, as they were held.
@@ -227,7 +228,7 @@ struct Lowering {
         label: Name,
         at place: Place
     ) throws -> (Operation, Frame) {
-        let slots = Slots(origin: origin, variables: [:])
+        let slots = Slots(origin: origin, variables: [:], constants: [:])
         var scope = Names()
 
         for name in names {
@@ -260,15 +261,23 @@ struct Lowering {
     private final class Slots {
         let origin: Int
         let variables: [Name: Int]
+
+        // The document's constants, settled, for the slots of a declaration's
+        // own body. A body names one only where the fold could not settle the
+        // read, an index the run settles, and then the constant takes a slot
+        // the body binds before its first statement.
+        let constants: [Name: (value: Value, type: LoweredType)]
         let outer: (slots: Slots, names: Names)?
 
         private(set) var names: [Name] = []
         private(set) var parameters: [Int] = []
         private(set) var reads: [(variable: Int, slot: Int)] = []
         private(set) var captures: [(Int, Int)] = []
+        private(set) var constantBindings: [(slot: Int, value: Value)] = []
 
         private var variableSlots: [Name: Int] = [:]
         private var capturedSlots: [Name: Int] = [:]
+        private var constantSlots: [Name: Int] = [:]
 
         // What the build proved stands in a slot, for the slots it proved
         // anything about. A path reads its head here, so a field of a type
@@ -281,9 +290,15 @@ struct Lowering {
         private(set) var types: Set<Int> = []
         private(set) var memberships: Set<Int> = []
 
-        init(origin: Int, variables: [Name: Int], outer: (slots: Slots, names: Names)? = nil) {
+        init(
+            origin: Int,
+            variables: [Name: Int],
+            constants: [Name: (value: Value, type: LoweredType)],
+            outer: (slots: Slots, names: Names)? = nil
+        ) {
             self.origin = origin
             self.variables = variables
+            self.constants = constants
             self.outer = outer
         }
 
@@ -367,17 +382,41 @@ struct Lowering {
 
             if let slot = variableSlots[name] { return slot }
 
-            guard let variable = variables[name] else { return nil }
+            if let variable = variables[name] {
+                let slot = allocate(name)
+                variableSlots[name] = slot
+                reads.append((variable: variable, slot: slot))
+
+                return slot
+            }
+
+            if let slot = constantSlots[name] { return slot }
+
+            guard let constant = constants[name] else { return nil }
 
             let slot = allocate(name)
-            variableSlots[name] = slot
-            reads.append((variable: variable, slot: slot))
+            constantSlots[name] = slot
+            constantBindings.append((slot: slot, value: constant.value))
+            hold(slot, constant.type)
 
             return slot
         }
 
         var frame: Frame {
             Frame(size: size, parameters: parameters, variables: reads, captures: captures.map { _, inner in inner }, names: names)
+        }
+
+        // The body with the constants it reads bound before its first
+        // statement, so a read the fold could not settle stands on a slot the
+        // way any name's does.
+        func binding(_ body: Body) -> Body {
+            guard !constantBindings.isEmpty else { return body }
+
+            let bindings = constantBindings.map { slot, value in
+                Instruction(binding: .bind(slot, settling: nil), code: .literal(value), label: names[slot].spelling)
+            }
+
+            return Body(instructions: bindings + body.instructions, result: body.result)
         }
     }
 
@@ -598,7 +637,10 @@ struct Lowering {
             throw BuildError.unjudged("a closure with no body", at: place)
         }
 
-        let inner = Slots(origin: slots.origin, variables: slots.variables, outer: (slots, scope))
+        // A closure reaches a constant the way it reaches a module variable,
+        // through the body it was written in, so the slot it takes is that
+        // body's and the binding is that body's.
+        let inner = Slots(origin: slots.origin, variables: slots.variables, constants: [:], outer: (slots, scope))
         var innerScope = Names()
 
         for name in procedure.signature.names {
