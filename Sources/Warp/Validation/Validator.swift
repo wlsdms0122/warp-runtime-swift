@@ -57,7 +57,7 @@ public struct Validator: Sendable {
         // A variable's start is written like a constant and sees what a
         // constant sees: the constants beside it, and no variable. A variable
         // holds nothing until the run starts.
-        for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
+        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
             guard !constants.contains(name) else {
                 throw ValidationError(
                     "'\(name)' is declared as a constant and as a variable, and"
@@ -67,7 +67,7 @@ public struct Validator: Sendable {
             }
 
             try validate(
-                expression,
+                variable.start,
                 visible: constants,
                 scope: .procedure(constants: constants),
                 at: .variable(name.spelling, in: .of(module))

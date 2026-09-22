@@ -486,15 +486,21 @@ public struct Builder: Sendable {
 
         // The names in scope before a body's first statement: its parameters,
         // the constants its module declared beside them, and the variables. A
-        // module variable holds the type it started as through every write,
-        // because every body of the document reads it as that.
+        // module variable holds the type it declared, or the type it started
+        // as, through every write, because every body of the document reads
+        // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             environment(of: signature, in: loweredTypes)
                 .merging(constants.mapValues { value in .fixed(type(of: value, in: loweredTypes)) }) { _, constant in
                     constant
                 }
                 .merging(
-                    variables.mapValues { value in .declared(type(of: value, in: loweredTypes)) }
+                    variables.reduce(into: [Name: Binding]()) { held, entry in
+                        held[entry.key] = .declared(
+                            module.variables[entry.key]?.declared?.lowered(in: loweredTypes)
+                                ?? type(of: entry.value, in: loweredTypes)
+                        )
+                    }
                 ) { _, variable in variable }
         }
 

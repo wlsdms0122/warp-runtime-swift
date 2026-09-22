@@ -329,7 +329,7 @@ extension Builder {
             }
 
             for (name, variable) in module.variables.sorted { $0.key < $1.key } {
-                try judge(subexpressions: variable, at: .variable(name.spelling, in: .of(module)), in: table)
+                try judge(subexpressions: variable.start, at: .variable(name.spelling, in: .of(module)), in: table)
             }
         }
     }
@@ -449,8 +449,10 @@ extension Builder {
 
     // What a document's variables start a run holding. Settled the way a
     // constant is, from what a constant settles from, reading those beside it
-    // and no variable; the starting value is a fact the link reads, and a
-    // variable's type is the type of that value.
+    // and no variable; the starting value is a fact the link reads. A variable
+    // that declares what it holds has its start settled into that, the way an
+    // argument is settled into its slot, and holds that type; one that
+    // declares nothing holds the type of the settled value.
     func variables(
         of module: Module,
         at origin: Int,
@@ -464,12 +466,12 @@ extension Builder {
 
         var started: [Name: Value] = [:]
 
-        for (name, expression) in module.variables.sorted { $0.key < $1.key } {
+        for (name, variable) in module.variables.sorted { $0.key < $1.key } {
             let place = Place.variable(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
                 let (judged, calls) = try await resolvedSites(
-                    in: expression,
+                    in: variable.start,
                     at: place,
                     in: known.mapValues { value in .fixed(type(of: value, in: context.loweredTypes)) },
                     with: context,
@@ -483,8 +485,10 @@ extension Builder {
                 // constant's does, so it passes the same gate.
                 try settles(judged, at: place, given: context, writing: fulfillment)
 
+                let settled: Value
+
                 do {
-                    started[name] = try await Folding(
+                    settled = try await Folding(
                         constants: known,
                         origin: origin,
                         in: answered,
@@ -494,6 +498,27 @@ extension Builder {
                     throw refused
                 } catch {
                     throw BuildError("\(error)", at: place)
+                }
+
+                guard let declared = variable.declared else {
+                    started[name] = settled
+                    return
+                }
+
+                let holding = declared.lowered(in: context.loweredTypes)
+
+                if case let .undeclared(label, _) = holding {
+                    throw BuildError("declares type '\(label)', which nothing declares", at: place)
+                }
+
+                do {
+                    started[name] = try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes)
+                } catch {
+                    throw BuildError(
+                        "starts as \(type(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
+                            + " and declares \(declared): \(error)",
+                        at: place
+                    )
                 }
             }
         }

@@ -98,7 +98,7 @@ public struct Module: Sendable {
     // to the module the way a constant is, and for the same reason: a name is
     // a scope question. Another module changes one only through a procedure
     // declared beside it.
-    public var variables: [Name: Expression] { source.variables }
+    public var variables: [Name: ModuleVariable] { source.variables }
 
     public var procedures: [Name: Procedure] { source.procedures }
 
@@ -150,6 +150,35 @@ public struct Module: Sendable {
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
+        procedures: [Name: Procedure],
+        identity: Identity? = nil,
+        builtin: Bool = false
+    ) throws {
+        try self.init(
+            description: description,
+            imports: imports,
+            types: types,
+            constraints: constraints,
+            contracts: contracts,
+            claims: claims,
+            constants: constants,
+            variables: variables.mapValues { start in ModuleVariable(start) },
+            procedures: procedures,
+            identity: identity,
+            builtin: builtin
+        )
+    }
+
+    // The same, with variables that may say what they hold.
+    public init(
+        description: String? = nil,
+        imports: Set<Name>? = nil,
+        types: [Name: TypeExpression] = [:],
+        constraints: [Name: [TypeExpression]] = [:],
+        contracts: [Name: [Name: ContractProcedure]] = [:],
+        claims: [Name: Set<Name>] = [:],
+        constants: [Name: Expression] = [:],
+        variables: [Name: ModuleVariable],
         procedures: [Name: Procedure],
         identity: Identity? = nil,
         builtin: Bool = false

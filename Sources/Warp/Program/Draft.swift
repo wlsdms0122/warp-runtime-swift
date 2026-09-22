@@ -51,9 +51,10 @@ public struct Draft: Sendable {
     public let constants: [Name: Expression]
 
     // Names bound to boxes the document's procedures share, each holding what
-    // its expression settles to when a run starts. Declared like a constant
-    // and read by the same spelling; unlike a constant, a body may write one.
-    public let variables: [Name: Expression]
+    // its start settles to when a run starts, under the type it declares or
+    // the start's. Declared like a constant and read by the same spelling;
+    // unlike a constant, a body may write one.
+    public let variables: [Name: ModuleVariable]
 
     // Settable only from here, the way `imports` is, so `declaring(_:)`
     // changes this one field of a copy.
@@ -68,7 +69,7 @@ public struct Draft: Sendable {
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
-        variables: [Name: Expression] = [:],
+        variables: [Name: ModuleVariable] = [:],
         procedures: [Name: Procedure]
     ) {
         self.description = description
@@ -291,8 +292,12 @@ public struct Draft: Sendable {
             fold(name, expression)
         }
 
-        for (name, expression) in variables {
-            fold(name, expression)
+        for (name, variable) in variables {
+            fold(name, variable.start)
+
+            if let declared = variable.declared {
+                named.formUnion(declared.mentions)
+            }
         }
 
         return Reading(
