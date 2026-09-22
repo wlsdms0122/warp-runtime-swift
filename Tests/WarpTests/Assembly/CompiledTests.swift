@@ -723,6 +723,46 @@ struct CompiledTests {
         #expect(laid.carried.named[0]?.allSatisfy { row in row != nil } == true)
     }
 
+    @Test("a document sending a contract's procedure is laid beside a later one")
+    func aDocumentSendingAContractProcedureIsLaid() async throws {
+        // Given. A contract, a document calling through its spelling, and one
+        // laid after that. A contract's procedure has no row of its own: the
+        // link answers the call through the contract, so the document laid
+        // before the last one is missing nothing.
+        let contract = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: ["app.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let leaning = try Module(
+            imports: ["app.Describable", "app.Describable.describe"],
+            types: ["bank.Account": .record(["balance": .int])],
+            claims: ["bank.Account": ["app.Describable"]],
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .string),
+                    body: [],
+                    result: .literal(.string("an account"))
+                ),
+                "bank.tell": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .string),
+                    body: [],
+                    result: .call(Call(receiver: reference("of"), selector: "app.Describable.describe"))
+                )
+            ]
+        )
+        let after = try Module(procedures: ["after.one": Procedure(body: [], result: .literal(.int(1)))])
+
+        // When / Then
+        await #expect(throws: Never.self) {
+            var compiled = try await builder.compile([contract], against: [], supplying: Supplying(Module.standard))
+
+            compiled += try await builder.compile([leaning], against: compiled, supplying: Supplying(Module.standard))
+            compiled += try await builder.compile([after], against: compiled, supplying: Supplying(Module.standard))
+
+            _ = try builder.link(compiled, supplying: Supplying(Module.standard))
+        }
+    }
+
     @Test("a document laid without what it sends is refused by the spelling")
     func aDocumentLaidWithoutItsSendsIsRefused() async throws {
         // Given. A document whose body sends a procedure another declares, laid on
