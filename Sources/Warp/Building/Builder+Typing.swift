@@ -2662,11 +2662,13 @@ extension Builder {
                     ) { first, _ in first }
                 )
 
+        // A dictionary's names are data, so what it reads as is what its
+        // entries hold, not which names it holds them under today.
         case let .dictionary(dictionary):
-            return .record(
-                Dictionary(
-                    dictionary.entries.map { entry in (entry.name, type(of: entry.value, in: table)) }
-                ) { first, _ in first }
+            return .dictionary(
+                dictionary.entries
+                    .map { entry in type(of: entry.value, in: table) }
+                    .reduce(nil) { joined, next in join(joined, next) } ?? .any
             )
         }
     }
