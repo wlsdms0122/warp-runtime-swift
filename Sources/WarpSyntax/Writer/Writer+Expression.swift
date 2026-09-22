@@ -101,15 +101,23 @@ public extension Writer {
         // else.
         case let .record(fields):
             let taken = Self.taken(Set(fields.keys), reserving: reserved, claiming: claiming, constructs: constructs)
+            let written = Value.Dictionary(try fields.mapValues { field in try value(of: field) })
 
             guard taken.isEmpty else {
-                throw WritingError(
-                    "a record with the field(s) \(taken.sorted()) is read as a form"
-                        + " where it is written, and a record of expressions cannot be quoted"
-                )
+                // The form keys are every notation's, and no notation writes
+                // around them. What a notation claims for itself it also says
+                // how to write.
+                guard taken.isDisjoint(with: reserved), let quoted = readBy.spelling?.quoting(record: written) else {
+                    throw WritingError(
+                        "a record with the field(s) \(taken.sorted()) is read as a form"
+                            + " where it is written, and a record of expressions cannot be quoted"
+                    )
+                }
+
+                return quoted
             }
 
-            return .dictionary(try fields.mapValues { field in try value(of: field) })
+            return .dictionary(written)
 
         case let .closure(procedure):
             return .dictionary([ExpressionReader.closureKey: try value(of: procedure)])

@@ -46,9 +46,15 @@ public protocol ExpressionSpelling: Sendable {
     // reach anything. A slot spends them on the notation's behalf.
     var vocabulary: Set<Name> { get }
 
-    // The expression a record spells. Reached only for a record carrying one of
-    // `keys` and none of the form keys, and free to refuse. A key this
-    // notation names but does not offer is refused here, and so is one written
-    // in a form it does not have.
+    // The expression a record spells. Reached only for a record this notation
+    // claims that carries none of the form keys, and free to refuse. A key
+    // this notation names but does not offer is refused here, and so is one
+    // written in a form it does not have.
     func expression(from decoder: Decoder) throws -> Expression
+
+    // How a record of expressions this notation would claim is written so
+    // that it reads back as that record, or nothing where the notation has no
+    // way to write one. The writer asks before refusing: a record whose field
+    // names happen to be this notation's operators still has to travel.
+    func quoting(record fields: Value.Dictionary) -> Value?
 }

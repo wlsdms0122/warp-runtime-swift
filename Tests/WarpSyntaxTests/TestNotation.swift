@@ -29,6 +29,8 @@ struct TestConditions: ExpressionSpelling {
         names.contains(Self.subjectKey)
     }
 
+    func quoting(record fields: Value.Dictionary) -> Value? { nil }
+
     // What the table stands in for, and so what this spelling owes the build.
     var vocabulary: Set<Name> { Set(Self.procedures.values) }
 
@@ -103,6 +105,8 @@ struct OwnVocabularyConditions: ExpressionSpelling {
     func claims(_ names: Set<Name>) -> Bool {
         names.contains("holds")
     }
+
+    func quoting(record fields: Value.Dictionary) -> Value? { nil }
 
     // MARK: - Initializer
     // MARK: - Public
