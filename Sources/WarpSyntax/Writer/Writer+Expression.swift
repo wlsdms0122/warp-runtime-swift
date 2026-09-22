@@ -104,10 +104,9 @@ public extension Writer {
             let written = Value.Dictionary(try fields.mapValues { field in try value(of: field) })
 
             guard taken.isEmpty else {
-                // The form keys are every notation's, and no notation writes
-                // around them. What a notation claims for itself it also says
-                // how to write.
-                guard taken.isDisjoint(with: reserved), let quoted = readBy.spelling?.quoting(record: written) else {
+                // The notation says how such a record is written, or it has no
+                // document.
+                guard let quoted = readBy.spelling?.quoting(record: written) else {
                     throw WritingError(
                         "a record with the field(s) \(taken.sorted()) is read as a form"
                             + " where it is written, and a record of expressions cannot be quoted"
