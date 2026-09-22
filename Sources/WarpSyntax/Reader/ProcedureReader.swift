@@ -70,6 +70,7 @@ public struct ProcedureReader: Decodable {
             // sent to, what comes back, and what each type parameter admits.
             signature: try BoundsReader.apply(
                 try container.decodeIfPresent([String: String].self, forKey: .bounds),
+                qualifying: (decoder.userInfo[.notation] as? Notation ?? .canonical).qualified,
                 to: Signature(
                     receiver: try container.decodeIfPresent(String.self, forKey: .receiver)
                         .map { spelling in try Name.read(spelling, at: decoder.steps) },

@@ -42,10 +42,13 @@ public struct CallForm: ConstructForm {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "call")
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
 
-        self.procedure = try Name.read(
-            try container.decode(String.self, forKey: .procedure),
-            at: decoder.steps
+        self.procedure = notation.qualified(
+            try Name.read(
+                try container.decode(String.self, forKey: .procedure),
+                at: decoder.steps
+            )
         )
         self.receiver = try decoder.descendingIfPresent(to: CodingKeys.of)?
             .read(ExpressionReader.self)

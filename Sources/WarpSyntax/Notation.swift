@@ -54,6 +54,19 @@ public struct Notation: Sendable {
     // `{ type: int }`. A document writes the record.
     public private(set) var bareParameter: Bool
 
+    // What a declared name the text writes stands for, where the text writes
+    // one short: a type's name in a slot, a cast, a field, a bound, a claim or
+    // a membership, and a procedure's name in a call. A document writes every
+    // name full, so a document qualifies nothing; a notation that lets a text
+    // name its own declarations short answers here, and the readers that know
+    // where a name stands ask it there.
+    public private(set) var qualifying: (@Sendable (Name) -> Name)?
+
+    // A declared name as this notation reads it.
+    public func qualified(_ name: Name) -> Name {
+        qualifying?(name) ?? name
+    }
+
     // What these spellings spend no matter which constructs exist. A template
     // and a spelling are written in a value slot and every construct has one,
     // so offering either owes these wherever the notation is used.
@@ -79,6 +92,15 @@ public struct Notation: Sendable {
     }
 
     // MARK: - Public
+    // This notation reading names the way `rule` says: what a text declares
+    // short is read full by the readers that meet a declared name.
+    public func qualifying(_ rule: @escaping @Sendable (Name) -> Name) -> Notation {
+        var copy = self
+        copy.qualifying = rule
+
+        return copy
+    }
+
     // Giving up the template. The procedures it stood for are still reachable by
     // sending them, which is the whole reason a spelling can be given up at all.
     public func removingInterpolation() -> Notation {

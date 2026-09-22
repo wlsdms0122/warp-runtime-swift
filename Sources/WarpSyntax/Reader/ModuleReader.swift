@@ -47,6 +47,7 @@ public struct ModuleReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
 
         // Read standing on the procedures rather than on the module holding
         // them, because what is refused just below is about the procedures. A
@@ -76,8 +77,12 @@ public struct ModuleReader: Decodable {
                 forKey: .contracts
             )
                 .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
-            claims: try Self.record([String].self, in: container, forKey: .satisfies)
-                .mapValues { contracts in try Set(contracts).named(at: []) },
+            claims: try Dictionary(
+                uniqueKeysWithValues: try Self.record([String].self, in: container, forKey: .satisfies)
+                    .map { type, contracts in
+                        (notation.qualified(type), Set(try Set(contracts).named(at: []).map(notation.qualified)))
+                    }
+            ),
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
             variables: try Self.record(VariableReader.self, in: container, forKey: .variables)

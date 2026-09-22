@@ -185,18 +185,13 @@ public struct ExpressionReader: Decodable {
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression? {
-        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
-
-        guard let spelling = notation.spelling, spelling.claims(Set(record.names)) else {
-            return nil
-        }
-
-        guard let decoder else {
-            throw ExpressionFormError(
-                "a record the notation spells cannot be read here."
-                    + " A spelling is the notation's, and this surface reads expressions alone"
-            )
-        }
+        // A surface reading expressions alone reads with no notation, so a
+        // record it meets is the record it is.
+        guard
+            let decoder,
+            let spelling = (decoder.userInfo[.notation] as? Notation)?.spelling,
+            spelling.claims(Set(record.names))
+        else { return nil }
 
         return try spelling.expression(from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder))
     }
@@ -273,7 +268,9 @@ public struct ExpressionReader: Decodable {
 
         do {
             if case let .string(spelling) = written {
-                type = try TypeReader.parse(spelling)
+                let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
+
+                type = try TypeReader.parse(spelling, qualifying: notation.qualified)
             } else {
                 guard let decoder else {
                     throw ExpressionFormError(
