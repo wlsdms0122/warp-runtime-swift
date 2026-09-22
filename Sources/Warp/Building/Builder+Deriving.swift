@@ -37,17 +37,25 @@ extension Builder {
         among symbols: [Symbol],
         settling const: inout Set<Name>,
         reading variables: Set<Name>,
+        taking asked: @escaping (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool
     ) {
         let own = Set(symbols.map(\.declared))
 
         // The body beside the names its own declaration said hold a procedure
         // answering without running, since applying one of those is what the
-        // body is judged on.
-        let bodies = symbols.reduce(into: [Name: (block: Block, applying: Set<Name>)]()) { table, symbol in
+        // body is judged on, and beside the names it may write: a parameter
+        // handed in place is the caller's box, not the body's own.
+        let bodies = symbols.reduce(
+            into: [Name: (block: Block, declaring: Set<Name>, applying: Set<Name>)]()
+        ) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
-            table[symbol.declared] = (block, symbol.procedure.signature.constProcedures)
+            table[symbol.declared] = (
+                block,
+                symbol.procedure.signature.ownedParameters,
+                symbol.procedure.signature.constProcedures
+            )
         }
 
         const.formUnion(
@@ -67,9 +75,11 @@ extension Builder {
                 const.contains(name)
                     && !isConst(
                         written.block,
+                        declaring: written.declaring,
                         given: given,
                         reading: variables,
-                        applying: written.applying
+                        applying: written.applying,
+                        taking: asked
                     ) ? name : nil
             }
 
@@ -197,24 +207,35 @@ extension Builder {
     // run. A selector is the declared spelling it names, so the table is asked
     // by the selector as written. `reading` is the module's variables: a body
     // reading one answers by the run's state, so it does not answer without
-    // running, and a write reaching one is the same fact from the other side.
+    // running. `declaring` is the names the body may write: what its
+    // signature owns and what it introduces. A write landing anywhere else, a
+    // module variable, a name a closure captured, a parameter handed in place,
+    // reaches the run's state the same way, and so does handing one of those
+    // in place to a call.
     //
     // The names a block binds are its own. A `let` and a `var` both introduce
     // one, and neither leaves the block, so declaring either says nothing about
     // what the block reaches.
     func isConst(
         _ block: Block,
+        declaring names: Set<Name>,
         given const: (Name) -> Bool,
         reading variables: Set<Name>,
-        applying procedures: Set<Name>
+        applying procedures: Set<Name>,
+        taking asked: (Name) -> Signature?
     ) -> Bool {
+        var declared = names
         var procedures = procedures
 
         for statement in block.body {
             guard
-                isConst(statement.binding, reading: variables),
-                isConst(statement.expression, given: const, reading: variables, applying: procedures)
+                isConst(statement.binding, declaring: declared),
+                isConst(statement.expression, declaring: declared, given: const, reading: variables, applying: procedures, taking: asked)
             else { return false }
+
+            if case let .variable(name, _)? = statement.binding {
+                declared.insert(name)
+            }
 
             guard let introduced = statement.binding?.introduced else { continue }
 
@@ -232,7 +253,7 @@ extension Builder {
         }
 
         return block.result.map { result in
-            isConst(result, given: const, reading: variables, applying: procedures)
+            isConst(result, declaring: declared, given: const, reading: variables, applying: procedures, taking: asked)
         } ?? true
     }
 
@@ -249,12 +270,12 @@ extension Builder {
     }
 
     // What a binding reaches. Introducing a name reaches nothing; writing one
-    // reaches whatever the path's head names, and a module variable is the
-    // run's state.
-    private func isConst(_ binding: Statement.Binding?, reading variables: Set<Name>) -> Bool {
+    // reaches whatever the path's head names, and a name the body does not
+    // own is the run's state.
+    private func isConst(_ binding: Statement.Binding?, declaring names: Set<Name>) -> Bool {
         guard case let .assignment(path)? = binding else { return true }
 
-        return path.head.map { head in !variables.contains(head) } ?? true
+        return path.head.map { head in names.contains(head) } ?? true
     }
 
     // What an operand or a condition answers only by running, if anything. An
@@ -308,16 +329,18 @@ extension Builder {
 
     func isConst(
         _ expression: Expression,
+        declaring names: Set<Name>,
         given const: (Name) -> Bool,
         reading variables: Set<Name>,
-        applying procedures: Set<Name>
+        applying procedures: Set<Name>,
+        taking asked: (Name) -> Signature?
     ) -> Bool {
         func isConst(_ inner: Expression) -> Bool {
-            self.isConst(inner, given: const, reading: variables, applying: procedures)
+            self.isConst(inner, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
         }
 
         func isConst(_ statements: [Statement]) -> Bool {
-            self.isConst(Block(body: statements), given: const, reading: variables, applying: procedures)
+            self.isConst(Block(body: statements), declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
         }
 
         switch expression {
@@ -345,9 +368,23 @@ extension Builder {
         case let .record(record):
             return record.values.allSatisfy(isConst)
 
+        // A name handed in place is written by the callee, so the call writes
+        // it here: one the body does not own reaches the run's state.
         case let .call(call):
-            return const(call.selector)
-                && (call.receiver.map(isConst) ?? true)
+            guard const(call.selector) else { return false }
+
+            if let signature = asked(call.selector) {
+                for (name, parameter) in signature.parameters where parameter.declared.isInout {
+                    guard
+                        case let .reference(path)? = call.handed(name, to: signature),
+                        let head = path.head
+                    else { continue }
+
+                    guard names.contains(head) else { return false }
+                }
+            }
+
+            return (call.receiver.map(isConst) ?? true)
                 && call.arguments.values.allSatisfy(isConst)
 
         // Calling a value is settled at run time, so what it reaches is said
@@ -366,7 +403,7 @@ extension Builder {
         // Control flow reaches nothing on its own: which part runs is decided
         // inside the body, so a construct is as const as the parts it holds.
         case let .block(block):
-            return self.isConst(block, given: const, reading: variables, applying: procedures)
+            return self.isConst(block, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
 
         case let .conditional(condition, then, otherwise):
             return isConst(condition)
@@ -375,11 +412,11 @@ extension Builder {
 
         case let .loop(condition, body, _):
             return isConst(condition)
-                && self.isConst(body, given: const, reading: variables, applying: procedures)
+                && self.isConst(body, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
 
         case let .attempt(body, rescue, _):
-            return self.isConst(body, given: const, reading: variables, applying: procedures)
-                && self.isConst(rescue, given: const, reading: variables, applying: procedures)
+            return self.isConst(body, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
+                && self.isConst(rescue, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
         }
     }
 }

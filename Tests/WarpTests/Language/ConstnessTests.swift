@@ -156,6 +156,68 @@ struct ConstnessTests {
         }
     }
 
+    @Test("a closure writing a variable it captured does not answer without running")
+    func aClosureWritingACapturedVariableIsRefused() async throws {
+        // Given. A closure that writes a variable the body around it declared.
+        // The box is outside the closure, so the write reaches the run's state.
+        let writing = Procedure(
+            body: [Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1)))],
+            result: .literal(.string("written"))
+        )
+        let handed = try Module(
+            procedures: [
+                "asking": asking,
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .variable("tally"), expression: .literal(.int(0))),
+                        Statement(binding: .constant("given"), expression: .closure(writing))
+                    ],
+                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([handed] + Module.standard)
+        }
+    }
+
+    @Test("a body writing through a parameter handed in place does not answer without running, and neither does one sending it")
+    func aBodyWritingInPlaceIsRefused() async throws {
+        // Given. A declaration writing its in-place parameter, and a closure
+        // handing a variable of its own to it. The parameter is the caller's
+        // box, so the declaration runs, and the closure sends what runs.
+        let bumping = Procedure(
+            signature: Signature(parameters: ["count": Parameter(type: .inout(.int))]),
+            body: [Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))]
+        )
+        let sending = Procedure(
+            body: [
+                Statement(binding: .variable("own"), expression: .literal(.int(0))),
+                Statement(expression: .call(Call(selector: "bumping", arguments: ["count": reference("own")])))
+            ],
+            result: .literal(.string("sent"))
+        )
+        let handed = try Module(
+            procedures: [
+                "asking": asking,
+                "bumping": bumping,
+                entryName: Procedure(
+                    access: .public,
+                    body: [Statement(binding: .constant("given"), expression: .closure(sending))],
+                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([handed] + Module.standard)
+        }
+    }
+
     @Test("a body applying a name a slot said holds a const procedure answers without running")
     func aBodyApplyingAConstProcedureSlotAnswers() async throws {
         // Given. `asking` applies what it was handed, and its slot asks for a
