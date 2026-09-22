@@ -51,13 +51,15 @@ extension LoweredTypeTable {
         let constraintLabels = constraintStanding ?? constraints.keys.sorted()
 
         // The index first, so a declaration naming another lowers against
-        // rows that already exist whichever is declared first.
+        // rows that already exist whichever is declared first. The contracts
+        // stand in it too: a field naming one is a slot the contract fills.
         let index = LoweredTypeTable(
             loweredTypes: [],
             constraints: [],
             labels: labels,
             constraintLabels: constraintLabels,
             recordRows: [],
+            satisfying: satisfying,
             of: linkage
         )
 
