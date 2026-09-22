@@ -37,9 +37,10 @@ public struct Notation: Sendable {
     // ships. The others are notations, and a notation lives where it does.
     public static let canonical = Notation()
 
-    // How a condition slot may be written here, and nothing where a condition is
-    // written as the expression it is.
-    public private(set) var condition: (any ConditionSpelling)?
+    // How an expression may be written here beyond the forms every document
+    // has, and nothing where every expression is written as the expression it
+    // is.
+    public private(set) var spelling: (any ExpressionSpelling)?
 
     // What `{ format:, with: }` lowers to, and nothing where this notation does
     // not offer a template.
@@ -53,38 +54,69 @@ public struct Notation: Sendable {
     // `{ type: int }`. A document writes the record.
     public private(set) var bareParameter: Bool
 
-    // What these spellings spend no matter which constructs exist. A template is
-    // written in a value slot and every construct has one, so offering it owes
-    // these wherever the notation is used.
-    //
-    // A condition's procedures are not here: a condition is read through `when` and
-    // `while`, so a notation with neither spends nothing on them however many it
-    // offers. The forms that read one ask for them by name, below.
-    public var vocabulary: Set<Name> {
-        guard let interpolation else { return [] }
+    // What a declared name the text writes stands for, where the text writes
+    // one short: a type's name in a slot, a cast, a field, a bound, a claim or
+    // a membership, and a procedure's name in a call. Nothing for a name the
+    // text does not declare. A document writes every name full, so a document
+    // qualifies nothing; a notation that lets a text name its own declarations
+    // short answers here, and the readers that know where a name stands ask
+    // it there.
+    public private(set) var qualifying: (@Sendable (Name, Space) -> Name?)?
 
-        return [interpolation.read, interpolation.joined]
+    // Where a declared name stands: the types, constraints and contracts a
+    // type spelling, a bound, a claim or a membership names, or the
+    // procedures a call names. A text may declare one name in both, and the
+    // reader that asks says which it is reading.
+    public enum Space: Sendable {
+        case type
+        case procedure
     }
 
-    // What a condition slot spends, for the forms that have one. Answered here
-    // rather than assembled by each of them, so that whether a notation has a
-    // condition spelling at all stays this type's business.
-    public var conditionVocabulary: Set<Name> {
-        condition?.vocabulary ?? []
+    // A declared name as this notation reads it: what the text's declaration
+    // is called, or the name as written where the text declares none there.
+    public func qualified(_ name: Name, as space: Space) -> Name {
+        qualifying?(name, space) ?? name
+    }
+
+    // Whether the text read with this notation declares the name there.
+    public func declares(_ name: Name, as space: Space) -> Bool {
+        qualifying?(name, space) != nil
+    }
+
+    // What these spellings spend no matter which constructs exist. A template
+    // and a spelling are written in a value slot and every construct has one,
+    // so offering either owes these wherever the notation is used.
+    public var vocabulary: Set<Name> {
+        var owed = spelling?.vocabulary ?? []
+
+        if let interpolation {
+            owed.formUnion([interpolation.read, interpolation.joined])
+        }
+
+        return owed
     }
 
     // MARK: - Initializer
     public init(
-        condition: (any ConditionSpelling)? = nil,
+        spelling: (any ExpressionSpelling)? = nil,
         interpolation: Interpolation? = nil,
         bareParameter: Bool = false
     ) {
-        self.condition = condition
+        self.spelling = spelling
         self.interpolation = interpolation
         self.bareParameter = bareParameter
     }
 
     // MARK: - Public
+    // This notation reading names the way `rule` says: what a text declares
+    // short is read full by the readers that meet a declared name.
+    public func qualifying(_ rule: @escaping @Sendable (Name, Space) -> Name?) -> Notation {
+        var copy = self
+        copy.qualifying = rule
+
+        return copy
+    }
+
     // Giving up the template. The procedures it stood for are still reachable by
     // sending them, which is the whole reason a spelling can be given up at all.
     public func removingInterpolation() -> Notation {

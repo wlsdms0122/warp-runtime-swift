@@ -22,11 +22,6 @@ public struct ConditionalForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "conditional"
 
-    // The condition slot may be written in spellings a notation named itself, so
-    // the procedures behind them are owed wherever this form is registered and
-    // nowhere else. Which procedures those are is never this form's business.
-    public static let readsCondition = true
-
     private let condition: Expression
     private let then: [Statement]
     private let otherwise: [Statement]?
@@ -35,7 +30,7 @@ public struct ConditionalForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "conditional")
 
-        self.condition = try decoder.descending(to: CodingKeys.when).read(ConditionReader.self).condition
+        self.condition = try decoder.descending(to: CodingKeys.when).read(ExpressionReader.self).expression
         self.then = try decoder.descending(to: CodingKeys.then).read(BodyReader.self).statements
         self.otherwise = try decoder.descendingIfPresent(to: CodingKeys.else)?.read(BodyReader.self).statements
     }

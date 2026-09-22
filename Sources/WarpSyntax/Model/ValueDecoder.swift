@@ -458,6 +458,19 @@ extension ValueDecoder {
             userInfo: decoder.userInfo
         )
     }
+
+    // A decoder standing on a value a walk reached below another, at the
+    // steps the walk took. The walk descended on its own, so the steps are
+    // its; the coding path is the decoder's, which is as far as a coding path
+    // knows.
+    init(standing held: Value, at steps: [Place.Step], in decoder: Decoder) {
+        self.init(
+            value: held,
+            codingPath: decoder.codingPath,
+            steps: steps,
+            userInfo: decoder.userInfo
+        )
+    }
 }
 
 extension Decoder {

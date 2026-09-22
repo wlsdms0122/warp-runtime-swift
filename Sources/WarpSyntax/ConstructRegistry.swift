@@ -37,20 +37,11 @@ public struct ConstructRegistry: Sendable {
     public var keys: [Name] { forms.keys.sorted() }
 
 
-    // What the registered forms send, and what their slots spend on their
-    // behalf. Dropping a form drops what it required, which is the point of the
-    // table being a value.
-    //
-    // The second half is added here rather than by each form. A form that reads
-    // a condition says so and nothing else. What a condition costs is between
-    // the notation and this table.
+    // What the registered forms send. Dropping a form drops what it required,
+    // which is the point of the table being a value.
     public func vocabulary(with notation: Notation) -> Set<Name> {
         forms.values.reduce(into: Set<Name>()) { procedures, form in
             procedures.formUnion(form.vocabulary(with: notation))
-
-            if form.readsCondition {
-                procedures.formUnion(notation.conditionVocabulary)
-            }
         }
     }
 

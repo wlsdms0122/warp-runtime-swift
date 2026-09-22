@@ -47,6 +47,7 @@ public struct ModuleReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
 
         // Read standing on the procedures rather than on the module holding
         // them, because what is refused just below is about the procedures. A
@@ -76,8 +77,31 @@ public struct ModuleReader: Decodable {
                 forKey: .contracts
             )
                 .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
+            // In key order, so that two claims that read as one refuse the same
+            // one every run.
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
-                .mapValues { contracts in try Set(contracts).named(at: []) },
+                .sorted { one, other in one.key < other.key }
+                .reduce(into: [Name: Set<Name>]()) { claims, entry in
+                    // The key is the type claiming, written as the document
+                    // spells it; the contracts it claims are names to read.
+                    let type = entry.key
+                    let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
+
+                    // Two keys that read as one type are one type claimed
+                    // twice, however the text spelled them, and so are two
+                    // contracts that read as one.
+                    guard claims[type] == nil else {
+                        throw ReadingError("'\(type)' claims twice under satisfies", at: steps)
+                    }
+
+                    let contracts = try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
+
+                    guard Set(contracts).count == contracts.count else {
+                        throw ReadingError("'\(type)' claims a contract twice under satisfies", at: steps)
+                    }
+
+                    claims[type] = Set(contracts)
+                },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
             variables: try Self.record(VariableReader.self, in: container, forKey: .variables)

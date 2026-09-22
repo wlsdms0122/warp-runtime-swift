@@ -23,6 +23,7 @@ enum BoundsReader {
     // wrote it.
     static func apply(
         _ bounds: [String: String]?,
+        qualifying: (Name) -> Name = { name in name },
         to signature: Signature,
         at steps: [Place.Step]
     ) throws -> Signature {
@@ -39,7 +40,7 @@ enum BoundsReader {
             let parsed: TypeExpression
 
             do {
-                parsed = try TypeReader.parse(bound)
+                parsed = try TypeReader.parse(bound, qualifying: qualifying)
             } catch let refused as TypeFormError {
                 throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: steps)
             }

@@ -59,7 +59,13 @@ public struct TypeReader: Decodable {
         }
     }
 
-    public static func parse(_ written: String) throws -> TypeExpression {
+    // A type from its spelling. `qualifying` is what a declared name written
+    // short stands for, which is the notation's answer where a text may write
+    // one short and the name itself where every name is written full.
+    public static func parse(
+        _ written: String,
+        qualifying: (Name) -> Name = { name in name }
+    ) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: .whitespaces)
 
         guard !text.isEmpty else {
@@ -73,7 +79,7 @@ public struct TypeReader: Decodable {
         // type, including a trailing `?`, so they are read before anything else
         // is.
         if let (mark, bare) = SlotMark.leading(of: text) {
-            let inner = try parse(bare)
+            let inner = try parse(bare, qualifying: qualifying)
 
             if let refusal = SlotMark.refusal(marking: inner, under: mark) {
                 throw TypeFormError(refusal)
@@ -87,7 +93,7 @@ public struct TypeReader: Decodable {
         }
 
         if constness == .const || isolation == .isolated {
-            guard case let .procedure(signature, _, _) = try parse(rest) else {
+            guard case let .procedure(signature, _, _) = try parse(rest, qualifying: qualifying) else {
                 throw TypeFormError("only a procedure is written const or isolated")
             }
 
@@ -100,7 +106,7 @@ public struct TypeReader: Decodable {
         // slot to mark.
         if let parts = joined(text) {
             let names = try parts.map { part -> Name in
-                let parsed = try parse(part.trimmingCharacters(in: .whitespaces))
+                let parsed = try parse(part.trimmingCharacters(in: .whitespaces), qualifying: qualifying)
 
                 guard case let .named(name) = parsed else {
                     throw TypeFormError(
@@ -120,7 +126,7 @@ public struct TypeReader: Decodable {
         }
 
         if text.hasSuffix("?") {
-            let inner = try parse(String(text.dropLast()))
+            let inner = try parse(String(text.dropLast()), qualifying: qualifying)
 
             switch inner {
             // What already admits null gains nothing from saying so again,
@@ -245,7 +251,7 @@ public struct TypeReader: Decodable {
 
             let name = try named(text)
 
-            return TypeExpression.keywords[name] ?? .named(name)
+            return TypeExpression.keywords[name] ?? .named(qualifying(name))
         }
 
         let head = String(text[text.startIndex ..< open])
@@ -264,7 +270,7 @@ public struct TypeReader: Decodable {
             )
         }
 
-        return holding.holding(try parse(inner))
+        return holding.holding(try parse(inner, qualifying: qualifying))
     }
 
     // Whether the reading takes this spelling back as the name it is. A name
@@ -395,8 +401,9 @@ public struct TypeReader: Decodable {
     }
 
     private static func read(from decoder: Decoder) throws -> TypeExpression {
+        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
         if let written = try? decoder.singleValueContainer().decode(String.self) {
-            return try parse(written)
+            return try parse(written) { name in notation.qualified(name, as: .type) }
         }
 
         // A record and a procedure are both mappings, so one of them has to be

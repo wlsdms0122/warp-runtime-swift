@@ -146,13 +146,13 @@ struct WriterTests {
                     ]
                 ]]
             ]
-        ], importing: ["example.holds"], from: Notation(condition: OwnVocabularyConditions()))
+        ], importing: ["example.holds"], from: Notation(spelling: OwnVocabularyConditions()))
 
         // When
         let written = try sut.value(of: module)
 
         // Then
-        #expect(Self.keys(in: written).isDisjoint(with: OwnVocabularyConditions().keys))
+        #expect(!Self.keys(in: written).contains("holds"))
         #expect(Self.keys(in: written).contains("call"))
     }
 

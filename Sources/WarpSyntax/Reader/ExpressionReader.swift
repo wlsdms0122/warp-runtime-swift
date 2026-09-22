@@ -47,7 +47,7 @@ public struct ExpressionReader: Decodable {
     // turns records that were data into forms. Under a movable boundary the same
     // document means different things in different notations, and the way an author
     // finds out is a payload silently becoming a reference.
-    static let formKeys: Set<Name> = [
+    public static let formKeys: Set<Name> = [
         "ref", "value", "format", "with", closureKey, "call", "as", "as?",
     ]
 
@@ -61,15 +61,14 @@ public struct ExpressionReader: Decodable {
     // rather than in each of them.
     static let subjectKey: Name = "of"
 
-    // What the slot an expression stands in reserves beyond the form keys: a
-    // notation's condition keys under `when` and `while`, and the construct
-    // keys directly under a statement's `value`. The writer quotes data by
-    // these, and the reader refuses an escape the writer would not have
-    // written by the same ones, so the slot that knows hands them in.
+    // What the slot an expression stands in reserves beyond the form keys and
+    // the notation's own: the construct keys directly under a statement's
+    // `value`. The writer quotes data by these, and the reader refuses an
+    // escape the writer would not have written by the same ones, so the slot
+    // that knows hands them in.
     struct Slot {
         static let plain = Slot()
 
-        var reserved: Set<Name> = []
         var constructs: Set<Name> = []
     }
 
@@ -158,15 +157,44 @@ public struct ExpressionReader: Decodable {
     ) throws -> Expression {
         let formKeys = Set(record.names).intersection(Self.formKeys)
 
-        guard !formKeys.isEmpty else { return try fields(in: record, at: steps, in: decoder) }
+        guard !formKeys.isEmpty else {
+            return try spelled(record, at: steps, in: decoder) ?? fields(in: record, at: steps, in: decoder)
+        }
 
         if record.names.contains("ref") { return try reference(in: record) }
         if record.names.contains("as") || record.names.contains("as?") { return try cast(in: record, at: steps, in: decoder) }
         if record.names.contains(Self.closureKey) { return try closure(in: record, at: steps, in: decoder) }
         if record.names.contains("call") { return try call(in: record, at: steps, in: decoder) }
-        if record.names.contains("value") { return try literal(in: record, slot: slot) }
+        if record.names.contains("value") { return try literal(in: record, in: decoder, slot: slot) }
 
         return try template(in: record, at: steps, in: decoder)
+    }
+
+    // A record the notation spells, read by the notation. A form key wins, and
+    // this is asked only where none stands: the form keys are fixed and read
+    // wherever data appears, so `{ as: <type>, of: <value> }` is a cast in
+    // every notation, where a notation that recognises its spellings by a
+    // subject key would see the `of` and claim the record, and what it made of
+    // the `as` beside it would be a message nobody wrote.
+    //
+    // Nothing where the notation spells nothing, or does not claim the record:
+    // that record is the expression it is, which is what keeps the spellings
+    // optional wherever an expression is asked for.
+    private static func spelled(
+        _ record: Value.Dictionary,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression? {
+        // A surface reading expressions alone reads with no notation, so a
+        // record it meets is the record it is.
+        guard
+            let decoder,
+            let notation = decoder.userInfo[.notation] as? Notation,
+            let spelling = notation.spelling,
+            spelling.claims(Set(record.names), in: notation)
+        else { return nil }
+
+        return try spelling.expression(from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder))
     }
 
     // No form key: an ordinary record of expressions. In the record's order,
@@ -241,7 +269,9 @@ public struct ExpressionReader: Decodable {
 
         do {
             if case let .string(spelling) = written {
-                type = try TypeReader.parse(spelling)
+                let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
+
+                type = try TypeReader.parse(spelling) { name in notation.qualified(name, as: .type) }
             } else {
                 guard let decoder else {
                     throw ExpressionFormError(
@@ -329,7 +359,7 @@ public struct ExpressionReader: Decodable {
         }
     }
 
-    private static func literal(in record: Value.Dictionary, slot: Slot) throws -> Expression {
+    private static func literal(in record: Value.Dictionary, in decoder: Decoder?, slot: Slot) throws -> Expression {
         guard record.count == 1, let payload = record["value"] else {
             throw ExpressionFormError(
                 "a record with `value` must be exactly { value: <data> }."
@@ -340,12 +370,15 @@ public struct ExpressionReader: Decodable {
 
         // Data no writer would have quoted is written as itself, and the
         // escape around it is a second spelling of the same literal. Asked of
-        // the writer's own judgment, with what this slot reserves. A bare null
-        // is the one exception: in a slot that may be left out it reads as the
-        // slot left out, so null written is written here.
+        // the writer's own judgment, with what this slot and the notation
+        // reserve. A bare null is the one exception: in a slot that may be
+        // left out it reads as the slot left out, so null written is written
+        // here.
+        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
         let quoted = try Writer.spelling(
             of: payload,
-            reserving: Self.formKeys.union(slot.reserved),
+            reserving: Self.formKeys,
+            claiming: notation.spelling.map { spelling in { names in spelling.claims(names, in: notation) } } ?? { _ in false },
             constructs: slot.constructs
         ) == .quoted
 
