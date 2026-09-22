@@ -36,13 +36,13 @@ let greet = Procedure(
     result: .reference([.key("greeting")])
 )
 
-let image = try Builder().build(
-    [try Module(procedures: ["hello.greet": greet])] + Module.standard,
-    entry: "hello.greet"
+let image = try await Builder().build(
+    [try Module(procedures: ["hello.greet": greet])] + Module.standard
 )
 
 let value = try await Executor().run(
     image,
+    entry: "hello.greet",
     arguments: ["name": .string("warp")]
 )
 
@@ -76,8 +76,8 @@ let module = try Loader().load(                        // tree → module, or re
     document,
     identity: try Identity.of(document)                // which document, for refusals
 )
-let image = try Builder().build([module] + Module.standard, entry: "entry")
-let answer = try await Executor().run(image)
+let image = try await Builder().build([module] + Module.standard)
+let answer = try await Executor().run(image, entry: "entry", arguments: [:])
 ```
 
 Each step refuses rather than guesses, and everything refusable is refused
@@ -102,8 +102,8 @@ link, and resolving those numbers to rows of a table is the link's work. That is
 why one compile answers every entry asked of it: which declaration a run starts
 from is not a fact about the documents.
 
-`Builder` has a door for each: `build(_ modules:entry:)` is the two together,
-and `compile(_ modules:)` and `link(_ compiled:entry:supplying:)` are the
+`Builder` has a door for each: `build(_ modules:)` is the two together,
+and `compile(_ modules:)` and `link(_ compiled:supplying:)` are the
 halves, for a caller holding what one compile answered. Compiling takes the
 whole set of modules at once, and the table a compile is read against is its
 own.
