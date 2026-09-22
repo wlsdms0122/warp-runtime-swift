@@ -77,7 +77,10 @@ public struct ModuleReader: Decodable {
                 forKey: .contracts
             )
                 .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
+            // In key order, so that two claims that read as one refuse the same
+            // one every run.
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
+                .sorted { one, other in one.key < other.key }
                 .reduce(into: [Name: Set<Name>]()) { claims, entry in
                     let type = notation.qualified(entry.key, as: .type)
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
