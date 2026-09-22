@@ -47,7 +47,7 @@ public struct ExpressionReader: Decodable {
     // turns records that were data into forms. Under a movable boundary the same
     // document means different things in different notations, and the way an author
     // finds out is a payload silently becoming a reference.
-    static let formKeys: Set<Name> = [
+    public static let formKeys: Set<Name> = [
         "ref", "value", "format", "with", closureKey, "call", "as", "as?",
     ]
 
