@@ -213,6 +213,11 @@ struct Compiling {
                 continue
             }
 
+            // A contract's procedure has no row: a call to it is a dispatch
+            // the link answers through the contract, so a document sending
+            // one is missing nothing.
+            guard contractProcedures[declared] == nil else { continue }
+
             guard lowering.concealed.contains(declared) else {
                 throw BuildError(
                     "'\(declared)' is sent by this document, and no document laid"
