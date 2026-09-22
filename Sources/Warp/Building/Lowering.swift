@@ -262,9 +262,10 @@ struct Lowering {
         let origin: Int
         let variables: [Name: Int]
 
-        // The document's constants, settled. A body names one only where the
-        // fold could not settle the read, an index the run settles, and then
-        // the constant takes a slot the body binds before its first statement.
+        // The document's constants, settled, for the slots of a declaration's
+        // own body. A body names one only where the fold could not settle the
+        // read, an index the run settles, and then the constant takes a slot
+        // the body binds before its first statement.
         let constants: [Name: (value: Value, type: LoweredType)]
         let outer: (slots: Slots, names: Names)?
 
@@ -636,7 +637,10 @@ struct Lowering {
             throw BuildError.unjudged("a closure with no body", at: place)
         }
 
-        let inner = Slots(origin: slots.origin, variables: slots.variables, constants: slots.constants, outer: (slots, scope))
+        // A closure reaches a constant the way it reaches a module variable,
+        // through the body it was written in, so the slot it takes is that
+        // body's and the binding is that body's.
+        let inner = Slots(origin: slots.origin, variables: slots.variables, constants: [:], outer: (slots, scope))
         var innerScope = Names()
 
         for name in procedure.signature.names {
