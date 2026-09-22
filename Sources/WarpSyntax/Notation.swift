@@ -56,15 +56,22 @@ public struct Notation: Sendable {
 
     // What a declared name the text writes stands for, where the text writes
     // one short: a type's name in a slot, a cast, a field, a bound, a claim or
-    // a membership, and a procedure's name in a call. A document writes every
-    // name full, so a document qualifies nothing; a notation that lets a text
-    // name its own declarations short answers here, and the readers that know
-    // where a name stands ask it there.
-    public private(set) var qualifying: (@Sendable (Name) -> Name)?
+    // a membership, and a procedure's name in a call. Nothing for a name the
+    // text does not declare. A document writes every name full, so a document
+    // qualifies nothing; a notation that lets a text name its own declarations
+    // short answers here, and the readers that know where a name stands ask
+    // it there.
+    public private(set) var qualifying: (@Sendable (Name) -> Name?)?
 
-    // A declared name as this notation reads it.
+    // A declared name as this notation reads it: what the text's declaration
+    // is called, or the name as written where the text declares none.
     public func qualified(_ name: Name) -> Name {
         qualifying?(name) ?? name
+    }
+
+    // Whether the text read with this notation declares the name.
+    public func declares(_ name: Name) -> Bool {
+        qualifying?(name) != nil
     }
 
     // What these spellings spend no matter which constructs exist. A template
@@ -94,7 +101,7 @@ public struct Notation: Sendable {
     // MARK: - Public
     // This notation reading names the way `rule` says: what a text declares
     // short is read full by the readers that meet a declared name.
-    public func qualifying(_ rule: @escaping @Sendable (Name) -> Name) -> Notation {
+    public func qualifying(_ rule: @escaping @Sendable (Name) -> Name?) -> Notation {
         var copy = self
         copy.qualifying = rule
 
