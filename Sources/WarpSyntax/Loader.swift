@@ -149,7 +149,11 @@ public struct Loader: Sendable {
         // values that happen to agree today about the one field this reads.
         let stamped = try stamped(value)
 
-        return try Writer(registry: registry, readBy: .canonical)
+        // Written for the reader every document has: the standard table and
+        // no notation. What this loader's own table reads as a construct is
+        // spent here, so a document is quoted by the table that will read it
+        // and not by the one that wrote it.
+        return try Writer(registry: .standard, readBy: .canonical)
             .value(of: try spelled(stamped, in: document(of: stamped), from: notation))
     }
 
