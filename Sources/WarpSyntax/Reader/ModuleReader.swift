@@ -77,12 +77,21 @@ public struct ModuleReader: Decodable {
                 forKey: .contracts
             )
                 .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
-            claims: try Dictionary(
-                uniqueKeysWithValues: try Self.record([String].self, in: container, forKey: .satisfies)
-                    .map { type, contracts in
-                        (notation.qualified(type), Set(try Set(contracts).named(at: []).map(notation.qualified)))
+            claims: try Self.record([String].self, in: container, forKey: .satisfies)
+                .reduce(into: [Name: Set<Name>]()) { claims, entry in
+                    let type = notation.qualified(entry.key)
+
+                    // Two keys that read as one type are one type claimed
+                    // twice, however the text spelled them.
+                    guard claims[type] == nil else {
+                        throw ReadingError(
+                            "'\(type)' claims twice under satisfies",
+                            at: [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
+                        )
                     }
-            ),
+
+                    claims[type] = Set(try Set(entry.value).named(at: []).map(notation.qualified))
+                },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
             variables: try Self.record(VariableReader.self, in: container, forKey: .variables)
