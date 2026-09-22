@@ -34,34 +34,21 @@ struct NotationTests {
         #expect(!sut.vocabulary(of: .testing).isEmpty)
     }
 
-    @Test("a spelling nobody reaches is not owed")
-    func aSpellingNobodyReachesIsNotOwed() throws {
-        // Given. A condition's procedures are read through `when` and `where`, so a
-        // notation whose spellings reach procedures and which registers neither form
-        // spends nothing on them. Offering is not spending.
+    @Test("what a spelling reaches is owed wherever the notation is read")
+    func aSpellingsProceduresAreOwedByTheNotation() throws {
+        // Given. A spelling is written in a value slot and every construct has
+        // one, so what it reaches is owed whether or not any form is
+        // registered. Nothing in this package knows what those procedures are.
         let notation = Notation(
-            condition: OwnVocabularyConditions(),
+            spelling: OwnVocabularyConditions(),
             interpolation: Interpolation(read: "text", joined: "joined")
         )
-        let sut = Loader(registry: try ConstructRegistry(forms: []))
 
-        // Then. What is left is what a template spends, which every slot can
-        // hold and no registry decides
-        #expect(sut.vocabulary(of: notation).isDisjoint(with: OwnVocabularyConditions().vocabulary))
-        #expect(sut.vocabulary(of: notation) == notation.vocabulary)
-    }
-
-    @Test("what a condition spelling reaches is owed where a condition is read")
-    func aConditionsProceduresAreOwedByTheFormsThatReadOne() throws {
-        // Given. The other half: register a form with a condition slot and the
-        // procedures are owed again. Nothing in this package knows what they are.
-        let sut = Loader(registry: try ConstructRegistry(forms: [ConditionalForm.self]))
-
-        // Then
-        #expect(
-            sut.vocabulary(of: Notation(condition: OwnVocabularyConditions()))
-                == OwnVocabularyConditions().vocabulary
-        )
+        // Then. With no forms at all, and with the standard ones
+        for sut in [Loader(registry: try ConstructRegistry(forms: [])), Loader()] {
+            #expect(sut.vocabulary(of: notation).isSuperset(of: OwnVocabularyConditions().vocabulary))
+            #expect(sut.vocabulary(of: notation) == notation.vocabulary)
+        }
     }
 
     @Test("a canonical notation still writes every condition the language has")

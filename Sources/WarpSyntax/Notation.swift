@@ -37,9 +37,10 @@ public struct Notation: Sendable {
     // ships. The others are notations, and a notation lives where it does.
     public static let canonical = Notation()
 
-    // How a condition slot may be written here, and nothing where a condition is
-    // written as the expression it is.
-    public private(set) var condition: (any ConditionSpelling)?
+    // How an expression may be written here beyond the forms every document
+    // has, and nothing where every expression is written as the expression it
+    // is.
+    public private(set) var spelling: (any ExpressionSpelling)?
 
     // What `{ format:, with: }` lowers to, and nothing where this notation does
     // not offer a template.
@@ -53,33 +54,26 @@ public struct Notation: Sendable {
     // `{ type: int }`. A document writes the record.
     public private(set) var bareParameter: Bool
 
-    // What these spellings spend no matter which constructs exist. A template is
-    // written in a value slot and every construct has one, so offering it owes
-    // these wherever the notation is used.
-    //
-    // A condition's procedures are not here: a condition is read through `when` and
-    // `while`, so a notation with neither spends nothing on them however many it
-    // offers. The forms that read one ask for them by name, below.
+    // What these spellings spend no matter which constructs exist. A template
+    // and a spelling are written in a value slot and every construct has one,
+    // so offering either owes these wherever the notation is used.
     public var vocabulary: Set<Name> {
-        guard let interpolation else { return [] }
+        var owed = spelling?.vocabulary ?? []
 
-        return [interpolation.read, interpolation.joined]
-    }
+        if let interpolation {
+            owed.formUnion([interpolation.read, interpolation.joined])
+        }
 
-    // What a condition slot spends, for the forms that have one. Answered here
-    // rather than assembled by each of them, so that whether a notation has a
-    // condition spelling at all stays this type's business.
-    public var conditionVocabulary: Set<Name> {
-        condition?.vocabulary ?? []
+        return owed
     }
 
     // MARK: - Initializer
     public init(
-        condition: (any ConditionSpelling)? = nil,
+        spelling: (any ExpressionSpelling)? = nil,
         interpolation: Interpolation? = nil,
         bareParameter: Bool = false
     ) {
-        self.condition = condition
+        self.spelling = spelling
         self.interpolation = interpolation
         self.bareParameter = bareParameter
     }

@@ -58,33 +58,32 @@ public extension Writer {
 
     // Where the expression is going decides what may be written bare there. The
     // form keys are read as forms wherever data appears, so every slot reserves
-    // those; a condition slot also reserves whatever the notation on the far
-    // side recognises a condition by, since data written plainly there would
-    // come back as one.
+    // those, and a record the notation on the far side would claim as a
+    // spelling is quoted, since data written plainly would come back as one.
     //
-    // The second half is empty for a document, which is what makes it worth
-    // naming rather than assuming: a document's condition slot is an expression
-    // like any other, and `.canonical` reserves nothing there. It stops being
-    // empty exactly when the reading side is a notation, and then this is the
-    // only thing standing between a record and a message.
+    // The second half claims nothing for a document, which is what makes it
+    // worth naming rather than assuming: `.canonical` reserves nothing beyond
+    // the form keys. It stops being empty exactly when the reading side is a
+    // notation, and then this is the only thing standing between a record and
+    // a message.
     //
     // `constructs` names the keys a record standing directly in this slot
     // would be read as a construct under, which is only ever a statement's
     // `value`: the reader takes a record there as a construct when it has
     // exactly one key and that key is a construct's, and reads nothing that
-    // way deeper down. What `reserving` names is read at every depth.
+    // way deeper down. What is reserved is read at every depth.
     func value(
         of expression: Expression,
-        reserving reserved: Set<Name> = [],
         constructs: Set<Name> = []
     ) throws -> Value {
-        let reserved = reserved.union(ExpressionReader.formKeys)
+        let reserved = ExpressionReader.formKeys
+        let claiming = readBy.spelling.map { spelling in spelling.claims } ?? { _ in false }
 
         switch expression {
         // Data that happens to look like a form has to say it is data, and data
         // that could not be mistaken for one says nothing.
         case let .literal(value):
-            switch try Self.spelling(of: value, reserving: reserved, constructs: constructs) {
+            switch try Self.spelling(of: value, reserving: reserved, claiming: claiming, constructs: constructs) {
             case .plainly: return value
             case .quoted: return .dictionary(["value": value])
             }
@@ -101,7 +100,7 @@ public extension Writer {
         // has no document, and saying so beats writing one that means something
         // else.
         case let .record(fields):
-            let taken = Self.taken(Set(fields.keys), reserving: reserved, constructs: constructs)
+            let taken = Self.taken(Set(fields.keys), reserving: reserved, claiming: claiming, constructs: constructs)
 
             guard taken.isEmpty else {
                 throw WritingError(
@@ -141,12 +140,6 @@ public extension Writer {
     }
 
     // MARK: - Private
-    // What the reading side would take for a condition rather than for data.
-    // Nothing for a document, which has no notation to take it for one.
-    private var conditionKeys: Set<Name> {
-        readBy.condition?.keys ?? []
-    }
-
     // A construct key and what goes under it. The key comes from the registry
     // rather than from the form, because a notation may have respelled it or
     // given it up.
@@ -176,7 +169,7 @@ public extension Writer {
         // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
-                "when": try value(of: condition, reserving: conditionKeys),
+                "when": try value(of: condition),
                 "then": .array(try then.map(value(of:)))
             ]
 
@@ -190,7 +183,7 @@ public extension Writer {
             try named(round, matches: id, in: "loop", binding: "round")
 
             var written: [Name: Value] = [
-                "while": try value(of: condition, reserving: conditionKeys)
+                "while": try value(of: condition)
             ]
 
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
@@ -328,15 +321,21 @@ public extension Writer {
     }
 
     // The keys under which a record with these fields would be read as
-    // something other than a record: a reserved key wherever it stands, and a
+    // something other than a record: a reserved key wherever it stands, every
+    // key where the notation claims the record as a spelling, and a
     // construct's key where the record is the one field under a statement's
-    // `value`. The reader's own two conditions, asked here as the writer.
+    // `value`. The reader's own conditions, asked here as the writer.
     private static func taken(
         _ keys: Set<Name>,
         reserving reserved: Set<Name>,
+        claiming: (Set<Name>) -> Bool,
         constructs: Set<Name>
     ) -> Set<Name> {
         var taken = keys.intersection(reserved)
+
+        if claiming(keys) {
+            taken.formUnion(keys)
+        }
 
         if keys.count == 1 {
             taken.formUnion(keys.intersection(constructs))
@@ -346,11 +345,12 @@ public extension Writer {
     }
 
     // Whether data is written as itself or under `{ value: }`. The reader asks
-    // this too, with nothing reserved beyond the form keys, so what it refuses
-    // as a second spelling is exactly what no writer would have quoted.
+    // this too, with what its notation claims, so what it refuses as a second
+    // spelling is exactly what no writer would have quoted.
     static func spelling(
         of value: Value,
         reserving reserved: Set<Name>,
+        claiming: (Set<Name>) -> Bool = { _ in false },
         constructs: Set<Name> = []
     ) throws -> Spelling {
         switch value {
@@ -363,18 +363,18 @@ public extension Writer {
 
         case let .array(elements):
             return try elements.reduce(.plainly) { carried, element in
-                try spelling(of: element, reserving: reserved) == .plainly ? carried : .quoted
+                try spelling(of: element, reserving: reserved, claiming: claiming) == .plainly ? carried : .quoted
             }
 
         case .record, .dictionary:
             guard let record = value.asDictionary,
-                taken(Set(record.names), reserving: reserved, constructs: constructs).isEmpty
+                taken(Set(record.names), reserving: reserved, claiming: claiming, constructs: constructs).isEmpty
             else {
                 return .quoted
             }
 
             return try record.values.reduce(.plainly) { carried, field in
-                try spelling(of: field, reserving: reserved) == .plainly ? carried : .quoted
+                try spelling(of: field, reserving: reserved, claiming: claiming) == .plainly ? carried : .quoted
             }
 
         case .procedure:

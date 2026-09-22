@@ -21,11 +21,6 @@ public struct LoopForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "loop"
 
-    // The condition slot may be written in spellings a notation named itself, so
-    // the procedures behind them are owed wherever this form is registered and
-    // nowhere else. Which procedures those are is never this form's business.
-    public static let readsCondition = true
-
     // The body is decoded as a key that must be there, so a loop with nothing
     // in it is still written with an empty one.
     public static let requiresBody = true
@@ -37,7 +32,7 @@ public struct LoopForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "loop")
 
-        self.condition = try decoder.descending(to: CodingKeys.while).read(ConditionReader.self).condition
+        self.condition = try decoder.descending(to: CodingKeys.while).read(ExpressionReader.self).expression
         self.body = try .reading(
             body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).statements,
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?

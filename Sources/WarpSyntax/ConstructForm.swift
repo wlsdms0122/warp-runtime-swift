@@ -24,16 +24,6 @@ public protocol ConstructForm: Sendable, Decodable {
     // procedure is a fact about a notation, and a form is not one.
     static var key: Name { get }
 
-    // Whether this form opens a condition slot. Answering yes is how a form owns
-    // the procedures its notation spends there, without knowing any of them.
-    //
-    // It is a fact about the form rather than a sum the form computes. A form
-    // that had to fetch what its slot spends is a form that can fetch nothing
-    // and be believed, and the under-declared debt surfaces as a link failure
-    // far from here. A form says which slots it opens; the registry adds up what
-    // those slots spend.
-    static var readsCondition: Bool { get }
-
     // Whether this form reads `body` as a key it must have. A writer asks the
     // form rather than keeping its own list of which forms do: the two sides
     // are a file apart, and a writer that drops an empty body a reader demands
@@ -45,8 +35,8 @@ public protocol ConstructForm: Sendable, Decodable {
     // spelling to reach anything. Most forms build the language's own constructs
     // and send nothing, so most leave this empty.
     //
-    // These are the form's own. A procedure it decided to send. What its slots spend
-    // is not here; it is above.
+    // These are the form's own. A procedure it decided to send. What a
+    // notation's spellings spend is the notation's.
     static func vocabulary(with notation: Notation) -> Set<Name>
 
     // Throws when the form cannot be the statement it was written as.
@@ -54,8 +44,6 @@ public protocol ConstructForm: Sendable, Decodable {
 }
 
 public extension ConstructForm {
-    static var readsCondition: Bool { false }
-
     static var requiresBody: Bool { false }
 
     static func vocabulary(with notation: Notation) -> Set<Name> { [] }
