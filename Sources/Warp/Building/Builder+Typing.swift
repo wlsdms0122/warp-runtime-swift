@@ -914,11 +914,7 @@ extension Builder {
         // path however it is headed: the run reads it.
         let inner = try await foldedIndexReferences(written, at: place, folding: folding)
 
-        guard
-            case let .key(head, _)? = inner.first,
-            folding.holds(head),
-            !inner.holdsAnIndexReference
-        else {
+        guard folding.settles(inner), case let .key(head, _)? = inner.first else {
             return .indexRef(inner, optional: optionally)
         }
 
@@ -1257,11 +1253,7 @@ extension Builder {
                 // lowering binds the constant in the body for the run to read.
                 let settled = try await foldedIndexReferences(resolved, at: place, folding: folding)
 
-                guard
-                    case let .key(head, _)? = settled.first,
-                    folding.holds(head),
-                    !settled.holdsAnIndexReference
-                else {
+                guard folding.settles(settled), case let .key(head, _)? = settled.first else {
                     return Inspection(rewritten: .reference(settled), reading: read)
                 }
 
@@ -2977,18 +2969,6 @@ extension Builder {
             at: place
         ) {
             try refuse(refusal, at: place, when: ask)
-        }
-    }
-}
-
-private extension Array where Element == PathSegment {
-    // Whether an index of this path is still a reference once the fold has
-    // settled what it could: one the run reads.
-    var holdsAnIndexReference: Bool {
-        contains { segment in
-            if case .indexRef = segment { return true }
-
-            return false
         }
     }
 }
