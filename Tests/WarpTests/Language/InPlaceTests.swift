@@ -50,6 +50,42 @@ struct InPlaceTests {
         #expect(second == .int(1))
     }
 
+    @Test("a module variable settled as a dictionary is written under new names")
+    func moduleVariableSettledAsADictionaryTakesNewNames() async throws {
+        // Given. An empty dictionary to start with: a dictionary's names are
+        // data, so what it reads as is what its entries hold, not which names
+        // it holds them under.
+        let sut = try Module(
+            imports: ["std.collection.keys", "std.collection.setting"],
+            variables: ["seen": .literal(.dictionary(Value.Dictionary([:])))],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .array(.string)),
+                    body: [
+                        Statement(
+                            binding: .assignment([.key("seen")]),
+                            expression: .call(
+                                Call(
+                                    receiver: reference("seen"),
+                                    selector: "std.collection.setting",
+                                    arguments: ["key": .literal(.string("a")), "value": .literal(.int(1))]
+                                )
+                            )
+                        )
+                    ],
+                    result: .call(Call(receiver: reference("seen"), selector: "std.collection.keys"))
+                )
+            ]
+        )
+
+        // When
+        let answer = try await Executor().run(try await Builder().build([sut] + Module.standard))
+
+        // Then
+        #expect(answer == .array([.string("a")]))
+    }
+
     @Test("a module variable is not visible to another document")
     func moduleVariableIsPrivateToItsDocument() throws {
         // Given. The other document writes a name only the first declares
