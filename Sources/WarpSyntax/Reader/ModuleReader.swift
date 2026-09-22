@@ -82,7 +82,9 @@ public struct ModuleReader: Decodable {
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
                 .sorted { one, other in one.key < other.key }
                 .reduce(into: [Name: Set<Name>]()) { claims, entry in
-                    let type = notation.qualified(entry.key, as: .type)
+                    // The key is the type claiming, written as the document
+                    // spells it; the contracts it claims are names to read.
+                    let type = entry.key
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
 
                     // Two keys that read as one type are one type claimed
