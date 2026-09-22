@@ -86,6 +86,47 @@ struct InPlaceTests {
         #expect(answer == .array([.string("a")]))
     }
 
+    @Test("a module variable holds the type it declares, whatever it started as")
+    func moduleVariableHoldsItsDeclaredType() async throws {
+        // Given. An empty dictionary start under a declared entry type: the
+        // start says nothing about what the box will hold, the declaration
+        // does, and a write of something else is held to it.
+        let sut = try Module(
+            variables: ["seen": ModuleVariable(.literal(.dictionary(Value.Dictionary([:]))), declared: .dictionary(.int))],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .dictionary(.int)),
+                    body: [
+                        Statement(binding: .assignment([.key("seen")]), expression: .literal(.string("not a dictionary")))
+                    ],
+                    result: reference("seen")
+                )
+            ]
+        )
+
+        // When / Then. The write is held to the declared type.
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+    }
+
+    @Test("a module variable's start is settled into the type it declares")
+    func moduleVariableStartIsSettledIntoItsDeclaredType() async throws {
+        // Given. A start the declared type does not take.
+        let sut = try Module(
+            variables: ["total": ModuleVariable(.literal(.string("many")), declared: .int)],
+            procedures: [
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("total"))
+            ]
+        )
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+    }
+
     @Test("a module variable is not visible to another document")
     func moduleVariableIsPrivateToItsDocument() throws {
         // Given. The other document writes a name only the first declares

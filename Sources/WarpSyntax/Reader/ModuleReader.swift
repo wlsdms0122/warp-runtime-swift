@@ -80,8 +80,8 @@ public struct ModuleReader: Decodable {
                 .mapValues { contracts in try Set(contracts).named(at: []) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
-            variables: try Self.record(ExpressionReader.self, in: container, forKey: .variables)
-                .mapValues(\.expression),
+            variables: try Self.record(VariableReader.self, in: container, forKey: .variables)
+                .mapValues(\.variable),
             procedures: procedures.mapValues(\.procedure)
         )
     }

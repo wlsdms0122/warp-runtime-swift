@@ -278,7 +278,7 @@ struct ModifierNotationTests {
         let module = try loader.load(written)
 
         // Then
-        #expect(module.variables["total"]?.constantValue == .int(0))
+        #expect(module.variables["total"]?.start.constantValue == .int(0))
         #expect(
             module.procedures["entry"]?.body[1].binding
                 == .assignment([.key("p"), .key("x")])

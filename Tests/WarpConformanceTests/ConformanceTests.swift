@@ -98,9 +98,30 @@ struct ConformanceTests {
     // MARK: - Private
     private func run(_ sut: Case.Program) async throws -> Value {
         let builder = Builder()
-        let image = try await builder.build(try sut.modules())
+        let supplying = try await Supplying(sut.modules())
+        let laid = try await laid(sut, with: builder, supplying: supplying)
+        let own = try await builder.compile(
+            [try Loader().load(sut.document, identity: try Identity.of(sut.document))],
+            against: laid,
+            supplying: supplying
+        )
+        let image = try builder.link(laid + own, supplying: supplying)
 
         return try await Executor().run(image, entry: "entry", arguments: sut.arguments)
+    }
+
+    // What stands before the case's own document: the vocabulary the case
+    // asked for and the standard one, then the documents beside the program
+    // laid one after another in the order written, each against what stands
+    // before it, the way a host lays documents as they arrive.
+    private func laid(_ sut: Case.Program, with builder: Builder, supplying: Supplying) async throws -> [Compiled] {
+        var laid = try await builder.compile(try await sut.brought + Module.standard, against: [], supplying: supplying)
+
+        for document in try sut.beside {
+            laid += try await builder.compile([document], against: laid, supplying: supplying)
+        }
+
+        return laid
     }
 
     // The object the program's own document compiles to, against what the
@@ -110,7 +131,7 @@ struct ConformanceTests {
     private func built(_ sut: Case.Program) async throws -> Value {
         let builder = Builder(fingerprinting: Fingerprint.of)
         let supplying = try await Supplying(sut.modules())
-        let behind = try await builder.compile(try sut.brought + sut.beside + Module.standard, against: [], supplying: supplying)
+        let behind = try await laid(sut, with: builder, supplying: supplying)
         let own = try await builder.compile(
             [try Loader().load(sut.document, identity: try Identity.of(sut.document))],
             against: behind,
@@ -180,12 +201,14 @@ struct ConformanceTests {
             return .load
         }
 
-        let modules = try vocabulary + sut.beside + [module] + Module.standard
-
         let image: Image
 
         do {
-            image = try await builder.build(modules)
+            let supplying = try Supplying(vocabulary + sut.beside + [module] + Module.standard)
+            let laid = try await laid(sut, with: builder, supplying: supplying)
+            let own = try await builder.compile([module], against: laid, supplying: supplying)
+
+            image = try builder.link(laid + own, supplying: supplying)
         } catch {
             return .build
         }

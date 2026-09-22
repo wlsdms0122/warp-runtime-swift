@@ -130,7 +130,14 @@ public struct Writer: Sendable {
 
         if !draft.variables.isEmpty {
             written[ModuleReader.CodingKeys.variables.name] = .dictionary(
-                try draft.variables.mapValues { variable in try value(of: variable) }
+                try draft.variables.mapValues { variable -> Value in
+                    guard let declared = variable.declared else { return try value(of: variable.start) }
+
+                    return .dictionary([
+                        VariableReader.typeKey: try value(of: declared),
+                        VariableReader.valueKey: try value(of: variable.start)
+                    ])
+                }
             )
         }
 
