@@ -914,7 +914,7 @@ extension Builder {
         // path however it is headed: the run reads it.
         let inner = try await foldedIndexReferences(written, at: place, folding: folding)
 
-        guard folding.settles(inner), case let .key(head, _)? = inner.first else {
+        guard let head = folding.settled(inner) else {
             return .indexRef(inner, optional: optionally)
         }
 
@@ -1253,7 +1253,7 @@ extension Builder {
                 // lowering binds the constant in the body for the run to read.
                 let settled = try await foldedIndexReferences(resolved, at: place, folding: folding)
 
-                guard folding.settles(settled), case let .key(head, _)? = settled.first else {
+                guard let head = folding.settled(settled) else {
                     return Inspection(rewritten: .reference(settled), reading: read)
                 }
 

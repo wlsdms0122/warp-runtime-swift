@@ -144,17 +144,20 @@ struct Folding {
         names.contains(name)
     }
 
-    // Whether a path settles here: headed by a name bound here, and indexed by
-    // nothing still a reference. Asked of a path whose index references have
-    // been folded, so one still a reference is one only a run settles.
-    func settles(_ path: [PathSegment]) -> Bool {
-        guard case let .key(head, _)? = path.first, holds(head) else { return false }
+    // The name a path settles from here, where it settles: headed by a name
+    // bound here, and indexed by nothing still a reference. Asked of a path
+    // whose index references have been folded, so one still a reference is
+    // one only a run settles.
+    func settled(_ path: [PathSegment]) -> Name? {
+        guard case let .key(head, _)? = path.first, holds(head) else { return nil }
 
-        return !path.contains { segment in
+        let indexedByTheRun = path.contains { segment in
             if case .indexRef = segment { return true }
 
             return false
         }
+
+        return indexedByTheRun ? nil : head
     }
 
     // What a path reads here.
