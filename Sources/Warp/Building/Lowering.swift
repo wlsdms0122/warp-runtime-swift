@@ -273,7 +273,7 @@ struct Lowering {
         private(set) var parameters: [Int] = []
         private(set) var reads: [(variable: Int, slot: Int)] = []
         private(set) var captures: [(Int, Int)] = []
-        private(set) var bound: [(slot: Int, value: Value)] = []
+        private(set) var constantBindings: [(slot: Int, value: Value)] = []
 
         private var variableSlots: [Name: Int] = [:]
         private var capturedSlots: [Name: Int] = [:]
@@ -396,7 +396,7 @@ struct Lowering {
 
             let slot = allocate(name)
             constantSlots[name] = slot
-            bound.append((slot: slot, value: constant.value))
+            constantBindings.append((slot: slot, value: constant.value))
             hold(slot, constant.type)
 
             return slot
@@ -410,9 +410,9 @@ struct Lowering {
         // statement, so a read the fold could not settle stands on a slot the
         // way any name's does.
         func binding(_ body: Body) -> Body {
-            guard !bound.isEmpty else { return body }
+            guard !constantBindings.isEmpty else { return body }
 
-            let bindings = bound.map { slot, value in
+            let bindings = constantBindings.map { slot, value in
                 Instruction(binding: .bind(slot, settling: nil), code: .literal(value), label: names[slot].spelling)
             }
 
