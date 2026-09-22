@@ -25,7 +25,7 @@ struct TestConditions: ExpressionSpelling {
 
     // A record carrying a subject is a message written this way, and a record
     // that is not is the expression it is.
-    func claims(_ names: Set<Name>) -> Bool {
+    func claims(_ names: Set<Name>, in notation: Notation) -> Bool {
         names.contains(Self.subjectKey)
     }
 
@@ -102,7 +102,7 @@ struct OwnVocabularyConditions: ExpressionSpelling {
     // MARK: - Property
     let vocabulary: Set<Name> = ["example.holds"]
 
-    func claims(_ names: Set<Name>) -> Bool {
+    func claims(_ names: Set<Name>, in notation: Notation) -> Bool {
         names.contains("holds")
     }
 

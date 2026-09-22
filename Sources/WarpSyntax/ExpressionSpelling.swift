@@ -37,10 +37,12 @@ public protocol ExpressionSpelling: Sendable {
     // not hand the procedure back to mean something else, which would make the
     // same document mean two things in two notations.
     //
-    // Asked of the names alone, so the writer can ask the same question of
-    // data before writing it plainly: what the reading side would take for a
-    // spelling, the writing side quotes.
-    func claims(_ names: Set<Name>) -> Bool
+    // Asked of the names and the notation they are read in, so the writer
+    // can ask the same question of data before writing it plainly: what the
+    // reading side would take for a spelling, the writing side quotes. The
+    // notation is handed in because a spelling is held by one and cannot see
+    // it, and what a text declares is the notation's to know.
+    func claims(_ names: Set<Name>, in notation: Notation) -> Bool
 
     // Procedures these spellings reach, which a link has to declare for them to
     // reach anything. A slot spends them on the notation's behalf.

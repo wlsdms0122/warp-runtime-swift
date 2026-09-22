@@ -77,7 +77,7 @@ public extension Writer {
         constructs: Set<Name> = []
     ) throws -> Value {
         let reserved = ExpressionReader.formKeys
-        let claiming = readBy.spelling.map { spelling in spelling.claims } ?? { _ in false }
+        let claiming = readBy.spelling.map { spelling in { names in spelling.claims(names, in: readBy) } } ?? { _ in false }
 
         switch expression {
         // Data that happens to look like a form has to say it is data, and data

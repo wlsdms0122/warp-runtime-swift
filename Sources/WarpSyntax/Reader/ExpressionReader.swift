@@ -189,8 +189,9 @@ public struct ExpressionReader: Decodable {
         // record it meets is the record it is.
         guard
             let decoder,
-            let spelling = (decoder.userInfo[.notation] as? Notation)?.spelling,
-            spelling.claims(Set(record.names))
+            let notation = decoder.userInfo[.notation] as? Notation,
+            let spelling = notation.spelling,
+            spelling.claims(Set(record.names), in: notation)
         else { return nil }
 
         return try spelling.expression(from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder))
@@ -377,7 +378,7 @@ public struct ExpressionReader: Decodable {
         let quoted = try Writer.spelling(
             of: payload,
             reserving: Self.formKeys,
-            claiming: notation.spelling.map { spelling in spelling.claims } ?? { _ in false },
+            claiming: notation.spelling.map { spelling in { names in spelling.claims(names, in: notation) } } ?? { _ in false },
             constructs: slot.constructs
         ) == .quoted
 
