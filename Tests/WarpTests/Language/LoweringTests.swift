@@ -152,6 +152,8 @@ struct LoweringTests {
         let answer = try await Executor().run(image, entry: "entry", arguments: ["key": .string("1")])
 
         // Then
+        #expect(answer == .int(1))
+
         guard
             case let .body(body, frame) = image["entry"]!.implementation,
             case let .bind(slot, settling)? = body.instructions.first?.binding,
@@ -162,7 +164,6 @@ struct LoweringTests {
             return
         }
 
-        #expect(answer == .int(1))
         #expect(frame.names[slot] == "digits")
         #expect(settling == nil)
         #expect(value == .dictionary(["0": .int(0), "1": .int(1)]))

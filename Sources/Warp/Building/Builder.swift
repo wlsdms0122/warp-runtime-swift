@@ -470,8 +470,9 @@ public struct Builder: Sendable {
         var constants: [Name: Value] = [:]
         var variables: [Name: Value] = [:]
 
-        // The constants as a body binds one it reads at an index the run
-        // settles: the value, and what the value reads as.
+        // The constants with what each reads as: what seeds the environment a
+        // body is judged in, and what a body binds where it reads one at an
+        // index the run settles.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
@@ -495,7 +496,7 @@ public struct Builder: Sendable {
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             environment(of: signature, in: loweredTypes)
-                .merging(constants.mapValues { value in .fixed(type(of: value, in: loweredTypes)) }) { _, constant in
+                .merging(typedConstants.mapValues { constant in .fixed(constant.type) }) { _, constant in
                     constant
                 }
                 .merging(
