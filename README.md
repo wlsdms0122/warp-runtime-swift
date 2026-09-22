@@ -94,7 +94,7 @@ toolchain has.
 | | what it answers | what varies |
 |---|---|---|
 | compile | every declaration judged and lowered, and the call graph read off it | the modules |
-| link | one table a run reads, walked from a named entry | the entry |
+| link | one table a run reads, every declaration of every module | the list |
 
 The line between them is the numbering. **A lowered body carries the numbers
 its own document gave**, so what a document lowers to is the same text in every
