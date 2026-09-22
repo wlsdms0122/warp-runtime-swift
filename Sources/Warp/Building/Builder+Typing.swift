@@ -1546,13 +1546,18 @@ extension Builder {
                 held.isConstProcedure || held.isIsolatedProcedure
             }
 
+            let taking: (Name) -> Signature? = { selector in
+                context.signature(of: selector) ?? context.contractProcedures[selector]?.signature
+            }
             let const = body.map { block in
                 isConst(
                     block,
+                    declaring: procedure.signature.ownedParameters,
                     given: context.isConst,
                     reading: reading,
                     applying: procedure.signature.constProcedures
-                        .union(captured.filter { _, held in held.isConstProcedure }.keys)
+                        .union(captured.filter { _, held in held.isConstProcedure }.keys),
+                    taking: taking
                 )
             } ?? false
             let isolated = body.map { block in
@@ -1562,7 +1567,7 @@ extension Builder {
                     given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures
                         .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
-                    taking: { selector in context.signature(of: selector) ?? context.contractProcedures[selector]?.signature }
+                    taking: taking
                 )
             } ?? false
 

@@ -619,7 +619,7 @@ public struct Builder: Sendable {
             beyond(selector)?.isolation == .isolated || asked[selector]?.isolation == .isolated
         }
 
-        self.const(among: holding, settling: &const, reading: reading, beyond: answersWithoutRunning)
+        self.const(among: holding, settling: &const, reading: reading, taking: taking, beyond: answersWithoutRunning)
         self.isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared)
         self.failing(among: holding, settling: &failing) { selector in beyond(selector)?.failing }
 

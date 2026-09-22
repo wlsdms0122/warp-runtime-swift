@@ -70,6 +70,12 @@ public struct Signature: Sendable, Equatable {
         Set(parameters.compactMap { name, parameter in parameter.type?.isIsolatedProcedure == true ? name : nil })
     }
 
+    // The parameters whose box is the body's own. One handed in place is the
+    // caller's box, written through rather than held.
+    var ownedParameters: Set<Name> {
+        Set(parameters.compactMap { name, parameter in parameter.declared.isInout ? nil : name })
+    }
+
     // MARK: - Initializer
     public init(
         receiver: Name? = nil,
