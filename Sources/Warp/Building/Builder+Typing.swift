@@ -908,16 +908,18 @@ extension Builder {
         at place: Place,
         folding: Folding
     ) async throws -> PathSegment {
-        guard case let .indexRef(inner, optionally) = segment else { return segment }
+        guard case let .indexRef(written, optionally) = segment else { return segment }
+
+        // An index path indexed in turn by what only the run settles stays a
+        // path however it is headed: the run reads it.
+        let inner = try await foldedIndexReferences(written, at: place, folding: folding)
 
         guard
             case let .key(head, _)? = inner.first,
-            folding.holds(head)
+            folding.holds(head),
+            !inner.holdsAnIndexReference
         else {
-            return .indexRef(
-                try await foldedIndexReferences(inner, at: place, folding: folding),
-                optional: optionally
-            )
+            return .indexRef(inner, optional: optionally)
         }
 
         let settled: Value
@@ -1250,12 +1252,15 @@ extension Builder {
 
                 // An inner index path may read a constant too. `items[C]` folds
                 // its index the way a whole constant path folds, so no constant
-                // name survives into the image.
+                // name survives into the image. One indexed by what only the run
+                // settles (`digits[ch]`) cannot fold: it stays a path, and the
+                // lowering binds the constant in the body for the run to read.
                 let settled = try await foldedIndexReferences(resolved, at: place, folding: folding)
 
                 guard
                     case let .key(head, _)? = settled.first,
-                    folding.holds(head)
+                    folding.holds(head),
+                    !settled.holdsAnIndexReference
                 else {
                     return Inspection(rewritten: .reference(settled), reading: read)
                 }
@@ -2972,6 +2977,18 @@ extension Builder {
             at: place
         ) {
             try refuse(refusal, at: place, when: ask)
+        }
+    }
+}
+
+private extension Array where Element == PathSegment {
+    // Whether an index of this path is still a reference once the fold has
+    // settled what it could: one the run reads.
+    var holdsAnIndexReference: Bool {
+        contains { segment in
+            if case .indexRef = segment { return true }
+
+            return false
         }
     }
 }

@@ -470,6 +470,10 @@ public struct Builder: Sendable {
         var constants: [Name: Value] = [:]
         var variables: [Name: Value] = [:]
 
+        // The constants as a body binds one it reads at an index the run
+        // settles: the value, and what the value reads as.
+        var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
+
         func context() -> TypingContext {
             compiling.context(reading: reading, of: origin)
         }
@@ -576,7 +580,7 @@ public struct Builder: Sendable {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, at: symbol.place)
+                try compiling.settle(try row(of: symbol), body: rewritten, constants: typedConstants, at: symbol.place)
             }
 
             return answer.procedure
@@ -700,6 +704,8 @@ public struct Builder: Sendable {
             leaning: fulfillment,
             in: context()
         )
+
+        typedConstants = constants.mapValues { value in (value: value, type: type(of: value, in: loweredTypes)) }
 
         variables = try await self.variables(
             of: module,

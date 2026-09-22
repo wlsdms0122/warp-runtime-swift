@@ -125,6 +125,49 @@ struct LoweringTests {
         #expect(inner.names == ["b"])
     }
 
+    @Test("a constant read at an index the run settles is bound before the first statement")
+    func aConstantReadAtARunIndexIsBound() async throws {
+        // Given. The fold settles `digits`, and cannot settle which entry `key`
+        // names, so the body reads the constant the way it reads any name
+        let module = try Module(
+            constants: [
+                "digits": .cast(
+                    .record(["0": .literal(.int(0)), "1": .literal(.int(1))]),
+                    as: .dictionary(.int),
+                    optional: false
+                )
+            ],
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(parameters: ["key": Parameter(type: .string)]),
+                    body: [Statement(binding: .constant("found"), expression: .reference([.key("digits"), .indexRef([.key("key")])]))],
+                    result: .reference([.key("found")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([module] + Module.standard)
+        let answer = try await Executor().run(image, entry: "entry", arguments: ["key": .string("1")])
+
+        // Then
+        guard
+            case let .body(body, frame) = image["entry"]!.implementation,
+            case let .bind(slot, settling)? = body.instructions.first?.binding,
+            case let .literal(value) = body.instructions.first!.code
+        else {
+            Issue.record("the constant was not bound")
+
+            return
+        }
+
+        #expect(answer == .int(1))
+        #expect(frame.names[slot] == "digits")
+        #expect(settling == nil)
+        #expect(value == .dictionary(["0": .int(0), "1": .int(1)]))
+    }
+
     @Test("a loop keeps its round's slots only where its result reads them")
     func aLoopKeepsOnlyWhereTheResultCouldTell() async throws {
         // Given. One loop whose result reads a body name; another whose result
