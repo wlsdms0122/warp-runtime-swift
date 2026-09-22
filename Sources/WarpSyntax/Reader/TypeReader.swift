@@ -403,7 +403,7 @@ public struct TypeReader: Decodable {
     private static func read(from decoder: Decoder) throws -> TypeExpression {
         let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
         if let written = try? decoder.singleValueContainer().decode(String.self) {
-            return try parse(written, qualifying: notation.qualified)
+            return try parse(written) { name in notation.qualified(name, as: .type) }
         }
 
         // A record and a procedure are both mappings, so one of them has to be

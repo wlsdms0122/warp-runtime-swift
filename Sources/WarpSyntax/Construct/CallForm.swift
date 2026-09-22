@@ -48,7 +48,8 @@ public struct CallForm: ConstructForm {
             try Name.read(
                 try container.decode(String.self, forKey: .procedure),
                 at: decoder.steps
-            )
+            ),
+            as: .procedure
         )
         self.receiver = try decoder.descendingIfPresent(to: CodingKeys.of)?
             .read(ExpressionReader.self)

@@ -270,7 +270,7 @@ public struct ExpressionReader: Decodable {
             if case let .string(spelling) = written {
                 let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
 
-                type = try TypeReader.parse(spelling, qualifying: notation.qualified)
+                type = try TypeReader.parse(spelling) { name in notation.qualified(name, as: .type) }
             } else {
                 guard let decoder else {
                     throw ExpressionFormError(

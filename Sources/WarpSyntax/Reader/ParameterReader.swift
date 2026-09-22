@@ -37,7 +37,7 @@ public struct ParameterReader: Decodable {
             }
 
             do {
-                self.parameter = Parameter(type: try TypeReader.parse(single, qualifying: notation.qualified))
+                self.parameter = Parameter(type: try TypeReader.parse(single) { name in notation.qualified(name, as: .type) })
             } catch let error as TypeFormError {
                 throw ReadingError(
                     error.message,
