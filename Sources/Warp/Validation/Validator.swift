@@ -156,18 +156,6 @@ public struct Validator: Sendable {
         )
     }
 
-    // One parameter, and everything a parameter is held to. Two walks meet a
-    // signature (a procedure's and a closure's) and a rule written at one of
-    // them is a rule the other does not have.
-    private func validate(
-        _ parameter: Name,
-        of signature: Signature,
-        beside constants: Set<Name>,
-        at here: Place
-    ) throws {
-        try introduced(parameter, beside: constants, at: here)
-    }
-
     private func validate(
         _ procedure: Procedure,
         constants: Set<Name>,
@@ -177,13 +165,8 @@ public struct Validator: Sendable {
         let parameters = Set(procedure.signature.names)
         let bound = constants.union(variables)
 
-        for parameter in procedure.signature.names {
-            try validate(
-                parameter,
-                of: procedure.signature,
-                beside: bound,
-                at: place.part(.parameters).key(parameter.spelling)
-            )
+        for (position, parameter) in procedure.signature.names.enumerated() {
+            try introduced(parameter, beside: bound, at: place.part(.parameters).index(position))
         }
 
         try reads(procedure, at: place)
@@ -448,13 +431,8 @@ public struct Validator: Sendable {
 
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
-            for parameter in procedure.signature.names {
-                try validate(
-                    parameter,
-                    of: procedure.signature,
-                    beside: scope.constants,
-                    at: inside.part(.parameters).key(parameter.spelling)
-                )
+            for (position, parameter) in procedure.signature.names.enumerated() {
+                try introduced(parameter, beside: scope.constants, at: inside.part(.parameters).index(position))
             }
 
             try reads(procedure, at: place)

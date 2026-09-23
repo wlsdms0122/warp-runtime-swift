@@ -77,19 +77,17 @@ extension Builder {
         at place: Place,
         in table: TypeTable
     ) throws {
-        for parameter in signature.parameters {
+        for (position, parameter) in signature.parameters.enumerated() {
+            let here = place.part(.parameters).index(position)
+
             try mentioned(
                 in: parameter.declared.slotUnwrapped,
-                at: place.part(.parameters).key(parameter.name.spelling),
+                at: here,
                 parameterized: true,
                 resolve: table
             )
-            try saysWhatItDoes(
-                with: parameter.declared,
-                at: place.part(.parameters).key(parameter.name.spelling),
-                in: table
-            )
-            try judge(parameter, at: place.part(.parameters).key(parameter.name.spelling), in: table)
+            try saysWhatItDoes(with: parameter.declared, at: here, in: table)
+            try judge(parameter, at: here, in: table)
         }
 
         // Two parameters under one name would be one name the body reads
@@ -98,7 +96,7 @@ extension Builder {
         where signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) {
             throw BuildError(
                 "declares '\(parameter.name)' twice",
-                at: place.part(.parameters).key(parameter.name.spelling)
+                at: place.part(.parameters).index(position)
             )
         }
 
