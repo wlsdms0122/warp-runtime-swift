@@ -329,20 +329,30 @@ public struct Writer: Sendable {
         case let .borrowing(inner):
             return try value(of: inner, under: .borrowing)
 
-        case let .procedure(signature, constness, isolation):
+        case let .procedure(type, constness, isolation):
             let spelling = TypeReader.procedureSpelling(constness, isolation)
 
-            guard let signature else { return .string(spelling) }
+            guard let type else { return .string(spelling) }
 
             // No bound check of its own: a procedure type written as a type has
             // no `bounds` surface, and the `.parameter` case refuses any bound
             // the walk below meets. One guard, wherever the walk started.
-            return .dictionary([try Name(spelling): .dictionary(try fields(of: signature))])
+            var written: [Name: Value] = [:]
+
+            if !type.parameters.isEmpty {
+                written["parameters"] = .array(try type.parameters.map(value(of:)))
+            }
+
+            if let returns = type.returns {
+                written["returns"] = try value(of: returns)
+            }
+
+            return .dictionary([try Name(spelling): .dictionary(written)])
         }
     }
 
     public func value(of parameter: Parameter) throws -> Value {
-        var written: [Name: Value] = [:]
+        var written: [Name: Value] = ["name": .string(parameter.name.spelling)]
 
         if let type = parameter.type {
             written["type"] = try value(of: type)
@@ -352,18 +362,8 @@ public struct Writer: Sendable {
             written["enum"] = .array(candidates.map(Value.string))
         }
 
-        if let fallback = parameter.default {
-            written["default"] = fallback
-        }
-
         if let description = parameter.description {
             written["description"] = .string(description)
-        }
-
-        // The bare type, where the notation this is read by offers it and
-        // nothing but the type was said.
-        if readBy.bareParameter, written.count == 1, case let .string(only)? = written["type"] {
-            return .string(only)
         }
 
         return .dictionary(written)
@@ -412,7 +412,7 @@ public struct Writer: Sendable {
         }
 
         if !signature.parameters.isEmpty {
-            written["parameters"] = .dictionary(try signature.parameters.mapValues(value(of:)))
+            written["parameters"] = .array(try signature.parameters.map(value(of:)))
         }
 
         if let returns = signature.returns {
@@ -446,8 +446,8 @@ public struct Writer: Sendable {
         case let .record(fields):
             return .record(fields.mapValues(stripped))
 
-        case let .procedure(signature, constness, isolation):
-            return .procedure(signature.map(stripped), constness, isolation)
+        case let .procedure(type, constness, isolation):
+            return .procedure(type.map(stripped), constness, isolation)
 
         case let .nullable(inner):
             return .nullable(stripped(inner))
@@ -475,15 +475,22 @@ public struct Writer: Sendable {
     private func stripped(_ signature: Signature) -> Signature {
         Signature(
             receiver: signature.receiver,
-            parameters: signature.parameters.mapValues { parameter in
+            parameters: signature.parameters.map { parameter in
                 Parameter(
+                    name: parameter.name,
                     type: parameter.type.map(stripped),
                     candidates: parameter.candidates,
-                    default: parameter.default,
                     description: parameter.description
                 )
             },
             returns: signature.returns.map(stripped)
+        )
+    }
+
+    private func stripped(_ type: ProcedureType) -> ProcedureType {
+        ProcedureType(
+            parameters: type.parameters.map(stripped),
+            returns: type.returns.map(stripped)
         )
     }
 
@@ -493,17 +500,13 @@ public struct Writer: Sendable {
     // bound differently is two claims about one thing: a signature the link
     // refuses has no document.
     private func bounds(of signature: Signature) throws -> Value? {
-        let held: [Name: [Name]]
+        let held = signature.parameterBounds
 
-        switch signature.parameterBounds {
-        case let .held(bounds):
-            held = bounds
-
-        case let .disagreeing(name, one, other):
-            throw WritingError(Signature.ParameterBounds.refusal(name, one, other) + ", so there is no `bounds` to write")
+        if let refusal = held.refusal {
+            throw WritingError(refusal + ", so there is no `bounds` to write")
         }
 
-        let bounds = held
+        let bounds = held.table
             .filter { _, constraints in !constraints.isEmpty }
             .mapValues { constraints in Value.string(constraints.sorted().map(\.spelling).joined(separator: " & ")) }
 

@@ -48,7 +48,7 @@ struct ReachTests {
                 "app.tell": Procedure(
                     signature: Signature(
                         receiver: "it",
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .string
                     ),
                     body: [],
@@ -57,7 +57,7 @@ struct ReachTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -66,7 +66,7 @@ struct ReachTests {
                 "bank.Card.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Card"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Card"))],
                         returns: .string
                     ),
                     body: [],
@@ -100,8 +100,8 @@ struct ReachTests {
                             binding: .constant("written"),
                             expression: .closure(Procedure(body: [], result: .call(Call(selector: "app.leaf"))))
                         ),
-                        Statement(binding: .constant("first"), expression: .apply(reference("written"), arguments: [:])),
-                        Statement(binding: .constant("second"), expression: .apply(reference("app.folded"), arguments: [:]))
+                        Statement(binding: .constant("first"), expression: .apply(reference("written"), arguments: [])),
+                        Statement(binding: .constant("second"), expression: .apply(reference("app.folded"), arguments: []))
                     ],
                     result: reference("second")
                 ),
@@ -131,7 +131,7 @@ struct ReachTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .apply(reference("app.held"), arguments: [:])
+                    result: .apply(reference("app.held"), arguments: [])
                 ),
                 "app.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
                 "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
@@ -158,7 +158,7 @@ struct ReachTests {
                 "app.aside": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .apply(reference("app.held"), arguments: [:])
+                    result: .apply(reference("app.held"), arguments: [])
                 ),
                 "app.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
@@ -206,9 +206,7 @@ private struct TwiceQuery: Query {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .int) }
+        var declared: Parameter { Parameter(name: "of", type: .int) }
     }
 
     enum Imports: Int, ImportSet {

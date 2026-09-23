@@ -44,7 +44,7 @@ struct BakedTests {
             procedures: [
                 "app.twice": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["value": Parameter(type: .int)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
                     body: [
                         Statement(
                             binding: .constant("once"),
@@ -303,7 +303,7 @@ struct BakedTests {
                 "app.counted": Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [name: Parameter(type: .int)],
+                        parameters: [Parameter(name: name, type: .int)],
                         returns: .int
                     ),
                     implementation: name == "of" ? .query(OfQuery()) : .query(ValueQuery())
@@ -333,7 +333,7 @@ struct BakedTests {
             procedures: [
                 name: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["value": Parameter(type: .int)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
                     body: [],
                     result: .call(
                         Call(
@@ -372,9 +372,7 @@ private struct OfQuery: Query {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .int) }
+        var declared: Parameter { Parameter(name: "of", type: .int) }
     }
 
     // MARK: - Property
@@ -391,9 +389,7 @@ private struct ValueQuery: Query {
     enum Parameters: Int, ParameterSet {
         case value
 
-        var name: Name { "value" }
-
-        var declared: Parameter { Parameter(type: .int) }
+        var declared: Parameter { Parameter(name: "value", type: .int) }
     }
 
     // MARK: - Property

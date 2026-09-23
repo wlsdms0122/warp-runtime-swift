@@ -16,18 +16,15 @@ enum NumericPair: Int, ParameterSet {
     case value
 
     // MARK: - Property
-    var name: Name {
-        switch self {
-        case .of:
-            return "of"
-
-        case .value:
-            return "value"
-        }
-    }
 
     var declared: Parameter {
-        Parameter(type: .parameter(name: "N", constraints: ["std.Numeric"]))
+        switch self {
+        case .of:
+            return Parameter(name: "of", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+
+        case .value:
+            return Parameter(name: "value", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+        }
     }
 
     // MARK: - Initializer

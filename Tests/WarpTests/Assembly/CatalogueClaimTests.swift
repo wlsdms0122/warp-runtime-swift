@@ -21,7 +21,7 @@ struct CatalogueClaimTests {
                 "chart.draw": Procedure(
                     signature: Signature(
                         receiver: "it",
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["chart.Plottable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["chart.Plottable"]))],
                         returns: .int
                     ),
                     body: [],
@@ -39,7 +39,7 @@ struct CatalogueClaimTests {
                 "bank.Account.height": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .int
                     ),
                     body: [],

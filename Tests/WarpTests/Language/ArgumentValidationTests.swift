@@ -59,9 +59,7 @@ private struct EvenQuery: Query {
     enum Parameters: Int, ParameterSet {
         case value
 
-        var name: Name { "value" }
-
-        var declared: Parameter { Parameter(type: .int) }
+        var declared: Parameter { Parameter(name: "value", type: .int) }
     }
 
     // MARK: - Public

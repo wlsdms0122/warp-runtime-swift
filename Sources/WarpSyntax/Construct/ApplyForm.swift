@@ -8,7 +8,8 @@
 import Foundation
 import Warp
 
-// Calling a value that is a procedure.
+// Calling a value that is a procedure. The arguments are a list, handed by
+// position: a value carries no names to hand by.
 //
 // Beside `call:` rather than folded into it, because the two ask different
 // questions. `call:` names a symbol, and the builder answers it before anything
@@ -28,7 +29,7 @@ public struct ApplyForm: ConstructForm {
     public static let key: Name = "apply"
 
     private let callee: Expression
-    private let arguments: [Name: Expression]
+    private let arguments: [Expression]
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -36,9 +37,8 @@ public struct ApplyForm: ConstructForm {
 
         self.callee = try decoder.descending(to: CodingKeys.procedure).read(ExpressionReader.self).expression
         self.arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
-            .read([String: ExpressionReader].self)
-            .mapValues(\.expression)
-            .named(at: decoder.steps) ?? [:]
+            .read([ExpressionReader].self)
+            .map(\.expression) ?? []
     }
 
     // MARK: - Public

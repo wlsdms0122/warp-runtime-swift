@@ -22,7 +22,7 @@ enum ObjectCoverageFixture {
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
             constraints: ["a.four": [.int, .string]],
-            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(receiver: "r", parameters: ["p": parameter], returns: .bool), constness: .const, isolation: .isolated)]],
+            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(receiver: "r", parameters: [parameter], returns: .bool), constness: .const, isolation: .isolated)]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],
@@ -84,9 +84,9 @@ enum ObjectCoverageFixture {
     )
 
     static let parameter = Parameter(
+        name: "p",
         type: .double,
         candidates: ["one", "two"],
-        default: .string("one"),
         description: "what it takes"
     )
 
@@ -103,7 +103,7 @@ enum ObjectCoverageFixture {
         "fraction": .ranged(.fraction(from: 0.5, to: .upTo(1.5))),
         "array": .array(.int),
         "dictionary": .dictionary(.string),
-        "procedure": .procedure(Signature(returns: .null), .const, .isolated),
+        "procedure": .procedure(ProcedureType(returns: .null), .const, .isolated),
         "variable": .variable(.bool),
         "inout": .inout(.string),
         "linear": .linear(.int),
@@ -143,7 +143,7 @@ enum ObjectCoverageFixture {
         ("array", .array(.string)),
         ("dictionary", .dictionary(.bool)),
         ("procedure", .procedure(
-            parameters: [LoweredParameter(name: "p", type: .int, defaulted: false)],
+            parameters: [.int],
             returns: .double,
             constness: .const,
             isolation: .unstated
@@ -214,7 +214,7 @@ enum ObjectCoverageFixture {
     static func row(label: Name, body: Bool) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(receiver: body ? "p" : nil, parameters: ["p": parameter], returns: .int),
+            signature: Signature(receiver: body ? "p" : nil, parameters: [parameter], returns: .int),
             access: .internal,
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
@@ -253,7 +253,7 @@ enum ObjectCoverageFixture {
             Instruction(binding: nil, code: .closure(3, captures: [(4, 0), (5, 1)]), label: "closure"),
             Instruction(
                 binding: nil,
-                code: .apply(.local(Address(slot: 6, steps: [])), arguments: [("a", .literal(.int(2)))]),
+                code: .apply(.local(Address(slot: 6, steps: [])), arguments: [.literal(.int(2))]),
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),

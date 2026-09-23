@@ -16,23 +16,14 @@ struct EncodedQuery: Query {
         case encoding
         case of
 
-        var name: Name {
-            switch self {
-            case .encoding:
-                return "encoding"
-
-            case .of:
-                return "of"
-            }
-        }
 
         var declared: Parameter {
             switch self {
             case .encoding:
-                return Parameter(type: .string, candidates: ["utf8"], default: .string("utf8"))
+                return Parameter(name: "encoding", type: .nullable(.string), candidates: ["utf8"])
 
             case .of:
-                return Parameter(type: .string)
+                return Parameter(name: "of", type: .string)
             }
         }
     }

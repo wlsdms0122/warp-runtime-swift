@@ -116,7 +116,7 @@ struct StandardTests {
         // Given. Map, filter and reduce are declarations rather than
         // constructs. Nothing in the grammar knows they exist
         let doubling = Procedure(
-            signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .int),
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
             body: [],
             result: .call(Call(
                 receiver: reference("item"),
@@ -125,7 +125,7 @@ struct StandardTests {
             ))
         )
         let odd = Procedure(
-            signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .bool),
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
             body: [
                 Statement(binding: .constant("left"), expression: .call(Call(
                         receiver: reference("item"),
@@ -139,8 +139,8 @@ struct StandardTests {
         let adding = Procedure(
             signature: Signature(
                 parameters: [
-                    "carried": Parameter(type: .int),
-                    "item": Parameter(type: .int)
+                    Parameter(name: "carried", type: .int),
+                    Parameter(name: "item", type: .int)
                 ],
                 returns: .int
             ),
@@ -156,7 +156,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
                     body: [
                         Statement(binding: .constant("doubled"), expression: .call(Call(
                                 receiver: reference("ns"),
@@ -212,7 +212,7 @@ struct StandardTests {
         // whether or not the body goes on to read it
         let counting = Procedure(
             signature: Signature(
-                parameters: ["carried": Parameter(type: .int), "item": Parameter(type: .int)],
+                parameters: [Parameter(name: "carried", type: .int), Parameter(name: "item", type: .int)],
                 returns: .int
             ),
             body: [],
@@ -226,7 +226,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
                     body: [],
                     result: .call(Call(
                         receiver: reference("ns"),
@@ -255,7 +255,7 @@ struct StandardTests {
         // Given. `map` declares `const procedure`, so a body that shouts is
         // refused before any run rather than suspending inside a path
         let loud = Procedure(
-            signature: Signature(parameters: ["item": Parameter(type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "item", type: .string)]),
             body: [],
             result: .call(Call(
                 selector: "app.shout",
@@ -266,7 +266,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
+                    signature: Signature(parameters: [Parameter(name: "names", type: .array(.string))]),
                     body: [],
                     result: .call(Call(
                         receiver: reference("names"),
@@ -387,18 +387,16 @@ struct StandardTests {
         )
     }
 
-    @Test("joined asked directly reads no default, since the default is the declaration's")
-    func joinedAskedDirectlyRefusesAMissingSeparator() async throws {
-        // Given: asked outside a link, nothing fills the declaration's
-        // default, and the procedure carries none of its own
+    @Test("joined asked directly reads a missing separator as nothing between")
+    func joinedAskedDirectlyReadsAMissingSeparatorAsEmpty() async throws {
+        // Given
         let sut = JoinedQuery()
 
-        // When / Then
-        await #expect {
-            try await sut.evaluate(Question(receiver: .array([.string("a"), .string("b")])))
-        } throws: { error in
-            "\(error)".contains("asks a string separator, and null arrived")
-        }
+        // When
+        let joined = try await sut.evaluate(Question(receiver: .array([.string("a"), .string("b")])))
+
+        // Then
+        #expect(joined == .string("ab"))
     }
 
     @Test("a codec keeps its own contract on the encoding name")
@@ -497,7 +495,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["n": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "n", type: .int)]),
                     body: [
                         Statement(binding: .constant("quotient"), expression: .call(Call(
                                 receiver: reference("n"),
@@ -544,9 +542,9 @@ struct StandardTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "trail": Parameter(type: .array(.int)),
-                            "head": Parameter(type: .int),
-                            "side": Parameter(type: .int)
+                            Parameter(name: "head", type: .int),
+                            Parameter(name: "side", type: .int),
+                            Parameter(name: "trail", type: .array(.int))
                         ]
                     ),
                     body: [
@@ -608,7 +606,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["counts": Parameter(type: .dictionary(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(.int))]),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
                                 receiver: reference("counts"),
@@ -727,7 +725,7 @@ struct StandardTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "n": Parameter(type: .int)
+                            Parameter(name: "n", type: .int)
                         ]
                     ),
                     body: [
@@ -766,7 +764,7 @@ struct StandardTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "line": Parameter(type: .string)
+                            Parameter(name: "line", type: .string)
                         ]
                     ),
                     body: [
@@ -808,7 +806,7 @@ struct StandardTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .array(.string))
+                            Parameter(name: "items", type: .array(.string))
                         ]
                     ),
                     body: [
@@ -862,7 +860,7 @@ struct StandardTests {
                     "value": .closure(
                         Procedure(
                             signature: Signature(
-                                parameters: ["item": Parameter(type: .any)]
+                                parameters: [Parameter(name: "item", type: .any)]
                             ),
                             body: [],
                             result: reference("item")
@@ -977,7 +975,7 @@ struct StandardTests {
         await #expect {
             try await run(
                 Procedure(
-                    signature: Signature(parameters: ["reason": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "reason", type: .string)]),
                     body: [Statement(expression: sut)]
                 ),
                 arguments: ["reason": .string("out of room")]
@@ -1015,7 +1013,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["ok": Parameter(type: .bool)]),
+                    signature: Signature(parameters: [Parameter(name: "ok", type: .bool)]),
                     body: [
                         Statement(binding: .variable("either"), expression: .literal(.null)
                         ),
@@ -1036,7 +1034,7 @@ struct StandardTests {
                     ],
                 ),
                 "app.wants": Procedure(
-                    signature: Signature(parameters: ["it": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .int)]),
                     body: []
                 )
             ]

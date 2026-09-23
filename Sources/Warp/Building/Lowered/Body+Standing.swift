@@ -76,7 +76,7 @@ extension Body {
                 record.fields.forEach { field in stand(on: field) }
 
             case let .procedure(parameters, returns, _, _):
-                parameters?.forEach { parameter in stand(on: parameter.type) }
+                parameters?.forEach { parameter in stand(on: parameter) }
                 returns.map { answer in stand(on: answer) }
 
             default:

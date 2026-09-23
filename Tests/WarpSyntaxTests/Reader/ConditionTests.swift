@@ -142,7 +142,7 @@ struct ConditionTests {
     func doubleOperatorKeysRejected() {
         // Given
         let fixture: Value = [
-            "parameters": ["k": ["type": "string"]],
+            "parameters": [["name": "k", "type": "string"]],
             "body": [
                 [
                     "value": ["conditional": [

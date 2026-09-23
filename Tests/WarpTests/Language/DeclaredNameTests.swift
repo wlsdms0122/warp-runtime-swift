@@ -13,7 +13,7 @@ import WarpStandard
 @Suite("A name that says what it holds")
 struct DeclaredNameTests {
     // MARK: - Property
-    private let takes = Signature(parameters: ["x": Parameter(type: .int)], returns: .int)
+    private let takes = Signature(parameters: [Parameter(name: "x", type: .int)], returns: .int)
 
     // MARK: - Initializer
     // MARK: - Test
@@ -284,7 +284,7 @@ struct DeclaredNameTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
-                            binding: .variable("step", declared: .procedure(takes)),
+                            binding: .variable("step", declared: .procedure(takes.type)),
                             expression: .closure(Procedure(signature: takes, body: [], result: reference("x")))
                         ),
                         Statement(
@@ -293,10 +293,10 @@ struct DeclaredNameTests {
                             )
                         )
                     ],
-                    result: .apply(reference("step"), arguments: ["x": .literal(.int(2))])
+                    result: .apply(reference("step"), arguments: [.literal(.int(2))])
                 ),
                 "swap": Procedure(
-                    signature: Signature(parameters: ["step": Parameter(type: .inout(.procedure(takes)))]),
+                    signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.type)))]),
                     body: [
                         Statement(
                             binding: .assignment([.key("step")]),
@@ -335,10 +335,10 @@ struct DeclaredNameTests {
                             )
                         )
                     ],
-                    result: .apply(reference("step"), arguments: ["x": .literal(.int(2))])
+                    result: .apply(reference("step"), arguments: [.literal(.int(2))])
                 ),
                 "swap": Procedure(
-                    signature: Signature(parameters: ["step": Parameter(type: .inout(.procedure(takes)))]),
+                    signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.type)))]),
                     body: []
                 )
             ]

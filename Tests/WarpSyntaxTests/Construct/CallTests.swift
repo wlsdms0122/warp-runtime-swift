@@ -20,7 +20,7 @@ struct CallTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("the callee signature settles inputs at the call boundary")
+    @Test("the callee signature settles inputs at the call boundary, a nullable one left out reading null")
     func calleeSignatureSettlesInputs() async throws {
         // Given
         let sut = try loader.loadDocument([
@@ -35,7 +35,7 @@ struct CallTests {
                     "result": ["result": ["ref": "call.pair"]]
                 ],
                 "callee": [
-                    "parameters": ["base": ["type": "int"], "bump": ["type": "int", "default": 1]],
+                    "parameters": [["name": "base", "type": "int"], ["name": "bump", "type": "int?"]],
                     "body": [
                         [
                             "let": "echo",
@@ -43,7 +43,7 @@ struct CallTests {
                         ]
                     ],
                     "result": ["pair": ["ref": "echo"]],
-                    "returns": ["pair": ["base": "int", "bump": "int"]]
+                    "returns": ["pair": ["base": "int", "bump": "int?"]]
                 ]
             ]
         ])
@@ -51,9 +51,9 @@ struct CallTests {
         // When
         let outputs = try await run(sut, entry: "caller")
 
-        // Then. The omitted `bump` settled to its default at the callee
-        // boundary
-        #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .int(1)]))
+        // Then. The omitted `bump` declares null, so it reads null at the
+        // callee boundary
+        #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .null]))
     }
 
     @Test("a constant argument violating the callee signature is rejected at link")
@@ -70,7 +70,7 @@ struct CallTests {
                     ]
                 ],
                 "callee": [
-                    "parameters": ["base": ["type": "int"]],
+                    "parameters": [["name": "base", "type": "int"]],
                     "body": [["let": "echo", "value": ["ref": "base"]]]
                 ]
             ]
@@ -120,7 +120,7 @@ struct CallTests {
             "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": ["type": "string"]],
+                    "parameters": [["name": "procedure", "type": "string"]],
                     "body": [
                         [
                             "let": "said",
@@ -131,7 +131,7 @@ struct CallTests {
                 ],
                 "shout": [
                     "receiver": "of",
-                    "parameters": ["of": ["type": "string"]],
+                    "parameters": [["name": "of", "type": "string"]],
                     "returns": "string",
                     "body": [],
                     "result": ["format": "${of}!", "with": ["of": ["ref": "of"]]]

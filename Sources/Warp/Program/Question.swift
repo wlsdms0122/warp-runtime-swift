@@ -103,7 +103,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // link proved answers without running, which a procedure states by declaring the
     // parameter `const procedure`, so reaching here means the judgement was
     // already made.
-    public func call(_ procedure: Value, with arguments: [(name: Name, value: Value)] = []) async throws -> Value {
+    public func call(_ procedure: Value, with arguments: [Value] = []) async throws -> Value {
         guard case let .procedure(closure) = procedure else {
             throw ExecutionError(
                 "this call names \(procedure.type), and only a procedure can be called"

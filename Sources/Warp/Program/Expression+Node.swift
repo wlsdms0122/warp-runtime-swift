@@ -110,11 +110,11 @@ public extension Expression {
         }
 
         // What a call is written with, walked in name order and each given its
-        // own place. Order because a `Dictionary` walks in whatever order its
-        // seed decided, and the stages downstream stop at the first refusal,
-        // which one an author is shown would be a fact of the run rather than
-        // of the text. Its own place because two of them reported from the same
-        // one would say a thing is wrong and not say which.
+        // own place. Name order because a `Dictionary` walks in whatever order
+        // its seed decided, and the stages downstream stop at the first
+        // refusal, which one an author is shown would be a fact of the run
+        // rather than of the text. Its own place because two of them reported
+        // from the same one would say a thing is wrong and not say which.
         func arguments(_ children: [Name: Expression]) -> [(Trail, Node)] {
             named(children, under: stepping(here, .part(.arguments)))
         }
@@ -150,7 +150,10 @@ public extension Expression {
             named(record, under: here)
 
         case let .apply(callee, written):
-            inner(callee, under: .callee) + arguments(written)
+            inner(callee, under: .callee)
+                + written.enumerated().flatMap { position, argument in
+                    argument.walked(at: stepping(stepping(here, .part(.arguments)), .index(position)), stepping: stepping)
+                }
 
         case let .call(call):
             (call.receiver.map { receiver in inner(receiver, under: .receiver) } ?? [])

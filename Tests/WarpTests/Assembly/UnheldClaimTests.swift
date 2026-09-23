@@ -22,7 +22,7 @@ struct UnheldClaimTests {
                 "app.tell": Procedure(
                     signature: Signature(
                         receiver: "it",
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .string
                     ),
                     body: [],
@@ -45,7 +45,7 @@ struct UnheldClaimTests {
                 "app.mine": Procedure(
                     signature: Signature(
                         receiver: "it",
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .string
                     ),
                     body: [],
@@ -91,7 +91,7 @@ struct UnheldClaimTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -118,7 +118,7 @@ struct UnheldClaimTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -166,7 +166,7 @@ struct UnheldClaimTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -228,7 +228,7 @@ struct UnheldClaimTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
                         returns: .int
                     ),
@@ -243,7 +243,7 @@ struct UnheldClaimTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],

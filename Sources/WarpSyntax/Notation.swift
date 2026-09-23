@@ -50,9 +50,10 @@ public struct Notation: Sendable {
     // understood, and which procedures it spends.
     public private(set) var interpolation: Interpolation?
 
-    // Whether a parameter may be written as a bare type, `int` for
-    // `{ type: int }`. A document writes the record.
-    public private(set) var bareParameter: Bool
+    // Whether a parameter may be written as one pair, `count: int` for
+    // `{ name: count, type: int }` and `count: { type: int, enum: [1, 2] }`
+    // for the record with the name inside. A document writes the record.
+    public private(set) var pairedParameter: Bool
 
     // What a declared name the text writes stands for, where the text writes
     // one short: a type's name in a slot, a cast, a field, a bound, a claim or
@@ -100,11 +101,11 @@ public struct Notation: Sendable {
     public init(
         spelling: (any ExpressionSpelling)? = nil,
         interpolation: Interpolation? = nil,
-        bareParameter: Bool = false
+        pairedParameter: Bool = false
     ) {
         self.spelling = spelling
         self.interpolation = interpolation
-        self.bareParameter = bareParameter
+        self.pairedParameter = pairedParameter
     }
 
     // MARK: - Public

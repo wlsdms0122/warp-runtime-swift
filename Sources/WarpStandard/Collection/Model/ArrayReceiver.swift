@@ -14,9 +14,7 @@ enum ArrayReceiver: Int, ParameterSet {
     case of
 
     // MARK: - Property
-    var name: Name { "of" }
-
-    var declared: Parameter { Parameter(type: .array(.parameter(name: "Element"))) }
+    var declared: Parameter { Parameter(name: "of", type: .array(.parameter(name: "Element"))) }
 
     // MARK: - Initializer
     // MARK: - Public

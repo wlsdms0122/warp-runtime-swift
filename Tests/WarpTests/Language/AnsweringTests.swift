@@ -93,7 +93,7 @@ struct AnsweringTests {
             try Module(
                 procedures: [
                     "counts": Procedure(
-                        signature: Signature(parameters: ["flag": Parameter(type: .bool)]),
+                        signature: Signature(parameters: [Parameter(name: "flag", type: .bool)]),
                         body: early
                             ? [
                                 Statement(
@@ -212,7 +212,7 @@ struct AnsweringTests {
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
-                            parameters: ["of": Parameter(type: .parameter(name: "T"))]
+                            parameters: [Parameter(name: "of", type: .parameter(name: "T"))]
                         ),
                         body: [],
                         result: .reference(answer)

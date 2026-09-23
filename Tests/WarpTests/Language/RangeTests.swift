@@ -76,7 +76,7 @@ struct RangeTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["level": Parameter(type: .ranged(.whole(from: 0, to: .through(255))))]
+                        parameters: [Parameter(name: "level", type: .ranged(.whole(from: 0, to: .through(255))))]
                     ),
                     body: [],
                     result: reference("level")
@@ -101,7 +101,7 @@ struct RangeTests {
             procedures: [
                 "paint": Procedure(
                     signature: Signature(
-                        parameters: ["level": Parameter(type: .ranged(.whole(from: 0, to: .through(255))))]
+                        parameters: [Parameter(name: "level", type: .ranged(.whole(from: 0, to: .through(255))))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -125,35 +125,6 @@ struct RangeTests {
         }
     }
 
-    @Test("a default outside its own range refuses at the build")
-    func aDefaultOutsideTheRangeRefuses() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            "level": Parameter(
-                                type: .ranged(.whole(from: 0, to: .through(255))),
-                                default: .int(300)
-                            )
-                        ]
-                    ),
-                    body: [],
-                    result: .literal(.null)
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("outside int(0...255)")
-        }
-    }
-
     @Test("a range that admits nothing refuses where it was written")
     func anEmptyRangeRefusesAtTheLink() async throws {
         // Given. No whole number is at once at least 9 and at most 1
@@ -162,7 +133,7 @@ struct RangeTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["level": Parameter(type: .ranged(.whole(from: 9, to: .through(1))))]
+                        parameters: [Parameter(name: "level", type: .ranged(.whole(from: 9, to: .through(1))))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -189,8 +160,7 @@ struct RangeTests {
                         access: .public,
                         signature: Signature(
                             parameters: [
-                                "level": Parameter(
-                                    type: .ranged(.whole(from: 0, to: .through(255))),
+                                Parameter(name: "level", type: .ranged(.whole(from: 0, to: .through(255))),
                                     candidates: candidates
                                 )
                             ]
@@ -235,7 +205,7 @@ struct RangeTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .named("std.byte"))]
+                        parameters: [Parameter(name: "value", type: .named("std.byte"))]
                     ),
                     body: [],
                     result: reference("value")
@@ -261,7 +231,7 @@ struct RangeTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["level": Parameter(type: .ranged(.whole(from: -10, to: .through(10))))]
+                        parameters: [Parameter(name: "level", type: .ranged(.whole(from: -10, to: .through(10))))]
                     ),
                     body: [],
                     result: .call(Call(receiver: reference("level"), selector: "std.math.absolute"))
@@ -280,7 +250,7 @@ struct RangeTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .int)],
+                        parameters: [Parameter(name: "value", type: .int)],
                         returns: .int
                     ),
                     body: [],
@@ -289,7 +259,7 @@ struct RangeTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["level": Parameter(type: .ranged(.whole(from: 0, to: .through(255))))]
+                        parameters: [Parameter(name: "level", type: .ranged(.whole(from: 0, to: .through(255))))]
                     ),
                     body: [],
                     result: .call(Call(

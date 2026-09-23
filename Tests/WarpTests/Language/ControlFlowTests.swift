@@ -306,7 +306,7 @@ struct ControlFlowTests {
             ],
             result: reference("sum"),
             arguments: ["counts": .array([.int(1), .int(2), .int(3)])],
-            signature: Signature(parameters: ["counts": Parameter(type: .array(.int))])
+            signature: Signature(parameters: [Parameter(name: "counts", type: .array(.int))])
         )
 
         // Then

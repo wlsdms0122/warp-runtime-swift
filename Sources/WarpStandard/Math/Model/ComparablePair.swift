@@ -16,18 +16,15 @@ enum ComparablePair: Int, ParameterSet {
     case value
 
     // MARK: - Property
-    var name: Name {
-        switch self {
-        case .of:
-            return "of"
-
-        case .value:
-            return "value"
-        }
-    }
 
     var declared: Parameter {
-        Parameter(type: .parameter(name: "T", constraints: ["std.Comparable"]))
+        switch self {
+        case .of:
+            return Parameter(name: "of", type: .parameter(name: "T", constraints: ["std.Comparable"]))
+
+        case .value:
+            return Parameter(name: "value", type: .parameter(name: "T", constraints: ["std.Comparable"]))
+        }
     }
 
     // MARK: - Initializer

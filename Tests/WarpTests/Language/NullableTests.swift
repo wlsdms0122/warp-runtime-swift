@@ -47,7 +47,7 @@ struct NullableTests {
             procedures: [
                 "half": Procedure(
                     signature: Signature(
-                        parameters: ["of": Parameter(type: .int)],
+                        parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],
@@ -57,9 +57,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "task": Parameter(
-                                type: .nullable(.record(["size": .int])),
-                                default: .null
+                            Parameter(name: "task", type: .nullable(.record(["size": .int]))
                             )
                         ]
                     ),
@@ -93,9 +91,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "task": Parameter(
-                                type: .nullable(.record(["size": .int])),
-                                default: .null
+                            Parameter(name: "task", type: .nullable(.record(["size": .int]))
                             )
                         ],
                         returns: .nullable(.int)
@@ -146,7 +142,7 @@ struct NullableTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["limit": Parameter(type: .nullable(.int))],
+                        parameters: [Parameter(name: "limit", type: .nullable(.int))],
                         returns: .nullable(.int)
                     ),
                     body: [],
@@ -167,7 +163,7 @@ struct NullableTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["limit": Parameter(type: .int)],
+                        parameters: [Parameter(name: "limit", type: .int)],
                         returns: .int
                     ),
                     body: [],
@@ -191,8 +187,8 @@ struct NullableTests {
                     signature: Signature(
                         receiver: "of",
                         parameters: [
-                            "of": Parameter(type: .string),
-                            "limit": Parameter(type: .nullable(.int))
+                            Parameter(name: "limit", type: .nullable(.int)),
+                            Parameter(name: "of", type: .string)
                         ],
                         returns: .string
                     ),
@@ -202,7 +198,7 @@ struct NullableTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["procedure": Parameter(type: .string)],
+                        parameters: [Parameter(name: "procedure", type: .string)],
                         returns: .string
                     ),
                     body: [
@@ -257,7 +253,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "value": Parameter(type: .nullable(.named("Loose")), default: .null)
+                            Parameter(name: "value", type: .nullable(.named("Loose")))
                         ]
                     ),
                     body: [],
@@ -281,7 +277,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "value": Parameter(type: .nullable(.named("Maybe")), default: .null)
+                            Parameter(name: "value", type: .nullable(.named("Maybe")))
                         ]
                     ),
                     body: [],
@@ -309,7 +305,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "task": Parameter(type: .nullable(.named("Task")), default: .null)
+                            Parameter(name: "task", type: .nullable(.named("Task")))
                         ],
                         returns: .nullable(.string)
                     ),
@@ -342,7 +338,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "task": Parameter(type: .record(["id": .string]))
+                            Parameter(name: "task", type: .record(["id": .string]))
                         ]
                     ),
                     body: [],
@@ -368,7 +364,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .nullable(.array(.string)), default: .null)
+                            Parameter(name: "items", type: .nullable(.array(.string)))
                         ]
                     ),
                     body: [],
@@ -396,7 +392,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .nullable(.array(.string)), default: .null)
+                            Parameter(name: "items", type: .nullable(.array(.string)))
                         ],
                         returns: .nullable(.string)
                     ),
@@ -424,7 +420,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .nullable(.array(.string)), default: .null)
+                            Parameter(name: "items", type: .nullable(.array(.string)))
                         ],
                         returns: .nullable(.string)
                     ),
@@ -450,10 +446,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(
-                                type: .array(.string),
-                                default: .array([.string("one")])
-                            )
+                            Parameter(name: "items", type: .array(.string))
                         ]
                     ),
                     body: [],
@@ -483,10 +476,7 @@ struct NullableTests {
                         access: .public,
                         signature: Signature(
                             parameters: [
-                                "items": Parameter(
-                                    type: .array(.string),
-                                    default: .array([.string("one")])
-                                )
+                                Parameter(name: "items", type: .array(.string))
                             ]
                         ),
                         body: [],
@@ -520,8 +510,8 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .nullable(.array(.string)), default: .null),
-                            "i": Parameter(type: .int, default: .int(1))
+                            Parameter(name: "i", type: .int),
+                            Parameter(name: "items", type: .nullable(.array(.string)))
                         ],
                         returns: .nullable(.string)
                     ),
@@ -537,9 +527,9 @@ struct NullableTests {
         // When / Then
         #expect(try await run(
             sut,
-            arguments: ["items": .array([.string("a"), .string("b")])]
+            arguments: ["i": .int(1), "items": .array([.string("a"), .string("b")])]
         ) == .string("b"))
-        #expect(try await run(sut) == .null)
+        #expect(try await run(sut, arguments: ["i": .int(1)]) == .null)
     }
 }
 
@@ -568,7 +558,7 @@ struct IndexReferenceJudgmentTests {
                 "shout": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .string)],
+                        parameters: [Parameter(name: "of", type: .string)],
                         returns: .string
                     ),
                     body: [],
@@ -602,7 +592,7 @@ struct IndexReferenceJudgmentTests {
                 "shout": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .string)],
+                        parameters: [Parameter(name: "of", type: .string)],
                         returns: .int
                     ),
                     body: [],
@@ -631,7 +621,7 @@ struct IndexReferenceJudgmentTests {
             "shout": Procedure(
                 signature: Signature(
                     receiver: "of",
-                    parameters: ["of": Parameter(type: .string)],
+                    parameters: [Parameter(name: "of", type: .string)],
                     returns: .int
                 ),
                 body: [],
@@ -645,7 +635,7 @@ struct IndexReferenceJudgmentTests {
             "loud": Procedure(
                 signature: Signature(
                     receiver: "of",
-                    parameters: ["of": Parameter(type: .int)],
+                    parameters: [Parameter(name: "of", type: .int)],
                     returns: .int
                 ),
                 body: [],
@@ -688,7 +678,7 @@ struct IndexReferenceJudgmentTests {
             body: [
                 Statement(binding: .constant("f"), expression: .closure(Procedure(
                         signature: Signature(
-                            parameters: ["greeting": Parameter(type: .string)]
+                            parameters: [Parameter(name: "greeting", type: .string)]
                         ),
                         body: [],
                         result: .reference([.key("greeting")])
@@ -758,8 +748,8 @@ struct IndexReferenceJudgmentTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .array(.string)),
-                            "names": Parameter(type: .array(.int))
+                            Parameter(name: "items", type: .array(.string)),
+                            Parameter(name: "names", type: .array(.int))
                         ],
                         returns: .string
                     ),
@@ -794,8 +784,8 @@ struct IndexReferenceJudgmentTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .array(.record(["id": .string]))),
-                            "i": Parameter(type: .int)
+                            Parameter(name: "i", type: .int),
+                            Parameter(name: "items", type: .array(.record(["id": .string])))
                         ]
                     ),
                     body: [],
@@ -826,8 +816,8 @@ struct IndexReferenceJudgmentTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "items": Parameter(type: .array(.string)),
-                            "name": Parameter(type: .string)
+                            Parameter(name: "items", type: .array(.string)),
+                            Parameter(name: "name", type: .string)
                         ]
                     ),
                     body: [],
@@ -854,7 +844,7 @@ struct IndexReferenceJudgmentTests {
                 "shout": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .string)],
+                        parameters: [Parameter(name: "of", type: .string)],
                         returns: .string
                     ),
                     body: [],
@@ -892,8 +882,8 @@ struct IndexReferenceJudgmentTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string),
-                            "i": Parameter(type: .int)
+                            Parameter(name: "i", type: .int),
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [],
@@ -929,7 +919,7 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .parameter(name: "T"))],
+                        parameters: [Parameter(name: "of", type: .parameter(name: "T"))],
                         returns: .any
                     ),
                     body: [],
@@ -962,7 +952,7 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .parameter(name: "T"))],
+                        parameters: [Parameter(name: "of", type: .parameter(name: "T"))],
                         returns: .any
                     ),
                     body: [
@@ -1006,8 +996,8 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(type: .parameter(name: "T")),
-                            "flag": Parameter(type: .bool)
+                            Parameter(name: "flag", type: .bool),
+                            Parameter(name: "of", type: .parameter(name: "T"))
                         ],
                         returns: .any
                     ),
@@ -1067,8 +1057,8 @@ struct ParameterReceiverTests {
                     "peek": Procedure(
                         signature: Signature(
                             parameters: [
-                                "of": Parameter(type: .parameter(name: "T")),
-                                "flag": Parameter(type: .bool)
+                                Parameter(name: "flag", type: .bool),
+                                Parameter(name: "of", type: .parameter(name: "T"))
                             ],
                             returns: .any
                         ),
@@ -1129,8 +1119,8 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(type: .parameter(name: "T")),
-                            "flag": Parameter(type: .bool)
+                            Parameter(name: "flag", type: .bool),
+                            Parameter(name: "of", type: .parameter(name: "T"))
                         ],
                         returns: .any
                     ),
@@ -1178,9 +1168,9 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(type: .parameter(name: "T")),
-                            "also": Parameter(type: .parameter(name: "T")),
-                            "flag": Parameter(type: .bool)
+                            Parameter(name: "also", type: .parameter(name: "T")),
+                            Parameter(name: "flag", type: .bool),
+                            Parameter(name: "of", type: .parameter(name: "T"))
                         ],
                         returns: .any
                     ),
@@ -1231,7 +1221,7 @@ struct ParameterReceiverTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(type: .reading(of: "T", path: [.key("inner")]))
+                            Parameter(name: "of", type: .reading(of: "T", path: [.key("inner")]))
                         ]
                     ),
                     body: [],

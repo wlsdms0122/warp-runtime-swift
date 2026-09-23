@@ -19,10 +19,7 @@ struct SpellingQuery: Query {
     // What this takes: the value spelled, and nothing else.
     enum Parameters: Int, ParameterSet {
         case of
-
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .any) }
+        var declared: Parameter { Parameter(name: "of", type: .any) }
     }
 
     // MARK: - Property

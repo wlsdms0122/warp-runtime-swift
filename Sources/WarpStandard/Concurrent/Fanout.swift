@@ -39,7 +39,7 @@ struct Fanout: Sendable {
         let key: Name?
         let position: Int
         let closure: Closure
-        let arguments: [(name: Name, value: Value)]
+        let arguments: [Value]
     }
 
     // MARK: - Property

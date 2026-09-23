@@ -39,7 +39,7 @@ struct LoweredTypeTests {
             .array(.named("bank.Acct")),
             .nullable(.named("bank.Owner")),
             .parameter(name: "T", constraints: ["app.Ordered"]),
-            .procedure(Signature(parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .int), .const),
+            .procedure(ProcedureType(parameters: [.named("bank.Account")], returns: .int), .const),
             .dictionary(.named("app.Maybe"))
         ]
 
@@ -167,7 +167,7 @@ struct LoweredTypeTests {
                         arguments: [
                             "value": .closure(
                                 Procedure(
-                                    signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .int),
+                                    signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
                                     body: [],
                                     result: .call(Call(
                                         receiver: .reference([.key("item")]),
@@ -198,13 +198,13 @@ struct LoweredTypeTests {
             types: [
                 "app.Maybe": .nullable(.int),
                 "app.Kinds": .record([
-                    "soft": .procedure(Signature(parameters: ["m": Parameter(type: .named("app.Maybe"))]), .unstated, .unstated)
+                    "soft": .procedure(ProcedureType(parameters: [.named("app.Maybe")]), .unstated, .unstated)
                 ])
             ],
             procedures: [
                 "app.entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["k": Parameter(type: .named("app.Kinds"))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "k", type: .named("app.Kinds"))], returns: .int),
                     body: [],
                     result: .literal(.int(1))
                 )
@@ -224,64 +224,7 @@ struct LoweredTypeTests {
             return
         }
 
-        #expect(soft.parameters["m"]?.mustBeGiven(in: TypeTable(types: module.types, constraints: [:])) == false)
-    }
-
-    @Test("a procedure type is the same whether a parameter that may be left out has a default or declares null")
-    func aParameterLeftOutEitherWay() {
-        // Given. Two procedure types whose one parameter need not be given:
-        // one because it declares null, one because it wrote a default.
-        let declaring = LoweredType.procedure(
-            parameters: [LoweredParameter(name: "x", type: .nullable(.int), defaulted: false)],
-            returns: nil,
-            constness: .unstated,
-            isolation: .unstated
-        )
-        let defaulting = LoweredType.procedure(
-            parameters: [LoweredParameter(name: "x", type: .nullable(.int), defaulted: true)],
-            returns: nil,
-            constness: .unstated,
-            isolation: .unstated
-        )
-        let requiring = LoweredType.procedure(
-            parameters: [LoweredParameter(name: "x", type: .int, defaulted: false)],
-            returns: nil,
-            constness: .unstated,
-            isolation: .unstated
-        )
-
-        // Then. What a call may leave out is what identity reads, and not how
-        // the declaration arranged it.
-        #expect(declaring.same(defaulting, in: .empty))
-        #expect(!declaring.same(requiring, in: .empty))
-    }
-
-    @Test("a parameter with a default is never required, whatever its type names")
-    func aDefaultedParameterIsNeverRequired() {
-        // Given: a type nothing declares, beside a default
-        let sut = Parameter(type: .named("bank.Vault"), default: .string("x"))
-
-        // When / Then
-        #expect(sut.mustBeGiven(in: types) == false)
-        #expect(Parameter(type: .named("bank.Vault")).mustBeGiven(in: types) == true)
-    }
-
-    @Test("an argument given twice by name is refused, not quietly kept once")
-    func anArgumentGivenTwiceIsRefused() throws {
-        // Given
-        let signature = Signature(parameters: ["item": Parameter(type: .int)])
-        let table = TypeTable().loweredTypes
-
-        // When / Then
-        #expect {
-            try signature.settle(
-                [(name: "item", value: .int(1)), (name: "item", value: .int(2))],
-                over: signature.lowered(in: table),
-                in: table
-            )
-        } throws: { error in
-            "\(error)".contains("'item' is given more than once")
-        }
+        #expect(soft.parameters.first?.declaresNull(in: TypeTable(types: module.types, constraints: [:])) == true)
     }
 
     @Test("a host asks a constraint about a value through the document's table")
@@ -306,7 +249,7 @@ struct LoweredTypeTests {
         }
         #expect(!TypeExpression.named("app.A").declaresNull(in: circular))
         #expect(TypeExpression.named("app.C").accepts(.int, in: circular))
-        #expect(Parameter(type: .named("app.C"), default: .int(0)).mustBeGiven(in: circular) == false)
+        #expect(Parameter(name: "c", type: .nullable(.named("app.C"))).mustBeGiven(in: circular) == false)
     }
 
     @Test("one undeclared name passes every reading and is refused where a value meets it")
@@ -407,9 +350,9 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["held": Parameter(type: .procedure(nil))]),
+                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(nil))]),
                     body: [],
-                    result: .apply(.reference([.key("held")]), arguments: [:])
+                    result: .apply(.reference([.key("held")]), arguments: [])
                 )
             ]
         )
@@ -441,9 +384,9 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["held": Parameter(type: .procedure(nil))]),
+                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(nil))]),
                     body: [],
-                    result: .apply(.reference([.key("held")]), arguments: [:])
+                    result: .apply(.reference([.key("held")]), arguments: [])
                 )
             ]
         )
@@ -474,7 +417,7 @@ struct LoweredTypeTests {
 
         // When / Then
         #expect {
-            try Parameter(type: .procedure(nil)).checking(made, called: "held")
+            try Parameter(name: "held", type: .procedure(nil)).checking(made)
         } throws: { error in
             "\(error)".contains("read where the link that made it is being read")
         }

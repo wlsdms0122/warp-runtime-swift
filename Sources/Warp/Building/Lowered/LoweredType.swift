@@ -26,11 +26,11 @@ indirect enum LoweredType: Sendable {
 
     case record(LoweredRecord)
 
-    // What a slot asks of a procedure value: the parameters it may be called
-    // with, in position order, and what it must answer. Nil where nothing
-    // was declared. Constness and isolation are the slot's requirements.
+    // What a slot asks of a procedure value: the types it is applied with, in
+    // position order, and what it must answer. Nil where nothing was
+    // declared. Constness and isolation are the slot's requirements.
     case procedure(
-        parameters: [LoweredParameter]?,
+        parameters: [LoweredType]?,
         returns: LoweredType?,
         constness: Constness,
         isolation: Isolation

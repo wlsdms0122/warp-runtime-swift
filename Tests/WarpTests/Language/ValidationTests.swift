@@ -120,7 +120,7 @@ struct ValidationTests {
         // When / Then. The two ways a closure introduces a name of its own
         #expect(throws: ValidationError.self) {
             try Validator().validate(module(Procedure(
-                signature: Signature(parameters: ["limit": Parameter(type: .int)], returns: .int),
+                signature: Signature(parameters: [Parameter(name: "limit", type: .int)], returns: .int),
                 body: [],
                 result: reference("limit")
             )))
@@ -178,7 +178,7 @@ struct ValidationTests {
                 Statement(binding: .constant("said"), expression: .apply(
                         .closure(Procedure(body: [])),
                         arguments: [
-                            "value": .array([
+                            .array([
                                 .conditional(.literal(.bool(true)), then: arm, else: nil)
                             ])
                         ]
@@ -269,11 +269,11 @@ struct ValidationTests {
         // Given. The signature and the body are one scope, so a name is
         // introduced once
         let readsIt = Procedure(
-            signature: Signature(parameters: ["name": Parameter(type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "name", type: .string)]),
             body: [Statement(binding: .constant("greeting"), expression: reference("name"))]
         )
         let redeclaresIt = Procedure(
-            signature: Signature(parameters: ["name": Parameter(type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "name", type: .string)]),
             body: [Statement(binding: .constant("name"), expression: .literal(.string("other")))]
         )
 
@@ -323,7 +323,7 @@ struct ValidationTests {
         // run's own values arrive as arguments like everything else.
         let read = Procedure(body: [Statement(binding: .constant("read"), expression: reference("run", "id"))])
         let taken = Procedure(
-            signature: Signature(parameters: ["run": Parameter(type: .dictionary(.any))]),
+            signature: Signature(parameters: [Parameter(name: "run", type: .dictionary(.any))]),
             body: [Statement(binding: .constant("read"), expression: reference("run", "id"))]
         )
 
@@ -478,7 +478,7 @@ struct ValidationTests {
                 claims: ["int": ["app.Described"]],
                 procedures: [
                     "int.describe": Procedure(
-                        signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .string),
+                        signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .int)], returns: .string),
                         body: [],
                         result: .literal(.string("int"))
                     ),

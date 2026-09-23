@@ -47,9 +47,7 @@ struct FailEffect: Effect {
     enum Parameters: Int, ParameterSet {
         case recoverable
 
-        var name: Name { "recoverable" }
-
-        var declared: Parameter { Parameter(type: .bool, default: .bool(false)) }
+        var declared: Parameter { Parameter(name: "recoverable", type: .nullable(.bool)) }
     }
 
     // MARK: - Property
@@ -243,9 +241,7 @@ struct ShoutEffect: Effect {
     enum Parameters: Int, ParameterSet {
         case text
 
-        var name: Name { "text" }
-
-        var declared: Parameter { Parameter(type: .string) }
+        var declared: Parameter { Parameter(name: "text", type: .string) }
     }
 
     // MARK: - Property

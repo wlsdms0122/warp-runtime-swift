@@ -15,10 +15,7 @@ struct KeysQuery: Query {
     // What this takes: the mapping, and nothing else.
     enum Parameters: Int, ParameterSet {
         case of
-
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .dictionary(.any)) }
+        var declared: Parameter { Parameter(name: "of", type: .dictionary(.any)) }
     }
 
     // MARK: - Property

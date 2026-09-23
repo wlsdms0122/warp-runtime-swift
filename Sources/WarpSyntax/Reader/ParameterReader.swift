@@ -8,13 +8,14 @@
 import Foundation
 import Warp
 
-// A parameter, written as a record. A notation may offer a bare type where a
-// parameter is wanted; a document has the one spelling.
+// A parameter, written as a record under the name its body reads it by. A
+// notation may offer the pair form, `count: int`; a document has the one
+// spelling.
 public struct ParameterReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
+        case name
         case type
         case candidates = "enum"
-        case `default`
         case description
     }
 
@@ -23,27 +24,41 @@ public struct ParameterReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        // The shorthand: a bare type where a parameter is wanted, where the
-        // notation offers it. Anything a type can be spelled as works there,
-        // so `array<string>` is as short as `string` is.
-        if let single = try? decoder.singleValueContainer().decode(String.self) {
-            let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
 
-            guard notation.bareParameter else {
-                throw ReadingError(
-                    "a parameter is written as a record, { type: \(single) } at the least",
-                    at: decoder.steps
-                )
+        // The pair form: one key that is the name, holding the type or the
+        // rest of the record. A record with `name` in it is the document's
+        // own form whatever else it holds, so the two never meet.
+        if
+            notation.pairedParameter,
+            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
+            keyed.allKeys.count == 1,
+            let key = keyed.allKeys.first,
+            key.stringValue != CodingKeys.name.stringValue
+        {
+            let name = try Name.read(key.stringValue, at: decoder.steps)
+
+            if let spelled = try? keyed.decode(String.self, forKey: key) {
+                do {
+                    self.parameter = Parameter(
+                        name: name,
+                        type: try TypeReader.parse(spelled) { name in notation.qualified(name, as: .type) }
+                    )
+                } catch let error as TypeFormError {
+                    throw ReadingError(error.message, at: decoder.steps)
+                }
+
+                return
             }
 
-            do {
-                self.parameter = Parameter(type: try TypeReader.parse(single) { name in notation.qualified(name, as: .type) })
-            } catch let error as TypeFormError {
-                throw ReadingError(
-                    error.message,
-                    at: decoder.steps
-                )
-            }
+            let rest = try keyed.decode(ParameterFieldsReader.self, forKey: key)
+
+            self.parameter = Parameter(
+                name: name,
+                type: rest.type,
+                candidates: rest.candidates,
+                description: rest.description
+            )
 
             return
         }
@@ -55,22 +70,13 @@ public struct ParameterReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        // Omitting `type:` declares nothing, which is not the same as declaring
-        // `any`. Both take whatever arrives; only one of them says so.
-        let type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type
+        let rest = try ParameterFieldsReader(from: decoder)
 
-        // The default is stored as written. Whether the parameter itself admits
-        // it is a declaration fact judged at the link (the one place a default
-        // written against a declared type name could be judged at all) and a
-        // default-supplied slot reads the declared representation because
-        // taking one settles it, the same gate a caller's value walks.
         self.parameter = Parameter(
-            type: type,
-            candidates: try container.decodeIfPresent([String].self, forKey: .candidates),
-            default: container.contains(.default)
-                ? try container.decode(ValueReader.self, forKey: .default).value
-                : nil,
-            description: try container.decodeIfPresent(String.self, forKey: .description)
+            name: try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps),
+            type: rest.type,
+            candidates: rest.candidates,
+            description: rest.description
         )
     }
 

@@ -22,10 +22,7 @@ struct AbortQuery: Query {
     // message nobody sent.
     enum Parameters: Int, ParameterSet {
         case of
-
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .any) }
+        var declared: Parameter { Parameter(name: "of", type: .any) }
     }
 
     // MARK: - Property

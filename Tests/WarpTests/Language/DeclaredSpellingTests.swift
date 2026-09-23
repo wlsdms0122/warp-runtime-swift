@@ -30,7 +30,7 @@ struct DeclaredSpellingTests {
             procedures: [
                 "store.keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .named("store.Task"))],
+                        parameters: [Parameter(name: "value", type: .named("store.Task"))],
                         returns: .named("store.Task")
                     ),
                     body: [],
@@ -190,7 +190,7 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "value": Parameter(type: .parameter(name: "T", constraints: ["std.Comparable"]))
+                            Parameter(name: "value", type: .parameter(name: "T", constraints: ["std.Comparable"]))
                         ],
                         returns: .parameter(name: "T", constraints: ["std.Comparable"])
                     ),
@@ -285,7 +285,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["absent": Parameter(type: .any, default: .null)]
+                        parameters: [Parameter(name: "absent", type: .any)]
                     ),
                     body: [],
                     result: .call(Call(
@@ -299,7 +299,7 @@ struct DeclaredSpellingTests {
 
         // When / Then
         await #expect {
-            try await run(sut)
+            try await run(sut, arguments: ["absent": .null])
         } throws: { error in
             "\(error)".contains("the receiver of 'std.math.min': expected some T: std.Comparable, got null")
         }
@@ -342,7 +342,7 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "value": Parameter(type: .parameter(name: "T", constraints: ["Numeric"]))
+                            Parameter(name: "value", type: .parameter(name: "T", constraints: ["Numeric"]))
                         ],
                         returns: .parameter(name: "T", constraints: ["Numeric"])
                     ),

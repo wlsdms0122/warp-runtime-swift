@@ -84,7 +84,7 @@ struct PlaceTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                        signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
                         body: []
                     )
                 ]
@@ -151,9 +151,9 @@ struct PlaceTests {
                 ]),
                 "helper": Procedure(
                     signature: Signature(parameters: [
-                        "first": Parameter(type: .int),
-                        "second": Parameter(type: .int),
-                        "third": Parameter(type: .int)
+                        Parameter(name: "first", type: .int),
+                        Parameter(name: "second", type: .int),
+                        Parameter(name: "third", type: .int)
                     ]),
                     body: []
                 )
@@ -186,7 +186,7 @@ struct PlaceTests {
                     )
                 ]),
                 "helper": Procedure(
-                    signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
                     body: []
                 )
             ]
@@ -251,7 +251,7 @@ struct PlaceTests {
                         )
                     ]),
                     "helper": Procedure(
-                        signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                        signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
                         body: []
                     )
                 ]
@@ -478,7 +478,7 @@ struct PlaceTests {
                 ]),
                 "stop": Procedure(
                     signature: Signature(
-                        parameters: ["message": Parameter(type: .string)],
+                        parameters: [Parameter(name: "message", type: .string)],
                         returns: .never
                     ),
                     body: [Statement(expression: .leave(Leave(reach: .procedure)))]

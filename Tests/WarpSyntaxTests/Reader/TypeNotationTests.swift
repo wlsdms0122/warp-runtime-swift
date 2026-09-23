@@ -178,7 +178,7 @@ struct TypeNotationTests {
         let sut = try await loader.loadProcedure([
             "receiver": "of",
             "bounds": ["T": "Comparable"],
-            "parameters": ["of": ["type": "some T"], "value": ["type": "some T"]],
+            "parameters": [["name": "of", "type": "some T"], ["name": "value", "type": "some T"]],
             "returns": "some T",
             "result": ["ref": "of"]
         ], importing: ["Comparable"])
@@ -187,11 +187,11 @@ struct TypeNotationTests {
         let signature = sut.procedures[entryName]?.signature
 
         #expect(
-            signature?.parameters["of"]?.type
+            signature?.parameter(named: "of")?.type
                 == .parameter(name: "T", constraints: ["Comparable"])
         )
         #expect(
-            signature?.parameters["value"]?.type
+            signature?.parameter(named: "value")?.type
                 == .parameter(name: "T", constraints: ["Comparable"])
         )
         #expect(signature?.returns == .parameter(name: "T", constraints: ["Comparable"]))
@@ -208,7 +208,7 @@ struct TypeNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Comparable"],
-                "parameters": ["of": ["type": "int"]],
+                "parameters": [["name": "of", "type": "int"]],
                 "result": ["ref": "of"]
             ])
         }
@@ -217,7 +217,7 @@ struct TypeNotationTests {
         await #expect(throws: ReadingError.self) {
             try await loader.loadProcedure([
                 "bounds": ["T": "array<int>"],
-                "parameters": ["of": ["type": "some T"]],
+                "parameters": [["name": "of", "type": "some T"]],
                 "result": ["ref": "of"]
             ])
         }
@@ -229,11 +229,11 @@ struct TypeNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [
-                    "by": [
+                    ["name": "by", 
                         "type": [
                             "procedure": [
                                 "bounds": ["T": "Comparable"],
-                                "parameters": ["item": ["type": "some T"]],
+                                "parameters": ["some T"],
                                 "returns": "bool"
                             ]
                         ]
@@ -251,35 +251,34 @@ struct TypeNotationTests {
         let sut = try await loader.loadProcedure([
             "bounds": ["Element": "Comparable"],
             "parameters": [
-                "of": ["type": "array<some Element>"],
-                "by": [
+                ["name": "by", 
                     "type": [
                         "procedure": [
-                            "parameters": ["item": ["type": "some Element"]],
+                            "parameters": ["some Element"],
                             "returns": "bool"
                         ]
                     ]
-                ]
+                ], ["name": "of", "type": "array<some Element>"]
             ],
             "result": ["ref": "of"]
         ], importing: ["Comparable"])
 
         // Then
-        let parameters = sut.procedures[entryName]?.signature.parameters
+        let signature = sut.procedures[entryName]?.signature
 
         #expect(
-            parameters?["of"]?.type
+            signature?.parameter(named: "of")?.type
                 == .array(.parameter(name: "Element", constraints: ["Comparable"]))
         )
 
-        guard case let .procedure(.some(inner), _, _) = parameters?["by"]?.type else {
+        guard case let .procedure(.some(inner), _, _) = signature?.parameter(named: "by")?.type else {
             Issue.record("the procedure type did not survive reading")
 
             return
         }
 
         #expect(
-            inner.parameters["item"]?.type
+            inner.parameters.first
                 == .parameter(name: "Element", constraints: ["Comparable"])
         )
     }
@@ -303,7 +302,7 @@ struct TypeNotationTests {
             "types": ["Task": ["id": "string", "done": "bool"]],
             "procedures": [
                 "entry": [
-                    "parameters": ["tasks": ["type": "array<Task>"]],
+                    "parameters": [["name": "tasks", "type": "array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]]
                 ]
             ]
@@ -312,7 +311,7 @@ struct TypeNotationTests {
         // Then
         #expect(sut.types["Task"] == .record(["id": .string, "done": .bool]))
         #expect(
-            sut.procedures["entry"]?.signature.parameters["tasks"]?.type
+            sut.procedures["entry"]?.signature.parameter(named: "tasks")?.type
                 == .array(.named("Task"))
         )
     }
@@ -324,7 +323,7 @@ struct TypeNotationTests {
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": ["rows": ["type": ["array": ["id": "string"]]]],
+                    "parameters": [["name": "rows", "type": ["array": ["id": "string"]]]],
                     "body": [["let": "seen", "value": ["ref": "rows"]]]
                 ]
             ]
@@ -332,7 +331,7 @@ struct TypeNotationTests {
 
         // Then
         #expect(
-            sut.procedures["entry"]?.signature.parameters["rows"]?.type
+            sut.procedures["entry"]?.signature.parameter(named: "rows")?.type
                 == .array(.record(["id": .string]))
         )
 
@@ -342,7 +341,7 @@ struct TypeNotationTests {
             try loader.loadDocument([
                 "procedures": [
                     "entry": [
-                        "parameters": ["rows": ["type": ["array": "string"]]],
+                        "parameters": [["name": "rows", "type": ["array": "string"]]],
                         "body": [["let": "seen", "value": ["ref": "rows"]]]
                     ]
                 ]
@@ -357,7 +356,7 @@ struct TypeNotationTests {
             "types": ["Task": ["id": "string"]],
             "procedures": [
                 "entry": [
-                    "parameters": ["tasks": ["type": "array<Task>"]],
+                    "parameters": [["name": "tasks", "type": "array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
                     "result": ["result": ["ref": "seen"]]
                 ]

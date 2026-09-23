@@ -67,8 +67,7 @@ enum BoundsReader {
 
         let bounded = signature.bounded(by: named)
 
-        var mentioned: Set<Name> = []
-        bounded.parameterOccurrences { name, _ in mentioned.insert(name) }
+        let mentioned = Set(bounded.parameterOccurrences.map(\.name))
 
         let unwritten = named.keys
             .filter { name in !mentioned.contains(name) }

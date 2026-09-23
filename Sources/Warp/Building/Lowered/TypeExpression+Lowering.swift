@@ -54,15 +54,10 @@ extension TypeExpression {
                 )
             )
 
-        case let .procedure(signature, constness, isolation):
+        case let .procedure(type, constness, isolation):
             return .procedure(
-                parameters: signature?.ordered(
-                    { name, parameter in
-                        parameter.lowered(named: name, as: parameter.declared.lowered(in: table))
-                    },
-                    standing: { parameter in parameter.name }
-                ),
-                returns: signature?.returns?.lowered(in: table),
+                parameters: type?.parameters.map { parameter in parameter.lowered(in: table) },
+                returns: type?.returns?.lowered(in: table),
                 constness: constness,
                 isolation: isolation
             )

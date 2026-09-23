@@ -142,7 +142,7 @@ struct UnwritableTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
                     body: [Statement(binding: .constant("probe"), expression: expression)]
                 )
             ]

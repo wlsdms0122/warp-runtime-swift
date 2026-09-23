@@ -269,7 +269,7 @@ struct CompiledTests {
                     "bank.Account.describe": Procedure(
                         signature: Signature(
                             receiver: "of",
-                            parameters: ["of": Parameter(type: .named("bank.Account"))],
+                            parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                             returns: .string
                         ),
                         body: [],
@@ -284,7 +284,7 @@ struct CompiledTests {
                         signature: Signature(
                             receiver: "it",
                             parameters: [
-                                "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                             ],
                             returns: .string
                         ),
@@ -396,7 +396,7 @@ struct CompiledTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -695,7 +695,7 @@ struct CompiledTests {
                 "lib.twice": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .int)],
+                        parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],
@@ -739,12 +739,12 @@ struct CompiledTests {
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 "bank.Account.describe": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .string),
+                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
                     body: [],
                     result: .literal(.string("an account"))
                 ),
                 "bank.tell": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .string),
+                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
                     body: [],
                     result: .call(Call(receiver: reference("of"), selector: "app.Describable.describe"))
                 )
@@ -772,7 +772,7 @@ struct CompiledTests {
                 "lib.twice": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .int)],
+                        parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],
@@ -806,7 +806,7 @@ struct CompiledTests {
                 "a.first": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .array(.int))]
+                        parameters: [Parameter(name: "of", type: .array(.int))]
                     ),
                     body: [],
                     result: .cast(
@@ -822,7 +822,7 @@ struct CompiledTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["items": Parameter(type: .array(.int))],
+                        parameters: [Parameter(name: "items", type: .array(.int))],
                         returns: .int
                     ),
                     body: [
@@ -944,7 +944,7 @@ struct CompiledTests {
                         signature: Signature(
                             receiver: "it",
                             parameters: [
-                                "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                             ],
                             returns: .string
                         ),
@@ -993,7 +993,7 @@ struct CompiledTests {
                     "bank.Account.describe": Procedure(
                         signature: Signature(
                             receiver: "of",
-                            parameters: ["of": Parameter(type: .named("bank.Account"))],
+                            parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                             returns: .string
                         ),
                         body: [],
@@ -1005,7 +1005,7 @@ struct CompiledTests {
                     "bank.Card.describe": Procedure(
                         signature: Signature(
                             receiver: "of",
-                            parameters: ["of": Parameter(type: .named("bank.Card"))],
+                            parameters: [Parameter(name: "of", type: .named("bank.Card"))],
                             returns: .string
                         ),
                         body: [],

@@ -111,12 +111,12 @@ extension Builder {
         holding signature: Signature,
         in context: TypingContext
     ) throws {
-        let taken = signature.parameters.filter { _, parameter in
+        let taken = signature.parameters.filter { parameter in
             if case .consuming = parameter.declared { return true }
 
             return false
         }
-        let borrowed = signature.parameters.filter { _, parameter in
+        let borrowed = signature.parameters.filter { parameter in
             if case .borrowing = parameter.declared { return true }
 
             return false
@@ -131,7 +131,7 @@ extension Builder {
         let walk = Consuming(context: context, place: place)
         try walk.answering(
             block,
-            held: Consuming.Held(live: Set(taken.keys), borrowed: Set(borrowed.keys))
+            held: Consuming.Held(live: Set(taken.map(\.name)), borrowed: Set(borrowed.map(\.name)))
         )
 
         // What a declaration answers is read off its body where nobody wrote
@@ -369,16 +369,16 @@ extension Builder {
                 try inside.answering(
                     block,
                     held: Held(
-                        live: Set(seeded.filter { _, parameter in
+                        live: Set(seeded.filter { parameter in
                             if case .consuming = parameter.declared { return true }
 
                             return false
-                        }.keys),
-                        borrowed: Set(seeded.filter { _, parameter in
+                        }.map(\.name)),
+                        borrowed: Set(seeded.filter { parameter in
                             if case .borrowing = parameter.declared { return true }
 
                             return false
-                        }.keys)
+                        }.map(\.name))
                     )
                 )
 
@@ -416,7 +416,7 @@ extension Builder {
             case let .apply(callee, arguments):
                 var carried = try moving(callee, held: held, guarded: "in a call of a value")
 
-                for (_, argument) in arguments.sorted(by: { $0.key < $1.key }) {
+                for argument in arguments {
                     carried = try moving(argument, held: carried, guarded: "in a call of a value")
                 }
 
@@ -527,7 +527,7 @@ extension Builder {
             var carried = held
 
             if let receiver = call.receiver {
-                let parameter = signature?.receiver.flatMap { name in signature?.parameters[name] }
+                let parameter = signature?.receiver.flatMap { name in signature?.parameter(named: name) }
 
                 carried = try handed(receiver, to: parameter, held: carried, guarded: guarded, of: call)
             }
@@ -535,7 +535,7 @@ extension Builder {
             for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
                 carried = try handed(
                     argument,
-                    to: signature?.parameters[name],
+                    to: signature?.parameter(named: name),
                     held: carried,
                     guarded: guarded,
                     of: call

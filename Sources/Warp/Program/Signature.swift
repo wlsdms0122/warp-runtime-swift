@@ -21,12 +21,11 @@ public struct Signature: Sendable, Equatable {
     // front of the selector rather than under its name.
     public let receiver: Name?
 
-    // What the declaration takes, under the names it wrote them under. A
-    // document writes them as a record, so the declaration says which
-    // parameters there are and nothing about their order. Where a run needs
-    // one, an argument's position is the names sorted, which `Name` orders and
-    // the lowering puts in place.
-    public let parameters: [Name: Parameter]
+    // What the declaration takes, in the order it wrote them. The order is the
+    // declaration's own: it is the order a value of this declaration is
+    // applied in, and the order the run keeps the arguments in. A call that
+    // hands arguments by name is resolved to these positions at the build.
+    public let parameters: [Parameter]
 
     // What a call returns, or nil where nothing was declared. Absence is
     // spelled by being absent rather than by a type meaning "no claim". `any`
@@ -35,51 +34,39 @@ public struct Signature: Sendable, Equatable {
     // say.
     public let returns: TypeExpression?
 
-    // The parameters in the order arguments stand in, each read as whatever
-    // the caller makes of it. A document writes them as a record, so the
-    // declaration says which parameters there are and nothing about their
-    // order; the order is the declared names sorted, and this is the one place
-    // that says so.
-    //
-    // What each one is made into comes first because that is what the caller
-    // came for, and `standing` says where to find the name on it. Made before
-    // they are put in order, so nothing is built twice: one list, sorted where
-    // it stands.
-    func ordered<T>(_ make: (Name, Parameter) -> T, standing name: (T) -> Name) -> [T] {
-        var made = parameters.map(make)
-
-        made.sort { left, right in name(left) < name(right) }
-
-        return made
+    // The declared names in position order.
+    public var names: [Name] {
+        parameters.map(\.name)
     }
 
-    // The declared names in that order, for a reader that wants the names and
-    // nothing made of them.
-    var names: [Name] {
-        ordered({ name, _ in name }, standing: { name in name })
+    // The type a value of this declaration carries: the parameter types in
+    // position order and the answer. No names, since a value is applied by
+    // position and the names are the declaration's own.
+    public var type: ProcedureType {
+        ProcedureType(parameters: parameters.map(\.declared), returns: returns)
     }
 
     // The parameters asking for a procedure that answers without running. A
     // body may apply a name standing in one and still answer without running.
     var constProcedures: Set<Name> {
-        Set(parameters.compactMap { name, parameter in parameter.type?.isConstProcedure == true ? name : nil })
+        Set(parameters.compactMap { parameter in parameter.type?.isConstProcedure == true ? parameter.name : nil })
     }
 
     // The same, for the claim isolation reads.
     var isolatedProcedures: Set<Name> {
-        Set(parameters.compactMap { name, parameter in parameter.type?.isIsolatedProcedure == true ? name : nil })
+        Set(parameters.compactMap { parameter in parameter.type?.isIsolatedProcedure == true ? parameter.name : nil })
     }
 
     // The parameters whose box is the body's own. One handed in place is the
     // caller's box, written through rather than held.
     var ownedParameters: Set<Name> {
-        Set(parameters.compactMap { name, parameter in parameter.declared.isInout ? nil : name })
+        Set(parameters.compactMap { parameter in parameter.declared.isInout ? nil : parameter.name })
     }
 
     // MARK: - Initializer
     public init(
         receiver: Name? = nil,
-        parameters: [Name: Parameter] = [:],
+        parameters: [Parameter] = [],
         returns: TypeExpression? = nil
     ) {
         self.receiver = receiver
@@ -89,7 +76,7 @@ public struct Signature: Sendable, Equatable {
 
     // A native procedure's declaration, read off the procedure itself. What it takes is
     // its own type's to say, so a registration names the procedure once and the
-    // parameters come with it.
+    // parameters come with it, in the order its cases stand.
     public init<P: NativeProcedure>(
         of procedure: P.Type,
         receiver: P.Parameters? = nil,
@@ -97,13 +84,21 @@ public struct Signature: Sendable, Equatable {
     ) {
         self.init(
             receiver: receiver?.name,
-            parameters: Dictionary(
-                uniqueKeysWithValues: P.Parameters.allCases.map { key in
-                    (key.name, key.declared)
-                }
-            ),
+            parameters: P.Parameters.allCases.map(\.declared),
             returns: returns
         )
+    }
+
+    // MARK: - Public
+    // The parameter declared under a name, or nil where none is.
+    public func parameter(named name: Name) -> Parameter? {
+        parameters.first { parameter in parameter.name == name }
+    }
+
+    // Where a name stands among the parameters, or nil where none is
+    // declared under it.
+    public func position(of name: Name) -> Int? {
+        parameters.firstIndex { parameter in parameter.name == name }
     }
 
     // The returned value, checked against what was declared. Run time rather
@@ -119,10 +114,7 @@ public struct Signature: Sendable, Equatable {
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
     func lowered(in table: LoweredTypeTable) -> [Slot] {
-        ordered(
-            { name, parameter in parameter.lowered(named: name, in: table) },
-            standing: { slot in slot.name }
-        )
+        parameters.map { parameter in parameter.lowered(in: table) }
     }
 
     // The same, with what a call put in the type parameters written in. The
@@ -130,20 +122,17 @@ public struct Signature: Sendable, Equatable {
     // because what a call read is a type and a declaration is a document's
     // spelling.
     func lowered(in table: LoweredTypeTable, filling bound: [Name: LoweredType]) -> [Slot] {
-        ordered(
-            { name, parameter in parameter.lowered(named: name, in: table, filling: bound) },
-            standing: { slot in slot.name }
-        )
+        parameters.map { parameter in parameter.lowered(in: table, filling: bound) }
     }
 
-    // Whether something declared this way may stand where this is required.
+    // Whether a value declared this way may stand where this is required.
     //
     // The directions are opposite on purpose: what is given must accept
     // everything that will be passed to it, and what is required must accept
     // everything it will get back. A body promising less than the slot asks and
     // returning more than the slot allows is the one that fits.
     public func accepts(_ given: Signature, in types: TypeTable = .empty) -> Bool {
-        TypeExpression.procedure(self).accepts(.procedure(given), in: types)
+        TypeExpression.procedure(type).accepts(.procedure(given.type), in: types)
     }
 
     // The expression a call hands under a parameter's name: what stands in
@@ -161,32 +150,20 @@ public struct Signature: Sendable, Equatable {
     // Every declared name this signature reaches, through what it takes and
     // what it answers.
     var mentions: Set<Name> {
-        parameters.values.reduce(into: returns?.mentions ?? []) { mentioned, parameter in
+        parameters.reduce(into: returns?.mentions ?? []) { mentioned, parameter in
             mentioned.formUnion(parameter.declared.mentions)
         }
     }
 
     // Arguments given by name, settled into the order a run keeps them in.
-    // A name the declaration lacks is refused.
+    // A name the declaration lacks is refused. The door a caller outside the
+    // build comes through, since the build resolves names itself.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
         in table: LoweredTypeTable
     ) throws -> [Value?] {
-        try settle(given.map { name, value in (name: name, value: value) }, over: slots, in: table)
-    }
-
-    // Arguments given as a list of names and values, the way a procedure hands
-    // them to a closure and a call of a value hands them to what it named.
-    // Each slot finds its name along the list, so neither side hashes.
-    func settle(
-        _ given: [(name: Name, value: Value)],
-        over slots: [Slot],
-        skipping: (Int) -> Bool = { _ in false },
-        in table: LoweredTypeTable
-    ) throws -> [Value?] {
-        let undeclared = given
-            .map { entry in entry.name }
+        let undeclared = given.keys
             .filter { name in !slots.contains { slot in slot.name == name } }
             .sorted()
 
@@ -197,20 +174,23 @@ public struct Signature: Sendable, Equatable {
             )
         }
 
-        // A name given twice is two instructions for one slot, and neither
-        // is the one to keep.
-        for (index, entry) in given.enumerated() {
-            guard given[..<index].contains(where: { earlier in earlier.name == entry.name }) else { continue }
+        return try settle(slots.map { slot in given[slot.name] }, over: slots, in: table)
+    }
 
-            throw ArgumentError("parameters: '\(entry.name)' is given more than once")
+    // Arguments handed by position, every position given: the way a value is
+    // applied. A count the slots do not have is two different procedures.
+    func settle(
+        applied given: [Value],
+        over slots: [Slot],
+        in table: LoweredTypeTable
+    ) throws -> [Value?] {
+        guard given.count == slots.count else {
+            throw ArgumentError(
+                "parameters: \(slots.count) declared, and \(given.count) given"
+            )
         }
 
-        return try settle(
-            slots.map { slot in given.first { entry in entry.name == slot.name }?.value },
-            over: slots,
-            skipping: skipping,
-            in: table
-        )
+        return try settle(given.map { value in Optional(value) }, over: slots, in: table)
     }
 
     // The boundary itself, over arguments standing at their parameter's
@@ -231,7 +211,7 @@ public struct Signature: Sendable, Equatable {
         var missing: [Name] = []
 
         for (position, slot) in slots.enumerated() where !skipping(position) {
-            if given[position] == nil, slot.parameter.mustBeGiven(in: table) {
+            if given[position] == nil, slot.mustBeGiven(in: table) {
                 missing.append(slot.name)
             }
         }

@@ -236,7 +236,7 @@ extension Builder {
         at place: Place,
         in table: TypeTable
     ) -> String? {
-        guard let receiver = given.receiver, let held = given.parameters[receiver] else {
+        guard let receiver = given.receiver, let held = given.parameter(named: receiver) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that"
                     + " '\(contract)' asks, and takes no receiver. A contract's"
                     + " procedure is answered about the value it is sent to"
@@ -251,12 +251,29 @@ extension Builder {
                     + " type that answers it"
         }
 
-        for (name, parameter) in asked.parameters.sorted(by: { $0.key < $1.key }) {
-            guard let filled = given.parameters[name] else {
+        // The witness declares the contract procedure's parameters, names and
+        // order alike, beside its receiver: a call written against the
+        // contract lands on whichever declaration answers, and the run hands
+        // the arguments to the same positions for every one of them.
+        let declared = given.parameters.filter { parameter in parameter.name != receiver }
+
+        for (position, parameter) in asked.parameters.enumerated() {
+            let name = parameter.name
+
+            guard position < declared.count, declared[position].name == name else {
+                guard given.parameter(named: name) != nil else {
+                    return "is named for '\(type)' and the procedure '\(procedure)' that"
+                            + " '\(contract)' asks, and declares no '\(name)'."
+                            + " A call written against the contract hands that name"
+                }
+
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and declares no '\(name)'."
-                        + " A call written against the contract hands that name"
+                        + " '\(contract)' asks, and declares '\(name)' at another"
+                        + " position. A declaration answering a contract takes its"
+                        + " parameters in the contract's order"
             }
+
+            let filled = declared[position]
 
             guard filled.declared.lowered(in: table.loweredTypes)
                 .same(parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
@@ -270,14 +287,10 @@ extension Builder {
 
         // Anything the contract did not name and a call must fill is a name no
         // call written against the contract could write.
-        for (name, parameter) in given.parameters.sorted(by: { $0.key < $1.key })
-        where name != receiver && asked.parameters[name] == nil {
-            guard
-                parameter.default != nil
-                    || parameter.declared.lowered(in: table.loweredTypes).declaresNull(in: table.loweredTypes)
-            else {
+        for parameter in declared.dropFirst(asked.parameters.count) {
+            guard !parameter.mustBeGiven(in: table) else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and requires '\(name)', which"
+                        + " '\(contract)' asks, and requires '\(parameter.name)', which"
                         + " the contract does not name. Nothing calling through"
                         + " the contract could fill it"
             }

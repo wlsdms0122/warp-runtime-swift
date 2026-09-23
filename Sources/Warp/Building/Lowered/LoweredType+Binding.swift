@@ -145,12 +145,8 @@ extension LoweredType {
             binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
         case let (.procedure(.some(mine), myAnswer, _, _), .procedure(.some(theirs), theirAnswer, _, _)):
-            let opposite = Dictionary(theirs.map { slot in (slot.name, slot.type) }) { first, _ in first }
-
-            for parameter in mine {
-                guard let against = opposite[parameter.name] else { continue }
-
-                parameter.type.binding(against: against, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
+            for (parameter, against) in zip(mine, theirs) {
+                parameter.binding(against: against, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
             }
 
             (myAnswer ?? .any).binding(
@@ -197,13 +193,7 @@ extension LoweredType {
 
         case let .procedure(parameters, returns, constness, isolation):
             return .procedure(
-                parameters: parameters?.map { parameter in
-                    LoweredParameter(
-                        name: parameter.name,
-                        type: parameter.type.filling(bound),
-                        defaulted: parameter.defaulted
-                    )
-                },
+                parameters: parameters?.map { parameter in parameter.filling(bound) },
                 returns: returns?.filling(bound),
                 constness: constness,
                 isolation: isolation

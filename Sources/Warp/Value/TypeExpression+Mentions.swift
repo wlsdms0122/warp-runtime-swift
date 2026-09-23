@@ -31,8 +31,8 @@ extension TypeExpression {
                 mentioned.formUnion(field.mentions)
             }
 
-        case let .procedure(signature, _, _):
-            signature?.mentions ?? []
+        case let .procedure(type, _, _):
+            type?.mentions ?? []
 
         case let .variable(inner), let .inout(inner), let .linear(inner), let .nullable(inner),
             let .consuming(inner), let .borrowing(inner):

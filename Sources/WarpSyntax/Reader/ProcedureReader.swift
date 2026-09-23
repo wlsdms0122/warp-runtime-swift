@@ -76,7 +76,7 @@ public struct ProcedureReader: Decodable {
                         .map { spelling in try Name.read(spelling, at: decoder.steps) },
                     parameters: try container
                         .decodeIfPresent(SignatureReader.self, forKey: .parameters)?
-                        .signature.parameters ?? [:],
+                        .signature.parameters ?? [],
                     returns: try container
                         .decodeIfPresent(TypeReader.self, forKey: .returns)?
                         .type

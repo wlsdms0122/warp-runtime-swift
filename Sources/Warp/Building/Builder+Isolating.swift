@@ -29,7 +29,7 @@ extension Builder {
 
             table[symbol.declared] = (
                 block,
-                Set(symbol.procedure.signature.parameters.keys),
+                Set(symbol.procedure.signature.names),
                 symbol.procedure.signature.isolatedProcedures
             )
         }
@@ -185,7 +185,7 @@ extension Builder {
             // nothing.
             case let .apply(callee, arguments):
                 return applies(callee, given: procedures)
-                    && arguments.values.allSatisfy { argument in
+                    && arguments.allSatisfy { argument in
                         holds(argument, declared: declared, applying: procedures)
                     }
 
@@ -211,9 +211,9 @@ extension Builder {
                     return false
                 }
 
-                for (name, parameter) in signature.parameters where parameter.declared.isInout {
+                for parameter in signature.parameters where parameter.declared.isInout {
                     guard
-                        case let .reference(path)? = call.handed(name, to: signature),
+                        case let .reference(path)? = call.handed(parameter.name, to: signature),
                         let head = path.head
                     else { continue }
 

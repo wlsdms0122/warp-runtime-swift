@@ -23,11 +23,11 @@ struct ConstnessTests {
     // so what fits here is exactly what the predicate admits.
     private let asking = Procedure(
         signature: Signature(
-            parameters: ["body": Parameter(type: .procedure(nil, .const))],
+            parameters: [Parameter(name: "body", type: .procedure(nil, .const))],
             returns: .string
         ),
         body: [
-            Statement(binding: .constant("answered"), expression: .apply(reference("body"), arguments: [:]))
+            Statement(binding: .constant("answered"), expression: .apply(reference("body"), arguments: []))
         ],
         result: reference("answered")
     )
@@ -104,7 +104,7 @@ struct ConstnessTests {
         // Given. The same early leave, reached through a native procedure that
         // calls the body once per element rather than through `apply`.
         let judging = Procedure(
-            signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .bool),
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
             body: [
                 Statement(expression: .conditional(
                     equals(reference("item"), .literal(.int(2))),
@@ -190,7 +190,7 @@ struct ConstnessTests {
         // handing a variable of its own to it. The parameter is the caller's
         // box, so the declaration runs, and the closure sends what runs.
         let bumping = Procedure(
-            signature: Signature(parameters: ["count": Parameter(type: .inout(.int))]),
+            signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))]),
             body: [Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))]
         )
         let sending = Procedure(
@@ -277,7 +277,7 @@ struct ConstnessTests {
                     access: .public,
                     body: [
                         Statement(
-                            binding: .variable("answering", declared: .procedure(Signature(returns: .string), .const)),
+                            binding: .variable("answering", declared: .procedure(ProcedureType(returns: .string), .const)),
                             expression: .closure(
                                 Procedure(
                                     signature: Signature(returns: .string),
@@ -292,7 +292,7 @@ struct ConstnessTests {
                                 Procedure(
                                     signature: Signature(returns: .string),
                                     body: [],
-                                    result: .apply(reference("answering"), arguments: [:])
+                                    result: .apply(reference("answering"), arguments: [])
                                 )
                             )
                         )
@@ -335,7 +335,7 @@ struct ConstnessTests {
                                 Procedure(
                                     signature: Signature(returns: .string),
                                     body: [],
-                                    result: .apply(reference("answering"), arguments: [:])
+                                    result: .apply(reference("answering"), arguments: [])
                                 )
                             )
                         )
@@ -357,11 +357,11 @@ struct ConstnessTests {
         // Nothing before the run says which procedure that holds.
         let relaying = Procedure(
             signature: Signature(
-                parameters: ["body": Parameter(type: .procedure(nil))],
+                parameters: [Parameter(name: "body", type: .procedure(nil))],
                 returns: .string
             ),
             body: [],
-            result: .apply(reference("body"), arguments: [:])
+            result: .apply(reference("body"), arguments: [])
         )
         let handed = try Module(
             procedures: [

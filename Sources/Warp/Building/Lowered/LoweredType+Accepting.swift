@@ -170,22 +170,16 @@ extension LoweredType {
             // Nothing was said on one side or the other, so nothing is refused.
             guard let required, let given else { return true }
 
-            // What stands here declares every name the slot hands, since a
-            // name the declaration does not have refuses at the run; it may
-            // declare more only where the name stands unfilled: a name
-            // nothing hands it and a call must fill is one no call could.
-            guard given.allSatisfy({ slot in
-                !slot.mustBeGiven(in: table) || required.contains { parameter in parameter.name == slot.name }
-            }) else {
-                return false
-            }
+            // What stands here takes exactly the positions the slot hands: an
+            // application gives every position, so a value of another count
+            // is refused by every one of them.
+            guard given.count == required.count else { return false }
 
             // The directions are opposite on purpose: what is given must
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
-            for parameter in required {
-                guard let taken = given.first(where: { slot in slot.name == parameter.name }) else { return false }
-                guard taken.type.accepts(parameter.type, in: table, assuming: assuming) else { return false }
+            for (parameter, taken) in zip(required, given) {
+                guard taken.accepts(parameter, in: table, assuming: assuming) else { return false }
             }
 
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assuming: assuming)
@@ -478,9 +472,7 @@ extension LoweredType {
             case let (mine?, theirs?):
                 return mine.count == theirs.count
                     && zip(mine, theirs).allSatisfy { one, other in
-                        one.name == other.name
-                            && one.mustBeGiven(in: table) == other.mustBeGiven(in: table)
-                            && one.type.same(other.type, in: table, assuming: walked)
+                        one.same(other, in: table, assuming: walked)
                     }
 
             default:

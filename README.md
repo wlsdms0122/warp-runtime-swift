@@ -14,7 +14,7 @@ import Warp
 
 let greet = Procedure(
     signature: Signature(
-        parameters: ["name": Parameter(type: .string)],
+        parameters: [Parameter(name: "name", type: .string)],
         returns: .string
     ),
     body: [
@@ -205,7 +205,7 @@ let vocabulary = Module(
         "app.shout": Procedure(
             signature: Signature(
                 receiver: "of",
-                parameters: ["of": Parameter(type: .string)],
+                parameters: [Parameter(name: "of", type: .string)],
                 returns: .string
             ),
             implementation: .query(ShoutQuery())

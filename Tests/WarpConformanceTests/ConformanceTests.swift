@@ -915,26 +915,22 @@ struct ConformanceError: Error, CustomStringConvertible {
 enum OneName: Int, ParameterSet {
     case of
 
-    var name: Name { "of" }
-
-    var declared: Parameter { Parameter(type: .any) }
+    var declared: Parameter { Parameter(name: "of", type: .any) }
 }
 
 enum TwoNames: Int, ParameterSet {
     case of
     case value
 
-    var name: Name {
+    var declared: Parameter {
         switch self {
         case .of:
-            return "of"
+            return Parameter(name: "of", type: .any)
 
         case .value:
-            return "value"
+            return Parameter(name: "value", type: .any)
         }
     }
-
-    var declared: Parameter { Parameter(type: .any) }
 }
 
 // A procedure a case asked for that answers without running. What it answers is

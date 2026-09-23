@@ -21,8 +21,7 @@ import Foundation
 //
 // `null` is spelled `.null` and never `nil`. They are not the same fact (`nil`
 // is a slot with nothing in it and `.null` is a value a program computed) and a
-// language where a parameter may or may not have a default has to keep them
-// apart.
+// language where a `T?` argument may be left out has to keep them apart.
 extension Value: ExpressibleByBooleanLiteral {
     public init(booleanLiteral value: Bool) {
         self = .bool(value)

@@ -274,7 +274,7 @@ struct ObjectReadingTests {
                     result: .call(Call(selector: "app.twice", arguments: ["n": .literal(.int(2))]))
                 ),
                 "app.twice": Procedure(
-                    signature: Signature(parameters: ["n": Parameter(type: .int)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .int),
                     body: [],
                     result: reference("n")
                 )
@@ -444,7 +444,7 @@ struct ObjectReadingTests {
                 "app.Box.one": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("app.Box"))],
+                        parameters: [Parameter(name: "of", type: .named("app.Box"))],
                         returns: .int
                     ),
                     body: [],
@@ -453,7 +453,7 @@ struct ObjectReadingTests {
                 "app.Box.two": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("app.Box"))],
+                        parameters: [Parameter(name: "of", type: .named("app.Box"))],
                         returns: .int
                     ),
                     body: [],
@@ -497,7 +497,7 @@ struct ObjectReadingTests {
                         binding: .constant("made"),
                         expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
                     )],
-                    result: .apply(reference("made"), arguments: [:])
+                    result: .apply(reference("made"), arguments: [])
                 ),
                 "app.other": Procedure(
                     signature: Signature(returns: .int),
@@ -505,7 +505,7 @@ struct ObjectReadingTests {
                         binding: .constant("made"),
                         expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))))
                     )],
-                    result: .apply(reference("made"), arguments: [:])
+                    result: .apply(reference("made"), arguments: [])
                 )
             ]
         )
@@ -625,7 +625,7 @@ struct ObjectReadingTests {
                             Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                         )
                     )],
-                    result: .apply(reference("made"), arguments: [:])
+                    result: .apply(reference("made"), arguments: [])
                 ),
                 "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
@@ -668,7 +668,7 @@ struct ObjectReadingTests {
                             Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                         )
                     )],
-                    result: .apply(reference("made"), arguments: [:])
+                    result: .apply(reference("made"), arguments: [])
                 )
             ]
         )
@@ -710,7 +710,7 @@ struct ObjectReadingTests {
                             Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                         )
                     )],
-                    result: .apply(reference("made"), arguments: [:])
+                    result: .apply(reference("made"), arguments: [])
                 ),
                 "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
@@ -816,7 +816,7 @@ struct ObjectReadingTests {
                             Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                         )
                     )],
-                    result: .apply(reference("made"), arguments: [:])
+                    result: .apply(reference("made"), arguments: [])
                 ),
                 "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
@@ -851,7 +851,7 @@ struct ObjectReadingTests {
             procedures: [
                 "app.entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["p": Parameter(type: .any)], returns: .named("app.Point")),
+                    signature: Signature(parameters: [Parameter(name: "p", type: .any)], returns: .named("app.Point")),
                     body: [],
                     result: .cast(reference("p"), as: .named("app.Point"), optional: false)
                 )

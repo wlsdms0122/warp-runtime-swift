@@ -702,7 +702,7 @@ struct Lowering {
 
     private mutating func lower(
         apply callee: Expression,
-        arguments: [Name: Expression],
+        arguments: [Expression],
         in scope: Names,
         on slots: Slots,
         label: Name,
@@ -710,8 +710,8 @@ struct Lowering {
     ) throws -> Operation {
         return .apply(
             try lower(callee, in: scope, on: slots, label: label, at: place),
-            arguments: try arguments.sorted { $0.key < $1.key }.map { name, argument in
-                (name, try lower(argument, in: scope, on: slots, label: label, at: place))
+            arguments: try arguments.map { argument in
+                try lower(argument, in: scope, on: slots, label: label, at: place)
             }
         )
     }
@@ -849,7 +849,7 @@ struct Lowering {
 
         let receiver = try lower(written, in: scope, on: slots, label: label, at: place)
 
-        if let stray = call.arguments.keys.first(where: { name in asked.signature.parameters[name] == nil }) {
+        if let stray = call.arguments.keys.first(where: { name in asked.signature.parameter(named: name) == nil }) {
             throw BuildError.unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
         }
 

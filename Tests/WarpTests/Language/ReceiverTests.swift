@@ -27,7 +27,7 @@ struct ReceiverTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -42,7 +42,7 @@ struct ReceiverTests {
                     signature: Signature(
                         receiver: "of",
                         parameters: [
-                            "of": Parameter(type: .string)
+                            Parameter(name: "of", type: .string)
                         ],
                         returns: .string
                     ),
@@ -107,7 +107,7 @@ struct ReceiverTests {
                     signature: Signature(
                         receiver: "of",
                         parameters: [
-                            "of": Parameter(type: .string)
+                            Parameter(name: "of", type: .string)
                         ],
                         returns: .string
                     ),
@@ -143,7 +143,7 @@ struct ReceiverTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "names": Parameter(type: .array(.string))
+                            Parameter(name: "names", type: .array(.string))
                         ]
                     ),
                     body: [
@@ -219,7 +219,7 @@ struct ReceiverTests {
         let label = Procedure(
             signature: Signature(
                 receiver: "of",
-                parameters: ["of": Parameter(type: .array(.string))],
+                parameters: [Parameter(name: "of", type: .array(.string))],
                 returns: .string
             ),
             body: [],
@@ -231,7 +231,7 @@ struct ReceiverTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["names": Parameter(type: .array(.string))]
+                        parameters: [Parameter(name: "names", type: .array(.string))]
                     ),
                     body: [],
                     result: .call(Call(receiver: reference("names"), selector: "label"))
@@ -257,7 +257,7 @@ struct ReceiverTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "subject": Parameter(type: .any)
+                            Parameter(name: "subject", type: .any)
                         ]
                     ),
                     body: [],
@@ -267,7 +267,7 @@ struct ReceiverTests {
                     signature: Signature(
                         receiver: "of",
                         parameters: [
-                            "of": Parameter(type: .array(.any))
+                            Parameter(name: "of", type: .array(.any))
                         ],
                         returns: .int
                     ),
@@ -291,9 +291,7 @@ private struct EchoQuery: Query {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .int) }
+        var declared: Parameter { Parameter(name: "of", type: .int) }
     }
 
     // MARK: - Property

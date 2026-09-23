@@ -94,7 +94,7 @@ struct EnvelopeTests {
             "imports": ["std.math.plus"],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": ["type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "array<string>"]],
                     "body": [
                         [
                             "let": "many",
@@ -305,7 +305,7 @@ struct EnvelopeTests {
         let module = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": ["names": ["type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "array<string>"]],
                     "body": [["let": "many", "value": ["ref": "names.count"]]],
                     "result": ["ref": "many"]
                 ]
@@ -329,7 +329,7 @@ struct EnvelopeTests {
             "imports": ["inClosure", "inLoop", "inBody", "inRescue", "inNestedData"],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": ["type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "array<string>"]],
                     "body": [
                         [
                             "let": "held",

@@ -185,7 +185,7 @@ struct LinearTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .linear(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .linear(.int))]),
                     body: [],
                     result: .literal(.null)
                 )
@@ -278,7 +278,7 @@ struct LinearTests {
                 "app.give": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
                     ),
                     body: [
                         Statement(expression: .call(Call(receiver: reference("of"), selector: "app.close")))
@@ -309,7 +309,7 @@ struct LinearTests {
                 "app.leak": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .named("app.Handle")
                     ),
                     body: [],
@@ -339,7 +339,7 @@ struct LinearTests {
                 "app.stash": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
                     ),
                     body: [
                         Statement(binding: .variable("kept"), expression: reference("of"))
@@ -369,7 +369,7 @@ struct LinearTests {
             result: .literal(.null),
             beside: [
                 "app.count": Procedure(
-                    signature: Signature(parameters: ["of": Parameter(type: .consuming(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .consuming(.int))]),
                     body: [],
                     result: .literal(.null)
                 )
@@ -398,7 +398,7 @@ struct LinearTests {
             beside: [
                 "app.swap": Procedure(
                     signature: Signature(
-                        parameters: ["of": Parameter(type: .inout(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .inout(.named("app.Handle")))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -429,7 +429,7 @@ struct LinearTests {
                 "app.leak": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .named("app.Handle")
                     ),
                     body: [
@@ -489,8 +489,8 @@ struct LinearTests {
                 "app.stash": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
-                        returns: .procedure(Signature(returns: .string))
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
+                        returns: .procedure(ProcedureType(returns: .string))
                     ),
                     body: [],
                     result: .closure(
@@ -526,7 +526,7 @@ struct LinearTests {
                 "app.leak": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .any
                     ),
                     body: [],
@@ -766,7 +766,7 @@ struct LinearTests {
                 )
             ],
             result: .literal(.null),
-            taking: ["payload": Parameter(type: .any)]
+            taking: [Parameter(name: "payload", type: .any)]
         )
 
         // When / Then
@@ -1319,7 +1319,7 @@ struct LinearTests {
             beside: [
                 "app.maybe": Procedure(
                     signature: Signature(
-                        parameters: ["of": Parameter(type: .nullable(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .nullable(.named("app.Handle")))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -1400,7 +1400,7 @@ struct LinearTests {
             beside: [
                 "app.pass": Procedure(
                     signature: Signature(
-                        parameters: ["of": Parameter(type: .consuming(.parameter(name: "T")))],
+                        parameters: [Parameter(name: "of", type: .consuming(.parameter(name: "T")))],
                         returns: .parameter(name: "T")
                     ),
                     body: [],
@@ -1436,7 +1436,7 @@ struct LinearTests {
                 "app.show": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .string
                     ),
                     body: [],
@@ -1500,7 +1500,7 @@ struct LinearTests {
                 "app.give": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
                     ),
                     body: [
                         Statement(
@@ -1547,7 +1547,7 @@ struct LinearTests {
                 "app.take": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("app.Handle"))]
+                        parameters: [Parameter(name: "of", type: .named("app.Handle"))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -1571,7 +1571,7 @@ struct LinearTests {
         body: [Statement],
         result: Warp.Expression,
         constraints: [Name: [TypeExpression]] = [:],
-        taking parameters: [Name: Parameter] = [:],
+        taking parameters: [Parameter] = [],
         beside others: [Name: Procedure] = [:]
     ) throws -> Module {
         try Module(
@@ -1598,7 +1598,7 @@ struct LinearTests {
                     implementation: .effect(CloseEffect())
                 ),
                 "app.peek": Procedure(
-                    signature: Signature(parameters: ["at": Parameter(type: .any)]),
+                    signature: Signature(parameters: [Parameter(name: "at", type: .any)]),
                     body: [],
                     result: .literal(.null)
                 ),
@@ -1606,7 +1606,7 @@ struct LinearTests {
                 "app.name": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .string
                     ),
                     body: [],
@@ -1621,9 +1621,7 @@ struct CloseEffect: Effect {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .consuming(.named("app.Handle"))) }
+        var declared: Parameter { Parameter(name: "of", type: .consuming(.named("app.Handle"))) }
     }
 
     // MARK: - Property

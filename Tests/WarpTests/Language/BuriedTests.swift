@@ -39,7 +39,7 @@ struct BuriedTests {
                 body: [Statement(binding: .constant("inside"), expression: marker("closure body"))],
                 result: marker("closure result")
             )),
-            .apply(marker("apply callee"), arguments: ["to": marker("apply argument")]),
+            .apply(marker("apply callee"), arguments: [marker("apply argument")]),
             .call(Call(
                 receiver: marker("call receiver"),
                 selector: "procedure",

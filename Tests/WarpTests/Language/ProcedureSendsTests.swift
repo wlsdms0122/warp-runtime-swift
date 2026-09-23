@@ -343,9 +343,7 @@ private struct TwiceQuery: Query {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .int) }
+        var declared: Parameter { Parameter(name: "of", type: .int) }
     }
 
     enum Imports: Int, ImportSet {
@@ -372,9 +370,7 @@ private struct AnnounceEffect: Effect {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .string) }
+        var declared: Parameter { Parameter(name: "of", type: .string) }
     }
 
     enum Imports: Int, ImportSet {
@@ -727,9 +723,7 @@ private struct ReceivingReporter: Effect {
     enum Parameters: Int, ParameterSet {
         case said
 
-        var name: Name { "said" }
-
-        var declared: Parameter { Parameter(type: .string) }
+        var declared: Parameter { Parameter(name: "said", type: .string) }
     }
 
     // MARK: - Property
@@ -809,7 +803,7 @@ private extension Module {
         procedures: [
             "app.pick": Procedure(
                 signature: Signature(
-                    parameters: ["a": Parameter(type: .int), "z": Parameter(type: .int)],
+                    parameters: [Parameter(name: "a", type: .int), Parameter(name: "z", type: .int)],
                     returns: .int
                 ),
                 body: [],
@@ -859,7 +853,7 @@ private extension Module {
             "app.greet": Procedure(
                 signature: Signature(
                     receiver: "subject",
-                    parameters: ["subject": Parameter(type: .int)],
+                    parameters: [Parameter(name: "subject", type: .int)],
                     returns: .int
                 ),
                 body: [],
@@ -882,7 +876,7 @@ private extension Module {
             "app.speak": Procedure(
                 signature: Signature(
                     receiver: "said",
-                    parameters: ["said": Parameter(type: .string)],
+                    parameters: [Parameter(name: "said", type: .string)],
                     returns: .string
                 ),
                 body: [],

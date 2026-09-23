@@ -60,7 +60,7 @@ struct NotationTests {
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": ["type": "string"]],
+                    "parameters": [["name": "procedure", "type": "string"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -96,7 +96,7 @@ struct NotationTests {
         // never was a condition type, which is what keeps the spellings
         // optional wherever a condition is asked for.
         let sut = try await Loader.testing.loadProcedure([
-            "parameters": ["ready": ["type": "bool"]],
+            "parameters": [["name": "ready", "type": "bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -149,7 +149,7 @@ struct NotationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["procedure": Parameter(type: .bool)]),
+                    signature: Signature(parameters: [Parameter(name: "procedure", type: .bool)]),
                     body: [
                         Statement(expression: .conditional(
                             .record([
@@ -193,7 +193,7 @@ struct NotationTests {
                 "imports": ["std.text.joined", "std.text.text"],
                 "procedures": [
                     "entry": [
-                        "parameters": ["procedure": ["type": "string"]],
+                        "parameters": [["name": "procedure", "type": "string"]],
                         "body": [
                             [
                                 "let": "line",
@@ -213,7 +213,7 @@ struct NotationTests {
         // Given, which procedures a template lowers to is the notation's answer, and
         // the reader carries none of its own
         let sut = try await Loader.testing.loadProcedure([
-            "parameters": ["procedure": ["type": "string"]],
+            "parameters": [["name": "procedure", "type": "string"]],
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "procedure"]]]]
             ]
@@ -240,7 +240,7 @@ struct NotationTests {
         // beside it would be a message nobody wrote, and the same document
         // would be a cast in one notation and a send in the next.
         let written: Value = [
-            "parameters": ["flag": ["type": "any"]],
+            "parameters": [["name": "flag", "type": "any"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -277,7 +277,7 @@ struct NotationTests {
             "imports": [],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": ["type": "string"]],
+                    "parameters": [["name": "procedure", "type": "string"]],
                     "body": [
                         ["let": "asked", "value": ["of": ["ref": "procedure"], "is": "hey"]]
                     ],
@@ -309,7 +309,7 @@ struct NotationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
                     body: [
                         Statement(expression: .conditional(
                             condition,

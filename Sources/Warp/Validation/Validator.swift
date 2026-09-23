@@ -166,16 +166,6 @@ public struct Validator: Sendable {
         at here: Place
     ) throws {
         try introduced(parameter, beside: constants, at: here)
-
-        // A default is a value a document writes, so it is held to what a
-        // document can hold. It reaches the wire without ever passing through
-        // a body, so a body's rules never see it.
-        guard let fallback = signature.parameters[parameter]?.default else { return }
-
-        guard !fallback.holdsProcedure else {
-            throw ValidationError(Value.procedureIsNotData, at: here)
-        }
-
     }
 
     private func validate(
@@ -184,10 +174,10 @@ public struct Validator: Sendable {
         variables: Set<Name>,
         at place: Place
     ) throws {
-        let parameters = Set(procedure.signature.parameters.keys)
+        let parameters = Set(procedure.signature.names)
         let bound = constants.union(variables)
 
-        for parameter in parameters.sorted() {
+        for parameter in procedure.signature.names {
             try validate(
                 parameter,
                 of: procedure.signature,
@@ -204,7 +194,7 @@ public struct Validator: Sendable {
         // A parameter handed in place is a variable in the body: the box is
         // the caller's, and writing it is what the parameter is for.
         let handed = parameters.filter { name in
-            procedure.signature.parameters[name]?.declared.isInout == true
+            procedure.signature.parameter(named: name)?.declared.isInout == true
         }
 
         try validate(
@@ -454,11 +444,11 @@ public struct Validator: Sendable {
 
         case let .closure(procedure):
             let inside = place.part(.closure)
-            let parameters = Set(procedure.signature.parameters.keys)
+            let parameters = Set(procedure.signature.names)
 
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
-            for parameter in parameters.sorted() {
+            for parameter in procedure.signature.names {
                 try validate(
                     parameter,
                     of: procedure.signature,
@@ -490,8 +480,8 @@ public struct Validator: Sendable {
                 at: place.part(.callee)
             )
 
-            for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                let here = place.argument(name.spelling)
+            for (position, argument) in arguments.enumerated() {
+                let here = place.part(.arguments).index(position)
 
                 try refuseConstruct(argument, at: here)
                 try validate(

@@ -84,7 +84,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["left": Parameter(type: .any)],
+                        parameters: [Parameter(name: "left", type: .any)],
                         returns: .bool
                     ),
                     body: [],
@@ -114,7 +114,7 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .parameter(name: "T", constraints: ["Scalar"]))],
+                        parameters: [Parameter(name: "value", type: .parameter(name: "T", constraints: ["Scalar"]))],
                         returns: .parameter(name: "T", constraints: ["Scalar"])
                     ),
                     body: [],
@@ -147,7 +147,7 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .parameter(name: "T", constraints: ["Scalar"]))],
+                        parameters: [Parameter(name: "value", type: .parameter(name: "T", constraints: ["Scalar"]))],
                         returns: .parameter(name: "T", constraints: ["Scalar"])
                     ),
                     body: [],
@@ -181,7 +181,7 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .parameter(name: "T", constraints: ["Sortable"]))],
+                        parameters: [Parameter(name: "value", type: .parameter(name: "T", constraints: ["Sortable"]))],
                         returns: .parameter(name: "T", constraints: ["Sortable"])
                     ),
                     body: [],
@@ -214,8 +214,8 @@ struct ConstraintTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraints: ["A"])),
-                            "right": Parameter(type: .parameter(name: "T", constraints: ["B"]))
+                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
+                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
                         ]
                     ),
                     body: [],
@@ -243,7 +243,7 @@ struct ConstraintTests {
                 procedures: [
                     "keep": Procedure(
                         signature: Signature(
-                            parameters: ["items": Parameter(type: .array(.composition(["A", "B"])))],
+                            parameters: [Parameter(name: "items", type: .array(.composition(["A", "B"])))],
                             returns: .int
                         ),
                         body: [],
@@ -345,13 +345,13 @@ struct ConstraintTests {
             constraints: ["A": [.int, .string]],
             procedures: [
                 "flag": Procedure(
-                    signature: Signature(parameters: ["on": Parameter(type: .bool)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "on", type: .bool)], returns: .int),
                     body: [],
                     result: .literal(.int(1))
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .composition(["A"]))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .composition(["A"]))], returns: .int),
                     body: [],
                     result: .call(Call(selector: "flag", arguments: ["on": reference("it")]))
                 )
@@ -396,13 +396,13 @@ struct ConstraintTests {
             constraints: ["A": [.array(.named("X"))], "B": [.string]],
             procedures: [
                 "keep": Procedure(
-                    signature: Signature(parameters: ["of": Parameter(type: .named("A"))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("A"))], returns: .int),
                     body: [],
                     result: .literal(.int(1))
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .named("X"))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("X"))], returns: .int),
                     body: [],
                     result: .call(Call(selector: "keep", arguments: ["of": reference("it")]))
                 )
@@ -420,7 +420,7 @@ struct ConstraintTests {
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             procedures: [
                 "app.tell": Procedure(
-                    signature: Signature(parameters: ["it": Parameter(type: .named("app.Describable"))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Describable"))], returns: .int),
                     body: [],
                     result: .literal(.int(1))
                 ),
@@ -451,7 +451,7 @@ struct ConstraintTests {
             claims: ["bank.Card": ["app.Describable"]],
             procedures: [
                 "bank.Card.describe": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("bank.Card"))], returns: .array(.int)),
+                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("bank.Card"))], returns: .array(.int)),
                     body: [],
                     result: .array([.literal(.int(1))])
                 ),
@@ -490,7 +490,7 @@ struct ConstraintTests {
             claims: ["bank.Card": ["app.Describable"], "app.Box": ["app.Printable"]],
             procedures: [
                 "app.Box.show": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .named("app.Box"))], returns: .named("bank.Card")),
+                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("app.Box"))], returns: .named("bank.Card")),
                     body: [],
                     result: .cast(.record(["last": .literal(.string("x"))]), as: .named("bank.Card"), optional: false)
                 ),
@@ -527,7 +527,7 @@ struct ConstraintTests {
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             procedures: [
                 "app.tell": Procedure(
-                    signature: Signature(parameters: ["it": Parameter(type: .nullable(.named("app.Describable")))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .nullable(.named("app.Describable")))], returns: .int),
                     body: [],
                     result: .literal(.int(1))
                 ),
@@ -555,7 +555,7 @@ struct ConstraintTests {
             claims: ["app.Handle": ["app.Describable"]],
             procedures: [
                 "app.Handle.describe": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))], returns: .string),
+                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))], returns: .string),
                     body: [],
                     result: .literal(.string("a handle"))
                 ),
@@ -581,8 +581,8 @@ struct ConstraintTests {
                 "app.Pairing": [
                     "pair": Signature(
                         parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraints: ["A"])),
-                            "right": Parameter(type: .parameter(name: "T", constraints: ["B"]))
+                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
+                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
                         ],
                         returns: .int
                     )
@@ -609,9 +609,9 @@ struct ConstraintTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "x": Parameter(type: .parameter(name: "T", constraints: ["C"])),
-                            "y": Parameter(type: .parameter(name: "T", constraints: ["B"])),
-                            "z": Parameter(type: .parameter(name: "T", constraints: ["A"]))
+                            Parameter(name: "x", type: .parameter(name: "T", constraints: ["C"])),
+                            Parameter(name: "y", type: .parameter(name: "T", constraints: ["B"])),
+                            Parameter(name: "z", type: .parameter(name: "T", constraints: ["A"]))
                         ],
                         returns: .int
                     ),
@@ -639,7 +639,7 @@ struct ConstraintTests {
                 procedures: [
                     "keep": Procedure(
                         signature: Signature(
-                            parameters: ["left": Parameter(type: .parameter(name: "T", constraints: bounds))],
+                            parameters: [Parameter(name: "left", type: .parameter(name: "T", constraints: bounds))],
                             returns: .int
                         ),
                         body: [],
@@ -670,7 +670,7 @@ struct ConstraintTests {
                 procedures: [
                     "keep": Procedure(
                         signature: Signature(
-                            parameters: ["left": Parameter(type: .parameter(name: "T", constraints: ["A", "B"]))],
+                            parameters: [Parameter(name: "left", type: .parameter(name: "T", constraints: ["A", "B"]))],
                             returns: .int
                         ),
                         body: [],
@@ -706,8 +706,8 @@ struct ConstraintTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraints: ["Scalar"])),
-                            "right": Parameter(type: .parameter(name: "T"))
+                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["Scalar"])),
+                            Parameter(name: "right", type: .parameter(name: "T"))
                         ]
                     ),
                     body: [],
@@ -794,7 +794,7 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .named("Weird"))]
+                        parameters: [Parameter(name: "value", type: .named("Weird"))]
                     ),
                     body: [],
                     result: reference("value")
@@ -823,9 +823,8 @@ struct ConstraintTests {
         // unjudged everywhere
         let sut = try Module(
             types: [
-                "Callback": .procedure(
-                    Signature(
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["Scalar"]))]
+                "Callback": .procedure(ProcedureType(
+                        parameters: [.parameter(name: "T", constraints: ["Scalar"])]
                     )
                 )
             ],
@@ -931,8 +930,7 @@ struct ConstraintTests {
                 "pick": Procedure(
                     signature: Signature(
                         parameters: [
-                            "speed": Parameter(
-                                type: .parameter(name: "N", constraints: ["std.Numeric"]),
+                            Parameter(name: "speed", type: .parameter(name: "N", constraints: ["std.Numeric"]),
                                 candidates: ["fast", "slow"]
                             )
                         ]
@@ -969,7 +967,7 @@ struct ConstraintTests {
                         access: .public,
                         signature: Signature(
                             parameters: [
-                                "level": Parameter(type: .double, candidates: candidates)
+                                Parameter(name: "level", type: .double, candidates: candidates)
                             ]
                         ),
                         body: [],
@@ -1004,7 +1002,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "level": Parameter(type: .double, candidates: ["0.0", "1.5"])
+                            Parameter(name: "level", type: .double, candidates: ["0.0", "1.5"])
                         ]
                     ),
                     body: [],
@@ -1033,8 +1031,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "level": Parameter(
-                                type: .parameter(name: "N", constraints: ["std.Numeric"]),
+                            Parameter(name: "level", type: .parameter(name: "N", constraints: ["std.Numeric"]),
                                 candidates: ["1", "2.5"]
                             )
                         ]
@@ -1094,7 +1091,7 @@ struct ConstraintTests {
             procedures: [
                 "read": Procedure(
                     signature: Signature(
-                        parameters: ["node": Parameter(type: .named("Node"))],
+                        parameters: [Parameter(name: "node", type: .named("Node"))],
                         returns: .int
                     ),
                     body: [],
@@ -1103,7 +1100,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["node": Parameter(type: .named("Node"))],
+                        parameters: [Parameter(name: "node", type: .named("Node"))],
                         returns: .int
                     ),
                     body: [],
@@ -1218,7 +1215,7 @@ struct ConstraintTests {
                         Statement(binding: .constant("kept"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        "it": Parameter(type: .parameter(name: "T", constraints: ["Nope"]))
+                                        Parameter(name: "it", type: .parameter(name: "T", constraints: ["Nope"]))
                                     ]
                                 ),
                                 body: [],
@@ -1248,7 +1245,7 @@ struct ConstraintTests {
                 "shout": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["procedure": Parameter(type: .string)]
+                        parameters: [Parameter(name: "procedure", type: .string)]
                     ),
                     body: [],
                     result: reference("procedure")
@@ -1279,7 +1276,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["items": Parameter(type: .array(.int))],
+                        parameters: [Parameter(name: "items", type: .array(.int))],
                         returns: .array(.int)
                     ),
                     body: [],
@@ -1290,8 +1287,8 @@ struct ConstraintTests {
                             "by": .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        "index": Parameter(type: .int),
-                                        "item": Parameter(type: .int)
+                                        Parameter(name: "item", type: .int),
+                                        Parameter(name: "index", type: .int)
                                     ],
                                     returns: .int
                                 ),
@@ -1342,8 +1339,8 @@ struct ConstraintTests {
                 "smallest": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraints: ["Exact"])),
-                            "right": Parameter(type: .parameter(name: "T", constraints: ["Exact"]))
+                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["Exact"])),
+                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["Exact"]))
                         ],
                         returns: .bool
                     ),
