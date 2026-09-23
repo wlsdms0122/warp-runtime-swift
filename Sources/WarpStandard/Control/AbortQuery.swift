@@ -18,10 +18,10 @@ struct AbortQuery: Query {
     // What this takes: the message it refuses with. Anything spells, so a
     // refusal can name what it was holding rather than only a sentence
     // written ahead of time. Null spells as `null`, and a refusal saying that
-    // word would be saying nothing, so null says the default, and so does a
-    // message nobody sent.
+    // word would be saying nothing, so null says `aborted`.
     enum Parameters: Int, ParameterSet {
         case of
+
         var declared: Parameter { Parameter(name: "of", type: .any) }
     }
 
