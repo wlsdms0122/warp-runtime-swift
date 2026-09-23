@@ -1659,6 +1659,23 @@ extension Builder {
                         at: place.part(.arguments).index(position)
                     )
                 }
+
+                // A constant is settled here, through the gate the run would
+                // hold it to, since a kind that fits may still hold a value
+                // the slot's type refuses.
+                for (position, (parameter, argument)) in zip(parameters, arguments).enumerated() {
+                    guard let constant = argument.constantValue else { continue }
+
+                    do {
+                        _ = try parameter.slotUnwrapped.checking(
+                            constant,
+                            at: "argument \(position)",
+                            in: context.loweredTypes
+                        )
+                    } catch {
+                        throw BuildError("applies a value: \(error)", at: place.part(.arguments).index(position))
+                    }
+                }
             }
 
             let answers: LoweredType

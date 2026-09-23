@@ -39,6 +39,21 @@ extension LoweredType {
         }
     }
 
+    // A value handed to a slot of this type: a null where the type admits
+    // one, and otherwise the value settled. `locus` is where a refusal says
+    // the value stood, in the caller's terms.
+    func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
+        guard value != .null else {
+            guard admitsNull(in: table) else {
+                throw ArgumentError("\(locus): expected \(rendered(in: table)), got null")
+            }
+
+            return value
+        }
+
+        return try settling(value, at: locus, in: table)
+    }
+
     // What a cast does, said once. The judgment is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {

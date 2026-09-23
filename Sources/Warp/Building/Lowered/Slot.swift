@@ -51,15 +51,9 @@ final class Slot: Sendable {
     // says the value stood, in the caller's terms: an argument is named by
     // its key, and a receiver by the procedure it was sent to.
     func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
-        if value == .null {
-            guard type.admitsNull(in: table) else {
-                throw ArgumentError("\(locus): expected \(type.rendered(in: table)), got null")
-            }
+        let settled = try type.checking(value, at: locus, in: table)
 
-            return value
-        }
-
-        let settled = try type.settling(value, at: locus, in: table)
+        guard settled != .null else { return settled }
 
         if let candidates {
             let written = candidates.map(\.spelling)
