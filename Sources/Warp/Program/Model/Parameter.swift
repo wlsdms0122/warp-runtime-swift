@@ -43,7 +43,7 @@ public struct Parameter: Sendable, Equatable {
     // Whether a call must write this argument. A type that declares null
     // reads omission as that null; every other type is given, null included.
     public func mustBeGiven(in types: TypeTable) -> Bool {
-        !declared.lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
+        declared.lowered(in: types.loweredTypes).mustBeGiven(in: types.loweredTypes)
     }
 
     // A host's door onto the boundary a run keeps: this parameter lowered

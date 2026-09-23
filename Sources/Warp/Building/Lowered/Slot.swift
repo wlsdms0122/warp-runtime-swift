@@ -36,7 +36,7 @@ final class Slot: Sendable {
     // like any other and goes to the type, which says whether it holds one.
     func taking(_ value: Value?, in table: LoweredTypeTable) throws -> Value {
         guard let value else {
-            guard type.declaresNull(in: table) else {
+            guard !mustBeGiven(in: table) else {
                 throw ArgumentError("input '\(name)': required, and nothing was given")
             }
 

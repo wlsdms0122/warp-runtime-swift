@@ -11,10 +11,7 @@ import Foundation
 // each is bounded by, and whether it has any at all. What a call puts in them
 // is read off the lowered declaration, where the readings are.
 public extension Signature {
-    var isGeneric: Bool {
-        parameters.contains { parameter in parameter.declared.isGeneric }
-            || (returns?.isGeneric ?? false)
-    }
+    var isGeneric: Bool { type.isGeneric }
 
     // Every type parameter mentioned in this signature, occurrence by
     // occurrence. A nested procedure type's parameters are collected too:
@@ -23,18 +20,13 @@ public extension Signature {
     // parameter filled by one call. Only a parameter behind a `named`
     // type is not collected, because the link refuses one anywhere but a
     // procedure signature and never fills one through the name.
-    var parameterOccurrences: [ParameterOccurrence] {
-        parameters.flatMap { parameter in parameter.declared.parameterOccurrences }
-            + (returns?.parameterOccurrences ?? [])
-    }
+    var parameterOccurrences: [ParameterOccurrence] { type.parameterOccurrences }
 
     // The bounds each type parameter this signature declares is held to: the
     // set a bounded mention carries, or none where every mention is bare.
     // What a signature holds a name to is one set, so two mentions carrying
     // two sets are two claims about one name, and this says which name.
-    var parameterBounds: ParameterBounds {
-        ParameterBounds(parameterOccurrences)
-    }
+    var parameterBounds: ParameterBounds { type.parameterBounds }
 
     // This signature with each type parameter's occurrences carrying the
     // constraint declared for its name. The signature owns the bound and the
