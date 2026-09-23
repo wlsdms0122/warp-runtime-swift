@@ -14,17 +14,16 @@ import Warp
 struct DecodedQuery: Query {
     // What this takes: the bytes, and the encoding to read them in.
     enum Parameters: Int, ParameterSet {
-        case encoding
         case of
-
+        case encoding
 
         var declared: Parameter {
             switch self {
-            case .encoding:
-                return Parameter(name: "encoding", type: .nullable(.string), candidates: ["utf8"])
-
             case .of:
                 return Parameter(name: "of", type: .bytes)
+
+            case .encoding:
+                return Parameter(name: "encoding", type: .nullable(.string), candidates: ["utf8"])
             }
         }
     }

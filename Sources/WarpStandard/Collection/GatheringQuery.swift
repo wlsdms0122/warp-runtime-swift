@@ -20,7 +20,6 @@ struct GatheringQuery: Query {
         case of
         case value
 
-
         var declared: Parameter {
             switch self {
             case .of:

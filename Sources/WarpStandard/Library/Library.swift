@@ -674,12 +674,12 @@ enum Library {
                   description "The elements folded into one, starting from a value."
                   parameters [
                     {
-                      name "from"
-                      type "some Carried"
-                    }
-                    {
                       name "of"
                       type "array<some Element>"
+                    }
+                    {
+                      name "from"
+                      type "some Carried"
                     }
                     {
                       name "value"
@@ -1337,6 +1337,10 @@ enum Library {
                   description "Each element answered by a procedure, run at once, in the collection's order."
                   parameters [
                     {
+                      name "over"
+                      type "array<some Element>"
+                    }
+                    {
                       name "by"
                       type {
                         "isolated procedure" {
@@ -1347,10 +1351,6 @@ enum Library {
                           returns "some Answer"
                         }
                       }
-                    }
-                    {
-                      name "over"
-                      type "array<some Element>"
                     }
                   ]
                   receiver "over"
@@ -1646,7 +1646,11 @@ enum Library {
                   description "The value one of two sides answers, chosen by a truth."
                   parameters [
                     {
-                      name "else"
+                      name "of"
+                      type "bool"
+                    }
+                    {
+                      name "then"
                       type {
                         "const procedure" {
                           returns "some Answer"
@@ -1654,11 +1658,7 @@ enum Library {
                       }
                     }
                     {
-                      name "of"
-                      type "bool"
-                    }
-                    {
-                      name "then"
+                      name "else"
                       type {
                         "const procedure" {
                           returns "some Answer"
