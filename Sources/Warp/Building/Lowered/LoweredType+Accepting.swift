@@ -170,7 +170,8 @@ extension LoweredType {
             // Nothing was said on one side or the other, so nothing is refused.
             guard let required, let given else { return true }
 
-            // A body may declare fewer than the slot hands it, and may
+            // What stands here declares every name the slot hands, since a
+            // name the declaration does not have refuses at the run; it may
             // declare more only where the name stands unfilled: a name
             // nothing hands it and a call must fill is one no call could.
             guard given.allSatisfy({ slot in
@@ -183,7 +184,7 @@ extension LoweredType {
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
             for parameter in required {
-                guard let taken = given.first(where: { slot in slot.name == parameter.name }) else { continue }
+                guard let taken = given.first(where: { slot in slot.name == parameter.name }) else { return false }
                 guard taken.type.accepts(parameter.type, in: table, assuming: assuming) else { return false }
             }
 

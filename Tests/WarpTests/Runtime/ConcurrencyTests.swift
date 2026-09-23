@@ -122,7 +122,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("placed"))
         } throws: { error in
-            "\(error)".contains("not declared in the signature: item")
+            error is BuildError && "\(error)".contains("where isolated procedure<(index: int, item: string)")
         }
     }
 
@@ -171,7 +171,7 @@ struct ConcurrencyTests {
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any)]
+                                    parameters: ["item": Parameter(type: .any), "index": Parameter(type: .int)]
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -381,7 +381,7 @@ struct ConcurrencyTests {
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any)]
+                                    parameters: ["item": Parameter(type: .any), "index": Parameter(type: .int)]
                                 ),
                                 body: [],
                                 result: reference("item")

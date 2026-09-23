@@ -41,15 +41,15 @@ struct ClosureTests {
         #expect(answer == .string("written"))
     }
 
-    @Test("a body declaring a name the slot never hands it is refused", arguments: [
+    @Test("a body declares every name the slot hands and no other", arguments: [
         (["item": Parameter(type: .int)] as [Name: Parameter], true),
-        ([:], true),
+        ([:], false),
         (["item": Parameter(type: .int), "index": Parameter(type: .int)], false)
     ])
-    func aBodyDeclaresNoMoreThanTheSlotHandsIt(declared: [Name: Parameter], fits: Bool) async throws {
-        // Given. The slot hands one name. A body reading none of it or one of
-        // it stands; a body writing a name nothing hands it could only ever
-        // read null there, so no call could fill it.
+    func aBodyDeclaresWhatTheSlotHandsIt(declared: [Name: Parameter], fits: Bool) async throws {
+        // Given. The slot hands one name. A body declaring it stands; one
+        // declaring none is handed a name it does not have, and one writing a
+        // name nothing hands it could only ever read null there.
         let walking = Procedure(
             signature: Signature(
                 parameters: [
