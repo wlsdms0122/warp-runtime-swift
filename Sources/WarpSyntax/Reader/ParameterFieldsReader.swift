@@ -13,7 +13,6 @@ import Warp
 // offers writes the name as the key and these under it.
 struct ParameterFieldsReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
-        case name
         case type
         case candidates = "enum"
         case description

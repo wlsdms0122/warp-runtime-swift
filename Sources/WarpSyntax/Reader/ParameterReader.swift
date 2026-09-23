@@ -27,14 +27,14 @@ public struct ParameterReader: Decodable {
         let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
 
         // The pair form: one key that is the name, holding the type or the
-        // rest of the record. A record with `name` in it is the document's
-        // own form whatever else it holds, so the two never meet.
+        // rest of the record. One key is always the pair where a notation
+        // offers it, `name` included, since the record holding nothing but a
+        // name reads either way and the notation picks this one.
         if
             notation.pairedParameter,
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
-            let key = keyed.allKeys.first,
-            key.stringValue != CodingKeys.name.stringValue
+            let key = keyed.allKeys.first
         {
             let name = try Name.read(key.stringValue, at: decoder.steps)
 
@@ -70,13 +70,12 @@ public struct ParameterReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let rest = try ParameterFieldsReader(from: decoder)
 
         self.parameter = Parameter(
             name: try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps),
-            type: rest.type,
-            candidates: rest.candidates,
-            description: rest.description
+            type: try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type,
+            candidates: try container.decodeIfPresent([String].self, forKey: .candidates),
+            description: try container.decodeIfPresent(String.self, forKey: .description)
         )
     }
 

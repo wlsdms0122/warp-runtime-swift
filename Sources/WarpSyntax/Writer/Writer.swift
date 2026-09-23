@@ -366,6 +366,14 @@ public struct Writer: Sendable {
             written["description"] = .string(description)
         }
 
+        // A record holding nothing but the name is one pair, and a notation
+        // offering the pair form reads that as a name and its type.
+        guard written.count > 1 || !readBy.pairedParameter else {
+            throw WritingError(
+                "parameter '\(parameter.name)' declares nothing but its name, which this notation reads as a name and its type"
+            )
+        }
+
         return .dictionary(written)
     }
 
