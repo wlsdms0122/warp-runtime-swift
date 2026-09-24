@@ -438,6 +438,8 @@ public struct Executor: Sendable {
         // implementation. It is here only so that `x.count` and the same
         // procedure written as a statement mean the same thing.
         case .native(.query):
+            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
+
             // A variable handed in place is read as what it holds now and
             // settled the way any argument is, since nothing here writes it.
             var values = try await given(call.arguments, in: &activation, at: trace)
@@ -451,7 +453,6 @@ public struct Executor: Sendable {
                 given: values,
                 skipping: skipped(call, of: callee, holding: false, receiving: handed)
             )
-            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
 
             do {
                 return try await answer(callee, for: receiver, with: settled, at: trace)
@@ -471,6 +472,7 @@ public struct Executor: Sendable {
 
         case let .native(.effect(effect)):
             let holds = try holds(call.handed, of: callee, in: activation)
+            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
             let settled = try settled(
                 callee,
                 given: try await given(call.arguments, in: &activation, at: trace),
@@ -483,7 +485,7 @@ public struct Executor: Sendable {
             return try await run(
                 effect,
                 of: callee,
-                receiver: sent(to: callee, receiver: try await received(call, of: callee, handed: handed, in: &activation, at: trace) ?? held, arguments: settled),
+                receiver: sent(to: callee, receiver: receiver ?? held, arguments: settled),
                 settled: settled,
                 holds: holds,
                 trace: trace
