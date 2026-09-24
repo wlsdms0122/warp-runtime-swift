@@ -32,7 +32,6 @@ public enum Envelope {
     // change before the first release folds into this one. The counter starts
     // moving when a document exists somewhere this code does not control.
     public static let version = 1
-    public static let earliest = 1
 
     public static let versionKey: Name = Module.versionKey
     public static let importsKey: Name = "imports"

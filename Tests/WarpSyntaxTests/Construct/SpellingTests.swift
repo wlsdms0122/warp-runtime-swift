@@ -62,16 +62,16 @@ struct SpellingTests {
 
     @Test("a procedure can be given up, and a built-in respelled by giving it up first")
     func removingFreesTheKey() throws {
-        // Given. A notation that wants `call` for something of its own takes
+        // Given. A notation that wants `loop` for something of its own takes
         // it by dropping ours, which is why a rename here is not a rename of
         // the language
         let sut = try ConstructRegistry.standard
-            .removing("call")
-            .registering(CallForm.self, as: "invoke")
+            .removing("loop")
+            .registering(LoopForm.self, as: "repeat")
 
         // Then
-        #expect(sut.form(for: "call") == nil)
-        #expect(sut.form(for: "invoke") != nil)
+        #expect(sut.form(for: "loop") == nil)
+        #expect(sut.form(for: "repeat") != nil)
     }
 
     @Test("a claimed procedure is never silently replaced, however it was claimed")

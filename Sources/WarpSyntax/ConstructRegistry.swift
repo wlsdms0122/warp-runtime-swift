@@ -27,7 +27,6 @@ public struct ConstructRegistry: Sendable {
         LoopForm.self,
         BlockForm.self,
         AttemptForm.self,
-        CallForm.self,
         ReturnForm.self,
         BreakForm.self,
         ContinueForm.self
@@ -148,10 +147,9 @@ public struct ConstructRegistry: Sendable {
         }
 
         // A tag is read as its expression wherever one stands, a statement's
-        // `value` included, so a construct under a tag would take a record or a
-        // reference for itself. `call` is the one tag that is a construct too,
-        // and only its own form stands under it.
-        guard ExpressionTag(key) == nil || (key == CallForm.key && ObjectIdentifier(form) == ObjectIdentifier(CallForm.self)) else {
+        // `value` included, so a construct under a tag would take a record, a
+        // reference or a call for itself.
+        guard ExpressionTag(key) == nil else {
             throw ValidationError(
                 "construct key '\(key)' is an expression's tag, and an expression is read under it",
                 at: nil

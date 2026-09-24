@@ -115,11 +115,13 @@ public extension Writer {
         named id: String?
     ) throws -> (Name, Value) {
         switch expression {
+        // A call is a tag, read where a statement's value is the way it is
+        // everywhere else, so no table respells it.
         case let .call(call):
-            return (try spelling(CallForm.self), try self.call(of: call))
+            return (ExpressionTag.call.key, try self.call(of: call))
 
         case let .apply(callee, arguments):
-            return (try spelling(CallForm.self), try self.call(of: callee, handing: arguments))
+            return (ExpressionTag.call.key, try self.call(of: callee, handing: arguments))
 
         case let .block(block):
             return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
@@ -132,7 +134,9 @@ public extension Writer {
                 "then": .array(try then.map(value(of:)))
             ]
 
-            if let otherwise {
+            // An empty `else` runs what no `else` runs, so it is written the
+            // one way: not at all.
+            if let otherwise, !otherwise.isEmpty {
                 written["else"] = .array(try otherwise.map(value(of:)))
             }
 

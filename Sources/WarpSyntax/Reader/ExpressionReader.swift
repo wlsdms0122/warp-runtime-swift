@@ -120,8 +120,9 @@ public struct ExpressionReader: Decodable {
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        if record.count == 1, let (key, written) = record.entries.first, let tag = ExpressionTag(key) {
-            let inside = steps + [.key(key.spelling)]
+        switch Tagging(record.entries, reading: ExpressionTag.init) {
+        case let .one(tag, written):
+            let inside = steps + [.key(tag.rawValue)]
 
             switch tag {
             case .reference: return try reference(written)
@@ -131,16 +132,18 @@ public struct ExpressionReader: Decodable {
             case .cast: return try cast(written, optional: false, at: inside, in: decoder)
             case .optionalCast: return try cast(written, optional: true, at: inside, in: decoder)
             }
-        }
 
         // A tag stands alone in every notation, whatever a notation's
         // spellings would make of the keys beside it.
-        guard Set(record.names).isDisjoint(with: Self.tags) else {
+        case let .among(tags):
             throw ExpressionFormError(
-                "\(Set(record.names).intersection(Self.tags).map { tag in "`\(tag)`" }.sorted().joined(separator: ", "))"
-                    + " stands alone in its mapping. A record with that field is"
-                    + " written { record: { … } } (found keys: \(record.names))"
+                "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping."
+                    + " A record with that field is written { record: { … } }"
+                    + " (found keys: \(record.names))"
             )
+
+        case .none:
+            break
         }
 
         if let spelled = try spelled(record, at: steps, in: decoder) { return spelled }

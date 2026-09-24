@@ -83,7 +83,7 @@ public struct Loader: Sendable {
         // question below. A module is checked where it is made, so the stamp
         // goes in with what is being made rather than onto what came back. A
         // refusal is exactly the moment somebody wants the file it came from.
-        let module = try reading { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
+        let module = try reading(by: .standard) { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
 
         // What a document imports is read before the program it belongs to, so
         // a caller decides whether to grant before it decides whether to link.
@@ -233,13 +233,7 @@ public struct Loader: Sendable {
     // because what to link is the caller's statement and the modules in it may
     // have come from anywhere.
     public func reading<T>(_ refused: () throws -> T) throws -> T {
-        do {
-            return try refused()
-        } catch let refusal as any WarpError {
-            guard let place = refusal.place else { throw refusal }
-
-            throw refusal.placed(place.written(by: registry))
-        }
+        try reading(by: registry, refused)
     }
 
     // The same, for a caller whose reading runs. A build folds constants, which
@@ -255,6 +249,16 @@ public struct Loader: Sendable {
     }
 
     // MARK: - Private
+    // The same, with the places written by the table the text was read by.
+    private func reading<T>(by table: ConstructRegistry, _ refused: () throws -> T) throws -> T {
+        do {
+            return try refused()
+        } catch let refusal as any WarpError {
+            guard let place = refusal.place else { throw refusal }
+
+            throw refusal.placed(place.written(by: table))
+        }
+    }
 
     // What a document spells, unjudged. Not a door: nothing here has been held
     // to the language's rules, and `load` is the one that has.

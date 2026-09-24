@@ -46,6 +46,11 @@ public struct TypeReader: Decodable {
     // The one key a record type is written under.
     public static let recordKey: Name = "record"
 
+    // What a type that is neither a spelling nor a form is refused with.
+    private static let unread = "a type is a name like `string`, `array<string>` or"
+        + " `Task`, or a mapping under one of `record`, `procedure`, `linear`, `array`"
+        + " and `dictionary`. A record type is written { record: { id: string } }"
+
     // A built-in taking another type, written under its own key where the
     // inner type has no spelling of its own. `array<string>` is a name; an
     // array of procedures is not, and this is the form that carries it.
@@ -400,42 +405,29 @@ public struct TypeReader: Decodable {
             return try parse(written) { name in notation.qualified(name, as: .type) }
         }
 
+        guard let keyed = try? decoder.container(keyedBy: AnyCodingKey.self) else {
+            throw ReadingError(Self.unread, at: decoder.steps)
+        }
+
         // A mapping is a form by its one key. The form is committed by its key
         // *before* what is under it is read, so a malformed signature refuses
         // as the procedure type it claimed to be.
-        if
-            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
-            keyed.allKeys.count == 1,
-            let key = keyed.allKeys.first,
-            let (mark, constness, isolation) = procedureKeywords(of: key.stringValue)
-        {
+        switch Tagging(keyed.allKeys.map { key in (name: key.name, value: key) }, reading: TypeForm.init) {
+        case let .one(.procedure(mark, constness, isolation), key):
             let form = try keyed.decode(ProcedureTypeReader.self, forKey: key)
             let written = TypeExpression.procedure(form.type, constness, isolation)
 
             return mark?.marking(written) ?? written
-        }
 
         // A declared type handed on once.
-        if
-            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
-            keyed.allKeys.count == 1,
-            let key = keyed.allKeys.first,
-            key.stringValue == linearKey.spelling
-        {
+        case let .one(.linear, key):
             return .linear(try keyed.decode(TypeReader.self, forKey: key).type)
-        }
 
-        // An array or a dictionary of something with no spelling of its own,
-        // told apart the same way. `array<string>` is written as the name it
-        // is; an array of procedures has no name, so it is written here. The
-        // writer answers whether the element has a name, so the two forms
-        // never overlap.
-        if
-            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
-            keyed.allKeys.count == 1,
-            let key = keyed.allKeys.first,
-            let holding = Holding(rawValue: key.stringValue)
-        {
+        // An array or a dictionary of something with no spelling of its own.
+        // `array<string>` is written as the name it is; an array of procedures
+        // has no name, so it is written here. The writer answers whether the
+        // element has a name, so the two forms never overlap.
+        case let .one(.holding(holding), key):
             let element = try keyed.decode(TypeReader.self, forKey: key).type
 
             if case let .string(spelling) = try Writer().value(of: element) {
@@ -447,28 +439,23 @@ public struct TypeReader: Decodable {
             }
 
             return holding.holding(element)
-        }
 
-        if
-            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
-            keyed.allKeys.count == 1,
-            let key = keyed.allKeys.first,
-            key.stringValue == recordKey.spelling
-        {
+        case let .one(.record, key):
             return try record(from: try keyed.superDecoder(forKey: key))
-        }
 
-        guard notation.readsBareRecords else {
+        case let .among(tags):
             throw ReadingError(
-                "a type is a name like `string`, `array<string>` or"
-                    + " `Task`, or a mapping under one of `\(recordKey)`, `procedure`,"
-                    + " `\(linearKey)`, `array` and `dictionary`. A record type is written"
-                    + " { \(recordKey): { id: string } }",
+                "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping."
+                    + " A record type with that field is written { \(recordKey): { … } }"
+                    + " (found keys: \(keyed.allKeys.map(\.stringValue).sorted()))",
                 at: decoder.steps
             )
-        }
 
-        return try record(from: decoder)
+        case .none:
+            guard notation.readsBareRecords else { throw ReadingError(Self.unread, at: decoder.steps) }
+
+            return try record(from: decoder)
+        }
     }
 
     // A record type's fields, each a type.

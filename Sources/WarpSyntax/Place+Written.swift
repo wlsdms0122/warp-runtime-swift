@@ -91,19 +91,21 @@ public extension Place {
     // language's own name stands in there, which is what a place said before
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {
+        // A call is a tag, and every table reads it under that one key.
+        if case .call = construct { return ExpressionTag.call.rawValue }
+
         let form: (any ConstructForm.Type)? = switch construct {
         case .block: BlockForm.self
         case .conditional: ConditionalForm.self
         case .loop: LoopForm.self
         case .attempt: AttemptForm.self
-        case .call: CallForm.self
         case let .leave(reach):
             switch reach {
             case .procedure: ReturnForm.self
             case .construct: BreakForm.self
             case .round: ContinueForm.self
             }
-        case .literal, .reference, .array, .record, .closure, .cast: nil
+        case .literal, .reference, .array, .record, .closure, .cast, .call: nil
         }
 
         guard let form else { return StatementReader.valueKey.spelling }
