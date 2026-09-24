@@ -151,5 +151,25 @@ struct OneSpellingTests {
         #expect(throws: WritingError.self) { try Writer().value(of: module) }
     }
 
+    @Test("a refusal inside a record or a cast is placed under the tag the text wrote", arguments: [
+        (written: Value.dictionary(["record": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.result.record.a"),
+        (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "int"])]), place: "procedures.entry.result.as?.of")
+    ])
+    func aRefusalInsideATagIsPlacedUnderIt(written: Value, place: String) async {
+        // Given
+        let document: Value = [
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["result": written]]
+        ]
+
+        // When / Then
+        await #expect {
+            try Loader().load(document, identity: nil)
+        } throws: { error in
+            (error as? any WarpError)?.place?.rendered == place
+        }
+    }
+
     // MARK: - Private
 }

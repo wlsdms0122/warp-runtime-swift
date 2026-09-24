@@ -408,7 +408,7 @@ private extension ObjectWriter {
         case .returns: return .array([.int(9)])
         case .body: return .array([.int(10)])
         case .result: return .array([.int(11)])
-        case .subject: return .array([.int(12)])
+        case let .subject(optional): return .array([.int(12), .bool(optional)])
         case .callee: return .array([.int(13)])
         case .arguments: return .array([.int(14)])
         case .closure: return .array([.int(15)])
@@ -416,6 +416,7 @@ private extension ObjectWriter {
         case .then: return .array([.int(17)])
         case .otherwise: return .array([.int(18)])
         case .rescue: return .array([.int(19)])
+        case .fields: return .array([.int(20)])
         }
     }
 

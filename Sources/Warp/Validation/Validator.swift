@@ -371,27 +371,23 @@ public struct Validator: Sendable {
 
         case let .record(record):
             for (name, field) in record.sorted(by: { $0.key < $1.key }) {
-                try refuseAnswerless(field, at: place.key(name.spelling))
-                try validate(
-                    field,
-                    visible: visible,
-                    variables: variables,
-                    scope: scope,
-                    at: place.key(name.spelling)
-                )
+                let here = place.part(.fields).key(name.spelling)
+
+                try refuseAnswerless(field, at: here)
+                try validate(field, visible: visible, variables: variables, scope: scope, at: here)
             }
 
         // A cast names a type and reads a value as it. The type is the link's
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
-        case let .cast(value, _, _):
-            try refuseAnswerless(value, at: place.part(.subject))
+        case let .cast(value, _, optional):
+            try refuseAnswerless(value, at: place.part(.subject(optional: optional)))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.part(.subject)
+                at: place.part(.subject(optional: optional))
             )
 
         // A closure sees where it was written plus what it declares, which is

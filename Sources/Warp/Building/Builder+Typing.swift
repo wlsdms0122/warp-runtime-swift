@@ -1284,7 +1284,7 @@ extension Builder {
         case let .cast(value, type, optional):
             let inner = try await inspected(
                 value,
-                at: place.part(.subject),
+                at: place.part(.subject(optional: optional)),
                 in: environment,
                 with: context,
                 ask: ask
@@ -1408,7 +1408,7 @@ extension Builder {
             for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try await inspected(
                     field,
-                    at: place.key(name.spelling),
+                    at: place.part(.fields).key(name.spelling),
                     in: environment,
                     with: context,
                     ask: ask

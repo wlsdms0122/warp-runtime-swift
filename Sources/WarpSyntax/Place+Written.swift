@@ -27,11 +27,19 @@ public extension Place {
     // the same type by the time anything here sees one.
     func written(by registry: ConstructRegistry) -> Place {
         Place(
-            steps.map { step in
+            steps.flatMap { step -> [Place.Step] in
                 switch step {
-                case let .part(part): .key(Self.key(of: part))
-                case let .construct(construct): .landmark(Self.key(of: construct, by: registry))
-                default: step
+                // A cast's subject stands inside the cast's own mapping, under
+                // the tag that says how the cast reads a mismatch.
+                case let .part(.subject(optional)):
+                    [
+                        .key((optional ? ExpressionTag.optionalCast : ExpressionTag.cast).rawValue),
+                        .key(ExpressionReader.subjectKey.spelling)
+                    ]
+
+                case let .part(part): [.key(Self.key(of: part))]
+                case let .construct(construct): [.landmark(Self.key(of: construct, by: registry))]
+                default: [step]
                 }
             },
             in: document
@@ -61,6 +69,7 @@ public extension Place {
         // What a cast reads is written under the expression grammar's subject
         // key.
         case .subject: ExpressionReader.subjectKey.spelling
+        case .fields: ExpressionTag.record.rawValue
 
         case .callee: CallForm.CodingKeys.procedure.stringValue
         case .arguments: CallForm.CodingKeys.arguments.stringValue

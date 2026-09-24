@@ -323,10 +323,8 @@ public struct ExpressionReader: Decodable {
         }
 
         do {
-            // A message written where a value is wanted has no statement to
-            // take a name from, and nothing in a message wants one.
-            return try CallForm(from: ValueDecoder(below: decoder, key: "call", holding: written, at: steps))
-                .expression(boundTo: "")
+            return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.rawValue, holding: written, at: steps))
+                .expression
         } catch let refusal as ReadingError {
             throw refusal
         } catch {

@@ -168,9 +168,8 @@ public struct Loader: Sendable {
 
         // Written for the reader every document has: the standard table and
         // no notation. What this loader's own table reads as a construct is
-        // spent here, so a document is quoted by the table that will read it
-        // and not by the one that wrote it, and what reads the document back
-        // is a loader with the standard table.
+        // spent here, and what reads the document back reads it by the
+        // standard table.
         return try Writer(registry: .standard, readBy: .canonical)
             .value(of: try spelled(stamped, in: document(of: stamped), from: notation))
     }
