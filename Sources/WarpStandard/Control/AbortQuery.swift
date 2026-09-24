@@ -33,7 +33,9 @@ struct AbortQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let message = question.receiver, message != .null else {
+        let message = question[.of]
+
+        guard message != .null else {
             throw Aborted(Self.unsaid)
         }
 

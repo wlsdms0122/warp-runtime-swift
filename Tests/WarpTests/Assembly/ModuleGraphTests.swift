@@ -28,7 +28,6 @@ struct ModuleGraphTests {
             procedures: [
                 "lib.twice": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
@@ -42,7 +41,7 @@ struct ModuleGraphTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(receiver: .literal(.int(1)), selector: "lib.twice"))
+                    result: .call(Call(selector: "lib.twice", arguments: [.literal(.int(1))]))
                 )
             ]
         )

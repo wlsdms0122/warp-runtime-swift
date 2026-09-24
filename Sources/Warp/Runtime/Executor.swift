@@ -376,9 +376,9 @@ public struct Executor: Sendable {
             return try await self.call(call, in: &activation, at: trace)
 
         case let .dispatch(dispatch):
-            let (call, receiver) = try await picked(dispatch, in: &activation, at: trace)
+            let (call, first) = try await picked(dispatch, in: &activation, at: trace)
 
-            return try await self.call(call, receiving: receiver, in: &activation, at: trace)
+            return try await self.call(call, first: first, in: &activation, at: trace)
 
         case let .apply(callee, arguments):
             return try await apply(callee, arguments: arguments, in: &activation, at: trace)
@@ -427,7 +427,7 @@ public struct Executor: Sendable {
     // the row is implemented, not by which container it was found in.
     private func call(
         _ call: CallOperation,
-        receiving handed: Value? = nil,
+        first: Value? = nil,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -438,66 +438,32 @@ public struct Executor: Sendable {
         // implementation. It is here only so that `x.count` and the same
         // procedure written as a statement mean the same thing.
         case .native(.query):
-            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
-
             // A variable handed in place is read as what it holds now and
             // settled the way any argument is, since nothing here writes it.
-            var values = try await given(call.arguments, in: &activation, at: trace)
+            var values = try await given(call.arguments, first: first, in: &activation, at: trace)
 
             for handed in call.handed {
                 values[handed.position] = try found(handed.address, in: activation)
             }
 
-            let settled = try settled(
-                callee,
-                given: values,
-                skipping: skipped(call, of: callee, holding: false, receiving: handed)
-            )
-
-            do {
-                return try await answer(callee, for: receiver, with: settled, at: trace)
-            } catch let unfit as ReferenceUnfit {
-                throw unfit
-            } catch let failure as any RecoverableFailure {
-                // What a procedure raises is the program's to rescue, under the
-                // name it raised it by, whatever the receiver was written as.
-                throw failure
-            } catch {
-                // A procedure blaming a type is answerable only if the author
-                // can see which name held it.
-                guard case let .local(address)? = call.receiver else { throw error }
-
-                throw ReferenceUnfit(path: spelled(address, in: activation), reason: "\(error)")
-            }
+            return try await answer(callee, with: try settled(callee, given: values), at: trace)
 
         case let .native(.effect(effect)):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
             let settled = try settled(
                 callee,
-                given: try await given(call.arguments, in: &activation, at: trace),
-                skipping: skipped(call, of: callee, holding: true, receiving: handed)
+                given: try await given(call.arguments, first: first, in: &activation, at: trace),
+                holding: call.handed
             )
-            // A receiver handed in place is read for the effect as what its
-            // hold holds now, the way the effect reads any receiver.
-            let held = try holds.first { position, _ in position == callee.receiverPosition }.map { _, handle in try handle.value() }
 
-            return try await run(
-                effect,
-                of: callee,
-                receiver: sent(to: callee, receiver: receiver ?? held, arguments: settled),
-                settled: settled,
-                holds: holds,
-                trace: trace
-            )
+            return try await run(effect, of: callee, settled: settled, holds: holds, trace: trace)
 
         case let .body(body, frame):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
             let settled = try settled(
                 callee,
-                given: try await given(call.arguments, in: &activation, at: trace),
-                skipping: skipped(call, of: callee, holding: true, receiving: handed)
+                given: try await given(call.arguments, first: first, in: &activation, at: trace),
+                holding: call.handed
             )
 
             return try await answer(
@@ -505,7 +471,6 @@ public struct Executor: Sendable {
                 running: body,
                 in: frame,
                 settled: settled,
-                receiver: receiver,
                 holding: holds,
                 at: trace.appending(callee.hop)
             )
@@ -583,15 +548,13 @@ public struct Executor: Sendable {
     }
 
     // The one way a written procedure is called: its frame, the settled
-    // arguments in their slots, the receiver in the slot its signature named,
-    // whatever the call handed in place held as a box, and the body answered
-    // in that frame.
+    // arguments in their slots, whatever the call handed in place held as a
+    // box, and the body answered in that frame.
     private func answer(
         _ callee: Linked,
         running body: Body,
         in frame: Frame,
         settled arguments: Settled,
-        receiver: Value?,
         holding holds: [(position: Int, handle: Handle)],
         at trace: Trace
     ) async throws -> Value {
@@ -608,13 +571,6 @@ public struct Executor: Sendable {
             guard let value else { continue }
 
             activation.cells[frame.parameters[position]] = .value(value)
-        }
-
-        // A receiver is written on the other side of the dot rather than by
-        // name, and was settled at the boundary the way an argument is. The
-        // body reads it under the name its signature gave it.
-        if let position = callee.receiverPosition, let receiver {
-            activation.cells[frame.parameters[position]] = .value(receiver)
         }
 
         return try await answer(body, of: callee, in: &activation, at: trace)
@@ -740,108 +696,62 @@ public struct Executor: Sendable {
         }
     }
 
-    // The receiver a call wrote in front, settled against what the parameter
-    // naming it declares. Nil where the call wrote none.
-    // Which row answers a call through a contract, and the receiver it answers
-    // about. The name the value wears is the whole of the choosing: the link
-    // gathered every type that answers this procedure and lowered a call for each,
-    // so nothing is resolved here.
+    // Which row answers a call through a contract, and the value it answers
+    // about. The name the first argument wears is the whole of the choosing:
+    // the link gathered every type that answers this procedure and lowered a
+    // call for each, so nothing is resolved here.
     private func picked(
         _ dispatch: DispatchOperation,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> (CallOperation, Value) {
-        let receiver = try await evaluate(dispatch.receiver, in: &activation, at: trace)
+        let first = try await evaluate(dispatch.first, in: &activation, at: trace)
 
-        guard let name = receiver.nominal, let call = dispatch.calls[name] else {
+        guard let name = first.nominal, let call = dispatch.calls[name] else {
             throw ExecutionError(
                 "'\(dispatch.contract).\(dispatch.procedure)' is sent to"
-                    + " \(receiver.nominal.map { held in "'\(held)'" } ?? "\(receiver.type)"),"
+                    + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)"),"
                     + " which answers no procedure of '\(dispatch.contract)'"
             )
         }
 
-        return (call, receiver)
-    }
-
-    private func received(
-        _ call: CallOperation,
-        of callee: Linked,
-        handed: Value?,
-        in activation: inout Activation,
-        at trace: Trace
-    ) async throws -> Value? {
-        // A dispatch read the receiver to pick this row, so what it read is
-        // what the row is sent. Reading the operand again would run whatever
-        // produced it a second time.
-        if let handed { return try callee.settling(receiver: handed) }
-
-        guard let receiver = call.receiver else { return nil }
-
-        do {
-            return try callee.settling(receiver: try await evaluate(receiver, in: &activation, at: trace))
-        } catch let unfit as ReferenceUnfit {
-            throw unfit
-        } catch {
-            // A refusal about the receiver is answerable only if the author can
-            // see which name held it: the locus is the receiver's path when it
-            // has one, and nothing to add when it does not.
-            guard case let .local(address) = receiver else { throw error }
-
-            throw ReferenceUnfit(path: spelled(address, in: activation), reason: "\(error)")
-        }
-    }
-
-    // The positions a call fills another way: the receiver where the call
-    // wrote one in front, and the ones handed in place where the callee
-    // takes holds. A const body takes no hold, so what it was handed is
-    // settled as a value.
-    // A dispatch read the receiver to pick the row, so the row's call carries
-    // none of its own and the value arrives beside it. Either way the slot is
-    // filled, and either way it is not filled from the arguments.
-    private func skipped(
-        _ call: CallOperation,
-        of callee: Linked,
-        holding: Bool,
-        receiving handed: Value? = nil
-    ) -> Skipped {
-        Skipped(
-            handed: holding ? call.handed : [],
-            receiver: call.receiver == nil && handed == nil ? nil : callee.receiverPosition
-        )
-    }
-
-    private struct Skipped {
-        let handed: [CallOperation.Handed]
-        let receiver: Int?
-
-        func contains(_ position: Int) -> Bool {
-            position == receiver || handed.contains { handed in handed.position == position }
-        }
+        return (call, first)
     }
 
     // The arguments settled against the declaration, in parameter order: the
-    // signature's own boundary, over the order the row keeps. The values are
-    // born beside the row they were settled by, so nothing else pairs them.
+    // signature's own boundary, over the order the row keeps. A position
+    // handed in place is filled with a hold rather than a value, so the
+    // boundary leaves it to the hold. The values are born beside the row they
+    // were settled by, so nothing else pairs them.
     private func settled(
         _ callee: Linked,
         given: [Value?],
-        skipping: Skipped
+        holding handed: [CallOperation.Handed] = []
     ) throws -> Settled {
-        Settled(values: try callee.settle(given, skipping: skipping.contains))
+        Settled(values: try callee.settle(given) { position in
+            handed.contains { handed in handed.position == position }
+        })
     }
 
-    // Every argument an operand wrote, in the order the row reads them. A loop
-    // rather than a map, since reading one may run what produced it.
+    // Every argument a call wrote, in position order. A loop rather than a
+    // map, since reading one may run what produced it. A dispatch read the
+    // first to pick the row, so what it read stands there rather than a
+    // second reading of the same operand.
     private func given(
         _ arguments: [Operation?],
+        first: Value? = nil,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> [Value?] {
         var given: [Value?] = []
         given.reserveCapacity(arguments.count)
 
-        for argument in arguments {
+        for (position, argument) in arguments.enumerated() {
+            if position == 0, let first {
+                given.append(first)
+                continue
+            }
+
             guard let argument else {
                 given.append(nil)
                 continue
@@ -858,15 +768,12 @@ public struct Executor: Sendable {
     // is run here, on a frame of its own.
     private func answer(
         _ callee: Linked,
-        for receiver: Value?,
         with arguments: Settled,
         at trace: Trace
     ) async throws -> Value {
-        let sent = sent(to: callee, receiver: receiver, arguments: arguments)
-
         switch callee.implementation {
         case let .native(.query(query)):
-            return try await evaluate(query, of: callee, receiver: sent, settled: arguments) ?? .null
+            return try await evaluate(query, of: callee, settled: arguments) ?? .null
 
         case let .body(body, frame):
             return try await answer(
@@ -874,7 +781,6 @@ public struct Executor: Sendable {
                 running: body,
                 in: frame,
                 settled: arguments,
-                receiver: sent,
                 holding: [],
                 at: trace
             )
@@ -884,13 +790,6 @@ public struct Executor: Sendable {
                 "this answers only by running, so it cannot be read as data here"
             )
         }
-    }
-
-    // What a call was sent to. A receiver is a parameter, so it reaches a
-    // native the same way whether it was written on the other side of the
-    // dot or by its own name: the two spellings are one call.
-    private func sent(to callee: Linked, receiver: Value?, arguments: Settled) -> Value? {
-        receiver ?? callee.receiverPosition.flatMap { position in arguments.values[position] }
     }
 
     // Running a closure here rather than in `evaluate`, which is what makes a
@@ -931,12 +830,10 @@ public struct Executor: Sendable {
     private func evaluate<W: Query>(
         _ query: W,
         of callee: Linked,
-        receiver: Value?,
         settled: Settled
     ) async throws -> Value? {
         try await query.evaluate(
             Question(
-                receiver: receiver,
                 settled: settled,
                 of: callee,
                 executor: self
@@ -947,7 +844,6 @@ public struct Executor: Sendable {
     private func run<W: Effect>(
         _ effect: W,
         of callee: Linked,
-        receiver: Value?,
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
         trace: Trace
@@ -955,7 +851,6 @@ public struct Executor: Sendable {
         try await effect.run(
             Invocation(
                 of: callee,
-                receiver: receiver,
                 settled: settled,
                 holds: holds,
                 trace: trace,
@@ -977,7 +872,7 @@ public struct Executor: Sendable {
 
     // Sending a procedure a procedure declared it sends. The row the send reaches is
     // numbered by the sender's document, the same as one written in a body, and
-    // the arguments arrive at the places the build worked out.
+    // the arguments stand at the callee's first positions.
     //
     // A procedure may hand over fewer than the callee declares, and a place it
     // never handed is a place nothing was given for. Which is the one thing
@@ -985,45 +880,32 @@ public struct Executor: Sendable {
     func send(
         _ sending: Sent,
         from origin: Int,
-        to receiver: Value?,
         handing values: [Value],
         at trace: Trace
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
-        let sentTo = try received(receiver, of: callee)
-        let settled = try settled(callee, to: sentTo, sending: sending, handing: values)
+        let settled = try settled(callee, sending: sending, handing: values)
 
         switch callee.implementation {
         case .native(.query):
-            return try await answer(callee, for: sentTo, with: settled, at: trace)
+            return try await answer(callee, with: settled, at: trace)
 
         case let .native(.effect(effect)):
             return try await run(
                 effect,
                 of: callee,
-                receiver: sent(to: callee, receiver: sentTo, arguments: settled),
                 settled: settled,
                 holds: [],
                 trace: trace.appending(callee.hop)
             )
 
         case let .body(body, frame):
-            var inner = try activation(of: callee, in: frame)
-
-            if let position = callee.receiverPosition, let sentTo {
-                inner.cells[frame.parameters[position]] = .value(sentTo)
-            }
-
-            for (position, value) in settled.values.enumerated() {
-                guard let value else { continue }
-
-                inner.cells[frame.parameters[position]] = .value(value)
-            }
-
             return try await answer(
-                body,
-                of: callee,
-                in: &inner,
+                callee,
+                running: body,
+                in: frame,
+                settled: settled,
+                holding: [],
                 at: trace.appending(callee.hop)
             )
         }
@@ -1035,7 +917,6 @@ public struct Executor: Sendable {
     func send(
         _ sending: Sent,
         from origin: Int,
-        to receiver: Value?,
         handing values: [Value]
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
@@ -1047,93 +928,30 @@ public struct Executor: Sendable {
             )
         }
 
-        let sentTo = try received(receiver, of: callee)
-
         return try await answer(
             callee,
-            for: sentTo,
-            with: try settled(callee, to: sentTo, sending: sending, handing: values),
+            with: try settled(callee, sending: sending, handing: values),
             at: Trace()
         )
     }
 
-    // The receiver of a send, over the callee's boundary. A call written in a
-    // document goes through `received(_:of:handed:in:)`; a send a procedure
-    // declared comes through here, and the two hold a value that does not fit
-    // to the same thing.
-    //
-    // Whether a send carries one at all is the sending body's, so a procedure
-    // declaring nothing to be sent to is refused here rather than handed a
-    // value it has no name for.
-    private func received(_ receiver: Value?, of callee: Linked) throws -> Value? {
-        guard let receiver else { return nil }
-
-        // A receiver handed over is a receiver written, whatever it holds: a
-        // procedure that receives by no name has no slot for it.
-        guard callee.receiverPosition != nil else {
-            throw ExecutionError(
-                "'\(callee.rendered)' is sent to something, and it"
-                    + " \(BuildError.receivesByNoName)"
-            )
-        }
-
-        return try callee.settling(receiver: receiver)
-    }
-
-    // A send's arguments over the callee's boundary. The build read where each
-    // handed value goes, so the pairing is made here from the send itself and
-    // the values the sender built.
-    //
-    // A place nothing was handed at answers nil, which is what tells the
-    // boundary nothing was given there.
+    // A send's arguments over the callee's boundary, standing at its first
+    // positions.
     private func settled(
         _ callee: Linked,
-        to receiver: Value?,
         sending: Sent,
         handing values: [Value]
     ) throws -> Settled {
         // How many a Swift body builds is the body's, so this is the one thing
         // about a send the build cannot read.
-        guard values.count == sending.handing.count else {
+        guard values.count == sending.handing else {
             throw ExecutionError(
                 "'\(callee.rendered)' is handed \(values.count) here, and the procedure sending"
-                    + " it declares it hands \(sending.handing.count)"
+                    + " it declares it hands \(sending.handing)"
             )
         }
 
-        var given: [Value?] = Array(repeating: nil, count: callee.slots.count)
-
-        for (position, value) in zip(sending.handing, values) {
-            // A row taking fewer parameters than the build read them off is a
-            // row this send was not compiled against.
-            guard given.indices.contains(position) else {
-                throw ExecutionError(
-                    "'\(callee.rendered)' takes \(callee.slots.count) parameters, and this send"
-                        + " stands something at \(position)"
-                )
-            }
-
-            // Sending to something fills the slot it is sent to, so a value
-            // handed under that name is a second instruction for one place. A
-            // document writes its receiver in front of the selector and a
-            // procedure sends to one, so the two spell it differently and
-            // refuse the same thing.
-            guard receiver == nil || position != callee.receiverPosition else {
-                throw ExecutionError(
-                    "'\(callee.slots[position].name)' sent to '\(callee.rendered)' both as what"
-                        + " it is sent to and by name"
-                )
-            }
-
-            given[position] = value
-        }
-
-        return Settled(
-            values: try callee.settle(
-                given,
-                skipping: { position in receiver != nil && position == callee.receiverPosition }
-            )
-        )
+        return Settled(values: try callee.settle(applied: values))
     }
 
     // Where a walk over a path came down: on a value, or on a reading gone

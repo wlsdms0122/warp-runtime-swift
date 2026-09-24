@@ -32,21 +32,21 @@ func literal(_ text: String) -> Warp.Expression {
 // A template as the language holds one: pieces written one after another, each
 // value asked how it reads.
 func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .call(Call(receiver: .array(pieces), selector: "std.text.joined"))
+    .call(Call(selector: "std.text.joined", arguments: [.array(pieces)]))
 }
 
 func spelling(_ value: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: value, selector: "std.text.text"))
+    .call(Call(selector: "std.text.text", arguments: [value]))
 }
 
 func refusing(_ message: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: message, selector: "std.control.abort"))
+    .call(Call(selector: "std.control.abort", arguments: [message]))
 }
 
 // Equality and the connectives are procedures, so a test writing one writes the
 // send the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
+    .call(Call(selector: "std.logic.equal", arguments: [subject, operand]))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something
@@ -54,17 +54,19 @@ func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expr
 func every(_ conditions: Warp.Expression...) -> Warp.Expression {
     .call(
         Call(
-            receiver: .array(
-                conditions.map { condition in
-                    .closure(
-                        Procedure(
-                            implementation: .body(Block(body: [], result: condition)),
-                            constness: .const
+            selector: "std.logic.and",
+            arguments: [
+                .array(
+                    conditions.map { condition in
+                        .closure(
+                            Procedure(
+                                implementation: .body(Block(body: [], result: condition)),
+                                constness: .const
+                            )
                         )
-                    )
-                }
-            ),
-            selector: "std.logic.and"
+                    }
+                )
+            ]
         )
     )
 }

@@ -38,8 +38,7 @@ struct CanonicalTests {
                         "when": [
                             "call": [
                                 "procedure": "std.logic.equal",
-                                "of": ["ref": "count"],
-                                "arguments": ["value": 1]
+                                "arguments": [["ref": "count"], 1]
                             ]
                         ],
                         "then": [["set": "pick", "value": "one"]],
@@ -71,8 +70,7 @@ struct CanonicalTests {
                         "while": [
                             "call": [
                                 "procedure": "std.logic.notEqual",
-                                "of": ["ref": "seen"],
-                                "arguments": ["value": 3]
+                                "arguments": [["ref": "seen"], 3]
                             ]
                         ],
                         "body": [
@@ -80,8 +78,7 @@ struct CanonicalTests {
                                 "set": "seen",
                                 "value": ["call": [
                                     "procedure": "std.math.plus",
-                                    "of": ["ref": "seen"],
-                                    "arguments": ["value": 1]
+                                    "arguments": [["ref": "seen"], 1]
                                 ]
                             ]]
                         ]
@@ -124,8 +121,7 @@ struct CanonicalTests {
         let plainly = try await picking(on: [
             "call": [
                 "procedure": "std.logic.equal",
-                "of": ["ref": "procedure"],
-                "arguments": ["value": "hey"]
+                "arguments": [["ref": "procedure"], "hey"]
             ]
         ])
 

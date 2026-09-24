@@ -100,9 +100,8 @@ struct ObservationTests {
                         Statement(binding: .constant("round"), expression: .loop(
                                 while: .call(
                                     Call(
-                                        receiver: reference("round", "index"),
                                         selector: "std.math.lessThan",
-                                        arguments: ["value": .literal(.int(2))]
+                                        arguments: [reference("round", "index"), .literal(.int(2))]
                                     )
                                 ),
                                 body: Block(body: [
@@ -140,10 +139,10 @@ struct ObservationTests {
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(
-                                    receiver: .literal(.array([.int(1), .int(2)])),
                                     selector: "std.concurrent.map",
                                     arguments: [
-                                        "by": .closure(
+                                        .literal(.array([.int(1), .int(2)])),
+                                        .closure(
                                             Procedure(
                                                 signature: Signature(
                                                     parameters: [
@@ -337,12 +336,7 @@ struct ObservationTests {
                                 Block(
                                     body: [
                                         Statement(binding: .constant("doomed"), expression: .call(
-                                                Call(
-                                                    selector: "app.fail",
-                                                    arguments: [
-                                                        "recoverable": .literal(.bool(true))
-                                                    ]
-                                                )
+                                                Call(selector: "app.fail", arguments: [.literal(.bool(true))])
                                             )
                                         )
                                     ]

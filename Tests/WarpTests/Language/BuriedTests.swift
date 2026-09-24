@@ -40,11 +40,7 @@ struct BuriedTests {
                 result: marker("closure result")
             )),
             .apply(marker("apply callee"), arguments: [marker("apply argument")]),
-            .call(Call(
-                receiver: marker("call receiver"),
-                selector: "procedure",
-                arguments: ["with": marker("call argument")]
-            )),
+            .call(Call(selector: "procedure", arguments: [marker("call first argument"), marker("call second argument")])),
             .block(Block(
                 body: [Statement(binding: .constant("held"), expression: marker("block body"))],
                 result: marker("block result")
@@ -78,7 +74,7 @@ struct BuriedTests {
             "cast operand", "leave value", "record field",
             "closure body", "closure result",
             "apply callee", "apply argument",
-            "call receiver", "call argument",
+            "call first argument", "call second argument",
             "block body", "block result",
             "conditional condition", "conditional then", "conditional else",
             "loop condition", "loop body",
@@ -152,12 +148,13 @@ struct BuriedTests {
         // Then
         #expect(casts == ["entry.alpha", "entry.beta", "entry.gamma"])
 
-        // And the same holds for what a call is written with.
+        // And what a call is written with is walked in position order, each
+        // argument under its own place.
         let sent = Warp.Expression.call(Call(
             selector: "send",
             arguments: [
-                "second": .cast(.literal(.int(2)), as: .string, optional: false),
-                "first": .cast(.literal(.int(1)), as: .string, optional: false)
+                .cast(.literal(.int(1)), as: .string, optional: false),
+                .cast(.literal(.int(2)), as: .string, optional: false)
             ]
         ))
 
@@ -166,7 +163,7 @@ struct BuriedTests {
                 guard case .cast = expression else { return nil }
 
                 return place.rendered
-            } == ["entry.arguments.first", "entry.arguments.second"]
+            } == ["entry.arguments[0]", "entry.arguments[1]"]
         )
     }
 

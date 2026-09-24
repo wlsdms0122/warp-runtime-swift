@@ -20,11 +20,6 @@ public struct Question<P: NativeProcedure>: Sendable {
     }
 
     // MARK: - Property
-    // What this was sent to, settled against the parameter the declaration
-    // names as its receiver, or nil where it was sent to nothing. Null is a
-    // value that arrived, and only a parameter that admits one is handed it.
-    public let receiver: Value?
-
     // The way back in travels with the arguments rather than being handed to
     // `Query.evaluate`: most procedures never call anything, and a parameter every
     // procedure declares to serve the few that do is a parameter in the wrong
@@ -36,13 +31,11 @@ public struct Question<P: NativeProcedure>: Sendable {
     // a constant against the procedure that will settle it. Not a door out of the
     // package, because what makes a procedure answerable is the link that took its
     // declaration, and a question built beside that skips it.
-    init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
-        self.receiver = receiver
+    init(arguments: [Name: Value] = [:]) {
         self.arguments = .given(arguments)
     }
 
-    init(receiver: Value?, settled: Settled, of callee: Linked, executor: Executor) {
-        self.receiver = receiver
+    init(settled: Settled, of callee: Linked, executor: Executor) {
         self.arguments = .settled(settled, of: callee, executor)
     }
 
@@ -56,9 +49,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // one was asked with no declaration behind it, so there are only names.
     public subscript(key: P.Parameters) -> Value {
         switch arguments {
-        case let .settled(settled, callee, _):
-            guard key.name != callee.signature.receiver else { return receiver ?? .null }
-
+        case let .settled(settled, _, _):
             return settled[key.position]
 
         case let .given(given):
@@ -71,14 +62,13 @@ public struct Question<P: NativeProcedure>: Sendable {
     // indexing twice and looking nothing up; a procedure this one never declared is
     // a procedure that does not compile.
     //
-    // The arguments stand in the order the key declared it hands them, which is
-    // the order the build read the places off.
+    // The arguments stand at the callee's first positions, as many as the key
+    // declared it hands.
     //
     // Synchronous, because a query answers without running and the link
     // refused a query declaring it sends anything that runs.
     public func send(
         _ key: P.Imports,
-        to receiver: Value? = nil,
         handing arguments: [Value] = []
     ) async throws -> Value {
         guard case let .settled(_, callee, executor) = self.arguments,
@@ -94,7 +84,6 @@ public struct Question<P: NativeProcedure>: Sendable {
         return try await executor.send(
             callee.sends[key.position],
             from: callee.origin,
-            to: receiver,
             handing: arguments
         )
     }

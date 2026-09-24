@@ -19,7 +19,7 @@ struct RoundedQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        switch question.receiver {
+        switch question[.of] {
         case let .int(number):
             return .int(number)
 

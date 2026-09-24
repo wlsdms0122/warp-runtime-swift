@@ -97,9 +97,10 @@ struct ExecutorTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
-                                                        "recoverable": .literal(.bool(true))
-                                                    ]))
+                                        Statement(binding: .constant("fragile"), expression: .call(Call(
+                                            selector: "app.fail",
+                                            arguments: [.literal(.bool(true))]
+                                        ))
                                         )
                                     ]), rescue: Block(
                                         body: [
@@ -133,9 +134,10 @@ struct ExecutorTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
-                                                        "recoverable": .literal(.bool(true))
-                                                    ]))
+                                        Statement(binding: .constant("fragile"), expression: .call(Call(
+                                            selector: "app.fail",
+                                            arguments: [.literal(.bool(true))]
+                                        ))
                                         )
                                     ]), rescue: Block(
                                         body: [
@@ -174,9 +176,10 @@ struct ExecutorTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("broken"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("broken"), expression: .call(Call(selector: "app.fail", arguments: [
-                                                        "recoverable": .literal(.bool(false))
-                                                    ]))
+                                        Statement(binding: .constant("broken"), expression: .call(Call(
+                                            selector: "app.fail",
+                                            arguments: [.literal(.bool(false))]
+                                        ))
                                         )
                                     ]), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
@@ -202,9 +205,10 @@ struct ExecutorTests {
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
-                                        "recoverable": .literal(.bool(true))
-                                    ]))
+                        Statement(binding: .constant("fragile"), expression: .call(Call(
+                            selector: "app.fail",
+                            arguments: [.literal(.bool(true))]
+                        ))
                         )
                     ]
                 )

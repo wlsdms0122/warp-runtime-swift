@@ -65,10 +65,7 @@ struct NullableTests {
                         Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)])
                         )
                     ],
-                    result: .call(Call(
-                        selector: "half",
-                        arguments: ["of": .reference([.key("read")])]
-                    ))
+                    result: .call(Call(selector: "half", arguments: [.reference([.key("read")])]))
                 )
             ]
         )
@@ -83,7 +80,7 @@ struct NullableTests {
 
     @Test("the optional dot on a record field reads it, and its answer may be null")
     func anOptionalDotOverANullable() async throws {
-        // Given. The receiver may be null, so `?.` is the only spelling that
+        // Given. The record may be null, so `?.` is the only spelling that
         // links; what it answers is the field or null
         let sut = try Module(
             procedures: [
@@ -185,10 +182,9 @@ struct NullableTests {
             procedures: [
                 "labelled": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [
-                            Parameter(name: "limit", type: .nullable(.int)),
-                            Parameter(name: "of", type: .string)
+                            Parameter(name: "of", type: .string),
+                            Parameter(name: "limit", type: .nullable(.int))
                         ],
                         returns: .string
                     ),
@@ -205,9 +201,9 @@ struct NullableTests {
                         // The written call omits `limit`; the type answers the
                         // omission with null, so the build takes the call.
                         Statement(binding: .constant("called"), expression: .call(Call(
-                                receiver: .reference([.key("procedure")]),
-                                selector: "labelled"
-                            ))
+                            selector: "labelled",
+                            arguments: [.reference([.key("procedure")])]
+                        ))
                         )
                     ],
                     result: .reference([.key("called")])
@@ -549,15 +545,11 @@ struct IndexReferenceJudgmentTests {
         // start, refused out loud
         let sut = try Module(
             constants: [
-                "loud": .call(Call(
-                    receiver: .literal(.string("hi")),
-                    selector: "shout"
-                ))
+                "loud": .call(Call(selector: "shout", arguments: [.literal(.string("hi"))]))
             ],
             procedures: [
                 "shout": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .string)],
                         returns: .string
                     ),
@@ -591,18 +583,17 @@ struct IndexReferenceJudgmentTests {
             procedures: [
                 "shout": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .string)],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(receiver: reference("of"), selector: "std.collection.count"))
+                    result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(receiver: reference("greeting"), selector: "shout"))
+                    result: .call(Call(selector: "shout", arguments: [reference("greeting")]))
                 )
             ]
         )
@@ -620,32 +611,30 @@ struct IndexReferenceJudgmentTests {
         let procedures: [Name: Procedure] = [
             "shout": Procedure(
                 signature: Signature(
-                    receiver: "of",
                     parameters: [Parameter(name: "of", type: .string)],
                     returns: .int
                 ),
                 body: [],
-                result: .call(Call(receiver: reference("of"), selector: "std.collection.count"))
+                result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
             ),
             "helper": Procedure(
                 signature: Signature(returns: .int),
                 body: [],
-                result: .call(Call(receiver: reference("greeting"), selector: "shout"))
+                result: .call(Call(selector: "shout", arguments: [reference("greeting")]))
             ),
             "loud": Procedure(
                 signature: Signature(
-                    receiver: "of",
                     parameters: [Parameter(name: "of", type: .int)],
                     returns: .int
                 ),
                 body: [],
-                result: .call(Call(selector: "helper", arguments: [:]))
+                result: .call(Call(selector: "helper"))
             ),
             entryName: Procedure(
                 access: .public,
                 signature: Signature(returns: .int),
                 body: [],
-                result: .call(Call(selector: "helper", arguments: [:]))
+                result: .call(Call(selector: "helper"))
             )
         ]
 
@@ -704,18 +693,15 @@ struct IndexReferenceJudgmentTests {
     func aConstantClosureIsChecked() async throws {
         // Given. The closure runs later, so evaluating the constant proves
         // nothing about the call inside it; the gate every gathered call passes
-        // catches the argument nobody declares
+        // catches the argument no parameter stands to take
         let sut = try Module(
             constants: [
                 "f": .closure(Procedure(
                     signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.string("a")),
                         selector: "std.text.uppercased",
-                        arguments: [
-                            "loudly": .literal(.bool(true))
-                        ]
+                        arguments: [.literal(.string("a")), .literal(.bool(true))]
                     ))
                 ))
             ],
@@ -733,7 +719,7 @@ struct IndexReferenceJudgmentTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("loudly")
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
         }
     }
 
@@ -843,17 +829,13 @@ struct IndexReferenceJudgmentTests {
             procedures: [
                 "shout": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .string)],
                         returns: .string
                     ),
                     body: [],
                     result: .call(Call(
-                        receiver: .reference([.key("of")]),
                         selector: "std.text.uppercased",
-                        arguments: [
-                            "loudly": .literal(.bool(true))
-                        ]
+                        arguments: [.reference([.key("of")]), .literal(.bool(true))]
                     ))
                 ),
                 entryName: Procedure(
@@ -865,11 +847,11 @@ struct IndexReferenceJudgmentTests {
             ]
         )
 
-        // When / Then. `loudly` names no parameter of uppercased
+        // When / Then. `uppercased` takes one argument and is sent two
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("loudly")
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
         }
     }
 
@@ -904,7 +886,7 @@ struct IndexReferenceJudgmentTests {
 // A dot on a type parameter. The type is the call's fact, so the build leaves
 // the segments as written rather than judging on nothing.
 @Suite
-struct ParameterReceiverTests {
+struct ParameterDotTests {
     // MARK: - Property
     private let builder = Builder()
 
@@ -918,7 +900,6 @@ struct ParameterReceiverTests {
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .parameter(name: "T"))],
                         returns: .any
                     ),
@@ -929,11 +910,7 @@ struct ParameterReceiverTests {
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .call(Call(
-                        receiver: .record(["count": .literal(.string("mine"))]),
-                        selector: "peek",
-                        arguments: [:]
-                    ))
+                    result: .call(Call(selector: "peek", arguments: [.record(["count": .literal(.string("mine"))])]))
                 )
             ]
         )
@@ -951,7 +928,6 @@ struct ParameterReceiverTests {
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .parameter(name: "T"))],
                         returns: .any
                     ),
@@ -966,11 +942,12 @@ struct ParameterReceiverTests {
                     signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
-                        receiver: .record([
-                            "inner": .record(["count": .literal(.string("mine"))])
-                        ]),
                         selector: "peek",
-                        arguments: [:]
+                        arguments: [
+                            .record([
+                                "inner": .record(["count": .literal(.string("mine"))])
+                            ])
+                        ]
                     ))
                 )
             ]
@@ -1024,8 +1001,8 @@ struct ParameterReceiverTests {
                     result: .call(Call(
                         selector: "peek",
                         arguments: [
-                            "of": .record(["inner": .record(["count": .literal(.string("mine"))])]),
-                            "flag": .literal(.bool(true))
+                            .literal(.bool(true)),
+                            .record(["inner": .record(["count": .literal(.string("mine"))])])
                         ]
                     ))
                 )
@@ -1088,8 +1065,8 @@ struct ParameterReceiverTests {
                         result: .call(Call(
                             selector: "peek",
                             arguments: [
-                                "of": .record(["inner": .record(["count": .literal(.int(1))])]),
-                                "flag": .literal(.bool(true))
+                                .literal(.bool(true)),
+                                .record(["inner": .record(["count": .literal(.int(1))])])
                             ]
                         ))
                     )
@@ -1144,10 +1121,10 @@ struct ParameterReceiverTests {
                     result: .call(Call(
                         selector: "peek",
                         arguments: [
-                            "of": .record([
+                            .literal(.bool(true)),
+                            .record([
                                 "inner": .record(["count": .record(["deep": .literal(.int(1))])])
-                            ]),
-                            "flag": .literal(.bool(true))
+                            ])
                         ]
                     ))
                 )
@@ -1193,9 +1170,9 @@ struct ParameterReceiverTests {
                     result: .call(Call(
                         selector: "peek",
                         arguments: [
-                            "of": .record(["inner": .record(["count": .literal(.int(1))])]),
-                            "also": .record(["inner": .record(["count": .literal(.int(2))])]),
-                            "flag": .literal(.bool(true))
+                            .record(["inner": .record(["count": .literal(.int(2))])]),
+                            .literal(.bool(true)),
+                            .record(["inner": .record(["count": .literal(.int(1))])])
                         ]
                     ))
                 )

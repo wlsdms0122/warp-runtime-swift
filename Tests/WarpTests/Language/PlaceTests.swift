@@ -42,19 +42,19 @@ struct PlaceTests {
         #expect(spin?.rendered == "procedures.entry.body.spin[0].loop.condition")
     }
 
-    @Test("what a call is written with is named under the key holding it")
-    func anArgumentIsNamedUnderItsKey() async {
+    @Test("what a call is written with is named by the position holding it")
+    func anArgumentIsNamedByItsPosition() async {
         // Given. An argument reported from the statement's own place says a
         // thing is wrong and does not say which of the several written there.
         let sut = place(
             refusing: Statement(binding: .constant("sent"), expression: .call(
-                    Call(selector: "send", arguments: ["amount": reference("missing")])
+                    Call(selector: "send", arguments: [reference("missing")])
                 )
             )
         )
 
         // Then
-        #expect(sut?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
+        #expect(sut?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
@@ -142,11 +142,10 @@ struct PlaceTests {
             procedures: [
                 entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(
-                            Call(selector: "helper", arguments: [
-                                "first": .literal(.int(1)),
-                                "second": .literal(.string("two")),
-                                "third": .literal(.int(3))
-                            ])
+                            Call(
+                                selector: "helper",
+                                arguments: [.literal(.int(1)), .literal(.string("two")), .literal(.int(3))]
+                            )
                         )
                     )
                 ]),
@@ -168,7 +167,7 @@ struct PlaceTests {
 
         // Then
         #expect(
-            error?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.second"
+            error?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[1]"
         )
     }
 
@@ -182,7 +181,7 @@ struct PlaceTests {
             procedures: [
                 entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(
-                            Call(selector: "helper", arguments: ["amount": .literal(.string("x"))])
+                            Call(selector: "helper", arguments: [.literal(.string("x"))])
                         )
                     )
                 ]),
@@ -199,10 +198,7 @@ struct PlaceTests {
                 procedures: [
                     entryName: Procedure(access: .public, body: [
                         Statement(binding: .constant("sent"), expression: .call(
-                                Call(
-                                    selector: "helper",
-                                    arguments: ["amount": reference("missing")]
-                                )
+                                Call(selector: "helper", arguments: [reference("missing")])
                             )
                         )
                     ])
@@ -215,8 +211,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(load?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
-        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
+        #expect(load?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
+        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
     }
 
     @Test("every walk that reports a place steps through the same slots to reach one")
@@ -240,10 +236,7 @@ struct PlaceTests {
                                 Block(body: [mayFail()]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("sent"), expression: .call(
-                                            Call(
-                                                selector: selector,
-                                                arguments: ["amount": argument]
-                                            )
+                                            Call(selector: selector, arguments: [argument])
                                         )
                                     )
                                 ]),
@@ -425,7 +418,7 @@ struct PlaceTests {
         let sut = try #require(
             place(
                 refusing: Statement(binding: .constant("sent"), expression: .call(
-                        Call(selector: "send", arguments: ["amount": reference("missing")])
+                        Call(selector: "send", arguments: [reference("missing")])
                     )
                 )
             )
@@ -439,8 +432,8 @@ struct PlaceTests {
         #expect(sut.steps.contains(.construct(.call)))
         #expect(sut.steps.contains(.part(.arguments)))
 
-        // What the author named is the one thing carried as it was typed
-        #expect(sut.steps.contains(.key("amount")))
+        // Where the argument stands is carried as the position it was written at
+        #expect(sut.steps.contains(.index(0)))
         #expect(sut.steps.contains(.key("call")) == false)
     }
 
@@ -472,7 +465,7 @@ struct PlaceTests {
                 entryName: Procedure(access: .public, body: [
                     Statement(
                         expression: .call(
-                            Call(selector: "stop", arguments: ["message": .literal(.string("x"))])
+                            Call(selector: "stop", arguments: [.literal(.string("x"))])
                         )
                     ),
                     Statement(binding: .constant("after"), expression: .literal(.int(1)))
@@ -662,11 +655,7 @@ struct PlaceTests {
         // reads keeps it anyway, because something does read it.
         let sut = try Module(
             constants: [
-                "beta": .call(Call(
-                    receiver: reference("gamma"),
-                    selector: "std.math.plus",
-                    arguments: ["value": reference("delta")]
-                )),
+                "beta": .call(Call(selector: "std.math.plus", arguments: [reference("gamma"), reference("delta")])),
                 "gamma": reference("beta"),
                 "delta": reference("epsilon"),
                 "epsilon": .literal(.int(1))

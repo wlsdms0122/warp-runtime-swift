@@ -18,11 +18,6 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // document's numbers.
     private let callee: Linked
 
-    // What this was sent to, settled against the parameter the declaration
-    // names as its receiver, or nil where the declaration names none. Null is
-    // a value that arrived, and only a parameter that admits one is handed it.
-    public let receiver: Value?
-
     private let settled: Settled
 
     // Where the run was when this was sent, as everything it went through to
@@ -47,14 +42,12 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Initializer
     init(
         of callee: Linked,
-        receiver: Value?,
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
         trace: Trace,
         executor: Executor
     ) {
         self.callee = callee
-        self.receiver = receiver
         self.settled = settled
         self.holds = holds
         self.trace = trace
@@ -64,12 +57,9 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Public
     // What an argument holds, named by the procedure's own key. An argument nobody
     // wrote and one written as null are the same fact here, the same as they
-    // are everywhere else. The receiver is a parameter like the rest, so its
-    // key answers what was sent to it.
+    // are everywhere else.
     public subscript(key: P.Parameters) -> Value {
-        guard key.name != callee.signature.receiver else { return receiver ?? .null }
-
-        return settled[key.position]
+        settled[key.position]
     }
 
     // What a parameter handed in place holds now.
@@ -115,14 +105,13 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // indexing twice and looking nothing up; a procedure this one never declared is
     // a procedure that does not compile.
     //
-    // The arguments stand in the order the key declared it hands them, which is
-    // the order the build read the places off.
+    // The arguments stand at the callee's first positions, as many as the key
+    // declared it hands.
     //
     // The label names which piece of this procedure's work the send is, the way it
     // does for a closure, so a refusal from inside says where it happened.
     public func send(
         _ key: P.Imports,
-        to receiver: Value? = nil,
         handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
@@ -133,15 +122,13 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         return try await executor.send(
             callee.sends[key.position],
             from: callee.origin,
-            to: receiver,
             handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
         )
     }
 
     // Calling a closure the procedure was handed as a value. The arguments
-    // are handed by position, every position given, since a value carries no
-    // names. The label names which piece of the procedure's work this call
+    // are handed by position, the way every call hands them. The label names which piece of the procedure's work this call
     // is, so a refusal from inside says where it happened rather than only
     // which procedure was running.
     public func call(

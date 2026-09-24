@@ -68,8 +68,7 @@ struct NotationTests {
                                 "when": [
                                     "call": [
                                         "procedure": "std.logic.equal",
-                                        "of": ["ref": "procedure"],
-                                        "arguments": ["value": "hey"]
+                                        "arguments": [["ref": "procedure"], "hey"]
                                     ]
                                 ],
                                 "then": [["set": "pick", "value": "matched"]],

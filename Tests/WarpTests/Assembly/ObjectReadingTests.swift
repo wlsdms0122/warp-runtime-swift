@@ -271,7 +271,7 @@ struct ObjectReadingTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "app.twice", arguments: ["n": .literal(.int(2))]))
+                    result: .call(Call(selector: "app.twice", arguments: [.literal(.int(2))]))
                 ),
                 "app.twice": Procedure(
                     signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .int),
@@ -290,14 +290,14 @@ struct ObjectReadingTests {
               case var .array(result) = body[1],
               case var .array(operation) = result[0],
               case var .array(call) = operation[1],
-              case let .array(arguments) = call[2]
+              case let .array(arguments) = call[1]
         else {
             Issue.record("an object writes a body whose result is a call")
 
             return
         }
 
-        call[2] = .array(arguments + [.array([])])
+        call[1] = .array(arguments + [.array([])])
         operation[1] = .array(call)
         result[0] = .array(operation)
         body[1] = .array(result)
@@ -382,9 +382,8 @@ struct ObjectReadingTests {
                     body: [],
                     result: .loop(
                         while: .call(Call(
-                            receiver: reference("round", "index"),
                             selector: "std.math.lessThan",
-                            arguments: ["value": .literal(.int(2))]
+                            arguments: [reference("round", "index"), .literal(.int(2))]
                         )),
                         body: Block(
                             body: [Statement(binding: .constant("k"), expression: reference("round", "index"))],
@@ -435,15 +434,14 @@ struct ObjectReadingTests {
         let sut = try Module(
             types: ["app.Box": .record(["v": .int])],
             contracts: [
-                "app.One": ["one": Signature(returns: .int)],
-                "app.Two": ["two": Signature(returns: .int)]
+                "app.One": ["one": Signature(parameters: [Parameter(name: "of", type: .named("app.One"))], returns: .int)],
+                "app.Two": ["two": Signature(parameters: [Parameter(name: "of", type: .named("app.Two"))], returns: .int)]
             ],
             claims: ["app.Box": ["app.One", "app.Two"]],
             procedures: [
                 "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
                 "app.Box.one": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("app.Box"))],
                         returns: .int
                     ),
@@ -452,7 +450,6 @@ struct ObjectReadingTests {
                 ),
                 "app.Box.two": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("app.Box"))],
                         returns: .int
                     ),
@@ -542,13 +539,14 @@ struct ObjectReadingTests {
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(
-                        receiver: .call(Call(
-                            receiver: .literal(.int(1)),
-                            selector: "std.math.plus",
-                            arguments: ["value": .literal(.int(2))]
-                        )),
                         selector: "std.math.minus",
-                        arguments: ["value": .literal(.int(3))]
+                        arguments: [
+                            .call(Call(
+                                selector: "std.math.plus",
+                                arguments: [.literal(.int(1)), .literal(.int(2))]
+                            )),
+                            .literal(.int(3))
+                        ]
                     ))
                 )
             ]

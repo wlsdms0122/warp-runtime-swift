@@ -176,9 +176,8 @@ struct LoweringTests {
         func loop(_ body: [Statement], result: Warp.Expression?) -> Warp.Expression {
             .loop(
                 while: .call(Call(
-                    receiver: .reference([.key("round"), .key("index")]),
                     selector: "std.math.lessThan",
-                    arguments: ["value": .literal(.int(1))]
+                    arguments: [.reference([.key("round"), .key("index")]), .literal(.int(1))]
                 )),
                 body: Block(body: body, result: result),
                 round: "round"
@@ -227,23 +226,22 @@ struct LoweringTests {
         #expect(nested == nil)
     }
 
-    @Test("arguments stand at their parameter's position, and the receiver stands apart")
+    @Test("arguments stand at their parameter's position")
     func argumentsStandByPosition() async throws {
-        // Given. A call writing its arguments in the other order
+        // Given. A call writing its arguments in the declaration's order, which
+        // is not the order the body reads them in
         let module = try Module(
             procedures: [
                 "entry": Procedure(
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.int(1)),
                         selector: "pair",
-                        arguments: ["second": .literal(.int(3)), "first": .literal(.int(2))]
+                        arguments: [.literal(.int(2)), .literal(.int(1)), .literal(.int(3))]
                     ))
                 ),
                 "pair": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [
                             Parameter(name: "first", type: .int),
                             Parameter(name: "of", type: .int),
@@ -275,8 +273,7 @@ struct LoweringTests {
         }
 
         #expect(image.linked[call.procedure].slots.map(\.name) == ["first", "of", "second"])
-        #expect(call.receiver != nil)
-        #expect(call.arguments.map { argument in argument == nil } == [false, true, false])
+        #expect(call.arguments.map { argument in argument == nil } == [false, false, false])
         #expect(try await Executor().run(image) == .array([.int(1), .int(2), .int(3)]))
     }
 
@@ -289,7 +286,7 @@ struct LoweringTests {
             procedures: [
                 "entry": Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.tally": Procedure(
-                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .int)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("count")])
                 )
@@ -314,7 +311,7 @@ struct LoweringTests {
                 "entry": Procedure(
                     access: .public,
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
-                    result: .call(Call(selector: "app.bump", arguments: ["of": .reference([.key("n")])]))
+                    result: .call(Call(selector: "app.bump", arguments: [.reference([.key("n")])]))
                 ),
                 "app.bump": Procedure(
                     signature: Signature(
@@ -352,7 +349,7 @@ struct LoweringTests {
                             )
                         ))
                     ],
-                    result: .call(Call(selector: "app.take", arguments: ["of": .reference([.key("body")])]))
+                    result: .call(Call(selector: "app.take", arguments: [.reference([.key("body")])]))
                 ),
                 "app.take": Procedure(
                     signature: Signature(
@@ -392,12 +389,11 @@ struct LoweringTests {
                         access: .public,
                         body: [Statement(binding: .variable("held"), expression: held)],
                         result: .call(Call(
-                            receiver: .call(Call(
-                                selector: "app.tag",
-                                arguments: ["of": .reference([.key("held")])]
-                            )),
                             selector: "std.logic.equal",
-                            arguments: ["value": .literal(.record(Record(name: "Tag", ["a": .int(1)])))]
+                            arguments: [
+                                .call(Call(selector: "app.tag", arguments: [.reference([.key("held")])])),
+                                .literal(.record(Record(name: "Tag", ["a": .int(1)])))
+                            ]
                         ))
                     ),
                     "app.tag": Procedure(
@@ -433,12 +429,12 @@ struct LoweringTests {
         let module = try Module(
             constants: [
                 "K": .literal(.int(1)),
-                "J": .call(Call(receiver: reference("K"), selector: "app.alpha"))
+                "J": .call(Call(selector: "app.alpha", arguments: [reference("K")]))
             ],
             procedures: [
                 "entry": Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.alpha": Procedure(
-                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .int)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("of")])
                 )
@@ -453,10 +449,10 @@ struct LoweringTests {
         }
     }
 
-    @Test("an effect sent to a variable in place reads it as its receiver")
-    func anEffectReadsItsHandedReceiver() async throws {
-        // Given. The receiver is handed in place, so the effect holds it, and
-        // it reads as the receiver too, the way any receiver does
+    @Test("an effect handed a variable in place reads what it holds")
+    func anEffectReadsItsHandedArgument() async throws {
+        // Given. The first argument is handed in place, so the effect holds it,
+        // and reads what the hold holds now
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -464,10 +460,10 @@ struct LoweringTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
                     ],
-                    result: .call(Call(receiver: .reference([.key("held")]), selector: "app.echo"))
+                    result: .call(Call(selector: "app.echo", arguments: [.reference([.key("held")])]))
                 ),
                 "app.echo": Procedure(
-                    signature: Signature(of: EchoEffect.self, receiver: .of, returns: .int),
+                    signature: Signature(of: EchoEffect.self, returns: .int),
                     implementation: .effect(EchoEffect())
                 )
             ]
@@ -484,7 +480,7 @@ struct LoweringTests {
     // MARK: - Private
 }
 
-// Answers what it was sent to.
+// Answers what the variable it was handed holds.
 private struct EchoEffect: Effect {
     enum Parameters: Int, ParameterSet {
         case of
@@ -496,7 +492,7 @@ private struct EchoEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) throws -> Value {
-        invocation.receiver ?? .null
+        try invocation.held(.of)
     }
 
     // MARK: - Private

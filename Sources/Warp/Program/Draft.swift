@@ -32,8 +32,8 @@ public struct Draft: Sendable {
 
     // Contracts this module declares: a name bound to the procedures a value must
     // answer to stand under it. Each procedure is a signature the implementing
-    // declaration is held to, written without the receiver, which is the
-    // implementing type itself.
+    // declaration is held to, taking the contract itself first, where the
+    // implementing declaration takes its own type.
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts each type this document names answers, by the name of

@@ -199,37 +199,24 @@ struct BytesTests {
 
     @Test("the collection vocabulary applies to bytes directly")
     func collectionProceduresReadBytes() async throws {
-        // Given. Each procedure declares an array receiver, and bytes are one
+        // Given. Each procedure declares an array first, and bytes are one
         let asks: [(Warp.Expression, Value)] = [
             (
-                .call(Call(
-                    receiver: reference("data"),
-                    selector: "std.collection.count"
-                )),
+                .call(Call(selector: "std.collection.count", arguments: [reference("data")])),
                 .int(2)
             ),
             (
-                .call(Call(
-                    receiver: reference("data"),
-                    selector: "std.collection.first"
-                )),
+                .call(Call(selector: "std.collection.first", arguments: [reference("data")])),
                 .int(104)
             ),
             (
-                .call(Call(
-                    receiver: reference("data"),
-                    selector: "std.collection.reversed"
-                )),
-                // The receiver's own elements, in the other order, so the
+                .call(Call(selector: "std.collection.reversed", arguments: [reference("data")])),
+                // The argument's own elements, in the other order, so the
                 // spelling they arrived in is the spelling they leave in.
                 .bytes([105, 104])
             ),
             (
-                .call(Call(
-                    receiver: reference("data"),
-                    selector: "std.collection.contains",
-                    arguments: ["value": .literal(.int(105))]
-                )),
+                .call(Call(selector: "std.collection.contains", arguments: [reference("data"), .literal(.int(105))])),
                 .bool(true)
             )
         ]
@@ -257,7 +244,7 @@ struct BytesTests {
     func aProcedureWantingOtherElementsRefusesAtTheBoundary() async throws {
         // Given. `joined` declares `array<string>`, which leaves no byte as it
         // is, so the compact spelling does not cross: it is read out and
-        // settled element by element. The receiver is read `any` here so the
+        // settled element by element. The argument is read `any` here so the
         // link lets it through and the run is the one that answers.
         //
         // This is why a procedure whose elements no byte can be still asks for the
@@ -270,10 +257,7 @@ struct BytesTests {
                         parameters: [Parameter(name: "data", type: .any)]
                     ),
                     body: [],
-                    result: .call(Call(
-                        receiver: reference("data"),
-                        selector: "std.text.joined"
-                    ))
+                    result: .call(Call(selector: "std.text.joined", arguments: [reference("data")]))
                 )
             ]
         )
@@ -283,7 +267,7 @@ struct BytesTests {
         await #expect {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
-            "\(error)".contains("the receiver of 'std.text.joined'[0]: expected string, got int")
+            "\(error)".contains("input 'of'[0]: expected string, got int")
                 && !"\(error)".contains("expected array")
         }
     }
@@ -309,10 +293,9 @@ struct BytesTests {
                                 element: "element",
                                 body: [
                                     Statement(binding: .assignment([.key("sum")]), expression: .call(Call(
-                                            receiver: reference("sum"),
-                                            selector: "std.math.plus",
-                                            arguments: ["value": reference("element")]
-                                        ))
+                                        selector: "std.math.plus",
+                                        arguments: [reference("sum"), reference("element")]
+                                    ))
                                     )
                                 ]
                             )
@@ -330,16 +313,13 @@ struct BytesTests {
     @Test("decoded and encoded are two directions of one named mapping")
     func decodedAndEncodedRoundTrip() async throws {
         // Given
-        func procedure(_ selector: Name, on receiver: Value) async throws -> Module {
+        func procedure(_ selector: Name, on subject: Value) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         body: [],
-                        result: .call(Call(
-                            receiver: .literal(receiver),
-                            selector: selector
-                        ))
+                        result: .call(Call(selector: selector, arguments: [.literal(subject)]))
                     )
                 ]
             )
@@ -368,9 +348,8 @@ struct BytesTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.bytes([104])),
                         selector: "std.text.decoded",
-                        arguments: ["encoding": .literal(.string("utf16"))]
+                        arguments: [.literal(.bytes([104])), .literal(.string("utf16"))]
                     ))
                 )
             ]
@@ -402,7 +381,7 @@ struct BytesTests {
                     result: .call(Call(
                         selector: "keep",
                         arguments: [
-                            "value": .literal(.array([
+                            .literal(.array([
                                 .bytes([104, 105]),
                                 .array([.int(1), .int(2)])
                             ]))
@@ -476,10 +455,7 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(
-                        selector: "keep",
-                        arguments: ["value": .literal(.bytes([104, 105]))]
-                    ))
+                    result: .call(Call(selector: "keep", arguments: [.literal(.bytes([104, 105]))]))
                 )
             ]
         )

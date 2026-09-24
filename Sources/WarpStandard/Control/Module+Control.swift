@@ -19,7 +19,7 @@ public extension Module {
         procedures: [
             "std.control.abort": Procedure(
                 description: "Refuses with a message, which an attempt around it catches.",
-                signature: Signature(of: AbortQuery.self, receiver: .of, returns: .never),
+                signature: Signature(of: AbortQuery.self, returns: .never),
                 implementation: .query(AbortQuery())
             )
         ],

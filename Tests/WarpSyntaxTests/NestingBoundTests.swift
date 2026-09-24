@@ -22,12 +22,13 @@ struct NestingBoundTests {
         case closure
 
         // How many levels of this shape fit under the bound. A level of a
-        // call opens two containers and its deepest argument a third; a level
-        // of a closure opens five. Around them the document opens three and
-        // the reference at the bottom one.
+        // call opens three containers, the last its list of arguments, where
+        // the next level and the other argument both stand; a level of a
+        // closure opens five. Around them the document opens three and the
+        // reference at the bottom one.
         var levels: Int {
             switch self {
-            case .call: (Envelope.nesting - 5) / 2
+            case .call: (Envelope.nesting - 4) / 3
             case .closure: (Envelope.nesting - 4) / 5
             }
         }
@@ -42,7 +43,7 @@ struct NestingBoundTests {
             case .call:
                 imports = ["std.math.plus"]
                 expression = (0 ..< deep).reduce(["ref": "one"]) { inner, _ in
-                    ["call": ["procedure": "std.math.plus", "of": inner, "arguments": ["value": ["ref": "one"]]]]
+                    ["call": ["procedure": "std.math.plus", "arguments": [inner, ["ref": "one"]]]]
                 }
 
             case .closure:
@@ -51,10 +52,10 @@ struct NestingBoundTests {
                     [
                         "call": [
                             "procedure": "std.logic.select",
-                            "of": ["ref": "yes"],
                             "arguments": [
-                                "then": ["closure": ["result": inner]],
-                                "else": ["closure": ["result": ["ref": "zero"]]]
+                                ["ref": "yes"],
+                                ["closure": ["result": inner]],
+                                ["closure": ["result": ["ref": "zero"]]]
                             ]
                         ]
                     ]

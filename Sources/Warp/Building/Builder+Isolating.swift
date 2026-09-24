@@ -211,17 +211,13 @@ extension Builder {
                     return false
                 }
 
-                for parameter in signature.parameters where parameter.declared.isInout {
-                    guard
-                        case let .reference(path)? = call.handed(parameter.name, to: signature),
-                        let head = path.head
-                    else { continue }
+                for (parameter, argument) in zip(signature.parameters, call.arguments) where parameter.declared.isInout {
+                    guard case let .reference(path) = argument, let head = path.head else { continue }
 
                     guard declared.contains(head) else { return false }
                 }
 
-                return (call.receiver.map { receiver in holds(receiver, declared: declared, applying: procedures) } ?? true)
-                    && call.arguments.values.allSatisfy { argument in holds(argument, declared: declared, applying: procedures) }
+                return call.arguments.allSatisfy { argument in holds(argument, declared: declared, applying: procedures) }
 
             case let .block(block):
                 return holds(block, declared: declared, applying: procedures)

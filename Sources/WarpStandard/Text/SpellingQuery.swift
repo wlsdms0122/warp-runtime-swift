@@ -26,7 +26,7 @@ struct SpellingQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .string(Rendering(question.receiver ?? .null).text())
+        .string(Rendering(question[.of]).text())
     }
 
     // MARK: - Private

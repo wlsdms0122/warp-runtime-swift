@@ -51,11 +51,6 @@ public final class Linked: Sendable {
     // Who may name this row: its own document, the link, or the caller too.
     public let access: Access
 
-    // Where the receiver stands among the slots, which is where it stands
-    // among the parameters: a lowering reads a parameter's type and leaves
-    // the order alone.
-    public let receiverPosition: Int?
-
     public let constness: Constness
     public let isolation: Isolation
 
@@ -106,14 +101,12 @@ public final class Linked: Sendable {
     ) {
         let slots = signature.lowered(in: table)
         let returns = signature.returns?.lowered(in: table)
-        let receiverPosition = signature.receiver.flatMap(signature.position(of:))
 
         self.label = label
         self.origin = origin
         self.nth = nth
         self.signature = signature
         self.access = access
-        self.receiverPosition = receiverPosition
         self.constness = constness
         self.isolation = isolation
         self.slots = slots
@@ -138,7 +131,6 @@ public final class Linked: Sendable {
         self.nth = row.nth
         self.signature = row.signature
         self.access = row.access
-        self.receiverPosition = row.receiverPosition
         self.constness = row.constness
         self.isolation = row.isolation
         self.slots = row.slots
@@ -160,7 +152,6 @@ public final class Linked: Sendable {
         self.nth = row.nth
         self.signature = row.signature
         self.access = row.access
-        self.receiverPosition = row.receiverPosition
         self.constness = row.constness
         self.isolation = row.isolation
         self.slots = row.slots
@@ -224,8 +215,8 @@ public final class Linked: Sendable {
         try signature.settle(given, over: slots, skipping: skipping, in: table)
     }
 
-    // The same, over arguments handed by position, every position given: the
-    // way a value is applied.
+    // The same, over arguments handed by position, the ones left off at the
+    // end given nothing: the way every call hands them.
     func settle(applied given: [Value]) throws -> [Value?] {
         try signature.settle(applied: given, over: slots, in: table)
     }
@@ -234,17 +225,6 @@ public final class Linked: Sendable {
     // build comes through.
     func settle(_ given: [Name: Value]) throws -> [Value?] {
         try signature.settle(given, over: slots, in: table)
-    }
-
-    // The receiver settled against the slot at this row's receiver
-    // position, or as it is where the row takes none. The receiver is the
-    // parameter a call fills by writing it in front, so it is held to what
-    // that parameter declares the way every other argument is: null is a
-    // value, and a slot that takes one says so.
-    func settling(receiver value: Value) throws -> Value {
-        guard let position = receiverPosition else { return value }
-
-        return try slots[position].checking(value, at: "the receiver of '\(rendered)'", in: table)
     }
 
     // The returned value, checked against what was declared.

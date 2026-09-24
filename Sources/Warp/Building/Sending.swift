@@ -105,49 +105,33 @@ struct Sending {
                 )
             }
 
-            return Sent(row: stands, handing: try positions(of: send, called: label))
+            return Sent(row: stands, handing: try handing(of: send, called: label))
         }
     }
 
     // MARK: - Private
-    // Where each name a send hands over stands among the parameters it reaches.
-    // The order is the callee's declaration order, which is the order its
-    // slots stand in and the order a run reads them at, so this is the same
-    // answer a call written in a body gets from the build.
-    private func positions(of send: Native.Send, called label: Name) throws -> [Int] {
-        guard !send.handing.isEmpty else { return [] }
+    // How many arguments a send hands over, held against the parameters it
+    // reaches: the same count a call written in a body is held to.
+    private func handing(of send: Native.Send, called label: Name) throws -> Int {
+        guard send.handing > 0 else { return 0 }
 
         guard let signature = taking(send.selector) else {
             throw BuildError(
-                "'\(label)' hands \(send.handing.map(\.spelling).joined(separator: ", ")) to"
-                    + " '\(send.selector)', and nothing standing here declares what it takes",
+                "'\(label)' hands \(send.handing) to '\(send.selector)', and nothing"
+                    + " standing here declares what it takes",
                 at: Place.procedure(label.spelling, in: .assembled).part(.imports)
             )
         }
 
-        let names = signature.names
-        var taken: Set<Int> = []
-
-        // A name handed twice is two instructions for one place, and neither is
-        // the one to keep. The same rule a call written in a body is held to.
-        return try send.handing.map { handed in
-            guard let position = names.firstIndex(of: handed) else {
-                throw BuildError(
-                    "'\(label)' hands '\(handed)' to '\(send.selector)', which declares"
-                        + " no parameter under that name",
-                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
-                )
-            }
-
-            guard taken.insert(position).inserted else {
-                throw BuildError(
-                    "'\(label)' hands '\(handed)' to '\(send.selector)' more than once",
-                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
-                )
-            }
-
-            return position
+        guard send.handing <= signature.parameters.count else {
+            throw BuildError(
+                "'\(label)' hands \(send.handing) to '\(send.selector)', which takes"
+                    + " \(signature.parameters.count)",
+                at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+            )
         }
+
+        return send.handing
     }
 
     private func answersOnlyByRunning(_ selector: Name) -> Bool {

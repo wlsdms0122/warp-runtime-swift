@@ -27,13 +27,12 @@ struct VocabularyTests {
         let extra = try Module(
             procedures: [
                 "extra.head": Procedure(
-                    signature: Signature(of: FirstQuery.self, receiver: .of, returns: .any),
+                    signature: Signature(of: FirstQuery.self, returns: .any),
                     implementation: .query(FirstQuery())
                 ),
                 "extra.longerThan": Procedure(
                     signature: Signature(
                         of: LongerThanQuery.self,
-                        receiver: .of,
                         returns: .bool
                     ),
                     implementation: .query(LongerThanQuery())
@@ -44,7 +43,7 @@ struct VocabularyTests {
             "parameters": [["name": "names", "type": "array<string>"]],
             "body": [
                 ["var": "verdict"],
-                ["let": "head", "value": ["call": ["procedure": "std.collection.first", "of": ["ref": "names"]]]],
+                ["let": "head", "value": ["call": ["procedure": "std.collection.first", "arguments": [["ref": "names"]]]]],
                 [
                     "value": ["conditional": [
                         "when": ["of": ["ref": "head"], "longerThan": 3],
@@ -106,7 +105,7 @@ private struct FirstQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard case let .array(elements) = question.receiver else { return nil }
+        guard case let .array(elements) = question[.of] else { return nil }
 
         return elements.first
     }
@@ -135,7 +134,7 @@ private struct LongerThanQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         guard
-            case let .string(text) = question.receiver,
+            case let .string(text) = question[.of],
             case let .int(limit) = question[.value]
         else {
             return nil

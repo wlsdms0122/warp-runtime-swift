@@ -29,7 +29,7 @@ struct CallTests {
                     "body": [
                         [
                             "let": "call",
-                            "value": ["call": ["procedure": "callee", "arguments": ["base": 41]]
+                            "value": ["call": ["procedure": "callee", "arguments": [41]]
                         ]]
                     ],
                     "result": ["result": ["ref": "call.pair"]]
@@ -65,7 +65,7 @@ struct CallTests {
                     "body": [
                         [
                             "let": "call",
-                            "value": ["call": ["procedure": "callee", "arguments": ["base": "not-a-number"]]
+                            "value": ["call": ["procedure": "callee", "arguments": ["not-a-number"]]
                         ]]
                     ]
                 ],
@@ -112,10 +112,11 @@ struct CallTests {
         #expect(outputs["result"] == .string("hello"))
     }
 
-    @Test("a call writes what it is sent to")
-    func callWritesItsReceiver() async throws {
-        // Given. `call` reaches a receiver the same way a spelling does, so a
-        // document is not forced through `x.shout` to send to one
+    @Test("a call writes what a procedure is about as its first argument")
+    func callWritesItsSubjectFirst() async throws {
+        // Given. What a procedure is about is its first parameter, filled the
+        // way every other one is, so a document is not forced through
+        // `x.shout` to hand it over
         let sut = try loader.loadDocument([
             "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
@@ -124,13 +125,12 @@ struct CallTests {
                     "body": [
                         [
                             "let": "said",
-                            "value": ["call": ["procedure": "shout", "of": ["ref": "procedure"]]
+                            "value": ["call": ["procedure": "shout", "arguments": [["ref": "procedure"]]]
                         ]]
                     ],
                     "result": ["result": ["ref": "said"]]
                 ],
                 "shout": [
-                    "receiver": "of",
                     "parameters": [["name": "of", "type": "string"]],
                     "returns": "string",
                     "body": [],

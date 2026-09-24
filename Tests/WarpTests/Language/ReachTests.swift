@@ -25,7 +25,7 @@ struct ReachTests {
                 "bank.Account": .record(["balance": .int]),
                 "bank.Card": .record(["last": .string])
             ],
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             claims: [
                 "bank.Account": ["app.Describable"],
                 "bank.Card": ["app.Describable"]
@@ -43,20 +43,18 @@ struct ReachTests {
                             )
                         )
                     ],
-                    result: .call(Call(receiver: reference("account"), selector: "app.tell"))
+                    result: .call(Call(selector: "app.tell", arguments: [reference("account")]))
                 ),
                 "app.tell": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(receiver: reference("it"), selector: "app.Describable.describe"))
+                    result: .call(Call(selector: "app.Describable.describe", arguments: [reference("it")]))
                 ),
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
@@ -65,7 +63,6 @@ struct ReachTests {
                 ),
                 "bank.Card.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Card"))],
                         returns: .string
                     ),
@@ -179,14 +176,14 @@ struct ReachTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
+                    result: .call(Call(selector: "app.twice", arguments: [.literal(.int(2))]))
                 )
             ]
         )
         let sending = try Module(
             procedures: [
                 "app.twice": Procedure(
-                    signature: Signature(of: TwiceQuery.self, receiver: .of, returns: .int),
+                    signature: Signature(of: TwiceQuery.self, returns: .int),
                     implementation: .query(TwiceQuery())
                 )
             ]
@@ -214,14 +211,14 @@ private struct TwiceQuery: Query {
 
         var selector: Name { "std.math.times" }
 
-        var handing: [Name] { ["value"] }
+        var handing: Int { 2 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        try await question.send(.times, to: question.receiver, handing: [.int(2)])
+        try await question.send(.times, handing: [question[.of], .int(2)])
     }
 
     // MARK: - Private

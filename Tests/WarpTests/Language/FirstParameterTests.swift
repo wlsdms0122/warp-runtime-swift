@@ -1,5 +1,5 @@
 //
-//  ReceiverTests.swift
+//  FirstParameterTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/17/26.
@@ -9,17 +9,18 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A receiver is a declared parameter, and a procedure a caller sends to one is a
-// declaration like any other. It is not reserved for native code.
-@Suite("A declaration may be sent to something")
-struct ReceiverTests {
+// What a procedure is about is its first parameter, declared and filled the way
+// every other one is, and a procedure taking one is a declaration like any other.
+// It is not reserved for native code.
+@Suite("What a declaration is about is its first parameter")
+struct FirstParameterTests {
     // MARK: - Property
     private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a declared receiver is read by the name the signature gave it")
-    func receiverIsANamedParameter() async throws {
+    @Test("a first argument is read by the name the signature gave it")
+    func firstArgumentIsANamedParameter() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -31,7 +32,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(receiver: .reference([.key("procedure")]), selector: "shout"))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "shout", arguments: [.reference([.key("procedure")])]))
                         )
                     ],
                     result: .record([
@@ -40,7 +41,6 @@ struct ReceiverTests {
                 ),
                 "shout": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [
                             Parameter(name: "of", type: .string)
                         ],
@@ -65,8 +65,8 @@ struct ReceiverTests {
         #expect(outputs["result"] == .string("hey!"))
     }
 
-    @Test("a native procedure reads its receiver by the parameter's own key")
-    func receiverIsReadByItsKey() async throws {
+    @Test("a native procedure reads its first argument by the parameter's own key")
+    func firstArgumentIsReadByItsKey() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -74,11 +74,11 @@ struct ReceiverTests {
                     access: .public,
                     body: [],
                     result: .record([
-                        "result": .call(Call(receiver: .literal(.int(20)), selector: "app.echo"))
+                        "result": .call(Call(selector: "app.echo", arguments: [.literal(.int(20))]))
                     ])
                 ),
                 "app.echo": Procedure(
-                    signature: Signature(of: EchoQuery.self, receiver: .of, returns: .int),
+                    signature: Signature(of: EchoQuery.self, returns: .int),
                     implementation: .query(EchoQuery())
                 )
             ]
@@ -105,7 +105,6 @@ struct ReceiverTests {
                 ),
                 "shout": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [
                             Parameter(name: "of", type: .string)
                         ],
@@ -127,16 +126,16 @@ struct ReceiverTests {
         let shout = try #require(image["shout"])
         let count = try #require(image["std.collection.count"])
 
-        #expect(shout.signature.receiver == "of")
-        #expect(count.signature.receiver == "of")
+        #expect(shout.signature.names.first == "of")
+        #expect(count.signature.names.first == "of")
         #expect(shout.isWritten)
         #expect(!count.isWritten)
     }
 
-    @Test("a call sends its receiver even where the parameter is required")
-    func receiverSuppliesItsParameter() async throws {
-        // Given. The receiver is written in front of the selector, so the
-        // builder must not read its parameter as one nobody supplied
+    @Test("a call fills a required first parameter by the argument at its position")
+    func firstArgumentSuppliesItsParameter() async throws {
+        // Given. The argument stands at the first parameter's position, so the
+        // builder must not read that parameter as one nobody supplied
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -149,7 +148,7 @@ struct ReceiverTests {
                     body: [
                         Statement(
                             binding: .constant("many"),
-                            expression: .call(Call(receiver: reference("names"), selector: "std.collection.count"))
+                            expression: .call(Call(selector: "std.collection.count", arguments: [reference("names")]))
                         )
                     ],
                     result: .record([
@@ -182,9 +181,10 @@ struct ReceiverTests {
                 ),
                 "dirty": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .call(Call(selector: "app.fail", arguments: [
-                                        "recoverable": .literal(.bool(true))
-                                    ]))
+                        Statement(binding: .constant("done"), expression: .call(Call(
+                            selector: "app.fail",
+                            arguments: [.literal(.bool(true))]
+                        ))
                         )
                     ]
                 ),
@@ -218,12 +218,11 @@ struct ReceiverTests {
         // which is const, so `label` is const
         let label = Procedure(
             signature: Signature(
-                receiver: "of",
                 parameters: [Parameter(name: "of", type: .array(.string))],
                 returns: .string
             ),
             body: [],
-            result: .call(Call(receiver: reference("of"), selector: "std.text.joined"))
+            result: .call(Call(selector: "std.text.joined", arguments: [reference("of")]))
         )
         let sut = try Module(
             procedures: [
@@ -234,7 +233,7 @@ struct ReceiverTests {
                         parameters: [Parameter(name: "names", type: .array(.string))]
                     ),
                     body: [],
-                    result: .call(Call(receiver: reference("names"), selector: "label"))
+                    result: .call(Call(selector: "label", arguments: [reference("names")]))
                 )
             ]
         )
@@ -265,14 +264,13 @@ struct ReceiverTests {
                 ),
                 "size": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [
                             Parameter(name: "of", type: .array(.any))
                         ],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(receiver: reference("of"), selector: "std.collection.count"))
+                    result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
                 )
             ]
         )
@@ -286,7 +284,7 @@ struct ReceiverTests {
     }
 }
 
-// Answers what it was sent to, read by the receiver's own key.
+// Answers what it was sent, read by the first parameter's own key.
 private struct EchoQuery: Query {
     enum Parameters: Int, ParameterSet {
         case of

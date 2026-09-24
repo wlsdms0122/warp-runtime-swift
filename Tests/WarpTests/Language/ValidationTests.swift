@@ -164,9 +164,7 @@ struct ValidationTests {
         let arm = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
         let sut = [
             Statement(binding: .constant("said"), expression: .call(
-                    Call(selector: "app.shout", arguments: [
-                        "text": .conditional(.literal(.bool(true)), then: arm, else: nil)
-                    ])
+                    Call(selector: "app.shout", arguments: [.conditional(.literal(.bool(true)), then: arm, else: nil)])
                 )
             )
         ]
@@ -352,9 +350,9 @@ struct ValidationTests {
                         access: .public,
                         body: [
                             Statement(binding: .constant("counted"), expression: .call(Call(
-                                    receiver: .literal(.array([.int(1)])),
-                                    selector: "std.collection.count"
-                                ))
+                                selector: "std.collection.count",
+                                arguments: [.literal(.array([.int(1)]))]
+                            ))
                             )
                         ]
                     )
@@ -377,9 +375,9 @@ struct ValidationTests {
                         access: .public,
                         body: [
                             Statement(binding: .constant("counted"), expression: .call(Call(
-                                    receiver: .literal(.array([.int(1)])),
-                                    selector: "std.collection.count"
-                                ))
+                                selector: "std.collection.count",
+                                arguments: [.literal(.array([.int(1)]))]
+                            ))
                             )
                         ]
                     )
@@ -406,9 +404,9 @@ struct ValidationTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("counted"), expression: .call(Call(
-                                receiver: .literal(.array([.int(1)])),
-                                selector: "std.collection.count"
-                            ))
+                            selector: "std.collection.count",
+                            arguments: [.literal(.array([.int(1)]))]
+                        ))
                         )
                     ]
                 )
@@ -474,11 +472,11 @@ struct ValidationTests {
         let sut = {
             try Module(
                 imports: [],
-                contracts: ["app.Described": ["describe": Signature(returns: .string)]],
+                contracts: ["app.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Described"))], returns: .string)]],
                 claims: ["int": ["app.Described"]],
                 procedures: [
                     "int.describe": Procedure(
-                        signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .int)], returns: .string),
+                        signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .string),
                         body: [],
                         result: .literal(.string("int"))
                     ),

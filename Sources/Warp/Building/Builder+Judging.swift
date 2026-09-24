@@ -68,10 +68,9 @@ extension Builder {
     }
 
     // Everything a signature is held to where it is declared: every type it
-    // mentions resolves, every parameter could be filled, every constraint it
-    // names is declared and single, and the receiver it names is a parameter it
-    // declares. The facts every consumer of the signature reads instead of
-    // re-deriving.
+    // mentions resolves, every parameter could be filled, and every constraint
+    // it names is declared and single. The facts every consumer of the
+    // signature reads instead of re-deriving.
     func judge(
         _ signature: Signature,
         at place: Place,
@@ -108,14 +107,6 @@ extension Builder {
         )
 
         try judgeConstraints(signature.parameterOccurrences, at: place, in: table)
-
-        if let receiver = signature.receiver, signature.parameter(named: receiver) == nil {
-            throw BuildError(
-                "receiver names '\(receiver)', which this"
-                    + " signature does not declare",
-                at: place
-            )
-        }
     }
 
     // Everything a cast's type is held to on its spelling alone: the names it
@@ -568,17 +559,6 @@ extension Builder {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
-        // The receiver is what stands in front of the dot, and that is the
-        // one place it is written. Its name under `arguments` is refused
-        // before anything is read, whether or not something stands in front.
-        if let receiver = callee.signature.receiver, call.arguments[receiver] != nil {
-            throw BuildError(
-                "sending '\(call.selector)' with '\(receiver)' by name, which is its"
-                    + " receiver and is written in front",
-                at: site.place.part(.arguments)
-            )
-        }
-
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
         // refuse whatever arrived. The judgment (a parameter read two ways has
@@ -604,7 +584,6 @@ extension Builder {
                 over: declaredSlots,
                 at: call,
                 readings: site.readings,
-                receiver: site.received,
                 in: loweredTypes
             ),
             in: loweredTypes,
@@ -621,33 +600,20 @@ extension Builder {
             slots = filled
         }
 
-        // Found by name along the list, the way the boundary finds one: a
-        // declaration's slots are few and in name order.
-        func slot(_ name: Name) -> Slot? {
-            slots.first { slot in slot.name == name }
-        }
-
-        let undeclared = call.arguments.keys
-            .filter { name in slot(name) == nil }
-            .sorted()
-
-        guard undeclared.isEmpty else {
+        // More arguments than slots is a different procedure. Fewer leaves the
+        // positions at the end given nothing, which only a slot that reads
+        // absence as null takes.
+        guard call.arguments.count <= slots.count else {
             throw BuildError(
-                "sending '\(call.selector)' with"
-                    + " \(undeclared.map(\.spelling).joined(separator: ", ")), which it does not declare",
+                "sending '\(call.selector)' \(call.arguments.count) arguments, and it"
+                    + " takes \(slots.count)",
                 at: site.place.part(.arguments)
             )
         }
 
-        // A receiver is written on the other side of the dot rather than by
-        // name, so a site that sends one has supplied that parameter.
-        let supplied = Set(call.arguments.keys)
-            .union(call.receiver == nil ? [] : [declared.receiver].compactMap { $0 })
-
-        let missing = slots
-            .filter { slot in slot.mustBeGiven(in: context.loweredTypes) && !supplied.contains(slot.name) }
+        let missing = slots.dropFirst(call.arguments.count)
+            .filter { slot in slot.mustBeGiven(in: context.loweredTypes) }
             .map(\.name)
-            .sorted()
 
         guard missing.isEmpty else {
             throw BuildError(
@@ -660,15 +626,15 @@ extension Builder {
         // An argument that needs a scope cannot be judged here. Only the ones
         // that already are what they will be. `taking` rather than `checking`,
         // so a constant passes exactly the gate the run would apply to it.
-        for (name, argument) in call.arguments.sorted(by: { left, right in left.key < right.key }) {
-            guard let slot = slot(name), let constant = argument.constantValue else { continue }
+        for (position, (slot, argument)) in zip(slots, call.arguments).enumerated() {
+            guard let constant = argument.constantValue else { continue }
 
             do {
                 _ = try slot.taking(constant, in: loweredTypes)
             } catch {
                 throw BuildError(
                     "sending '\(call.selector)': \(error)",
-                    at: site.place.argument(name.spelling)
+                    at: site.place.argument(position)
                 )
             }
         }
@@ -677,16 +643,20 @@ extension Builder {
         // cannot say that a string a host parses is well formed, and the
         // procedure can. It happens here rather than while decoding, because a
         // notation judging arguments would have to know the vocabulary; judging
-        // belongs where names resolve.
-        // A procedure's own keys name its parameters, so what a call wrote by name
-        // is asked for by key here, through the same door the procedure reads an
-        // argument through when it answers.
+        // belongs where names resolve. The procedure's own keys name its
+        // parameters, so each constant is asked for under the name of the slot
+        // it stands at, through the same door the procedure reads an argument
+        // through when it answers.
         func validate(_ query: some Query, given constants: [Name: Value]) throws {
             try query.validate(Question(arguments: constants))
         }
 
         if case let .native(.query(query)) = callee.implementation {
-            let constants = call.arguments.compactMapValues(\.constantValue)
+            var constants: [Name: Value] = [:]
+
+            for (slot, argument) in zip(slots, call.arguments) {
+                constants[slot.name] = argument.constantValue
+            }
 
             do {
                 try validate(query, given: constants)
@@ -703,45 +673,15 @@ extension Builder {
         // makes declaring an answer worth anything before a run: both sides are
         // declarations, and a declaration is text. The site carries the walk's
         // readings, so nothing is walked again for the asking.
-        for name in call.arguments.keys.sorted() {
-            guard let slot = slot(name) else { continue }
-
-            let written = site.readings[name] ?? .any
-
+        for (position, (slot, written)) in zip(slots, site.readings).enumerated() {
             guard !slot.type.accepts(written, in: loweredTypes) else { continue }
 
             throw BuildError(
-                "sending '\(call.selector)' with \(name),"
+                "sending '\(call.selector)' with \(slot.name),"
                     + " which holds \(written.rendered(in: loweredTypes))"
                     + " where \(slot.type.rendered(in: loweredTypes)) is declared",
-                at: site.place.argument(name.spelling)
+                at: site.place.argument(position)
             )
-        }
-
-        // A procedure that receives by no name has no slot for what stands in
-        // front of the dot, so what was written there would go nowhere.
-        guard site.received == nil || declared.receiver != nil else {
-            throw BuildError(
-                "'\(call.selector)' is sent to something, and it"
-                    + " \(BuildError.receivesByNoName)",
-                at: site.place.part(.receiver)
-            )
-        }
-
-        // The receiver is written on the other side of the dot and checked the
-        // same way.
-        if
-            let written = site.received,
-            let name = declared.receiver,
-            let slot = slot(name)
-        {
-            guard slot.type.accepts(written, in: loweredTypes) else {
-                throw BuildError(
-                    "sending '\(call.selector)' to \(written.rendered(in: loweredTypes)),"
-                        + " where \(slot.type.rendered(in: loweredTypes)) is declared",
-                    at: site.place.part(.receiver)
-                )
-            }
         }
     }
 }

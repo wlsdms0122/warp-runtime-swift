@@ -17,16 +17,15 @@ struct UnheldClaimTests {
         // and hands the type nowhere.
         // A contract and a type, both named by the program for their own sake.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.tell": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(receiver: .reference([.key("it")]), selector: "app.Describable.describe"))
+                    result: .call(Call(selector: "app.Describable.describe", arguments: [.reference([.key("it")])]))
                 )
             ]
         )
@@ -44,12 +43,11 @@ struct UnheldClaimTests {
             procedures: [
                 "app.mine": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(receiver: .reference([.key("it")]), selector: "app.tell"))
+                    result: .call(Call(selector: "app.tell", arguments: [.reference([.key("it")])]))
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -85,11 +83,10 @@ struct UnheldClaimTests {
         // Given. One document claiming two pairs, one of them with no procedure
         // behind it, and a program leaning on the other.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.tell": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [
                             Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
@@ -97,7 +94,7 @@ struct UnheldClaimTests {
                     ),
                     body: [],
                     result: .call(
-                        Call(receiver: .reference([.key("it")]), selector: "app.Describable.describe")
+                        Call(selector: "app.Describable.describe", arguments: [.reference([.key("it")])])
                     )
                 )
             ]
@@ -117,7 +114,6 @@ struct UnheldClaimTests {
             procedures: [
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
@@ -141,7 +137,7 @@ struct UnheldClaimTests {
                             )
                         )
                     ],
-                    result: .call(Call(receiver: .reference([.key("account")]), selector: "app.tell"))
+                    result: .call(Call(selector: "app.tell", arguments: [.reference([.key("account")])]))
                 )
             ]
         )
@@ -160,11 +156,10 @@ struct UnheldClaimTests {
         // Given. The claim in one document with no procedure behind it, and the
         // program that hands the type in another.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.tell": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [
                             Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
@@ -172,7 +167,7 @@ struct UnheldClaimTests {
                     ),
                     body: [],
                     result: .call(
-                        Call(receiver: .reference([.key("it")]), selector: "app.Describable.describe")
+                        Call(selector: "app.Describable.describe", arguments: [.reference([.key("it")])])
                     )
                 )
             ]
@@ -200,7 +195,7 @@ struct UnheldClaimTests {
                             )
                         )
                     ],
-                    result: .call(Call(receiver: .reference([.key("plain")]), selector: "app.tell"))
+                    result: .call(Call(selector: "app.tell", arguments: [.reference([.key("plain")])]))
                 )
             ]
         )
@@ -222,11 +217,10 @@ struct UnheldClaimTests {
         // constant handing it a type, and the claim in a document the program
         // never names.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.count": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [
                             Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
@@ -242,7 +236,6 @@ struct UnheldClaimTests {
             procedures: [
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
@@ -259,12 +252,14 @@ struct UnheldClaimTests {
             constants: [
                 "app.counted": .call(
                     Call(
-                        receiver: .cast(
-                            .record(["balance": .literal(.int(7))]),
-                            as: .named("bank.Account"),
-                            optional: false
-                        ),
-                        selector: "app.count"
+                        selector: "app.count",
+                        arguments: [
+                            .cast(
+                                .record(["balance": .literal(.int(7))]),
+                                as: .named("bank.Account"),
+                                optional: false
+                            )
+                        ]
                     )
                 )
             ],

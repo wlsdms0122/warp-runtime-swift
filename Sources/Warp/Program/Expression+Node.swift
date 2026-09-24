@@ -109,14 +109,13 @@ public extension Expression {
             )
         }
 
-        // What a call is written with, walked in name order and each given its
-        // own place. Name order because a `Dictionary` walks in whatever order
-        // its seed decided, and the stages downstream stop at the first
-        // refusal, which one an author is shown would be a fact of the run
-        // rather than of the text. Its own place because two of them reported
-        // from the same one would say a thing is wrong and not say which.
-        func arguments(_ children: [Name: Expression]) -> [(Trail, Node)] {
-            named(children, under: stepping(here, .part(.arguments)))
+        // What a call or an application is written with, walked in position
+        // order and each given its own place: two of them reported from the
+        // same one would say a thing is wrong and not say which.
+        func arguments(_ children: [Expression]) -> [(Trail, Node)] {
+            children.enumerated().flatMap { position, argument in
+                argument.walked(at: stepping(stepping(here, .part(.arguments)), .index(position)), stepping: stepping)
+            }
         }
 
         func named(_ children: [Name: Expression], under place: Trail) -> [(Trail, Node)] {
@@ -134,7 +133,7 @@ public extension Expression {
             procedure.block?.walked(at: here, stepping: stepping) ?? []
 
         case let .cast(value, _, _):
-            inner(value, under: .receiver)
+            inner(value, under: .subject)
 
         // A leave writes what it carries directly under its own construct,
         // which the statement holding it already stepped into.
@@ -150,14 +149,10 @@ public extension Expression {
             named(record, under: here)
 
         case let .apply(callee, written):
-            inner(callee, under: .callee)
-                + written.enumerated().flatMap { position, argument in
-                    argument.walked(at: stepping(stepping(here, .part(.arguments)), .index(position)), stepping: stepping)
-                }
+            inner(callee, under: .callee) + arguments(written)
 
         case let .call(call):
-            (call.receiver.map { receiver in inner(receiver, under: .receiver) } ?? [])
-                + arguments(call.arguments)
+            arguments(call.arguments)
 
         case let .block(block):
             block.walked(at: here, stepping: stepping)

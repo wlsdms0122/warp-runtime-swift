@@ -157,7 +157,7 @@ struct ExpressionFormTests {
         // is an array written one after another, each value asked how it reads
         guard
             case let .call(joined) = reference,
-            case let .array(pieces) = joined.receiver
+            case let .array(pieces) = joined.arguments.first
         else {
             Issue.record("expected a joined array, got \(reference)")
 
@@ -177,7 +177,7 @@ struct ExpressionFormTests {
         // The binding is substituted, so the placeholder never names anything
         // the template was not given.
         #expect(spelled.selector == Notation.testing.interpolation?.read)
-        #expect(spelled.receiver?.referencePath == [.key("name")])
+        #expect(spelled.arguments.first?.referencePath == [.key("name")])
     }
 
     @Test("an index reference inside a placeholder stays inside the template")
@@ -193,9 +193,9 @@ struct ExpressionFormTests {
         // against whatever scope the statement runs in
         guard
             case let .call(joined) = reference,
-            case let .array(pieces) = joined.receiver,
+            case let .array(pieces) = joined.arguments.first,
             case let .call(spelled)? = pieces.last,
-            case let .reference(path)? = spelled.receiver
+            case let .reference(path)? = spelled.arguments.first
         else {
             Issue.record("expected a spelled reference, got \(reference)")
 

@@ -161,10 +161,9 @@ public struct Place: Sendable, Equatable {
     // asks the four of them for the same place and compares.
     public func part(_ part: Part) -> Place { appending(.part(part)) }
 
-    // What a call is written with. Two steps and not one. A document nests them
-    // under a key of their own, and an argument named beside a statement would
-    // be a name meaning two things.
-    public func argument(_ name: String) -> Place { part(.arguments).key(name) }
+    // What a call is written with. Two steps and not one: a document nests them
+    // under a key of their own.
+    public func argument(_ position: Int) -> Place { part(.arguments).index(position) }
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
@@ -251,7 +250,7 @@ public extension Place {
         case body
         case result
 
-        case receiver
+        case subject
         case callee
         case arguments
         case closure
@@ -285,7 +284,7 @@ public extension Place {
             case .returns: "returns"
             case .body: "body"
             case .result: "result"
-            case .receiver: "receiver"
+            case .subject: "subject"
             case .callee: "callee"
             case .arguments: "arguments"
             case .closure: "closure"

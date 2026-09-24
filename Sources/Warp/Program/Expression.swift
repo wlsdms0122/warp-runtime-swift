@@ -19,7 +19,7 @@ import Foundation
 //                does not hold reads as null
 //   array     . Elements are expressions
 //   record    . Fields are expressions
-//   call      . A message: a selector, a receiver, arguments. The one
+//   call      . A selector and its arguments by position. The one
 //                calling type, and the only open one
 //
 // The control constructs carry a `Block` and, where a name has to exist inside that
@@ -208,8 +208,7 @@ public indirect enum Expression: Sendable {
                 || arguments.contains { argument in argument.holdsConstruct }
 
         case let .call(call):
-            return call.receiver?.holdsConstruct ?? false
-                || call.arguments.values.contains { argument in argument.holdsConstruct }
+            return call.arguments.contains { argument in argument.holdsConstruct }
 
         // A cast runs no body (it names a type and judges what arrives against
         // it) so it holds a construct only where the value it reads does.

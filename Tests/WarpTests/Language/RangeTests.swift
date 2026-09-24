@@ -109,10 +109,7 @@ struct RangeTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(
-                        selector: "paint",
-                        arguments: ["level": .literal(.int(256))]
-                    ))
+                    result: .call(Call(selector: "paint", arguments: [.literal(.int(256))]))
                 )
             ]
         )
@@ -223,8 +220,8 @@ struct RangeTests {
         }
     }
 
-    @Test("a range fills a procedure's receiver, the way an int does")
-    func aRangeFillsAProceduresReceiver() async throws {
+    @Test("a range fills a procedure's first parameter, the way an int does")
+    func aRangeFillsAProceduresFirstParameter() async throws {
         // Given. A range's value stands where the int it narrows stands
         let sut = try Module(
             procedures: [
@@ -234,7 +231,7 @@ struct RangeTests {
                         parameters: [Parameter(name: "level", type: .ranged(.whole(from: -10, to: .through(10))))]
                     ),
                     body: [],
-                    result: .call(Call(receiver: reference("level"), selector: "std.math.absolute"))
+                    result: .call(Call(selector: "std.math.absolute", arguments: [reference("level")]))
                 )
             ]
         )
@@ -262,10 +259,7 @@ struct RangeTests {
                         parameters: [Parameter(name: "level", type: .ranged(.whole(from: 0, to: .through(255))))]
                     ),
                     body: [],
-                    result: .call(Call(
-                        selector: "keep",
-                        arguments: ["value": reference("level")]
-                    ))
+                    result: .call(Call(selector: "keep", arguments: [reference("level")]))
                 )
             ]
         )

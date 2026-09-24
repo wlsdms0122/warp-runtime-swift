@@ -38,11 +38,10 @@ struct Arithmetic: Sendable {
     }
 
     // MARK: - Public
-    func answer(_ receiver: Value?, _ operand: Value) throws -> Value {
-        guard let receiver, let left = number(receiver), let right = number(operand) else {
+    func answer(_ first: Value, _ operand: Value) throws -> Value {
+        guard let left = number(first), let right = number(operand) else {
             throw ExecutionError(
-                "arithmetic asks \(receiver?.type.description ?? "nothing") and"
-                    + " \(operand.type), expected two numbers"
+                "arithmetic asks \(first.type) and \(operand.type), expected two numbers"
             )
         }
 
@@ -54,7 +53,7 @@ struct Arithmetic: Sendable {
         }
 
         if
-            case let .int(leftWhole) = receiver,
+            case let .int(leftWhole) = first,
             case let .int(rightWhole) = operand,
             let answered = try whole(leftWhole, rightWhole)
         {

@@ -215,21 +215,23 @@ struct VariableTests {
         let sut = [
             Statement(binding: .constant("both"), expression: .call(
                     Call(
-                        receiver: .record([
-                            "left": .closure(
-                                Procedure(
-                                    body: [
-                                        Statement(binding: .variable("tally"), expression: .literal(.int(0))
-                                        ),
-                                        Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1))
-                                        )
-                                    ],
-                                    result: reference("tally")
-                                )
-                            ),
-                            "right": .closure(Procedure(body: [], result: .literal(.int(2))))
-                        ]),
-                        selector: "std.concurrent.all"
+                        selector: "std.concurrent.all",
+                        arguments: [
+                            .record([
+                                "left": .closure(
+                                    Procedure(
+                                        body: [
+                                            Statement(binding: .variable("tally"), expression: .literal(.int(0))
+                                            ),
+                                            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1))
+                                            )
+                                        ],
+                                        result: reference("tally")
+                                    )
+                                ),
+                                "right": .closure(Procedure(body: [], result: .literal(.int(2))))
+                            ])
+                        ]
                     )
                 )
             )

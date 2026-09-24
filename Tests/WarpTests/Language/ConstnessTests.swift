@@ -118,9 +118,8 @@ struct ConstnessTests {
             body: [Statement(binding: .constant("judging"), expression: .closure(judging))],
             result: .call(
                 Call(
-                    receiver: .array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]),
                     selector: "std.collection.filter",
-                    arguments: ["value": reference("judging")]
+                    arguments: [.array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]), reference("judging")]
                 )
             )
         )
@@ -145,7 +144,7 @@ struct ConstnessTests {
                 entryName: Procedure(
                     access: .public,
                     body: [Statement(binding: .constant("given"), expression: .closure(reading))],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )
             ]
         )
@@ -173,7 +172,7 @@ struct ConstnessTests {
                         Statement(binding: .variable("tally"), expression: .literal(.int(0))),
                         Statement(binding: .constant("given"), expression: .closure(writing))
                     ],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )
             ]
         )
@@ -196,7 +195,7 @@ struct ConstnessTests {
         let sending = Procedure(
             body: [
                 Statement(binding: .variable("own"), expression: .literal(.int(0))),
-                Statement(expression: .call(Call(selector: "bumping", arguments: ["count": reference("own")])))
+                Statement(expression: .call(Call(selector: "bumping", arguments: [reference("own")])))
             ],
             result: .literal(.string("sent"))
         )
@@ -207,7 +206,7 @@ struct ConstnessTests {
                 entryName: Procedure(
                     access: .public,
                     body: [Statement(binding: .constant("given"), expression: .closure(sending))],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )
             ]
         )
@@ -247,13 +246,13 @@ struct ConstnessTests {
                                     signature: Signature(returns: .string),
                                     body: [],
                                     result: .call(
-                                        Call(selector: "asking", arguments: ["body": reference("answering")])
+                                        Call(selector: "asking", arguments: [reference("answering")])
                                     )
                                 )
                             )
                         )
                     ],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("relaying")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("relaying")]))
                 )
             ]
         )
@@ -297,7 +296,7 @@ struct ConstnessTests {
                             )
                         )
                     ],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("relaying")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("relaying")]))
                 )
             ]
         )
@@ -340,7 +339,7 @@ struct ConstnessTests {
                             )
                         )
                     ],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("relaying")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("relaying")]))
                 )
             ]
         )
@@ -387,13 +386,13 @@ struct ConstnessTests {
                                     signature: Signature(returns: .string),
                                     body: [],
                                     result: .call(
-                                        Call(selector: "relaying", arguments: ["body": reference("answering")])
+                                        Call(selector: "relaying", arguments: [reference("answering")])
                                     )
                                 )
                             )
                         )
                     ],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )
             ]
         )
@@ -437,7 +436,7 @@ struct ConstnessTests {
                 entryName: Procedure(
                     access: .public,
                     body: [Statement(binding: .constant("given"), expression: .closure(body))],
-                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )
             ]
         )

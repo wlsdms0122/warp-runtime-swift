@@ -61,9 +61,9 @@ struct StandardTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(
-                                receiver: .literal(.array([.int(1)])),
-                                selector: "std.collection.count"
-                            ))
+                            selector: "std.collection.count",
+                            arguments: [.literal(.array([.int(1)]))]
+                        ))
                         )
                     ]
                 )
@@ -93,9 +93,8 @@ struct StandardTests {
                                 equals(.literal(.int(1)), .literal(.int(2))),
                                 equals(
                                     .call(Call(
-                                        receiver: .literal(.int(1)),
                                         selector: "std.math.dividedBy",
-                                        arguments: ["value": .literal(.int(0))]
+                                        arguments: [.literal(.int(1)), .literal(.int(0))]
                                     )),
                                     .literal(.int(0))
                                 )
@@ -118,20 +117,15 @@ struct StandardTests {
         let doubling = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
             body: [],
-            result: .call(Call(
-                receiver: reference("item"),
-                selector: "std.math.times",
-                arguments: ["value": .literal(.int(2))]
-            ))
+            result: .call(Call(selector: "std.math.times", arguments: [reference("item"), .literal(.int(2))]))
         )
         let odd = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
             body: [
                 Statement(binding: .constant("left"), expression: .call(Call(
-                        receiver: reference("item"),
-                        selector: "std.math.remainder",
-                        arguments: ["value": .literal(.int(2))]
-                    ))
+                    selector: "std.math.remainder",
+                    arguments: [reference("item"), .literal(.int(2))]
+                ))
                 )
             ],
             result: equals(reference("left"), .literal(.int(1)))
@@ -145,11 +139,7 @@ struct StandardTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(
-                receiver: reference("carried"),
-                selector: "std.math.plus",
-                arguments: ["value": reference("item")]
-            ))
+            result: .call(Call(selector: "std.math.plus", arguments: [reference("carried"), reference("item")]))
         )
 
         let sut = try Module(
@@ -159,25 +149,19 @@ struct StandardTests {
                     signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
                     body: [
                         Statement(binding: .constant("doubled"), expression: .call(Call(
-                                receiver: reference("ns"),
-                                selector: "std.collection.map",
-                                arguments: ["value": .closure(doubling)]
-                            ))
+                            selector: "std.collection.map",
+                            arguments: [reference("ns"), .closure(doubling)]
+                        ))
                         ),
                         Statement(binding: .constant("kept"), expression: .call(Call(
-                                receiver: reference("ns"),
-                                selector: "std.collection.filter",
-                                arguments: ["value": .closure(odd)]
-                            ))
+                            selector: "std.collection.filter",
+                            arguments: [reference("ns"), .closure(odd)]
+                        ))
                         ),
                         Statement(binding: .constant("total"), expression: .call(Call(
-                                receiver: reference("ns"),
-                                selector: "std.collection.reduce",
-                                arguments: [
-                                    "from": .literal(.int(0)),
-                                    "value": .closure(adding)
-                                ]
-                            ))
+                            selector: "std.collection.reduce",
+                            arguments: [reference("ns"), .literal(.int(0)), .closure(adding)]
+                        ))
                         )
                     ],
                     result: .record([
@@ -216,11 +200,7 @@ struct StandardTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(
-                receiver: reference("carried"),
-                selector: "std.math.plus",
-                arguments: ["value": .literal(.int(1))]
-            ))
+            result: .call(Call(selector: "std.math.plus", arguments: [reference("carried"), .literal(.int(1))]))
         )
         let sut = try Module(
             procedures: [
@@ -229,12 +209,8 @@ struct StandardTests {
                     signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
                     body: [],
                     result: .call(Call(
-                        receiver: reference("ns"),
                         selector: "std.collection.reduce",
-                        arguments: [
-                            "from": .literal(.int(0)),
-                            "value": .closure(counting)
-                        ]
+                        arguments: [reference("ns"), .literal(.int(0)), .closure(counting)]
                     ))
                 )
             ]
@@ -257,10 +233,7 @@ struct StandardTests {
         let loud = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .string)]),
             body: [],
-            result: .call(Call(
-                selector: "app.shout",
-                arguments: ["text": reference("item")]
-            ))
+            result: .call(Call(selector: "app.shout", arguments: [reference("item")]))
         )
         let sut = try Module(
             procedures: [
@@ -268,11 +241,7 @@ struct StandardTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "names", type: .array(.string))]),
                     body: [],
-                    result: .call(Call(
-                        receiver: reference("names"),
-                        selector: "std.collection.map",
-                        arguments: ["value": .closure(loud)]
-                    ))
+                    result: .call(Call(selector: "std.collection.map", arguments: [reference("names"), .closure(loud)]))
                 )
             ]
         )
@@ -292,17 +261,13 @@ struct StandardTests {
             ("std.math.dividedBy", .int(5), .int(0))
         ]
 
-        for (procedure, receiver, operand) in asks {
+        for (procedure, subject, operand) in asks {
             let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         body: [],
-                        result: .call(Call(
-                            receiver: .literal(receiver),
-                            selector: procedure,
-                            arguments: ["value": .literal(operand)]
-                        ))
+                        result: .call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)]))
                     )
                 ]
             )
@@ -324,26 +289,22 @@ struct StandardTests {
             ("std.math.minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ procedure: Name, _ receiver: Value, _ operand: Value) async throws -> Module {
+        func asking(_ procedure: Name, _ subject: Value, _ operand: Value) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         body: [],
-                        result: .call(Call(
-                            receiver: .literal(receiver),
-                            selector: procedure,
-                            arguments: ["value": .literal(operand)]
-                        ))
+                        result: .call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)]))
                     )
                 ]
             )
         }
 
-        for (procedure, receiver, operand) in asks {
+        for (procedure, subject, operand) in asks {
             // When / Then
             await #expect(throws: ExecutionError.self, "\(procedure) answered") {
-                try await run(asking(procedure, receiver, operand))
+                try await run(asking(procedure, subject, operand))
             }
         }
 
@@ -363,9 +324,8 @@ struct StandardTests {
                         access: .public,
                         body: [],
                         result: .call(Call(
-                            receiver: .literal(.int(left)),
                             selector: "std.math.dividedBy",
-                            arguments: ["value": .literal(.int(right))]
+                            arguments: [.literal(.int(left)), .literal(.int(right))]
                         ))
                     )
                 ]
@@ -393,7 +353,7 @@ struct StandardTests {
         let sut = JoinedQuery()
 
         // When
-        let joined = try await sut.evaluate(Question(receiver: .array([.string("a"), .string("b")])))
+        let joined = try await sut.evaluate(Question(arguments: ["of": .array([.string("a"), .string("b")])]))
 
         // Then
         #expect(joined == .string("ab"))
@@ -409,15 +369,13 @@ struct StandardTests {
         // When / Then
         #expect(
             try await sut.evaluate(Question(
-                receiver: .bytes([104]),
-                arguments: ["encoding": .string("utf8")]
+                arguments: ["of": .bytes([104]), "encoding": .string("utf8")]
             )) == .string("h")
         )
 
         await #expect {
             try await sut.evaluate(Question(
-                receiver: .bytes([104]),
-                arguments: ["encoding": .string("utf16")]
+                arguments: ["of": .bytes([104]), "encoding": .string("utf16")]
             ))
         } throws: { error in
             "\(error)".contains("no encoding named 'utf16'")
@@ -434,12 +392,14 @@ struct StandardTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.array([
-                            .int(1),
-                            .int(Int.max),
-                            .string("9223372036854775807")
-                        ])),
-                        selector: "std.text.text"
+                        selector: "std.text.text",
+                        arguments: [
+                            .literal(.array([
+                                .int(1),
+                                .int(Int.max),
+                                .string("9223372036854775807")
+                            ]))
+                        ]
                     ))
                 )
             ]
@@ -464,16 +424,13 @@ struct StandardTests {
             ("std.math.absolute", .int(Int.min))
         ]
 
-        for (procedure, receiver) in asks {
+        for (procedure, subject) in asks {
             let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         body: [],
-                        result: .call(Call(
-                            receiver: .literal(receiver),
-                            selector: procedure
-                        ))
+                        result: .call(Call(selector: procedure, arguments: [.literal(subject)]))
                     )
                 ]
             )
@@ -498,21 +455,19 @@ struct StandardTests {
                     signature: Signature(parameters: [Parameter(name: "n", type: .int)]),
                     body: [
                         Statement(binding: .constant("quotient"), expression: .call(Call(
-                                receiver: reference("n"),
-                                selector: "std.math.dividedBy",
-                                arguments: ["value": .literal(.int(4))]
-                            ))
+                            selector: "std.math.dividedBy",
+                            arguments: [reference("n"), .literal(.int(4))]
+                        ))
                         ),
                         Statement(binding: .constant("whole"), expression: .call(Call(
-                                receiver: reference("quotient"),
-                                selector: "std.math.floored"
-                            ))
+                            selector: "std.math.floored",
+                            arguments: [reference("quotient")]
+                        ))
                         ),
                         Statement(binding: .constant("left"), expression: .call(Call(
-                                receiver: reference("n"),
-                                selector: "std.math.remainder",
-                                arguments: ["value": .literal(.int(4))]
-                            ))
+                            selector: "std.math.remainder",
+                            arguments: [reference("n"), .literal(.int(4))]
+                        ))
                         )
                     ],
                     result: .record([
@@ -549,27 +504,24 @@ struct StandardTests {
                     ),
                     body: [
                         Statement(binding: .constant("stepped"), expression: .call(Call(
-                                receiver: reference("head"),
-                                selector: "std.math.plus",
-                                arguments: ["value": .literal(.int(1))]
-                            ))
+                            selector: "std.math.plus",
+                            arguments: [reference("head"), .literal(.int(1))]
+                        ))
                         ),
                         Statement(binding: .constant("wrapped"), expression: .call(Call(
-                                receiver: reference("stepped"),
-                                selector: "std.math.remainder",
-                                arguments: ["value": reference("side")]
-                            ))
+                            selector: "std.math.remainder",
+                            arguments: [reference("stepped"), reference("side")]
+                        ))
                         ),
                         Statement(binding: .constant("grown"), expression: .call(Call(
-                                receiver: reference("trail"),
-                                selector: "std.collection.prepending",
-                                arguments: ["value": reference("wrapped")]
-                            ))
+                            selector: "std.collection.prepending",
+                            arguments: [reference("trail"), reference("wrapped")]
+                        ))
                         ),
                         Statement(binding: .constant("moved"), expression: .call(Call(
-                                receiver: reference("grown"),
-                                selector: "std.collection.dropLast"
-                            ))
+                            selector: "std.collection.dropLast",
+                            arguments: [reference("grown")]
+                        ))
                         )
                     ],
                     result: .record([
@@ -609,23 +561,19 @@ struct StandardTests {
                     signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(.int))]),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
-                                receiver: reference("counts"),
-                                selector: "std.collection.keys"
-                            ))
+                            selector: "std.collection.keys",
+                            arguments: [reference("counts")]
+                        ))
                         ),
                         Statement(binding: .constant("held"), expression: .call(Call(
-                                receiver: reference("counts"),
-                                selector: "std.collection.values"
-                            ))
+                            selector: "std.collection.values",
+                            arguments: [reference("counts")]
+                        ))
                         ),
                         Statement(binding: .constant("changed"), expression: .call(Call(
-                                receiver: reference("counts"),
-                                selector: "std.collection.setting",
-                                arguments: [
-                                    "key": .literal(.string("b")),
-                                    "value": .literal(.int(9))
-                                ]
-                            ))
+                            selector: "std.collection.setting",
+                            arguments: [reference("counts"), .literal(.string("b")), .literal(.int(9))]
+                        ))
                         )
                     ],
                     result: .record([
@@ -661,17 +609,20 @@ struct StandardTests {
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("sum"), expression: .call(Call(receiver: .literal(.int(2)), selector: "std.math.plus", arguments: [
-                                        "value": .literal(.int(3))
-                                    ]))
+                        Statement(binding: .constant("sum"), expression: .call(Call(
+                            selector: "std.math.plus",
+                            arguments: [.literal(.int(2)), .literal(.int(3))]
+                        ))
                         ),
-                        Statement(binding: .constant("product"), expression: .call(Call(receiver: .literal(.int(4)), selector: "std.math.times", arguments: [
-                                        "value": .literal(.double(2.5))
-                                    ]))
+                        Statement(binding: .constant("product"), expression: .call(Call(
+                            selector: "std.math.times",
+                            arguments: [.literal(.int(4)), .literal(.double(2.5))]
+                        ))
                         ),
-                        Statement(binding: .constant("quotient"), expression: .call(Call(receiver: .literal(.int(7)), selector: "std.math.dividedBy", arguments: [
-                                        "value": .literal(.int(2))
-                                    ]))
+                        Statement(binding: .constant("quotient"), expression: .call(Call(
+                            selector: "std.math.dividedBy",
+                            arguments: [.literal(.int(7)), .literal(.int(2))]
+                        ))
                         )
                     ],
                     result: .record([
@@ -700,9 +651,10 @@ struct StandardTests {
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("gone"), expression: .call(Call(receiver: .literal(.int(1)), selector: "std.math.dividedBy", arguments: [
-                                        "value": .literal(.int(0))
-                                    ]))
+                        Statement(binding: .constant("gone"), expression: .call(Call(
+                            selector: "std.math.dividedBy",
+                            arguments: [.literal(.int(1)), .literal(.int(0))]
+                        ))
                         )
                     ]
                 )
@@ -732,9 +684,10 @@ struct StandardTests {
                         Statement(binding: .variable("verdict"), expression: .literal(.string(""))
                         ),
                         Statement(
-                            expression: .conditional(.call(Call(receiver: .reference([.key("n")]), selector: "std.math.lessThan", arguments: [
-                                            "value": .literal(.int(10))
-                                        ])), then: [
+                            expression: .conditional(.call(Call(
+                                selector: "std.math.lessThan",
+                                arguments: [.reference([.key("n")]), .literal(.int(10))]
+                            )), then: [
                                         Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("small"))
                                         )
                                     ], else: [
@@ -768,18 +721,20 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("parts"), expression: .call(Call(receiver: .reference([.key("line")]), selector: "std.text.split", arguments: [
-                                        "value": .literal(.string(","))
-                                    ]))
+                        Statement(binding: .constant("parts"), expression: .call(Call(
+                            selector: "std.text.split",
+                            arguments: [.reference([.key("line")]), .literal(.string(","))]
+                        ))
                         ),
-                        Statement(binding: .constant("rejoined"), expression: .call(Call(receiver: .reference([.key("parts")]), selector: "std.text.joined", arguments: [
-                                        "value": .literal(.string(" / "))
-                                    ]))
+                        Statement(binding: .constant("rejoined"), expression: .call(Call(
+                            selector: "std.text.joined",
+                            arguments: [.reference([.key("parts")]), .literal(.string(" / "))]
+                        ))
                         ),
-                        Statement(binding: .constant("fixed"), expression: .call(Call(receiver: .reference([.key("rejoined")]), selector: "std.text.replacing", arguments: [
-                                        "value": .literal(.string("b")),
-                                        "with": .literal(.string("B"))
-                                    ]))
+                        Statement(binding: .constant("fixed"), expression: .call(Call(
+                            selector: "std.text.replacing",
+                            arguments: [.reference([.key("rejoined")]), .literal(.string("b")), .literal(.string("B"))]
+                        ))
                         )
                     ],
                     result: .record([
@@ -810,11 +765,12 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("many"), expression: .call(Call(receiver: .reference([.key("items")]), selector: "std.collection.count"))
+                        Statement(binding: .constant("many"), expression: .call(Call(selector: "std.collection.count", arguments: [.reference([.key("items")])]))
                         ),
-                        Statement(binding: .constant("said"), expression: .call(Call(receiver: .reference([.key("many")]), selector: "std.text.split", arguments: [
-                                        "value": .literal(.string(","))
-                                    ]))
+                        Statement(binding: .constant("said"), expression: .call(Call(
+                            selector: "std.text.split",
+                            arguments: [.reference([.key("many")]), .literal(.string(","))]
+                        ))
                         )
                     ]
                 )
@@ -833,11 +789,7 @@ struct StandardTests {
         // else. `Comparable` does not admit them, and a literal is a reading
         // the build can judge, so the refusal lands before the run.
         let sut = Warp.Expression.call(
-            Call(
-                receiver: .literal(.bytes([0x01])),
-                selector: "std.math.lessThan",
-                arguments: ["value": .literal(.bytes([0x02]))]
-            )
+            Call(selector: "std.math.lessThan", arguments: [.literal(.bytes([0x01])), .literal(.bytes([0x02]))])
         )
 
         // When / Then
@@ -854,10 +806,10 @@ struct StandardTests {
         // an element that is null was still an element of the collection
         let sut = Warp.Expression.call(
             Call(
-                receiver: .literal(.array([.int(1), .null])),
                 selector: "std.collection.map",
                 arguments: [
-                    "value": .closure(
+                    .literal(.array([.int(1), .null])),
+                    .closure(
                         Procedure(
                             signature: Signature(
                                 parameters: [Parameter(name: "item", type: .any)]
@@ -888,9 +840,8 @@ struct StandardTests {
         // equality reads the text the way a person does, not the bytes.
         let sut = Warp.Expression.call(
             Call(
-                receiver: .literal(.string("caf\u{E9}")),
                 selector: "std.logic.equal",
-                arguments: ["value": .literal(.string("cafe\u{301}"))]
+                arguments: [.literal(.string("caf\u{E9}")), .literal(.string("cafe\u{301}"))]
             )
         )
 
@@ -928,11 +879,7 @@ struct StandardTests {
             Procedure(
                 body: [],
                 result: .call(
-                    Call(
-                        receiver: .literal(above),
-                        selector: "std.math.max",
-                        arguments: ["value": .literal(below)]
-                    )
+                    Call(selector: "std.math.max", arguments: [.literal(above), .literal(below)])
                 )
             )
         )
@@ -952,8 +899,8 @@ struct StandardTests {
                     body: [],
                     result: .call(
                         Call(
-                            receiver: .literal(.array([.double(1.5), .double(.nan)])),
-                            selector: "std.collection.sorted"
+                            selector: "std.collection.sorted",
+                            arguments: [.literal(.array([.double(1.5), .double(.nan)]))]
                         )
                     )
                 )
@@ -1028,7 +975,7 @@ struct StandardTests {
                             )
                         ),
                         Statement(binding: .constant("used"), expression: .call(
-                                Call(selector: "wants", arguments: ["it": reference("either")])
+                                Call(selector: "wants", arguments: [reference("either")])
                             )
                         )
                     ],

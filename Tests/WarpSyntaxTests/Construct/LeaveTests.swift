@@ -73,8 +73,7 @@ struct LeaveTests {
                                 "set": "seen",
                                 "value": ["call": [
                                     "procedure": "std.math.plus",
-                                    "of": ["ref": "seen"],
-                                    "arguments": ["value": 1]
+                                    "arguments": [["ref": "seen"], 1]
                                 ]
                             ]],
                             [
@@ -108,7 +107,7 @@ struct LeaveTests {
                     "value": ["loop": [
                         "while": [
                             "of": ["ref": "kept.index"],
-                            "lessThan": ["call": ["procedure": "std.collection.count", "of": ["ref": "names"]]]
+                            "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
                         ],
                         "body": [
                             ["let": "item", "value": ["ref": "names[kept.index]"]],
@@ -173,8 +172,7 @@ struct LeaveTests {
                                             "set": "count",
                                             "value": ["call": [
                                                 "procedure": "std.math.plus",
-                                                "of": ["ref": "count"],
-                                                "arguments": ["value": 1]
+                                                "arguments": [["ref": "count"], 1]
                                             ]
                                         ]],
                                         ["value": ["break": "outer"]]
@@ -267,9 +265,9 @@ struct LeaveTests {
                                     "let": "kept",
                                     "value": ["call": [
                                         "procedure": "std.collection.filter",
-                                        "of": ["ref": "names"],
                                         "arguments": [
-                                            "by": [
+                                            ["ref": "names"],
+                                            [
                                                 "closure": [
                                                     "parameters": [["name": "item", "type": "string"]],
                                                     "body": [["value": ["break": Value.null]]]
@@ -342,7 +340,7 @@ struct LeaveTests {
                             "let": "used",
                             "value": ["call": [
                                 "procedure": "wants",
-                                "arguments": ["it": ["ref": "blocked"]]
+                                "arguments": [["ref": "blocked"]]
                             ]
                         ]]
                     ],
@@ -384,8 +382,7 @@ struct LeaveTests {
                                             "set": "seen",
                                             "value": ["call": [
                                                 "procedure": "std.math.plus",
-                                                "of": ["ref": "seen"],
-                                                "arguments": ["value": 1]
+                                                "arguments": [["ref": "seen"], 1]
                                             ]
                                         ]],
                                         ["value": ["break": Value.null]]
@@ -422,8 +419,7 @@ struct LeaveTests {
                                 "set": "seen",
                                 "value": ["call": [
                                     "procedure": "std.math.plus",
-                                    "of": ["ref": "seen"],
-                                    "arguments": ["value": 1]
+                                    "arguments": [["ref": "seen"], 1]
                                 ]
                             ]],
                             ["let": "noted", "value": ["ref": "seen"]]

@@ -22,7 +22,7 @@ struct KeysQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let held = question.receiver?.asDictionary else { return nil }
+        guard let held = question[.of].asDictionary else { return nil }
 
         // In name order, the order both spellings hold: a walk that answered a
         // different order each run would make a program that reads it depend on

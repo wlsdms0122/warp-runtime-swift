@@ -307,7 +307,6 @@ struct ObjectWriter {
 
     private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
         .array([
-            ObjectWriter.maybe(signature.receiver, name),
             .array(try signature.parameters.map(parameter)),
             try ObjectWriter.maybe(signature.returns, type)
         ])
@@ -409,7 +408,7 @@ private extension ObjectWriter {
         case .returns: return .array([.int(9)])
         case .body: return .array([.int(10)])
         case .result: return .array([.int(11)])
-        case .receiver: return .array([.int(12)])
+        case .subject: return .array([.int(12)])
         case .callee: return .array([.int(13)])
         case .arguments: return .array([.int(14)])
         case .closure: return .array([.int(15)])
@@ -577,11 +576,11 @@ private extension ObjectWriter {
     }
 
     func sent(_ sent: Sent) -> Value {
-        .array([.int(sent.row), .array(sent.handing.map(Value.int))])
+        .array([.int(sent.row), .int(sent.handing)])
     }
 
     func send(_ send: Native.Send) -> Value {
-        .array([.int(send.position), name(send.selector), .array(send.handing.map(name))])
+        .array([.int(send.position), name(send.selector), .int(send.handing)])
     }
 
     func frame(_ frame: Frame) -> Value {
@@ -728,7 +727,6 @@ private extension ObjectWriter {
     func callOperation(_ call: CallOperation) throws(ObjectUnwritable) -> Value {
         .array([
             .int(call.procedure),
-            try ObjectWriter.maybe(call.receiver, operation),
             .array(try call.arguments.map { (argument) throws(ObjectUnwritable) -> Value in try ObjectWriter.maybe(argument, self.operation) }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
@@ -743,8 +741,8 @@ private extension ObjectWriter {
         .array([
             name(dispatch.contract),
             name(dispatch.procedure),
-            try operation(dispatch.receiver),
-            try keyed(dispatch.arguments, argument)
+            try operation(dispatch.first),
+            .array(try dispatch.arguments.map(argument))
         ])
     }
 

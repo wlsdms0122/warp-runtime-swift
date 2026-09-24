@@ -29,9 +29,11 @@ struct ConcurrentTests {
                     "let": "par",
                     "value": ["call": [
                         "procedure": "std.concurrent.all",
-                        "of": [
-                            "left": ["closure": ["result": 1]],
-                            "right": ["closure": ["result": 2]]
+                        "arguments": [
+                            [
+                                "left": ["closure": ["result": 1]],
+                                "right": ["closure": ["result": 2]]
+                            ]
                         ]
                     ]
                 ]]
@@ -61,12 +63,14 @@ struct ConcurrentTests {
                                 "let": "par",
                                 "value": ["call": [
                                     "procedure": "std.concurrent.all",
-                                    "of": [
-                                        "fine": ["closure": ["result": "ok"]],
-                                        "fragile": [
-                                            "closure": [
-                                                "body": [["let": "boom", "value": ["fail": true]]],
-                                                "result": ["ref": "boom"]
+                                    "arguments": [
+                                        [
+                                            "fine": ["closure": ["result": "ok"]],
+                                            "fragile": [
+                                                "closure": [
+                                                    "body": [["let": "boom", "value": ["fail": true]]],
+                                                    "result": ["ref": "boom"]
+                                                ]
                                             ]
                                         ]
                                     ]
@@ -103,17 +107,19 @@ struct ConcurrentTests {
                                 "let": "par",
                                 "value": ["call": [
                                     "procedure": "std.concurrent.all",
-                                    "of": [
-                                        "fragile": [
-                                            "closure": [
-                                                "body": [["let": "boom", "value": ["fail": true]]],
-                                                "result": ["ref": "boom"]
-                                            ]
-                                        ],
-                                        "broken": [
-                                            "closure": [
-                                                "body": [["let": "boom", "value": ["fail": false]]],
-                                                "result": ["ref": "boom"]
+                                    "arguments": [
+                                        [
+                                            "fragile": [
+                                                "closure": [
+                                                    "body": [["let": "boom", "value": ["fail": true]]],
+                                                    "result": ["ref": "boom"]
+                                                ]
+                                            ],
+                                            "broken": [
+                                                "closure": [
+                                                    "body": [["let": "boom", "value": ["fail": false]]],
+                                                    "result": ["ref": "boom"]
+                                                ]
                                             ]
                                         ]
                                     ]
@@ -143,9 +149,9 @@ struct ConcurrentTests {
                     "let": "greeted",
                     "value": ["call": [
                         "procedure": "std.concurrent.map",
-                        "of": ["ref": "names"],
                         "arguments": [
-                            "by": [
+                            ["ref": "names"],
+                            [
                                 "closure": [
                                     "parameters": [["name": "item", "type": "string"], ["name": "index", "type": "int"]],
                                     "body": [
@@ -186,14 +192,16 @@ struct ConcurrentTests {
                     "let": "either",
                     "value": ["call": [
                         "procedure": "std.concurrent.first",
-                        "of": [
+                        "arguments": [
                             [
-                                "closure": [
-                                    "body": [["let": "boom", "value": ["fail": true]]],
-                                    "result": ["ref": "boom"]
-                                ]
-                            ],
-                            ["closure": ["result": "answered"]]
+                                [
+                                    "closure": [
+                                        "body": [["let": "boom", "value": ["fail": true]]],
+                                        "result": ["ref": "boom"]
+                                    ]
+                                ],
+                                ["closure": ["result": "answered"]]
+                            ]
                         ]
                     ]
                 ]]

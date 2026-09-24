@@ -17,7 +17,7 @@ struct EqualQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .bool((question.receiver ?? .null).matches(question[.value]))
+        .bool(question[.of].matches(question[.value]))
     }
 
     // MARK: - Private

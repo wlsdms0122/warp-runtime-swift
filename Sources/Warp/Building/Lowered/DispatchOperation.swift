@@ -7,8 +7,8 @@
 
 import Foundation
 
-// A call through a contract, as the run makes it: the value the procedure is
-// sent to, what the call was written with, and one lowered call for every type
+// A call through a contract, as the run makes it: the value it is about,
+// what else the call was written with, and one lowered call for every type
 // that answers the procedure.
 //
 // Apart from `CallOperation` because the two are different facts. A call names
@@ -26,30 +26,30 @@ struct DispatchOperation: Sendable {
     let contract: Name
     let procedure: Name
 
-    // Read once. Its name picks the call, and the call is made with what was
-    // read rather than with a second reading of the same operand.
-    let receiver: Operation
+    // The first argument, read once. Its name picks the call, and the call is
+    // made with what was read rather than with a second reading of the same
+    // operand.
+    let first: Operation
 
-    // What the call was written with, under the names the contract's procedure
-    // declares. Lowered once: where an argument lands is the answering row's
-    // to say, and the rows are many.
-    let arguments: [Name: Argument]
+    // The arguments after the first, by position. Lowered once: where an
+    // argument lands is the answering row's to say, and the rows are many.
+    let arguments: [Argument]
 
-    // By the name of the type that answers, each with no receiver of its own.
-    // Empty until the link fills it.
+    // By the name of the type that answers, each with nothing at its first
+    // position. Empty until the link fills it.
     let calls: [Name: CallOperation]
 
     // MARK: - Initializer
     init(
         contract: Name,
         procedure: Name,
-        receiver: Operation,
-        arguments: [Name: Argument],
+        first: Operation,
+        arguments: [Argument],
         calls: [Name: CallOperation] = [:]
     ) {
         self.contract = contract
         self.procedure = procedure
-        self.receiver = receiver
+        self.first = first
         self.arguments = arguments
         self.calls = calls
     }

@@ -83,10 +83,7 @@ struct ClosureTests {
                         ),
                         Statement(
                             binding: .constant("ran"),
-                            expression: .call(Call(
-                                selector: "walking",
-                                arguments: ["by": reference("body")]
-                            ))
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
                         )
                     ]
                 )
@@ -145,10 +142,7 @@ struct ClosureTests {
                         ),
                         Statement(
                             binding: .constant("ran"),
-                            expression: .call(Call(
-                                selector: "walking",
-                                arguments: ["by": reference("body")]
-                            ))
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
                         )
                     ]
                 )
@@ -184,9 +178,9 @@ struct ClosureTests {
                                 Procedure(
                                     body: [
                                         Statement(binding: .constant("said"), expression: .call(Call(
-                                                selector: "app.shout",
-                                                arguments: ["text": .literal(.string("hi"))]
-                                            ))
+                                            selector: "app.shout",
+                                            arguments: [.literal(.string("hi"))]
+                                        ))
                                         )
                                     ],
                                     result: reference("said")
@@ -194,9 +188,9 @@ struct ClosureTests {
                             )
                         ),
                         Statement(binding: .constant("ran"), expression: .call(Call(
-                                selector: "twice",
-                                arguments: ["body": reference("loud")]
-                            ))
+                            selector: "twice",
+                            arguments: [reference("loud")]
+                        ))
                         )
                     ]
                 )
@@ -234,10 +228,7 @@ struct ClosureTests {
                             )
                         )
                     ],
-                    result: .call(Call(
-                        selector: "twice",
-                        arguments: ["body": reference("quiet")]
-                    ))
+                    result: .call(Call(selector: "twice", arguments: [reference("quiet")]))
                 )
             ]
         )
@@ -272,7 +263,7 @@ struct ClosureTests {
                         Call(
                             selector: "twice",
                             arguments: [
-                                "body": .closure(
+                                .closure(
                                     Procedure(body: [], result: .literal(.string("hi")))
                                 )
                             ]
@@ -308,10 +299,7 @@ struct ClosureTests {
         let answer = try await answer(
             of: [
                 Statement(binding: .constant("hello"), expression: .call(
-                        Call(
-                            selector: "makeGreeter",
-                            arguments: ["greeting": .literal(.string("hello"))]
-                        )
+                        Call(selector: "makeGreeter", arguments: [.literal(.string("hello"))])
                     )
                 ),
                 Statement(binding: .constant("said"), expression: .apply(

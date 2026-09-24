@@ -16,7 +16,7 @@ import Foundation
 //
 // The case order is the declaration order, the order the run keeps the
 // arguments in, which is a fact of the wire.
-// `Signature.init(of:receiver:returns:)` is the door that says so.
+// `Signature.init(of:returns:)` is the door that says so.
 public protocol ParameterSet: CaseIterable, Hashable, Sendable {
     // What it takes: the name a document writes to fill this, the type, and
     // the members it must be one of.

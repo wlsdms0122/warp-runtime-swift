@@ -49,11 +49,11 @@ struct BakedTests {
                         Statement(
                             binding: .constant("once"),
                             expression: .call(
-                                Call(selector: "app.add1", arguments: ["value": .reference([.key("value")])])
+                                Call(selector: "app.add1", arguments: [.reference([.key("value")])])
                             )
                         )
                     ],
-                    result: .call(Call(selector: "app.add1", arguments: ["value": reference("once")]))
+                    result: .call(Call(selector: "app.add1", arguments: [reference("once")]))
                 )
             ]
         )
@@ -267,11 +267,7 @@ struct BakedTests {
             imports: ["std.math.plus"],
             constants: [
                 "app.two": .call(
-                    Call(
-                        receiver: .literal(.int(1)),
-                        selector: "std.math.plus",
-                        arguments: ["value": .literal(.int(1))]
-                    )
+                    Call(selector: "std.math.plus", arguments: [.literal(.int(1)), .literal(.int(1))])
                 )
             ],
             procedures: [
@@ -337,11 +333,8 @@ struct BakedTests {
                     body: [],
                     result: .call(
                         Call(
-                            receiver: .reference([.key("value")]),
                             selector: "std.math.plus",
-                            arguments: [
-                                "value": .literal(.int(number))
-                            ]
+                            arguments: [.reference([.key("value")]), .literal(.int(number))]
                         )
                     )
                 )

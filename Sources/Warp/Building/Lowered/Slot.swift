@@ -48,8 +48,7 @@ final class Slot: Sendable {
 
     // The value settled to the declared representation, and held to the
     // spellings where the declaration lists them. `locus` is where a refusal
-    // says the value stood, in the caller's terms: an argument is named by
-    // its key, and a receiver by the procedure it was sent to.
+    // says the value stood, in the caller's terms.
     func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
         let settled = try type.checking(value, at: locus, in: table)
 

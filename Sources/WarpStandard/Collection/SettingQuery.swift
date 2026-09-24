@@ -36,7 +36,7 @@ struct SettingQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let held = question.receiver?.asDictionary else { return nil }
+        guard let held = question[.of].asDictionary else { return nil }
 
         guard case let .string(key) = question[.key] else {
             throw ExecutionError("setting asks a string key")
@@ -51,7 +51,7 @@ struct SettingQuery: Query {
         }
 
         // The names are data from here on: what was written was held to no
-        // declaration, so the answer is a dictionary whatever the receiver was.
+        // declaration, so the answer is a dictionary whatever the collection was.
         return .dictionary(held.writing(field, with: question[.value]))
     }
 

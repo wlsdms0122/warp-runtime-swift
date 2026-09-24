@@ -133,9 +133,8 @@ struct LoweredTypeTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.int(1)),
                         selector: "std.math.lessThan",
-                        arguments: ["value": .literal(.int(2))]
+                        arguments: [.literal(.int(1)), .literal(.int(2))]
                     ))
                 )
             ]
@@ -162,17 +161,16 @@ struct LoweredTypeTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.array([.int(1), .int(2)])),
                         selector: "std.collection.map",
                         arguments: [
-                            "value": .closure(
+                            .literal(.array([.int(1), .int(2)])),
+                            .closure(
                                 Procedure(
                                     signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
                                     body: [],
                                     result: .call(Call(
-                                        receiver: .reference([.key("item")]),
                                         selector: "std.math.plus",
-                                        arguments: ["value": .literal(.int(10))]
+                                        arguments: [.reference([.key("item")]), .literal(.int(10))]
                                     ))
                                 )
                             )

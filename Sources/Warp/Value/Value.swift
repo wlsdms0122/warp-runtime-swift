@@ -282,7 +282,7 @@ public indirect enum Value: Sendable, Equatable {
     // The elements at these positions, in the spelling this value is. Nil for
     // what has no elements to take, the way `elements` answers nil.
     //
-    // This is for the procedures that only put their receiver's own elements in
+    // This is for the procedures that only put a collection's own elements in
     // another order or take fewer of them, and so never have to look at one.
     // Saying which by position lets bytes be rearranged as the bytes they are:
     // reading them out as values and writing them back would cost the boxing
@@ -319,7 +319,7 @@ public indirect enum Value: Sendable, Equatable {
     // bytes by construction. Reading them out to put one more beside them
     // would spend the whole collection's boxing on a single addition, which is
     // the same waste the two above exist against. It is the arriving
-    // element, not the receiver's size, that decides the answer's spelling.
+    // element, not the collection's size, that decides the answer's spelling.
     public func adding(_ element: Value, atFront: Bool) -> Value? {
         guard let held = elements else { return nil }
 
@@ -342,7 +342,7 @@ public indirect enum Value: Sendable, Equatable {
     // These elements, spelled the way this value is. The other half of the
     // projection above: `elements` reads a compact spelling as the array it is,
     // and this writes an array back into the compact spelling where it still
-    // holds, so a procedure that answers its receiver's own elements, rearranged or
+    // holds, so a procedure that answers a collection's own elements, rearranged or
     // fewer, answers bytes when it was given bytes.
     //
     // Where it no longer holds, a byte's slot now carrying something that is

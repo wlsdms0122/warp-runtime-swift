@@ -268,7 +268,6 @@ struct CompiledTests {
                 procedures: [
                     "bank.Account.describe": Procedure(
                         signature: Signature(
-                            receiver: "of",
                             parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                             returns: .string
                         ),
@@ -278,11 +277,10 @@ struct CompiledTests {
                 ]
             ),
             asking: try Module(
-                contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+                contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
                 procedures: [
                     "app.tell": Procedure(
                         signature: Signature(
-                            receiver: "it",
                             parameters: [
                                 Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                             ],
@@ -290,7 +288,7 @@ struct CompiledTests {
                         ),
                         body: [],
                         result: .call(
-                            Call(receiver: reference("it"), selector: "app.Describable.describe")
+                            Call(selector: "app.Describable.describe", arguments: [reference("it")])
                         )
                     )
                 ]
@@ -314,7 +312,7 @@ struct CompiledTests {
                                 )
                             )
                         ],
-                        result: .call(Call(receiver: reference("account"), selector: "app.tell"))
+                        result: .call(Call(selector: "app.tell", arguments: [reference("account")]))
                     )
                 ]
             )
@@ -388,14 +386,13 @@ struct CompiledTests {
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
         )
         let answering = try Module(
             procedures: [
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
@@ -694,16 +691,11 @@ struct CompiledTests {
             procedures: [
                 "lib.twice": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(
-                        receiver: reference("of"),
-                        selector: "std.math.plus",
-                        arguments: ["value": reference("of")]
-                    ))
+                    result: .call(Call(selector: "std.math.plus", arguments: [reference("of"), reference("of")]))
                 )
             ]
         )
@@ -730,7 +722,7 @@ struct CompiledTests {
         // link answers the call through the contract, so the document laid
         // before the last one is missing nothing.
         let contract = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: ["app.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let leaning = try Module(
@@ -739,14 +731,14 @@ struct CompiledTests {
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 "bank.Account.describe": Procedure(
-                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
                     body: [],
                     result: .literal(.string("an account"))
                 ),
                 "bank.tell": Procedure(
-                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
                     body: [],
-                    result: .call(Call(receiver: reference("of"), selector: "app.Describable.describe"))
+                    result: .call(Call(selector: "app.Describable.describe", arguments: [reference("of")]))
                 )
             ]
         )
@@ -771,16 +763,11 @@ struct CompiledTests {
             procedures: [
                 "lib.twice": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(
-                        receiver: reference("of"),
-                        selector: "std.math.plus",
-                        arguments: ["value": reference("of")]
-                    ))
+                    result: .call(Call(selector: "std.math.plus", arguments: [reference("of"), reference("of")]))
                 )
             ]
         )
@@ -805,7 +792,6 @@ struct CompiledTests {
             procedures: [
                 "a.first": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .array(.int))]
                     ),
                     body: [],
@@ -828,7 +814,7 @@ struct CompiledTests {
                     body: [
                         Statement(
                             binding: .constant("held"),
-                            expression: .call(Call(receiver: reference("items"), selector: "a.first"))
+                            expression: .call(Call(selector: "a.first", arguments: [reference("items")]))
                         )
                     ],
                     result: .reference([.key("held"), .key("count")])
@@ -938,11 +924,10 @@ struct CompiledTests {
     private func describing() throws -> [Module] {
         [
             try Module(
-                contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+                contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
                 procedures: [
                     "app.tell": Procedure(
                         signature: Signature(
-                            receiver: "it",
                             parameters: [
                                 Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                             ],
@@ -950,7 +935,7 @@ struct CompiledTests {
                         ),
                         body: [],
                         result: .call(
-                            Call(receiver: reference("it"), selector: "app.Describable.describe")
+                            Call(selector: "app.Describable.describe", arguments: [reference("it")])
                         )
                     )
                 ]
@@ -986,13 +971,12 @@ struct CompiledTests {
                             )
                         ],
                         result: .array([
-                            .call(Call(receiver: reference("account"), selector: "app.tell")),
-                            .call(Call(receiver: reference("card"), selector: "app.tell"))
+                            .call(Call(selector: "app.tell", arguments: [reference("account")])),
+                            .call(Call(selector: "app.tell", arguments: [reference("card")]))
                         ])
                     ),
                     "bank.Account.describe": Procedure(
                         signature: Signature(
-                            receiver: "of",
                             parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                             returns: .string
                         ),
@@ -1004,7 +988,6 @@ struct CompiledTests {
                     ),
                     "bank.Card.describe": Procedure(
                         signature: Signature(
-                            receiver: "of",
                             parameters: [Parameter(name: "of", type: .named("bank.Card"))],
                             returns: .string
                         ),

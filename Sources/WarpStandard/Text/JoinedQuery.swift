@@ -35,11 +35,11 @@ struct JoinedQuery: Query {
         // The `.array` case and not the elements projection, because this procedure
         // declares `array<string>` and bytes cross an `array<…>` slot whole
         // only where the element declaration leaves every byte alone. `string`
-        // does not, so a bytes receiver is read out and refused element by
+        // does not, so bytes are read out and refused element by
         // element at the boundary. Before here.
-        guard case let .array(elements) = question.receiver else {
+        guard case let .array(elements) = question[.of] else {
             throw ExecutionError(
-                "joined asks \(question.receiver?.type.description ?? "nothing"), expected array"
+                "joined asks \(question[.of].type), expected array"
             )
         }
 

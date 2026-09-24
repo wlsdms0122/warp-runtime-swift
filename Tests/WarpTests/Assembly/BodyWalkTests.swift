@@ -25,7 +25,7 @@ struct BodyWalkTests {
     private var holders: [(name: String, operation: Operation)] {
         get throws {
             let body = Body(instructions: [Instruction(binding: nil, code: leaf, label: "leaf")], result: nil)
-            let call = CallOperation(procedure: 1, receiver: leaf, arguments: [nil], handed: [])
+            let call = CallOperation(procedure: 1, arguments: [leaf, nil], handed: [])
 
             return [
                 ("array", .array([leaf])),
@@ -37,8 +37,8 @@ struct BodyWalkTests {
                 ("loop", .loop(while: leaf, body: Body(instructions: [], result: nil), round: 0, keeps: nil)),
                 ("attempt", .attempt(body, rescue: Body(instructions: [], result: nil), failure: 0)),
                 ("call", .call(call)),
-                ("dispatch", .dispatch(DispatchOperation(contract: "c", procedure: "p", receiver: leaf, arguments: [:]))),
-                ("dispatch argument", .dispatch(DispatchOperation(contract: "c", procedure: "p", receiver: .literal(.null), arguments: ["a": .value(leaf)]))),
+                ("dispatch", .dispatch(DispatchOperation(contract: "c", procedure: "p", first: leaf, arguments: []))),
+                ("dispatch argument", .dispatch(DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [.value(leaf)]))),
                 ("leave", .leave(.procedure, target: nil, leaf))
             ]
         }
@@ -180,7 +180,7 @@ struct BodyWalkTests {
     @Test("an argument handed in place is the dispatch's own to read")
     func aReferenceArgumentIsReadByItsNode() {
         let sut = Operation.dispatch(
-            DispatchOperation(contract: "c", procedure: "p", receiver: .literal(.null), arguments: ["a": .reference(address)])
+            DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [.reference(address)])
         )
         var locals = 0
 
@@ -204,9 +204,9 @@ struct BodyWalkTests {
 
     @Test("the calls beside a dispatch are neither walked nor rewritten")
     func aDispatchsCallsAreTheLinks() {
-        let beside = CallOperation(procedure: 5, receiver: leaf, arguments: [], handed: [])
+        let beside = CallOperation(procedure: 5, arguments: [leaf], handed: [])
         let sut = Operation.dispatch(
-            DispatchOperation(contract: "c", procedure: "p", receiver: .literal(.null), arguments: [:], calls: ["t": beside])
+            DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [], calls: ["t": beside])
         )
         var leaves = 0
 
@@ -224,7 +224,7 @@ struct BodyWalkTests {
 
         #expect(leaves == 0)
 
-        guard case let .dispatch(dispatch) = rewritten, case .literal(.int(7))? = dispatch.calls["t"]?.receiver else {
+        guard case let .dispatch(dispatch) = rewritten, case .literal(.int(7))?? = dispatch.calls["t"]?.arguments.first else {
             Issue.record("the calls beside the dispatch stand as the link laid them")
 
             return

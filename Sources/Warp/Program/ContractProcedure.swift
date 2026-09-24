@@ -14,9 +14,8 @@ import Foundation
 // a call through the contract then reads as the contract says, and a claim
 // backed by a declaration that does less does not hold.
 //
-// No receiver and no bounds: the receiver is the type that satisfies the
-// contract, and the bound a type parameter carries is the declaring
-// signature's own.
+// No bounds: the bound a type parameter carries is the declaring signature's
+// own.
 public struct ContractProcedure: Sendable, Equatable {
     // MARK: - Property
     public let signature: Signature

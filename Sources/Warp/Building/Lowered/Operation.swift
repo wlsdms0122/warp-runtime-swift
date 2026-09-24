@@ -44,8 +44,8 @@ indirect enum Operation: Sendable {
     case attempt(Body, rescue: Body, failure: Int?)
     case call(CallOperation)
 
-    // A call through a contract: which row answers is the receiver's own name
-    // to say, and the link laid out one call per type that answers.
+    // A call through a contract: which row answers is the first argument's
+    // own name to say, and the link laid out one call per type that answers.
     case dispatch(DispatchOperation)
     case leave(Leave.Reach, target: Name?, Operation?)
 }
@@ -82,7 +82,7 @@ extension Body.Node {
                 return call.handed.contains { handed in handed.address.reads(slots) }
 
             case let .dispatch(dispatch):
-                return dispatch.arguments.values.contains { argument in
+                return dispatch.arguments.contains { argument in
                     guard case let .reference(address) = argument else { return false }
 
                     return address.reads(slots)

@@ -41,11 +41,7 @@ struct BoundaryTests {
                     access: .public,
                     body: [],
                     result: .call(
-                        Call(
-                            receiver: .literal(.int(1)),
-                            selector: "std.math.plus",
-                            arguments: ["value": .literal(.string("a"))]
-                        )
+                        Call(selector: "std.math.plus", arguments: [.literal(.int(1)), .literal(.string("a"))])
                     )
                 )
             ]
@@ -74,12 +70,8 @@ struct BoundaryTests {
                         Call(
                             selector: "wants",
                             arguments: [
-                                "it": .call(
-                                    Call(
-                                        receiver: .literal(.int(1)),
-                                        selector: "std.math.plus",
-                                        arguments: ["value": .literal(.int(2))]
-                                    )
+                                .call(
+                                    Call(selector: "std.math.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
                                 )
                             ]
                         )
@@ -124,9 +116,8 @@ struct BoundaryTests {
                     body: [],
                     result: .call(
                         Call(
-                            receiver: .reference([.key("names")]),
                             selector: "std.collection.appending",
-                            arguments: ["value": .literal(.int(1))]
+                            arguments: [.reference([.key("names")]), .literal(.int(1))]
                         )
                     )
                 )
@@ -149,8 +140,8 @@ struct BoundaryTests {
         // `accepts` cannot order `any` against a type, since everything takes
         // `any` and `any` takes everything, so asking which is looser answers
         // yes both ways and whichever was read first would win. Reading it
-        // first is what a receiver does, and that made a list of anything into
-        // a list of whatever went in first.
+        // first is what a first argument does, and that made a list of
+        // anything into a list of whatever went in first.
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -159,18 +150,16 @@ struct BoundaryTests {
                     body: [
                         Statement(binding: .constant("one"), expression: .call(
                                 Call(
-                                    receiver: .reference([.key("xs")]),
                                     selector: "std.collection.appending",
-                                    arguments: ["value": .literal(.int(1))]
+                                    arguments: [.reference([.key("xs")]), .literal(.int(1))]
                                 )
                             )
                         )
                     ],
                     result: .call(
                         Call(
-                            receiver: .reference([.key("one")]),
                             selector: "std.collection.appending",
-                            arguments: ["value": .literal(.string("a"))]
+                            arguments: [.reference([.key("one")]), .literal(.string("a"))]
                         )
                     )
                 )
@@ -200,9 +189,8 @@ struct BoundaryTests {
                     body: [],
                     result: .call(
                         Call(
-                            receiver: .reference([.key("trees")]),
                             selector: "std.collection.appending",
-                            arguments: ["value": .record(["a": .literal(.int(1))])]
+                            arguments: [.reference([.key("trees")]), .record(["a": .literal(.int(1))])]
                         )
                     )
                 )
@@ -229,9 +217,8 @@ struct BoundaryTests {
                     body: [],
                     result: .call(
                         Call(
-                            receiver: .reference([.key("counts")]),
                             selector: "std.collection.appending",
-                            arguments: ["value": .literal(.int(1))]
+                            arguments: [.reference([.key("counts")]), .literal(.int(1))]
                         )
                     )
                 )
@@ -316,11 +303,11 @@ struct BoundaryTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One procedure, sent to one value with one operand. The type every arithmetic
+    // One procedure, handed one value and one operand. The shape every arithmetic
     // procedure takes, so the cases above say what they are about and nothing else.
     private func answering(
         _ selector: Name,
-        _ receiver: Value,
+        _ subject: Value,
         _ operand: Value
     ) async throws -> Value {
         let module = try Module(
@@ -329,11 +316,7 @@ struct BoundaryTests {
                     access: .public,
                     body: [],
                     result: .call(
-                        Call(
-                            receiver: .literal(receiver),
-                            selector: selector,
-                            arguments: ["value": .literal(operand)]
-                        )
+                        Call(selector: selector, arguments: [.literal(subject), .literal(operand)])
                     )
                 )
             ]

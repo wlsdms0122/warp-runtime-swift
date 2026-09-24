@@ -98,7 +98,7 @@ struct EnvelopeTests {
                     "body": [
                         [
                             "let": "many",
-                            "value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+                            "value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]
                         ]]
                     ],
                     "result": ["ref": "many"]
@@ -168,7 +168,7 @@ struct EnvelopeTests {
                         "body": [
                             [
                                 "let": "sum",
-                                "value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+                                "value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]
                             ]]
                         ],
                         "result": ["ref": "sum"]
@@ -193,7 +193,7 @@ struct EnvelopeTests {
                         "body": [
                             [
                                 "let": "sum",
-                                "value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+                                "value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]
                             ]]
                         ],
                         "result": ["ref": "sum"]
@@ -212,7 +212,7 @@ struct EnvelopeTests {
         // what to allow, and would then be refused at the build by a procedure the
         // list never mentioned.
         let constant: Value = [
-            "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+            "call": ["procedure": "std.math.plus", "arguments": [1, 2]]
         ]
 
         let module = try loader.loadDocument([

@@ -49,7 +49,7 @@ struct ArgumentValidationTests {
     )
 
     private func even(_ value: Warp.Expression) -> Warp.Expression {
-        .call(Call(selector: "app.even", arguments: ["value": value]))
+        .call(Call(selector: "app.even", arguments: [value]))
     }
 }
 

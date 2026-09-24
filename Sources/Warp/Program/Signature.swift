@@ -12,19 +12,9 @@ import Foundation
 // language makes before running at the boundary it is easiest to make it at.
 public struct Signature: Sendable, Equatable {
     // MARK: - Property
-    // Which declared parameter is the receiver (the thing this is sent *to*) or
-    // nil for a plain call, which most procedures are.
-    //
-    // A name rather than a type, so the body reads its receiver by the name it
-    // declared, the same as every other parameter. A reserved spelling would be
-    // the alternative. Declaring one is what lets a call write the receiver in
-    // front of the selector rather than under its name.
-    public let receiver: Name?
-
     // What the declaration takes, in the order it wrote them. The order is the
-    // declaration's own: it is the order a value of this declaration is
-    // applied in, and the order the run keeps the arguments in. A call that
-    // hands arguments by name is resolved to these positions at the build.
+    // declaration's own: it is the order every call hands its arguments in,
+    // and the order the run keeps them in.
     public let parameters: [Parameter]
 
     // What a call returns, or nil where nothing was declared. Absence is
@@ -64,12 +54,7 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Initializer
-    public init(
-        receiver: Name? = nil,
-        parameters: [Parameter] = [],
-        returns: TypeExpression? = nil
-    ) {
-        self.receiver = receiver
+    public init(parameters: [Parameter] = [], returns: TypeExpression? = nil) {
         self.parameters = parameters
         self.returns = returns
     }
@@ -77,16 +62,8 @@ public struct Signature: Sendable, Equatable {
     // A native procedure's declaration, read off the procedure itself. What it takes is
     // its own type's to say, so a registration names the procedure once and the
     // parameters come with it, in the order its cases stand.
-    public init<P: NativeProcedure>(
-        of procedure: P.Type,
-        receiver: P.Parameters? = nil,
-        returns: TypeExpression? = nil
-    ) {
-        self.init(
-            receiver: receiver?.name,
-            parameters: P.Parameters.allCases.map(\.declared),
-            returns: returns
-        )
+    public init<P: NativeProcedure>(of procedure: P.Type, returns: TypeExpression? = nil) {
+        self.init(parameters: P.Parameters.allCases.map(\.declared), returns: returns)
     }
 
     // MARK: - Public
@@ -135,17 +112,6 @@ public struct Signature: Sendable, Equatable {
         TypeExpression.procedure(type).accepts(.procedure(given.type), in: types)
     }
 
-    // The expression a call hands under a parameter's name: what stands in
-    // front where the parameter is the receiver, and the argument written
-    // under the name otherwise. One rule, asked wherever a call is read.
-    public func handed(
-        _ name: Name,
-        receiver: Expression?,
-        arguments: [Name: Expression]
-    ) -> Expression? {
-        name == self.receiver ? receiver : arguments[name]
-    }
-
     // MARK: - Internal
     // Every declared name this signature reaches, through what it takes and
     // what it answers.
@@ -177,26 +143,30 @@ public struct Signature: Sendable, Equatable {
         return try settle(slots.map { slot in given[slot.name] }, over: slots, in: table)
     }
 
-    // Arguments handed by position, every position given: the way a value is
-    // applied. A count the slots do not have is two different procedures.
+    // Arguments handed by position, the way every call hands them. Positions
+    // left off at the end are the ones nothing was given at, which only a
+    // slot that reads absence as null takes; more than the slots is a
+    // different procedure.
     func settle(
         applied given: [Value],
         over slots: [Slot],
         in table: LoweredTypeTable
     ) throws -> [Value?] {
-        guard given.count == slots.count else {
+        guard given.count <= slots.count else {
             throw ArgumentError(
                 "parameters: \(slots.count) declared, and \(given.count) given"
             )
         }
 
-        return try settle(given.map { value in Optional(value) }, over: slots, in: table)
+        let placed = given.map { value in Optional(value) }
+            + Array(repeating: nil, count: slots.count - given.count)
+
+        return try settle(placed, over: slots, in: table)
     }
 
     // The boundary itself, over arguments standing at their parameter's
     // position. `skipping` names the positions a call fills another way, a
-    // receiver written in front of the dot or a parameter handed a variable
-    // in place, and those answer nil. The answer is built from the
+    // parameter handed a variable in place, and those answer nil. The answer is built from the
     // declaration, never copied from the caller: only declared names exist
     // inside the boundary.
     func settle(

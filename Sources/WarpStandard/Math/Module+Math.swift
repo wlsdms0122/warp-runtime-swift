@@ -18,7 +18,6 @@ public extension Module {
                 description: "The sum, whole where both sides are.",
                 signature: Signature(
                     of: PlusQuery.self,
-                    receiver: .of,
                     returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(PlusQuery())
@@ -27,7 +26,6 @@ public extension Module {
                 description: "The difference.",
                 signature: Signature(
                     of: MinusQuery.self,
-                    receiver: .of,
                     returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(MinusQuery())
@@ -36,38 +34,36 @@ public extension Module {
                 description: "The product.",
                 signature: Signature(
                     of: TimesQuery.self,
-                    receiver: .of,
                     returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(TimesQuery())
             ),
             "std.math.dividedBy": Procedure(
                 description: "The quotient, which is not generally whole.",
-                signature: Signature(of: DividedByQuery.self, receiver: .of, returns: .double),
+                signature: Signature(of: DividedByQuery.self, returns: .double),
                 implementation: .query(DividedByQuery())
             ),
             "std.math.remainder": Procedure(
                 description: "What is left of a whole division.",
                 signature: Signature(
                     of: RemainderQuery.self,
-                    receiver: .of,
                     returns: .parameter(name: "N", constraints: ["std.Numeric"])
                 ),
                 implementation: .query(RemainderQuery())
             ),
             "std.math.floored": Procedure(
                 description: "The whole number at or below this one.",
-                signature: Signature(of: FlooredQuery.self, receiver: .of, returns: .int),
+                signature: Signature(of: FlooredQuery.self, returns: .int),
                 implementation: .query(FlooredQuery())
             ),
             "std.math.rounded": Procedure(
                 description: "The nearest whole number.",
-                signature: Signature(of: RoundedQuery.self, receiver: .of, returns: .int),
+                signature: Signature(of: RoundedQuery.self, returns: .int),
                 implementation: .query(RoundedQuery())
             ),
             "std.math.lessThan": Procedure(
                 description: "Whether this orders before another.",
-                signature: Signature(of: LessThanQuery.self, receiver: .of, returns: .bool),
+                signature: Signature(of: LessThanQuery.self, returns: .bool),
                 implementation: .query(LessThanQuery())
             )
         ],

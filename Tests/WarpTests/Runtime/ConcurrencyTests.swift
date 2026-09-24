@@ -24,11 +24,13 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(
-                    receiver: .record([
-                        "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
-                        "right": .closure(Procedure(body: [], result: .literal(.int(2))))
-                    ]),
-                    selector: "std.concurrent.all"
+                    selector: "std.concurrent.all",
+                    arguments: [
+                        .record([
+                            "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
+                            "right": .closure(Procedure(body: [], result: .literal(.int(2))))
+                        ])
+                    ]
                 )
             )
         )
@@ -45,12 +47,14 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("all"), expression: .call(
                 Call(
-                    receiver: .array([
-                        .closure(Procedure(body: [], result: .literal(.int(1)))),
-                        .closure(Procedure(body: [], result: .literal(.int(2)))),
-                        .closure(Procedure(body: [], result: .literal(.int(3))))
-                    ]),
-                    selector: "std.concurrent.all"
+                    selector: "std.concurrent.all",
+                    arguments: [
+                        .array([
+                            .closure(Procedure(body: [], result: .literal(.int(1)))),
+                            .closure(Procedure(body: [], result: .literal(.int(2)))),
+                            .closure(Procedure(body: [], result: .literal(.int(3))))
+                        ])
+                    ]
                 )
             )
         )
@@ -67,10 +71,10 @@ struct ConcurrencyTests {
         // Given. The concurrent reading of what `each` walks
         let sut = Statement(binding: .constant("kept"), expression: .call(
                 Call(
-                    receiver: .literal(.array([.int(1), .int(2), .int(3)])),
                     selector: "std.concurrent.map",
                     arguments: [
-                        "by": .closure(
+                        .literal(.array([.int(1), .int(2), .int(3)])),
+                        .closure(
                             Procedure(
                                 signature: Signature(
                                     parameters: [
@@ -101,10 +105,10 @@ struct ConcurrencyTests {
         // not one to hand over quietly
         let sut = Statement(binding: .constant("placed"), expression: .call(
                 Call(
-                    receiver: .literal(.array([.string("a"), .string("b")])),
                     selector: "std.concurrent.map",
                     arguments: [
-                        "by": .closure(
+                        .literal(.array([.string("a"), .string("b")])),
+                        .closure(
                             Procedure(
                                 signature: Signature(
                                     parameters: [Parameter(name: "index", type: .any)]
@@ -134,10 +138,10 @@ struct ConcurrencyTests {
         // was given": what a procedure offers is what arrived
         let sut = Statement(binding: .constant("kept"), expression: .call(
                 Call(
-                    receiver: .literal(.array([.int(1), .null, .int(3)])),
                     selector: "std.concurrent.map",
                     arguments: [
-                        "by": .closure(
+                        .literal(.array([.int(1), .null, .int(3)])),
+                        .closure(
                             Procedure(
                                 signature: Signature(
                                     parameters: [
@@ -166,10 +170,10 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("none"), expression: .call(
                 Call(
-                    receiver: .literal(.array([])),
                     selector: "std.concurrent.map",
                     arguments: [
-                        "by": .closure(
+                        .literal(.array([])),
+                        .closure(
                             Procedure(
                                 signature: Signature(
                                     parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)]
@@ -196,24 +200,23 @@ struct ConcurrencyTests {
         // can
         let sut = Statement(binding: .constant("either"), expression: .call(
                 Call(
-                    receiver: .array([
-                        .closure(
-                            Procedure(
-                                body: [
-                                    Statement(binding: .constant("doomed"), expression: .call(
-                                            Call(
-                                                selector: "app.fail",
-                                                arguments: ["recoverable": .literal(.bool(true))]
+                    selector: "std.concurrent.first",
+                    arguments: [
+                        .array([
+                            .closure(
+                                Procedure(
+                                    body: [
+                                        Statement(binding: .constant("doomed"), expression: .call(
+                                                Call(selector: "app.fail", arguments: [.literal(.bool(true))])
                                             )
                                         )
-                                    )
-                                ],
-                                result: reference("doomed")
-                            )
-                        ),
-                        .closure(Procedure(body: [], result: .literal(.string("answered"))))
-                    ]),
-                    selector: "std.concurrent.first"
+                                    ],
+                                    result: reference("doomed")
+                                )
+                            ),
+                            .closure(Procedure(body: [], result: .literal(.string("answered"))))
+                        ])
+                    ]
                 )
             )
         )
@@ -237,19 +240,21 @@ struct ConcurrencyTests {
         let waiting = CancellationWatch()
         let sut = Statement(binding: .constant("either"), expression: .call(
                 Call(
-                    receiver: .array([
-                        .closure(Procedure(body: [], result: .literal(.string("answered")))),
-                        .closure(
-                            Procedure(
-                                body: [
-                                    Statement(binding: .constant("slow"), expression: .call(Call(selector: "app.wait"))
-                                    )
-                                ],
-                                result: reference("slow")
+                    selector: "std.concurrent.first",
+                    arguments: [
+                        .array([
+                            .closure(Procedure(body: [], result: .literal(.string("answered")))),
+                            .closure(
+                                Procedure(
+                                    body: [
+                                        Statement(binding: .constant("slow"), expression: .call(Call(selector: "app.wait"))
+                                        )
+                                    ],
+                                    result: reference("slow")
+                                )
                             )
-                        )
-                    ]),
-                    selector: "std.concurrent.first"
+                        ])
+                    ]
                 )
             )
         )
@@ -277,23 +282,22 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("either"), expression: .call(
                 Call(
-                    receiver: .array([
-                        .closure(
-                            Procedure(
-                                body: [
-                                    Statement(binding: .constant("doomed"), expression: .call(
-                                            Call(
-                                                selector: "app.fail",
-                                                arguments: ["recoverable": .literal(.bool(true))]
+                    selector: "std.concurrent.first",
+                    arguments: [
+                        .array([
+                            .closure(
+                                Procedure(
+                                    body: [
+                                        Statement(binding: .constant("doomed"), expression: .call(
+                                                Call(selector: "app.fail", arguments: [.literal(.bool(true))])
                                             )
                                         )
-                                    )
-                                ],
-                                result: reference("doomed")
+                                    ],
+                                    result: reference("doomed")
+                                )
                             )
-                        )
-                    ]),
-                    selector: "std.concurrent.first"
+                        ])
+                    ]
                 )
             )
         )
@@ -316,10 +320,7 @@ struct ConcurrencyTests {
             Procedure(
                 body: [
                     Statement(binding: .constant("doomed"), expression: .call(
-                            Call(
-                                selector: "app.fail",
-                                arguments: ["recoverable": .literal(.bool(true))]
-                            )
+                            Call(selector: "app.fail", arguments: [.literal(.bool(true))])
                         )
                     )
                 ],
@@ -327,10 +328,7 @@ struct ConcurrencyTests {
             )
         )
         let sut = Statement(binding: .constant("both"), expression: .call(
-                Call(
-                    receiver: .record(["first": doomed, "second": doomed]),
-                    selector: "std.concurrent.all"
-                )
+                Call(selector: "std.concurrent.all", arguments: [.record(["first": doomed, "second": doomed])])
             )
         )
 
@@ -353,11 +351,13 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(
-                    receiver: .array([
-                        .closure(Procedure(body: [], result: .literal(.int(1)))),
-                        .literal(.int(2))
-                    ]),
-                    selector: "std.concurrent.all"
+                    selector: "std.concurrent.all",
+                    arguments: [
+                        .array([
+                            .closure(Procedure(body: [], result: .literal(.int(1)))),
+                            .literal(.int(2))
+                        ])
+                    ]
                 )
             )
         )
@@ -366,7 +366,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("the receiver of 'std.concurrent.all'[1]: expected isolated procedure, got int")
+            "\(error)".contains("input 'of'[1]: expected isolated procedure, got int")
         }
     }
 
@@ -376,10 +376,10 @@ struct ConcurrencyTests {
         // and the boundary every procedure shares is what judges it
         let sut = Statement(binding: .constant("walked"), expression: .call(
                 Call(
-                    receiver: reference("subject"),
                     selector: "std.concurrent.map",
                     arguments: [
-                        "by": .closure(
+                        reference("subject"),
+                        .closure(
                             Procedure(
                                 signature: Signature(
                                     parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)]

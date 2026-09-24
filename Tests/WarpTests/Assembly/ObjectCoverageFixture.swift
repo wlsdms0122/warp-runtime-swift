@@ -22,7 +22,7 @@ enum ObjectCoverageFixture {
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
             constraints: ["a.four": [.int, .string]],
-            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(receiver: "r", parameters: [parameter], returns: .bool), constness: .const, isolation: .isolated)]],
+            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .named("a.five")), parameter], returns: .bool), constness: .const, isolation: .isolated)]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],
@@ -184,7 +184,7 @@ enum ObjectCoverageFixture {
 
     static let everyPart: [Place.Part] = [
         .procedures, .constants, .variables, .types, .constraints, .contracts, .satisfies,
-        .imports, .parameters, .returns, .body, .result, .receiver, .callee, .arguments,
+        .imports, .parameters, .returns, .body, .result, .subject, .callee, .arguments,
         .closure, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]
 
@@ -214,12 +214,12 @@ enum ObjectCoverageFixture {
     static func row(label: Name, body: Bool) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(receiver: body ? "p" : nil, parameters: [parameter], returns: .int),
+            signature: Signature(parameters: [parameter], returns: .int),
             access: .internal,
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            sends: body ? [] : [Sent(row: 1, handing: [0, 2])],
+            sends: body ? [] : [Sent(row: 1, handing: 2)],
             judging: body
                 ? .body(
                     everyOperation,
@@ -231,7 +231,7 @@ enum ObjectCoverageFixture {
                         names: (0 ..< 12).map { at in Name(normal: "s\(at)") }
                     )
                 )
-                : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: ["x", "y"])])
+                : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: 2)])
         )
     }
 
@@ -314,18 +314,17 @@ enum ObjectCoverageFixture {
     // so what the call hands over is the link's to judge.
     static let callOperation = CallOperation(
         procedure: 0,
-        receiver: .literal(.int(12)),
-        arguments: [.literal(.int(13)), nil],
-        handed: [CallOperation.Handed(position: 1, address: Address(slot: 5, steps: []))]
+        arguments: [.literal(.int(12)), .literal(.int(13)), nil],
+        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))]
     )
 
     static let dispatchOperation = DispatchOperation(
         contract: "a.five",
         procedure: "a.six",
-        receiver: .literal(.int(14)),
+        first: .literal(.int(14)),
         arguments: [
-            "byValue": .value(.literal(.int(15))),
-            "byReference": .reference(Address(slot: 6, steps: []))
+            .value(.literal(.int(15))),
+            .reference(Address(slot: 6, steps: []))
         ],
         calls: ["a.nineteen": callOperation]
     )

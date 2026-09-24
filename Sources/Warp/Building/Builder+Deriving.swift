@@ -174,13 +174,9 @@ extension Builder {
             return .unstated
 
         case let .call(call):
-            return (failing(call.selector) ?? .unstated)
-                .joined(call.receiver.map(read) ?? .these([]))
-                .joined(
-                    call.arguments.values.reduce(Failing.these([])) { carried, argument in
-                        carried.joined(read(argument))
-                    }
-                )
+            return call.arguments.reduce(failing(call.selector) ?? .unstated) { carried, argument in
+                carried.joined(read(argument))
+            }
 
         case let .block(block):
             return self.failing(block, given: failing)
@@ -310,9 +306,8 @@ extension Builder {
                 context.signature(of: call.selector) != nil || context.contractProcedures[call.selector] != nil,
                 !context.isConst(call.selector)
             else {
-                return call.receiver.flatMap { receiver in runs(in: receiver, given: context) }
-                    ?? call.arguments.values.lazy
-                        .compactMap { argument in runs(in: argument, given: context) }.first
+                return call.arguments.lazy
+                    .compactMap { argument in runs(in: argument, given: context) }.first
             }
 
             return .calling(call.selector)
@@ -374,18 +369,14 @@ extension Builder {
             guard const(call.selector) else { return false }
 
             if let signature = asked(call.selector) {
-                for parameter in signature.parameters where parameter.declared.isInout {
-                    guard
-                        case let .reference(path)? = call.handed(parameter.name, to: signature),
-                        let head = path.head
-                    else { continue }
+                for (parameter, argument) in zip(signature.parameters, call.arguments) where parameter.declared.isInout {
+                    guard case let .reference(path) = argument, let head = path.head else { continue }
 
                     guard names.contains(head) else { return false }
                 }
             }
 
-            return (call.receiver.map(isConst) ?? true)
-                && call.arguments.values.allSatisfy(isConst)
+            return call.arguments.allSatisfy(isConst)
 
         // Calling a value is settled at run time, so what it reaches is said
         // by the slot the value came out of and nowhere else. A slot asking

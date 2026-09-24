@@ -28,7 +28,7 @@ struct IsolationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.shout", arguments: ["text": .literal(.string("hi"))]))
+                    result: .call(Call(selector: "app.shout", arguments: [.literal(.string("hi"))]))
                 )
             ]
         )
@@ -79,13 +79,15 @@ struct IsolationTests {
                     body: [],
                     result: .call(
                         Call(
-                            receiver: .record([
-                                "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
-                                "right": .closure(
-                                    Procedure(body: [], result: .call(Call(selector: "app.ticket")))
-                                )
-                            ]),
-                            selector: "std.concurrent.all"
+                            selector: "std.concurrent.all",
+                            arguments: [
+                                .record([
+                                    "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
+                                    "right": .closure(
+                                        Procedure(body: [], result: .call(Call(selector: "app.ticket")))
+                                    )
+                                ])
+                            ]
                         )
                     )
                 )

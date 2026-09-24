@@ -15,11 +15,11 @@ import Foundation
 // them out; a native says, and the row a compile settles records what it said.
 enum Native: Sendable {
     // One of the procedures it declared it sends: the spelling it reaches,
-    // where it stands among them, and the names it hands over there.
+    // where it stands among them, and how many arguments it hands over there.
     struct Send: Hashable, Sendable {
         let position: Int
         let selector: Name
-        let handing: [Name]
+        let handing: Int
     }
 
     case query(any Query)
