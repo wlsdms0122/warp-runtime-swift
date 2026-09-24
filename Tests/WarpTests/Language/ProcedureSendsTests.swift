@@ -190,7 +190,20 @@ struct ProcedureSendsTests {
             )
         }
 
-        #expect(refusal?.message.contains("hands 3 to 'app.pick', which takes 2") == true)
+        #expect(refusal?.message.contains("sends 'app.pick' 3 arguments, and it takes 2") == true)
+    }
+
+    @Test("a procedure handing fewer than the callee requires is refused at the build")
+    func handingFewerThanTheCalleeRequiresIsRefused() async {
+        // Given / When / Then. `app.pick` requires both of its parameters, and
+        // a send handing one leaves the second off, which every run would refuse
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build(
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.undercounting, .picked]
+            )
+        }
+
+        #expect(refusal?.message.contains("sends 'app.pick' without z, which it requires") == true)
     }
 
     @Test("a procedure handing more than it declared it hands is refused when it sends")
@@ -442,8 +455,30 @@ private struct OvercountingEffect: Effect {
     // MARK: - Private
 }
 
-// Declares it hands one and hands two.
+// Declares it hands two and hands three.
 private struct OverhandingEffect: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case pick
+
+        var selector: Name { "app.pick" }
+
+        var handing: Int { 2 }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.pick, handing: [.int(9), .int(1), .int(3)])
+    }
+
+    // MARK: - Private
+}
+
+// Declares it hands one to a procedure that requires two.
+private struct UndercountingEffect: Effect {
     typealias Parameters = NoParameters
 
     enum Imports: Int, ImportSet {
@@ -458,7 +493,7 @@ private struct OverhandingEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, handing: [.int(9), .int(1)])
+        try await invocation.send(.pick, handing: [.int(9)])
     }
 
     // MARK: - Private
@@ -616,6 +651,15 @@ private extension Module {
             "app.overcounting": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .effect(OvercountingEffect())
+            )
+        ]
+    )
+
+    static let undercounting = try! Module(
+        procedures: [
+            "app.undercounting": Procedure(
+                signature: Signature(returns: .int),
+                implementation: .effect(UndercountingEffect())
             )
         ]
     )

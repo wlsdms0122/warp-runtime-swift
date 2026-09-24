@@ -8,10 +8,9 @@
 import Foundation
 
 // Where a native procedure's declared sends stand in its document's numbering,
-// and where the names each one hands over stand among the parameters it reaches.
-// A procedure names the spellings it sends and the arguments it hands at each, and
-// this answers with numbers, so the run reads numbers where the procedure wrote
-// spellings.
+// and how many arguments each one hands over. A procedure names the spellings it
+// sends and how many it hands at each, and this answers with numbers, so the run
+// reads numbers where the procedure wrote spellings.
 //
 // Which row a number is stays the link's answer, the same as for a call a body
 // wrote. A spelling nothing declares is refused there.
@@ -43,17 +42,22 @@ struct Sending {
     // which is only reachable for a send that hands nothing over.
     private let taking: @Sendable (Name) -> Signature?
 
+    // What the declared parameters are read as, so a count is held to them.
+    private let loweredTypes: LoweredTypeTable
+
     // MARK: - Initializer
     init(
         numbering: Numbering,
         const: (@Sendable (Name) -> Bool)? = nil,
         isolated: (@Sendable (Name) -> Bool)? = nil,
-        taking: @escaping @Sendable (Name) -> Signature?
+        taking: @escaping @Sendable (Name) -> Signature?,
+        in loweredTypes: LoweredTypeTable
     ) {
         self.numbering = numbering
         self.const = const
         self.isolated = isolated
         self.taking = taking
+        self.loweredTypes = loweredTypes
     }
 
     // MARK: - Public
@@ -111,22 +115,25 @@ struct Sending {
 
     // MARK: - Private
     // How many arguments a send hands over, held against the parameters it
-    // reaches: the same count a call written in a body is held to.
+    // reaches by the same rule a call written in a body is held to. A
+    // spelling nothing standing here declares is the link's to refuse, and
+    // only a send handing nothing may reach one.
     private func handing(of send: Native.Send, called label: Name) throws -> Int {
-        guard send.handing > 0 else { return 0 }
-
         guard let signature = taking(send.selector) else {
-            throw BuildError(
-                "'\(label)' hands \(send.handing) to '\(send.selector)', and nothing"
-                    + " standing here declares what it takes",
-                at: Place.procedure(label.spelling, in: .assembled).part(.imports)
-            )
+            guard send.handing == 0 else {
+                throw BuildError(
+                    "'\(label)' hands \(send.handing) to '\(send.selector)', and nothing"
+                        + " standing here declares what it takes",
+                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                )
+            }
+
+            return 0
         }
 
-        guard send.handing <= signature.parameters.count else {
+        if let refusal = signature.refusal(handing: send.handing, in: loweredTypes) {
             throw BuildError(
-                "'\(label)' hands \(send.handing) to '\(send.selector)', which takes"
-                    + " \(signature.parameters.count)",
+                "'\(label)' sends '\(send.selector)' \(refusal)",
                 at: Place.procedure(label.spelling, in: .assembled).part(.imports)
             )
         }

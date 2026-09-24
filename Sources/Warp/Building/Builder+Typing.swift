@@ -394,9 +394,7 @@ extension Builder {
     // readings already in hand, so nothing is walked a second time for the
     // asking.
     func substitution(
-        of signature: Signature,
         over slots: [Slot],
-        at call: Call,
         readings sent: [LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> Substitution {
@@ -429,7 +427,6 @@ extension Builder {
         by signature: Signature?,
         over slots: [Slot],
         answering: LoweredType?,
-        at call: Call,
         readings sent: @autoclosure () throws -> [LoweredType],
         in loweredTypes: LoweredTypeTable
     ) rethrows -> LoweredType {
@@ -438,9 +435,7 @@ extension Builder {
 
         return returns.filling(
             substitution(
-                of: signature,
                 over: slots,
-                at: call,
                 readings: try sent(),
                 in: loweredTypes
             ).readings
@@ -556,7 +551,7 @@ extension Builder {
                 // declared. Elsewhere. That is why this is not `any`'s case and
                 // does not refuse: the segments stand as written and the call's
                 // type answers them, which is the decision
-                // `ParameterReceiverTests` holds.
+                // `ParameterDotTests` holds.
                 //
                 // What would make this judgeable here is the bound: a
                 // constraint is a declared membership of concrete types, so a
@@ -1712,7 +1707,6 @@ extension Builder {
                         by: signature,
                         over: context.slots(of: call.selector),
                         answering: context.answer(of: call.selector),
-                        at: call,
                         readings: readings,
                         in: context.loweredTypes
                     )
@@ -1796,7 +1790,6 @@ extension Builder {
                     by: signature,
                     over: context.slots(of: call.selector),
                     answering: context.answer(of: call.selector),
-                    at: call,
                     readings: sent,
                     in: context.loweredTypes
                 )
@@ -2055,12 +2048,8 @@ extension Builder {
 
         let parameters = asked.signature.parameters
 
-        guard call.arguments.count <= parameters.count else {
-            throw BuildError(
-                "sends '\(call.selector)' \(call.arguments.count) arguments, and"
-                    + " '\(asked.contract)' asks for \(parameters.count)",
-                at: place.part(.arguments)
-            )
+        if let refusal = asked.signature.refusal(handing: call.arguments.count, in: context.loweredTypes) {
+            throw BuildError("sends '\(call.selector)' \(refusal)", at: place.part(.arguments))
         }
 
         let first = try await inspected(
@@ -2128,16 +2117,6 @@ extension Builder {
 
             arguments.append(inner.rewritten)
             calls += inner.calls
-        }
-
-        for parameter in parameters.dropFirst(call.arguments.count) {
-            guard !parameter.mustBeGiven(in: context.types) else {
-                throw BuildError(
-                    "sends '\(call.selector)' without '\(parameter.name)', which"
-                        + " '\(asked.contract)' asks for",
-                    at: place.part(.arguments)
-                )
-            }
         }
 
         return Inspection(

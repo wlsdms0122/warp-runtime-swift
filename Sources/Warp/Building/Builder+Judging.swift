@@ -559,6 +559,10 @@ extension Builder {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
+        if let refusal = callee.signature.refusal(handing: call.arguments.count, in: loweredTypes) {
+            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
+        }
+
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
         // refuse whatever arrived. The judgment (a parameter read two ways has
@@ -580,9 +584,7 @@ extension Builder {
             over: declaredSlots,
             answering: context.answer(of: call.selector),
             filledWith: substitution(
-                of: declared,
                 over: declaredSlots,
-                at: call,
                 readings: site.readings,
                 in: loweredTypes
             ),
@@ -598,29 +600,6 @@ extension Builder {
 
         case let .fits(filled, _):
             slots = filled
-        }
-
-        // More arguments than slots is a different procedure. Fewer leaves the
-        // positions at the end given nothing, which only a slot that reads
-        // absence as null takes.
-        guard call.arguments.count <= slots.count else {
-            throw BuildError(
-                "sending '\(call.selector)' \(call.arguments.count) arguments, and it"
-                    + " takes \(slots.count)",
-                at: site.place.part(.arguments)
-            )
-        }
-
-        let missing = slots.dropFirst(call.arguments.count)
-            .filter { slot in slot.mustBeGiven(in: context.loweredTypes) }
-            .map(\.name)
-
-        guard missing.isEmpty else {
-            throw BuildError(
-                "sending '\(call.selector)' without"
-                    + " \(missing.map(\.spelling).joined(separator: ", ")), which it requires",
-                at: site.place.part(.arguments)
-            )
         }
 
         // An argument that needs a scope cannot be judged here. Only the ones

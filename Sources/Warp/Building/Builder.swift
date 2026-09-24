@@ -655,7 +655,8 @@ public struct Builder: Sendable {
             numbering: numbering,
             const: constant,
             isolated: untouched,
-            taking: taking
+            taking: taking,
+            in: loweredTypes
         )
 
         // This document's block of the table, in name order. What a
