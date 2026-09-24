@@ -16,7 +16,7 @@ import Warp
 // points, removable, and what keeps a space carrying a combining mark, which is
 // also one character and two code points, where it was written.
 struct TrimmedQuery: Query {
-    typealias Parameters = StringReceiver
+    typealias Parameters = StringOperand
 
     // MARK: - Property
     // MARK: - Initializer

@@ -15,7 +15,7 @@ import Warp
 // only known by walking the nine in front of it, and a body reading them in
 // order would pay that walk every round.
 struct CharactersQuery: Query {
-    typealias Parameters = StringReceiver
+    typealias Parameters = StringOperand
 
     // MARK: - Property
     // MARK: - Initializer

@@ -10,7 +10,7 @@ import Warp
 
 // The text in lower case.
 struct LowercasedQuery: Query {
-    typealias Parameters = StringReceiver
+    typealias Parameters = StringOperand
 
     // MARK: - Property
     // MARK: - Initializer

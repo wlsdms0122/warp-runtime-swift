@@ -10,7 +10,7 @@ import Warp
 
 // The text in upper case.
 struct UppercasedQuery: Query {
-    typealias Parameters = StringReceiver
+    typealias Parameters = StringOperand
 
     // MARK: - Property
     // MARK: - Initializer

@@ -1,5 +1,5 @@
 //
-//  FanoutParameters.swift
+//  FanoutOperand.swift
 //  WarpStandard
 //
 //  Created by JSilver on 9/7/26.
@@ -11,7 +11,7 @@ import Warp
 // The pieces a fan-out is handed: closures under keys, or closures in order.
 // Two types and no third, which is what the membership says and what `any`
 // could not.
-enum FanoutParameters: Int, ParameterSet {
+enum FanoutOperand: Int, ParameterSet {
     case of
 
     // MARK: - Property
