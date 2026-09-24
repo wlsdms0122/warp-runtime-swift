@@ -519,10 +519,14 @@ extension Builder {
 
         // A call hands its receiver and its arguments to slots the callee
         // declared, so a value handed on lands somewhere that says it takes
-        // one. A slot that does not say so would let the obligation go.
+        // one. A slot that does not say so would let the obligation go. The
+        // walk hands them in the order the run evaluates them: the receiver,
+        // then the arguments in the callee's parameter order.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
             let signature = context.signature(of: call.selector)
                 ?? context.contractProcedures[call.selector]?.signature
+            let order = signature.map { signature in signature.parameters.map(\.name) }
+                ?? call.arguments.keys.sorted()
 
             var carried = held
 
@@ -532,7 +536,9 @@ extension Builder {
                 carried = try handed(receiver, to: parameter, held: carried, guarded: guarded, of: call)
             }
 
-            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
+            for name in order {
+                guard let argument = call.arguments[name] else { continue }
+
                 carried = try handed(
                     argument,
                     to: signature?.parameter(named: name),
