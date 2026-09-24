@@ -90,6 +90,9 @@ public extension Writer {
         case let .call(call):
             return .dictionary(["call": try self.call(of: call)])
 
+        case let .apply(callee, arguments):
+            return .dictionary(["call": try self.call(of: callee, handing: arguments)])
+
         // Everything left is a construct, and this notation spells constructs
         // in statement position only. Some of them need to be there (a loop and
         // an attempt each bind a name inside themselves and take it from the
@@ -115,20 +118,8 @@ public extension Writer {
         case let .call(call):
             return (try spelling(CallForm.self), try self.call(of: call))
 
-        // A string under `procedure` reads back as a name, so a value that is
-        // literal text has no spelling there.
         case let .apply(callee, arguments):
-            if case .literal(.string) = callee {
-                throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
-            }
-
-            var written: [Name: Value] = ["procedure": try value(of: callee)]
-
-            if !arguments.isEmpty {
-                written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
-            }
-
-            return (try spelling(CallForm.self), .dictionary(written))
+            return (try spelling(CallForm.self), try self.call(of: callee, handing: arguments))
 
         case let .block(block):
             return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
@@ -192,6 +183,23 @@ public extension Writer {
         }
     }
 
+    // A call of a value, under the same key a call of a declaration is. A
+    // string under `procedure` reads back as a name, so a value that is
+    // literal text has no spelling there.
+    private func call(of callee: Expression, handing arguments: [Expression]) throws -> Value {
+        if case .literal(.string) = callee {
+            throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
+        }
+
+        var written: [Name: Value] = ["procedure": try value(of: callee)]
+
+        if !arguments.isEmpty {
+            written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
+        }
+
+        return .dictionary(written)
+    }
+
     private func call(of call: Call) throws -> Value {
         var written: [Name: Value] = ["procedure": .string(call.selector.spelling)]
 
@@ -223,7 +231,13 @@ public extension Writer {
             written["body"] = .array(try block.body.map(value(of:)))
         }
 
-        if let result = block.result {
+        // A result written as null reads as no result, so null is written the
+        // way it reads back: as nothing.
+        switch block.result {
+        case nil, .literal(.null)?:
+            break
+
+        case let result?:
             written["result"] = try value(of: result)
         }
 

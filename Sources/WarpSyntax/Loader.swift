@@ -107,6 +107,18 @@ public struct Loader: Sendable {
             .read(in: document)
         }
 
+        // A document says each thing one way: what the writer writes for the
+        // program it read. Anything else is a second text for one program, and
+        // a second identity for it.
+        if let steps = value.divergence(from: try Writer(registry: .standard, readBy: .canonical).value(of: module)) {
+            throw ReadingError(
+                "a document says each thing one way, and this says it another way here."
+                    + " Write it as the writer writes it",
+                at: steps
+            )
+            .read(in: document)
+        }
+
         return module
     }
 

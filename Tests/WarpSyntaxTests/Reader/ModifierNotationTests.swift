@@ -51,7 +51,7 @@ struct ModifierNotationTests {
         let read = try await Loader().load([
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]], "result": Value.null]]
+            "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]]]]
         ])
 
         #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == form)
@@ -101,7 +101,7 @@ struct ModifierNotationTests {
             "warp": 1,
             "imports": [],
             "procedures": [
-                "entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]
+                "entry": ["parameters": [["name": "f", "type": written]]]
             ]
         ])
 
@@ -137,7 +137,7 @@ struct ModifierNotationTests {
         let read = try await Loader().load([
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]]
+            "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
         ])
 
         // Then
@@ -158,7 +158,7 @@ struct ModifierNotationTests {
         let read = try await Loader().load([
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]]
+            "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
         ])
 
         // Then
@@ -212,7 +212,7 @@ struct ModifierNotationTests {
         let module = try await Loader().load([
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]]
+            "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
         ])
 
         // Then
