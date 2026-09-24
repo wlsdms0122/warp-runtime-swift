@@ -29,7 +29,8 @@ let greet = Procedure(
                         .array([
                             .literal(.string("hello, ")),
                             .call(Call(selector: "std.text.text", arguments: [.reference([.key("name", optional: false)])]))
-                        ])
+                        ]),
+                        .literal(.string(""))
                     ]
                 )
             )
@@ -196,13 +197,13 @@ makes the host's vocabulary the bounds of an arriving program.
 ```swift
 struct ShoutQuery: Query {
     enum Parameters: Int, ParameterSet {
-        case of
+        case text
 
-        var declared: Parameter { Parameter(name: "of", type: .string) }
+        var declared: Parameter { Parameter(name: "text", type: .string) }
     }
 
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard case let .string(text) = question[.of] else { return nil }
+        guard case let .string(text) = question[.text] else { return nil }
 
         return .string(text.uppercased())
     }

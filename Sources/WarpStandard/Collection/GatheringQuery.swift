@@ -17,16 +17,16 @@ import Warp
 struct GatheringQuery: Query {
     // What this takes: the elements, and where in them to read.
     enum Parameters: Int, ParameterSet {
-        case of
-        case value
+        case array
+        case positions
 
         var declared: Parameter {
             switch self {
-            case .of:
-                return Parameter(name: "of", type: .array(.parameter(name: "Element")))
+            case .array:
+                return Parameter(name: "array", type: .array(.parameter(name: "Element")))
 
-            case .value:
-                return Parameter(name: "value", type: .array(.int))
+            case .positions:
+                return Parameter(name: "positions", type: .array(.int))
             }
         }
     }
@@ -37,14 +37,14 @@ struct GatheringQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, so bytes are read where an array is.
-        let collection = question[.of]
+        let collection = question[.array]
 
         guard let held = collection.elements else { return nil }
 
-        guard case let .array(given) = question[.value] else {
+        guard case let .array(given) = question[.positions] else {
             throw ExecutionError(
                 "gathering asks an array of positions, and"
-                    + " \(question[.value].type) arrived"
+                    + " \(question[.positions].type) arrived"
             )
         }
 

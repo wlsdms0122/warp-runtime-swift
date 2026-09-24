@@ -20,7 +20,7 @@ struct DictionaryProcedureTests {
     func settingAnswersADictionary() async throws {
         // Given
         let question = Question<SettingQuery>(
-            arguments: ["of": .record(Record(name: "app.Point", ["a": .int(1)])), "key": .string("b"), "value": .int(2)]
+            arguments: ["dictionary": .record(Record(name: "app.Point", ["a": .int(1)])), "key": .string("b"), "value": .int(2)]
         )
 
         // When
@@ -34,7 +34,7 @@ struct DictionaryProcedureTests {
     func settingRefusesAKeyOutsideNormalForm() async {
         // Given
         let question = Question<SettingQuery>(
-            arguments: ["of": .dictionary(["a": .int(1)]), "key": .string("cafe\u{301}"), "value": .int(2)]
+            arguments: ["dictionary": .dictionary(["a": .int(1)]), "key": .string("cafe\u{301}"), "value": .int(2)]
         )
 
         // When / Then
@@ -49,8 +49,8 @@ struct DictionaryProcedureTests {
     func countingReadsEitherSpelling() async throws {
         // Given. The declaration answers `int`, so neither spelling may answer
         // absence
-        let held = Question<CountQuery>(arguments: ["of": .dictionary(["a": .int(1), "b": .int(2)])])
-        let laid = Question<CountQuery>(arguments: ["of": .record(Record(name: "app.Point", ["a": .int(1)]))])
+        let held = Question<CountQuery>(arguments: ["collection": .dictionary(["a": .int(1), "b": .int(2)])])
+        let laid = Question<CountQuery>(arguments: ["collection": .record(Record(name: "app.Point", ["a": .int(1)]))])
 
         // When / Then
         #expect(try await CountQuery().evaluate(held) == .int(2))

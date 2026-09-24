@@ -40,13 +40,12 @@ public struct Question<P: NativeProcedure>: Sendable {
     }
 
     // MARK: - Public
-    // What an argument holds, named by the procedure's own key. An argument nobody
-    // wrote and one written as null are the same fact here, the same as they
-    // are everywhere else.
+    // What an argument holds, named by the procedure's own key.
     //
     // A settled question reads the place the key stands at, since the run
     // ordered the arguments by the declaration this key belongs to. A given
-    // one was asked with no declaration behind it, so there are only names.
+    // one was asked with no declaration behind it, so there are only names,
+    // and a name it was not given reads as null.
     public subscript(key: P.Parameters) -> Value {
         switch arguments {
         case let .settled(settled, _, _):
@@ -62,7 +61,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // indexing twice and looking nothing up; a procedure this one never declared is
     // a procedure that does not compile.
     //
-    // The arguments stand at the callee's first positions, as many as the key
+    // The arguments stand at the callee's positions, as many as the key
     // declared it hands.
     //
     // Synchronous, because a query answers without running and the link

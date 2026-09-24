@@ -131,7 +131,7 @@ struct Sending {
             return 0
         }
 
-        if let refusal = signature.refusal(handing: send.handing, in: loweredTypes) {
+        if let refusal = signature.refusal(handing: send.handing) {
             throw BuildError(
                 "'\(label)' sends '\(send.selector)' \(refusal)",
                 at: Place.procedure(label.spelling, in: .assembled).part(.imports)

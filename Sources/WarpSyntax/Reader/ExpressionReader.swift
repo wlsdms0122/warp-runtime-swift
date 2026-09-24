@@ -504,7 +504,7 @@ public struct ExpressionReader: Decodable {
             return .literal(.string(only))
         }
 
-        return .call(Call(selector: interpolation.joined, arguments: [.array(pieces)]))
+        return .call(Call(selector: interpolation.joined, arguments: [.array(pieces), .literal(.string(""))]))
     }
 
     // A placeholder names a binding and then drills into it, so what it reads is

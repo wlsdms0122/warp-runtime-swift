@@ -10,20 +10,18 @@ import Warp
 
 // Strings written one after another, with a separator between.
 struct JoinedQuery: Query {
-    // What this takes: the strings, and what goes between them. The
-    // separator may be left out, and nothing between is what null reads
-    // as, which is what makes `parts.joined` reachable from a path.
+    // What this takes: the strings, and what goes between them.
     enum Parameters: Int, ParameterSet {
-        case of
-        case value
+        case strings
+        case separator
 
         var declared: Parameter {
             switch self {
-            case .of:
-                return Parameter(name: "of", type: .array(.string))
+            case .strings:
+                return Parameter(name: "strings", type: .array(.string))
 
-            case .value:
-                return Parameter(name: "value", type: .nullable(.string))
+            case .separator:
+                return Parameter(name: "separator", type: .string)
             }
         }
     }
@@ -37,23 +35,14 @@ struct JoinedQuery: Query {
         // only where the element declaration leaves every byte alone. `string`
         // does not, so bytes are read out and refused element by
         // element at the boundary. Before here.
-        guard case let .array(elements) = question[.of] else {
+        guard case let .array(elements) = question[.strings] else {
             throw ExecutionError(
-                "joined asks \(question[.of].type), expected array"
+                "joined asks \(question[.strings].type), expected array"
             )
         }
 
-        let separator: String
-
-        switch question[.value] {
-        case .null:
-            separator = ""
-
-        case let .string(given):
-            separator = given
-
-        case let given:
-            throw ExecutionError("joined asks a string separator, and \(given.type) arrived")
+        guard case let .string(separator) = question[.separator] else {
+            throw ExecutionError("joined asks a string separator, and \(question[.separator].type) arrived")
         }
 
         let written = try elements.map { element -> String in

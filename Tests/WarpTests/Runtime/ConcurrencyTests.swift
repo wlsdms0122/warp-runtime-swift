@@ -366,7 +366,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("input 'of'[1]: expected isolated procedure, got int")
+            "\(error)".contains("input 'pieces'[1]: expected isolated procedure, got int")
         }
     }
 

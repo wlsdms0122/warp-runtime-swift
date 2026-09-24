@@ -100,9 +100,9 @@ struct NullableTests {
         )
 
         // When / Then. The value that arrived reads its field, and the null the
-        // caller left answers null
+        // caller handed answers null
         #expect(try await run(sut, arguments: ["task": .dictionary(["size": .int(7)])]) == .int(7))
-        #expect(try await run(sut) == .null)
+        #expect(try await run(sut, arguments: ["task": .null]) == .null)
     }
 
     @Test("a name that is statically null is not read through")
@@ -148,11 +148,15 @@ struct NullableTests {
             ]
         )
 
-        // When / Then. A value arrives as itself, an explicit null as null, and
-        // an omission reads as the null the type declares
+        // When / Then. A value arrives as itself and a null as null. A
+        // parameter given nothing is refused, nullable or not
         #expect(try await run(sut, arguments: ["limit": .int(5)]) == .int(5))
         #expect(try await run(sut, arguments: ["limit": .null]) == .null)
-        #expect(try await run(sut) == .null)
+        await #expect {
+            try await run(sut)
+        } throws: { error in
+            "\(error)".contains("nothing was given for limit")
+        }
 
         // A plain typed parameter still means "give me something".
         let plain = try Module(
@@ -174,10 +178,9 @@ struct NullableTests {
         }
     }
 
-    @Test("a written call may leave a nullable argument out")
-    func mustBeGivenIsOneAnswer() async throws {
-        // Given. "must this be written" is one question: the call check and
-        // the boundary both read the type's null
+    @Test("a written call hands a nullable argument like any other")
+    func aNullableArgumentIsHanded() async throws {
+        // Given
         let sut = try Module(
             procedures: [
                 "labelled": Procedure(
@@ -198,8 +201,6 @@ struct NullableTests {
                         returns: .string
                     ),
                     body: [
-                        // The written call omits `limit`; the type answers the
-                        // omission with null, so the build takes the call.
                         Statement(binding: .constant("called"), expression: .call(Call(
                             selector: "labelled",
                             arguments: [.reference([.key("procedure")])]
@@ -212,7 +213,11 @@ struct NullableTests {
         )
 
         // When / Then
-        #expect(try await run(sut, arguments: ["procedure": .string("hey")]) == .string("hey"))
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'labelled' 1 arguments, and it takes 2")
+        }
     }
 
     @Test("a constant's dots are judged like a body's")
@@ -315,7 +320,7 @@ struct NullableTests {
             try await run(sut, arguments: ["task": .dictionary(["name": .string("a")])])
                 == .string("a")
         )
-        #expect(try await run(sut) == .null)
+        #expect(try await run(sut, arguments: ["task": .null]) == .null)
     }
 
     @Test("a nullable type spells itself in refusals")
@@ -403,7 +408,7 @@ struct NullableTests {
             sut,
             arguments: ["items": .array([.string("first")])]
         ) == .string("first"))
-        #expect(try await run(sut) == .null)
+        #expect(try await run(sut, arguments: ["items": .null]) == .null)
     }
 
     @Test("the optional index does not read past the end")
@@ -525,7 +530,7 @@ struct NullableTests {
             sut,
             arguments: ["i": .int(1), "items": .array([.string("a"), .string("b")])]
         ) == .string("b"))
-        #expect(try await run(sut, arguments: ["i": .int(1)]) == .null)
+        #expect(try await run(sut, arguments: ["i": .int(1), "items": .null]) == .null)
     }
 }
 

@@ -28,7 +28,6 @@ public struct ConstructRegistry: Sendable {
         BlockForm.self,
         AttemptForm.self,
         CallForm.self,
-        ApplyForm.self,
         ReturnForm.self,
         BreakForm.self,
         ContinueForm.self

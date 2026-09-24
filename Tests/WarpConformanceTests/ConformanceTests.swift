@@ -370,7 +370,7 @@ struct Case: Sendable, CustomStringConvertible {
     // procedure's is, so a runner reads it with the reader it already has; what
     // is written beside it is what a body would otherwise have shown.
     //
-    // The names it may declare are `of` and `value`, in that order, because a
+    // The names it may declare are `first` and `second`, in that order, because a
     // procedure the host answers reads its arguments at fixed places and a case
     // cannot invent a place in someone else's runner.
     struct Supplied: Sendable {
@@ -853,7 +853,7 @@ extension Case.Program {
     }
 
     // Which of the fixed place sets this declaration reads its arguments
-    // through. A case declares `of` and `value` and nothing else, so the
+    // through. A case declares `first` and `second` and nothing else, so the
     // arity picks one.
     private func places(_ count: Int) throws -> any ParameterSet.Type {
         switch count {
@@ -869,7 +869,7 @@ extension Case.Program {
         default:
             throw ConformanceError(
                 "a procedure a case asks for declares \(count) names, and the places"
-                    + " a case may name are `of` and `value`"
+                    + " a case may name are `first` and `second`"
             )
         }
     }
@@ -913,22 +913,22 @@ struct ConformanceError: Error, CustomStringConvertible {
 // declaration's names stand in. A case cannot invent a place in someone else's
 // runner, so the places are fixed here and the spec says which they are.
 enum OneName: Int, ParameterSet {
-    case of
+    case first
 
-    var declared: Parameter { Parameter(name: "of", type: .any) }
+    var declared: Parameter { Parameter(name: "first", type: .any) }
 }
 
 enum TwoNames: Int, ParameterSet {
-    case of
-    case value
+    case first
+    case second
 
     var declared: Parameter {
         switch self {
-        case .of:
-            return Parameter(name: "of", type: .any)
+        case .first:
+            return Parameter(name: "first", type: .any)
 
-        case .value:
-            return Parameter(name: "value", type: .any)
+        case .second:
+            return Parameter(name: "second", type: .any)
         }
     }
 }

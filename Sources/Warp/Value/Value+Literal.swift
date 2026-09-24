@@ -20,8 +20,7 @@ import Foundation
 // happens during a run, so nothing written down can name one.
 //
 // `null` is spelled `.null` and never `nil`. They are not the same fact (`nil`
-// is a slot with nothing in it and `.null` is a value a program computed) and a
-// language where a `T?` argument may be left out has to keep them apart.
+// is a slot with nothing in it and `.null` is a value a program computed).
 extension Value: ExpressibleByBooleanLiteral {
     public init(booleanLiteral value: Bool) {
         self = .bool(value)

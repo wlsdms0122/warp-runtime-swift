@@ -12,18 +12,18 @@ import Warp
 // every operation are declared alike: both are the same member of the shared
 // ground's `Numeric`, so a whole answers a whole and a fraction a fraction.
 enum NumericPair: Int, ParameterSet {
-    case of
-    case value
+    case lhs
+    case rhs
 
     // MARK: - Property
 
     var declared: Parameter {
         switch self {
-        case .of:
-            return Parameter(name: "of", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+        case .lhs:
+            return Parameter(name: "lhs", type: .parameter(name: "N", constraints: ["std.Numeric"]))
 
-        case .value:
-            return Parameter(name: "value", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+        case .rhs:
+            return Parameter(name: "rhs", type: .parameter(name: "N", constraints: ["std.Numeric"]))
         }
     }
 

@@ -23,10 +23,7 @@ struct Encoding: Sendable {
 
     // MARK: - Public
     // Refuses a name this has no mapping for, before either direction runs.
-    // Null is the encoding left unsaid, and UTF-8 is what that says.
     func named(_ value: Value) throws {
-        guard value != .null else { return }
-
         guard case let .string(name) = value else {
             throw ExecutionError("\(procedure) asks \(value.type) for an encoding name")
         }

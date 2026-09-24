@@ -62,8 +62,6 @@ public extension Place {
         // key.
         case .subject: ExpressionReader.subjectKey.spelling
 
-        // A call and an invocation are written under the same two keys, which
-        // `PlaceWrittenTests` holds them to, so one of them answers for both.
         case .callee: CallForm.CodingKeys.procedure.stringValue
         case .arguments: CallForm.CodingKeys.arguments.stringValue
 
@@ -94,7 +92,6 @@ public extension Place {
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {
         let form: (any ConstructForm.Type)? = switch construct {
-        case .apply: ApplyForm.self
         case .block: BlockForm.self
         case .conditional: ConditionalForm.self
         case .loop: LoopForm.self

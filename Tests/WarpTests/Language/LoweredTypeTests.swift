@@ -174,7 +174,7 @@ struct LoweredTypeTests {
         let ordered = try #require(image.loweredTypes.constraintRow(named: "std.Comparable"))
 
         // Then
-        #expect(row.slots.map(\.name) == ["of", "value"])
+        #expect(row.slots.map(\.name) == ["lhs", "rhs"])
         #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: [.membership(ordered)]), .parameter(label: "T", bounds: [.membership(ordered)])])
         #expect(row.returns == .bool)
         #expect(try await Executor().run(image) == .bool(true))
@@ -275,7 +275,7 @@ struct LoweredTypeTests {
         }
         #expect(!TypeExpression.named("app.A").declaresNull(in: circular))
         #expect(TypeExpression.named("app.C").accepts(.int, in: circular))
-        #expect(Parameter(name: "c", type: .nullable(.named("app.C"))).mustBeGiven(in: circular) == false)
+        #expect(TypeExpression.nullable(.named("app.C")).declaresNull(in: circular))
     }
 
     @Test("one undeclared name passes every reading and is refused where a value meets it")

@@ -8,7 +8,7 @@
 import Foundation
 
 // A call as the run makes it. Arguments stand at the callee's slots, nil
-// where the call wrote nothing or where a hold stands instead. A parameter
+// where a hold stands instead or where a dispatch hands what it read. A parameter
 // handed in place takes the caller's hold: the slot holding it and the path
 // below it.
 struct CallOperation: Sendable {
@@ -50,9 +50,8 @@ struct CallOperation: Sendable {
     // An argument list placed against the callee that takes it: every argument
     // at its slot, a slot taking one in place holding the place instead, and a
     // literal settled to the slot it lands in. Nil where nothing was written:
-    // the positions a call leaves off at the end, and the first one of a call
-    // through a contract, which the run hands over from the reading that
-    // picked this callee.
+    // the first one of a call through a contract, which the run hands over
+    // from the reading that picked this callee.
     //
     // One rule, whether the callee is the one the call named or one of the
     // types the link found answering a contract's procedure.
@@ -63,7 +62,7 @@ struct CallOperation: Sendable {
         in loweredTypes: LoweredTypeTable,
         at place: Place
     ) throws {
-        guard written.count <= callee.slots.count else {
+        guard written.count == callee.slots.count else {
             throw BuildError.unjudged(
                 "\(written.count) arguments to '\(callee.rendered)', which takes \(callee.slots.count)",
                 at: place
@@ -76,7 +75,7 @@ struct CallOperation: Sendable {
         placed.reserveCapacity(callee.slots.count)
 
         for (position, slot) in callee.slots.enumerated() {
-            let given = position < written.count ? written[position] : nil
+            let given = written[position]
 
             if case .inout = slot.type {
                 guard case let .reference(address)? = given else {
@@ -99,7 +98,7 @@ struct CallOperation: Sendable {
 
                 guard case let .literal(value) = code else { return code }
 
-                return .literal(try slot.taking(value, in: loweredTypes))
+                return .literal(try slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes))
             })
         }
 

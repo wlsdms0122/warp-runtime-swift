@@ -106,7 +106,7 @@ public indirect enum Expression: Sendable {
         case .record: .record
         case .closure: .closure
         case .cast: .cast
-        case .apply: .apply
+        case .apply: .call
         case .block: .block
         case .conditional: .conditional
         case .loop: .loop

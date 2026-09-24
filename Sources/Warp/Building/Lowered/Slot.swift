@@ -25,27 +25,6 @@ final class Slot: Sendable {
     }
 
     // MARK: - Public
-    // Whether a call must write this argument: the type's one answer, for
-    // the call check, the boundary and path reachability alike.
-    func mustBeGiven(in table: LoweredTypeTable) -> Bool {
-        type.mustBeGiven(in: table)
-    }
-
-    // An argument as given, or the null a nullable declares where nothing
-    // was. Nil is the absence: a key the call never wrote. A null is a value
-    // like any other and goes to the type, which says whether it holds one.
-    func taking(_ value: Value?, in table: LoweredTypeTable) throws -> Value {
-        guard let value else {
-            guard !mustBeGiven(in: table) else {
-                throw ArgumentError("input '\(name)': required, and nothing was given")
-            }
-
-            return try checking(.null, at: "input '\(name)'", in: table)
-        }
-
-        return try checking(value, at: "input '\(name)'", in: table)
-    }
-
     // The value settled to the declared representation, and held to the
     // spellings where the declaration lists them. `locus` is where a refusal
     // says the value stood, in the caller's terms.

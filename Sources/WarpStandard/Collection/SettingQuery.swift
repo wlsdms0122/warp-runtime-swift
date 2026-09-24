@@ -14,14 +14,14 @@ import Warp
 struct SettingQuery: Query {
     // What this takes: the mapping, the name written, and what it holds.
     enum Parameters: Int, ParameterSet {
-        case of
+        case dictionary
         case key
         case value
 
         var declared: Parameter {
             switch self {
-            case .of:
-                return Parameter(name: "of", type: .dictionary(.any))
+            case .dictionary:
+                return Parameter(name: "dictionary", type: .dictionary(.any))
 
             case .key:
                 return Parameter(name: "key", type: .string)
@@ -36,7 +36,7 @@ struct SettingQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let held = question[.of].asDictionary else { return nil }
+        guard let held = question[.dictionary].asDictionary else { return nil }
 
         guard case let .string(key) = question[.key] else {
             throw ExecutionError("setting asks a string key")

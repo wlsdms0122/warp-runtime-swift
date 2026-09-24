@@ -276,7 +276,8 @@ struct BuilderTests {
                             .array([
                                 .literal(.string("https://")),
                                 .call(Call(selector: "std.text.text", arguments: [reference("host")]))
-                            ])
+                            ]),
+                            .literal(.string(""))
                         ]
                     )
                 )

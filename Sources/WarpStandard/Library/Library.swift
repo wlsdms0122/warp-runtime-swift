@@ -29,15 +29,15 @@ enum Library {
                 "std.collection.append" {
                   body [
                     {
-                      set "to"
+                      set "array"
                       value {
                         call {
                           arguments [
                             {
-                              ref "to"
+                              ref "array"
                             }
                             {
-                              ref "value"
+                              ref "element"
                             }
                           ]
                           procedure "std.collection.appending"
@@ -48,11 +48,11 @@ enum Library {
                   description "Writes one element onto the end of the array a variable holds, in place."
                   parameters [
                     {
-                      name "to"
+                      name "array"
                       type "inout array<some Element>"
                     }
                     {
-                      name "value"
+                      name "element"
                       type "some Element"
                     }
                   ]
@@ -88,10 +88,10 @@ enum Library {
                                     call {
                                       arguments [
                                         {
-                                          ref "of[walk.index]"
+                                          ref "array[walk.index]"
                                         }
                                         {
-                                          ref "value"
+                                          ref "element"
                                         }
                                       ]
                                       procedure "std.logic.equal"
@@ -111,7 +111,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "of"
+                                        ref "array"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -128,11 +128,11 @@ enum Library {
                   description "Whether an array holds a value."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                     {
-                      name "value"
+                      name "element"
                       type "some Element"
                     }
                   ]
@@ -190,7 +190,7 @@ enum Library {
                                         call {
                                           arguments [
                                             {
-                                              ref "of"
+                                              ref "array"
                                             }
                                           ]
                                           procedure "std.collection.count"
@@ -212,7 +212,7 @@ enum Library {
                   description "The elements after the first."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                   ]
@@ -220,7 +220,7 @@ enum Library {
                     call {
                       arguments [
                         {
-                          ref "of"
+                          ref "array"
                         }
                         {
                           ref "places"
@@ -272,7 +272,7 @@ enum Library {
                                         call {
                                           arguments [
                                             {
-                                              ref "of"
+                                              ref "array"
                                             }
                                           ]
                                           procedure "std.collection.count"
@@ -294,7 +294,7 @@ enum Library {
                   description "The elements before the last."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                   ]
@@ -302,7 +302,7 @@ enum Library {
                     call {
                       arguments [
                         {
-                          ref "of"
+                          ref "array"
                         }
                         {
                           ref "places"
@@ -327,14 +327,14 @@ enum Library {
                             {
                               let "kept"
                               value {
-                                apply {
+                                call {
                                   arguments [
                                     {
-                                      ref "of[walk.index]"
+                                      ref "array[walk.index]"
                                     }
                                   ]
                                   procedure {
-                                    ref "value"
+                                    ref "isIncluded"
                                   }
                                 }
                               }
@@ -377,7 +377,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "of"
+                                        ref "array"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -394,11 +394,11 @@ enum Library {
                   description "The elements a procedure answers true for."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                     {
-                      name "value"
+                      name "isIncluded"
                       type {
                         "const procedure" {
                           parameters [
@@ -413,7 +413,7 @@ enum Library {
                     call {
                       arguments [
                         {
-                          ref "of"
+                          ref "array"
                         }
                         {
                           ref "places"
@@ -428,12 +428,12 @@ enum Library {
                   description "The first element, or nothing."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                   ]
                   result {
-                    ref "of[0]"
+                    ref "array[0]"
                   }
                   returns "some Element"
                 }
@@ -448,7 +448,7 @@ enum Library {
                               call {
                                 arguments [
                                   {
-                                    ref "of"
+                                    ref "array"
                                   }
                                 ]
                                 procedure "std.collection.count"
@@ -464,12 +464,12 @@ enum Library {
                   description "The last element, or nothing."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                   ]
                   result {
-                    ref "of[at]"
+                    ref "array[at]"
                   }
                   returns "some Element"
                 }
@@ -487,14 +487,14 @@ enum Library {
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   arguments [
                                     {
-                                      ref "of[walk.index]"
+                                      ref "array[walk.index]"
                                     }
                                   ]
                                   procedure {
-                                    ref "value"
+                                    ref "transform"
                                   }
                                 }
                               }
@@ -526,7 +526,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "of"
+                                        ref "array"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -543,11 +543,11 @@ enum Library {
                   description "Each element answered by a procedure, in order."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                     {
-                      name "value"
+                      name "transform"
                       type {
                         "const procedure" {
                           parameters [
@@ -571,7 +571,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "of"
+                              ref "array"
                             }
                           ]
                           procedure "std.collection.reversed"
@@ -587,7 +587,7 @@ enum Library {
                               ref "back"
                             }
                             {
-                              ref "value"
+                              ref "element"
                             }
                           ]
                           procedure "std.collection.appending"
@@ -598,11 +598,11 @@ enum Library {
                   description "The elements with one more at the front."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                     {
-                      name "value"
+                      name "element"
                       type "some Element"
                     }
                   ]
@@ -622,7 +622,7 @@ enum Library {
                   body [
                     {
                       value {
-                        ref "from"
+                        ref "initialResult"
                       }
                       var "carried"
                     }
@@ -634,17 +634,17 @@ enum Library {
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   arguments [
                                     {
                                       ref "carried"
                                     }
                                     {
-                                      ref "of[walk.index]"
+                                      ref "array[walk.index]"
                                     }
                                   ]
                                   procedure {
-                                    ref "value"
+                                    ref "nextPartialResult"
                                   }
                                 }
                               }
@@ -666,7 +666,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "of"
+                                        ref "array"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -683,15 +683,15 @@ enum Library {
                   description "The elements folded into one, starting from a value."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                     {
-                      name "from"
+                      name "initialResult"
                       type "some Carried"
                     }
                     {
-                      name "value"
+                      name "nextPartialResult"
                       type {
                         "const procedure" {
                           parameters [
@@ -734,7 +734,7 @@ enum Library {
                                             call {
                                               arguments [
                                                 {
-                                                  ref "of"
+                                                  ref "array"
                                                 }
                                               ]
                                               procedure "std.collection.count"
@@ -771,7 +771,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "of"
+                                        ref "array"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -788,7 +788,7 @@ enum Library {
                   description "The elements back to front."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                   ]
@@ -796,7 +796,7 @@ enum Library {
                     call {
                       arguments [
                         {
-                          ref "of"
+                          ref "array"
                         }
                         {
                           ref "places"
@@ -815,7 +815,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "of"
+                              ref "array"
                             }
                           ]
                           procedure "std.collection.count"
@@ -871,10 +871,10 @@ enum Library {
                                             call {
                                               arguments [
                                                 {
-                                                  ref "of[inner.index]"
+                                                  ref "array[inner.index]"
                                                 }
                                                 {
-                                                  ref "of[outer.index]"
+                                                  ref "array[outer.index]"
                                                 }
                                               ]
                                               procedure "std.math.lessThan"
@@ -896,10 +896,10 @@ enum Library {
                                             call {
                                               arguments [
                                                 {
-                                                  ref "of[outer.index]"
+                                                  ref "array[outer.index]"
                                                 }
                                                 {
-                                                  ref "of[inner.index]"
+                                                  ref "array[inner.index]"
                                                 }
                                               ]
                                               procedure "std.math.lessThan"
@@ -1140,7 +1140,7 @@ enum Library {
                   description "The elements in order, for numbers or for strings."
                   parameters [
                     {
-                      name "of"
+                      name "array"
                       type "array<some Element>"
                     }
                   ]
@@ -1148,7 +1148,7 @@ enum Library {
                     call {
                       arguments [
                         {
-                          ref "of"
+                          ref "array"
                         }
                         {
                           ref "places"
@@ -1167,7 +1167,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "of"
+                              ref "dictionary"
                             }
                           ]
                           procedure "std.collection.keys"
@@ -1198,7 +1198,7 @@ enum Library {
                                       ref "held"
                                     }
                                     {
-                                      ref "of[name]"
+                                      ref "dictionary[name]"
                                     }
                                   ]
                                   procedure "std.collection.appending"
@@ -1233,7 +1233,7 @@ enum Library {
                   description "What a record holds, by its names in order."
                   parameters [
                     {
-                      name "of"
+                      name "dictionary"
                       type "dictionary<some Entry>"
                     }
                   ]
@@ -1271,7 +1271,7 @@ enum Library {
                             {
                               let "item"
                               value {
-                                ref "over[walk.index]"
+                                ref "array[walk.index]"
                               }
                             }
                             {
@@ -1288,7 +1288,7 @@ enum Library {
                                     {
                                       let "answered"
                                       value {
-                                        apply {
+                                        call {
                                           arguments [
                                             {
                                               ref "item"
@@ -1298,7 +1298,7 @@ enum Library {
                                             }
                                           ]
                                           procedure {
-                                            ref "by"
+                                            ref "transform"
                                           }
                                         }
                                       }
@@ -1337,7 +1337,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "over"
+                                        ref "array"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -1354,11 +1354,11 @@ enum Library {
                   description "Each element answered by a procedure, run at once, in the collection's order."
                   parameters [
                     {
-                      name "over"
+                      name "array"
                       type "array<some Element>"
                     }
                     {
-                      name "by"
+                      name "transform"
                       type {
                         "isolated procedure" {
                           parameters [
@@ -1406,13 +1406,13 @@ enum Library {
                             {
                               let "side"
                               value {
-                                ref "of[walk.index]"
+                                ref "conditions[walk.index]"
                               }
                             }
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   procedure {
                                     ref "side"
                                   }
@@ -1454,7 +1454,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "of"
+                                        ref "conditions"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -1471,7 +1471,7 @@ enum Library {
                   description "Whether every one answers true, asked until one does not."
                   parameters [
                     {
-                      name "of"
+                      name "conditions"
                       type {
                         array {
                           "const procedure" {
@@ -1488,7 +1488,7 @@ enum Library {
                   description "The opposite of a truth."
                   parameters [
                     {
-                      name "of"
+                      name "value"
                       type "bool"
                     }
                   ]
@@ -1496,7 +1496,7 @@ enum Library {
                     call {
                       arguments [
                         {
-                          ref "of"
+                          ref "value"
                         }
                         false
                       ]
@@ -1509,11 +1509,11 @@ enum Library {
                   description "Whether two values differ."
                   parameters [
                     {
-                      name "of"
+                      name "lhs"
                       type "any"
                     }
                     {
-                      name "value"
+                      name "rhs"
                       type "any"
                     }
                   ]
@@ -1524,10 +1524,10 @@ enum Library {
                           call {
                             arguments [
                               {
-                                ref "of"
+                                ref "lhs"
                               }
                               {
-                                ref "value"
+                                ref "rhs"
                               }
                             ]
                             procedure "std.logic.equal"
@@ -1550,13 +1550,13 @@ enum Library {
                             {
                               let "side"
                               value {
-                                ref "of[walk.index]"
+                                ref "conditions[walk.index]"
                               }
                             }
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   procedure {
                                     ref "side"
                                   }
@@ -1590,7 +1590,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "of"
+                                        ref "conditions"
                                       }
                                     ]
                                     procedure "std.collection.count"
@@ -1607,7 +1607,7 @@ enum Library {
                   description "Whether one answers true, asked until one does."
                   parameters [
                     {
-                      name "of"
+                      name "conditions"
                       type {
                         array {
                           "const procedure" {
@@ -1629,7 +1629,7 @@ enum Library {
                             {
                               let "taken"
                               value {
-                                apply {
+                                call {
                                   procedure {
                                     ref "then"
                                   }
@@ -1645,7 +1645,7 @@ enum Library {
                             }
                           ]
                           when {
-                            ref "of"
+                            ref "condition"
                           }
                         }
                       }
@@ -1653,7 +1653,7 @@ enum Library {
                     {
                       let "left"
                       value {
-                        apply {
+                        call {
                           procedure {
                             ref "else"
                           }
@@ -1664,7 +1664,7 @@ enum Library {
                   description "The value one of two sides answers, chosen by a truth."
                   parameters [
                     {
-                      name "of"
+                      name "condition"
                       type "bool"
                     }
                     {
@@ -1717,7 +1717,7 @@ enum Library {
                                     arguments [
                                       0
                                       {
-                                        ref "of"
+                                        ref "number"
                                       }
                                     ]
                                     procedure "std.math.minus"
@@ -1730,7 +1730,7 @@ enum Library {
                             call {
                               arguments [
                                 {
-                                  ref "of"
+                                  ref "number"
                                 }
                                 0
                               ]
@@ -1747,12 +1747,12 @@ enum Library {
                   description "The number without its sign."
                   parameters [
                     {
-                      name "of"
+                      name "number"
                       type "some N"
                     }
                   ]
                   result {
-                    ref "of"
+                    ref "number"
                   }
                   returns "some N"
                 }
@@ -1763,11 +1763,11 @@ enum Library {
                   description "Whether this one is larger, by the one order."
                   parameters [
                     {
-                      name "of"
+                      name "lhs"
                       type "some T"
                     }
                     {
-                      name "value"
+                      name "rhs"
                       type "some T"
                     }
                   ]
@@ -1775,10 +1775,10 @@ enum Library {
                     call {
                       arguments [
                         {
-                          ref "value"
+                          ref "rhs"
                         }
                         {
-                          ref "of"
+                          ref "lhs"
                         }
                       ]
                       procedure "std.math.lessThan"
@@ -1795,7 +1795,7 @@ enum Library {
                             {
                               value {
                                 return {
-                                  ref "value"
+                                  ref "rhs"
                                 }
                               }
                             }
@@ -1804,10 +1804,10 @@ enum Library {
                             call {
                               arguments [
                                 {
-                                  ref "of"
+                                  ref "lhs"
                                 }
                                 {
-                                  ref "value"
+                                  ref "rhs"
                                 }
                               ]
                               procedure "std.math.lessThan"
@@ -1823,16 +1823,16 @@ enum Library {
                   description "The larger of two of a kind, by the one order."
                   parameters [
                     {
-                      name "of"
+                      name "lhs"
                       type "some T"
                     }
                     {
-                      name "value"
+                      name "rhs"
                       type "some T"
                     }
                   ]
                   result {
-                    ref "of"
+                    ref "lhs"
                   }
                   returns "some T"
                 }
@@ -1845,7 +1845,7 @@ enum Library {
                             {
                               value {
                                 return {
-                                  ref "of"
+                                  ref "lhs"
                                 }
                               }
                             }
@@ -1854,10 +1854,10 @@ enum Library {
                             call {
                               arguments [
                                 {
-                                  ref "of"
+                                  ref "lhs"
                                 }
                                 {
-                                  ref "value"
+                                  ref "rhs"
                                 }
                               ]
                               procedure "std.math.lessThan"
@@ -1873,16 +1873,16 @@ enum Library {
                   description "The smaller of two of a kind, by the one order."
                   parameters [
                     {
-                      name "of"
+                      name "lhs"
                       type "some T"
                     }
                     {
-                      name "value"
+                      name "rhs"
                       type "some T"
                     }
                   ]
                   result {
-                    ref "value"
+                    ref "rhs"
                   }
                   returns "some T"
                 }
@@ -1915,7 +1915,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "of"
+                              ref "text"
                             }
                           ]
                           procedure "std.text.characters"
@@ -1928,7 +1928,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "value"
+                              ref "other"
                             }
                           ]
                           procedure "std.text.characters"
@@ -2095,11 +2095,11 @@ enum Library {
                   description "Whether a string holds another inside it."
                   parameters [
                     {
-                      name "of"
+                      name "text"
                       type "string"
                     }
                     {
-                      name "value"
+                      name "other"
                       type "string"
                     }
                   ]
@@ -2127,7 +2127,7 @@ enum Library {
                             call {
                               arguments [
                                 {
-                                  ref "value"
+                                  ref "target"
                                 }
                                 ""
                               ]
@@ -2141,15 +2141,15 @@ enum Library {
                   description "Every occurrence of a piece swapped for another."
                   parameters [
                     {
-                      name "of"
+                      name "text"
                       type "string"
                     }
                     {
-                      name "value"
+                      name "target"
                       type "string"
                     }
                     {
-                      name "with"
+                      name "replacement"
                       type "string"
                     }
                   ]
@@ -2160,17 +2160,17 @@ enum Library {
                           call {
                             arguments [
                               {
-                                ref "of"
+                                ref "text"
                               }
                               {
-                                ref "value"
+                                ref "target"
                               }
                             ]
                             procedure "std.text.split"
                           }
                         }
                         {
-                          ref "with"
+                          ref "replacement"
                         }
                       ]
                       procedure "std.text.joined"
@@ -2186,7 +2186,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "of"
+                              ref "text"
                             }
                           ]
                           procedure "std.text.characters"
@@ -2212,7 +2212,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "value"
+                              ref "separator"
                             }
                           ]
                           procedure "std.text.characters"
@@ -2447,6 +2447,7 @@ enum Library {
                                                   {
                                                     ref "current"
                                                   }
+                                                  ""
                                                 ]
                                                 procedure "std.text.joined"
                                               }
@@ -2504,11 +2505,11 @@ enum Library {
                   description "The text cut on a separator."
                   parameters [
                     {
-                      name "of"
+                      name "text"
                       type "string"
                     }
                     {
-                      name "value"
+                      name "separator"
                       type "string"
                     }
                   ]
@@ -2524,6 +2525,7 @@ enum Library {
                               {
                                 ref "current"
                               }
+                              ""
                             ]
                             procedure "std.text.joined"
                           }
@@ -2542,7 +2544,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "of"
+                              ref "text"
                             }
                           ]
                           procedure "std.text.characters"
@@ -2555,7 +2557,7 @@ enum Library {
                         call {
                           arguments [
                             {
-                              ref "value"
+                              ref "prefix"
                             }
                           ]
                           procedure "std.text.characters"
@@ -2668,11 +2670,11 @@ enum Library {
                   description "Whether a string begins with another."
                   parameters [
                     {
-                      name "of"
+                      name "text"
                       type "string"
                     }
                     {
-                      name "value"
+                      name "prefix"
                       type "string"
                     }
                   ]

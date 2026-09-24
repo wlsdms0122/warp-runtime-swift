@@ -22,7 +22,6 @@ public enum Construct: Sendable, Equatable {
     case closure
     case cast
 
-    case apply
     case block
     case conditional
     case loop
@@ -46,7 +45,6 @@ public enum Construct: Sendable, Equatable {
         case .record: "record"
         case .closure: "closure"
         case .cast: "cast"
-        case .apply: "apply"
         case .block: "block"
         case .conditional: "conditional"
         case .loop: "loop"

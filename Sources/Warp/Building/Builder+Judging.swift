@@ -559,7 +559,7 @@ extension Builder {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
-        if let refusal = callee.signature.refusal(handing: call.arguments.count, in: loweredTypes) {
+        if let refusal = callee.signature.refusal(handing: call.arguments.count) {
             throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
         }
 
@@ -603,13 +603,13 @@ extension Builder {
         }
 
         // An argument that needs a scope cannot be judged here. Only the ones
-        // that already are what they will be. `taking` rather than `checking`,
-        // so a constant passes exactly the gate the run would apply to it.
+        // that already are what they will be, each through the gate the run
+        // would hold it to.
         for (position, (slot, argument)) in zip(slots, call.arguments).enumerated() {
             guard let constant = argument.constantValue else { continue }
 
             do {
-                _ = try slot.taking(constant, in: loweredTypes)
+                _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
             } catch {
                 throw BuildError(
                     "sending '\(call.selector)': \(error)",

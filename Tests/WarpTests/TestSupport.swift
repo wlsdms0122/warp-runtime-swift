@@ -342,7 +342,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
 // value asked how it reads. The notation spells this `{ format:, with: }` and
 // lowers it to exactly this.
 func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .call(Call(selector: "std.text.joined", arguments: [.array(pieces)]))
+    .call(Call(selector: "std.text.joined", arguments: [.array(pieces), .literal(.string(""))]))
 }
 
 func literal(_ text: String) -> Warp.Expression {

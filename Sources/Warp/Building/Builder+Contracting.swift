@@ -250,37 +250,24 @@ extension Builder {
                     + " procedure takes the type that answers it first"
         }
 
+        guard given.parameters.count == asked.parameters.count else {
+            return "is named for '\(type)' and the procedure '\(procedure)' that"
+                    + " '\(contract)' asks, and takes \(given.parameters.count)"
+                    + " parameters where the contract asks \(asked.parameters.count)"
+        }
+
         // After the first, the witness takes what the contract asks at the
         // same positions: a call written against the contract lands on
         // whichever declaration answers, and the run hands the arguments to
         // the same positions for every one of them. The names are each
         // declaration's own.
-        for (position, parameter) in asked.parameters.enumerated().dropFirst() {
-            guard position < given.parameters.count else {
-                return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and takes \(given.parameters.count)"
-                        + " parameters where the contract asks \(asked.parameters.count)"
-            }
-
-            let filled = given.parameters[position]
-
+        for (position, (parameter, filled)) in zip(asked.parameters, given.parameters).enumerated().dropFirst() {
             guard filled.declared.lowered(in: table.loweredTypes)
                 .same(parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
             else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and takes \(filled.declared.rendered)"
                         + " at \(position) where the contract writes \(parameter.declared.rendered)"
-            }
-        }
-
-        // Anything past what the contract asks and a call must fill is a
-        // position no call written against the contract could fill.
-        for parameter in given.parameters.dropFirst(max(asked.parameters.count, 1)) {
-            guard !parameter.mustBeGiven(in: table) else {
-                return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and requires '\(parameter.name)', which"
-                        + " the contract does not ask. Nothing calling through"
-                        + " the contract could fill it"
             }
         }
 

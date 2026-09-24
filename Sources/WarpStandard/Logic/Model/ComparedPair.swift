@@ -11,17 +11,17 @@ import Warp
 // The two values an equality procedure reads. Either side takes null:
 // comparing against null is what asking whether a name holds anything is.
 enum ComparedPair: Int, ParameterSet {
-    case of
-    case value
+    case lhs
+    case rhs
 
     // MARK: - Property
     var declared: Parameter {
         switch self {
-        case .of:
-            return Parameter(name: "of", type: .any)
+        case .lhs:
+            return Parameter(name: "lhs", type: .any)
 
-        case .value:
-            return Parameter(name: "value", type: .any)
+        case .rhs:
+            return Parameter(name: "rhs", type: .any)
         }
     }
 

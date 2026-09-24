@@ -301,7 +301,7 @@ struct LeaveTests {
                         ["let": "said", "value": ["call": ["procedure": "helper"]]],
                         [
                             "let": "invoked",
-                            "value": ["apply": [
+                            "value": ["call": [
                                 "procedure": [
                                     "closure": [
                                         "returns": "string",

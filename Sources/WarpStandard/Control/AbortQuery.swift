@@ -20,9 +20,9 @@ struct AbortQuery: Query {
     // written ahead of time. Null spells as `null`, and a refusal saying that
     // word would be saying nothing, so null says `aborted`.
     enum Parameters: Int, ParameterSet {
-        case of
+        case message
 
-        var declared: Parameter { Parameter(name: "of", type: .any) }
+        var declared: Parameter { Parameter(name: "message", type: .any) }
     }
 
     // MARK: - Property
@@ -33,7 +33,7 @@ struct AbortQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        let message = question[.of]
+        let message = question[.message]
 
         guard message != .null else {
             throw Aborted(Self.unsaid)

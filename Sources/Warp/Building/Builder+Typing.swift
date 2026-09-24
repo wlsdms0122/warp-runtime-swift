@@ -1596,6 +1596,27 @@ extension Builder {
                 with: context,
                 ask: ask
             )
+
+            // Read once, and every judgment below asks this reading: whether
+            // it could be called, what it takes and what it answers.
+            let callee = called.reading.slotUnwrapped.resolved(in: context.loweredTypes)
+
+            // Null is not called through, the way it is not read through.
+            if case .nullable = callee {
+                throw BuildError(
+                    "calls a value of \(called.reading.rendered(in: context.loweredTypes)), which may be null",
+                    at: place.part(.callee)
+                )
+            }
+
+            guard callee.couldBeProcedure(in: context.loweredTypes) else {
+                throw BuildError(
+                    "calls a value of \(called.reading.rendered(in: context.loweredTypes)),"
+                        + " and only a procedure can be called",
+                    at: place.part(.callee)
+                )
+            }
+
             var rewritten: [Expression] = []
             var calls = called.calls
             var readings: [LoweredType] = []
@@ -1615,35 +1636,22 @@ extension Builder {
             }
 
             // The arguments are handed by position the way a call's are, so
-            // more than the slot's type takes is one no run could take, one
-            // left off at the end is one whose type declares null, and an
-            // argument the slot's type refuses is refused here the way a
-            // call's is.
-            if case let .procedure(parameters?, _, _, _) = called.reading {
-                let applied = "applies a value of \(called.reading.rendered(in: context.loweredTypes))"
-
-                switch called.reading.arityMismatch(handing: arguments.count, in: context.loweredTypes) {
-                case let .tooMany(takes)?:
+            // a count the slot's type does not take is one no run could take,
+            // and an argument the slot's type refuses is refused here the way
+            // a call's is.
+            if case let .procedure(parameters?, _, _, _) = callee {
+                guard arguments.count == parameters.count else {
                     throw BuildError(
-                        "\(applied) with \(arguments.count) arguments, and it takes \(takes)",
+                        "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
+                            + " with \(arguments.count) arguments, and it takes \(parameters.count)",
                         at: place.part(.arguments)
                     )
-
-                case let .missing(positions)?:
-                    throw BuildError(
-                        "\(applied) without what it takes at \(positions.map(String.init).joined(separator: ", ")),"
-                            + " which it requires",
-                        at: place.part(.arguments)
-                    )
-
-                case nil:
-                    break
                 }
 
                 for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
                 where !parameter.slotUnwrapped.accepts(reading, in: context.loweredTypes) {
                     throw BuildError(
-                        "applies a value with \(reading.rendered(in: context.loweredTypes))"
+                        "calls a value with \(reading.rendered(in: context.loweredTypes))"
                             + " where it takes \(parameter.rendered(in: context.loweredTypes))",
                         at: place.part(.arguments).index(position)
                     )
@@ -1662,14 +1670,14 @@ extension Builder {
                             in: context.loweredTypes
                         )
                     } catch {
-                        throw BuildError("applies a value: \(error)", at: place.part(.arguments).index(position))
+                        throw BuildError("calls a value: \(error)", at: place.part(.arguments).index(position))
                     }
                 }
             }
 
             let answers: LoweredType
 
-            if case let .procedure(_, returns?, _, _) = called.reading {
+            if case let .procedure(_, returns?, _, _) = callee {
                 answers = returns
             } else {
                 answers = .any
@@ -2055,7 +2063,7 @@ extension Builder {
 
         let parameters = asked.signature.parameters
 
-        if let refusal = asked.signature.refusal(handing: call.arguments.count, in: context.loweredTypes) {
+        if let refusal = asked.signature.refusal(handing: call.arguments.count) {
             throw BuildError("sends '\(call.selector)' \(refusal)", at: place.part(.arguments))
         }
 

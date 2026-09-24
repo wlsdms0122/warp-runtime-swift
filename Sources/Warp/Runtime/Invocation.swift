@@ -55,9 +55,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     }
 
     // MARK: - Public
-    // What an argument holds, named by the procedure's own key. An argument nobody
-    // wrote and one written as null are the same fact here, the same as they
-    // are everywhere else.
+    // What an argument holds, named by the procedure's own key.
     public subscript(key: P.Parameters) -> Value {
         settled[key.position]
     }
@@ -105,7 +103,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // indexing twice and looking nothing up; a procedure this one never declared is
     // a procedure that does not compile.
     //
-    // The arguments stand at the callee's first positions, as many as the key
+    // The arguments stand at the callee's positions, as many as the key
     // declared it hands.
     //
     // The label names which piece of this procedure's work the send is, the way it

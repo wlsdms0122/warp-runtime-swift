@@ -294,7 +294,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await run(sut, arguments: ["absent": .null])
         } throws: { error in
-            "\(error)".contains("input 'of': expected some T: std.Comparable, got null")
+            "\(error)".contains("input 'lhs': expected some T: std.Comparable, got null")
         }
     }
 

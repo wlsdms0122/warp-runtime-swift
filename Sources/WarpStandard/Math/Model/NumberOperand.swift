@@ -11,10 +11,10 @@ import Warp
 // The one number a rounding procedure reads, a member of the shared ground's
 // `Numeric`. It takes nothing else.
 enum NumberOperand: Int, ParameterSet {
-    case of
+    case number
 
     // MARK: - Property
-    var declared: Parameter { Parameter(name: "of", type: .parameter(name: "N", constraints: ["std.Numeric"])) }
+    var declared: Parameter { Parameter(name: "number", type: .parameter(name: "N", constraints: ["std.Numeric"])) }
 
     // MARK: - Initializer
     // MARK: - Public

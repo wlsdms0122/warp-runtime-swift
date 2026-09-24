@@ -347,18 +347,6 @@ struct StandardTests {
         )
     }
 
-    @Test("joined asked directly reads a missing separator as nothing between")
-    func joinedAskedDirectlyReadsAMissingSeparatorAsEmpty() async throws {
-        // Given
-        let sut = JoinedQuery()
-
-        // When
-        let joined = try await sut.evaluate(Question(arguments: ["of": .array([.string("a"), .string("b")])]))
-
-        // Then
-        #expect(joined == .string("ab"))
-    }
-
     @Test("a codec keeps its own contract on the encoding name")
     func aCodecReadsItsEncodingArgument() async throws {
         // Given. The declaration's enum says the same names early; this is the
@@ -369,13 +357,13 @@ struct StandardTests {
         // When / Then
         #expect(
             try await sut.evaluate(Question(
-                arguments: ["of": .bytes([104]), "encoding": .string("utf8")]
+                arguments: ["bytes": .bytes([104]), "encoding": .string("utf8")]
             )) == .string("h")
         )
 
         await #expect {
             try await sut.evaluate(Question(
-                arguments: ["of": .bytes([104]), "encoding": .string("utf16")]
+                arguments: ["bytes": .bytes([104]), "encoding": .string("utf16")]
             ))
         } throws: { error in
             "\(error)".contains("no encoding named 'utf16'")

@@ -193,17 +193,17 @@ struct ProcedureSendsTests {
         #expect(refusal?.message.contains("sends 'app.pick' 3 arguments, and it takes 2") == true)
     }
 
-    @Test("a procedure handing fewer than the callee requires is refused at the build")
-    func handingFewerThanTheCalleeRequiresIsRefused() async {
-        // Given / When / Then. `app.pick` requires both of its parameters, and
-        // a send handing one leaves the second off, which every run would refuse
+    @Test("a procedure handing fewer than the callee takes is refused at the build")
+    func handingFewerThanTheCalleeTakesIsRefused() async {
+        // Given / When / Then. `app.pick` takes two, and a send handing one is
+        // a count every run would refuse
         let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.undercounting, .picked]
             )
         }
 
-        #expect(refusal?.message.contains("sends 'app.pick' without z, which it requires") == true)
+        #expect(refusal?.message.contains("sends 'app.pick' 1 arguments, and it takes 2") == true)
     }
 
     @Test("a procedure handing more than it declared it hands is refused when it sends")

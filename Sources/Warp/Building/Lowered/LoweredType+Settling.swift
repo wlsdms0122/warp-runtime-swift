@@ -145,15 +145,6 @@ extension LoweredType {
         }
     }
 
-    // Whether a call must write a slot of this type. A default answers
-    // omission with a value; a type that declares null answers it with the
-    // null it holds. Without either, omission is a missing argument. Asked
-    // of a table that stands, since a type declaring null is read off the
-    // row it names.
-    func mustBeGiven(in table: LoweredTypeTable) -> Bool {
-        !declaresNull(in: table)
-    }
-
     // Whether every byte settles into this element declaration as itself,
     // unchanged and with nothing asked of any one of them. This is what lets
     // a compact spelling cross a boundary whole. It says the same thing

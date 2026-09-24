@@ -20,7 +20,7 @@ struct LessThanQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        let (order, _) = try ordering.of(question[.of], and: question[.value])
+        let (order, _) = try ordering.of(question[.lhs], and: question[.rhs])
 
         return .bool(order == .orderedAscending)
     }
