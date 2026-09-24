@@ -13,7 +13,6 @@ public struct ProcedureReader: Decodable {
         case description
         case access
         case parameters
-        case receiver
         case returns
         case bounds
         case body
@@ -65,15 +64,13 @@ public struct ProcedureReader: Decodable {
             description: try container.decodeIfPresent(String.self, forKey: .description),
             access: access ?? .internal,
             // Absent `parameters:` means an empty signature, not an absent
-            // contract. `parameters:`, `receiver:`, `returns:` and `bounds:`
-            // are one signature. What a call may pass, which of those it is
-            // sent to, what comes back, and what each type parameter admits.
+            // contract. `parameters:`, `returns:` and `bounds:` are one
+            // signature. What a call may pass, what comes back, and what each
+            // type parameter admits.
             signature: try BoundsReader.apply(
                 try container.decodeIfPresent([String: String].self, forKey: .bounds),
                 qualifying: { name in (decoder.userInfo[.notation] as? Notation ?? .canonical).qualified(name, as: .type) },
                 to: Signature(
-                    receiver: try container.decodeIfPresent(String.self, forKey: .receiver)
-                        .map { spelling in try Name.read(spelling, at: decoder.steps) },
                     parameters: try container
                         .decodeIfPresent(SignatureReader.self, forKey: .parameters)?
                         .signature.parameters ?? [],

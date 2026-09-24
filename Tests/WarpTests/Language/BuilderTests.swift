@@ -25,9 +25,8 @@ struct BuilderTests {
         let sut = try Module(
             constants: [
                 "greeting": .call(Call(
-                    receiver: .literal(.int(1)),
                     selector: "std.math.dividedBy",
-                    arguments: ["value": .literal(.int(0))]
+                    arguments: [.literal(.int(1)), .literal(.int(0))]
                 ))
             ],
             procedures: [entryName: Procedure(access: .public, body: [])]
@@ -103,18 +102,10 @@ struct BuilderTests {
             constants: [
                 "zebra": .literal(.int(2)),
                 "yak": .call(
-                    Call(
-                        receiver: reference("zebra"),
-                        selector: "std.math.times",
-                        arguments: ["value": reference("zebra")]
-                    )
+                    Call(selector: "std.math.times", arguments: [reference("zebra"), reference("zebra")])
                 ),
                 "xerus": .call(
-                    Call(
-                        receiver: reference("yak"),
-                        selector: "std.math.plus",
-                        arguments: ["value": reference("zebra")]
-                    )
+                    Call(selector: "std.math.plus", arguments: [reference("yak"), reference("zebra")])
                 )
             ],
             procedures: [entryName: Procedure(access: .public, body: [], result: reference("xerus"))]
@@ -280,11 +271,13 @@ struct BuilderTests {
                 "host": .literal(.string("warp.dev")),
                 "url": .call(
                     Call(
-                        receiver: .array([
-                            .literal(.string("https://")),
-                            .call(Call(receiver: reference("host"), selector: "std.text.text"))
-                        ]),
-                        selector: "std.text.joined"
+                        selector: "std.text.joined",
+                        arguments: [
+                            .array([
+                                .literal(.string("https://")),
+                                .call(Call(selector: "std.text.text", arguments: [reference("host")]))
+                            ])
+                        ]
                     )
                 )
             ],
@@ -339,9 +332,10 @@ struct BuilderTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("attempt"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("attempt"), expression: .call(Call(selector: "app.fail", arguments: [
-                                                        "recoverable": .literal(.bool(true))
-                                                    ]))
+                                        Statement(binding: .constant("attempt"), expression: .call(Call(
+                                            selector: "app.fail",
+                                            arguments: [.literal(.bool(true))]
+                                        ))
                                         )
                                     ]), rescue: Block(body: [
                                         Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing"))
@@ -575,8 +569,8 @@ struct BuilderTests {
         #expect(try image.reached(from: "loopy") == ["loopy"])
     }
 
-    @Test("an argument the callee never declared is refused")
-    func undeclaredArgumentIsRefused() async throws {
+    @Test("an argument past the callee's parameters is refused")
+    func argumentPastTheParametersIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -595,8 +589,8 @@ struct BuilderTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
-                                        "base": .literal(.int(1)),
-                                        "bonus": .literal(.int(2))
+                                        .literal(.int(1)),
+                                        .literal(.int(2))
                                     ]))
                         )
                     ]
@@ -667,9 +661,10 @@ struct BuilderTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
-                                        "base": .reference([.key("text")])
-                                    ]))
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("text")])]
+                        ))
                         )
                     ]
                 )
@@ -707,9 +702,10 @@ struct BuilderTests {
                     body: [
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
                         ),
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
-                                        "base": .reference([.key("held")])
-                                    ]))
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("held")])]
+                        ))
                         )
                     ]
                 ),
@@ -741,9 +737,10 @@ struct BuilderTests {
                     body: [
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
                         ),
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
-                                        "base": .reference([.key("held")])
-                                    ]))
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("held")])]
+                        ))
                         )
                     ]
                 ),
@@ -792,11 +789,7 @@ struct BuilderTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("got"), expression: .call(
-                                Call(
-                                    receiver: .literal(.int(1)),
-                                    selector: "plus",
-                                    arguments: ["value": .literal(.int(2))]
-                                )
+                                Call(selector: "plus", arguments: [.literal(.int(1)), .literal(.int(2))])
                             )
                         )
                     ],
@@ -824,10 +817,12 @@ struct BuilderTests {
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(
-                                    receiver: .array([
-                                        .closure(Procedure(body: [], result: .literal(.int(1))))
-                                    ]),
-                                    selector: "std.concurrent.all"
+                                    selector: "std.concurrent.all",
+                                    arguments: [
+                                        .array([
+                                            .closure(Procedure(body: [], result: .literal(.int(1))))
+                                        ])
+                                    ]
                                 )
                             )
                         )

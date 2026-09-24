@@ -16,7 +16,7 @@ import Warp
 // points, removable, and what keeps a space carrying a combining mark, which is
 // also one character and two code points, where it was written.
 struct TrimmedQuery: Query {
-    typealias Parameters = StringReceiver
+    typealias Parameters = StringOperand
 
     // MARK: - Property
     // MARK: - Initializer
@@ -24,7 +24,7 @@ struct TrimmedQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Not a string is not a failure here. A path that asks a string procedure
         // of a number reads as absence, the same as a field never set.
-        guard case let .string(text) = question.receiver else { return nil }
+        guard case let .string(text) = question[.of] else { return nil }
 
         let trimmed = text.drop(while: Self.isWhitespace)
             .reversed().drop(while: Self.isWhitespace).reversed()

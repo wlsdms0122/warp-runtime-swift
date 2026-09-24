@@ -10,7 +10,7 @@ import Warp
 
 // Runs every closure, answers the first success and asks the rest to stop.
 struct FirstEffect: Effect {
-    typealias Parameters = FanoutReceiver
+    typealias Parameters = FanoutOperand
 
     // MARK: - Property
     let failing = Failing.these([ConcurrentFailed.type])

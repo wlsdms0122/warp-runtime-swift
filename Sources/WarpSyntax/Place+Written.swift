@@ -58,10 +58,9 @@ public extension Place {
         case .body: BlockReader.CodingKeys.body.stringValue
         case .result: BlockReader.CodingKeys.result.stringValue
 
-        // A receiver is written under the same key wherever one is (a message
-        // in statement position, a message in a value, a cast) so the key is
-        // the expression grammar's rather than any one form's.
-        case .receiver: ExpressionReader.subjectKey.spelling
+        // What a cast reads is written under the expression grammar's subject
+        // key.
+        case .subject: ExpressionReader.subjectKey.spelling
 
         // A call and an invocation are written under the same two keys, which
         // `PlaceWrittenTests` holds them to, so one of them answers for both.

@@ -31,7 +31,7 @@ struct FingerprintTests {
             "app.main": Procedure(
                 signature: Signature(returns: .int),
                 body: [],
-                result: .call(Call(selector: "a.foo", arguments: ["of": .literal(.null)]))
+                result: .call(Call(selector: "a.foo", arguments: [.literal(.null)]))
             )
         ]
     )

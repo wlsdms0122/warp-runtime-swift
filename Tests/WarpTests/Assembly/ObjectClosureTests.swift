@@ -184,7 +184,7 @@ struct ObjectClosureTests {
                     Procedure(
                         signature: Signature(returns: .int),
                         body: [],
-                        result: .call(Call(receiver: .literal(.int(2)), selector: "std.math.plus", arguments: ["value": .literal(.int(3))]))
+                        result: .call(Call(selector: "std.math.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
                     )
                 )
             ],

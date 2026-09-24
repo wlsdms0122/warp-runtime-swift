@@ -26,11 +26,7 @@ struct InPlaceTests {
                         Statement(
                             binding: .assignment([.key("total")]),
                             expression: .call(
-                                Call(
-                                    receiver: reference("total"),
-                                    selector: "std.math.plus",
-                                    arguments: ["value": .literal(.int(1))]
-                                )
+                                Call(selector: "std.math.plus", arguments: [reference("total"), .literal(.int(1))])
                             )
                         )
                     ],
@@ -67,14 +63,13 @@ struct InPlaceTests {
                             binding: .assignment([.key("seen")]),
                             expression: .call(
                                 Call(
-                                    receiver: reference("seen"),
                                     selector: "std.collection.setting",
-                                    arguments: ["key": .literal(.string("a")), "value": .literal(.int(1))]
+                                    arguments: [reference("seen"), .literal(.string("a")), .literal(.int(1))]
                                 )
                             )
                         )
                     ],
-                    result: .call(Call(receiver: reference("seen"), selector: "std.collection.keys"))
+                    result: .call(Call(selector: "std.collection.keys", arguments: [reference("seen")]))
                 )
             ]
         )
@@ -179,10 +174,7 @@ struct InPlaceTests {
                                     body: [
                                         Statement(
                                             expression: .call(
-                                                Call(
-                                                    selector: "poke",
-                                                    arguments: ["count": .reference([.key("xs"), .index(1)])]
-                                                )
+                                                Call(selector: "poke", arguments: [.reference([.key("xs"), .index(1)])])
                                             )
                                         )
                                     ]
@@ -200,7 +192,7 @@ struct InPlaceTests {
                         Statement(binding: .assignment([.key("count")]), expression: .literal(.int(9))),
                         Statement(
                             expression: .call(
-                                Call(receiver: .literal(.string("after")), selector: "std.control.abort")
+                                Call(selector: "std.control.abort", arguments: [.literal(.string("after"))])
                             )
                         )
                     ]
@@ -254,7 +246,7 @@ struct InPlaceTests {
                     access: .public,
                     signature: Signature(returns: .array(.int)),
                     body: [],
-                    result: .call(Call(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
+                    result: .call(Call(selector: "poke", arguments: [.reference([.key("items"), .index(0)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))], returns: .array(.int)),
@@ -280,7 +272,7 @@ struct InPlaceTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
+                    result: .call(Call(selector: "poke", arguments: [.reference([.key("items"), .index(1)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "second", type: .inout(.int))], returns: .int),
@@ -314,7 +306,7 @@ struct InPlaceTests {
                             expression: .cast(.record([:]), as: .dictionary(.int), optional: false)
                         ),
                         Statement(
-                            expression: .call(Call(selector: "fill", arguments: ["slot": reference("table", "k")]))
+                            expression: .call(Call(selector: "fill", arguments: [reference("table", "k")]))
                         )
                     ],
                     result: reference("table", "k")
@@ -342,7 +334,7 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .call(Call(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: [.reference([.key("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
@@ -374,7 +366,7 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .call(Call(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: [.reference([.key("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
@@ -407,7 +399,7 @@ struct InPlaceTests {
                     signature: Signature(parameters: [Parameter(name: "all", type: .inout(.record(["items": .array(.int)])))]),
                     body: [
                         Statement(
-                            expression: .call(Call(selector: "other.grow", arguments: ["list": reference("all", "items")]))
+                            expression: .call(Call(selector: "other.grow", arguments: [reference("all", "items")]))
                         )
                     ],
                     result: .literal(.null)

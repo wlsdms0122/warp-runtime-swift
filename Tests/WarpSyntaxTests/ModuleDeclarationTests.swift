@@ -190,7 +190,9 @@ struct ModuleDeclarationTests {
                 "bank.Card": ["last": "string"]
             ],
             "contracts": [
-                "app.Describable": ["describe": ["returns": "string"]]
+                "app.Describable": [
+                    "describe": ["parameters": [["name": "of", "type": "app.Describable"]], "returns": "string"]
+                ]
             ],
             "satisfies": [
                 "bank.Account": ["app.Describable"],
@@ -204,23 +206,20 @@ struct ModuleDeclarationTests {
                             "value": ["as": "bank.Card", "of": ["last": "42"]]
                         ]
                     ],
-                    "result": ["result": ["call": ["of": ["ref": "card"], "procedure": "app.tell"]]]
+                    "result": ["result": ["call": ["procedure": "app.tell", "arguments": [["ref": "card"]]]]]
                 ],
                 "app.tell": [
-                    "receiver": "it",
                     "parameters": [["name": "it", "type": "some T"]],
                     "bounds": ["T": "app.Describable"],
                     "returns": "string",
-                    "result": ["call": ["of": ["ref": "it"], "procedure": "app.Describable.describe"]]
+                    "result": ["call": ["procedure": "app.Describable.describe", "arguments": [["ref": "it"]]]]
                 ],
                 "bank.Account.describe": [
-                    "receiver": "of",
                     "parameters": [["name": "of", "type": "bank.Account"]],
                     "returns": "string",
                     "result": "an account"
                 ],
                 "bank.Card.describe": [
-                    "receiver": "of",
                     "parameters": [["name": "of", "type": "bank.Card"]],
                     "returns": "string",
                     "result": "a card"

@@ -31,7 +31,7 @@ struct NamelessTests {
                 "entry": [
                     "returns": "int",
                     "body": [
-                        ["value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]]],
+                        ["value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]]],
                         ["let": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]
@@ -183,7 +183,7 @@ struct NamelessTests {
                 "entry": [
                     "returns": "int",
                     "body": [
-                        ["value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]]],
+                        ["value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]]],
                         ["let": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]

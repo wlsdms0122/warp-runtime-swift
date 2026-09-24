@@ -31,15 +31,15 @@ struct CallTests {
         )
         let sut: [Statement] = [
             Statement(binding: .constant("counted"), expression: .call(
-                    Call(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "std.collection.count")
+                    Call(selector: "std.collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
                 )
             ),
             Statement(binding: .constant("shouted"), expression: .call(
-                    Call(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
+                    Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
                 )
             ),
             Statement(binding: .constant("echoed"), expression: .call(
-                    Call(selector: "echo", arguments: ["text": .literal(.string("back"))])
+                    Call(selector: "echo", arguments: [.literal(.string("back"))])
                 )
             )
         ]
@@ -64,11 +64,11 @@ struct CallTests {
         #expect(outputs["echoed"] == .string("back"))
     }
 
-    @Test("a receiver outside what a procedure declares is refused at the build")
-    func receiverOutsideTheDeclarationIsRefused() async throws {
+    @Test("an argument outside what a procedure declares is refused at the build")
+    func argumentOutsideTheDeclarationIsRefused() async throws {
         // Given. `count` declares `std.Collection`, and an int is no member
         let sut = Warp.Expression.call(
-            Call(receiver: .literal(.int(7)), selector: "std.collection.count")
+            Call(selector: "std.collection.count", arguments: [.literal(.int(7))])
         )
 
         // When / Then
@@ -103,16 +103,16 @@ struct CallTests {
 
     @Test("a native procedure is linked against its signature like a procedure is")
     func hostProcedureIsCheckedAgainstItsSignature() async throws {
-        // Given. An argument the procedure does not declare. This was unreachable
-        // while an effect was an opaque Swift value.
+        // Given. One argument more than the procedure declares. This was
+        // unreachable while an effect was an opaque Swift value.
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(
                         Call(
                             selector: "app.shout",
                             arguments: [
-                                "text": .literal(.string("hi")),
-                                "volume": .literal(.int(11))
+                                .literal(.string("hi")),
+                                .literal(.int(11))
                             ]
                         )
                     )
@@ -149,7 +149,7 @@ struct CallTests {
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(
-                        Call(selector: "app.shout", arguments: ["text": .literal(.int(7))])
+                        Call(selector: "app.shout", arguments: [.literal(.int(7))])
                     )
                 )
             ]
@@ -214,10 +214,7 @@ struct CallTests {
                             differs(reference("n"), .literal(.int(0))),
                             then: [
                                 Statement(binding: .constant("recur"), expression: .call(
-                                        Call(
-                                            selector: "countdown",
-                                            arguments: ["n": .literal(.int(0))]
-                                        )
+                                        Call(selector: "countdown", arguments: [.literal(.int(0))])
                                     )
                                 )
                             ],
@@ -230,7 +227,7 @@ struct CallTests {
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("run"), expression: .call(
-                        Call(selector: "countdown", arguments: ["n": .literal(.int(1))])
+                        Call(selector: "countdown", arguments: [.literal(.int(1))])
                     )
                 )
             ],

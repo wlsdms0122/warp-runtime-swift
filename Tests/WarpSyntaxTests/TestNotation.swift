@@ -10,8 +10,9 @@ import Warp
 import WarpSyntax
 
 // A notation of the plainest kind: an operator record is a subject and a
-// procedure sent to it, `{ of: <expression>, <procedure>: <expression> }`, and
-// the operand lands under `value`.
+// procedure sent to it, `{ of: <expression>, <procedure>: <expression> }`. The
+// subject stands first and the operand second, the positions every standard
+// procedure the table reaches takes them at.
 //
 // The table is one line per procedure: a key is the bare name of the declaration it
 // reaches, and a key not in the table is sent as written. What a real notation
@@ -21,7 +22,6 @@ import WarpSyntax
 struct TestConditions: ExpressionSpelling {
     // MARK: - Property
     static let subjectKey: Name = "of"
-    static let operandKey: Name = "value"
 
     // A record carrying a subject is a message written this way, and a record
     // that is not is the expression it is.
@@ -65,14 +65,14 @@ struct TestConditions: ExpressionSpelling {
 
         return .call(
             Call(
-                receiver: try container.decode(
-                    ExpressionReader.self,
-                    forKey: AnyCodingKey(stringValue: Self.subjectKey.spelling)
-                )
-                .expression,
                 selector: try Self.procedures[Name(procedure)] ?? Name(procedure),
                 arguments: [
-                    Self.operandKey: try container.decode(
+                    try container.decode(
+                        ExpressionReader.self,
+                        forKey: AnyCodingKey(stringValue: Self.subjectKey.spelling)
+                    )
+                    .expression,
+                    try container.decode(
                         ExpressionReader.self,
                         forKey: AnyCodingKey(stringValue: procedure)
                     )
@@ -113,10 +113,12 @@ struct OwnVocabularyConditions: ExpressionSpelling {
     func expression(from decoder: Decoder) throws -> Warp.Expression {
         .call(
             Call(
-                receiver: try decoder.container(keyedBy: AnyCodingKey.self)
-                    .decode(ExpressionReader.self, forKey: AnyCodingKey(stringValue: "holds"))
-                    .expression,
-                selector: "example.holds"
+                selector: "example.holds",
+                arguments: [
+                    try decoder.container(keyedBy: AnyCodingKey.self)
+                        .decode(ExpressionReader.self, forKey: AnyCodingKey(stringValue: "holds"))
+                        .expression
+                ]
             )
         )
     }

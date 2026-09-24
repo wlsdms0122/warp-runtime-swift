@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// Calling a procedure by name.
+// Calling a procedure by name, with its arguments by position.
 //
 // A call names a symbol, never a document. Naming the document would write a
 // linkage fact into the call site; which module declared it is the builder's
@@ -26,7 +26,6 @@ import Warp
 public struct CallForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case procedure
-        case of
         case arguments
     }
 
@@ -34,8 +33,7 @@ public struct CallForm: ConstructForm {
     public static let key: Name = "call"
 
     private let procedure: Name
-    private let receiver: Expression?
-    private let arguments: [Name: Expression]
+    private let arguments: [Expression]
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -51,24 +49,14 @@ public struct CallForm: ConstructForm {
             ),
             as: .procedure
         )
-        self.receiver = try decoder.descendingIfPresent(to: CodingKeys.of)?
-            .read(ExpressionReader.self)
-            .expression
         self.arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
-            .read([String: ExpressionReader].self)
-            .mapValues(\.expression)
-            .named(at: decoder.steps) ?? [:]
+            .read([ExpressionReader].self)
+            .map(\.expression) ?? []
     }
 
     // MARK: - Public
     public func expression(boundTo id: String?) -> Expression {
-        .call(
-            Call(
-                receiver: receiver,
-                selector: procedure,
-                arguments: arguments
-            )
-        )
+        .call(Call(selector: procedure, arguments: arguments))
     }
 
     // MARK: - Private

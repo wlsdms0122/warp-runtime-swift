@@ -93,7 +93,7 @@ struct PlaceWrittenTests {
             "body": [
                 [
                     "let": "sent",
-                    "value": ["call": ["procedure": "nowhere", "of": 1]
+                    "value": ["call": ["procedure": "nowhere", "arguments": [1]]
                 ]]
             ]
         ], importing: ["nowhere"])

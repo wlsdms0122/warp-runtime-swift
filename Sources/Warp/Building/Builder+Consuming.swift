@@ -517,31 +517,20 @@ extension Builder {
             }
         }
 
-        // A call hands its receiver and its arguments to slots the callee
-        // declared, so a value handed on lands somewhere that says it takes
-        // one. A slot that does not say so would let the obligation go. The
-        // walk hands them in the order the run evaluates them: the receiver,
-        // then the arguments in the callee's parameter order.
+        // A call hands its arguments to slots the callee declared, so a value
+        // handed on lands somewhere that says it takes one. A slot that does
+        // not say so would let the obligation go. The walk hands them in
+        // position order, the order the run evaluates them in.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
-            let signature = context.signature(of: call.selector)
-                ?? context.contractProcedures[call.selector]?.signature
-            let order = signature.map { signature in signature.parameters.map(\.name) }
-                ?? call.arguments.keys.sorted()
+            let parameters = (context.signature(of: call.selector)
+                ?? context.contractProcedures[call.selector]?.signature)?.parameters ?? []
 
             var carried = held
 
-            if let receiver = call.receiver {
-                let parameter = signature?.receiver.flatMap { name in signature?.parameter(named: name) }
-
-                carried = try handed(receiver, to: parameter, held: carried, guarded: guarded, of: call)
-            }
-
-            for name in order {
-                guard let argument = call.arguments[name] else { continue }
-
+            for (position, argument) in call.arguments.enumerated() {
                 carried = try handed(
                     argument,
-                    to: signature?.parameter(named: name),
+                    to: parameters.indices.contains(position) ? parameters[position] : nil,
                     held: carried,
                     guarded: guarded,
                     of: call

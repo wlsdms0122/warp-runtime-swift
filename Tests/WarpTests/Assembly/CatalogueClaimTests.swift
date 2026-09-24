@@ -16,16 +16,15 @@ struct CatalogueClaimTests {
         // claiming one's type answers the other's contract, and a program
         // naming neither the claim nor the procedure that answers it.
         let charting = try Module(
-            contracts: ["chart.Plottable": ["height": Signature(returns: .int)]],
+            contracts: ["chart.Plottable": ["height": Signature(parameters: [Parameter(name: "of", type: .named("chart.Plottable"))], returns: .int)]],
             procedures: [
                 "chart.draw": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["chart.Plottable"]))],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(receiver: .reference([.key("it")]), selector: "chart.Plottable.height"))
+                    result: .call(Call(selector: "chart.Plottable.height", arguments: [.reference([.key("it")])]))
                 )
             ]
         )
@@ -38,7 +37,6 @@ struct CatalogueClaimTests {
             procedures: [
                 "bank.Account.height": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .int
                     ),
@@ -62,7 +60,7 @@ struct CatalogueClaimTests {
                             )
                         )
                     ],
-                    result: .call(Call(receiver: .reference([.key("account")]), selector: "chart.draw"))
+                    result: .call(Call(selector: "chart.draw", arguments: [.reference([.key("account")])]))
                 )
             ]
         )

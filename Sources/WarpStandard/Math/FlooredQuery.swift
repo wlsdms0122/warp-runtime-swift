@@ -12,7 +12,7 @@ import Warp
 // which is how a quotient becomes a whole number again: `dividedBy` always
 // answers a double, and this is the other half of writing a whole division.
 struct FlooredQuery: Query {
-    typealias Parameters = NumberReceiver
+    typealias Parameters = NumberOperand
 
     // MARK: - Property
     private let integer = IntegerConversion("floored")
@@ -20,7 +20,7 @@ struct FlooredQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        switch question.receiver {
+        switch question[.of] {
         case let .int(number):
             return .int(number)
 

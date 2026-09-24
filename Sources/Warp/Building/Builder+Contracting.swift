@@ -11,7 +11,7 @@ import Foundation
 // what they said. A contract is the procedures a value must have, and a document
 // says which types have them: the claim names a type and a contract, and the
 // declaration behind each procedure is the one named for the type and the procedure,
-// whose signature is the contract's with the receiver filled in by the type
+// whose signature is the contract's with the first parameter taking the type
 // itself.
 //
 // Read off the claims and not off the whole type table. A spelling that
@@ -35,8 +35,8 @@ extension Builder {
     // the type that satisfies it, and beside it the reason each claim that did
     // not hold does not.
     //
-    // The run reads a row out of the first by the receiver's own name, and a
-    // type standing in it has every procedure behind it.
+    // The run reads a row out of the first by the name its first argument
+    // wears, and a type standing in it has every procedure behind it.
     func witnesses(
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
@@ -110,7 +110,7 @@ extension Builder {
     // One claim held to what stands behind it: the two names declared, every
     // procedure the contract asks answered by a declaration named for the type and
     // the procedure, and every one of those signatures the contract's with the
-    // receiver filled in by the type itself.
+    // first parameter taking the type itself.
     private func holding(
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
@@ -188,7 +188,7 @@ extension Builder {
             if let reason = answers(
                 wanted.signature,
                 as: witness.held.signature,
-                receiving: type,
+                answering: type,
                 of: contract,
                 procedure: procedure,
                 at: claim.place,
@@ -230,68 +230,56 @@ extension Builder {
     private func answers(
         _ asked: Signature,
         as given: Signature,
-        receiving type: Name,
+        answering type: Name,
         of contract: Name,
         procedure: Name,
         at place: Place,
         in table: TypeTable
     ) -> String? {
-        guard let receiver = given.receiver, let held = given.parameter(named: receiver) else {
+        guard let held = given.parameters.first else {
             return "is named for '\(type)' and the procedure '\(procedure)' that"
-                    + " '\(contract)' asks, and takes no receiver. A contract's"
-                    + " procedure is answered about the value it is sent to"
+                    + " '\(contract)' asks, and takes nothing. A contract's"
+                    + " procedure is answered about the value it takes first"
         }
 
         guard held.declared.lowered(in: table.loweredTypes)
             .same(TypeExpression.named(type).lowered(in: table.loweredTypes), in: table.loweredTypes)
         else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and its receiver takes"
-                    + " \(held.declared.rendered). A contract's procedure takes the"
-                    + " type that answers it"
+                    + " asks, and takes \(held.declared.rendered) first. A contract's"
+                    + " procedure takes the type that answers it first"
         }
 
-        // The witness declares the contract procedure's parameters, names and
-        // order alike, beside its receiver: a call written against the
-        // contract lands on whichever declaration answers, and the run hands
-        // the arguments to the same positions for every one of them.
-        let declared = given.parameters.filter { parameter in parameter.name != receiver }
-
-        for (position, parameter) in asked.parameters.enumerated() {
-            let name = parameter.name
-
-            guard position < declared.count, declared[position].name == name else {
-                guard given.parameter(named: name) != nil else {
-                    return "is named for '\(type)' and the procedure '\(procedure)' that"
-                            + " '\(contract)' asks, and declares no '\(name)'."
-                            + " A call written against the contract hands that name"
-                }
-
+        // After the first, the witness takes what the contract asks at the
+        // same positions: a call written against the contract lands on
+        // whichever declaration answers, and the run hands the arguments to
+        // the same positions for every one of them. The names are each
+        // declaration's own.
+        for (position, parameter) in asked.parameters.enumerated().dropFirst() {
+            guard position < given.parameters.count else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and declares '\(name)' at another"
-                        + " position. A declaration answering a contract takes its"
-                        + " parameters in the contract's order"
+                        + " '\(contract)' asks, and takes \(given.parameters.count)"
+                        + " parameters where the contract asks \(asked.parameters.count)"
             }
 
-            let filled = declared[position]
+            let filled = given.parameters[position]
 
             guard filled.declared.lowered(in: table.loweredTypes)
                 .same(parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
             else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and takes '\(name)' as"
-                        + " \(filled.declared.rendered) where the contract"
-                        + " writes \(parameter.declared.rendered)"
+                        + " '\(contract)' asks, and takes \(filled.declared.rendered)"
+                        + " at \(position) where the contract writes \(parameter.declared.rendered)"
             }
         }
 
-        // Anything the contract did not name and a call must fill is a name no
-        // call written against the contract could write.
-        for parameter in declared.dropFirst(asked.parameters.count) {
+        // Anything past what the contract asks and a call must fill is a
+        // position no call written against the contract could fill.
+        for parameter in given.parameters.dropFirst(max(asked.parameters.count, 1)) {
             guard !parameter.mustBeGiven(in: table) else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and requires '\(parameter.name)', which"
-                        + " the contract does not name. Nothing calling through"
+                        + " the contract does not ask. Nothing calling through"
                         + " the contract could fill it"
             }
         }

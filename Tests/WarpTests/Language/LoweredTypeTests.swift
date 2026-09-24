@@ -49,6 +49,34 @@ struct LoweredTypeTests {
         }
     }
 
+    @Test("a type parameter read as ranges or as a range and its kind is the kind, whichever is read first")
+    func aParameterReadAsRangesIsTheirKind() {
+        // Given. Ranges meet by their kind, so two that overlap, or a range
+        // and the plain kind under it, take each other both ways
+        let table = types.loweredTypes
+        let parameter = TypeExpression.parameter(name: "T").lowered(in: table)
+        let narrow = TypeExpression.ranged(.whole(from: 0, to: .through(10))).lowered(in: table)
+        let wide = TypeExpression.ranged(.whole(from: 5, to: .through(100))).lowered(in: table)
+
+        func read(_ readings: [LoweredType]) -> LoweredType? {
+            var bound: [Name: LoweredType] = [:]
+            var disagreeing: [Name: LoweredType] = [:]
+            var holding: [Substitution.Held] = []
+
+            for reading in readings {
+                parameter.binding(against: reading, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
+            }
+
+            return bound["T"]
+        }
+
+        // When / Then
+        #expect(read([narrow, wide]) == .int)
+        #expect(read([wide, narrow]) == .int)
+        #expect(read([narrow, .int]) == .int)
+        #expect(read([.int, narrow]) == .int)
+    }
+
     @Test("a name lowers to its row, and the row of the record it names is the chain's end")
     func aNameLowersToARow() throws {
         // Given
@@ -133,9 +161,8 @@ struct LoweredTypeTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.int(1)),
                         selector: "std.math.lessThan",
-                        arguments: ["value": .literal(.int(2))]
+                        arguments: [.literal(.int(1)), .literal(.int(2))]
                     ))
                 )
             ]
@@ -162,17 +189,16 @@ struct LoweredTypeTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.array([.int(1), .int(2)])),
                         selector: "std.collection.map",
                         arguments: [
-                            "value": .closure(
+                            .literal(.array([.int(1), .int(2)])),
+                            .closure(
                                 Procedure(
                                     signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
                                     body: [],
                                     result: .call(Call(
-                                        receiver: .reference([.key("item")]),
                                         selector: "std.math.plus",
-                                        arguments: ["value": .literal(.int(10))]
+                                        arguments: [.reference([.key("item")]), .literal(.int(10))]
                                     ))
                                 )
                             )

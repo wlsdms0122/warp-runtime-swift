@@ -40,7 +40,6 @@ public extension Signature {
         guard !bounds.isEmpty else { return self }
 
         return Signature(
-            receiver: receiver,
             parameters: parameters.map { parameter in
                 Parameter(
                     name: parameter.name,

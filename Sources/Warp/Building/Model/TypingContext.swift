@@ -41,7 +41,7 @@ struct TypingContext: Sendable {
 
     // Every contract's procedures, under the spelling a call writes to reach one.
     // Beside the symbols rather than in them: a name here answers with no
-    // declaration, and which declaration runs is the receiver's to say.
+    // declaration, and which declaration runs is the first argument's to say.
     let contractProcedures: [Name: LoweredContractProcedure]
 
     // The variables of the document being read, by name. A body reading one

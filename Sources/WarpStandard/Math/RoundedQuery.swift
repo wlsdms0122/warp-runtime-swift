@@ -11,7 +11,7 @@ import Warp
 // The nearest whole number. Answers an int whatever it was sent, the same as
 // `floored`.
 struct RoundedQuery: Query {
-    typealias Parameters = NumberReceiver
+    typealias Parameters = NumberOperand
 
     // MARK: - Property
     private let integer = IntegerConversion("rounded")
@@ -19,7 +19,7 @@ struct RoundedQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        switch question.receiver {
+        switch question[.of] {
         case let .int(number):
             return .int(number)
 

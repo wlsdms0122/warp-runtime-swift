@@ -23,9 +23,9 @@ struct CountQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         // A list in either spelling. Bytes have a length the way text has a
         // count, and unlike text, no Unicode question about what "one" means.
-        if let elements = question.receiver?.elements { return .int(elements.count) }
+        if let elements = question[.of].elements { return .int(elements.count) }
 
-        switch question.receiver {
+        switch question[.of] {
         case let .string(text):
             return .int(text.count)
 

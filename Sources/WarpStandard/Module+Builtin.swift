@@ -14,7 +14,7 @@ public extension Module {
     // and ordering are the machine's, case mapping and encoding carry
     // Unicode's tables with them, running at once is the host's scheduler, and
     // `appending` is the only way an array grows and `gathering` the only way
-    // an answer keeps the spelling its receiver arrived in.
+    // an answer keeps the spelling its collection arrived in.
     //
     // `trimmed` stands here for a smaller reason: nothing names the characters
     // it removes, so a body written in Warp would have to invent the list.

@@ -540,7 +540,7 @@ private extension String {
 
 // The inside of a procedure type: the types a value is applied with, in
 // position order, and what it answers. No names, since a value carries
-// none, and no receiver for the same reason.
+// none.
 private struct ProcedureTypeReader: Decodable {
     // No `bounds` here on purpose: a nested procedure type's parameters are
     // the declaring procedure's own slots, so the declaring signature owns

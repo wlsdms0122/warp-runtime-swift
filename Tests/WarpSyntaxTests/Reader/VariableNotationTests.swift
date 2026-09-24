@@ -179,17 +179,19 @@ struct VariableNotationTests {
                     "let": "both",
                     "value": ["call": [
                         "procedure": "std.concurrent.all",
-                        "of": [
-                            "left": [
-                                "closure": [
-                                    "body": [
-                                        ["var": "tally", "value": 0],
-                                        ["set": "tally", "value": 1]
-                                    ],
-                                    "result": ["ref": "tally"]
-                                ]
-                            ],
-                            "right": ["closure": ["result": 2]]
+                        "arguments": [
+                            [
+                                "left": [
+                                    "closure": [
+                                        "body": [
+                                            ["var": "tally", "value": 0],
+                                            ["set": "tally", "value": 1]
+                                        ],
+                                        "result": ["ref": "tally"]
+                                    ]
+                                ],
+                                "right": ["closure": ["result": 2]]
+                            ]
                         ]
                     ]
                 ]],

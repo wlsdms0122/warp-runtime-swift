@@ -176,7 +176,6 @@ struct TypeNotationTests {
         // Given. The slots name the parameter, and the signature says what the
         // name admits
         let sut = try await loader.loadProcedure([
-            "receiver": "of",
             "bounds": ["T": "Comparable"],
             "parameters": [["name": "of", "type": "some T"], ["name": "value", "type": "some T"]],
             "returns": "some T",

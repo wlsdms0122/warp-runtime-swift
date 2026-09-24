@@ -29,11 +29,7 @@ struct FailingTests {
                     access: .public,
                     body: [],
                     result: .call(
-                        Call(
-                            receiver: .literal(.int(1)),
-                            selector: "std.math.plus",
-                            arguments: ["value": .literal(.int(2))]
-                        )
+                        Call(selector: "std.math.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
                     )
                 )
             ]
@@ -60,7 +56,7 @@ struct FailingTests {
                 "app.reach": Procedure(
                     body: [],
                     result: .call(
-                        Call(receiver: .literal(.string("no")), selector: "std.control.abort")
+                        Call(selector: "std.control.abort", arguments: [.literal(.string("no"))])
                     )
                 )
             ]
@@ -85,7 +81,7 @@ struct FailingTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "it", type: .any)]),
                     body: [],
-                    result: .call(Call(receiver: reference("it"), selector: "std.control.abort"))
+                    result: .call(Call(selector: "std.control.abort", arguments: [reference("it")]))
                 )
             ]
         )
@@ -134,7 +130,7 @@ struct FailingTests {
                             binding: .constant("tried"),
                             expression: .attempt(
                                 Block(body: [], result: .call(
-                                    Call(receiver: .literal(.string("no")), selector: "std.control.abort")
+                                    Call(selector: "std.control.abort", arguments: [.literal(.string("no"))])
                                 )),
                                 rescue: Block(
                                     body: [],

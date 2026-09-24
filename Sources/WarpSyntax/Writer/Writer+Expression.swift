@@ -232,14 +232,8 @@ public extension Writer {
     private func call(of call: Call) throws -> Value {
         var written: [Name: Value] = ["procedure": .string(call.selector.spelling)]
 
-        if let receiver = call.receiver {
-            written[ExpressionReader.subjectKey] = try value(of: receiver)
-        }
-
         if !call.arguments.isEmpty {
-            written["arguments"] = .dictionary(
-                try call.arguments.mapValues { argument in try value(of: argument) }
-            )
+            written["arguments"] = .array(try call.arguments.map { argument in try value(of: argument) })
         }
 
         return .dictionary(written)

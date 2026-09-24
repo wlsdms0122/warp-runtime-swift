@@ -11,8 +11,10 @@ that stays where it was built looks like.
 
 ```swift
 import Warp
+import WarpStandard
 
 let greet = Procedure(
+    access: .public,
     signature: Signature(
         parameters: [Parameter(name: "name", type: .string)],
         returns: .string
@@ -20,20 +22,20 @@ let greet = Procedure(
     body: [
         Statement(
             binding: .constant("greeting"),
-            expression: .dispatch(
-                Dispatch(
-                    receiver: .array([
-                        .literal(.string("hello, ")),
-                        .dispatch(
-                            Dispatch(receiver: .reference([.key("name")]), selector: "text")
-                        )
-                    ]),
-                    selector: "joined"
+            expression: .call(
+                Call(
+                    selector: "std.text.joined",
+                    arguments: [
+                        .array([
+                            .literal(.string("hello, ")),
+                            .call(Call(selector: "std.text.text", arguments: [.reference([.key("name", optional: false)])]))
+                        ])
+                    ]
                 )
             )
         )
     ],
-    result: .reference([.key("greeting")])
+    result: .reference([.key("greeting", optional: false)])
 )
 
 let image = try await Builder().build(
@@ -193,21 +195,23 @@ makes the host's vocabulary the bounds of an arriving program.
 
 ```swift
 struct ShoutQuery: Query {
-    func evaluate(_ question: Question) throws -> Value? {
-        guard case let .string(text) = question.receiver else { return nil }
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var declared: Parameter { Parameter(name: "of", type: .string) }
+    }
+
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        guard case let .string(text) = question[.of] else { return nil }
 
         return .string(text.uppercased())
     }
 }
 
-let vocabulary = Module(
+let vocabulary = try Module(
     procedures: [
         "app.shout": Procedure(
-            signature: Signature(
-                receiver: "of",
-                parameters: [Parameter(name: "of", type: .string)],
-                returns: .string
-            ),
+            signature: Signature(of: ShoutQuery.self, returns: .string),
             implementation: .query(ShoutQuery())
         )
     ]

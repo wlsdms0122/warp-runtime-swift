@@ -1,5 +1,5 @@
 //
-//  StringReceiver.swift
+//  StringOperand.swift
 //  WarpStandard
 //
 //  Created by JSilver on 9/7/26.
@@ -8,9 +8,8 @@
 import Foundation
 import Warp
 
-// The one string a transformation reads. It takes nothing else, which is what
-// makes `name.uppercased` reachable from a path.
-enum StringReceiver: Int, ParameterSet {
+// The one string a transformation reads. It takes nothing else.
+enum StringOperand: Int, ParameterSet {
     case of
 
     // MARK: - Property

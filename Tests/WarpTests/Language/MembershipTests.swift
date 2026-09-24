@@ -27,7 +27,7 @@ struct MembershipTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.hold", arguments: ["it": .literal(.string("a"))]))
+                    result: .call(Call(selector: "app.hold", arguments: [.literal(.string("a"))]))
                 ),
                 "app.hold": Procedure(
                     signature: Signature(
@@ -53,7 +53,7 @@ struct MembershipTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.hold", arguments: ["it": .literal(.int(1))]))
+                    result: .call(Call(selector: "app.hold", arguments: [.literal(.int(1))]))
                 ),
                 "app.hold": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
@@ -80,7 +80,7 @@ struct MembershipTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
                     body: [],
-                    result: .call(Call(selector: "app.narrow", arguments: ["it": reference("it")]))
+                    result: .call(Call(selector: "app.narrow", arguments: [reference("it")]))
                 ),
                 "app.narrow": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .string)]),

@@ -414,10 +414,6 @@ public struct Writer: Sendable {
     func fields(of signature: Signature) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 
-        if let receiver = signature.receiver {
-            written["receiver"] = .string(receiver.spelling)
-        }
-
         if !signature.parameters.isEmpty {
             written["parameters"] = .array(try signature.parameters.map(value(of:)))
         }
@@ -481,7 +477,6 @@ public struct Writer: Sendable {
 
     private func stripped(_ signature: Signature) -> Signature {
         Signature(
-            receiver: signature.receiver,
             parameters: signature.parameters.map { parameter in
                 Parameter(
                     name: parameter.name,

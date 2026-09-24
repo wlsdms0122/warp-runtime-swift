@@ -12,11 +12,10 @@ struct FoldedContractTests {
 
     private func documents(returning type: TypeExpression, giving: Warp.Expression) throws -> [Module] {
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.count": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .int
                     ),
@@ -33,7 +32,7 @@ struct FoldedContractTests {
         let program = try Module(
             constants: [
                 "app.counted": .call(
-                    Call(receiver: .call(Call(selector: "app.give")), selector: "app.count")
+                    Call(selector: "app.count", arguments: [.call(Call(selector: "app.give"))])
                 )
             ],
             procedures: [
@@ -81,11 +80,10 @@ struct FoldedContractTests {
     @Test("a deferred pair stands where it was folded, not where the walk ended")
     func aDeferredPairStandsWhereItWasFolded() async throws {
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.count": Procedure(
                     signature: Signature(
-                        receiver: "it",
                         parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .int
                     ),
@@ -112,8 +110,8 @@ struct FoldedContractTests {
         // reports first is `bank.Plain`, which `app.zzz` handed.
         let program = try Module(
             constants: [
-                "app.aaa": .call(Call(receiver: .call(Call(selector: "app.giveEarly")), selector: "app.count")),
-                "app.zzz": .call(Call(receiver: .call(Call(selector: "app.giveLate")), selector: "app.count"))
+                "app.aaa": .call(Call(selector: "app.count", arguments: [.call(Call(selector: "app.giveEarly"))])),
+                "app.zzz": .call(Call(selector: "app.count", arguments: [.call(Call(selector: "app.giveLate"))]))
             ],
             procedures: [
                 entryName: Procedure(

@@ -273,10 +273,10 @@ func walking(
     .loop(
         while: .call(
             Call(
-                receiver: .reference([.key(round), .key("index")]),
                 selector: "std.math.lessThan",
                 arguments: [
-                    "value": .call(Call(receiver: .reference(material), selector: "std.collection.count"))
+                    .reference([.key(round), .key("index")]),
+                    .call(Call(selector: "std.collection.count", arguments: [.reference(material)]))
                 ]
             )
         ),
@@ -295,15 +295,15 @@ func walking(
 // Equality and the connectives are procedures, so a test writing one writes the call
 // the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
+    .call(Call(selector: "std.logic.equal", arguments: [subject, operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
+    .call(Call(selector: "std.logic.notEqual", arguments: [subject, operand]))
 }
 
 func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: condition, selector: "std.logic.not"))
+    .call(Call(selector: "std.logic.not", arguments: [condition]))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something that
@@ -319,17 +319,19 @@ func some(_ conditions: Warp.Expression...) -> Warp.Expression {
 private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
     .call(
         Call(
-            receiver: .array(
-                conditions.map { condition in
-                    .closure(
-                        Procedure(
-                            implementation: .body(Block(body: [], result: condition)),
-                            constness: .const
+            selector: selector,
+            arguments: [
+                .array(
+                    conditions.map { condition in
+                        .closure(
+                            Procedure(
+                                implementation: .body(Block(body: [], result: condition)),
+                                constness: .const
+                            )
                         )
-                    )
-                }
-            ),
-            selector: selector
+                    }
+                )
+            ]
         )
     )
 }
@@ -340,7 +342,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
 // value asked how it reads. The notation spells this `{ format:, with: }` and
 // lowers it to exactly this.
 func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .call(Call(receiver: .array(pieces), selector: "std.text.joined"))
+    .call(Call(selector: "std.text.joined", arguments: [.array(pieces)]))
 }
 
 func literal(_ text: String) -> Warp.Expression {
@@ -348,13 +350,13 @@ func literal(_ text: String) -> Warp.Expression {
 }
 
 func spelling(_ value: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: value, selector: "std.text.text"))
+    .call(Call(selector: "std.text.text", arguments: [value]))
 }
 
 // MARK: - Refusal
 
 func refusing(_ message: Warp.Expression) -> Warp.Expression {
-    .call(Call(receiver: message, selector: "std.control.abort"))
+    .call(Call(selector: "std.control.abort", arguments: [message]))
 }
 
 extension Closure {

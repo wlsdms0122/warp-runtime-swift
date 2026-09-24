@@ -16,7 +16,7 @@ public extension Module {
         procedures: [
             "std.logic.equal": Procedure(
                 description: "Whether two values are the same.",
-                signature: Signature(of: EqualQuery.self, receiver: .of, returns: .bool),
+                signature: Signature(of: EqualQuery.self, returns: .bool),
                 implementation: .query(EqualQuery())
             )
         ],

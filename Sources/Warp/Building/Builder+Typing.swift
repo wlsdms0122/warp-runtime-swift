@@ -223,9 +223,9 @@ extension Builder {
         return (inner.rewritten, inner.calls)
     }
 
-    // The one membership judgment every surface shares: call reads it over
-    // the whole signature, a path over the receiver's slot. Answers the
-    // refusal, or nil where every constrained parameter admits its reading.
+    // The one membership judgment a call is held to, over the whole
+    // signature. Answers the refusal, or nil where every constrained
+    // parameter admits its reading.
     //
     // That one parameter takes one bound, and that a named bound is declared,
     // are the declaration's own facts. Held by
@@ -315,8 +315,7 @@ extension Builder {
         }
     }
 
-    // The judgment every call shares, whichever surface writes it. A call
-    // writes the arguments, a path writes only the receiver. What the readings
+    // The judgment every call shares. What the readings
     // put in the declaration's type parameters is read once: a parameter read
     // two ways is refused rather than folded, a bounded one is judged against
     // its membership, and the declaration comes back with the readings filled.
@@ -391,23 +390,19 @@ extension Builder {
     }
 
     // What a call put in its callee's type parameters, read by holding each
-    // declared parameter beside what was actually sent. The readings already in
-    // hand, so nothing is walked a second time for the asking. A receiver is a
-    // parameter written on the other side of the dot, so it is read the same
-    // way.
+    // declared parameter beside what was actually sent at its position. The
+    // readings already in hand, so nothing is walked a second time for the
+    // asking.
     func substitution(
-        of signature: Signature,
         over slots: [Slot],
-        at call: Call,
-        readings sent: [Name: LoweredType],
-        receiver received: LoweredType?,
+        readings sent: [LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
         var holding: [(slot: Name, held: Substitution.Held)] = []
 
-        func read(_ slot: Slot, as reading: LoweredType) {
+        for (slot, reading) in zip(slots, sent) {
             var held: [Substitution.Held] = []
 
             slot.type.binding(
@@ -421,20 +416,6 @@ extension Builder {
             holding += held.map { held in (slot: slot.name, held: held) }
         }
 
-        for name in call.arguments.keys.sorted() {
-            guard let slot = slots.first(where: { slot in slot.name == name }), let reading = sent[name] else {
-                continue
-            }
-
-            read(slot, as: reading)
-        }
-
-        if let received,
-           let name = signature.receiver,
-           let slot = slots.first(where: { slot in slot.name == name }) {
-            read(slot, as: received)
-        }
-
         return Substitution(readings: bound, disagreeing: disagreeing, holding: holding)
     }
 
@@ -446,9 +427,7 @@ extension Builder {
         by signature: Signature?,
         over slots: [Slot],
         answering: LoweredType?,
-        at call: Call,
-        readings sent: @autoclosure () throws -> [Name: LoweredType],
-        receiver received: @autoclosure () throws -> LoweredType?,
+        readings sent: @autoclosure () throws -> [LoweredType],
         in loweredTypes: LoweredTypeTable
     ) rethrows -> LoweredType {
         guard let signature, let returns = answering else { return .any }
@@ -456,11 +435,8 @@ extension Builder {
 
         return returns.filling(
             substitution(
-                of: signature,
                 over: slots,
-                at: call,
                 readings: try sent(),
-                receiver: try received(),
                 in: loweredTypes
             ).readings
         )
@@ -575,7 +551,7 @@ extension Builder {
                 // declared. Elsewhere. That is why this is not `any`'s case and
                 // does not refuse: the segments stand as written and the call's
                 // type answers them, which is the decision
-                // `ParameterReceiverTests` holds.
+                // `ParameterDotTests` holds.
                 //
                 // What would make this judgeable here is the bound: a
                 // constraint is a declared membership of concrete types, so a
@@ -751,7 +727,7 @@ extension Builder {
             // not declare is a defect the text shows, refused here rather than
             // found at run, and so is a `?.` on one it does declare: the type
             // proves the field is there, so the spelling that expects absence
-            // says nothing, unless it just read past the receiver's own null.
+            // says nothing, unless it just read past the record's own null.
             case let (.key(key, _), .record(fields)):
                 guard let field = fields[key] else {
                     return .refused(
@@ -1308,7 +1284,7 @@ extension Builder {
         case let .cast(value, type, optional):
             let inner = try await inspected(
                 value,
-                at: place.part(.receiver),
+                at: place.part(.subject),
                 in: environment,
                 with: context,
                 ask: ask
@@ -1638,17 +1614,30 @@ extension Builder {
                 calls += inner.calls
             }
 
-            // The arguments are handed by position, every position given, so
-            // a count the slot's type does not have is one no run could take,
-            // and an argument the slot's type refuses is refused here the way
-            // a call's is.
+            // The arguments are handed by position the way a call's are, so
+            // more than the slot's type takes is one no run could take, one
+            // left off at the end is one whose type declares null, and an
+            // argument the slot's type refuses is refused here the way a
+            // call's is.
             if case let .procedure(parameters?, _, _, _) = called.reading {
-                guard parameters.count == arguments.count else {
+                let applied = "applies a value of \(called.reading.rendered(in: context.loweredTypes))"
+
+                switch called.reading.arityMismatch(handing: arguments.count, in: context.loweredTypes) {
+                case let .tooMany(takes)?:
                     throw BuildError(
-                        "applies a value of \(called.reading.rendered(in: context.loweredTypes))"
-                            + " with \(arguments.count) arguments, and it takes \(parameters.count)",
+                        "\(applied) with \(arguments.count) arguments, and it takes \(takes)",
                         at: place.part(.arguments)
                     )
+
+                case let .missing(positions)?:
+                    throw BuildError(
+                        "\(applied) without what it takes at \(positions.map(String.init).joined(separator: ", ")),"
+                            + " which it requires",
+                        at: place.part(.arguments)
+                    )
+
+                case nil:
+                    break
                 }
 
                 for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
@@ -1707,39 +1696,25 @@ extension Builder {
                 ?? context.contractProcedures[call.selector]?.signature
 
             guard case .judging = ask else {
-                var readings: [Name: LoweredType] = [:]
+                var readings: [LoweredType] = []
 
-                for argument in call.arguments {
-                    readings[argument.key] = try await inspected(
-                        argument.value,
-                        at: place.argument(argument.key.spelling),
+                for (position, argument) in call.arguments.enumerated() {
+                    readings.append(try await inspected(
+                        argument,
+                        at: place.argument(position),
                         in: environment,
                         with: context,
                         ask: ask
-                    ).reading
-                }
-
-                var receiver: LoweredType?
-
-                if let written = call.receiver {
-                    receiver = try await inspected(
-                        written,
-                        at: place.part(.receiver),
-                        in: environment,
-                        with: context,
-                        ask: ask
-                    ).reading
+                    ).reading)
                 }
 
                 return Inspection(
                     rewritten: expression,
-                    reading: try answered(
+                    reading: answered(
                         by: signature,
                         over: context.slots(of: call.selector),
                         answering: context.answer(of: call.selector),
-                        at: call,
                         readings: readings,
-                        receiver: receiver,
                         in: context.loweredTypes
                     )
                 )
@@ -1747,19 +1722,15 @@ extension Builder {
 
             // Every operand of this call, judged before the walk splits on what
             // the selector names: what a slot takes has nothing to do with
-            // whether the operand written into it is read or run. Named one by
+            // whether the operand written into it is read or run. Placed one by
             // one, because a loop over the values alone reports the third
             // operand from the place the first was.
-            if let written = call.receiver {
-                try held(written, asOperand: place.part(.receiver), given: context, when: ask)
-            }
-
-            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
-                try held(argument, asOperand: place.argument(name.spelling), given: context, when: ask)
+            for (position, argument) in call.arguments.enumerated() {
+                try held(argument, asOperand: place.argument(position), given: context, when: ask)
             }
 
             // A call through a contract names no declaration. What answers it
-            // is the receiver's own type, so it is judged here against what
+            // is the first argument's own type, so it is judged here against what
             // the contract said and nowhere against a callee.
             if let asked = context.contractProcedures[call.selector] {
                 return try await inspected(
@@ -1783,33 +1754,21 @@ extension Builder {
                 )
             }
 
-            var receiver: Inspection?
+            var arguments: [Expression] = []
+            var sent: [LoweredType] = []
+            var calls: [CallSite] = []
 
-            if let written = call.receiver {
-                receiver = try await inspected(
-                    written,
-                    at: place.part(.receiver),
-                    in: environment,
-                    with: context,
-                    ask: ask
-                )
-            }
-
-            var arguments: [Name: Expression] = [:]
-            var sent: [Name: LoweredType] = [:]
-            var calls = receiver?.calls ?? []
-
-            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
+            for (position, argument) in call.arguments.enumerated() {
                 let inner = try await inspected(
                     argument,
-                    at: place.argument(name.spelling),
+                    at: place.argument(position),
                     in: environment,
                     with: context,
                     ask: ask
                 )
 
-                arguments[name] = inner.rewritten
-                sent[name] = inner.reading
+                arguments.append(inner.rewritten)
+                sent.append(inner.reading)
                 calls += inner.calls
             }
 
@@ -1822,11 +1781,7 @@ extension Builder {
                 when: ask
             )
 
-            let rewritten = Call(
-                receiver: receiver?.rewritten,
-                selector: call.selector,
-                arguments: arguments
-            )
+            let rewritten = Call(selector: call.selector, arguments: arguments)
 
             return Inspection(
                 rewritten: .call(rewritten),
@@ -1835,17 +1790,14 @@ extension Builder {
                         call: rewritten,
                         place: place,
                         callee: call.selector,
-                        readings: sent,
-                        received: receiver?.reading
+                        readings: sent
                     )
                 ] + calls,
                 reading: answered(
                     by: signature,
                     over: context.slots(of: call.selector),
                     answering: context.answer(of: call.selector),
-                    at: call,
                     readings: sent,
-                    receiver: receiver?.reading,
                     in: context.loweredTypes
                 )
             )
@@ -2083,7 +2035,7 @@ extension Builder {
 
     // A call through a contract. Nothing here names a declaration: what the
     // contract asked is the whole of the judgment, and which body runs is
-    // decided at the run by the name the receiver wears.
+    // decided at the run by the name the first argument wears.
     private func inspected(
         contract asked: LoweredContractProcedure,
         call: Call,
@@ -2092,29 +2044,35 @@ extension Builder {
         with context: TypingContext,
         ask: Ask
     ) async throws -> Inspection {
-        guard let written = call.receiver else {
+        guard let written = call.arguments.first else {
             throw BuildError(
-                "sends '\(call.selector)' with nothing in front of it."
-                    + " A contract's procedure is answered about the value it is"
-                    + " sent to, so there is nothing here to answer it",
+                "sends '\(call.selector)' with nothing at its first position."
+                    + " A contract's procedure is answered about the value it"
+                    + " takes first, so there is nothing here to answer it",
                 at: place
             )
         }
 
-        let receiver = try await inspected(
+        let parameters = asked.signature.parameters
+
+        if let refusal = asked.signature.refusal(handing: call.arguments.count, in: context.loweredTypes) {
+            throw BuildError("sends '\(call.selector)' \(refusal)", at: place.part(.arguments))
+        }
+
+        let first = try await inspected(
             written,
-            at: place.part(.receiver),
+            at: place.argument(0),
             in: environment,
             with: context,
             ask: ask
         )
 
-        switch context.loweredTypes.answering(contract: asked.contract, reading: receiver.reading) {
+        switch context.loweredTypes.answering(contract: asked.contract, reading: first.reading) {
         case let .leansOn(types):
             for type in types {
                 ask.fulfillment?.require(
                     Claim(type: type, contract: asked.contract),
-                    at: place.part(.receiver)
+                    at: place.argument(0)
                 )
             }
 
@@ -2123,27 +2081,21 @@ extension Builder {
 
         case .settled(false):
             throw BuildError(
-                "sends '\(call.selector)' to \(receiver.reading.rendered(in: context.loweredTypes)),"
+                "sends '\(call.selector)' to \(first.reading.rendered(in: context.loweredTypes)),"
                     + " which does not answer every procedure '\(asked.contract)' asks",
-                at: place.part(.receiver)
+                at: place.argument(0)
             )
         }
 
-        var arguments: [Name: Expression] = [:]
-        var calls = receiver.calls
+        var arguments: [Expression] = [first.rewritten]
+        var calls = first.calls
 
-        for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
-            guard let parameter = asked.signature.parameter(named: name) else {
-                throw BuildError(
-                    "sends '\(call.selector)' with '\(name)', which"
-                        + " '\(asked.contract)' does not name",
-                    at: place.argument(name.spelling)
-                )
-            }
-
+        for (position, argument) in call.arguments.enumerated().dropFirst() {
+            let parameter = parameters[position]
+            let here = place.argument(position)
             let inner = try await inspected(
                 argument,
-                at: place.argument(name.spelling),
+                at: here,
                 in: environment,
                 with: context,
                 ask: ask
@@ -2155,7 +2107,7 @@ extension Builder {
                 throw BuildError(
                     "hands \(inner.reading.rendered(in: context.loweredTypes)) where '\(asked.contract)'"
                         + " writes \(parameter.declared.rendered)",
-                    at: place.argument(name.spelling)
+                    at: here
                 )
             }
 
@@ -2165,28 +2117,18 @@ extension Builder {
                 as: "hands",
                 in: context.loweredTypes,
                 fulfillment: ask.fulfillment,
-                at: place.argument(name.spelling)
+                at: here
             ) {
-                throw BuildError(refusal, at: place.argument(name.spelling))
+                throw BuildError(refusal, at: here)
             }
 
-            arguments[name] = inner.rewritten
+            arguments.append(inner.rewritten)
             calls += inner.calls
-        }
-
-        for parameter in asked.signature.parameters where call.arguments[parameter.name] == nil {
-            guard !parameter.mustBeGiven(in: context.types) else {
-                throw BuildError(
-                    "sends '\(call.selector)' without '\(parameter.name)', which"
-                        + " '\(asked.contract)' asks for",
-                    at: place.part(.arguments)
-                )
-            }
         }
 
         return Inspection(
             rewritten: ask.rewrites
-                ? .call(Call(receiver: receiver.rewritten, selector: call.selector, arguments: arguments))
+                ? .call(Call(selector: call.selector, arguments: arguments))
                 : .call(call),
             calls: calls,
             reading: asked.signature.returns?.lowered(in: context.loweredTypes) ?? .any
@@ -2891,14 +2833,10 @@ extension Builder {
     ) throws {
         guard case .judging = ask else { return }
 
-        for parameter in signature.parameters where parameter.declared.isInout {
+        for (position, (parameter, argument)) in zip(signature.parameters, call.arguments).enumerated()
+        where parameter.declared.isInout {
             let name = parameter.name
-
-            guard let argument = call.handed(name, to: signature) else { continue }
-
-            let at = name == signature.receiver
-                ? place.part(.receiver)
-                : place.argument(name.spelling)
+            let at = place.argument(position)
 
             guard case let .reference(path) = argument, let head = path.head else {
                 try refuse(

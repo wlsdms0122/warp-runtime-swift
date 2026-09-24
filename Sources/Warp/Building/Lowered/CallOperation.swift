@@ -7,14 +7,13 @@
 
 import Foundation
 
-// A call as the run makes it. Arguments stand in the callee's parameter
-// order, nil where the call wrote nothing; the receiver stands apart the way
-// it is settled apart. A parameter handed in place takes the caller's hold:
-// the slot holding it and the path below it.
+// A call as the run makes it. Arguments stand at the callee's slots, nil
+// where the call wrote nothing or where a hold stands instead. A parameter
+// handed in place takes the caller's hold: the slot holding it and the path
+// below it.
 struct CallOperation: Sendable {
     // MARK: - Property
     let procedure: Int
-    let receiver: Operation?
     let arguments: [Operation?]
     let handed: [Handed]
 
@@ -29,7 +28,6 @@ struct CallOperation: Sendable {
     // there without asking how many there are.
     init(
         procedure: Int,
-        receiver: Operation?,
         arguments: [Operation?],
         judging handed: [Handed]
     ) throws {
@@ -40,72 +38,55 @@ struct CallOperation: Sendable {
             )
         }
 
-        self.init(procedure: procedure, receiver: receiver, arguments: arguments, handed: handed)
+        self.init(procedure: procedure, arguments: arguments, handed: handed)
     }
 
-    init(procedure: Int, receiver: Operation?, arguments: [Operation?], handed: [Handed]) {
+    init(procedure: Int, arguments: [Operation?], handed: [Handed]) {
         self.procedure = procedure
-        self.receiver = receiver
         self.arguments = arguments
         self.handed = handed
     }
 
     // An argument list placed against the callee that takes it: every argument
-    // at the position of the slot it fills, a slot taking one in place holding
-    // the place instead, and a literal settled to the slot it lands in.
+    // at its slot, a slot taking one in place holding the place instead, and a
+    // literal settled to the slot it lands in. Nil where nothing was written:
+    // the positions a call leaves off at the end, and the first one of a call
+    // through a contract, which the run hands over from the reading that
+    // picked this callee.
     //
     // One rule, whether the callee is the one the call named or one of the
-    // types the link found answering a contract's procedure. The arguments are
-    // asked for by name in the order the callee's slots stand, so a call the
-    // author wrote lowers each one where it lands and a call through a
-    // contract hands over what it lowered once.
+    // types the link found answering a contract's procedure.
     init(
-        handing argument: (Name) throws -> Argument?,
-        written: some Sequence<Name>,
-        receiver: Argument?,
+        handing written: [Argument?],
         to callee: Linked,
         row: Int,
         in loweredTypes: LoweredTypeTable,
         at place: Place
     ) throws {
-        if let stray = written.first(where: { name in callee.signature.parameter(named: name) == nil }) {
+        guard written.count <= callee.slots.count else {
             throw BuildError.unjudged(
-                "an argument '\(stray)' that '\(callee.rendered)' does not declare",
+                "\(written.count) arguments to '\(callee.rendered)', which takes \(callee.slots.count)",
                 at: place
             )
         }
 
-        var sent: Operation?
         var placed: [Operation?] = []
         var handed: [Handed] = []
 
         placed.reserveCapacity(callee.slots.count)
 
         for (position, slot) in callee.slots.enumerated() {
-            let name = slot.name
-            let isReceiver = name == callee.signature.receiver
-
-            // What the slot takes: the receiver written in front stands under
-            // the name the callee receives by, and the build has refused that
-            // name by name, so nothing is asked for under it.
-            let given = isReceiver ? receiver : try argument(name)
+            let given = position < written.count ? written[position] : nil
 
             if case .inout = slot.type {
                 guard case let .reference(address)? = given else {
                     throw BuildError.unjudged(
-                        "'\(name)' handed to '\(callee.rendered)' in place without a variable",
+                        "'\(slot.name)' handed to '\(callee.rendered)' in place without a variable",
                         at: place
                     )
                 }
 
                 handed.append(Handed(position: position, address: address))
-                placed.append(nil)
-
-                continue
-            }
-
-            if isReceiver, let receiver {
-                sent = receiver.read
                 placed.append(nil)
 
                 continue
@@ -122,7 +103,7 @@ struct CallOperation: Sendable {
             })
         }
 
-        self.init(procedure: row, receiver: sent, arguments: placed, handed: handed)
+        self.init(procedure: row, arguments: placed, handed: handed)
     }
 
     // MARK: - Public

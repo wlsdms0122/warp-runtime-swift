@@ -24,7 +24,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -59,8 +59,8 @@ struct LinearTests {
         let sut = try await holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))),
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -83,7 +83,7 @@ struct LinearTests {
                         .literal(.bool(true)),
                         then: [
                             Statement(
-                                expression: .call(Call(receiver: reference("handle"), selector: "app.close"))
+                                expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))
                             )
                         ],
                         else: nil
@@ -113,7 +113,7 @@ struct LinearTests {
                         body: Block(
                             body: [
                                 Statement(
-                                    expression: .call(Call(receiver: reference("handle"), selector: "app.close"))
+                                    expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))
                                 )
                             ]
                         ),
@@ -139,9 +139,9 @@ struct LinearTests {
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
-                    expression: .call(Call(selector: "app.peek", arguments: ["at": reference("handle")]))
+                    expression: .call(Call(selector: "app.peek", arguments: [reference("handle")]))
                 ),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -160,7 +160,7 @@ struct LinearTests {
         let sut = try await holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.borrow"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
@@ -229,9 +229,9 @@ struct LinearTests {
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(receiver: reference("handle"), selector: "app.name"))
+                    expression: .call(Call(selector: "app.name", arguments: [reference("handle")]))
                 ),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: reference("shown")
         )
@@ -250,7 +250,7 @@ struct LinearTests {
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(receiver: reference("handle"), selector: "app.name"))
+                    expression: .call(Call(selector: "app.name", arguments: [reference("handle")]))
                 )
             ],
             result: reference("shown")
@@ -270,18 +270,17 @@ struct LinearTests {
         let sut = try await holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.give"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.give", arguments: [reference("handle")]))),
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.give": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
                     ),
                     body: [
-                        Statement(expression: .call(Call(receiver: reference("of"), selector: "app.close")))
+                        Statement(expression: .call(Call(selector: "app.close", arguments: [reference("of")])))
                     ],
                     result: .literal(.null)
                 )
@@ -302,13 +301,12 @@ struct LinearTests {
         let sut = try await holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.leak": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .named("app.Handle")
                     ),
@@ -332,13 +330,12 @@ struct LinearTests {
         let sut = try await holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.stash": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
                     ),
                     body: [
@@ -364,7 +361,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
@@ -392,7 +389,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
@@ -422,13 +419,12 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.leak": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .named("app.Handle")
                     ),
@@ -458,10 +454,10 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close"))),
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(receiver: reference("handle"), selector: "app.name"))
+                    expression: .call(Call(selector: "app.name", arguments: [reference("handle")]))
                 )
             ],
             result: reference("shown")
@@ -482,13 +478,12 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.stash": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .procedure(ProcedureType(returns: .string))
                     ),
@@ -519,13 +514,12 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.leak": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .any
                     ),
@@ -644,7 +638,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .array([reference("handle")])
         )
@@ -691,7 +685,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             constraints: ["app.Openable": [.named("app.Handle"), .int]]
@@ -738,7 +732,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             constraints: [
@@ -1079,7 +1073,7 @@ struct LinearTests {
                         round: "round"
                     )
                 ),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -1099,7 +1093,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make"))),
-                Statement(expression: .call(Call(receiver: reference("held"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("held")])))
             ],
             result: .literal(.null),
             beside: [
@@ -1120,7 +1114,7 @@ struct LinearTests {
                                 else: nil
                             )
                         ),
-                        Statement(expression: .call(Call(receiver: reference("own"), selector: "app.close"))),
+                        Statement(expression: .call(Call(selector: "app.close", arguments: [reference("own")]))),
                         Statement(
                             binding: .none,
                             expression: .leave(
@@ -1146,7 +1140,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make"))),
-                Statement(expression: .call(Call(receiver: reference("held"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("held")])))
             ],
             result: .literal(.null),
             beside: [
@@ -1172,7 +1166,7 @@ struct LinearTests {
                                 else: nil
                             )
                         ),
-                        Statement(expression: .call(Call(receiver: reference("own"), selector: "app.close"))),
+                        Statement(expression: .call(Call(selector: "app.close", arguments: [reference("own")]))),
                         Statement(
                             binding: .none,
                             expression: .leave(
@@ -1260,7 +1254,7 @@ struct LinearTests {
                         .literal(.bool(true)),
                         then: [
                             Statement(
-                                expression: .call(Call(receiver: reference("handle"), selector: "app.close"))
+                                expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))
                             ),
                             Statement(
                                 binding: .none,
@@ -1283,7 +1277,7 @@ struct LinearTests {
                         else: nil
                     )
                 ),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ]
         }
 
@@ -1313,7 +1307,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
@@ -1394,7 +1388,7 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
@@ -1427,20 +1421,19 @@ struct LinearTests {
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(receiver: reference("handle"), selector: "app.show"))
+                    expression: .call(Call(selector: "app.show", arguments: [reference("handle")]))
                 ),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: reference("shown"),
             beside: [
                 "app.show": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(receiver: reference("of"), selector: "app.name"))
+                    result: .call(Call(selector: "app.name", arguments: [reference("of")]))
                 )
             ]
         )
@@ -1467,7 +1460,7 @@ struct LinearTests {
                                 Statement(
                                     binding: .constant("shown"),
                                     expression: .call(
-                                        Call(receiver: reference("handle"), selector: "app.name")
+                                        Call(selector: "app.name", arguments: [reference("handle")])
                                     )
                                 )
                             ]
@@ -1475,7 +1468,7 @@ struct LinearTests {
                         round: "round"
                     )
                 ),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -1493,13 +1486,12 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.give": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
                     ),
                     body: [
@@ -1511,7 +1503,7 @@ struct LinearTests {
                                     body: [
                                         Statement(
                                             expression: .call(
-                                                Call(receiver: reference("of"), selector: "app.close")
+                                                Call(selector: "app.close", arguments: [reference("of")])
                                             )
                                         )
                                     ]
@@ -1540,13 +1532,12 @@ struct LinearTests {
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
                 "app.take": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("app.Handle"))]
                     ),
                     body: [],
@@ -1594,7 +1585,7 @@ struct LinearTests {
                     )
                 ),
                 "app.close": Procedure(
-                    signature: Signature(of: CloseEffect.self, receiver: .of),
+                    signature: Signature(of: CloseEffect.self),
                     implementation: .effect(CloseEffect())
                 ),
                 "app.peek": Procedure(
@@ -1605,7 +1596,6 @@ struct LinearTests {
                 // Reads the handle and leaves the obligation with the caller.
                 "app.name": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
                         returns: .string
                     ),

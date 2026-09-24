@@ -75,16 +75,16 @@ extension Operation {
             return body.walk(visit) && rescue.walk(visit)
 
         case let .call(call):
-            return (call.receiver?.walk(visit) ?? true)
-                && call.arguments.allSatisfy { argument in argument?.walk(visit) ?? true }
+            return call.arguments.allSatisfy { argument in argument?.walk(visit) ?? true }
 
-        // What a call through a contract hands over is in `arguments`. The
+        // What a call through a contract hands over is its first and its
+        // `arguments`. The
         // calls beside it are the link's copy of the same, so walking those
         // too would read one fact twice. An argument handed in place is a
         // place and not an operation, and a place is the node's own to read.
         case let .dispatch(dispatch):
-            return dispatch.receiver.walk(visit)
-                && dispatch.arguments.values.allSatisfy { argument in
+            return dispatch.first.walk(visit)
+                && dispatch.arguments.allSatisfy { argument in
                     guard case let .value(operation) = argument else { return true }
 
                     return operation.walk(visit)

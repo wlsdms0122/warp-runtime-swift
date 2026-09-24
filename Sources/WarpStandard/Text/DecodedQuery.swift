@@ -36,7 +36,7 @@ struct DecodedQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         try encoding.named(question[.encoding])
 
-        guard let bytes = question.receiver?.bytes else { return nil }
+        guard let bytes = question[.of].bytes else { return nil }
 
         guard let text = encoding.text(of: bytes) else {
             throw ExecutionError("the bytes are not utf8 text")

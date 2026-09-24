@@ -75,7 +75,24 @@ extension LoweredType {
             // type that row holds. Asking without it would call those two a
             // disagreement, which is the same question the link asks elsewhere
             // and answers correctly.
-            if already.accepts(given, in: table) { return }
+            // A range meets anything by its kind, so a range and the plain
+            // kind under it take each other both ways, and so do two ranges
+            // that overlap. Which was read first says nothing, so the reading
+            // that holds both is the kind under them.
+            if already.accepts(given, in: table) {
+                switch (already, given) {
+                case let (.ranged(mine), .ranged):
+                    bound[name] = mine.lowered
+
+                case (.ranged, _) where given.accepts(already, in: table):
+                    bound[name] = given
+
+                default:
+                    break
+                }
+
+                return
+            }
 
             if given.accepts(already, in: table) {
                 bound[name] = given

@@ -30,39 +30,33 @@ struct ContractCallKeepsTests {
     func aRoundCutShortIsPutBack(through: Name) async throws {
         // Given. A loop of three rounds that leaves in the third after binding
         // `k`, whose result hands `k` to a call on a value it was given. The
-        // receiver is a parameter and the argument is the body's, so a walk
-        // that stops at the receiver sees nothing to put back.
+        // first argument is a parameter and the second is the body's, so a
+        // walk that stops at the first sees nothing to put back.
         let loop = Warp.Expression.loop(
             while: .call(Call(
-                receiver: reference("round", "index"),
                 selector: "std.math.lessThan",
-                arguments: ["value": .literal(.int(3))]
+                arguments: [reference("round", "index"), .literal(.int(3))]
             )),
             body: Block(
                 body: [
                     Statement(binding: .constant("k"), expression: reference("round", "index")),
                     Statement(expression: .conditional(
                         .call(Call(
-                            receiver: reference("round", "index"),
                             selector: "std.logic.equal",
-                            arguments: ["value": .literal(.int(2))]
+                            arguments: [reference("round", "index"), .literal(.int(2))]
                         )),
                         then: [Statement(expression: .leave(Leave(reach: .construct)))],
                         else: nil
                     ))
                 ],
-                result: .call(Call(
-                    receiver: reference("it"),
-                    selector: through,
-                    arguments: ["with": reference("k")]
-                ))
+                result: .call(Call(selector: through, arguments: [reference("it"), reference("k")]))
             ),
             round: "round"
         )
 
         let sut = try Module(
             types: ["bank.Box": .record(["v": .int])],
-            contracts: ["app.Show": ["show": Signature(parameters: [Parameter(name: "with", type: .nullable(.int))], returns: .nullable(.int))]],
+            contracts: ["app.Show": ["show": Signature(parameters: [Parameter(name: "of", type: .named("app.Show")), Parameter(name: "with", type: .nullable(.int))], returns: .nullable(.int))]],
             claims: ["bank.Box": ["app.Show"]],
             procedures: [
                 "app.entry": Procedure(
@@ -72,7 +66,7 @@ struct ContractCallKeepsTests {
                         binding: .constant("box"),
                         expression: .cast(.record(["v": .literal(.int(100))]), as: .named("bank.Box"), optional: false)
                     )],
-                    result: .call(Call(selector: "app.tell", arguments: ["it": reference("box")]))
+                    result: .call(Call(selector: "app.tell", arguments: [reference("box")]))
                 ),
                 "app.tell": Procedure(
                     signature: Signature(
@@ -88,7 +82,6 @@ struct ContractCallKeepsTests {
                 ),
                 "bank.Box.show": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [
                             Parameter(name: "of", type: .named("bank.Box")),
                             Parameter(name: "with", type: .nullable(.int))

@@ -25,7 +25,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
+                result: .call(Call(selector: "app.twice", arguments: [.literal(.int(2))]))
             )])] + [.sending, .shouting] + Module.standard
         )
 
@@ -43,7 +43,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(receiver: .literal(.string("hi")), selector: "app.announce"))
+                result: .call(Call(selector: "app.announce", arguments: [.literal(.string("hi"))]))
             )])] + [.sending, .shouting] + Module.standard
         )
 
@@ -137,7 +137,7 @@ struct ProcedureSendsTests {
                 imports: [],
                 procedures: [
                     "app.twice": Procedure(
-                        signature: Signature(of: TwiceQuery.self, receiver: .of, returns: .int),
+                        signature: Signature(of: TwiceQuery.self, returns: .int),
                         implementation: .query(TwiceQuery())
                     )
                 ]
@@ -161,10 +161,10 @@ struct ProcedureSendsTests {
         }
     }
 
-    @Test("what a procedure hands over stands where the callee keeps it, not where the procedure wrote it")
-    func handedArgumentsStandWhereTheCalleeKeepsThem() async throws {
-        // Given. `app.picking` hands `z` before `a`, and the callee keeps them
-        // the other way round
+    @Test("what a procedure hands over stands at the callee's first positions")
+    func handedArgumentsStandAtTheCalleesPositions() async throws {
+        // Given. `app.picking` hands two values, and the callee answers the one
+        // standing at its second position
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
@@ -180,14 +180,30 @@ struct ProcedureSendsTests {
         #expect(answer == .int(9))
     }
 
-    @Test("a procedure handing a name the callee never declared is refused at the build")
-    func anUnknownHandedNameIsRefused() async {
-        // Given / When / Then
-        await #expect(throws: BuildError.self) {
+    @Test("a procedure handing more than the callee takes is refused at the build")
+    func handingMoreThanTheCalleeTakesIsRefused() async {
+        // Given / When / Then. `app.pick` takes two, and a third would stand at
+        // a position the callee does not have
+        let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.misnaming, .picked]
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.overcounting, .picked]
             )
         }
+
+        #expect(refusal?.message.contains("sends 'app.pick' 3 arguments, and it takes 2") == true)
+    }
+
+    @Test("a procedure handing fewer than the callee requires is refused at the build")
+    func handingFewerThanTheCalleeRequiresIsRefused() async {
+        // Given / When / Then. `app.pick` requires both of its parameters, and
+        // a send handing one leaves the second off, which every run would refuse
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build(
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.undercounting, .picked]
+            )
+        }
+
+        #expect(refusal?.message.contains("sends 'app.pick' without z, which it requires") == true)
     }
 
     @Test("a procedure handing more than it declared it hands is refused when it sends")
@@ -208,39 +224,10 @@ struct ProcedureSendsTests {
         }
     }
 
-    @Test("a procedure handing one name twice is refused at the build")
-    func aDoubledHandedNameIsRefused() async {
-        // Given / When / Then. Two instructions for one place, and neither is
-        // the one to keep
-        await #expect(throws: BuildError.self) {
-            try await Builder().build(
-                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [.doubling, .picked]
-            )
-        }
-    }
-
-    @Test("a procedure handing the name it sends to is refused when it sends")
-    func handingTheReceiversNameIsRefused() async throws {
-        // Given. Whether a send carries a receiver is the Swift body's, so this
-        // is not a thing the build can read off the declaration
-        let image = try await Builder().build(
-            [try Module(procedures: ["entry": Procedure(
-                access: .public,
-                body: [],
-                result: .call(Call(selector: "app.receiving"))
-            )])] + [.receiving, .greeted]
-        )
-
-        // When / Then
-        await #expect(throws: ExecutionError.self) {
-            try await Executor().run(image)
-        }
-    }
-
-    @Test("a procedure sending to something the callee cannot take is refused at the boundary")
-    func aMistypedReceiverIsRefused() async throws {
-        // Given. `app.mistyping` sends an int to a procedure whose receiver is
-        // declared string
+    @Test("a procedure handing what the callee cannot take is refused at the boundary")
+    func aMistypedArgumentIsRefused() async throws {
+        // Given. `app.mistyping` hands an int to a procedure whose first
+        // parameter is declared string
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
@@ -256,72 +243,16 @@ struct ProcedureSendsTests {
         }
     }
 
-    @Test("a procedure sending to one that declares nothing to be sent to is refused")
-    func sendingToOneThatTakesNoReceiverIsRefused() async throws {
-        // Given. A value handed under no name at all: the callee would read it
-        // as a receiver it never declared
+    @Test("a value a send hands over is held to the parameter it fills")
+    func aHandedNullIsHeldToItsType() async throws {
+        // Given. `app.reporting` declares `said: string`, and null is not a
+        // string. The same gate an argument a body writes goes through
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.unreceiving"))
-            )])] + [.unreceiving, .picked]
-        )
-
-        // When / Then
-        await #expect(throws: ExecutionError.self) {
-            try await Executor().run(image)
-        }
-    }
-
-    @Test("sending null to one that declares nothing to be sent to is a receiver it has no slot for")
-    func sendingNullToOneThatDeclaresNoneRefuses() async throws {
-        // Given. Null is a value, so handing it over is writing a receiver, and
-        // the callee has nowhere to put one
-        let image = try await Builder().build(
-            [try Module(procedures: ["entry": Procedure(
-                access: .public,
-                body: [],
-                result: .call(Call(selector: "app.nulling"))
-            )])] + [.nulling, .plain]
-        )
-
-        // When / Then
-        await #expect(throws: ExecutionError.self) {
-            try await Executor().run(image)
-        }
-    }
-
-    @Test("an effect that declares nothing to be sent to refuses null the same way")
-    func anEffectSentNullRefusesToo() async throws {
-        // Given. What a query is held to and what an effect is held to say the
-        // same thing, so the fact is settled where the send crosses rather than
-        // beside each kind of callee
-        let image = try await Builder().build(
-            [try Module(procedures: ["entry": Procedure(
-                access: .public,
-                body: [],
-                result: .call(Call(selector: "app.nullingToAnEffect"))
-            )])] + [.nullingToAnEffect, .plainlyRunning]
-        )
-
-        // When / Then
-        await #expect(throws: ExecutionError.self) {
-            try await Executor().run(image)
-        }
-    }
-
-    @Test("a receiver a send hands over is held to the parameter it fills")
-    func aDeclaredReceiverSentNullIsHeldToItsType() async throws {
-        // Given. `app.receiving` declares `said: string`, and null is not a
-        // string. The same gate an argument goes through, whichever side of
-        // the dot the value came from
-        let image = try await Builder().build(
-            [try Module(procedures: ["entry": Procedure(
-                access: .public,
-                body: [],
-                result: .call(Call(selector: "app.nullingToAReceiver"))
-            )])] + [.nullingToAReceiver, .reporting]
+                result: .call(Call(selector: "app.nullingToAParameter"))
+            )])] + [.nullingToAParameter, .reporting]
         )
 
         // When / Then
@@ -351,14 +282,14 @@ private struct TwiceQuery: Query {
 
         var selector: Name { "std.math.times" }
 
-        var handing: [Name] { ["value"] }
+        var handing: Int { 2 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        try await question.send(.times, to: question.receiver, handing: [.int(2)])
+        try await question.send(.times, handing: [question[.of], .int(2)])
     }
 
     // MARK: - Private
@@ -378,14 +309,14 @@ private struct AnnounceEffect: Effect {
 
         var selector: Name { "app.shout" }
 
-        var handing: [Name] { ["text"] }
+        var handing: Int { 1 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.shout, handing: [invocation.receiver ?? .null])
+        try await invocation.send(.shout, handing: [invocation[.of]])
     }
 
     // MARK: - Private
@@ -479,8 +410,8 @@ private struct ShoutingQuery: Query {
     // MARK: - Private
 }
 
-// Hands two arguments in the order it wrote them, which is not the order the
-// callee keeps them in. What the callee answers says which order was kept.
+// Hands two arguments, which stand at the callee's first two positions. What
+// the callee answers says which one stood second.
 private struct PickingEffect: Effect {
     typealias Parameters = NoParameters
 
@@ -489,21 +420,21 @@ private struct PickingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var handing: [Name] { ["z", "a"] }
+        var handing: Int { 2 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, handing: [.int(9), .int(1)])
+        try await invocation.send(.pick, handing: [.int(1), .int(9)])
     }
 
     // MARK: - Private
 }
 
-// Hands a name the callee declares no parameter under.
-private struct MisnamingEffect: Effect {
+// Hands more than the callee takes.
+private struct OvercountingEffect: Effect {
     typealias Parameters = NoParameters
 
     enum Imports: Int, ImportSet {
@@ -511,20 +442,20 @@ private struct MisnamingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var handing: [Name] { ["nowhere"] }
+        var handing: Int { 3 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, handing: [.int(1)])
+        try await invocation.send(.pick, handing: [.int(1), .int(2), .int(3)])
     }
 
     // MARK: - Private
 }
 
-// Declares it hands one and hands two.
+// Declares it hands two and hands three.
 private struct OverhandingEffect: Effect {
     typealias Parameters = NoParameters
 
@@ -533,21 +464,21 @@ private struct OverhandingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var handing: [Name] { ["z"] }
+        var handing: Int { 2 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, handing: [.int(9), .int(1)])
+        try await invocation.send(.pick, handing: [.int(9), .int(1), .int(3)])
     }
 
     // MARK: - Private
 }
 
-// Hands one name twice.
-private struct DoublingEffect: Effect {
+// Declares it hands one to a procedure that requires two.
+private struct UndercountingEffect: Effect {
     typealias Parameters = NoParameters
 
     enum Imports: Int, ImportSet {
@@ -555,42 +486,20 @@ private struct DoublingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var handing: [Name] { ["z", "z"] }
+        var handing: Int { 1 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, handing: [.int(9), .int(1)])
+        try await invocation.send(.pick, handing: [.int(9)])
     }
 
     // MARK: - Private
 }
 
-// Sends to something and hands over the name it is sent to as well.
-private struct ReceivingEffect: Effect {
-    typealias Parameters = NoParameters
-
-    enum Imports: Int, ImportSet {
-        case greet
-
-        var selector: Name { "app.greet" }
-
-        var handing: [Name] { ["subject"] }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.greet, to: .int(7), handing: [.int(9)])
-    }
-
-    // MARK: - Private
-}
-
-// Sends an int to a procedure whose receiver is declared string.
+// Hands an int to a procedure whose first parameter is declared string.
 private struct MistypingEffect: Effect {
     typealias Parameters = NoParameters
 
@@ -598,128 +507,44 @@ private struct MistypingEffect: Effect {
         case speak
 
         var selector: Name { "app.speak" }
+
+        var handing: Int { 1 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.speak, to: .int(7))
+        try await invocation.send(.speak, handing: [.int(7)])
     }
 
     // MARK: - Private
 }
 
-// Sends to a procedure that declares nothing to be sent to.
-private struct UnreceivingEffect: Effect {
+// Hands null to a procedure whose first parameter is declared string.
+private struct NullingToAParameter: Effect {
     typealias Parameters = NoParameters
 
     enum Imports: Int, ImportSet {
-        case pick
+        case reporting
 
-        var selector: Name { "app.pick" }
+        var selector: Name { "app.reporting" }
+
+        var handing: Int { 1 }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, to: .int(7))
+        try await invocation.send(.reporting, handing: [.null])
     }
 
     // MARK: - Private
 }
 
-// Sends null rather than leaving the receiver out.
-private struct NullingEffect: Effect {
-    typealias Parameters = NoParameters
-
-    enum Imports: Int, ImportSet {
-        case plain
-
-        var selector: Name { "app.plain" }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.plain, to: .null)
-    }
-
-    // MARK: - Private
-}
-
-// Declares nothing to be sent to.
-private struct PlainQuery: Query {
-    typealias Parameters = NoParameters
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .string("plain")
-    }
-
-    // MARK: - Private
-}
-
-// Sends null to a procedure that runs rather than one that answers as data.
-private struct NullingToAnEffect: Effect {
-    typealias Parameters = NoParameters
-
-    enum Imports: Int, ImportSet {
-        case running
-
-        var selector: Name { "app.running" }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.running, to: .null)
-    }
-
-    // MARK: - Private
-}
-
-// Declares nothing to be sent to, and runs.
-private struct PlainlyRunningEffect: Effect {
-    typealias Parameters = NoParameters
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) throws -> Value {
-        .string("ran")
-    }
-
-    // MARK: - Private
-}
-
-// Sends null to a procedure that does declare what it is sent to.
-private struct NullingToAReceiver: Effect {
-    typealias Parameters = NoParameters
-
-    enum Imports: Int, ImportSet {
-        case receiving
-
-        var selector: Name { "app.receiving" }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.receiving, to: .null)
-    }
-
-    // MARK: - Private
-}
-
-// Declares what it is sent to, as a string.
-private struct ReceivingReporter: Effect {
+// Declares what it is handed, as a string.
+private struct SaidReporter: Effect {
     enum Parameters: Int, ParameterSet {
         case said
 
@@ -730,7 +555,7 @@ private struct ReceivingReporter: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) throws -> Value {
-        .string("received")
+        .string("reported")
     }
 
     // MARK: - Private
@@ -740,11 +565,11 @@ private extension Module {
     static let sending = try! Module(
         procedures: [
             "app.twice": Procedure(
-                signature: Signature(of: TwiceQuery.self, receiver: .of, returns: .int),
+                signature: Signature(of: TwiceQuery.self, returns: .int),
                 implementation: .query(TwiceQuery())
             ),
             "app.announce": Procedure(
-                signature: Signature(of: AnnounceEffect.self, receiver: .of, returns: .string),
+                signature: Signature(of: AnnounceEffect.self, returns: .string),
                 implementation: .effect(AnnounceEffect())
             )
         ]
@@ -797,7 +622,7 @@ private extension Module {
         ]
     )
 
-    // The callee two of the tests above hand arguments to: it answers `z`, so an
+    // The callee three of the tests above hand arguments to: it answers `z`, so an
     // argument standing at the wrong place shows in the answer.
     static let picked = try! Module(
         procedures: [
@@ -821,11 +646,20 @@ private extension Module {
         ]
     )
 
-    static let misnaming = try! Module(
+    static let overcounting = try! Module(
         procedures: [
-            "app.misnaming": Procedure(
+            "app.overcounting": Procedure(
                 signature: Signature(returns: .int),
-                implementation: .effect(MisnamingEffect())
+                implementation: .effect(OvercountingEffect())
+            )
+        ]
+    )
+
+    static let undercounting = try! Module(
+        procedures: [
+            "app.undercounting": Procedure(
+                signature: Signature(returns: .int),
+                implementation: .effect(UndercountingEffect())
             )
         ]
     )
@@ -839,43 +673,10 @@ private extension Module {
         ]
     )
 
-    static let doubling = try! Module(
-        procedures: [
-            "app.doubling": Procedure(
-                signature: Signature(returns: .int),
-                implementation: .effect(DoublingEffect())
-            )
-        ]
-    )
-
-    static let greeted = try! Module(
-        procedures: [
-            "app.greet": Procedure(
-                signature: Signature(
-                    receiver: "subject",
-                    parameters: [Parameter(name: "subject", type: .int)],
-                    returns: .int
-                ),
-                body: [],
-                result: .reference([.key("subject")])
-            )
-        ]
-    )
-
-    static let receiving = try! Module(
-        procedures: [
-            "app.receiving": Procedure(
-                signature: Signature(returns: .int),
-                implementation: .effect(ReceivingEffect())
-            )
-        ]
-    )
-
     static let spoken = try! Module(
         procedures: [
             "app.speak": Procedure(
                 signature: Signature(
-                    receiver: "said",
                     parameters: [Parameter(name: "said", type: .string)],
                     returns: .string
                 ),
@@ -894,65 +695,20 @@ private extension Module {
         ]
     )
 
-    static let unreceiving = try! Module(
-        procedures: [
-            "app.unreceiving": Procedure(
-                signature: Signature(returns: .int),
-                implementation: .effect(UnreceivingEffect())
-            )
-        ]
-    )
-
-    static let plain = try! Module(
-        procedures: [
-            "app.plain": Procedure(
-                signature: Signature(returns: .string),
-                implementation: .query(PlainQuery())
-            )
-        ]
-    )
-
-    static let nulling = try! Module(
-        procedures: [
-            "app.nulling": Procedure(
-                signature: Signature(returns: .string),
-                implementation: .effect(NullingEffect())
-            )
-        ]
-    )
-
-    static let plainlyRunning = try! Module(
-        procedures: [
-            "app.running": Procedure(
-                signature: Signature(returns: .string),
-                implementation: .effect(PlainlyRunningEffect())
-            )
-        ]
-    )
-
-    static let nullingToAnEffect = try! Module(
-        procedures: [
-            "app.nullingToAnEffect": Procedure(
-                signature: Signature(returns: .string),
-                implementation: .effect(NullingToAnEffect())
-            )
-        ]
-    )
-
     static let reporting = try! Module(
         procedures: [
-            "app.receiving": Procedure(
-                signature: Signature(of: ReceivingReporter.self, receiver: .said, returns: .string),
-                implementation: .effect(ReceivingReporter())
+            "app.reporting": Procedure(
+                signature: Signature(of: SaidReporter.self, returns: .string),
+                implementation: .effect(SaidReporter())
             )
         ]
     )
 
-    static let nullingToAReceiver = try! Module(
+    static let nullingToAParameter = try! Module(
         procedures: [
-            "app.nullingToAReceiver": Procedure(
+            "app.nullingToAParameter": Procedure(
                 signature: Signature(returns: .string),
-                implementation: .effect(NullingToAReceiver())
+                implementation: .effect(NullingToAParameter())
             )
         ]
     )

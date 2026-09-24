@@ -46,7 +46,7 @@ struct DeclaredSpellingTests {
                     body: [],
                     result: .call(Call(
                         selector: "store.keep",
-                        arguments: ["value": .literal(.record(Record(name: nil, ["id": .string("a")])))]
+                        arguments: [.literal(.record(Record(name: nil, ["id": .string("a")])))]
                     ))
                 )
             ]
@@ -201,10 +201,7 @@ struct DeclaredSpellingTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(
-                        selector: "keep",
-                        arguments: ["value": .literal(.int(3))]
-                    ))
+                    result: .call(Call(selector: "keep", arguments: [.literal(.int(3))]))
                 )
             ]
         )
@@ -226,8 +223,8 @@ struct DeclaredSpellingTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.array([.bool(true), .bool(false)])),
-                        selector: "std.collection.sorted"
+                        selector: "std.collection.sorted",
+                        arguments: [.literal(.array([.bool(true), .bool(false)]))]
                     ))
                 )
             ]
@@ -275,11 +272,11 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("min sent null is held to the receiver it declares")
-    func minSentNullIsHeldToItsReceiver() async throws {
-        // Given. The receiver is a reference that reads null. Null is a value,
-        // and `some T: Comparable` does not admit one, so the boundary refuses
-        // before the ordering procedure is asked anything
+    @Test("min handed null first is held to the parameter it declares first")
+    func minHandedNullIsHeldToItsFirstParameter() async throws {
+        // Given. The first argument is a reference that reads null. Null is a
+        // value, and `some T: Comparable` does not admit one, so the boundary
+        // refuses before the ordering procedure is asked anything
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -288,11 +285,7 @@ struct DeclaredSpellingTests {
                         parameters: [Parameter(name: "absent", type: .any)]
                     ),
                     body: [],
-                    result: .call(Call(
-                        receiver: reference("absent"),
-                        selector: "std.math.min",
-                        arguments: ["value": .literal(.int(1))]
-                    ))
+                    result: .call(Call(selector: "std.math.min", arguments: [reference("absent"), .literal(.int(1))]))
                 )
             ]
         )
@@ -301,7 +294,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await run(sut, arguments: ["absent": .null])
         } throws: { error in
-            "\(error)".contains("the receiver of 'std.math.min': expected some T: std.Comparable, got null")
+            "\(error)".contains("input 'of': expected some T: std.Comparable, got null")
         }
     }
 
@@ -354,9 +347,9 @@ struct DeclaredSpellingTests {
                     signature: Signature(returns: .string),
                     body: [
                         Statement(binding: .constant("kept"), expression: .call(Call(
-                                selector: "keep",
-                                arguments: ["value": .literal(.string("a"))]
-                            ))
+                            selector: "keep",
+                            arguments: [.literal(.string("a"))]
+                        ))
                         )
                     ],
                     result: reference("kept")
@@ -380,9 +373,8 @@ struct DeclaredSpellingTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.string("a")),
                         selector: "std.math.plus",
-                        arguments: ["value": .literal(.string("b"))]
+                        arguments: [.literal(.string("a")), .literal(.string("b"))]
                     ))
                 )
             ]
@@ -406,9 +398,8 @@ struct DeclaredSpellingTests {
                     signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.string("b")),
                         selector: "std.math.min",
-                        arguments: ["value": .literal(.string("a"))]
+                        arguments: [.literal(.string("b")), .literal(.string("a"))]
                     ))
                 )
             ]
@@ -431,8 +422,8 @@ struct DeclaredSpellingTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.array([.int(2), .int(1)])),
-                        selector: "std.collection.sorted"
+                        selector: "std.collection.sorted",
+                        arguments: [.literal(.array([.int(2), .int(1)]))]
                     ))
                 )
             ]

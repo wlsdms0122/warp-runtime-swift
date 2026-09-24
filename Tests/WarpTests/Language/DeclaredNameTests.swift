@@ -100,7 +100,7 @@ struct DeclaredNameTests {
                     body: [
                         Statement(
                             expression: .call(
-                                Call(receiver: .literal(.string("x")), selector: "std.control.abort")
+                                Call(selector: "std.control.abort", arguments: [.literal(.string("x"))])
                             )
                         ),
                         Statement(
@@ -289,7 +289,7 @@ struct DeclaredNameTests {
                         ),
                         Statement(
                             expression: .call(
-                                Call(selector: "swap", arguments: ["step": .reference([.key("step")])])
+                                Call(selector: "swap", arguments: [.reference([.key("step")])])
                             )
                         )
                     ],
@@ -331,7 +331,7 @@ struct DeclaredNameTests {
                         ),
                         Statement(
                             expression: .call(
-                                Call(selector: "swap", arguments: ["step": .reference([.key("step")])])
+                                Call(selector: "swap", arguments: [.reference([.key("step")])])
                             )
                         )
                     ],

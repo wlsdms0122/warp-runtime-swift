@@ -37,14 +37,14 @@ public extension Module {
                     + " A record's under its keys, an array's in its order."
                     + " A failure fails the whole procedure, with every piece's"
                     + " failure reported.",
-                signature: Signature(of: AllEffect.self, receiver: .of, returns: .any),
+                signature: Signature(of: AllEffect.self, returns: .any),
                 implementation: .effect(AllEffect())
             ),
             "std.concurrent.first": Procedure(
                 description: "Runs every closure, answers the first success and"
                     + " asks the rest to stop. Which one wins is timing's. The"
                     + " one fact here that is.",
-                signature: Signature(of: FirstEffect.self, receiver: .of, returns: .any),
+                signature: Signature(of: FirstEffect.self, returns: .any),
                 implementation: .effect(FirstEffect())
             )
         ],

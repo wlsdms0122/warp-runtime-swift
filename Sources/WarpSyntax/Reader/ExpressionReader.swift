@@ -491,8 +491,8 @@ public struct ExpressionReader: Decodable {
             case let .ref(path):
                 return .call(
                     Call(
-                        receiver: try substituted(path, over: bindings),
-                        selector: interpolation.read
+                        selector: interpolation.read,
+                        arguments: [try substituted(path, over: bindings)]
                     )
                 )
             }
@@ -504,7 +504,7 @@ public struct ExpressionReader: Decodable {
             return .literal(.string(only))
         }
 
-        return .call(Call(receiver: .array(pieces), selector: interpolation.joined))
+        return .call(Call(selector: interpolation.joined, arguments: [.array(pieces)]))
     }
 
     // A placeholder names a binding and then drills into it, so what it reads is

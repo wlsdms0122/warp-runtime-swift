@@ -35,7 +35,7 @@ struct EncodedQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         try encoding.named(question[.encoding])
 
-        guard case let .string(text) = question.receiver else { return nil }
+        guard case let .string(text) = question[.of] else { return nil }
 
         return .bytes(Array(text.utf8))
     }

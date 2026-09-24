@@ -56,11 +56,7 @@ struct CatalogueTests {
                     access: .public,
                     body: [],
                     result: .call(
-                        Call(
-                            receiver: .literal(.int(1)),
-                            selector: "std.math.plus",
-                            arguments: ["value": .literal(.int(2))]
-                        )
+                        Call(selector: "std.math.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
                     )
                 )
             ]
@@ -186,7 +182,7 @@ struct CatalogueTests {
                     access: .public,
                     body: [],
                     result: .call(
-                        Call(receiver: .literal(.string("a")), selector: "std.text.uppercased")
+                        Call(selector: "std.text.uppercased", arguments: [.literal(.string("a"))])
                     )
                 )
             ]
@@ -210,14 +206,13 @@ struct CatalogueTests {
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
         )
         let answering = try Module(
             procedures: [
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
@@ -265,7 +260,6 @@ struct CatalogueTests {
             procedures: [
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
@@ -275,7 +269,7 @@ struct CatalogueTests {
             ]
         )
         let program = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(
@@ -314,7 +308,7 @@ struct CatalogueTests {
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
         )
         let spelling = try Module(
@@ -325,7 +319,6 @@ struct CatalogueTests {
             procedures: [
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .named("bank.Wording")
                     ),

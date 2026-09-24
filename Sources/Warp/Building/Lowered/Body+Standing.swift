@@ -148,7 +148,7 @@ extension Body.Node {
                 call.handed.forEach { handed in handed.address.stand(in: &standing) }
 
             case let .dispatch(dispatch):
-                dispatch.arguments.values.forEach { argument in
+                dispatch.arguments.forEach { argument in
                     guard case let .reference(address) = argument else { return }
 
                     address.stand(in: &standing)

@@ -318,9 +318,22 @@ extension Builder {
 
             // A contract's procedures are declarations the way the module's
             // own are, and what a call is judged against is what was judged.
+            // Each is answered about the value it takes first, so that value
+            // is written as the contract itself.
             for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
                 for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
-                    try judge(asked.signature, at: .contract(contract.spelling, in: .of(module)).key(name.spelling), in: table)
+                    let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
+
+                    guard asked.signature.parameters.first?.type == .named(contract) else {
+                        throw BuildError(
+                            "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
+                                + " A contract's procedure takes '\(contract)' first,"
+                                + " the value it is answered about",
+                            at: place.part(.parameters)
+                        )
+                    }
+
+                    try judge(asked.signature, at: place, in: table)
                 }
             }
 

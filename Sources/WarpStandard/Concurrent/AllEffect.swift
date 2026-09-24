@@ -11,7 +11,7 @@ import Warp
 // Runs every closure and answers every answer. A record's under its keys, an
 // array's in its order.
 struct AllEffect: Effect {
-    typealias Parameters = FanoutReceiver
+    typealias Parameters = FanoutOperand
 
     // MARK: - Property
     // Every recoverable failure a piece raises is gathered into one, so this

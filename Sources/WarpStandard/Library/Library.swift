@@ -32,14 +32,14 @@ enum Library {
                       set "to"
                       value {
                         call {
-                          arguments {
-                            value {
+                          arguments [
+                            {
+                              ref "to"
+                            }
+                            {
                               ref "value"
                             }
-                          }
-                          of {
-                            ref "to"
-                          }
+                          ]
                           procedure "std.collection.appending"
                         }
                       }
@@ -56,7 +56,6 @@ enum Library {
                       type "some Element"
                     }
                   ]
-                  receiver "to"
                   result null
                   returns "null"
                 }
@@ -87,14 +86,14 @@ enum Library {
                                   ]
                                   when {
                                     call {
-                                      arguments {
-                                        value {
+                                      arguments [
+                                        {
+                                          ref "of[walk.index]"
+                                        }
+                                        {
                                           ref "value"
                                         }
-                                      }
-                                      of {
-                                        ref "of[walk.index]"
-                                      }
+                                      ]
                                       procedure "std.logic.equal"
                                     }
                                   }
@@ -104,19 +103,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "of"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "of"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -135,7 +136,6 @@ enum Library {
                       type "some Element"
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "found"
                   }
@@ -156,22 +156,22 @@ enum Library {
                               set "places"
                               value {
                                 call {
-                                  arguments {
-                                    value {
+                                  arguments [
+                                    {
+                                      ref "places"
+                                    }
+                                    {
                                       call {
-                                        arguments {
-                                          value 1
-                                        }
-                                        of {
-                                          ref "walk.index"
-                                        }
+                                        arguments [
+                                          {
+                                            ref "walk.index"
+                                          }
+                                          1
+                                        ]
                                         procedure "std.math.plus"
                                       }
                                     }
-                                  }
-                                  of {
-                                    ref "places"
-                                  }
+                                  ]
                                   procedure "std.collection.appending"
                                 }
                               }
@@ -179,27 +179,29 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    arguments {
-                                      value 1
-                                    }
-                                    of {
-                                      call {
-                                        of {
-                                          ref "of"
+                                    arguments [
+                                      {
+                                        call {
+                                          arguments [
+                                            {
+                                              ref "of"
+                                            }
+                                          ]
+                                          procedure "std.collection.count"
                                         }
-                                        procedure "std.collection.count"
                                       }
-                                    }
+                                      1
+                                    ]
                                     procedure "std.math.minus"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -214,17 +216,16 @@ enum Library {
                       type "array<some Element>"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "of"
+                        }
+                        {
                           ref "places"
                         }
-                      }
-                      of {
-                        ref "of"
-                      }
+                      ]
                       procedure "std.collection.gathering"
                     }
                   }
@@ -245,14 +246,14 @@ enum Library {
                               set "places"
                               value {
                                 call {
-                                  arguments {
-                                    value {
+                                  arguments [
+                                    {
+                                      ref "places"
+                                    }
+                                    {
                                       ref "walk.index"
                                     }
-                                  }
-                                  of {
-                                    ref "places"
-                                  }
+                                  ]
                                   procedure "std.collection.appending"
                                 }
                               }
@@ -260,27 +261,29 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    arguments {
-                                      value 1
-                                    }
-                                    of {
-                                      call {
-                                        of {
-                                          ref "of"
+                                    arguments [
+                                      {
+                                        call {
+                                          arguments [
+                                            {
+                                              ref "of"
+                                            }
+                                          ]
+                                          procedure "std.collection.count"
                                         }
-                                        procedure "std.collection.count"
                                       }
-                                    }
+                                      1
+                                    ]
                                     procedure "std.math.minus"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -295,17 +298,16 @@ enum Library {
                       type "array<some Element>"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "of"
+                        }
+                        {
                           ref "places"
                         }
-                      }
-                      of {
-                        ref "of"
-                      }
+                      ]
                       procedure "std.collection.gathering"
                     }
                   }
@@ -345,14 +347,14 @@ enum Library {
                                       set "places"
                                       value {
                                         call {
-                                          arguments {
-                                            value {
+                                          arguments [
+                                            {
+                                              ref "places"
+                                            }
+                                            {
                                               ref "walk.index"
                                             }
-                                          }
-                                          of {
-                                            ref "places"
-                                          }
+                                          ]
                                           procedure "std.collection.appending"
                                         }
                                       }
@@ -367,19 +369,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "of"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "of"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -405,17 +409,16 @@ enum Library {
                       }
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "of"
+                        }
+                        {
                           ref "places"
                         }
-                      }
-                      of {
-                        ref "of"
-                      }
+                      ]
                       procedure "std.collection.gathering"
                     }
                   }
@@ -429,7 +432,6 @@ enum Library {
                       type "array<some Element>"
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "of[0]"
                   }
@@ -441,17 +443,19 @@ enum Library {
                       let "at"
                       value {
                         call {
-                          arguments {
-                            value 1
-                          }
-                          of {
-                            call {
-                              of {
-                                ref "of"
+                          arguments [
+                            {
+                              call {
+                                arguments [
+                                  {
+                                    ref "of"
+                                  }
+                                ]
+                                procedure "std.collection.count"
                               }
-                              procedure "std.collection.count"
                             }
-                          }
+                            1
+                          ]
                           procedure "std.math.minus"
                         }
                       }
@@ -464,7 +468,6 @@ enum Library {
                       type "array<some Element>"
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "of[at]"
                   }
@@ -500,14 +503,14 @@ enum Library {
                               set "answers"
                               value {
                                 call {
-                                  arguments {
-                                    value {
+                                  arguments [
+                                    {
+                                      ref "answers"
+                                    }
+                                    {
                                       ref "answered"
                                     }
-                                  }
-                                  of {
-                                    ref "answers"
-                                  }
+                                  ]
                                   procedure "std.collection.appending"
                                 }
                               }
@@ -515,19 +518,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "of"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "of"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -553,7 +558,6 @@ enum Library {
                       }
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "answers"
                   }
@@ -565,9 +569,11 @@ enum Library {
                       let "back"
                       value {
                         call {
-                          of {
-                            ref "of"
-                          }
+                          arguments [
+                            {
+                              ref "of"
+                            }
+                          ]
                           procedure "std.collection.reversed"
                         }
                       }
@@ -576,14 +582,14 @@ enum Library {
                       let "grown"
                       value {
                         call {
-                          arguments {
-                            value {
+                          arguments [
+                            {
+                              ref "back"
+                            }
+                            {
                               ref "value"
                             }
-                          }
-                          of {
-                            ref "back"
-                          }
+                          ]
                           procedure "std.collection.appending"
                         }
                       }
@@ -600,12 +606,13 @@ enum Library {
                       type "some Element"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      of {
-                        ref "grown"
-                      }
+                      arguments [
+                        {
+                          ref "grown"
+                        }
+                      ]
                       procedure "std.collection.reversed"
                     }
                   }
@@ -651,19 +658,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "of"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "of"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -694,7 +703,6 @@ enum Library {
                       }
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "carried"
                   }
@@ -715,37 +723,39 @@ enum Library {
                               set "places"
                               value {
                                 call {
-                                  arguments {
-                                    value {
+                                  arguments [
+                                    {
+                                      ref "places"
+                                    }
+                                    {
                                       call {
-                                        arguments {
-                                          value {
+                                        arguments [
+                                          {
                                             call {
-                                              arguments {
-                                                value 1
-                                              }
-                                              of {
-                                                ref "walk.index"
-                                              }
+                                              arguments [
+                                                {
+                                                  ref "of"
+                                                }
+                                              ]
+                                              procedure "std.collection.count"
+                                            }
+                                          }
+                                          {
+                                            call {
+                                              arguments [
+                                                {
+                                                  ref "walk.index"
+                                                }
+                                                1
+                                              ]
                                               procedure "std.math.plus"
                                             }
                                           }
-                                        }
-                                        of {
-                                          call {
-                                            of {
-                                              ref "of"
-                                            }
-                                            procedure "std.collection.count"
-                                          }
-                                        }
+                                        ]
                                         procedure "std.math.minus"
                                       }
                                     }
-                                  }
-                                  of {
-                                    ref "places"
-                                  }
+                                  ]
                                   procedure "std.collection.appending"
                                 }
                               }
@@ -753,19 +763,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "of"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "of"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -780,17 +792,16 @@ enum Library {
                       type "array<some Element>"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "of"
+                        }
+                        {
                           ref "places"
                         }
-                      }
-                      of {
-                        ref "of"
-                      }
+                      ]
                       procedure "std.collection.gathering"
                     }
                   }
@@ -802,9 +813,11 @@ enum Library {
                       let "total"
                       value {
                         call {
-                          of {
-                            ref "of"
-                          }
+                          arguments [
+                            {
+                              ref "of"
+                            }
+                          ]
                           procedure "std.collection.count"
                         }
                       }
@@ -839,12 +852,12 @@ enum Library {
                                               set "rank"
                                               value {
                                                 call {
-                                                  arguments {
-                                                    value 1
-                                                  }
-                                                  of {
-                                                    ref "rank"
-                                                  }
+                                                  arguments [
+                                                    {
+                                                      ref "rank"
+                                                    }
+                                                    1
+                                                  ]
                                                   procedure "std.math.plus"
                                                 }
                                               }
@@ -856,14 +869,14 @@ enum Library {
                                           ]
                                           when {
                                             call {
-                                              arguments {
-                                                value {
+                                              arguments [
+                                                {
+                                                  ref "of[inner.index]"
+                                                }
+                                                {
                                                   ref "of[outer.index]"
                                                 }
-                                              }
-                                              of {
-                                                ref "of[inner.index]"
-                                              }
+                                              ]
                                               procedure "std.math.lessThan"
                                             }
                                           }
@@ -881,14 +894,14 @@ enum Library {
                                           ]
                                           when {
                                             call {
-                                              arguments {
-                                                value {
+                                              arguments [
+                                                {
+                                                  ref "of[outer.index]"
+                                                }
+                                                {
                                                   ref "of[inner.index]"
                                                 }
-                                              }
-                                              of {
-                                                ref "of[outer.index]"
-                                              }
+                                              ]
                                               procedure "std.math.lessThan"
                                             }
                                           }
@@ -907,12 +920,12 @@ enum Library {
                                                       set "rank"
                                                       value {
                                                         call {
-                                                          arguments {
-                                                            value 1
-                                                          }
-                                                          of {
-                                                            ref "rank"
-                                                          }
+                                                          arguments [
+                                                            {
+                                                              ref "rank"
+                                                            }
+                                                            1
+                                                          ]
                                                           procedure "std.math.plus"
                                                         }
                                                       }
@@ -920,14 +933,14 @@ enum Library {
                                                   ]
                                                   when {
                                                     call {
-                                                      arguments {
-                                                        value {
+                                                      arguments [
+                                                        {
+                                                          ref "inner.index"
+                                                        }
+                                                        {
                                                           ref "outer.index"
                                                         }
-                                                      }
-                                                      of {
-                                                        ref "inner.index"
-                                                      }
+                                                      ]
                                                       procedure "std.math.lessThan"
                                                     }
                                                   }
@@ -944,14 +957,14 @@ enum Library {
                                   ]
                                   while {
                                     call {
-                                      arguments {
-                                        value {
+                                      arguments [
+                                        {
+                                          ref "inner.index"
+                                        }
+                                        {
                                           ref "total"
                                         }
-                                      }
-                                      of {
-                                        ref "inner.index"
-                                      }
+                                      ]
                                       procedure "std.math.lessThan"
                                     }
                                   }
@@ -962,14 +975,14 @@ enum Library {
                               set "ranks"
                               value {
                                 call {
-                                  arguments {
-                                    value {
+                                  arguments [
+                                    {
+                                      ref "ranks"
+                                    }
+                                    {
                                       ref "rank"
                                     }
-                                  }
-                                  of {
-                                    ref "ranks"
-                                  }
+                                  ]
                                   procedure "std.collection.appending"
                                 }
                               }
@@ -977,14 +990,14 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "outer.index"
+                                }
+                                {
                                   ref "total"
                                 }
-                              }
-                              of {
-                                ref "outer.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1020,14 +1033,14 @@ enum Library {
                                           ]
                                           when {
                                             call {
-                                              arguments {
-                                                value {
+                                              arguments [
+                                                {
+                                                  ref "ranks[scan.index]"
+                                                }
+                                                {
                                                   ref "pick.index"
                                                 }
-                                              }
-                                              of {
-                                                ref "ranks[scan.index]"
-                                              }
+                                              ]
                                               procedure "std.math.lessThan"
                                             }
                                           }
@@ -1045,14 +1058,14 @@ enum Library {
                                           ]
                                           when {
                                             call {
-                                              arguments {
-                                                value {
+                                              arguments [
+                                                {
+                                                  ref "pick.index"
+                                                }
+                                                {
                                                   ref "ranks[scan.index]"
                                                 }
-                                              }
-                                              of {
-                                                ref "pick.index"
-                                              }
+                                              ]
                                               procedure "std.math.lessThan"
                                             }
                                           }
@@ -1067,14 +1080,14 @@ enum Library {
                                               set "places"
                                               value {
                                                 call {
-                                                  arguments {
-                                                    value {
+                                                  arguments [
+                                                    {
+                                                      ref "places"
+                                                    }
+                                                    {
                                                       ref "scan.index"
                                                     }
-                                                  }
-                                                  of {
-                                                    ref "places"
-                                                  }
+                                                  ]
                                                   procedure "std.collection.appending"
                                                 }
                                               }
@@ -1089,14 +1102,14 @@ enum Library {
                                   ]
                                   while {
                                     call {
-                                      arguments {
-                                        value {
+                                      arguments [
+                                        {
+                                          ref "scan.index"
+                                        }
+                                        {
                                           ref "total"
                                         }
-                                      }
-                                      of {
-                                        ref "scan.index"
-                                      }
+                                      ]
                                       procedure "std.math.lessThan"
                                     }
                                   }
@@ -1106,14 +1119,14 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "pick.index"
+                                }
+                                {
                                   ref "total"
                                 }
-                              }
-                              of {
-                                ref "pick.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1131,17 +1144,16 @@ enum Library {
                       type "array<some Element>"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "of"
+                        }
+                        {
                           ref "places"
                         }
-                      }
-                      of {
-                        ref "of"
-                      }
+                      ]
                       procedure "std.collection.gathering"
                     }
                   }
@@ -1153,9 +1165,11 @@ enum Library {
                       let "names"
                       value {
                         call {
-                          of {
-                            ref "of"
-                          }
+                          arguments [
+                            {
+                              ref "of"
+                            }
+                          ]
                           procedure "std.collection.keys"
                         }
                       }
@@ -1179,14 +1193,14 @@ enum Library {
                               set "held"
                               value {
                                 call {
-                                  arguments {
-                                    value {
+                                  arguments [
+                                    {
+                                      ref "held"
+                                    }
+                                    {
                                       ref "of[name]"
                                     }
-                                  }
-                                  of {
-                                    ref "held"
-                                  }
+                                  ]
                                   procedure "std.collection.appending"
                                 }
                               }
@@ -1194,19 +1208,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "names"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "names"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1221,7 +1237,6 @@ enum Library {
                       type "dictionary<some Entry>"
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "held"
                   }
@@ -1299,14 +1314,14 @@ enum Library {
                               set "pieces"
                               value {
                                 call {
-                                  arguments {
-                                    value {
+                                  arguments [
+                                    {
+                                      ref "pieces"
+                                    }
+                                    {
                                       ref "piece"
                                     }
-                                  }
-                                  of {
-                                    ref "pieces"
-                                  }
+                                  ]
                                   procedure "std.collection.appending"
                                 }
                               }
@@ -1314,19 +1329,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "over"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "over"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1353,12 +1370,13 @@ enum Library {
                       }
                     }
                   ]
-                  receiver "over"
                   result {
                     call {
-                      of {
-                        ref "pieces"
-                      }
+                      arguments [
+                        {
+                          ref "pieces"
+                        }
+                      ]
                       procedure "std.concurrent.all"
                     }
                   }
@@ -1413,12 +1431,12 @@ enum Library {
                                   ]
                                   when {
                                     call {
-                                      arguments {
-                                        value false
-                                      }
-                                      of {
-                                        ref "answered"
-                                      }
+                                      arguments [
+                                        {
+                                          ref "answered"
+                                        }
+                                        false
+                                      ]
                                       procedure "std.logic.equal"
                                     }
                                   }
@@ -1428,19 +1446,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "of"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "of"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1461,7 +1481,6 @@ enum Library {
                       }
                     }
                   ]
-                  receiver "of"
                   result true
                   returns "bool"
                 }
@@ -1473,15 +1492,14 @@ enum Library {
                       type "bool"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value false
-                      }
-                      of {
-                        ref "of"
-                      }
+                      arguments [
+                        {
+                          ref "of"
+                        }
+                        false
+                      ]
                       procedure "std.logic.equal"
                     }
                   }
@@ -1499,25 +1517,24 @@ enum Library {
                       type "any"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value false
-                      }
-                      of {
-                        call {
-                          arguments {
-                            value {
-                              ref "value"
-                            }
+                      arguments [
+                        {
+                          call {
+                            arguments [
+                              {
+                                ref "of"
+                              }
+                              {
+                                ref "value"
+                              }
+                            ]
+                            procedure "std.logic.equal"
                           }
-                          of {
-                            ref "of"
-                          }
-                          procedure "std.logic.equal"
                         }
-                      }
+                        false
+                      ]
                       procedure "std.logic.equal"
                     }
                   }
@@ -1565,19 +1582,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "of"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "of"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1598,7 +1617,6 @@ enum Library {
                       }
                     }
                   ]
-                  receiver "of"
                   result false
                   returns "bool"
                 }
@@ -1666,7 +1684,6 @@ enum Library {
                       }
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "left"
                   }
@@ -1697,12 +1714,12 @@ enum Library {
                               value {
                                 return {
                                   call {
-                                    arguments {
-                                      value {
+                                    arguments [
+                                      0
+                                      {
                                         ref "of"
                                       }
-                                    }
-                                    of 0
+                                    ]
                                     procedure "std.math.minus"
                                   }
                                 }
@@ -1711,12 +1728,12 @@ enum Library {
                           ]
                           when {
                             call {
-                              arguments {
-                                value 0
-                              }
-                              of {
-                                ref "of"
-                              }
+                              arguments [
+                                {
+                                  ref "of"
+                                }
+                                0
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1734,7 +1751,6 @@ enum Library {
                       type "some N"
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "of"
                   }
@@ -1755,17 +1771,16 @@ enum Library {
                       type "some T"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "value"
+                        }
+                        {
                           ref "of"
                         }
-                      }
-                      of {
-                        ref "value"
-                      }
+                      ]
                       procedure "std.math.lessThan"
                     }
                   }
@@ -1787,14 +1802,14 @@ enum Library {
                           ]
                           when {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "of"
+                                }
+                                {
                                   ref "value"
                                 }
-                              }
-                              of {
-                                ref "of"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1816,7 +1831,6 @@ enum Library {
                       type "some T"
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "of"
                   }
@@ -1838,14 +1852,14 @@ enum Library {
                           ]
                           when {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "of"
+                                }
+                                {
                                   ref "value"
                                 }
-                              }
-                              of {
-                                ref "of"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -1867,7 +1881,6 @@ enum Library {
                       type "some T"
                     }
                   ]
-                  receiver "of"
                   result {
                     ref "value"
                   }
@@ -1900,9 +1913,11 @@ enum Library {
                       let "held"
                       value {
                         call {
-                          of {
-                            ref "of"
-                          }
+                          arguments [
+                            {
+                              ref "of"
+                            }
+                          ]
                           procedure "std.text.characters"
                         }
                       }
@@ -1911,9 +1926,11 @@ enum Library {
                       let "wanted"
                       value {
                         call {
-                          of {
-                            ref "value"
-                          }
+                          arguments [
+                            {
+                              ref "value"
+                            }
+                          ]
                           procedure "std.text.characters"
                         }
                       }
@@ -1936,14 +1953,14 @@ enum Library {
                                       let "at"
                                       value {
                                         call {
-                                          arguments {
-                                            value {
+                                          arguments [
+                                            {
+                                              ref "walk.index"
+                                            }
+                                            {
                                               ref "probe.index"
                                             }
-                                          }
-                                          of {
-                                            ref "walk.index"
-                                          }
+                                          ]
                                           procedure "std.math.plus"
                                         }
                                       }
@@ -1964,19 +1981,21 @@ enum Library {
                                           ]
                                           when {
                                             call {
-                                              of {
-                                                call {
-                                                  arguments {
-                                                    value {
-                                                      ref "wanted[probe.index]"
-                                                    }
+                                              arguments [
+                                                {
+                                                  call {
+                                                    arguments [
+                                                      {
+                                                        ref "held[at]"
+                                                      }
+                                                      {
+                                                        ref "wanted[probe.index]"
+                                                      }
+                                                    ]
+                                                    procedure "std.logic.equal"
                                                   }
-                                                  of {
-                                                    ref "held[at]"
-                                                  }
-                                                  procedure "std.logic.equal"
                                                 }
-                                              }
+                                              ]
                                               procedure "std.logic.not"
                                             }
                                           }
@@ -1986,19 +2005,21 @@ enum Library {
                                   ]
                                   while {
                                     call {
-                                      arguments {
-                                        value {
+                                      arguments [
+                                        {
+                                          ref "probe.index"
+                                        }
+                                        {
                                           call {
-                                            of {
-                                              ref "wanted"
-                                            }
+                                            arguments [
+                                              {
+                                                ref "wanted"
+                                              }
+                                            ]
                                             procedure "std.collection.count"
                                           }
                                         }
-                                      }
-                                      of {
-                                        ref "probe.index"
-                                      }
+                                      ]
                                       procedure "std.math.lessThan"
                                     }
                                   }
@@ -2024,42 +2045,46 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    arguments {
-                                      value 1
-                                    }
-                                    of {
-                                      call {
-                                        arguments {
-                                          value {
-                                            call {
-                                              of {
-                                                ref "wanted"
+                                    arguments [
+                                      {
+                                        call {
+                                          arguments [
+                                            {
+                                              call {
+                                                arguments [
+                                                  {
+                                                    ref "held"
+                                                  }
+                                                ]
+                                                procedure "std.collection.count"
                                               }
-                                              procedure "std.collection.count"
                                             }
-                                          }
-                                        }
-                                        of {
-                                          call {
-                                            of {
-                                              ref "held"
+                                            {
+                                              call {
+                                                arguments [
+                                                  {
+                                                    ref "wanted"
+                                                  }
+                                                ]
+                                                procedure "std.collection.count"
+                                              }
                                             }
-                                            procedure "std.collection.count"
-                                          }
+                                          ]
+                                          procedure "std.math.minus"
                                         }
-                                        procedure "std.math.minus"
                                       }
-                                    }
+                                      1
+                                    ]
                                     procedure "std.math.plus"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -2078,7 +2103,6 @@ enum Library {
                       type "string"
                     }
                   ]
-                  receiver "of"
                   result false
                   returns "bool"
                 }
@@ -2091,7 +2115,9 @@ enum Library {
                             {
                               value {
                                 call {
-                                  of "replacing asks an empty piece"
+                                  arguments [
+                                    "replacing asks an empty piece"
+                                  ]
                                   procedure "std.control.abort"
                                 }
                               }
@@ -2099,12 +2125,12 @@ enum Library {
                           ]
                           when {
                             call {
-                              arguments {
-                                value ""
-                              }
-                              of {
-                                ref "value"
-                              }
+                              arguments [
+                                {
+                                  ref "value"
+                                }
+                                ""
+                              ]
                               procedure "std.logic.equal"
                             }
                           }
@@ -2127,27 +2153,26 @@ enum Library {
                       type "string"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          call {
+                            arguments [
+                              {
+                                ref "of"
+                              }
+                              {
+                                ref "value"
+                              }
+                            ]
+                            procedure "std.text.split"
+                          }
+                        }
+                        {
                           ref "with"
                         }
-                      }
-                      of {
-                        call {
-                          arguments {
-                            value {
-                              ref "value"
-                            }
-                          }
-                          of {
-                            ref "of"
-                          }
-                          procedure "std.text.split"
-                        }
-                      }
+                      ]
                       procedure "std.text.joined"
                     }
                   }
@@ -2159,9 +2184,11 @@ enum Library {
                       let "held"
                       value {
                         call {
-                          of {
-                            ref "of"
-                          }
+                          arguments [
+                            {
+                              ref "of"
+                            }
+                          ]
                           procedure "std.text.characters"
                         }
                       }
@@ -2170,9 +2197,11 @@ enum Library {
                       let "heldCount"
                       value {
                         call {
-                          of {
-                            ref "held"
-                          }
+                          arguments [
+                            {
+                              ref "held"
+                            }
+                          ]
                           procedure "std.collection.count"
                         }
                       }
@@ -2181,9 +2210,11 @@ enum Library {
                       let "wanted"
                       value {
                         call {
-                          of {
-                            ref "value"
-                          }
+                          arguments [
+                            {
+                              ref "value"
+                            }
+                          ]
                           procedure "std.text.characters"
                         }
                       }
@@ -2192,9 +2223,11 @@ enum Library {
                       let "wantedCount"
                       value {
                         call {
-                          of {
-                            ref "wanted"
-                          }
+                          arguments [
+                            {
+                              ref "wanted"
+                            }
+                          ]
                           procedure "std.collection.count"
                         }
                       }
@@ -2206,7 +2239,9 @@ enum Library {
                             {
                               value {
                                 call {
-                                  of "split asks an empty separator"
+                                  arguments [
+                                    "split asks an empty separator"
+                                  ]
                                   procedure "std.control.abort"
                                 }
                               }
@@ -2214,12 +2249,12 @@ enum Library {
                           ]
                           when {
                             call {
-                              arguments {
-                                value 0
-                              }
-                              of {
-                                ref "wantedCount"
-                              }
+                              arguments [
+                                {
+                                  ref "wantedCount"
+                                }
+                                0
+                              ]
                               procedure "std.logic.equal"
                             }
                           }
@@ -2246,29 +2281,31 @@ enum Library {
                             {
                               value {
                                 call {
-                                  of {
-                                    call {
-                                      arguments {
-                                        value {
-                                          call {
-                                            arguments {
-                                              value {
-                                                ref "wantedCount"
-                                              }
-                                            }
-                                            of {
-                                              ref "at"
-                                            }
-                                            procedure "std.math.plus"
+                                  arguments [
+                                    {
+                                      call {
+                                        arguments [
+                                          {
+                                            ref "heldCount"
                                           }
-                                        }
+                                          {
+                                            call {
+                                              arguments [
+                                                {
+                                                  ref "at"
+                                                }
+                                                {
+                                                  ref "wantedCount"
+                                                }
+                                              ]
+                                              procedure "std.math.plus"
+                                            }
+                                          }
+                                        ]
+                                        procedure "std.math.lessThan"
                                       }
-                                      of {
-                                        ref "heldCount"
-                                      }
-                                      procedure "std.math.lessThan"
                                     }
-                                  }
+                                  ]
                                   procedure "std.logic.not"
                                 }
                               }
@@ -2287,14 +2324,14 @@ enum Library {
                                               let "offset"
                                               value {
                                                 call {
-                                                  arguments {
-                                                    value {
+                                                  arguments [
+                                                    {
+                                                      ref "at"
+                                                    }
+                                                    {
                                                       ref "probe.index"
                                                     }
-                                                  }
-                                                  of {
-                                                    ref "at"
-                                                  }
+                                                  ]
                                                   procedure "std.math.plus"
                                                 }
                                               }
@@ -2315,19 +2352,21 @@ enum Library {
                                                   ]
                                                   when {
                                                     call {
-                                                      of {
-                                                        call {
-                                                          arguments {
-                                                            value {
-                                                              ref "wanted[probe.index]"
-                                                            }
+                                                      arguments [
+                                                        {
+                                                          call {
+                                                            arguments [
+                                                              {
+                                                                ref "held[offset]"
+                                                              }
+                                                              {
+                                                                ref "wanted[probe.index]"
+                                                              }
+                                                            ]
+                                                            procedure "std.logic.equal"
                                                           }
-                                                          of {
-                                                            ref "held[offset]"
-                                                          }
-                                                          procedure "std.logic.equal"
                                                         }
-                                                      }
+                                                      ]
                                                       procedure "std.logic.not"
                                                     }
                                                   }
@@ -2337,14 +2376,14 @@ enum Library {
                                           ]
                                           while {
                                             call {
-                                              arguments {
-                                                value {
+                                              arguments [
+                                                {
+                                                  ref "probe.index"
+                                                }
+                                                {
                                                   ref "wantedCount"
                                                 }
-                                              }
-                                              of {
-                                                ref "probe.index"
-                                              }
+                                              ]
                                               procedure "std.math.lessThan"
                                             }
                                           }
@@ -2366,14 +2405,14 @@ enum Library {
                                       set "current"
                                       value {
                                         call {
-                                          arguments {
-                                            value {
+                                          arguments [
+                                            {
+                                              ref "current"
+                                            }
+                                            {
                                               ref "held[at]"
                                             }
-                                          }
-                                          of {
-                                            ref "current"
-                                          }
+                                          ]
                                           procedure "std.collection.appending"
                                         }
                                       }
@@ -2382,12 +2421,12 @@ enum Library {
                                       set "at"
                                       value {
                                         call {
-                                          arguments {
-                                            value 1
-                                          }
-                                          of {
-                                            ref "at"
-                                          }
+                                          arguments [
+                                            {
+                                              ref "at"
+                                            }
+                                            1
+                                          ]
                                           procedure "std.math.plus"
                                         }
                                       }
@@ -2398,19 +2437,21 @@ enum Library {
                                       set "pieces"
                                       value {
                                         call {
-                                          arguments {
-                                            value {
+                                          arguments [
+                                            {
+                                              ref "pieces"
+                                            }
+                                            {
                                               call {
-                                                of {
-                                                  ref "current"
-                                                }
+                                                arguments [
+                                                  {
+                                                    ref "current"
+                                                  }
+                                                ]
                                                 procedure "std.text.joined"
                                               }
                                             }
-                                          }
-                                          of {
-                                            ref "pieces"
-                                          }
+                                          ]
                                           procedure "std.collection.appending"
                                         }
                                       }
@@ -2423,14 +2464,14 @@ enum Library {
                                       set "at"
                                       value {
                                         call {
-                                          arguments {
-                                            value {
+                                          arguments [
+                                            {
+                                              ref "at"
+                                            }
+                                            {
                                               ref "wantedCount"
                                             }
-                                          }
-                                          of {
-                                            ref "at"
-                                          }
+                                          ]
                                           procedure "std.math.plus"
                                         }
                                       }
@@ -2445,14 +2486,14 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "at"
+                                }
+                                {
                                   ref "heldCount"
                                 }
-                              }
-                              of {
-                                ref "at"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -2471,22 +2512,23 @@ enum Library {
                       type "string"
                     }
                   ]
-                  receiver "of"
                   result {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "pieces"
+                        }
+                        {
                           call {
-                            of {
-                              ref "current"
-                            }
+                            arguments [
+                              {
+                                ref "current"
+                              }
+                            ]
                             procedure "std.text.joined"
                           }
                         }
-                      }
-                      of {
-                        ref "pieces"
-                      }
+                      ]
                       procedure "std.collection.appending"
                     }
                   }
@@ -2498,9 +2540,11 @@ enum Library {
                       let "held"
                       value {
                         call {
-                          of {
-                            ref "of"
-                          }
+                          arguments [
+                            {
+                              ref "of"
+                            }
+                          ]
                           procedure "std.text.characters"
                         }
                       }
@@ -2509,9 +2553,11 @@ enum Library {
                       let "wanted"
                       value {
                         call {
-                          of {
-                            ref "value"
-                          }
+                          arguments [
+                            {
+                              ref "value"
+                            }
+                          ]
                           procedure "std.text.characters"
                         }
                       }
@@ -2528,24 +2574,28 @@ enum Library {
                           ]
                           when {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
                                   call {
-                                    of {
-                                      ref "wanted"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "held"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                call {
-                                  of {
-                                    ref "held"
+                                {
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "wanted"
+                                      }
+                                    ]
+                                    procedure "std.collection.count"
                                   }
-                                  procedure "std.collection.count"
                                 }
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -2569,19 +2619,21 @@ enum Library {
                                   ]
                                   when {
                                     call {
-                                      of {
-                                        call {
-                                          arguments {
-                                            value {
-                                              ref "wanted[walk.index]"
-                                            }
+                                      arguments [
+                                        {
+                                          call {
+                                            arguments [
+                                              {
+                                                ref "held[walk.index]"
+                                              }
+                                              {
+                                                ref "wanted[walk.index]"
+                                              }
+                                            ]
+                                            procedure "std.logic.equal"
                                           }
-                                          of {
-                                            ref "held[walk.index]"
-                                          }
-                                          procedure "std.logic.equal"
                                         }
-                                      }
+                                      ]
                                       procedure "std.logic.not"
                                     }
                                   }
@@ -2591,19 +2643,21 @@ enum Library {
                           ]
                           while {
                             call {
-                              arguments {
-                                value {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
                                   call {
-                                    of {
-                                      ref "wanted"
-                                    }
+                                    arguments [
+                                      {
+                                        ref "wanted"
+                                      }
+                                    ]
                                     procedure "std.collection.count"
                                   }
                                 }
-                              }
-                              of {
-                                ref "walk.index"
-                              }
+                              ]
                               procedure "std.math.lessThan"
                             }
                           }
@@ -2622,7 +2676,6 @@ enum Library {
                       type "string"
                     }
                   ]
-                  receiver "of"
                   result true
                   returns "bool"
                 }

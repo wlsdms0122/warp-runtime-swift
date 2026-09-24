@@ -457,7 +457,6 @@ private extension ObjectReader {
     func signature(_ value: Value) throws -> Signature {
         var fields = try Fields(value, of: "signature")
         let read = Signature(
-            receiver: try fields.maybe(name),
             parameters: try Fields.list(fields.next(), of: "parameters", parameter),
             returns: try fields.maybe(expression)
         )
@@ -570,7 +569,7 @@ private extension ObjectReader {
         case 9: read = .returns
         case 10: read = .body
         case 11: read = .result
-        case 12: read = .receiver
+        case 12: read = .subject
         case 13: read = .callee
         case 14: read = .arguments
         case 15: read = .closure
@@ -797,7 +796,7 @@ private extension ObjectReader {
         var fields = try Fields(value, of: "send")
         let read = Sent(
             row: try fields.count(),
-            handing: try Fields.list(fields.next(), of: "send", counted)
+            handing: try fields.count()
         )
 
         try fields.end()
@@ -810,7 +809,7 @@ private extension ObjectReader {
         let read = Native.Send(
             position: try fields.count(),
             selector: try name(fields.next()),
-            handing: try Fields.list(fields.next(), of: "native send", name)
+            handing: try fields.count()
         )
 
         try fields.end()
@@ -1022,7 +1021,6 @@ private extension ObjectReader {
         var fields = try Fields(value, of: "call")
         let read = try CallOperation(
             procedure: try fields.count(),
-            receiver: try fields.maybe(operation),
             arguments: try Fields.list(fields.next(), of: "arguments") { written in
                 try Fields.maybe(written, of: "argument", operation)
             },
@@ -1049,8 +1047,8 @@ private extension ObjectReader {
         let read = DispatchOperation(
             contract: try name(fields.next()),
             procedure: try name(fields.next()),
-            receiver: try operation(fields.next()),
-            arguments: try keyed(fields.next(), of: "arguments", argument)
+            first: try operation(fields.next()),
+            arguments: try Fields.list(fields.next(), of: "arguments", argument)
         )
 
         try fields.end()

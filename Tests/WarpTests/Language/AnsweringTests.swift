@@ -121,9 +121,9 @@ struct AnsweringTests {
                         access: .public,
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(
-                                    selector: "counts",
-                                    arguments: ["flag": .literal(.bool(true))]
-                                ))
+                                selector: "counts",
+                                arguments: [.literal(.bool(true))]
+                            ))
                             )
                         ],
                         result: .reference([.key("said"), .key("total")])
@@ -221,11 +221,9 @@ struct AnsweringTests {
                         access: .public,
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(
-                                    selector: "peek",
-                                    arguments: [
-                                        "of": .record(["inner": .literal(.int(1))])
-                                    ]
-                                ))
+                                selector: "peek",
+                                arguments: [.record(["inner": .literal(.int(1))])]
+                            ))
                             )
                         ],
                         result: .reference(path)

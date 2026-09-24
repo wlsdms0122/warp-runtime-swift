@@ -32,9 +32,8 @@ struct ConstraintTests {
                     signature: Signature(returns: .bool),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.bool(true)),
                         selector: "std.math.lessThan",
-                        arguments: ["value": .literal(.bool(false))]
+                        arguments: [.literal(.bool(true)), .literal(.bool(false))]
                     ))
                 )
             ]
@@ -59,9 +58,8 @@ struct ConstraintTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.string("a")),
                         selector: "std.math.plus",
-                        arguments: ["value": .literal(.string("b"))]
+                        arguments: [.literal(.string("a")), .literal(.string("b"))]
                     ))
                 )
             ]
@@ -89,9 +87,8 @@ struct ConstraintTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        receiver: reference("left"),
                         selector: "std.math.lessThan",
-                        arguments: ["value": .literal(.int(1))]
+                        arguments: [reference("left"), .literal(.int(1))]
                     ))
                 )
             ]
@@ -124,10 +121,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(
-                        selector: "keep",
-                        arguments: ["value": .literal(.int(7))]
-                    ))
+                    result: .call(Call(selector: "keep", arguments: [.literal(.int(7))]))
                 )
             ]
         )
@@ -157,10 +151,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(),
                     body: [],
-                    result: .call(Call(
-                        selector: "keep",
-                        arguments: ["value": .literal(.double(1.5))]
-                    ))
+                    result: .call(Call(selector: "keep", arguments: [.literal(.double(1.5))]))
                 )
             ]
         )
@@ -253,7 +244,7 @@ struct ConstraintTests {
                         access: .public,
                         signature: Signature(returns: .int),
                         body: [],
-                        result: .call(Call(selector: "keep", arguments: ["items": .literal(.array([element]))]))
+                        result: .call(Call(selector: "keep", arguments: [.literal(.array([element]))]))
                     )
                 ]
             )
@@ -353,7 +344,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "it", type: .composition(["A"]))], returns: .int),
                     body: [],
-                    result: .call(Call(selector: "flag", arguments: ["on": reference("it")]))
+                    result: .call(Call(selector: "flag", arguments: [reference("it")]))
                 )
             ]
         )
@@ -404,7 +395,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "it", type: .named("X"))], returns: .int),
                     body: [],
-                    result: .call(Call(selector: "keep", arguments: ["of": reference("it")]))
+                    result: .call(Call(selector: "keep", arguments: [reference("it")]))
                 )
             ]
         )
@@ -417,7 +408,7 @@ struct ConstraintTests {
     func nullIsRefusedWhereAContractStands() async throws {
         // Given
         let sut = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.tell": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Describable"))], returns: .int),
@@ -428,7 +419,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "app.tell", arguments: ["it": .literal(.null)]))
+                    result: .call(Call(selector: "app.tell", arguments: [.literal(.null)]))
                 )
             ]
         )
@@ -447,11 +438,11 @@ struct ConstraintTests {
         // witness answers a whole number
         let sut = try Module(
             types: ["bank.Card": .record(["last": .string])],
-            contracts: ["app.Describable": ["describe": Signature(returns: .array(.named("app.Describable")))]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .array(.named("app.Describable")))]],
             claims: ["bank.Card": ["app.Describable"]],
             procedures: [
                 "bank.Card.describe": Procedure(
-                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("bank.Card"))], returns: .array(.int)),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Card"))], returns: .array(.int)),
                     body: [],
                     result: .array([.literal(.int(1))])
                 ),
@@ -464,7 +455,7 @@ struct ConstraintTests {
                             expression: .cast(.record(["last": .literal(.string("x"))]), as: .named("bank.Card"), optional: false)
                         )
                     ],
-                    result: .call(Call(receiver: reference("card"), selector: "app.Describable.describe"))
+                    result: .call(Call(selector: "app.Describable.describe", arguments: [reference("card")]))
                 )
             ]
         )
@@ -484,13 +475,13 @@ struct ConstraintTests {
         let sut = try Module(
             types: ["app.Box": .record(["n": .int]), "bank.Card": .record(["last": .string])],
             contracts: [
-                "app.Describable": ["describe": Signature(returns: .string)],
-                "app.Printable": ["show": Signature(returns: .named("app.Describable"))]
+                "app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)],
+                "app.Printable": ["show": Signature(parameters: [Parameter(name: "of", type: .named("app.Printable"))], returns: .named("app.Describable"))]
             ],
             claims: ["bank.Card": ["app.Describable"], "app.Box": ["app.Printable"]],
             procedures: [
                 "app.Box.show": Procedure(
-                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .named("app.Box"))], returns: .named("bank.Card")),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("app.Box"))], returns: .named("bank.Card")),
                     body: [],
                     result: .cast(.record(["last": .literal(.string("x"))]), as: .named("bank.Card"), optional: false)
                 ),
@@ -504,10 +495,10 @@ struct ConstraintTests {
                         ),
                         Statement(
                             binding: .constant("shown"),
-                            expression: .call(Call(receiver: reference("box"), selector: "app.Printable.show"))
+                            expression: .call(Call(selector: "app.Printable.show", arguments: [reference("box")]))
                         )
                     ],
-                    result: .call(Call(receiver: reference("shown"), selector: "app.Describable.describe"))
+                    result: .call(Call(selector: "app.Describable.describe", arguments: [reference("shown")]))
                 )
             ]
         )
@@ -524,7 +515,7 @@ struct ConstraintTests {
     func nullFillsANullableComposition() async throws {
         // Given
         let sut = try Module(
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
                 "app.tell": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .nullable(.named("app.Describable")))], returns: .int),
@@ -535,7 +526,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "app.tell", arguments: ["it": .literal(.null)]))
+                    result: .call(Call(selector: "app.tell", arguments: [.literal(.null)]))
                 )
             ]
         )
@@ -551,11 +542,11 @@ struct ConstraintTests {
         // name that holds it
         let sut = try Module(
             types: ["app.Handle": .linear(.record(["name": .string]))],
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             claims: ["app.Handle": ["app.Describable"]],
             procedures: [
                 "app.Handle.describe": Procedure(
-                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))], returns: .string),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))], returns: .string),
                     body: [],
                     result: .literal(.string("a handle"))
                 ),
@@ -581,6 +572,7 @@ struct ConstraintTests {
                 "app.Pairing": [
                     "pair": Signature(
                         parameters: [
+                            Parameter(name: "of", type: .named("app.Pairing")),
                             Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
                             Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
                         ],
@@ -680,7 +672,7 @@ struct ConstraintTests {
                         access: .public,
                         signature: Signature(returns: .int),
                         body: [],
-                        result: .call(Call(selector: "keep", arguments: ["left": .literal(argument)]))
+                        result: .call(Call(selector: "keep", arguments: [.literal(argument)]))
                     )
                 ]
             )
@@ -717,13 +709,7 @@ struct ConstraintTests {
                     access: .public,
                     signature: Signature(),
                     body: [],
-                    result: .call(Call(
-                        selector: "keep",
-                        arguments: [
-                            "left": .literal(.double(1.0)),
-                            "right": .literal(.double(2.0))
-                        ]
-                    ))
+                    result: .call(Call(selector: "keep", arguments: [.literal(.double(1.0)), .literal(.double(2.0))]))
                 )
             ]
         )
@@ -1104,10 +1090,7 @@ struct ConstraintTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(
-                        selector: "read",
-                        arguments: ["node": reference("node")]
-                    ))
+                    result: .call(Call(selector: "read", arguments: [reference("node")]))
                 )
             ]
         )
@@ -1174,11 +1157,11 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a receiver written in front and by name is refused")
-    func aReceiverAndASameNamedArgumentAreOneSlot() async throws {
-        // Given. The dot writes the receiver and the arguments write `of`
-        // again. One parameter takes one argument, and the one by name would be
-        // neither read nor run, so the build refuses the call
+    @Test("more arguments than a procedure takes are refused")
+    func moreArgumentsThanParametersAreRefused() async throws {
+        // Given. `absolute` takes one parameter and the call writes two. The
+        // second would stand at no position, neither read nor run, so the build
+        // refuses the call
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1186,9 +1169,8 @@ struct ConstraintTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        receiver: .literal(.int(1)),
                         selector: "std.math.absolute",
-                        arguments: ["of": .literal(.string("x"))]
+                        arguments: [.literal(.int(1)), .literal(.string("x"))]
                     ))
                 )
             ]
@@ -1198,7 +1180,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("by name, which is its receiver")
+            error is BuildError && "\(error)".contains("sending 'std.math.absolute' 2 arguments, and it takes 1")
         }
     }
 
@@ -1236,41 +1218,11 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a receiver naming no parameter refuses where it is declared")
-    func aReceiverNamingNoParameterRefuses() async throws {
-        // Given. The declaration states a fact about its own parameters, and a
-        // name pointing at none of them is judged where it is written
-        let sut = try Module(
-            procedures: [
-                "shout": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: [Parameter(name: "procedure", type: .string)]
-                    ),
-                    body: [],
-                    result: reference("procedure")
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("receiver names 'of'")
-        }
-    }
-
-    @Test("an effect's own resolver reads the receiver it was handed")
-    func anEffectResolverReadsItsReceiver() async throws {
-        // Given. A native procedure resolves its receiver through its invocation,
-        // which is the one door outside the executor's own resolvers.
+    @Test("an effect's own resolver reads the first argument it was handed")
+    func anEffectResolverReadsItsFirstArgument() async throws {
+        // Given. A native procedure resolves its first argument through its
+        // invocation, which is the one door outside the executor's own
+        // resolvers.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1281,10 +1233,10 @@ struct ConstraintTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        receiver: .call(Call(receiver: reference("items"), selector: "std.collection.reversed")),
                         selector: "std.concurrent.map",
                         arguments: [
-                            "by": .closure(Procedure(
+                            .call(Call(selector: "std.collection.reversed", arguments: [reference("items")])),
+                            .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
                                         Parameter(name: "item", type: .int),
@@ -1346,22 +1298,15 @@ struct ConstraintTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        receiver: reference("left"),
                         selector: "std.math.lessThan",
-                        arguments: ["value": reference("right")]
+                        arguments: [reference("left"), reference("right")]
                     ))
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .bool),
                     body: [],
-                    result: .call(Call(
-                        selector: "smallest",
-                        arguments: [
-                            "left": .literal(.int(1)),
-                            "right": .literal(.int(2))
-                        ]
-                    ))
+                    result: .call(Call(selector: "smallest", arguments: [.literal(.int(1)), .literal(.int(2))]))
                 )
             ]
         )

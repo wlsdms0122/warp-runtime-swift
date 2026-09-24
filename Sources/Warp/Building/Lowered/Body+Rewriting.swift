@@ -121,7 +121,6 @@ extension Operation {
             inside = .call(
                 CallOperation(
                     procedure: call.procedure,
-                    receiver: try call.receiver.map { receiver in try receiver.rewritten(operation: operation, type: type) },
                     arguments: try call.arguments.map { argument in
                         try argument.map { argument in try argument.rewritten(operation: operation, type: type) }
                     },
@@ -136,8 +135,8 @@ extension Operation {
                 DispatchOperation(
                     contract: dispatch.contract,
                     procedure: dispatch.procedure,
-                    receiver: try dispatch.receiver.rewritten(operation: operation, type: type),
-                    arguments: try dispatch.arguments.mapValues { argument in
+                    first: try dispatch.first.rewritten(operation: operation, type: type),
+                    arguments: try dispatch.arguments.map { argument in
                         try argument.rewritten(operation: operation, type: type)
                     },
                     calls: dispatch.calls

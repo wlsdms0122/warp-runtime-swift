@@ -443,7 +443,6 @@ final class Relocating {
 
         return CallOperation(
             procedure: procedure,
-            receiver: call.receiver,
             arguments: call.arguments,
             handed: call.handed
         )
@@ -464,7 +463,7 @@ final class Relocating {
         return DispatchOperation(
             contract: dispatch.contract,
             procedure: dispatch.procedure,
-            receiver: dispatch.receiver,
+            first: dispatch.first,
             arguments: dispatch.arguments,
             calls: try asked.answering.reduce(into: [Name: CallOperation]()) { calls, entry in
                 guard let row = rows[entry.value] else {
@@ -475,9 +474,7 @@ final class Relocating {
                 }
 
                 calls[entry.key] = try CallOperation(
-                    handing: { name in dispatch.arguments[name] },
-                    written: dispatch.arguments.keys,
-                    receiver: nil,
+                    handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
                     to: table[row],
                     row: row,
                     in: loweredTypes,

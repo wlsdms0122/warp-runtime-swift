@@ -31,7 +31,7 @@ struct ConditionTests {
             differs(.reference(path("kind")), .literal(.string("b")))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(receiver: .array([.literal(.int(3)), .literal(.int(4))]), selector: "std.collection.contains", arguments: ["value": .reference(path("n"))]))
+            .call(Call(selector: "std.collection.contains", arguments: [.array([.literal(.int(3)), .literal(.int(4))]), .reference(path("n"))]))
         ))
         #expect(try await sut.evaluate(
             differs(.reference(path("n")), .literal(.null))
@@ -60,7 +60,7 @@ struct ConditionTests {
 
         // And one_of can draw its candidates from the scope
         #expect(try await sut.evaluate(
-            .call(Call(receiver: .reference(path("candidates")), selector: "std.collection.contains", arguments: ["value": .reference(path("left"))]))
+            .call(Call(selector: "std.collection.contains", arguments: [.reference(path("candidates")), .reference(path("left"))]))
         ))
     }
 
@@ -88,7 +88,7 @@ struct ConditionTests {
         #expect(try await sut.evaluate(condition))
     }
 
-    @Test("text atoms evaluate on strings; asking a number is unfit")
+    @Test("text atoms evaluate on strings; asking a number is refused")
     func textAtomsEvaluateOnStrings() async throws {
         // Given
         let sut = try await folding([
@@ -100,27 +100,28 @@ struct ConditionTests {
 
         // Then
         #expect(try await sut.evaluate(
-            .call(Call(receiver: .reference(path("title")), selector: "std.text.contains", arguments: ["value": .literal(.string("spec"))]))
+            .call(Call(selector: "std.text.contains", arguments: [.reference(path("title")), .literal(.string("spec"))]))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(receiver: .reference(path("tags")), selector: "std.collection.contains", arguments: ["value": .literal(.string("b"))]))
+            .call(Call(selector: "std.collection.contains", arguments: [.reference(path("tags")), .literal(.string("b"))]))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(receiver: .reference(path("title")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("hello"))]))
+            .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("title")), .literal(.string("hello"))]))
         ))
         // Absence is not an empty collection. `contains` walks what it was
         // handed, the way every other collection procedure does, so asking it
         // of nothing is refused rather than answered false.
         await #expect(throws: (any Error).self) {
             try await sut.evaluate(
-                .call(Call(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
+                .call(Call(selector: "std.collection.contains", arguments: [.reference(path("gone")), .literal(.string("x"))]))
             )
         }
 
-        // A text atom asking a number is type misuse, not a false answer
-        await #expect(throws: ReferenceUnfit.self) {
+        // A text atom asking a number is type misuse, not a false answer. The
+        // number is refused where the argument it stands at is settled
+        await #expect(throws: ArgumentError.self) {
             try await sut.evaluate(
-                .call(Call(receiver: .reference(path("n")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("3"))]))
+                .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("n")), .literal(.string("3"))]))
             )
         }
     }

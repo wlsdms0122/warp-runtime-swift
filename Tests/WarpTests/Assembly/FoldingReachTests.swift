@@ -21,7 +21,7 @@ struct FoldingReachTests {
         let document = try Module(
             imports: ["std.math.plus"],
             constants: [
-                "sum": .call(Call(receiver: .literal(.int(2)), selector: "std.math.plus", arguments: ["value": .literal(.int(3))]))
+                "sum": .call(Call(selector: "std.math.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
             ],
             procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("sum"))]
         )

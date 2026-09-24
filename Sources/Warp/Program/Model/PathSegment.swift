@@ -113,7 +113,7 @@ extension PathSegment {
     // that lived at each landing would drift.
     func needlessMark(
         at walked: [PathSegment],
-        on receiver: String,
+        on held: String,
         landing: Landing,
         unwrapped: Bool
     ) -> String? {
@@ -127,13 +127,13 @@ extension PathSegment {
             return nil
 
         case .element:
-            return "\(walked.rendered) writes `\(mark)` into \(receiver),"
+            return "\(walked.rendered) writes `\(mark)` into \(held),"
                 + " which is never null."
                 + " An array the type proves is there is indexed with `[`"
 
         case let .field(name):
             return "\(walked.rendered) writes `\(mark)` for '\(name)',"
-                + " which \(receiver) declares."
+                + " which \(held) declares."
                 + " A field the type proves is read with `.`"
         }
     }

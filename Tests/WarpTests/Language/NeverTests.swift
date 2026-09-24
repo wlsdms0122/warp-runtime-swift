@@ -108,9 +108,10 @@ struct NeverTests {
                     body: [
                         Statement(binding: .variable("x"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
-                                "count": .reference([.key("kept")])
-                            ]))
+                        Statement(binding: .constant("said"), expression: .call(Call(
+                            selector: "wants",
+                            arguments: [.reference([.key("kept")])]
+                        ))
                         )
                     ],
                     result: reference("kept")
@@ -156,9 +157,10 @@ struct NeverTests {
                     body: [
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
-                                "procedure": .reference([.key("y")])
-                            ]))
+                        Statement(binding: .constant("said"), expression: .call(Call(
+                            selector: "wants",
+                            arguments: [.reference([.key("y")])]
+                        ))
                         )
                     ],
                     result: reference("y")
@@ -182,9 +184,10 @@ struct NeverTests {
                     body: [
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
-                                "count": .reference([.key("y")])
-                            ]))
+                        Statement(binding: .constant("said"), expression: .call(Call(
+                            selector: "wants",
+                            arguments: [.reference([.key("y")])]
+                        ))
                         )
                     ]
                 ),
@@ -239,7 +242,7 @@ struct NeverTests {
                     expression: .leave(
                         Leave(
                             reach: .procedure,
-                            value: .call(Call(receiver: reference("items"), selector: "std.collection.count"))
+                            value: .call(Call(selector: "std.collection.count", arguments: [reference("items")]))
                         )
                     )
                 )
@@ -297,9 +300,10 @@ struct NeverTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
-                                "count": .reference([.key("kept")])
-                            ]))
+                        Statement(binding: .constant("said"), expression: .call(Call(
+                            selector: "wants",
+                            arguments: [.reference([.key("kept")])]
+                        ))
                         )
                     ]
                 ),

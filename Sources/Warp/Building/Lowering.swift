@@ -590,7 +590,7 @@ struct Lowering {
 
         case let .call(call):
             // A selector naming a contract's procedure names no row. Which row
-            // answers is the receiver's, so every one the build found is
+            // answers is the first argument's, so every one the build found is
             // lowered here and the run picks by the name it reads.
             if let asked = contractProcedures[call.selector] {
                 return .dispatch(try lower(call, through: asked, in: scope, on: slots, label: label, at: place))
@@ -843,49 +843,24 @@ struct Lowering {
         label: Name,
         at place: Place
     ) throws -> DispatchOperation {
-        guard let written = call.receiver else {
-            throw BuildError.unjudged("a call to '\(call.selector)' with nothing in front of it", at: place)
+        guard let written = call.arguments.first else {
+            throw BuildError.unjudged("a call to '\(call.selector)' with nothing at its first position", at: place)
         }
 
-        let receiver = try lower(written, in: scope, on: slots, label: label, at: place)
-
-        if let stray = call.arguments.keys.first(where: { name in asked.signature.parameter(named: name) == nil }) {
-            throw BuildError.unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
+        guard call.arguments.count <= asked.signature.parameters.count else {
+            throw BuildError.unjudged("a call to '\(call.selector)' with more arguments than it asks", at: place)
         }
 
-        // The receiver is dropped from the arguments: it is read once here,
-        // and the run hands what it read to whichever row it picked.
+        // The first is read here, once, and the run hands what it read to
+        // whichever row it picked.
         return DispatchOperation(
             contract: asked.contract,
             procedure: asked.procedure,
-            receiver: receiver,
-            arguments: try arguments(
-                of: call,
-                in: scope,
-                on: slots,
-                label: label,
-                at: place
-            )
+            first: try lower(written, in: scope, on: slots, label: label, at: place),
+            arguments: try call.arguments.dropFirst().map { written in
+                try argument(written, in: scope, on: slots, label: label, at: place)
+            }
         )
-    }
-
-    // What a call was written with, lowered once and under the names it was
-    // written under. In name order, so which slots a nested body takes is the
-    // text's fact rather than a dictionary's.
-    private mutating func arguments(
-        of call: Call,
-        in scope: Names,
-        on slots: Slots,
-        label: Name,
-        at place: Place
-    ) throws -> [Name: Argument] {
-        var lowered: [Name: Argument] = [:]
-
-        for (name, written) in call.arguments.sorted(by: { left, right in left.key < right.key }) {
-            lowered[name] = try argument(written, in: scope, on: slots, label: label, at: place)
-        }
-
-        return lowered
     }
 
     // One argument, kept as the place it names where it names one: a slot
@@ -932,13 +907,7 @@ struct Lowering {
         let callee = table[row]
 
         return try CallOperation(
-            handing: { name in
-                try call.arguments[name].map { written in
-                    try argument(written, in: scope, on: slots, label: label, at: place)
-                }
-            },
-            written: call.arguments.keys,
-            receiver: try call.receiver.map { written in
+            handing: try call.arguments.map { written in
                 try argument(written, in: scope, on: slots, label: label, at: place)
             },
             to: callee,

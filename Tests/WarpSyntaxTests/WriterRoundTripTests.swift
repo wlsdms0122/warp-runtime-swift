@@ -64,7 +64,6 @@ struct WriterRoundTripTests {
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
                     signature: Signature(
-                        receiver: "of",
                         parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),

@@ -385,13 +385,13 @@ public struct Validator: Sendable {
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
         case let .cast(value, _, _):
-            try refuseAnswerless(value, at: place.part(.receiver))
+            try refuseAnswerless(value, at: place.part(.subject))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.part(.receiver)
+                at: place.part(.subject)
             )
 
         // A closure sees where it was written plus what it declares, which is
@@ -559,19 +559,8 @@ public struct Validator: Sendable {
             )
 
         case let .call(call):
-            if let receiver = call.receiver {
-                try refuseConstruct(receiver, at: place.part(.receiver))
-                try validate(
-                    receiver,
-                    visible: visible,
-                    variables: variables,
-                    scope: scope,
-                    at: place.part(.receiver)
-                )
-            }
-
-            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
-                let here = place.argument(name.spelling)
+            for (position, argument) in call.arguments.enumerated() {
+                let here = place.argument(position)
 
                 try refuseConstruct(argument, at: here)
                 try validate(

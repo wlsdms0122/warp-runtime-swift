@@ -83,10 +83,7 @@ struct ClosureTests {
                         ),
                         Statement(
                             binding: .constant("ran"),
-                            expression: .call(Call(
-                                selector: "walking",
-                                arguments: ["by": reference("body")]
-                            ))
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
                         )
                     ]
                 )
@@ -102,6 +99,55 @@ struct ClosureTests {
             await #expect(throws: BuildError.self) {
                 try await Builder().build([sut] + Module.standard)
             }
+        }
+    }
+
+    @Test(
+        "a value applied short or over is refused by what it lacks or by the count",
+        arguments: [
+            (handed: 1, refusal: "without what it takes at 1, which it requires"),
+            (handed: 4, refusal: "with 4 arguments, and it takes 3")
+        ]
+    )
+    func anApplicationShortOrOverSaysWhy(handed: Int, refusal: String) async throws {
+        // Given. `made` takes two and a nullable third, so one argument lacks
+        // the second and four is one more than it takes
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("made"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: [
+                                        Parameter(name: "a", type: .int),
+                                        Parameter(name: "b", type: .int),
+                                        Parameter(name: "c", type: .nullable(.int))
+                                    ]),
+                                    body: [],
+                                    result: reference("a")
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("said"),
+                            expression: .apply(
+                                reference("made"),
+                                arguments: Array(repeating: .literal(.int(1)), count: handed)
+                            )
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains(refusal)
         }
     }
 
@@ -145,10 +191,7 @@ struct ClosureTests {
                         ),
                         Statement(
                             binding: .constant("ran"),
-                            expression: .call(Call(
-                                selector: "walking",
-                                arguments: ["by": reference("body")]
-                            ))
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
                         )
                     ]
                 )
@@ -184,9 +227,9 @@ struct ClosureTests {
                                 Procedure(
                                     body: [
                                         Statement(binding: .constant("said"), expression: .call(Call(
-                                                selector: "app.shout",
-                                                arguments: ["text": .literal(.string("hi"))]
-                                            ))
+                                            selector: "app.shout",
+                                            arguments: [.literal(.string("hi"))]
+                                        ))
                                         )
                                     ],
                                     result: reference("said")
@@ -194,9 +237,9 @@ struct ClosureTests {
                             )
                         ),
                         Statement(binding: .constant("ran"), expression: .call(Call(
-                                selector: "twice",
-                                arguments: ["body": reference("loud")]
-                            ))
+                            selector: "twice",
+                            arguments: [reference("loud")]
+                        ))
                         )
                     ]
                 )
@@ -234,10 +277,7 @@ struct ClosureTests {
                             )
                         )
                     ],
-                    result: .call(Call(
-                        selector: "twice",
-                        arguments: ["body": reference("quiet")]
-                    ))
+                    result: .call(Call(selector: "twice", arguments: [reference("quiet")]))
                 )
             ]
         )
@@ -272,7 +312,7 @@ struct ClosureTests {
                         Call(
                             selector: "twice",
                             arguments: [
-                                "body": .closure(
+                                .closure(
                                     Procedure(body: [], result: .literal(.string("hi")))
                                 )
                             ]
@@ -308,10 +348,7 @@ struct ClosureTests {
         let answer = try await answer(
             of: [
                 Statement(binding: .constant("hello"), expression: .call(
-                        Call(
-                            selector: "makeGreeter",
-                            arguments: ["greeting": .literal(.string("hello"))]
-                        )
+                        Call(selector: "makeGreeter", arguments: [.literal(.string("hello"))])
                     )
                 ),
                 Statement(binding: .constant("said"), expression: .apply(

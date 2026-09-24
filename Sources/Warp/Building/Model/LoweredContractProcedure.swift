@@ -18,9 +18,9 @@ struct LoweredContractProcedure: Sendable {
     let contract: Name
     let procedure: Name
 
-    // What the contract said the procedure takes and answers. No receiver: the
-    // receiver is whatever satisfies the contract, which is the whole reason
-    // the procedure is in one.
+    // What the contract said the procedure takes and answers. It takes the
+    // contract first: whatever satisfies the contract stands there, which is
+    // the whole reason the procedure is in one.
     let signature: Signature
 
     // What the contract asks of every declaration answering it beyond the

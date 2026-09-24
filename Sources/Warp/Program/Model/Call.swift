@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A message: a selector, what it is sent to, and what it is sent with.
+// A call: a selector and the arguments it is sent with, by position.
 //
 // The language has one calling type and leaves the question of what answers to
 // the link. A procedure, a bundled procedure and a caller's own are not three kinds
@@ -16,31 +16,20 @@ import Foundation
 // every one of them lowers to this, and a caller adds a procedure without the
 // grammar growing a case.
 //
-// The receiver is optional because not every message has one. `x.count` and
-// `{ of: x, contains: y }` are sent *to* something; a procedure call is not. The
-// language declines to invent a receiver for the ones that have none.
+// The arguments stand at the positions of the parameters they fill. What a
+// procedure is about is its first parameter, the way every other one is
+// filled, so there is nothing to write in front of the selector.
 public struct Call: Sendable {
     // MARK: - Property
-    public let receiver: Expression?
     public let selector: Name
-    public let arguments: [Name: Expression]
+    public let arguments: [Expression]
 
     // MARK: - Initializer
-    public init(
-        receiver: Expression? = nil,
-        selector: Name,
-        arguments: [Name: Expression] = [:]
-    ) {
-        self.receiver = receiver
+    public init(selector: Name, arguments: [Expression] = []) {
         self.selector = selector
         self.arguments = arguments
     }
 
     // MARK: - Public
-    // The expression handed under a parameter's name, receiver included.
-    public func handed(_ name: Name, to signature: Signature) -> Expression? {
-        signature.handed(name, receiver: receiver, arguments: arguments)
-    }
-
     // MARK: - Private
 }

@@ -142,8 +142,8 @@ extension Linked {
                 DispatchOperation(
                     contract: dispatch.contract,
                     procedure: dispatch.procedure,
-                    receiver: try Self.renumbered(dispatch.receiver, answer),
-                    arguments: try dispatch.arguments.mapValues { argument in
+                    first: try Self.renumbered(dispatch.first, answer),
+                    arguments: try dispatch.arguments.map { argument in
                         try Self.renumbered(argument, answer)
                     },
                     calls: dispatch.calls
@@ -165,7 +165,6 @@ extension Linked {
     ) rethrows -> CallOperation {
         CallOperation(
             procedure: call.procedure,
-            receiver: try call.receiver.map { receiver in try Self.renumbered(receiver, answer) },
             arguments: try call.arguments.map { argument in
                 try argument.map { operation in try Self.renumbered(operation, answer) }
             },
