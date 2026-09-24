@@ -65,13 +65,13 @@ public extension Writer {
             return try literal(value)
 
         case let .reference(path):
-            return .dictionary(["ref": .string(path.rendered)])
+            return .dictionary([ExpressionTag.reference.key: .string(path.rendered)])
 
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
 
         case let .record(fields):
-            return .dictionary(["record": .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
+            return .dictionary([ExpressionTag.record.key: .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
 
         case let .closure(procedure):
             return .dictionary([ExpressionReader.closureKey: try value(of: procedure)])
@@ -81,17 +81,17 @@ public extension Writer {
         // null, and the type itself is written once either way.
         case let .cast(read, type, optional):
             return .dictionary([
-                optional ? "as?" : "as": .dictionary([
+                (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key: .dictionary([
                     ExpressionReader.subjectKey: try value(of: read),
-                    "type": try value(of: type),
+                    ExpressionReader.typeKey: try value(of: type),
                 ]),
             ])
 
         case let .call(call):
-            return .dictionary(["call": try self.call(of: call)])
+            return .dictionary([ExpressionTag.call.key: try self.call(of: call)])
 
         case let .apply(callee, arguments):
-            return .dictionary(["call": try self.call(of: callee, handing: arguments)])
+            return .dictionary([ExpressionTag.call.key: try self.call(of: callee, handing: arguments)])
 
         // Everything left is a construct, and this notation spells constructs
         // in statement position only. Some of them need to be there (a loop and
@@ -231,13 +231,7 @@ public extension Writer {
             written["body"] = .array(try block.body.map(value(of:)))
         }
 
-        // A result written as null reads as no result, so null is written the
-        // way it reads back: as nothing.
-        switch block.result {
-        case nil, .literal(.null)?:
-            break
-
-        case let result?:
+        if let result = block.result {
             written["result"] = try value(of: result)
         }
 
@@ -302,7 +296,7 @@ public extension Writer {
                 (name: entry.name, value: try literal(entry.value))
             }
 
-            return .dictionary(["record": .dictionary(try Value.Dictionary(fields))])
+            return .dictionary([ExpressionTag.record.key: .dictionary(try Value.Dictionary(fields))])
 
         case .procedure:
             throw WritingError(

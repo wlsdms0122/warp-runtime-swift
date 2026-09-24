@@ -37,8 +37,10 @@ public struct ExpressionReader: Decodable {
     // document's keys asks for.
     static let closureKey = ExpressionTag.closure.key
 
-    // What a cast reads, inside the cast's own mapping.
+    // What a cast reads and the type it reads it as, inside the cast's own
+    // mapping.
     static let subjectKey: Name = "of"
+    static let typeKey: Name = "type"
 
     public let expression: Expression
 
@@ -188,8 +190,11 @@ public struct ExpressionReader: Decodable {
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        guard let record = written.asDictionary else {
-            throw ExpressionFormError("{ record: } takes a mapping of its fields")
+        // A named record is data written as itself, so the name has no place
+        // under the tag: kept, it would be a second spelling of that data, and
+        // dropped, a name the text wrote that nothing reads.
+        guard written.nominal == nil, let record = written.asDictionary else {
+            throw ExpressionFormError("{ record: } takes a mapping of its fields, and no name")
         }
 
         return try fields(in: record, at: steps, in: decoder)
@@ -241,7 +246,7 @@ public struct ExpressionReader: Decodable {
             let cast = written.asDictionary,
             cast.count == 2,
             let subject = cast[Self.subjectKey],
-            let spelled = cast["type"]
+            let spelled = cast[Self.typeKey]
         else {
             throw ExpressionFormError("{ \(key): } takes { of: <value>, type: <type> }")
         }
@@ -264,7 +269,7 @@ public struct ExpressionReader: Decodable {
                     )
                 }
 
-                type = try TypeReader(from: ValueDecoder(below: decoder, key: "type", holding: spelled, at: inside))
+                type = try TypeReader(from: ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside))
                     .type
             }
         } catch let error as TypeFormError {

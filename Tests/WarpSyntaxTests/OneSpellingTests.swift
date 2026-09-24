@@ -63,5 +63,43 @@ struct OneSpellingTests {
         }
     }
 
+    @Test("a named record under the record tag is refused, since it is written as itself")
+    func aNamedRecordUnderTheTagIsRefused() async throws {
+        // Given
+        let point = try Value.holding([(name: Name("x"), value: Value.int(1))], named: "Point")
+        let document: Value = [
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["result": ["record": point]]]
+        ]
+
+        // When / Then
+        await #expect {
+            try Loader().load(document, identity: nil)
+        } throws: { error in
+            "\(error)".contains("no name")
+        }
+    }
+
+    @Test("what a loader writes as canonical, the same loader reads back, whatever aliases it holds")
+    func anAliasIsAReadingConvenience() async throws {
+        // Given. A table that reads `cond` as a conditional too
+        let sut = Loader(registry: try ConstructRegistry.standard.registering(ConditionalForm.self, as: "cond"))
+        let text: Value = [
+            "procedures": [
+                "entry": [
+                    "parameters": [["name": "held", "type": "bool"]],
+                    "body": [["value": ["cond": ["when": ["ref": "held"], "then": []]]]]
+                ]
+            ]
+        ]
+
+        // When
+        let document = try sut.canonical(text, from: .canonical)
+
+        // Then
+        await #expect(throws: Never.self) { try sut.load(document, identity: nil) }
+    }
+
     // MARK: - Private
 }

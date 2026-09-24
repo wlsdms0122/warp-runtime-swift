@@ -28,6 +28,15 @@ struct NullableTests {
         }
     }
 
+    @Test("a block whose result is null holds no result, the way a document reads one")
+    func aNullResultIsNoResult() {
+        // Given / When
+        let sut = Block(body: [], result: .literal(.null))
+
+        // Then
+        #expect(sut.result == nil)
+    }
+
     @Test("what may be null does not stand where null was never declared")
     func aNullableReadingNeedsANullableSlot() throws {
         // The declared half fits its own slot, and the nullable does not. In
