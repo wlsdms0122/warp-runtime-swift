@@ -43,7 +43,7 @@ struct ClosureNotationTests {
                             ]
                         ]]
                     ],
-                    "result": ["result": ["ref": "ran"]]
+                    "result": ["record": ["result": ["ref": "ran"]]]
                 ],
                 "twice": [
                     "parameters": [["name": "body", "type": "procedure"]],
@@ -51,7 +51,7 @@ struct ClosureNotationTests {
                         ["let": "first", "value": ["call": ["procedure": ["ref": "body"]]]],
                         ["let": "second", "value": ["call": ["procedure": ["ref": "body"]]]]
                     ],
-                    "result": ["said": [["ref": "first"], ["ref": "second"]]]
+                    "result": ["record": ["said": [["ref": "first"], ["ref": "second"]]]]
                 ]
             ]
         ])
@@ -87,7 +87,7 @@ struct ClosureNotationTests {
                             "value": ["call": ["procedure": "runner", "arguments": [["ref": "made"]]]
                         ]]
                     ],
-                    "result": ["result": ["ref": "said"]]
+                    "result": ["record": ["result": ["ref": "said"]]]
                 ],
                 "runner": [
                     "parameters": [["name": "body", "type": "procedure"]],
@@ -95,7 +95,7 @@ struct ClosureNotationTests {
                         ["let": "outer", "value": "called"],
                         ["let": "ran", "value": ["call": ["procedure": ["ref": "body"]]]]
                     ],
-                    "result": ["said": ["ref": "ran"]]
+                    "result": ["record": ["said": ["ref": "ran"]]]
                 ]
             ]
         ])
@@ -138,7 +138,7 @@ struct ClosureNotationTests {
                             "value": ["call": ["procedure": ["ref": "doubler"], "arguments": [3]]
                         ]]
                     ],
-                    "result": ["result": ["ref": "said"]]
+                    "result": ["record": ["result": ["ref": "said"]]]
                 ]
             ]
         ])

@@ -43,7 +43,7 @@ struct BlockTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "greet"]]
+            "result": ["record": ["result": ["ref": "greet"]]]
         ], importing: ["std.text.joined", "std.text.text"])
 
         // When
@@ -67,7 +67,7 @@ struct BlockTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "block"]]
+            "result": ["record": ["result": ["ref": "block"]]]
         ])
 
         // When

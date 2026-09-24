@@ -145,19 +145,25 @@ struct ModifierNotationTests {
     }
 
     @Test(
-        "a record's only field is not a key the reading keeps for itself",
-        arguments: ["procedure", "var procedure", "const isolated procedure", "linear"]
+        "a record's only field may be named for a key the reading takes another way",
+        arguments: ["procedure", "var procedure", "const isolated procedure", "linear", "array", "record"]
     )
-    func aRecordIsNotWrittenUnderAReservedKey(spelling: String) throws {
-        // Given. The writer asks the reading itself rather than a list beside
-        // it, so a key the reading takes some other way is refused here rather
-        // than written and read back as that other thing
+    func aRecordsOnlyFieldMayBeNamedLikeAForm(spelling: String) async throws {
+        // Given. A record type is written under `record`, so its field names
+        // are never keys the reading takes as a form
         let type = TypeExpression.record([try Name(spelling): .int])
 
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: type)
-        }
+        // When
+        let written = try Writer().value(of: type)
+        let read = try await Loader().load([
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]]
+        ])
+
+        // Then
+        #expect(written == .dictionary(["record": .dictionary([try Name(spelling): "int"])]))
+        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
     @Test(
@@ -244,13 +250,13 @@ struct ModifierNotationTests {
         let written = try Writer(registry: loader.registry).value(of: module)
         let read = try loader.load(written)
 
-        // Then. Quoted under `value`, and read back as the record it was
+        // Then. Written under `record`, and read back as the record it was
         guard case let .array(body)? = written["procedures"]?["entry"]?["body"] else {
             Issue.record("the body was not written as an array")
             return
         }
 
-        #expect(body.first?["value"] == .dictionary(["value": .dictionary(["loop": 1])]))
+        #expect(body.first?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
         #expect(read.procedures["entry"]?.body.first?.expression.constantValue == .dictionary(["loop": .int(1)]))
     }
 
@@ -265,7 +271,7 @@ struct ModifierNotationTests {
             "procedures": [
                 "entry": [
                     "body": [
-                        ["var": "p", "value": ["x": 1]],
+                        ["var": "p", "value": ["record": ["x": 1]]],
                         ["set": "p.x", "value": 2],
                         ["set": "total", "value": ["ref": "p.x"]]
                     ],

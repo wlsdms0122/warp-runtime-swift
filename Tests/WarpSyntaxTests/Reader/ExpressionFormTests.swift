@@ -36,7 +36,7 @@ struct ExpressionFormTests {
     @Test("a value the document named is data, and keeps the name")
     func aNamedRecordStaysALiteral() throws {
         // Given. A record standing under a name is a value of that type, not a
-        // form the notation reserved
+        // mapping read by its tag
         let written = try TextEncoding.value(from: "warpt 1\nbank.Money { amount 7 }\n")
 
         // When
@@ -84,26 +84,30 @@ struct ExpressionFormTests {
         #expect(reference.referencePath == [.key("items"), .index(0), .key("name")])
     }
 
-    @Test("form-shaped data inside { value: } quotation stays inert")
-    func quotedFormLikePayloadStaysInert() throws {
-        // Given. { value: } is quotation; ref-shaped data inside is data
-        let reference = try loader.expression(from: ["value": ["ref": "secret"]])
+    @Test("a record's field named like a tag is a field, and reaches nothing")
+    func aFieldNamedLikeATagStaysInert() throws {
+        // Given. Under `record`, a field's name is never a key the grammar
+        // reads, so a field called `ref` holds the text it was given
+        let reference = try loader.expression(from: ["record": ["ref": "secret", "value": 1]])
 
         // Then
-        guard case let .literal(payload) = reference else {
-            Issue.record("expected quoted, got \(reference)")
+        guard case let .record(fields) = reference else {
+            Issue.record("expected a record, got \(reference)")
 
             return
         }
 
-        #expect(payload == .dictionary(["ref": .string("secret")]))
-        #expect(validates(reference), "quoted payloads are not even validation targets")
+        #expect(fields["ref"]?.constantValue == .string("secret"))
+        #expect(fields["value"]?.constantValue == .int(1))
+        #expect(validates(reference), "a field named `ref` names nothing to resolve")
     }
 
     @Test("a half-spelled form record is rejected at load", arguments: [
         ["ref": "a", "extra": "b"] as Value,
         ["ref": 3],
-        ["value": "a", "extra": "b"],
+        ["record": ["a": 1], "extra": "b"],
+        ["record": "a"],
+        ["as": "int"],
         ["with": ["a": 1]],
         ["format": "x", "extra": "b"],
         ["format": "x", "with": [1, 2]],
@@ -111,7 +115,7 @@ struct ExpressionFormTests {
     ])
     func ambiguousFormRecordRejected(fixture: Value) {
         // When / Then. A half-spelled form is an author mistake, not a record;
-        // plain data carrying these keys must be quoted with { value: }
+        // plain data carrying these keys is written under `record`
         #expect(throws: ReadingError.self) {
             _ = try loader.expression(from: fixture)
         }
@@ -212,15 +216,15 @@ struct ExpressionFormTests {
         #expect(throws: (any Error).self) {
             try loader.expression(from: [
                 "format": "hello, ${who.name}",
-                "with": ["who": ["value": ["name": "warp"]]]
+                "with": ["who": ["record": ["name": "warp"]]]
             ])
         }
     }
 
-    @Test("an ordinary record without form keys passes unquoted")
-    func plainRecordPassesWithoutFormKeys() throws {
-        // Given. An ordinary record of expressions needs no quoting
-        let reference = try loader.expression(from: ["name": "report", "target": ["ref": "target"]])
+    @Test("a record is written under `record`, and each field is an expression")
+    func aRecordIsWrittenUnderItsTag() throws {
+        // Given
+        let reference = try loader.expression(from: ["record": ["name": "report", "target": ["ref": "target"]]])
 
         // Then
         guard case let .record(record) = reference else {
@@ -230,6 +234,20 @@ struct ExpressionFormTests {
         }
 
         #expect(record["target"]?.referencePath == [.key("target")])
+    }
+
+    @Test("a bare mapping where a value is wanted is refused")
+    func aBareMappingIsRefused() {
+        // Given. A mapping is an expression by its one tag, and these fields
+        // carry none
+        let fixture: Value = ["name": "report", "target": ["ref": "target"]]
+
+        // When / Then
+        #expect {
+            try loader.expression(from: fixture)
+        } throws: { error in
+            "\(error)".contains("a mapping where a value is wanted is one of")
+        }
     }
 
 }

@@ -46,7 +46,7 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "pick"]]
+            "result": ["record": ["result": ["ref": "pick"]]]
         ], importing: ["std.logic.equal"])
 
         // When
@@ -85,7 +85,7 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "seen"]]
+            "result": ["record": ["result": ["ref": "seen"]]]
         ], importing: ["std.logic.notEqual", "std.math.plus"])
 
         // When
@@ -113,7 +113,7 @@ struct CanonicalTests {
                         ]
                     ]]
                 ],
-                "result": ["result": ["ref": "pick"]]
+                "result": ["record": ["result": ["ref": "pick"]]]
             ], importing: ["std.logic.equal"])
         }
 
@@ -159,7 +159,7 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "pick"]]
+            "result": ["record": ["result": ["ref": "pick"]]]
         ])
 
         // When

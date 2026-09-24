@@ -357,7 +357,7 @@ struct EnvelopeTests {
                         ]],
                         [
                             "let": "deep",
-                            "value": ["a": [["call": ["procedure": "inNestedData"]]]]
+                            "value": ["record": ["a": [["call": ["procedure": "inNestedData"]]]]]
                         ]
                     ],
                     "result": ["ref": "tried"]

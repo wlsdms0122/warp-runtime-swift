@@ -33,7 +33,7 @@ struct LoopTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "gate"]]
+            "result": ["record": ["result": ["ref": "gate"]]]
         ], importing: ["std.logic.notEqual"])
 
         // When
@@ -59,7 +59,7 @@ struct LoopTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "gate"]]
+            "result": ["record": ["result": ["ref": "gate"]]]
         ], importing: ["std.logic.notEqual"])
 
         // When

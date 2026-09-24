@@ -28,11 +28,11 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "first.entry": [
                     "body": [["let": "said", "value": ["call": ["procedure": "first.helper"]]]],
-                    "result": ["result": ["ref": "said"]]
+                    "result": ["record": ["result": ["ref": "said"]]]
                 ],
                 "first.helper": [
                     "body": [["let": "done", "value": "from first"]],
-                    "result": ["said": ["ref": "done"]]
+                    "result": ["record": ["said": ["ref": "done"]]]
                 ]
             ]
         ])
@@ -40,7 +40,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "second.helper": [
                     "body": [["let": "done", "value": "from second"]],
-                    "result": ["said": ["ref": "done"]]
+                    "result": ["record": ["said": ["ref": "done"]]]
                 ]
             ]
         ])
@@ -60,7 +60,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "caller.entry": [
                     "body": [["let": "said", "value": ["call": ["procedure": "greet"]]]],
-                    "result": ["result": ["ref": "said"]]
+                    "result": ["record": ["result": ["ref": "said"]]]
                 ]
             ]
         ])
@@ -68,7 +68,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "greeting.greet": [
                     "body": [["let": "done", "value": "hello"]],
-                    "result": ["said": ["ref": "done"]]
+                    "result": ["record": ["said": ["ref": "done"]]]
                 ]
             ]
         ])
@@ -89,11 +89,11 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "first.entry": [
                     "body": [["let": "said", "value": ["call": ["procedure": "second.helper"]]]],
-                    "result": ["result": ["ref": "said"]]
+                    "result": ["record": ["result": ["ref": "said"]]]
                 ],
                 "first.helper": [
                     "body": [["let": "done", "value": "from first"]],
-                    "result": ["said": ["ref": "done"]]
+                    "result": ["record": ["said": ["ref": "done"]]]
                 ]
             ]
         ])
@@ -101,7 +101,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "second.helper": [
                     "body": [["let": "done", "value": "from second"]],
-                    "result": ["said": ["ref": "done"]]
+                    "result": ["record": ["said": ["ref": "done"]]]
                 ]
             ]
         ])
@@ -121,7 +121,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "entry": [
                     "body": [["let": "said", "value": ["ref": "greeting"]]],
-                    "result": ["result": ["ref": "said"], "cap": ["ref": "limit"]]
+                    "result": ["record": ["result": ["ref": "said"], "cap": ["ref": "limit"]]]
                 ]
             ]
         ])
@@ -146,7 +146,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "entry": [
                     "body": [["let": "seen", "value": ["ref": "url"]]],
-                    "result": ["result": ["ref": "seen"]]
+                    "result": ["record": ["result": ["ref": "seen"]]]
                 ]
             ]
         ])
@@ -186,8 +186,8 @@ struct ModuleDeclarationTests {
         // neither
         let sut = try loader.loadDocument([
             "types": [
-                "bank.Account": ["balance": "int"],
-                "bank.Card": ["last": "string"]
+                "bank.Account": ["record": ["balance": "int"]],
+                "bank.Card": ["record": ["last": "string"]]
             ],
             "contracts": [
                 "app.Describable": [
@@ -203,10 +203,10 @@ struct ModuleDeclarationTests {
                     "body": [
                         [
                             "let": "card",
-                            "value": ["as": "bank.Card", "of": ["last": "42"]]
+                            "value": ["as": ["of": ["record": ["last": "42"]], "type": "bank.Card"]]
                         ]
                     ],
-                    "result": ["result": ["call": ["procedure": "app.tell", "arguments": [["ref": "card"]]]]]
+                    "result": ["record": ["result": ["call": ["procedure": "app.tell", "arguments": [["ref": "card"]]]]]]
                 ],
                 "app.tell": [
                     "parameters": [["name": "it", "type": "some T"]],

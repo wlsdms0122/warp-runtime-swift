@@ -51,7 +51,7 @@ struct VocabularyTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "verdict"], "head": ["ref": "head"]]
+            "result": ["record": ["result": ["ref": "verdict"], "head": ["ref": "head"]]]
         ], importing: ["extra.longerThan", "std.collection.first"])
 
         // When

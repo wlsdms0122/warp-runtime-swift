@@ -13,18 +13,16 @@ import Warp
 //
 //   string / any / procedure  . A built-in, by its own name
 //   array<string>             . A built-in applied to another type
-//   dictionary<Task>              . The same, for a map of string keys
+//   dictionary<Task>          . The same, for a map of string keys
 //   Task                      . A name some module declares
-//   { id: string, done: bool }. A record, written as the record it describes
+//   { record: { id: string } }. A record, its fields under `record`
 //   { procedure: { parameters: [], returns: } }
-//                             . A procedure, written as the types it is applied
+//                             . A procedure, written as the types it is called
 //                                with and what it answers. Bare `procedure` says
 //                                only that it is one
 //
-// A record is a mapping and a parameter is also written as a mapping, which
-// would be ambiguous if both could appear in the same slot. They cannot: a
-// parameter's record always carries `type`, and a record type is only ever the
-// value of that key.
+// A mapping is one of these by its one key, so a record's field names are
+// never keys the grammar reads.
 public struct TypeReader: Decodable {
     // MARK: - Property
     public let type: TypeExpression
@@ -44,6 +42,9 @@ public struct TypeReader: Decodable {
     // MARK: - Public
     // The one key a type handed on once is written under.
     public static let linearKey = "linear"
+
+    // The one key a record type is written under.
+    public static let recordKey = "record"
 
     // A built-in taking another type, written under its own key where the
     // inner type has no spelling of its own. `array<string>` is a name; an
@@ -291,14 +292,6 @@ public struct TypeReader: Decodable {
         procedureKeywords(of: key.spelling) != nil
     }
 
-    // Whether the reading keeps this key for a form of its own. A record whose
-    // only field is one would come back as that other form.
-    public static func reserves(_ key: Name) -> Bool {
-        readsAsAProcedure(key)
-            || key.spelling == linearKey
-            || Holding(rawValue: key.spelling) != nil
-    }
-
     // What a procedure form's key says, read front to back: a slot's mark if one
     // is written, the modifiers in either order, and `procedure`. Nil where the
     // key is not a procedure form's, which a record's field name is.
@@ -407,13 +400,9 @@ public struct TypeReader: Decodable {
             return try parse(written) { name in notation.qualified(name, as: .type) }
         }
 
-        // A record and a procedure are both mappings, so one of them has to be
-        // told apart by its key. A single `procedure` key is the procedure
-        // form; anything else is a record, and a record cannot have a lone
-        // field by that name, which the writer refuses to produce for the same
-        // reason. The form is committed by its key *before* the signature is
-        // read, so a malformed signature refuses as the procedure type it
-        // claimed to be rather than quietly reading as a record.
+        // A mapping is a form by its one key. The form is committed by its key
+        // *before* what is under it is read, so a malformed signature refuses
+        // as the procedure type it claimed to be.
         if
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
@@ -426,9 +415,7 @@ public struct TypeReader: Decodable {
             return mark?.marking(written) ?? written
         }
 
-        // A declared type handed on once, told apart by its key the way the
-        // procedure form is. A record cannot have a lone field by that name,
-        // which the writer refuses to produce for the same reason.
+        // A declared type handed on once.
         if
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
@@ -462,16 +449,36 @@ public struct TypeReader: Decodable {
             return holding.holding(element)
         }
 
+        if
+            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
+            keyed.allKeys.count == 1,
+            let key = keyed.allKeys.first,
+            key.stringValue == recordKey
+        {
+            return try record(from: try keyed.superDecoder(forKey: key))
+        }
+
+        guard notation.readsBareRecords else {
+            throw ReadingError(
+                "a type is a name like `string`, `array<string>` or"
+                    + " `Task`, or a mapping under one of `\(recordKey)`, `procedure`,"
+                    + " `\(linearKey)`, `array` and `dictionary`. A record type is written"
+                    + " { \(recordKey): { id: string } }",
+                at: decoder.steps
+            )
+        }
+
+        return try record(from: decoder)
+    }
+
+    // A record type's fields, each a type.
+    private static func record(from decoder: Decoder) throws -> TypeExpression {
         guard
             let fields = try? decoder
                 .singleValueContainer()
                 .decode([String: TypeReader].self)
         else {
-            throw ReadingError(
-                "a type is a name like `string`, `array<string>` or"
-                    + " `Task`, or a record like { id: string }",
-                at: decoder.steps
-            )
+            throw ReadingError("a record type is a mapping of its fields to their types", at: decoder.steps)
         }
 
         return .record(try fields.mapValues(\.type).named(at: decoder.steps))

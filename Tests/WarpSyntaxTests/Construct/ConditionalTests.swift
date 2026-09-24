@@ -33,7 +33,7 @@ struct ConditionalTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "pick"]]
+            "result": ["record": ["result": ["ref": "pick"]]]
         ], importing: ["std.logic.equal"])
 
         // When
@@ -73,7 +73,7 @@ struct ConditionalTests {
             "body": [
                 ["var": "kept"]
             ],
-            "result": ["result": ["ref": "kept"]]
+            "result": ["record": ["result": ["ref": "kept"]]]
         ])
 
         // When

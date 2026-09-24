@@ -276,7 +276,7 @@ struct ReadingErrorTests {
             "imports": [],
             "procedures": ["entry": ["body": [[
                 "let": "held",
-                "value": ["first": "a", "second": ["ref": [1]]]
+                "value": ["record": ["first": "a", "second": ["ref": [1]]]]
             ]]]]
         ]
 
@@ -286,7 +286,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.second")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.second")
     }
 
     @Test("a record with two things wrong refuses the same one every time")
@@ -300,7 +300,7 @@ struct ReadingErrorTests {
             "imports": [],
             "procedures": ["entry": ["body": [[
                 "let": "held",
-                "value": ["zebra": ["ref": [1]], "alpha": ["ref": [2]]]
+                "value": ["record": ["zebra": ["ref": [1]], "alpha": ["ref": [2]]]]
             ]]]]
         ]
 
@@ -310,7 +310,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.alpha")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.alpha")
     }
 
     @Test("a document that writes its imports as nothing has not written them")

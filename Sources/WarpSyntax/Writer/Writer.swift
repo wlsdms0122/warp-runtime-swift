@@ -294,19 +294,9 @@ public struct Writer: Sendable {
             )
 
         // A record, a procedure and a type handed on once are all written as a
-        // mapping, and the key is what tells them apart. A record whose only
-        // field is a key the reading takes some other way would come back as
-        // that other thing, or not come back at all.
+        // mapping, and the one key is what tells them apart.
         case let .record(fields):
-            guard fields.count != 1 || !TypeReader.reserves(fields.keys.first!) else {
-                throw WritingError(
-                    "a record whose only field is '\(fields.keys.first!)' is read as"
-                        + " the form that key belongs to, and a document has no way"
-                        + " to tell the two apart"
-                )
-            }
-
-            return .dictionary(try fields.mapValues(value(of:)))
+            return .dictionary([try Name(TypeReader.recordKey): .dictionary(try fields.mapValues(value(of:)))])
 
         // Written under its own key, which is where a record can carry it: the
         // type a declared type is handed on once is usually written inline,

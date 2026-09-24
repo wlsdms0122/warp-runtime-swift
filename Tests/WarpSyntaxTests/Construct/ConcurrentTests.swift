@@ -30,15 +30,15 @@ struct ConcurrentTests {
                     "value": ["call": [
                         "procedure": "std.concurrent.all",
                         "arguments": [
-                            [
+                            ["record": [
                                 "left": ["closure": ["result": 1]],
                                 "right": ["closure": ["result": 2]]
-                            ]
+                            ]]
                         ]
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "par"]]
+            "result": ["record": ["result": ["ref": "par"]]]
         ], importing: ["std.concurrent.all"])
         let boundary = IsolationBoundaryProbe()
 
@@ -64,7 +64,7 @@ struct ConcurrentTests {
                                 "value": ["call": [
                                     "procedure": "std.concurrent.all",
                                     "arguments": [
-                                        [
+                                        ["record": [
                                             "fine": ["closure": ["result": "ok"]],
                                             "fragile": [
                                                 "closure": [
@@ -72,7 +72,7 @@ struct ConcurrentTests {
                                                     "result": ["ref": "boom"]
                                                 ]
                                             ]
-                                        ]
+                                        ]]
                                     ]
                                 ]
                             ]]
@@ -84,7 +84,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "par"]]
+            "result": ["record": ["result": ["ref": "par"]]]
         ], importing: ["std.concurrent.all", "test.fail"])
 
         // When
@@ -108,7 +108,7 @@ struct ConcurrentTests {
                                 "value": ["call": [
                                     "procedure": "std.concurrent.all",
                                     "arguments": [
-                                        [
+                                        ["record": [
                                             "fragile": [
                                                 "closure": [
                                                     "body": [["let": "boom", "value": ["fail": true]]],
@@ -121,7 +121,7 @@ struct ConcurrentTests {
                                                     "result": ["ref": "boom"]
                                                 ]
                                             ]
-                                        ]
+                                        ]]
                                     ]
                                 ]
                             ]]
@@ -170,7 +170,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "greeted"]]
+            "result": ["record": ["result": ["ref": "greeted"]]]
         ], importing: ["std.text.joined", "std.concurrent.map", "std.text.text"])
 
         // When
@@ -206,7 +206,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "either"]]
+            "result": ["record": ["result": ["ref": "either"]]]
         ], importing: ["test.fail", "std.concurrent.first"])
 
         // When

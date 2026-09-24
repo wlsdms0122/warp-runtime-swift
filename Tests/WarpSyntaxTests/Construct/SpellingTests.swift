@@ -40,7 +40,7 @@ struct SpellingTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "pick"]]
+            "result": ["record": ["result": ["ref": "pick"]]]
         ], importing: ["std.logic.equal"])
 
         // When
