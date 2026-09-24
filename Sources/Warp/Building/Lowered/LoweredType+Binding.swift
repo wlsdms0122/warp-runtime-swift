@@ -76,12 +76,13 @@ extension LoweredType {
             // disagreement, which is the same question the link asks elsewhere
             // and answers correctly.
             // A range meets anything by its kind, so a range and the plain
-            // kind under it take each other both ways. The plain kind is the
-            // looser of the two, whichever was read first.
+            // kind under it take each other both ways, and so do two ranges
+            // that overlap. Which was read first says nothing, so the reading
+            // that holds both is the kind under them.
             if already.accepts(given, in: table) {
                 switch (already, given) {
-                case (.ranged, .ranged):
-                    break
+                case let (.ranged(mine), .ranged):
+                    bound[name] = mine.lowered
 
                 case (.ranged, _) where given.accepts(already, in: table):
                     bound[name] = given
