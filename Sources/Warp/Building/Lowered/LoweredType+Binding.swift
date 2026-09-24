@@ -75,7 +75,23 @@ extension LoweredType {
             // type that row holds. Asking without it would call those two a
             // disagreement, which is the same question the link asks elsewhere
             // and answers correctly.
-            if already.accepts(given, in: table) { return }
+            // A range meets anything by its kind, so a range and the plain
+            // kind under it take each other both ways. The plain kind is the
+            // looser of the two, whichever was read first.
+            if already.accepts(given, in: table) {
+                switch (already, given) {
+                case (.ranged, .ranged):
+                    break
+
+                case (.ranged, _) where given.accepts(already, in: table):
+                    bound[name] = given
+
+                default:
+                    break
+                }
+
+                return
+            }
 
             if given.accepts(already, in: table) {
                 bound[name] = given
