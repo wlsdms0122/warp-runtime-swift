@@ -115,21 +115,6 @@ struct PlaceWrittenTests {
         #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].call")
     }
 
-    @Test("a call and an invocation are written under the same two keys")
-    func oneKeyAnswersForBothForms() {
-        // Given. The place reading takes both from `CallForm`, which is right
-        // only while the two agree. If they ever part, this is what says so
-        // rather than a line number quietly going missing.
-        #expect(
-            CallForm.CodingKeys.procedure.stringValue
-                == ApplyForm.CodingKeys.procedure.stringValue
-        )
-        #expect(
-            CallForm.CodingKeys.arguments.stringValue
-                == ApplyForm.CodingKeys.arguments.stringValue
-        )
-    }
-
     @Test("a construct in a slot no statement holds is still spelled for its own construct")
     func aSlotOutsideAStatementKnowsItsOwner() throws {
         // Given. A loop standing in a block's result. Nothing puts a construct

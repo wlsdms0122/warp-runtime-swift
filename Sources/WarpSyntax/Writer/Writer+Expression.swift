@@ -158,14 +158,20 @@ public extension Writer {
         case let .call(call):
             return (try spelling(CallForm.self), try self.call(of: call))
 
+        // A string under `procedure` reads back as a name, so a value that is
+        // literal text has no spelling there.
         case let .apply(callee, arguments):
+            if case .literal(.string) = callee {
+                throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
+            }
+
             var written: [Name: Value] = ["procedure": try value(of: callee)]
 
             if !arguments.isEmpty {
                 written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
             }
 
-            return (try spelling(ApplyForm.self), .dictionary(written))
+            return (try spelling(CallForm.self), .dictionary(written))
 
         case let .block(block):
             return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))

@@ -189,7 +189,7 @@ enum ObjectCoverageFixture {
     ]
 
     static let everyConstruct: [Construct] = [
-        .literal, .reference, .array, .record, .closure, .cast, .apply, .block,
+        .literal, .reference, .array, .record, .closure, .cast, .block,
         .conditional, .loop, .attempt, .call, .leave(.procedure), .leave(.construct), .leave(.round)
     ]
 

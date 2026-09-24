@@ -611,13 +611,12 @@ private extension ObjectReader {
         case 3: read = .record
         case 4: read = .closure
         case 5: read = .cast
-        case 6: read = .apply
-        case 7: read = .block
-        case 8: read = .conditional
-        case 9: read = .loop
-        case 10: read = .attempt
-        case 11: read = .call
-        case 12: read = .leave(try reach(fields.next()))
+        case 6: read = .block
+        case 7: read = .conditional
+        case 8: read = .loop
+        case 9: read = .attempt
+        case 10: read = .call
+        case 11: read = .leave(try reach(fields.next()))
         default: throw ObjectRefused("'construct' names a construct this reads none of")
         }
 

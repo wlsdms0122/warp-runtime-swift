@@ -386,8 +386,8 @@ struct ClosureTests {
         #expect(answer == .string("y"))
     }
 
-    @Test("calling something that is not a procedure fails with what it was")
-    func callingNonProcedureFails() async {
+    @Test("calling a value no procedure could be is refused at the build")
+    func callingNonProcedureIsRefused() async {
         // Given
         let sut = [
             Statement(binding: .constant("notCallable"), expression: .literal(.int(1))),
@@ -396,8 +396,10 @@ struct ClosureTests {
         ]
 
         // When / Then
-        await #expect(throws: ExecutionError.self) {
+        await #expect {
             try await answer(of: sut, result: reference("called"))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("calls a value of int, and only a procedure can be called")
         }
     }
 

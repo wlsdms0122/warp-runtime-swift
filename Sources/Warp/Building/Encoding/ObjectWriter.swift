@@ -434,13 +434,12 @@ private extension ObjectWriter {
         case .record: return .array([.int(3)])
         case .closure: return .array([.int(4)])
         case .cast: return .array([.int(5)])
-        case .apply: return .array([.int(6)])
-        case .block: return .array([.int(7)])
-        case .conditional: return .array([.int(8)])
-        case .loop: return .array([.int(9)])
-        case .attempt: return .array([.int(10)])
-        case .call: return .array([.int(11)])
-        case let .leave(reach): return .array([.int(12), self.reach(reach)])
+        case .block: return .array([.int(6)])
+        case .conditional: return .array([.int(7)])
+        case .loop: return .array([.int(8)])
+        case .attempt: return .array([.int(9)])
+        case .call: return .array([.int(10)])
+        case let .leave(reach): return .array([.int(11), self.reach(reach)])
         }
     }
 

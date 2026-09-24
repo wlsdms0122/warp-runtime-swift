@@ -50,6 +50,22 @@ struct WriterTests {
         }
     }
 
+    @Test("a call of literal text has no document to write")
+    func aCallOfTextIsNotWritten() throws {
+        // Given. Text under `procedure` reads back as a declaration's name, so
+        // a value that is text cannot be written there
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(body: [], result: .apply(.literal(.string("app.f")), arguments: []))
+            ]
+        )
+
+        // When / Then
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: sut)
+        }
+    }
+
     @Test("every construct survives being written and read back", arguments: Self.corpus)
     func writingIsAFixedPoint(_ document: Value) async throws {
         // Given
@@ -672,7 +688,7 @@ struct WriterTests {
                     ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]],
                     [
                         "let": "called",
-                        "value": ["apply": [
+                        "value": ["call": [
                             "procedure": [
                                 "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
                             ],
@@ -901,7 +917,7 @@ struct WriterTests {
                         ]],
                         [
                             "let": "called",
-                            "value": ["apply": [
+                            "value": ["call": [
                                 "procedure": [
                                     "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
                                 ],

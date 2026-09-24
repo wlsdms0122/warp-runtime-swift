@@ -327,7 +327,7 @@ enum Library {
                             {
                               let "kept"
                               value {
-                                apply {
+                                call {
                                   arguments [
                                     {
                                       ref "of[walk.index]"
@@ -487,7 +487,7 @@ enum Library {
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   arguments [
                                     {
                                       ref "of[walk.index]"
@@ -634,7 +634,7 @@ enum Library {
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   arguments [
                                     {
                                       ref "carried"
@@ -1288,7 +1288,7 @@ enum Library {
                                     {
                                       let "answered"
                                       value {
-                                        apply {
+                                        call {
                                           arguments [
                                             {
                                               ref "item"
@@ -1412,7 +1412,7 @@ enum Library {
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   procedure {
                                     ref "side"
                                   }
@@ -1556,7 +1556,7 @@ enum Library {
                             {
                               let "answered"
                               value {
-                                apply {
+                                call {
                                   procedure {
                                     ref "side"
                                   }
@@ -1629,7 +1629,7 @@ enum Library {
                             {
                               let "taken"
                               value {
-                                apply {
+                                call {
                                   procedure {
                                     ref "then"
                                   }
@@ -1653,7 +1653,7 @@ enum Library {
                     {
                       let "left"
                       value {
-                        apply {
+                        call {
                           procedure {
                             ref "else"
                           }

@@ -8,7 +8,10 @@
 import Foundation
 import Warp
 
-// Calling a procedure by name, with its arguments by position.
+// Calling a procedure, with its arguments by position. `procedure` holds a
+// string or an expression: a string names a declaration the build resolves,
+// and an expression is a value the run calls. A string is never a value that
+// could be called, so the two readings never meet.
 //
 // A call names a symbol, never a document. Naming the document would write a
 // linkage fact into the call site; which module declared it is the builder's
@@ -32,8 +35,7 @@ public struct CallForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "call"
 
-    private let procedure: Name
-    private let arguments: [Expression]
+    private let expression: Expression
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -42,21 +44,30 @@ public struct CallForm: ConstructForm {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
 
-        self.procedure = notation.qualified(
-            try Name.read(
-                try container.decode(String.self, forKey: .procedure),
-                at: decoder.steps
-            ),
-            as: .procedure
-        )
-        self.arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
+        let arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
             .read([ExpressionReader].self)
             .map(\.expression) ?? []
+
+        guard let spelled = try? container.decode(String.self, forKey: .procedure) else {
+            self.expression = .apply(
+                try decoder.descending(to: CodingKeys.procedure).read(ExpressionReader.self).expression,
+                arguments: arguments
+            )
+
+            return
+        }
+
+        self.expression = .call(
+            Call(
+                selector: notation.qualified(try Name.read(spelled, at: decoder.steps), as: .procedure),
+                arguments: arguments
+            )
+        )
     }
 
     // MARK: - Public
     public func expression(boundTo id: String?) -> Expression {
-        .call(Call(selector: procedure, arguments: arguments))
+        expression
     }
 
     // MARK: - Private

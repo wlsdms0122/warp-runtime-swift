@@ -1596,6 +1596,17 @@ extension Builder {
                 with: context,
                 ask: ask
             )
+
+            // A value read as a kind that is not a procedure is one every run
+            // refuses to call.
+            guard !called.reading.resolved(in: context.loweredTypes).unrefined.isDecidedKind else {
+                throw BuildError(
+                    "calls a value of \(called.reading.rendered(in: context.loweredTypes)),"
+                        + " and only a procedure can be called",
+                    at: place.part(.callee)
+                )
+            }
+
             var rewritten: [Expression] = []
             var calls = called.calls
             var readings: [LoweredType] = []
