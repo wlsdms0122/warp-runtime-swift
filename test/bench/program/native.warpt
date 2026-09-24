@@ -6,6 +6,7 @@ warpt 1
   ]
   procedures {
     entry {
+      access "public"
       body [
         {
           let "one"
@@ -20,12 +21,12 @@ warpt 1
                   let "sum"
                   value {
                     call {
-                      arguments {
-                        value 1
-                      }
-                      of {
-                        ref "one"
-                      }
+                      arguments [
+                        {
+                          ref "one"
+                        }
+                        1
+                      ]
                       procedure "std.math.plus"
                     }
                   }
@@ -33,14 +34,14 @@ warpt 1
               ]
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -48,9 +49,12 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
+      parameters [
+        {
+          name "rounds"
+          type "int"
+        }
+      ]
       result {
         ref "one"
       }
