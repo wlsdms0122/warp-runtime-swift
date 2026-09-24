@@ -298,7 +298,7 @@ struct TypeNotationTests {
     func moduleDeclaresTypes() throws {
         // Given
         let sut = try loader.loadDocument([
-            "types": ["Task": ["id": "string", "done": "bool"]],
+            "types": ["Task": ["record": ["id": "string", "done": "bool"]]],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "tasks", "type": "array<Task>"]],
@@ -322,7 +322,7 @@ struct TypeNotationTests {
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "rows", "type": ["array": ["id": "string"]]]],
+                    "parameters": [["name": "rows", "type": ["array": ["record": ["id": "string"]]]]],
                     "body": [["let": "seen", "value": ["ref": "rows"]]]
                 ]
             ]
@@ -352,12 +352,12 @@ struct TypeNotationTests {
     func declaredTypeIsEnforced() async throws {
         // Given
         let sut = try loader.loadDocument([
-            "types": ["Task": ["id": "string"]],
+            "types": ["Task": ["record": ["id": "string"]]],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "tasks", "type": "array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
-                    "result": ["result": ["ref": "seen"]]
+                    "result": ["record": ["result": ["ref": "seen"]]]
                 ]
             ]
         ])

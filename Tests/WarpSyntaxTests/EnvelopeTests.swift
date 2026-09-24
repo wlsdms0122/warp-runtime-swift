@@ -261,21 +261,19 @@ struct EnvelopeTests {
         }
     }
 
-    @Test("a document written for the earliest reader is still read")
-    func anEarlierDocumentIsStillRead() throws {
-        // Given. The number moved when the language did, and the promise that
-        // makes it worth having is that moving it does not lock out what was
-        // already written. Backward is a promise; forward is not available to
-        // anyone, which is the whole reason the number exists. Nothing has
-        // shipped yet, so the two ends of the promise are one number for now.
-        let sut = try loader.load([
-            "imports": [],
-            "warp": .int(Envelope.earliest),
-            "procedures": ["entry": ["result": "hello"]]
-        ])
-
-        // Then
-        #expect(sut.procedures["entry"] != nil)
+    @Test("a document written for an earlier version is refused and asked to be written again")
+    func anEarlierDocumentIsWrittenAgain() {
+        // Given. A document is spelled the way this version's writer spells
+        // it, so one written for another version is another text
+        #expect {
+            try loader.load([
+                "imports": [],
+                "warp": .int(Envelope.version - 1),
+                "procedures": ["entry": ["result": "hello"]]
+            ])
+        } throws: { error in
+            "\(error)".contains("Write it again")
+        }
     }
 
     @Test("a procedure a document declares itself is not something it imports")
@@ -357,7 +355,7 @@ struct EnvelopeTests {
                         ]],
                         [
                             "let": "deep",
-                            "value": ["a": [["call": ["procedure": "inNestedData"]]]]
+                            "value": ["record": ["a": [["call": ["procedure": "inNestedData"]]]]]
                         ]
                     ],
                     "result": ["ref": "tried"]

@@ -27,11 +27,19 @@ public extension Place {
     // the same type by the time anything here sees one.
     func written(by registry: ConstructRegistry) -> Place {
         Place(
-            steps.map { step in
+            steps.flatMap { step -> [Place.Step] in
                 switch step {
-                case let .part(part): .key(Self.key(of: part))
-                case let .construct(construct): .landmark(Self.key(of: construct, by: registry))
-                default: step
+                // A cast's subject stands inside the cast's own mapping, under
+                // the tag that says how the cast reads a mismatch.
+                case let .part(.subject(optional)):
+                    [
+                        .key((optional ? ExpressionTag.optionalCast : ExpressionTag.cast).rawValue),
+                        .key(ExpressionReader.subjectKey.spelling)
+                    ]
+
+                case let .part(part): [.key(Self.key(of: part))]
+                case let .construct(construct): [.landmark(Self.key(of: construct, by: registry))]
+                default: [step]
                 }
             },
             in: document
@@ -61,13 +69,14 @@ public extension Place {
         // What a cast reads is written under the expression grammar's subject
         // key.
         case .subject: ExpressionReader.subjectKey.spelling
+        case .fields: ExpressionTag.record.rawValue
 
         case .callee: CallForm.CodingKeys.procedure.stringValue
         case .arguments: CallForm.CodingKeys.arguments.stringValue
 
         // A closure is written wherever data is, so its key is the expression
         // grammar's rather than any form's.
-        case .closure: ExpressionReader.closureKey.spelling
+        case .closure: ExpressionTag.closure.rawValue
 
         case .then: ConditionalForm.CodingKeys.then.stringValue
         case .otherwise: ConditionalForm.CodingKeys.else.stringValue
@@ -91,19 +100,21 @@ public extension Place {
     // language's own name stands in there, which is what a place said before
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {
+        // A call is a tag, and every table reads it under that one key.
+        if case .call = construct { return ExpressionTag.call.rawValue }
+
         let form: (any ConstructForm.Type)? = switch construct {
         case .block: BlockForm.self
         case .conditional: ConditionalForm.self
         case .loop: LoopForm.self
         case .attempt: AttemptForm.self
-        case .call: CallForm.self
         case let .leave(reach):
             switch reach {
             case .procedure: ReturnForm.self
             case .construct: BreakForm.self
             case .round: ContinueForm.self
             }
-        case .literal, .reference, .array, .record, .closure, .cast: nil
+        case .literal, .reference, .array, .record, .closure, .cast, .call: nil
         }
 
         guard let form else { return StatementReader.valueKey.spelling }

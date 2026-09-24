@@ -37,11 +37,8 @@ public protocol ExpressionSpelling: Sendable {
     // not hand the procedure back to mean something else, which would make the
     // same document mean two things in two notations.
     //
-    // Asked of the names and the notation they are read in, so the writer
-    // can ask the same question of data before writing it plainly: what the
-    // reading side would take for a spelling, the writing side quotes. The
-    // notation is handed in because a spelling is held by one and cannot see
-    // it, and what a text declares is the notation's to know.
+    // Asked of the names and the notation they are read in, since what a
+    // text declares is the notation's to know.
     func claims(_ names: Set<Name>, in notation: Notation) -> Bool
 
     // Procedures these spellings reach, which a link has to declare for them to
@@ -49,14 +46,8 @@ public protocol ExpressionSpelling: Sendable {
     var vocabulary: Set<Name> { get }
 
     // The expression a record spells. Reached only for a record this notation
-    // claims that carries none of the form keys, and free to refuse. A key
-    // this notation names but does not offer is refused here, and so is one
-    // written in a form it does not have.
+    // claims that is not a tag's, and free to refuse. A key this notation
+    // names but does not offer is refused here, and so is one written in a
+    // form it does not have.
     func expression(from decoder: Decoder) throws -> Expression
-
-    // How a record of expressions this notation would claim is written so
-    // that it reads back as that record, or nothing where the notation has no
-    // way to write one. The writer asks before refusing: a record whose field
-    // names happen to be this notation's operators still has to travel.
-    func quoting(record fields: Value.Dictionary) -> Value?
 }

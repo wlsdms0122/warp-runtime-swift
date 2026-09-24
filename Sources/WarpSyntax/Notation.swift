@@ -50,6 +50,11 @@ public struct Notation: Sendable {
     // understood, and which procedures it spends.
     public private(set) var interpolation: Interpolation?
 
+    // Whether a mapping with no tag of its own is a record: where a value is
+    // wanted, a record of expressions, and where a type is, a record type. A
+    // document writes a record under `record`.
+    public private(set) var readsBareRecords: Bool
+
     // Whether a parameter may be written as one pair, `count: int` for
     // `{ name: count, type: int }` and `count: { type: int, enum: [1, 2] }`
     // for the record with the name inside. A document writes the record.
@@ -101,11 +106,13 @@ public struct Notation: Sendable {
     public init(
         spelling: (any ExpressionSpelling)? = nil,
         interpolation: Interpolation? = nil,
-        pairedParameter: Bool = false
+        pairedParameter: Bool = false,
+        readsBareRecords: Bool = false
     ) {
         self.spelling = spelling
         self.interpolation = interpolation
         self.pairedParameter = pairedParameter
+        self.readsBareRecords = readsBareRecords
     }
 
     // MARK: - Public

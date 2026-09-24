@@ -147,14 +147,13 @@ public struct ModuleReader: Decodable {
     }
 
     // A document says which language it is written for, and one that does not
-    // is not a document. Reading silence as the earliest would mean guessing at
-    // the one question that has to be answerable from the bytes alone, and it
-    // is what lets a file of some other kind entirely walk in and be turned
+    // is not a document. Reading silence as some version would mean guessing
+    // at the one question that has to be answerable from the bytes alone, and
+    // it is what lets a file of some other kind entirely walk in and be turned
     // away for its keys rather than for what it is.
     //
-    // Anything outside the range this reader knows is refused rather than
-    // guessed at. Below it, the document is claiming a language that never
-    // existed. Read through its own container, before anything else and before
+    // Any version but this reader's is refused rather than guessed at. Read
+    // through its own container, before anything else and before
     // the keys are judged, because everything after it is read by rules a newer
     // document may not be written to. Including which keys exist. A later
     // version adding a key would otherwise be turned away as malformed, and a
@@ -181,10 +180,13 @@ public struct ModuleReader: Decodable {
         let written = try envelope.superDecoder(forKey: key)
         let version = try written.read(Int.self)
 
-        guard (Envelope.earliest ... Envelope.version).contains(version) else {
+        // One version, because a document is spelled one way: the way the
+        // writer of this version writes it. An older document is written
+        // again, and a later one is for a reader that knows it.
+        guard version == Envelope.version else {
             throw ReadingError(
-                "this document is written for warp \(version),"
-                    + " and this reads \(Envelope.earliest) through \(Envelope.version)",
+                "this document is written for warp \(version), and this reads warp \(Envelope.version)."
+                    + " Write it again for \(Envelope.version)",
                 at: written.steps
             )
         }

@@ -327,7 +327,7 @@ extension Builder {
 
                 try mentioned(
                     in: held,
-                    at: place.key(name.spelling),
+                    at: place.part(.fields).key(name.spelling),
                     parameterized: parameterized,
                     nested: true,
                     resolve: table

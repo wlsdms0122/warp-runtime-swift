@@ -30,6 +30,10 @@ struct Workload {
     private let module: Module
     private let image: Image
 
+    // Where every program starts: a public procedure taking the number of
+    // rounds to run, by the one name every document under `program/` gives it.
+    private static let entry: Name = "entry"
+
     // MARK: - Initializer
     init(reading url: URL) async throws {
         let text = try String(contentsOf: url, encoding: .utf8)
@@ -44,7 +48,7 @@ struct Workload {
     // How long one run of `rounds` rounds takes. The program answers something it
     // computed so that no round can be skipped.
     func time(rounds: Int) async throws -> Duration {
-        try await elapsed { _ = try await Executor().run(image, arguments: ["rounds": .int(rounds)]) }
+        try await elapsed { _ = try await Executor().run(image, entry: Self.entry, arguments: ["rounds": .int(rounds)]) }
     }
 
     // How long this document costs to arrive: its text read as a value, and
@@ -70,7 +74,6 @@ struct Workload {
 
             _ = try builder.link(
                 laid.compiled + (try await builder.compile([module], against: laid)),
-                entry: "entry",
                 supplying: Vocabulary.brought
             )
         }
@@ -81,12 +84,16 @@ struct Workload {
     // nothing between them is left out. What arriving costs is `load()`.
     func once() async throws -> Duration {
         try await elapsed {
-            _ = try await Executor().run(try await Self.built(module), arguments: ["rounds": .int(1)])
+            _ = try await Executor().run(
+                try await Self.built(module),
+                entry: Self.entry,
+                arguments: ["rounds": .int(1)]
+            )
         }
     }
 
     // MARK: - Private
     private static func built(_ module: Module) async throws -> Image {
-        try await Builder().build([module] + Module.standard, entry: "entry")
+        try await Builder().build([module] + Module.standard)
     }
 }

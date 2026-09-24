@@ -76,7 +76,7 @@ struct NotationTests {
                             ]
                         ]]
                     ],
-                    "result": ["result": ["ref": "pick"]]
+                    "result": ["record": ["result": ["ref": "pick"]]]
                 ]
             ]
         ], from: .canonical)
@@ -119,24 +119,36 @@ struct NotationTests {
         #expect(condition.referencePath == path("ready"))
     }
 
-    @Test("a record a document may hold plainly is refused where a notation would claim it")
-    func aRecordAcquiredByANotationIsRefusedWhereItWouldBeRead() throws {
+    @Test("a record a notation would claim is written under `record` and read back as a record there")
+    func aRecordANotationWouldClaimIsWrittenUnderRecord() throws {
         // Given. Writing and reading are inverses, and a reading side with
-        // spellings is a different far side from one without. Written for a
-        // notation that recognises a condition by its subject key, this record
-        // would come back a message, so it has no document *there*. Even though
-        // it has one in a document, below.
+        // spellings is a different far side from one without. Written bare
+        // for a notation that recognises a condition by its subject key, these
+        // fields would come back a message. Under `record` they are a record's
+        // fields whatever they are called.
         let module = try Self.conditional(on: .record([
             "of": .reference(path("procedure")),
             "equal": .literal(.string("hey"))
         ]))
 
+        // When
+        let written = try Writer(readBy: .testing).value(of: module)
+        let read = try sut.loadDocument(written, from: .testing)
+
         // Then
-        #expect {
-            try Writer(readBy: .testing).value(of: module)
-        } throws: { error in
-            "\(error)".contains("read as a form")
+        guard
+            case let .array(body)? = written["procedures"]?["entry"]?["body"],
+            let condition = body.first?["value"]?["conditional"]?["when"],
+            case let .body(block) = read.procedures[entryName]?.implementation,
+            case let .conditional(.record(fields), _, _) = block.body.first?.expression
+        else {
+            Issue.record("a record written for a notation reads back as a record there")
+
+            return
         }
+
+        #expect(condition["record"]?["of"] == Value.dictionary(["ref": .string("procedure")]))
+        #expect(Set(fields.keys) == ["of", "equal"])
     }
 
     @Test("a record that some notation would read as a condition is still a record")
@@ -231,19 +243,19 @@ struct NotationTests {
         #expect(call.selector == Notation.testing.interpolation?.joined)
     }
 
-    @Test("a form key wins over a notation's condition, in every notation")
-    func aFormKeyIsReadAsAFormWhereverItIsWritten() async throws {
-        // Given. `{ as: <type>, of: <value> }` is a cast, and the form keys are
-        // fixed. A notation that recognises its conditions by the subject key
-        // sees the `of` and would claim the record; what it made of the `as`
-        // beside it would be a message nobody wrote, and the same document
-        // would be a cast in one notation and a send in the next.
+    @Test("a tag wins over a notation's condition, in every notation")
+    func aTagIsReadAsItsFormWhereverItIsWritten() async throws {
+        // Given. `{ as: { of: <value>, type: <type> } }` is a cast, and the
+        // tags are fixed and read before any spelling. A notation that
+        // recognises its conditions by the subject key never sees the `of`
+        // written inside the cast, so the same document is a cast in every
+        // notation rather than a send in some.
         let written: Value = [
             "parameters": [["name": "flag", "type": "any"]],
             "body": [
                 [
                     "value": ["conditional": [
-                        "when": ["as": "bool", "of": ["ref": "flag"]],
+                        "when": ["as": ["of": ["ref": "flag"], "type": "bool"]],
                         "then": [["let": "kept", "value": "yes"]]
                     ]
                 ]]
@@ -258,7 +270,7 @@ struct NotationTests {
                 case let .conditional(condition, _, _) = block.body.first?.expression,
                 case .cast = condition
             else {
-                Issue.record("`as` names a type to read, whatever else is written beside it")
+                Issue.record("`as` is a cast in every notation")
 
                 return
             }
@@ -269,23 +281,34 @@ struct NotationTests {
     func readingCarriesNoNotation() async throws {
         // Given. The spelling these tests read with, left unlowered in a
         // document. `load` takes a document, and a document has no spellings,
-        // so the record is the expression it is rather than the message some
-        // table would have made of it.
-        let module = try await sut.load([
-            "warp": .int(Envelope.version),
-            "imports": [],
-            "procedures": [
-                "entry": [
-                    "parameters": [["name": "procedure", "type": "string"]],
-                    "body": [
-                        ["let": "asked", "value": ["of": ["ref": "procedure"], "is": "hey"]]
-                    ],
-                    "result": ["ref": "asked"]
+        // so the mapping is not the message some table would have made of it:
+        // standing bare it is refused, and under `record` it is a record.
+        func document(asking asked: Value) -> Value {
+            [
+                "warp": .int(Envelope.version),
+                "imports": [],
+                "procedures": [
+                    "entry": [
+                        "parameters": [["name": "procedure", "type": "string"]],
+                        "body": [
+                            ["let": "asked", "value": asked]
+                        ],
+                        "result": ["ref": "asked"]
+                    ]
                 ]
             ]
-        ])
+        }
+        let spelled: Value = ["of": ["ref": "procedure"], "is": "hey"]
+
+        // When
+        let module = try await sut.load(document(asking: ["record": spelled]))
 
         // Then
+        #expect {
+            try sut.load(document(asking: spelled))
+        } throws: { error in
+            "\(error)".contains("a mapping where a value is wanted is one of")
+        }
         guard
             case let .body(block) = module.procedures[entryName]?.implementation,
             case let .record(fields) = block.body.first?.expression

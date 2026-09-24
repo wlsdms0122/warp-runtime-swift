@@ -56,7 +56,6 @@ enum Library {
                       type "some Element"
                     }
                   ]
-                  result null
                   returns "null"
                 }
                 "std.collection.contains" {

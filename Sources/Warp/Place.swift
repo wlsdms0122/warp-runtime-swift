@@ -250,10 +250,15 @@ public extension Place {
         case body
         case result
 
-        case subject
+        // What a cast reads, and whether the cast reads a mismatch as null,
+        // which a document writes under a key of its own.
+        case subject(optional: Bool)
         case callee
         case arguments
         case closure
+
+        // What a record is written with: its fields, each under its name.
+        case fields
 
         // A condition, and which construct holds it. The construct is carried
         // because a document does not write the two under one key (a
@@ -285,6 +290,7 @@ public extension Place {
             case .body: "body"
             case .result: "result"
             case .subject: "subject"
+            case .fields: "fields"
             case .callee: "callee"
             case .arguments: "arguments"
             case .closure: "closure"

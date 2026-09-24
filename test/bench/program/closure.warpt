@@ -5,6 +5,7 @@ warpt 1
   ]
   procedures {
     entry {
+      access "public"
       body [
         {
           let "one"
@@ -19,7 +20,6 @@ warpt 1
                   let "held"
                   value {
                     closure {
-                      body []
                       result {
                         ref "one"
                       }
@@ -29,7 +29,7 @@ warpt 1
                 {
                   let "got"
                   value {
-                    invoke {
+                    call {
                       procedure {
                         ref "held"
                       }
@@ -39,14 +39,14 @@ warpt 1
               ]
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -54,9 +54,12 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
+      parameters [
+        {
+          name "rounds"
+          type "int"
+        }
+      ]
       result {
         ref "one"
       }

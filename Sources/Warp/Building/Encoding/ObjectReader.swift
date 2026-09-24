@@ -569,7 +569,12 @@ private extension ObjectReader {
         case 9: read = .returns
         case 10: read = .body
         case 11: read = .result
-        case 12: read = .subject
+        case 12:
+            guard case let .bool(optional) = try fields.next() else {
+                throw ObjectRefused("'part' names a cast's subject without saying whether the cast reads a mismatch as null")
+            }
+
+            read = .subject(optional: optional)
         case 13: read = .callee
         case 14: read = .arguments
         case 15: read = .closure
@@ -577,6 +582,7 @@ private extension ObjectReader {
         case 17: read = .then
         case 18: read = .otherwise
         case 19: read = .rescue
+        case 20: read = .fields
         default: throw ObjectRefused("'part' names a part this reads none of")
         }
 

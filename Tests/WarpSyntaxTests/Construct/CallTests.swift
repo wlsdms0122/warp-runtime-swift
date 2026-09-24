@@ -32,18 +32,18 @@ struct CallTests {
                             "value": ["call": ["procedure": "callee", "arguments": [41, .null]]
                         ]]
                     ],
-                    "result": ["result": ["ref": "call.pair"]]
+                    "result": ["record": ["result": ["ref": "call.pair"]]]
                 ],
                 "callee": [
                     "parameters": [["name": "base", "type": "int"], ["name": "bump", "type": "int?"]],
                     "body": [
                         [
                             "let": "echo",
-                            "value": ["base": ["ref": "base"], "bump": ["ref": "bump"]]
+                            "value": ["record": ["base": ["ref": "base"], "bump": ["ref": "bump"]]]
                         ]
                     ],
-                    "result": ["pair": ["ref": "echo"]],
-                    "returns": ["pair": ["base": "int", "bump": "int?"]]
+                    "result": ["record": ["pair": ["ref": "echo"]]],
+                    "returns": ["record": ["pair": ["record": ["base": "int", "bump": "int?"]]]]
                 ]
             ]
         ])
@@ -91,7 +91,7 @@ struct CallTests {
             "procedures": [
                 "caller": [
                     "body": [["let": "call", "value": ["call": ["procedure": "some-other-file.greet"]]]],
-                    "result": ["result": ["ref": "call.said"]]
+                    "result": ["record": ["result": ["ref": "call.said"]]]
                 ]
             ]
         ])
@@ -99,8 +99,8 @@ struct CallTests {
             "procedures": [
                 "some-other-file.greet": [
                     "body": [["let": "procedure", "value": "hello"]],
-                    "result": ["said": ["ref": "procedure"]],
-                    "returns": ["said": "string"]
+                    "result": ["record": ["said": ["ref": "procedure"]]],
+                    "returns": ["record": ["said": "string"]]
                 ]
             ]
         ])
@@ -128,7 +128,7 @@ struct CallTests {
                             "value": ["call": ["procedure": "shout", "arguments": [["ref": "procedure"]]]
                         ]]
                     ],
-                    "result": ["result": ["ref": "said"]]
+                    "result": ["record": ["result": ["ref": "said"]]]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "string"]],

@@ -56,82 +56,42 @@ public extension Writer {
         return .dictionary(written)
     }
 
-    // Where the expression is going decides what may be written bare there. The
-    // form keys are read as forms wherever data appears, so every slot reserves
-    // those, and a record the notation on the far side would claim as a
-    // spelling is quoted, since data written plainly would come back as one.
-    //
-    // The second half claims nothing for a document, which is what makes it
-    // worth naming rather than assuming: `.canonical` reserves nothing beyond
-    // the form keys. It stops being empty exactly when the reading side is a
-    // notation, and then this is the only thing standing between a record and
-    // a message.
-    //
-    // `constructs` names the keys a record standing directly in this slot
-    // would be read as a construct under, which is only ever a statement's
-    // `value`: the reader takes a record there as a construct when it has
-    // exactly one key and that key is a construct's, and reads nothing that
-    // way deeper down. What is reserved is read at every depth.
-    func value(
-        of expression: Expression,
-        constructs: Set<Name> = []
-    ) throws -> Value {
-        let reserved = ExpressionReader.formKeys
-        let claiming = readBy.spelling.map { spelling in { names in spelling.claims(names, in: readBy) } } ?? { _ in false }
-
+    // An expression as a document writes it: a scalar as itself, an array as
+    // the array of what it holds, and anything else under the one key its
+    // form is read by.
+    func value(of expression: Expression) throws -> Value {
         switch expression {
-        // Data that happens to look like a form has to say it is data, and data
-        // that could not be mistaken for one says nothing.
         case let .literal(value):
-            switch try Self.spelling(of: value, reserving: reserved, claiming: claiming, constructs: constructs) {
-            case .plainly: return value
-            case .quoted: return .dictionary(["value": value])
-            }
+            return try literal(value)
 
         case let .reference(path):
-            return .dictionary(["ref": .string(path.rendered)])
+            return .dictionary([ExpressionTag.reference.key: .string(path.rendered)])
 
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
 
-        // A record of expressions is not data, so `{ value: }` cannot rescue
-        // it. Quoting one would say the fields are literals rather than things
-        // to evaluate. A record whose own field names are read as a form here
-        // has no document, and saying so beats writing one that means something
-        // else.
         case let .record(fields):
-            let taken = Self.taken(Set(fields.keys), reserving: reserved, claiming: claiming, constructs: constructs)
-            let written = Value.Dictionary(try fields.mapValues { field in try value(of: field) })
-
-            guard taken.isEmpty else {
-                // The notation says how such a record is written, or it has no
-                // document.
-                guard let quoted = readBy.spelling?.quoting(record: written) else {
-                    throw WritingError(
-                        "a record with the field(s) \(taken.sorted()) is read as a form"
-                            + " where it is written, and a record of expressions cannot be quoted"
-                    )
-                }
-
-                return quoted
-            }
-
-            return .dictionary(written)
+            return .dictionary([ExpressionTag.record.key: .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
 
         case let .closure(procedure):
-            return .dictionary([ExpressionReader.closureKey: try value(of: procedure)])
+            return .dictionary([ExpressionTag.closure.key: try value(of: procedure)])
 
         // The mark rides on the key, the way `?.` rides on a segment: one
         // spelling says the mismatch refuses and the other says it reads as
         // null, and the type itself is written once either way.
         case let .cast(read, type, optional):
             return .dictionary([
-                optional ? "as?" : "as": try value(of: type),
-                ExpressionReader.subjectKey: try value(of: read),
+                (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key: .dictionary([
+                    ExpressionReader.subjectKey: try value(of: read),
+                    ExpressionReader.typeKey: try value(of: type),
+                ]),
             ])
 
         case let .call(call):
-            return .dictionary(["call": try self.call(of: call)])
+            return .dictionary([ExpressionTag.call.key: try self.call(of: call)])
+
+        case let .apply(callee, arguments):
+            return .dictionary([ExpressionTag.call.key: try self.call(of: callee, handing: arguments)])
 
         // Everything left is a construct, and this notation spells constructs
         // in statement position only. Some of them need to be there (a loop and
@@ -155,23 +115,13 @@ public extension Writer {
         named id: String?
     ) throws -> (Name, Value) {
         switch expression {
+        // A call is a tag, read where a statement's value is the way it is
+        // everywhere else, so no table respells it.
         case let .call(call):
-            return (try spelling(CallForm.self), try self.call(of: call))
+            return (ExpressionTag.call.key, try self.call(of: call))
 
-        // A string under `procedure` reads back as a name, so a value that is
-        // literal text has no spelling there.
         case let .apply(callee, arguments):
-            if case .literal(.string) = callee {
-                throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
-            }
-
-            var written: [Name: Value] = ["procedure": try value(of: callee)]
-
-            if !arguments.isEmpty {
-                written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
-            }
-
-            return (try spelling(CallForm.self), .dictionary(written))
+            return (ExpressionTag.call.key, try self.call(of: callee, handing: arguments))
 
         case let .block(block):
             return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
@@ -184,7 +134,9 @@ public extension Writer {
                 "then": .array(try then.map(value(of:)))
             ]
 
-            if let otherwise {
+            // An empty `else` runs what no `else` runs, so it is written the
+            // one way: not at all.
+            if let otherwise, !otherwise.isEmpty {
                 written["else"] = .array(try otherwise.map(value(of:)))
             }
 
@@ -231,8 +183,25 @@ public extension Writer {
         // Whatever is left needs no name, so it is written as the expression it
         // is under the key that says "this statement is just a value".
         default:
-            return (StatementReader.valueKey, try value(of: expression, constructs: Set(registry.keys)))
+            return (StatementReader.valueKey, try value(of: expression))
         }
+    }
+
+    // A call of a value, under the same key a call of a declaration is. A
+    // string under `procedure` reads back as a name, so a value that is
+    // literal text has no spelling there.
+    private func call(of callee: Expression, handing arguments: [Expression]) throws -> Value {
+        if case .literal(.string) = callee {
+            throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
+        }
+
+        var written: [Name: Value] = ["procedure": try value(of: callee)]
+
+        if !arguments.isEmpty {
+            written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
+        }
+
+        return .dictionary(written)
     }
 
     private func call(of call: Call) throws -> Value {
@@ -312,75 +281,36 @@ public extension Writer {
         }
     }
 
-    // How data has to be written to come back as itself: as it stands, or
-    // quoted because something in it would otherwise be read as a form.
-    //
-    // The third answer is a refusal rather than a case. A procedure is code
-    // that has already closed over a scope, and a document holds neither.
-    // Quoting one would put something in the text that reading it back could
-    // not answer with, which is the same reason a natively implemented procedure has
-    // no document.
-    enum Spelling {
-        case plainly
-        case quoted
-    }
-
-    // The keys under which a record with these fields would be read as
-    // something other than a record: a reserved key wherever it stands, every
-    // key where the notation claims the record as a spelling, and a
-    // construct's key where the record is the one field under a statement's
-    // `value`. The reader's own conditions, asked here as the writer.
-    private static func taken(
-        _ keys: Set<Name>,
-        reserving reserved: Set<Name>,
-        claiming: (Set<Name>) -> Bool,
-        constructs: Set<Name>
-    ) -> Set<Name> {
-        var taken = keys.intersection(reserved)
-
-        if claiming(keys) {
-            taken.formUnion(keys)
-        }
-
-        if keys.count == 1 {
-            taken.formUnion(keys.intersection(constructs))
-        }
-
-        return taken
-    }
-
-    // Whether data is written as itself or under `{ value: }`. The reader asks
-    // this too, with what its notation claims, so what it refuses as a second
-    // spelling is exactly what no writer would have quoted.
-    static func spelling(
-        of value: Value,
-        reserving reserved: Set<Name>,
-        claiming: (Set<Name>) -> Bool = { _ in false },
-        constructs: Set<Name> = []
-    ) throws -> Spelling {
+    // Data as a document writes it: a record under `record` like every
+    // record, whatever its fields are called.
+    private func literal(_ value: Value) throws -> Value {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
-            return .plainly
+            return value
 
         // A named record is data wherever it stands, and is read as such.
         case let .record(record) where record.name != nil:
-            return .plainly
+            return value
 
         case let .array(elements):
-            return try elements.reduce(.plainly) { carried, element in
-                try spelling(of: element, reserving: reserved, claiming: claiming) == .plainly ? carried : .quoted
+            return .array(try elements.map(literal))
+
+        // A dictionary and a record read back apart only by the type they
+        // stand in, and `record` reads back as a record. A dictionary is
+        // written as a record cast to the dictionary it is, which names what
+        // it holds, and only its author can say that.
+        case .dictionary:
+            throw WritingError(
+                "a dictionary has no document of its own. Write a record and cast it"
+                    + " to the `dictionary<T>` it is"
+            )
+
+        case .record:
+            let fields = try (value.asDictionary?.entries ?? []).map { entry in
+                (name: entry.name, value: try literal(entry.value))
             }
 
-        case .record, .dictionary:
-            guard let record = value.asDictionary,
-                taken(Set(record.names), reserving: reserved, claiming: claiming, constructs: constructs).isEmpty
-            else {
-                return .quoted
-            }
-
-            return try record.values.reduce(.plainly) { carried, field in
-                try spelling(of: field, reserving: reserved, claiming: claiming) == .plainly ? carried : .quoted
-            }
+            return .dictionary([ExpressionTag.record.key: .dictionary(try Value.Dictionary(fields))])
 
         case .procedure:
             throw WritingError(

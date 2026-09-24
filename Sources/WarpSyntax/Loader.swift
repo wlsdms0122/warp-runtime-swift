@@ -83,7 +83,7 @@ public struct Loader: Sendable {
         // question below. A module is checked where it is made, so the stamp
         // goes in with what is being made rather than onto what came back. A
         // refusal is exactly the moment somebody wants the file it came from.
-        let module = try reading { try Module(try spelled(value, in: document), identity: identity) }
+        let module = try reading(by: .standard) { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
 
         // What a document imports is read before the program it belongs to, so
         // a caller decides whether to grant before it decides whether to link.
@@ -103,6 +103,23 @@ public struct Loader: Sendable {
             throw ReadingError(
                 "a document says what it imports, and this one does not."
                     + " Write `\(Envelope.importsKey)`, empty where the program uses nothing"
+            )
+            .read(in: document)
+        }
+
+        // A document says each thing one way: what the writer writes for the
+        // program it read. Anything else is a second text for one program, and
+        // a second identity for it.
+        // A document is read and written by the standard table, the one
+        // `canonical` writes with. A table a caller composes is for what it
+        // lowers into a document, and a document is spelled one way.
+        let spelling = try Writer(registry: .standard, readBy: .canonical).value(of: module)
+
+        if let (steps, held) = value.divergence(from: spelling) {
+            throw ReadingError(
+                "a document says each thing one way, and this says it another way here."
+                    + " The one way writes \(try held.map(TextEncoding.line(from:)) ?? "nothing")",
+                at: steps
             )
             .read(in: document)
         }
@@ -151,9 +168,8 @@ public struct Loader: Sendable {
 
         // Written for the reader every document has: the standard table and
         // no notation. What this loader's own table reads as a construct is
-        // spent here, so a document is quoted by the table that will read it
-        // and not by the one that wrote it, and what reads the document back
-        // is a loader with the standard table.
+        // spent here, and what reads the document back reads it by the
+        // standard table.
         return try Writer(registry: .standard, readBy: .canonical)
             .value(of: try spelled(stamped, in: document(of: stamped), from: notation))
     }
@@ -216,13 +232,7 @@ public struct Loader: Sendable {
     // because what to link is the caller's statement and the modules in it may
     // have come from anywhere.
     public func reading<T>(_ refused: () throws -> T) throws -> T {
-        do {
-            return try refused()
-        } catch let refusal as any WarpError {
-            guard let place = refusal.place else { throw refusal }
-
-            throw refusal.placed(place.written(by: registry))
-        }
+        try reading(by: registry, refused)
     }
 
     // The same, for a caller whose reading runs. A build folds constants, which
@@ -238,15 +248,26 @@ public struct Loader: Sendable {
     }
 
     // MARK: - Private
+    // The same, with the places written by the table the text was read by.
+    private func reading<T>(by table: ConstructRegistry, _ refused: () throws -> T) throws -> T {
+        do {
+            return try refused()
+        } catch let refusal as any WarpError {
+            guard let place = refusal.place else { throw refusal }
+
+            throw refusal.placed(place.written(by: table))
+        }
+    }
 
     // What a document spells, unjudged. Not a door: nothing here has been held
     // to the language's rules, and `load` is the one that has.
     private func spelled(
         _ value: Value,
         in document: Place.Document,
-        from notation: Notation = .canonical
+        from notation: Notation = .canonical,
+        by table: ConstructRegistry? = nil
     ) throws -> Draft {
-        try read(ModuleReader.self, from: value, in: document, from: notation).draft
+        try read(ModuleReader.self, from: value, in: document, from: notation, by: table).draft
     }
 
     // The document a refusal about reading this value is in. The identity is
@@ -293,7 +314,8 @@ public struct Loader: Sendable {
         _ type: T.Type,
         from value: Value,
         in document: Place.Document,
-        from notation: Notation = .canonical
+        from notation: Notation = .canonical,
+        by table: ConstructRegistry? = nil
     ) throws -> T {
         // Held here rather than in each reader below: a value a caller built
         // reaches every reader through this one door, and past the bound the
@@ -303,7 +325,7 @@ public struct Loader: Sendable {
         }
 
         let userInfo: [CodingUserInfoKey: Any] = [
-            .constructRegistry: registry,
+            .constructRegistry: table ?? registry,
             .notation: notation
         ]
 

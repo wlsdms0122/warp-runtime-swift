@@ -54,18 +54,6 @@ struct UnwritableTests {
         }
     }
 
-    @Test("a record whose fields are read as a form has no document")
-    func aRecordThatWouldReadAsAFormIsRefused() {
-        // Given. A record of expressions cannot be quoted, because `{ value: }`
-        // says the fields are data rather than things to work out
-        let sut = try? sut.value(
-            of: module(binding: .record(["ref": .literal(.string("not-a-path"))]))
-        )
-
-        // Then
-        #expect(sut == nil)
-    }
-
     @Test("a declared type named like a built-in has no document")
     func aTypeNamedLikeABuiltinIsRefused() {
         // Given. Nothing stops a module declaring a type called `int`; a
@@ -115,21 +103,6 @@ struct UnwritableTests {
 
         #expect(throws: WritingError.self) {
             try sut.value(of: TypeExpression.ranged(.fraction(to: .through(.nan))))
-        }
-    }
-
-    @Test("a record type shaped like a procedure type has no document")
-    func aRecordTypeThatWouldReadAsAProcedureIsRefused() {
-        // Given. A record and a procedure are both written as a mapping, and
-        // the key that tells them apart is the procedure's
-        #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.record(["procedure": .int]))
-        }
-
-        // Two fields cannot be mistaken for one. The procedure form is a single
-        // key, so this stays a record
-        #expect(throws: Never.self) {
-            try sut.value(of: TypeExpression.record(["procedure": .int, "other": .bool]))
         }
     }
 

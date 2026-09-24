@@ -184,8 +184,8 @@ enum ObjectCoverageFixture {
 
     static let everyPart: [Place.Part] = [
         .procedures, .constants, .variables, .types, .constraints, .contracts, .satisfies,
-        .imports, .parameters, .returns, .body, .result, .subject, .callee, .arguments,
-        .closure, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
+        .imports, .parameters, .returns, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
+        .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]
 
     static let everyConstruct: [Construct] = [

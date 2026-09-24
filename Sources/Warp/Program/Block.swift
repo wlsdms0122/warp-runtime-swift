@@ -28,9 +28,16 @@ public struct Block: Sendable {
     }
 
     // MARK: - Initializer
+    // A result of null is no result: a document reads `result null` as
+    // nothing written, so the model holds the one shape either way.
     public init(body: [Statement], result: Expression? = nil) {
         self.body = body
-        self.result = result
+
+        if case .literal(.null)? = result {
+            self.result = nil
+        } else {
+            self.result = result
+        }
     }
 
     // MARK: - Public

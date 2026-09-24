@@ -132,8 +132,8 @@ public extension Expression {
         case let .closure(procedure):
             procedure.block?.walked(at: here, stepping: stepping) ?? []
 
-        case let .cast(value, _, _):
-            inner(value, under: .subject)
+        case let .cast(value, _, optional):
+            inner(value, under: .subject(optional: optional))
 
         // A leave writes what it carries directly under its own construct,
         // which the statement holding it already stepped into.
@@ -146,7 +146,7 @@ public extension Expression {
             }
 
         case let .record(record):
-            named(record, under: here)
+            named(record, under: stepping(here, .part(.fields)))
 
         case let .apply(callee, written):
             inner(callee, under: .callee) + arguments(written)

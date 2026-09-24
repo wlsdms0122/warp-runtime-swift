@@ -40,7 +40,7 @@ struct SpellingTests {
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "pick"]]
+            "result": ["record": ["result": ["ref": "pick"]]]
         ], importing: ["std.logic.equal"])
 
         // When
@@ -62,16 +62,16 @@ struct SpellingTests {
 
     @Test("a procedure can be given up, and a built-in respelled by giving it up first")
     func removingFreesTheKey() throws {
-        // Given. A notation that wants `call` for something of its own takes
+        // Given. A notation that wants `loop` for something of its own takes
         // it by dropping ours, which is why a rename here is not a rename of
         // the language
         let sut = try ConstructRegistry.standard
-            .removing("call")
-            .registering(CallForm.self, as: "invoke")
+            .removing("loop")
+            .registering(LoopForm.self, as: "repeat")
 
         // Then
-        #expect(sut.form(for: "call") == nil)
-        #expect(sut.form(for: "invoke") != nil)
+        #expect(sut.form(for: "loop") == nil)
+        #expect(sut.form(for: "repeat") != nil)
     }
 
     @Test("a claimed procedure is never silently replaced, however it was claimed")
@@ -82,6 +82,16 @@ struct SpellingTests {
         // When / Then. The guard is on the procedure, not on the form
         #expect(throws: ValidationError.self) {
             try sut.registering(LoopForm.self, as: "unless")
+        }
+    }
+
+    @Test("a construct is not registered under an expression's tag", arguments: ["record", "ref", "as", "closure"])
+    func aTagIsNoConstructKey(tag: String) {
+        // Given / When / Then. A tag is read as its expression under a
+        // statement's `value` too, so a construct under one would take a
+        // record or a reference for itself
+        #expect(throws: ValidationError.self) {
+            try ConstructRegistry.standard.removing("conditional").registering(ConditionalForm.self, as: Name(tag))
         }
     }
 

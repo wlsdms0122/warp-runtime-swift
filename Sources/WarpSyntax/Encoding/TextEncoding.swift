@@ -45,6 +45,19 @@ public enum TextEncoding {
         return written
     }
 
+    // The same writing on one line and without the envelope, for a sentence
+    // that quotes a value.
+    static func line(from value: Value) throws -> String {
+        var written = ""
+
+        try write(value, at: 0, into: &written, within: Envelope.nesting)
+
+        return written
+            .split(separator: "\n")
+            .map { line in line.trimmingCharacters(in: .whitespaces) }
+            .joined(separator: " ")
+    }
+
     public static func data(from value: Value) throws -> Data {
         Data(try text(from: value).utf8)
     }

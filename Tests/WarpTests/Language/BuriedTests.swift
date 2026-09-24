@@ -146,7 +146,7 @@ struct BuriedTests {
         }
 
         // Then
-        #expect(casts == ["entry.alpha", "entry.beta", "entry.gamma"])
+        #expect(casts == ["entry.fields.alpha", "entry.fields.beta", "entry.fields.gamma"])
 
         // And what a call is written with is walked in position order, each
         // argument under its own place.

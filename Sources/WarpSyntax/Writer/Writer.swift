@@ -27,21 +27,11 @@ public struct Writer: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
 
-    // Which notation the result has to survive being read by. The far side, not
-    // this side. Nothing here writes a spelling, so this never spells anything;
-    // it is used to *avoid* writing data that the reader over there would take
-    // for one.
-    //
-    // The contract is that writing and reading are inverses, and a reading side
-    // with spellings is a different far side from one without. A record with a
-    // field called `of` is data in a document and a condition in a notation that
-    // recognises one by its subject, so writing it plainly is only safe when
-    // whoever reads it back agrees.
-    //
-    // It is deliberately not paired with a `Loader`'s notation, because they
-    // answer different questions: a loader's says what the input is written in,
-    // and this says who the output is for. A front end is exactly where the two
-    // differ. It reads its own notation and writes for the wire.
+    // Which notation the result is read by: the far side, not this side. It
+    // decides whether a parameter is written as one pair, which only a
+    // notation that reads pairs takes back. A loader's notation says what an
+    // input is written in, and this says who the output is for; a front end is
+    // where the two differ.
     public let readBy: Notation
 
     // MARK: - Initializer
@@ -294,25 +284,15 @@ public struct Writer: Sendable {
             )
 
         // A record, a procedure and a type handed on once are all written as a
-        // mapping, and the key is what tells them apart. A record whose only
-        // field is a key the reading takes some other way would come back as
-        // that other thing, or not come back at all.
+        // mapping, and the one key is what tells them apart.
         case let .record(fields):
-            guard fields.count != 1 || !TypeReader.reserves(fields.keys.first!) else {
-                throw WritingError(
-                    "a record whose only field is '\(fields.keys.first!)' is read as"
-                        + " the form that key belongs to, and a document has no way"
-                        + " to tell the two apart"
-                )
-            }
-
-            return .dictionary(try fields.mapValues(value(of:)))
+            return .dictionary([TypeReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
 
         // Written under its own key, which is where a record can carry it: the
         // type a declared type is handed on once is usually written inline,
         // and there is no front of a record to write a keyword on.
         case let .linear(inner):
-            return .dictionary([try Name(TypeReader.linearKey): try value(of: inner)])
+            return .dictionary([TypeReader.linearKey: try value(of: inner)])
 
         // All four marks are written the same way, so the writing is said once
         // below. They are matched one to a case because the mark a case carries

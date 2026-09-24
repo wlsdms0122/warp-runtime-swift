@@ -386,7 +386,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "d0cf00/types.wallet.Coin.amount")
+        #expect(error?.place?.rendered == "d0cf00/types.wallet.Coin.fields.amount")
     }
 
     @Test("a membership is placed the same way")

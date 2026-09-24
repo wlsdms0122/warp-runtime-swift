@@ -94,21 +94,17 @@ struct WriterTests {
     }
 
     @Test("a named record is data wherever it stands, written plainly and read back so")
-    func aNamedRecordIsNeverQuoted() throws {
-        // Given. A field named for a form key, under a name that makes the
-        // record data
-        let point = try Value.holding([(name: Name("value"), value: Value.int(1))], named: "Point")
+    func aNamedRecordIsWrittenPlainly() throws {
+        // Given. A field named for a tag, under a name that makes the record
+        // data
+        let point = try Value.holding([(name: Name("ref"), value: Value.int(1))], named: "Point")
 
-        // Then. The writer leaves it as it is, the reader reads it as itself,
-        // and the escape around it is refused as a second spelling
-        #expect(try Writer.spelling(of: point, reserving: ExpressionReader.formKeys) == .plainly)
+        // Then. The writer leaves it as it is and the reader reads it as itself
+        #expect(try Writer().value(of: Expression.literal(point)) == point)
         guard case .literal(let read) = try ExpressionReader.read(point), read == point else {
             Issue.record("the named record was not read as itself")
 
             return
-        }
-        #expect(throws: (any Error).self) {
-            try ExpressionReader.read(.dictionary(["value": point]))
         }
     }
 
@@ -231,11 +227,11 @@ struct WriterTests {
                             ]
                         ]
                     ],
-                    "result": [
+                    "result": ["record": [
                         "picked": ["ref": "pick"],
                         "sizes": ["ref": "walked"],
                         "line": ["ref": "line"]
-                    ]
+                    ]]
                 ]
             ]
         ]
@@ -294,16 +290,18 @@ struct WriterTests {
         #expect(message["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
 
-    @Test("data that would read as a form is written as data")
-    func dataThatLooksLikeAFormIsQuoted() throws {
-        // Given. A payload with a field called `ref` is not a reference, and
-        // writing it bare would make a document that loads into something else
+    @Test("a record whose field is named like a tag is written under `record` and read back as a record")
+    func aFieldNamedLikeATagIsWrittenUnderRecord() throws {
+        // Given. A payload with a field called `ref` is not a reference, and a
+        // record of expressions with one is not either
         let module = try Module(
             procedures: [
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("payload"), expression: .literal(.dictionary(["ref": .string("not-a-path")]))
+                        Statement(binding: .constant("payload"), expression: .record(["ref": .literal(.string("not-a-path"))])
+                        ),
+                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.key("payload")])])
                         )
                     ]
                 )
@@ -316,15 +314,21 @@ struct WriterTests {
 
         // Then
         guard
+            case let .array(body)? = written["procedures"]?["entry"]?["body"],
             case let .body(block) = read.procedures["entry"]?.implementation,
-            case let .literal(carried) = block.body.first?.expression
+            block.body.count == 2,
+            case let .record(payload) = block.body[0].expression,
+            case let .record(held) = block.body[1].expression
         else {
-            Issue.record("a quoted payload is a literal")
+            Issue.record("a record written under `record` reads back as a record")
 
             return
         }
 
-        #expect(carried == .dictionary(["ref": .string("not-a-path")]))
+        #expect(body.first?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
+        #expect(body.last?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
+        #expect(payload["ref"]?.constantValue == .string("not-a-path"))
+        #expect(held["ref"]?.referencePath == [.key("payload")])
     }
 
     @Test("a notation that gave up a procedure cannot write what it said")
@@ -576,17 +580,16 @@ struct WriterTests {
                 )
             ]
         ),
-        // Data that would read as a form, quoted, and a variable written twice
+        // Data whose fields are named like tags, and a variable written twice
         try! Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("payload"), expression: .literal(
-                                .dictionary(["ref": .string("not-a-path"), "deep": .array([
-                                    .dictionary(["value": .int(1)])
-                                ])])
-                            )
+                        Statement(binding: .constant("payload"), expression: .record([
+                                "ref": .literal(.string("not-a-path")),
+                                "deep": .array([.record(["value": .literal(.int(1))])])
+                            ])
                         ),
                         Statement(binding: .variable("count"), expression: .literal(.int(0))),
                         Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))
@@ -608,7 +611,7 @@ struct WriterTests {
         "warp": 1,
         "imports": ["std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
         "description": "one of every type",
-        "types": ["Task": ["done": "bool", "id": "string"]],
+        "types": ["Task": ["record": ["done": "bool", "id": "string"]]],
         "constraints": ["Scalar": ["int", "string"]],
         "const": ["limit": 10],
         "procedures": [
@@ -622,8 +625,8 @@ struct WriterTests {
                 "returns": "dictionary<any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
-                    ["let": "pair", "value": ["a": ["ref": "procedure"], "b": 2]],
-                    ["let": "quoted", "value": ["value": ["ref": "not-a-path"]]],
+                    ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
+                    ["let": "tagged", "value": ["record": ["ref": "not-a-path"]]],
                     ["var": "seen", "value": 0],
                     ["let": "indexed", "value": ["ref": "names[0]"]],
                     ["let": "computed", "value": ["ref": "names[seen].count"]],
@@ -696,7 +699,7 @@ struct WriterTests {
                         ]
                     ]]
                 ],
-                "result": ["result": ["ref": "pick"]]
+                "result": ["record": ["result": ["ref": "pick"]]]
             ],
             "typed": [
                 "parameters": [
@@ -705,7 +708,7 @@ struct WriterTests {
                     ["name": "how", "type": ["const procedure": ["parameters": ["int"], "returns": "bool"]]],
                     ["name": "of", "type": "string"],
                     ["name": "parameter", "type": "some Element"],
-                    ["name": "shaped", "type": ["done": "bool", "id": "string"]]
+                    ["name": "shaped", "type": ["record": ["done": "bool", "id": "string"]]]
                 ],
                 "returns": "never",
                 "bounds": ["T": "Scalar"],
@@ -718,10 +721,10 @@ struct WriterTests {
     // usually is. Spellings and all, since what comes out the far side is the
     // thing under test.
     static let corpus: [Value] = [
-        // Literals, references, records, arrays and quoting
+        // Literals, references, records, arrays and a field named like a tag
         [
             "description": "the types that need no name",
-            "types": ["Task": ["id": "string", "done": "bool"]],
+            "types": ["Task": ["record": ["id": "string", "done": "bool"]]],
             "const": ["limit": 10],
             "procedures": [
                 "entry": [
@@ -733,12 +736,12 @@ struct WriterTests {
                     "returns": "dictionary<any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
-                        ["let": "pair", "value": ["a": ["ref": "procedure"], "b": 2]],
-                        ["let": "quoted", "value": ["value": ["ref": "literal-text"]]],
+                        ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
+                        ["let": "tagged", "value": ["record": ["ref": "literal-text"]]],
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
                     ],
-                    "result": ["result": ["ref": "pair"]]
+                    "result": ["record": ["result": ["ref": "pair"]]]
                 ]
             ]
         ],
@@ -791,7 +794,7 @@ struct WriterTests {
                         ]],
                         ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]]
                     ],
-                    "result": ["result": ["ref": "pick"]]
+                    "result": ["record": ["result": ["ref": "pick"]]]
                 ]
             ]
         ],
@@ -837,7 +840,7 @@ struct WriterTests {
                             ]
                         ]]
                     ],
-                    "result": ["result": ["ref": "tried"]]
+                    "result": ["record": ["result": ["ref": "tried"]]]
                 ]
             ]
         ],
@@ -929,7 +932,7 @@ struct WriterTests {
                             "value": ["format": "${procedure}!", "with": ["procedure": ["ref": "procedure"]]]
                         ]
                     ],
-                    "result": ["result": ["ref": "line"]]
+                    "result": ["record": ["result": ["ref": "line"]]]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "string"]],
