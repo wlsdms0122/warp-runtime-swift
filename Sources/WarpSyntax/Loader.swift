@@ -110,10 +110,12 @@ public struct Loader: Sendable {
         // A document says each thing one way: what the writer writes for the
         // program it read. Anything else is a second text for one program, and
         // a second identity for it.
-        if let steps = value.divergence(from: try Writer(registry: .standard, readBy: .canonical).value(of: module)) {
+        let spelling = try Writer(registry: registry, readBy: .canonical).value(of: module)
+
+        if let steps = value.divergence(from: spelling) {
             throw ReadingError(
                 "a document says each thing one way, and this says it another way here."
-                    + " Write it as the writer writes it",
+                    + " The one way writes \(spelling.spelled(at: steps))",
                 at: steps
             )
             .read(in: document)

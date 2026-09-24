@@ -137,13 +137,23 @@ public struct ConstructRegistry: Sendable {
             throw ValidationError("construct key '\(key)' is already registered", at: nil)
         }
 
-        // `value` is the key an expression quotes a literal under, read
-        // wherever an expression is, so a construct registered under it would
-        // never be reached: the statement reader passes that procedure by.
+        // `value` is the key a statement writes what it runs under, so a
+        // construct registered under it would never be reached.
         guard key != StatementReader.valueKey else {
             throw ValidationError(
-                "construct key '\(key)' is the procedure a statement writes its expression under,"
+                "construct key '\(key)' is the key a statement writes its expression under,"
                     + " and no construct sits under it",
+                at: nil
+            )
+        }
+
+        // A tag is read as its expression wherever one stands, a statement's
+        // `value` included, so a construct under a tag would take a record or a
+        // reference for itself. `call` is the one tag that is a construct too,
+        // and only its own form stands under it.
+        guard ExpressionTag(key) == nil || (key == CallForm.key && ObjectIdentifier(form) == ObjectIdentifier(CallForm.self)) else {
+            throw ValidationError(
+                "construct key '\(key)' is an expression's tag, and an expression is read under it",
                 at: nil
             )
         }

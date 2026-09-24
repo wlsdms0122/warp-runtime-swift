@@ -31,14 +31,11 @@ import Warp
 public struct ExpressionReader: Decodable {
     // MARK: - Property
     // The keys a mapping is an expression by, one to a mapping.
-    public static let tags: Set<Name> = [
-        "ref", "record", "call", closureKey, "as", "as?",
-    ]
+    public static let tags = Set(ExpressionTag.allCases.map(\.key))
 
-    // The key a closure literal is written under. Named because a place read
-    // in a document's keys asks for it, and a key spelled in two files is a
-    // key the two can come to disagree about.
-    static let closureKey: Name = "closure"
+    // The key a closure literal is written under, which a place read in a
+    // document's keys asks for.
+    static let closureKey = ExpressionTag.closure.key
 
     // What a cast reads, inside the cast's own mapping.
     static let subjectKey: Name = "of"
@@ -124,14 +121,27 @@ public struct ExpressionReader: Decodable {
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        if record.count == 1, let tag = record.names.first, Self.tags.contains(tag) {
+        if record.count == 1, let (key, written) = record.entries.first, let tag = ExpressionTag(key) {
+            let inside = steps + [.key(key.spelling)]
+
             switch tag {
-            case "ref": return try reference(in: record)
-            case "record": return try fields(under: record, at: steps, in: decoder)
-            case "call": return try call(in: record, at: steps, in: decoder)
-            case Self.closureKey: return try closure(in: record, at: steps, in: decoder)
-            default: return try cast(in: record, at: steps, in: decoder)
+            case .reference: return try reference(written)
+            case .record: return try fields(under: written, at: inside, in: decoder)
+            case .call: return try call(written, at: steps, in: decoder)
+            case .closure: return try closure(written, at: steps, in: decoder)
+            case .cast: return try cast(written, optional: false, at: inside, in: decoder)
+            case .optionalCast: return try cast(written, optional: true, at: inside, in: decoder)
             }
+        }
+
+        // A tag stands alone in every notation, whatever a notation's
+        // spellings would make of the keys beside it.
+        guard Set(record.names).isDisjoint(with: Self.tags) else {
+            throw ExpressionFormError(
+                "\(Set(record.names).intersection(Self.tags).map { tag in "`\(tag)`" }.sorted().joined(separator: ", "))"
+                    + " stands alone in its mapping. A record with that field is"
+                    + " written { record: { … } } (found keys: \(record.names))"
+            )
         }
 
         if let spelled = try spelled(record, at: steps, in: decoder) { return spelled }
@@ -146,17 +156,6 @@ public struct ExpressionReader: Decodable {
                     + " \(Self.tags.map { tag in "`\(tag)`" }.sorted().joined(separator: ", ")),"
                     + " under its one key. A record is written { record: { … } }"
                     + " (found keys: \(record.names))"
-            )
-        }
-
-        // A tag written beside other keys is not a field name here either: a
-        // record holding one is written under `record`, the way a document
-        // writes every record.
-        guard Set(record.names).isDisjoint(with: Self.tags) else {
-            throw ExpressionFormError(
-                "\(Set(record.names).intersection(Self.tags).map { tag in "`\(tag)`" }.sorted().joined(separator: ", "))"
-                    + " stands alone in its mapping. A record with that field is"
-                    + " written { record: { … } } (found keys: \(record.names))"
             )
         }
 
@@ -185,15 +184,15 @@ public struct ExpressionReader: Decodable {
 
     // `{ record: { … } }`: the fields, each an expression.
     private static func fields(
-        under record: Value.Dictionary,
+        under written: Value,
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        guard let written = record["record"]?.asDictionary else {
+        guard let record = written.asDictionary else {
             throw ExpressionFormError("{ record: } takes a mapping of its fields")
         }
 
-        return try fields(in: written, at: steps + [.key("record")], in: decoder)
+        return try fields(in: record, at: steps, in: decoder)
     }
 
     // A record of expressions, in the record's order, so that a record with
@@ -214,14 +213,8 @@ public struct ExpressionReader: Decodable {
         )
     }
 
-    private static func reference(in record: Value.Dictionary) throws -> Expression {
-        guard record.count == 1 else {
-            throw ExpressionFormError(
-                "`ref` stands alone in its mapping (found keys: \(record.names))"
-            )
-        }
-
-        guard case let .string(rendered)? = record["ref"] else {
+    private static func reference(_ written: Value) throws -> Expression {
+        guard case let .string(rendered) = written else {
             throw ExpressionFormError(
                 "{ ref: } takes a path string like a.b[0]"
             )
@@ -237,19 +230,18 @@ public struct ExpressionReader: Decodable {
     // `{ as: { of: <value>, type: <type> } }`, and `as?` for the reading that
     // takes a mismatch as null.
     private static func cast(
-        in record: Value.Dictionary,
-        at steps: [Place.Step],
+        _ written: Value,
+        optional: Bool,
+        at inside: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        let key = record.names[0]
-        let optional = key == "as?"
-        let inside = steps + [.key(key.spelling)]
+        let key = (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key
 
         guard
-            let cast = record[key]?.asDictionary,
+            let cast = written.asDictionary,
             cast.count == 2,
-            let read = cast[Self.subjectKey],
-            let written = cast["type"]
+            let subject = cast[Self.subjectKey],
+            let spelled = cast["type"]
         else {
             throw ExpressionFormError("{ \(key): } takes { of: <value>, type: <type> }")
         }
@@ -260,7 +252,7 @@ public struct ExpressionReader: Decodable {
         let type: TypeExpression
 
         do {
-            if case let .string(spelling) = written {
+            if case let .string(spelling) = spelled {
                 let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
 
                 type = try TypeReader.parse(spelling) { name in notation.qualified(name, as: .type) }
@@ -272,7 +264,7 @@ public struct ExpressionReader: Decodable {
                     )
                 }
 
-                type = try TypeReader(from: ValueDecoder(below: decoder, key: "type", holding: written, at: inside))
+                type = try TypeReader(from: ValueDecoder(below: decoder, key: "type", holding: spelled, at: inside))
                     .type
             }
         } catch let error as TypeFormError {
@@ -280,24 +272,17 @@ public struct ExpressionReader: Decodable {
         }
 
         return .cast(
-            try Self.read(read, at: inside + [.key(Self.subjectKey.spelling)], in: decoder),
+            try Self.read(subject, at: inside + [.key(Self.subjectKey.spelling)], in: decoder),
             as: type,
             optional: optional
         )
     }
 
     private static func closure(
-        in record: Value.Dictionary,
+        _ written: Value,
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        guard record.count == 1, let written = record[Self.closureKey] else {
-            throw ExpressionFormError(
-                "a record with `closure` must be exactly { closure: <procedure> }"
-                    + " (found keys: \(record.names))"
-            )
-        }
-
         guard let decoder else {
             throw ExpressionFormError(
                 "{ closure: } cannot be read here. A closure carries statements,"
@@ -321,17 +306,10 @@ public struct ExpressionReader: Decodable {
     }
 
     private static func call(
-        in record: Value.Dictionary,
+        _ written: Value,
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        guard record.count == 1, let written = record["call"] else {
-            throw ExpressionFormError(
-                "a record with `call` must be exactly { call: <call> }"
-                    + " (found keys: \(record.names))"
-            )
-        }
-
         guard let decoder else {
             throw ExpressionFormError(
                 "{ call: } cannot be read here. A call may carry bodies,"
