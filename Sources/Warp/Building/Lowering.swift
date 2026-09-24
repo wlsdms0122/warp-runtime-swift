@@ -847,8 +847,8 @@ struct Lowering {
             throw BuildError.unjudged("a call to '\(call.selector)' with nothing at its first position", at: place)
         }
 
-        guard call.arguments.count <= asked.signature.parameters.count else {
-            throw BuildError.unjudged("a call to '\(call.selector)' with more arguments than it asks", at: place)
+        guard call.arguments.count == asked.signature.parameters.count else {
+            throw BuildError.unjudged("a call to '\(call.selector)' with another count than it asks", at: place)
         }
 
         // The first is read here, once, and the run hands what it read to

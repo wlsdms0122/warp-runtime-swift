@@ -1597,7 +1597,19 @@ extension Builder {
                 ask: ask
             )
 
-            guard called.reading.couldBeProcedure(in: context.loweredTypes) else {
+            // Read once, and every judgment below asks this reading: whether
+            // it could be called, what it takes and what it answers.
+            let callee = called.reading.slotUnwrapped.resolved(in: context.loweredTypes)
+
+            // Null is not called through, the way it is not read through.
+            if case .nullable = callee {
+                throw BuildError(
+                    "calls a value of \(called.reading.rendered(in: context.loweredTypes)), which may be null",
+                    at: place.part(.callee)
+                )
+            }
+
+            guard callee.couldBeProcedure(in: context.loweredTypes) else {
                 throw BuildError(
                     "calls a value of \(called.reading.rendered(in: context.loweredTypes)),"
                         + " and only a procedure can be called",
@@ -1627,10 +1639,10 @@ extension Builder {
             // a count the slot's type does not take is one no run could take,
             // and an argument the slot's type refuses is refused here the way
             // a call's is.
-            if case let .procedure(parameters?, _, _, _) = called.reading {
+            if case let .procedure(parameters?, _, _, _) = callee {
                 guard arguments.count == parameters.count else {
                     throw BuildError(
-                        "applies a value of \(called.reading.rendered(in: context.loweredTypes))"
+                        "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
                             + " with \(arguments.count) arguments, and it takes \(parameters.count)",
                         at: place.part(.arguments)
                     )
@@ -1639,7 +1651,7 @@ extension Builder {
                 for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
                 where !parameter.slotUnwrapped.accepts(reading, in: context.loweredTypes) {
                     throw BuildError(
-                        "applies a value with \(reading.rendered(in: context.loweredTypes))"
+                        "calls a value with \(reading.rendered(in: context.loweredTypes))"
                             + " where it takes \(parameter.rendered(in: context.loweredTypes))",
                         at: place.part(.arguments).index(position)
                     )
@@ -1658,14 +1670,14 @@ extension Builder {
                             in: context.loweredTypes
                         )
                     } catch {
-                        throw BuildError("applies a value: \(error)", at: place.part(.arguments).index(position))
+                        throw BuildError("calls a value: \(error)", at: place.part(.arguments).index(position))
                     }
                 }
             }
 
             let answers: LoweredType
 
-            if case let .procedure(_, returns?, _, _) = called.reading {
+            if case let .procedure(_, returns?, _, _) = callee {
                 answers = returns
             } else {
                 answers = .any

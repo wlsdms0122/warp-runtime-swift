@@ -29,7 +29,8 @@ let greet = Procedure(
                         .array([
                             .literal(.string("hello, ")),
                             .call(Call(selector: "std.text.text", arguments: [.reference([.key("name", optional: false)])]))
-                        ])
+                        ]),
+                        .literal(.string(""))
                     ]
                 )
             )

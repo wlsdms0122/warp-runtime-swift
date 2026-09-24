@@ -160,7 +160,15 @@ public struct Signature: Sendable, Equatable {
         over slots: [Slot],
         in table: LoweredTypeTable
     ) throws -> [Value] {
-        try settle(given.map { value in Optional(value) }, over: slots, in: table).compactMap { value in value }
+        guard given.count == slots.count else {
+            throw ArgumentError(
+                "parameters: \(slots.count) declared, and \(given.count) given"
+            )
+        }
+
+        return try zip(slots, given).map { slot, value in
+            try slot.checking(value, at: "input '\(slot.name)'", in: table)
+        }
     }
 
     // The boundary itself, over arguments standing at their parameter's
