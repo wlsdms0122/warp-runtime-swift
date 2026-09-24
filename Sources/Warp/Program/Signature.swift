@@ -114,25 +114,22 @@ public struct Signature: Sendable, Equatable {
 
     // MARK: - Internal
     // Why handing `count` arguments by position does not fit this
-    // declaration, or nil where it does: no more than it takes, and every
-    // position left off at the end one whose type reads absence as null.
-    // Asked of the declared parameters rather than of what a call filled them
-    // with, since the run's boundary asks the same: a bare type parameter is
-    // never left out, whatever one call read it as.
+    // declaration, said by the names it declares, or nil where it fits. Asked
+    // of the declared type rather than of what a call filled it with, since
+    // the run's boundary asks the same: a bare type parameter is never left
+    // out, whatever one call read it as.
     func refusal(handing count: Int, in table: LoweredTypeTable) -> String? {
-        guard count <= parameters.count else {
-            return "\(count) arguments, and it takes \(parameters.count)"
+        switch TypeExpression.procedure(type).lowered(in: table).arityMismatch(handing: count, in: table) {
+        case let .tooMany(takes)?:
+            return "\(count) arguments, and it takes \(takes)"
+
+        case let .missing(positions)?:
+            return "without \(positions.map { position in parameters[position].name.spelling }.joined(separator: ", ")),"
+                + " which it requires"
+
+        case nil:
+            return nil
         }
-
-        let missing = parameters.dropFirst(count)
-            .filter { parameter in parameter.declared.lowered(in: table).mustBeGiven(in: table) }
-            .map(\.name.spelling)
-
-        guard missing.isEmpty else {
-            return "without \(missing.joined(separator: ", ")), which it requires"
-        }
-
-        return nil
     }
 
     // Every declared name this signature reaches, through what it takes and

@@ -1620,17 +1620,24 @@ extension Builder {
             // argument the slot's type refuses is refused here the way a
             // call's is.
             if case let .procedure(parameters?, _, _, _) = called.reading {
-                guard
-                    arguments.count <= parameters.count,
-                    !parameters.dropFirst(arguments.count).contains(where: { parameter in
-                        parameter.mustBeGiven(in: context.loweredTypes)
-                    })
-                else {
+                let applied = "applies a value of \(called.reading.rendered(in: context.loweredTypes))"
+
+                switch called.reading.arityMismatch(handing: arguments.count, in: context.loweredTypes) {
+                case let .tooMany(takes)?:
                     throw BuildError(
-                        "applies a value of \(called.reading.rendered(in: context.loweredTypes))"
-                            + " with \(arguments.count) arguments, and it takes \(parameters.count)",
+                        "\(applied) with \(arguments.count) arguments, and it takes \(takes)",
                         at: place.part(.arguments)
                     )
+
+                case let .missing(positions)?:
+                    throw BuildError(
+                        "\(applied) without what it takes at \(positions.map(String.init).joined(separator: ", ")),"
+                            + " which it requires",
+                        at: place.part(.arguments)
+                    )
+
+                case nil:
+                    break
                 }
 
                 for (position, (parameter, reading)) in zip(parameters, readings).enumerated()

@@ -102,6 +102,55 @@ struct ClosureTests {
         }
     }
 
+    @Test(
+        "a value applied short or over is refused by what it lacks or by the count",
+        arguments: [
+            (handed: 1, refusal: "without what it takes at 1, which it requires"),
+            (handed: 4, refusal: "with 4 arguments, and it takes 3")
+        ]
+    )
+    func anApplicationShortOrOverSaysWhy(handed: Int, refusal: String) async throws {
+        // Given. `made` takes two and a nullable third, so one argument lacks
+        // the second and four is one more than it takes
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("made"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: [
+                                        Parameter(name: "a", type: .int),
+                                        Parameter(name: "b", type: .int),
+                                        Parameter(name: "c", type: .nullable(.int))
+                                    ]),
+                                    body: [],
+                                    result: reference("a")
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("said"),
+                            expression: .apply(
+                                reference("made"),
+                                arguments: Array(repeating: .literal(.int(1)), count: handed)
+                            )
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains(refusal)
+        }
+    }
+
     @Test("an extra parameter the slot never hands does not fit, even a nullable one")
     func anExtraParameterDoesNotFit() async throws {
         // Given. The slot hands one value and the body writes two, the second
