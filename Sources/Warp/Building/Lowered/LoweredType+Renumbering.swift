@@ -58,11 +58,7 @@ extension LoweredType {
         case let .procedure(parameters, returns, constness, isolation):
             return .procedure(
                 parameters: try parameters?.map { parameter in
-                    LoweredParameter(
-                        name: parameter.name,
-                        type: try parameter.type.renumbered(type: type, membership: membership),
-                        defaulted: parameter.defaulted
-                    )
+                    try parameter.renumbered(type: type, membership: membership)
                 },
                 returns: try returns?.renumbered(type: type, membership: membership),
                 constness: constness,

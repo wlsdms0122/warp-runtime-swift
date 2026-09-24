@@ -78,8 +78,8 @@ extension Operation {
         case let .apply(callee, arguments):
             inside = .apply(
                 try callee.rewritten(operation: operation, type: type),
-                arguments: try arguments.map { name, argument in
-                    (name, try argument.rewritten(operation: operation, type: type))
+                arguments: try arguments.map { argument in
+                    try argument.rewritten(operation: operation, type: type)
                 }
             )
 

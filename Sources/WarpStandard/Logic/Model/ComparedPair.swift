@@ -8,25 +8,22 @@
 import Foundation
 import Warp
 
-// The two values an equality procedure reads. Nothing is required on either side:
-// comparing against null is what asking whether a name holds anything is, and a
-// required parameter cannot be given null.
+// The two values an equality procedure reads. Either side takes null:
+// comparing against null is what asking whether a name holds anything is.
 enum ComparedPair: Int, ParameterSet {
     case of
     case value
 
     // MARK: - Property
-    var name: Name {
+    var declared: Parameter {
         switch self {
         case .of:
-            return "of"
+            return Parameter(name: "of", type: .any)
 
         case .value:
-            return "value"
+            return Parameter(name: "value", type: .any)
         }
     }
-
-    var declared: Parameter { Parameter(type: .any, default: .null) }
 
     // MARK: - Initializer
     // MARK: - Public

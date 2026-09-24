@@ -36,9 +36,7 @@ struct FailEffect: Effect {
     enum Parameters: Int, ParameterSet {
         case recoverable
 
-        var name: Name { "recoverable" }
-
-        var declared: Parameter { Parameter(type: .bool, default: .bool(false)) }
+        var declared: Parameter { Parameter(name: "recoverable", type: .nullable(.bool)) }
     }
 
     // MARK: - Property
@@ -111,7 +109,7 @@ extension Module {
         procedures: [
             "test.fail": Procedure(
                 signature: Signature(
-                    parameters: ["recoverable": Parameter(type: .bool)]
+                    parameters: [Parameter(name: "recoverable", type: .bool)]
                 ),
                 implementation: .effect(FailEffect())
             )

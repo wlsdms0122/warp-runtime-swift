@@ -55,7 +55,7 @@ extension Operation {
             return held.fields.allSatisfy { field in field.walk(visit) }
 
         case let .apply(callee, arguments):
-            return callee.walk(visit) && arguments.allSatisfy { _, argument in argument.walk(visit) }
+            return callee.walk(visit) && arguments.allSatisfy { argument in argument.walk(visit) }
 
         case let .cast(read, _, _):
             return read.walk(visit)

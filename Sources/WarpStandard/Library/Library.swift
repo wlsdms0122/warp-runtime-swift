@@ -46,14 +46,16 @@ enum Library {
                     }
                   ]
                   description "Writes one element onto the end of the array a variable holds, in place."
-                  parameters {
-                    to {
+                  parameters [
+                    {
+                      name "to"
                       type "inout array<some Element>"
                     }
-                    value {
+                    {
+                      name "value"
                       type "some Element"
                     }
-                  }
+                  ]
                   receiver "to"
                   result null
                   returns "null"
@@ -123,14 +125,16 @@ enum Library {
                     }
                   ]
                   description "Whether an array holds a value."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                    value {
+                    {
+                      name "value"
                       type "some Element"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "found"
@@ -204,11 +208,12 @@ enum Library {
                     }
                   ]
                   description "The elements after the first."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -284,11 +289,12 @@ enum Library {
                     }
                   ]
                   description "The elements before the last."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -320,11 +326,11 @@ enum Library {
                               let "kept"
                               value {
                                 apply {
-                                  arguments {
-                                    item {
+                                  arguments [
+                                    {
                                       ref "of[walk.index]"
                                     }
-                                  }
+                                  ]
                                   procedure {
                                     ref "value"
                                   }
@@ -382,23 +388,23 @@ enum Library {
                     }
                   ]
                   description "The elements a procedure answers true for."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                    value {
+                    {
+                      name "value"
                       type {
                         "const procedure" {
-                          parameters {
-                            item {
-                              type "some Element"
-                            }
-                          }
+                          parameters [
+                            "some Element"
+                          ]
                           returns "bool"
                         }
                       }
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -417,11 +423,12 @@ enum Library {
                 }
                 "std.collection.first" {
                   description "The first element, or nothing."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "of[0]"
@@ -451,11 +458,12 @@ enum Library {
                     }
                   ]
                   description "The last element, or nothing."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "of[at]"
@@ -477,11 +485,11 @@ enum Library {
                               let "answered"
                               value {
                                 apply {
-                                  arguments {
-                                    item {
+                                  arguments [
+                                    {
                                       ref "of[walk.index]"
                                     }
-                                  }
+                                  ]
                                   procedure {
                                     ref "value"
                                   }
@@ -528,23 +536,23 @@ enum Library {
                     }
                   ]
                   description "Each element answered by a procedure, in order."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                    value {
+                    {
+                      name "value"
                       type {
                         "const procedure" {
-                          parameters {
-                            item {
-                              type "some Element"
-                            }
-                          }
+                          parameters [
+                            "some Element"
+                          ]
                           returns "some Answer"
                         }
                       }
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "answers"
@@ -582,14 +590,16 @@ enum Library {
                     }
                   ]
                   description "The elements with one more at the front."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                    value {
+                    {
+                      name "value"
                       type "some Element"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -618,14 +628,14 @@ enum Library {
                               let "answered"
                               value {
                                 apply {
-                                  arguments {
-                                    carried {
+                                  arguments [
+                                    {
                                       ref "carried"
                                     }
-                                    item {
+                                    {
                                       ref "of[walk.index]"
                                     }
-                                  }
+                                  ]
                                   procedure {
                                     ref "value"
                                   }
@@ -662,29 +672,28 @@ enum Library {
                     }
                   ]
                   description "The elements folded into one, starting from a value."
-                  parameters {
-                    from {
-                      type "some Carried"
-                    }
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                    value {
+                    {
+                      name "from"
+                      type "some Carried"
+                    }
+                    {
+                      name "value"
                       type {
                         "const procedure" {
-                          parameters {
-                            carried {
-                              type "some Carried"
-                            }
-                            item {
-                              type "some Element"
-                            }
-                          }
+                          parameters [
+                            "some Carried"
+                            "some Element"
+                          ]
                           returns "some Carried"
                         }
                       }
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "carried"
@@ -765,11 +774,12 @@ enum Library {
                     }
                   ]
                   description "The elements back to front."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -817,120 +827,120 @@ enum Library {
                               value {
                                 loop {
                                   body [
-                            {
-                              value true
-                              var "tie"
-                            }
-                              {
-                                value {
-                                  conditional {
-                                    then [
-                                  {
-                                    set "rank"
-                                    value {
-                                      call {
-                                        arguments {
-                                          value 1
-                                        }
-                                        of {
-                                          ref "rank"
-                                        }
-                                        procedure "std.math.plus"
-                                      }
+                                    {
+                                      value true
+                                      var "tie"
                                     }
-                                  }
-                                  {
-                                    set "tie"
-                                    value false
-                                  }
-                                    ]
-                                    when {
-                                    call {
-                                      arguments {
-                                        value {
-                                          ref "of[outer.index]"
-                                        }
-                                      }
-                                      of {
-                                        ref "of[inner.index]"
-                                      }
-                                      procedure "std.math.lessThan"
-                                    }
-                                    }
-                                  }
-                                }
-                              }
-                              {
-                                value {
-                                  conditional {
-                                    then [
-                                  {
-                                    set "tie"
-                                    value false
-                                  }
-                                    ]
-                                    when {
-                                    call {
-                                      arguments {
-                                        value {
-                                          ref "of[inner.index]"
-                                        }
-                                      }
-                                      of {
-                                        ref "of[outer.index]"
-                                      }
-                                      procedure "std.math.lessThan"
-                                    }
-                                    }
-                                  }
-                                }
-                              }
-                              {
-                                value {
-                                  conditional {
-                                    then [
-                                  {
-                                    value {
-                                      conditional {
-                                        then [
-                                      {
-                                        set "rank"
-                                        value {
-                                          call {
-                                            arguments {
-                                              value 1
+                                    {
+                                      value {
+                                        conditional {
+                                          then [
+                                            {
+                                              set "rank"
+                                              value {
+                                                call {
+                                                  arguments {
+                                                    value 1
+                                                  }
+                                                  of {
+                                                    ref "rank"
+                                                  }
+                                                  procedure "std.math.plus"
+                                                }
+                                              }
                                             }
-                                            of {
-                                              ref "rank"
+                                            {
+                                              set "tie"
+                                              value false
                                             }
-                                            procedure "std.math.plus"
+                                          ]
+                                          when {
+                                            call {
+                                              arguments {
+                                                value {
+                                                  ref "of[outer.index]"
+                                                }
+                                              }
+                                              of {
+                                                ref "of[inner.index]"
+                                              }
+                                              procedure "std.math.lessThan"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                    {
+                                      value {
+                                        conditional {
+                                          then [
+                                            {
+                                              set "tie"
+                                              value false
+                                            }
+                                          ]
+                                          when {
+                                            call {
+                                              arguments {
+                                                value {
+                                                  ref "of[inner.index]"
+                                                }
+                                              }
+                                              of {
+                                                ref "of[outer.index]"
+                                              }
+                                              procedure "std.math.lessThan"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                    {
+                                      value {
+                                        conditional {
+                                          then [
+                                            {
+                                              value {
+                                                conditional {
+                                                  then [
+                                                    {
+                                                      set "rank"
+                                                      value {
+                                                        call {
+                                                          arguments {
+                                                            value 1
+                                                          }
+                                                          of {
+                                                            ref "rank"
+                                                          }
+                                                          procedure "std.math.plus"
+                                                        }
+                                                      }
+                                                    }
+                                                  ]
+                                                  when {
+                                                    call {
+                                                      arguments {
+                                                        value {
+                                                          ref "outer.index"
+                                                        }
+                                                      }
+                                                      of {
+                                                        ref "inner.index"
+                                                      }
+                                                      procedure "std.math.lessThan"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          ]
+                                          when {
+                                            ref "tie"
                                           }
                                         }
                                       }
-                                        ]
-                                        when {
-                                        call {
-                                          arguments {
-                                            value {
-                                              ref "outer.index"
-                                            }
-                                          }
-                                          of {
-                                            ref "inner.index"
-                                          }
-                                          procedure "std.math.lessThan"
-                                        }
-                                        }
-                                      }
                                     }
-                                  }
-                                    ]
-                                    when {
-                                    ref "tie"
-                                    }
-                                  }
-                                }
-                              }
                                   ]
                                   while {
                                     call {
@@ -995,87 +1005,87 @@ enum Library {
                               value {
                                 loop {
                                   body [
-                            {
-                              value true
-                              var "same"
-                            }
-                              {
-                                value {
-                                  conditional {
-                                    then [
-                                  {
-                                    set "same"
-                                    value false
-                                  }
-                                    ]
-                                    when {
-                                    call {
-                                      arguments {
-                                        value {
-                                          ref "pick.index"
-                                        }
-                                      }
-                                      of {
-                                        ref "ranks[scan.index]"
-                                      }
-                                      procedure "std.math.lessThan"
+                                    {
+                                      value true
+                                      var "same"
                                     }
-                                    }
-                                  }
-                                }
-                              }
-                              {
-                                value {
-                                  conditional {
-                                    then [
-                                  {
-                                    set "same"
-                                    value false
-                                  }
-                                    ]
-                                    when {
-                                    call {
-                                      arguments {
-                                        value {
-                                          ref "ranks[scan.index]"
-                                        }
-                                      }
-                                      of {
-                                        ref "pick.index"
-                                      }
-                                      procedure "std.math.lessThan"
-                                    }
-                                    }
-                                  }
-                                }
-                              }
-                              {
-                                value {
-                                  conditional {
-                                    then [
-                                  {
-                                    set "places"
-                                    value {
-                                      call {
-                                        arguments {
-                                          value {
-                                            ref "scan.index"
+                                    {
+                                      value {
+                                        conditional {
+                                          then [
+                                            {
+                                              set "same"
+                                              value false
+                                            }
+                                          ]
+                                          when {
+                                            call {
+                                              arguments {
+                                                value {
+                                                  ref "pick.index"
+                                                }
+                                              }
+                                              of {
+                                                ref "ranks[scan.index]"
+                                              }
+                                              procedure "std.math.lessThan"
+                                            }
                                           }
                                         }
-                                        of {
-                                          ref "places"
-                                        }
-                                        procedure "std.collection.appending"
                                       }
                                     }
-                                  }
-                                    ]
-                                    when {
-                                    ref "same"
+                                    {
+                                      value {
+                                        conditional {
+                                          then [
+                                            {
+                                              set "same"
+                                              value false
+                                            }
+                                          ]
+                                          when {
+                                            call {
+                                              arguments {
+                                                value {
+                                                  ref "ranks[scan.index]"
+                                                }
+                                              }
+                                              of {
+                                                ref "pick.index"
+                                              }
+                                              procedure "std.math.lessThan"
+                                            }
+                                          }
+                                        }
+                                      }
                                     }
-                                  }
-                                }
-                              }
+                                    {
+                                      value {
+                                        conditional {
+                                          then [
+                                            {
+                                              set "places"
+                                              value {
+                                                call {
+                                                  arguments {
+                                                    value {
+                                                      ref "scan.index"
+                                                    }
+                                                  }
+                                                  of {
+                                                    ref "places"
+                                                  }
+                                                  procedure "std.collection.appending"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                          when {
+                                            ref "same"
+                                          }
+                                        }
+                                      }
+                                    }
                                   ]
                                   while {
                                     call {
@@ -1115,11 +1125,12 @@ enum Library {
                     Element "std.Comparable"
                   }
                   description "The elements in order, for numbers or for strings."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "array<some Element>"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -1204,11 +1215,12 @@ enum Library {
                     }
                   ]
                   description "What a record holds, by its names in order."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "dictionary<some Entry>"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "held"
@@ -1262,14 +1274,14 @@ enum Library {
                                       let "answered"
                                       value {
                                         apply {
-                                          arguments {
-                                            index {
-                                              ref "index"
-                                            }
-                                            item {
+                                          arguments [
+                                            {
                                               ref "item"
                                             }
-                                          }
+                                            {
+                                              ref "index"
+                                            }
+                                          ]
                                           procedure {
                                             ref "by"
                                           }
@@ -1323,26 +1335,24 @@ enum Library {
                     }
                   ]
                   description "Each element answered by a procedure, run at once, in the collection's order."
-                  parameters {
-                    by {
+                  parameters [
+                    {
+                      name "over"
+                      type "array<some Element>"
+                    }
+                    {
+                      name "by"
                       type {
                         "isolated procedure" {
-                          parameters {
-                            index {
-                              type "int"
-                            }
-                            item {
-                              type "some Element"
-                            }
-                          }
+                          parameters [
+                            "some Element"
+                            "int"
+                          ]
                           returns "some Answer"
                         }
                       }
                     }
-                    over {
-                      type "array<some Element>"
-                    }
-                  }
+                  ]
                   receiver "over"
                   result {
                     call {
@@ -1439,8 +1449,9 @@ enum Library {
                     }
                   ]
                   description "Whether every one answers true, asked until one does not."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type {
                         array {
                           "const procedure" {
@@ -1449,18 +1460,19 @@ enum Library {
                         }
                       }
                     }
-                  }
+                  ]
                   receiver "of"
                   result true
                   returns "bool"
                 }
                 "std.logic.not" {
                   description "The opposite of a truth."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "bool"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -1477,16 +1489,16 @@ enum Library {
                 }
                 "std.logic.notEqual" {
                   description "Whether two values differ."
-                  parameters {
-                    of {
-                      default null
+                  parameters [
+                    {
+                      name "of"
                       type "any"
                     }
-                    value {
-                      default null
+                    {
+                      name "value"
                       type "any"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -1574,8 +1586,9 @@ enum Library {
                     }
                   ]
                   description "Whether one answers true, asked until one does."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type {
                         array {
                           "const procedure" {
@@ -1584,7 +1597,7 @@ enum Library {
                         }
                       }
                     }
-                  }
+                  ]
                   receiver "of"
                   result false
                   returns "bool"
@@ -1631,25 +1644,28 @@ enum Library {
                     }
                   ]
                   description "The value one of two sides answers, chosen by a truth."
-                  parameters {
-                    else {
-                      type {
-                        "const procedure" {
-                          returns "some Answer"
-                        }
-                      }
-                    }
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "bool"
                     }
-                    then {
+                    {
+                      name "then"
                       type {
                         "const procedure" {
                           returns "some Answer"
                         }
                       }
                     }
-                  }
+                    {
+                      name "else"
+                      type {
+                        "const procedure" {
+                          returns "some Answer"
+                        }
+                      }
+                    }
+                  ]
                   receiver "of"
                   result {
                     ref "left"
@@ -1712,11 +1728,12 @@ enum Library {
                     N "std.Numeric"
                   }
                   description "The number without its sign."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "some N"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "of"
@@ -1728,14 +1745,16 @@ enum Library {
                     T "std.Comparable"
                   }
                   description "Whether this one is larger, by the one order."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "some T"
                     }
-                    value {
+                    {
+                      name "value"
                       type "some T"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -1787,14 +1806,16 @@ enum Library {
                     T "std.Comparable"
                   }
                   description "The larger of two of a kind, by the one order."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "some T"
                     }
-                    value {
+                    {
+                      name "value"
                       type "some T"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "of"
@@ -1836,14 +1857,16 @@ enum Library {
                     T "std.Comparable"
                   }
                   description "The smaller of two of a kind, by the one order."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "some T"
                     }
-                    value {
+                    {
+                      name "value"
                       type "some T"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     ref "value"
@@ -2045,14 +2068,16 @@ enum Library {
                     }
                   ]
                   description "Whether a string holds another inside it."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "string"
                     }
-                    value {
+                    {
+                      name "value"
                       type "string"
                     }
-                  }
+                  ]
                   receiver "of"
                   result false
                   returns "bool"
@@ -2088,17 +2113,20 @@ enum Library {
                     }
                   ]
                   description "Every occurrence of a piece swapped for another."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "string"
                     }
-                    value {
+                    {
+                      name "value"
                       type "string"
                     }
-                    with {
+                    {
+                      name "with"
                       type "string"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -2433,14 +2461,16 @@ enum Library {
                     }
                   ]
                   description "The text cut on a separator."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "string"
                     }
-                    value {
+                    {
+                      name "value"
                       type "string"
                     }
-                  }
+                  ]
                   receiver "of"
                   result {
                     call {
@@ -2582,14 +2612,16 @@ enum Library {
                     }
                   ]
                   description "Whether a string begins with another."
-                  parameters {
-                    of {
+                  parameters [
+                    {
+                      name "of"
                       type "string"
                     }
-                    value {
+                    {
+                      name "value"
                       type "string"
                     }
-                  }
+                  ]
                   receiver "of"
                   result true
                   returns "bool"

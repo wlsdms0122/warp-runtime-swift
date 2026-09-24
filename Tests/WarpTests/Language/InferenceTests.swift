@@ -27,7 +27,7 @@ struct InferenceTests {
         // Element`, so what it answers here is a string and the declaration
         // never said so
         let wants = Procedure(
-            signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
             body: []
         )
         let sut = try Module(
@@ -36,7 +36,7 @@ struct InferenceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["names": Parameter(type: .array(.string))]
+                        parameters: [Parameter(name: "names", type: .array(.string))]
                     ),
                     body: [
                         Statement(binding: .constant("head"), expression: .call(Call(
@@ -64,7 +64,7 @@ struct InferenceTests {
     func aFilledHoleRefusesWhatDisagrees() async throws {
         // Given. The same walk, over an array of ints
         let wants = Procedure(
-            signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
             body: []
         )
         let sut = try Module(
@@ -73,7 +73,7 @@ struct InferenceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["counts": Parameter(type: .array(.int))]
+                        parameters: [Parameter(name: "counts", type: .array(.int))]
                     ),
                     body: [
                         Statement(binding: .constant("head"), expression: .call(Call(
@@ -104,14 +104,14 @@ struct InferenceTests {
         // asking for the receiver's type back is the disagreement
         let counting = Procedure(
             signature: Signature(
-                parameters: ["item": Parameter(type: .string)],
+                parameters: [Parameter(name: "item", type: .string)],
                 returns: .int
             ),
             body: [],
             result: .call(Call(receiver: reference("item"), selector: "std.collection.count"))
         )
         let wants = Procedure(
-            signature: Signature(parameters: ["ns": Parameter(type: .array(.string))]),
+            signature: Signature(parameters: [Parameter(name: "ns", type: .array(.string))]),
             body: []
         )
         let sut = try Module(
@@ -120,7 +120,7 @@ struct InferenceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["names": Parameter(type: .array(.string))]
+                        parameters: [Parameter(name: "names", type: .array(.string))]
                     ),
                     body: [
                         Statement(binding: .constant("sizes"), expression: .call(Call(
@@ -175,7 +175,7 @@ struct InferenceTests {
                     ]
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
                     body: []
                 )
             ]
@@ -252,7 +252,7 @@ struct InferenceTests {
                     result: reference("y")
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: ["count": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
                     body: []
                 )
             ]
@@ -291,7 +291,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -323,7 +323,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "task": Parameter(type: .named("Task"))
+                            Parameter(name: "task", type: .named("Task"))
                         ]
                     ),
                     body: [
@@ -336,7 +336,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -364,7 +364,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "names": Parameter(type: .array(.string))
+                            Parameter(name: "names", type: .array(.string))
                         ]
                     ),
                     body: [
@@ -377,7 +377,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -403,7 +403,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "counts": Parameter(type: .array(.int))
+                            Parameter(name: "counts", type: .array(.int))
                         ]
                     ),
                     body: [
@@ -423,7 +423,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -450,7 +450,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "flag": Parameter(type: .bool)
+                            Parameter(name: "flag", type: .bool)
                         ]
                     ),
                     body: [
@@ -474,7 +474,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -508,7 +508,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "names": Parameter(type: .array(.string))
+                            Parameter(name: "names", type: .array(.string))
                         ]
                     ),
                     body: [
@@ -523,7 +523,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .int)
+                            Parameter(name: "procedure", type: .int)
                         ]
                     ),
                     body: [
@@ -557,7 +557,7 @@ struct InferenceTests {
                                         "by": .closure(
                                             Procedure(
                                                 signature: Signature(
-                                                    parameters: ["item": Parameter(type: .int)],
+                                                    parameters: [Parameter(name: "item", type: .int)],
                                                     returns: .int
                                                 ),
                                                 body: [],
@@ -579,7 +579,7 @@ struct InferenceTests {
                 ),
                 "wants": Procedure(
                     signature: Signature(
-                        parameters: ["procedures": Parameter(type: .array(.string))]
+                        parameters: [Parameter(name: "procedures", type: .array(.string))]
                     ),
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.string("ok")))
@@ -605,7 +605,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "ready": Parameter(type: .bool)
+                            Parameter(name: "ready", type: .bool)
                         ]
                     ),
                     body: [
@@ -630,7 +630,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -656,7 +656,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "count": Parameter(type: .int)
+                            Parameter(name: "count", type: .int)
                         ]
                     ),
                     body: [
@@ -682,7 +682,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "name": Parameter(type: .string)
+                            Parameter(name: "name", type: .string)
                         ]
                     ),
                     body: [
@@ -708,7 +708,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "names": Parameter(type: .array(.string))
+                            Parameter(name: "names", type: .array(.string))
                         ]
                     ),
                     body: [
@@ -734,7 +734,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -765,7 +765,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [],
@@ -796,7 +796,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -831,7 +831,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "failed": Parameter(type: .record(["type": .string, "message": .string]))
+                            Parameter(name: "failed", type: .record(["type": .string, "message": .string]))
                         ]
                     ),
                     body: [
@@ -863,7 +863,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .named("Tree"))
+                            Parameter(name: "payload", type: .named("Tree"))
                         ]
                     ),
                     body: [
@@ -895,7 +895,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "rows": Parameter(type: .array(.any))
+                            Parameter(name: "rows", type: .array(.any))
                         ]
                     ),
                     body: [],
@@ -923,7 +923,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -964,7 +964,7 @@ struct InferenceTests {
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [],
@@ -998,7 +998,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -1039,7 +1039,7 @@ struct InferenceTests {
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [],
@@ -1070,7 +1070,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "count": Parameter(type: .int)
+                            Parameter(name: "count", type: .int)
                         ]
                     ),
                     body: [],
@@ -1093,7 +1093,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "count": Parameter(type: .nullable(.int))
+                            Parameter(name: "count", type: .nullable(.int))
                         ]
                     ),
                     body: [],
@@ -1115,7 +1115,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "count": Parameter(type: .nullable(.int))
+                            Parameter(name: "count", type: .nullable(.int))
                         ]
                     ),
                     body: [],
@@ -1142,7 +1142,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .dictionary(.string))
+                            Parameter(name: "payload", type: .dictionary(.string))
                         ]
                     ),
                     body: [
@@ -1177,7 +1177,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -1219,7 +1219,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -1250,7 +1250,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [],
@@ -1277,7 +1277,7 @@ struct InferenceTests {
                 "peek": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .parameter(name: "T"))],
+                        parameters: [Parameter(name: "of", type: .parameter(name: "T"))],
                         returns: .any
                     ),
                     body: [
@@ -1342,7 +1342,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -1374,7 +1374,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .record(["data": .any]))
+                            Parameter(name: "payload", type: .record(["data": .any]))
                         ]
                     ),
                     body: [
@@ -1406,7 +1406,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -1450,7 +1450,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .any)
+                            Parameter(name: "payload", type: .any)
                         ]
                     ),
                     body: [
@@ -1482,7 +1482,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "task": Parameter(type: .record(["id": .string]))
+                            Parameter(name: "task", type: .record(["id": .string]))
                         ]
                     ),
                     body: [
@@ -1507,7 +1507,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "task": Parameter(type: .record(["id": .string]))
+                            Parameter(name: "task", type: .record(["id": .string]))
                         ]
                     ),
                     body: [
@@ -1538,7 +1538,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "ready": Parameter(type: .bool)
+                            Parameter(name: "ready", type: .bool)
                         ]
                     ),
                     body: [
@@ -1575,7 +1575,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -1626,7 +1626,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .int)
+                            Parameter(name: "procedure", type: .int)
                         ]
                     ),
                     body: [
@@ -1677,7 +1677,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -1706,7 +1706,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "ready": Parameter(type: .bool)
+                            Parameter(name: "ready", type: .bool)
                         ]
                     ),
                     body: [
@@ -1730,7 +1730,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -1763,7 +1763,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "ready": Parameter(type: .bool)
+                            Parameter(name: "ready", type: .bool)
                         ]
                     ),
                     body: names.map { name in
@@ -1784,7 +1784,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -1846,8 +1846,8 @@ struct InferenceTests {
                     signature: Signature(
                         receiver: "of",
                         parameters: [
-                            "of": Parameter(type: .string),
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "of", type: .string),
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -1901,7 +1901,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -1926,7 +1926,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "ready": Parameter(type: .bool)
+                            Parameter(name: "ready", type: .bool)
                         ]
                     ),
                     body: [
@@ -1951,7 +1951,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [
@@ -1991,7 +1991,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .int)
+                            Parameter(name: "procedure", type: .int)
                         ]
                     ),
                     body: [
@@ -2038,7 +2038,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            "procedure": Parameter(type: .string)
+                            Parameter(name: "procedure", type: .string)
                         ]
                     ),
                     body: [

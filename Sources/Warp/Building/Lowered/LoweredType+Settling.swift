@@ -39,6 +39,21 @@ extension LoweredType {
         }
     }
 
+    // A value handed to a slot of this type: a null where the type admits
+    // one, and otherwise the value settled. `locus` is where a refusal says
+    // the value stood, in the caller's terms.
+    func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
+        guard value != .null else {
+            guard admitsNull(in: table) else {
+                throw ArgumentError("\(locus): expected \(rendered(in: table)), got null")
+            }
+
+            return value
+        }
+
+        return try settling(value, at: locus, in: table)
+    }
+
     // What a cast does, said once. The judgment is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
@@ -135,8 +150,8 @@ extension LoweredType {
     // null it holds. Without either, omission is a missing argument. Asked
     // of a table that stands, since a type declaring null is read off the
     // row it names.
-    func mustBeGiven(defaulted: Bool, in table: LoweredTypeTable) -> Bool {
-        !defaulted && !declaresNull(in: table)
+    func mustBeGiven(in table: LoweredTypeTable) -> Bool {
+        !declaresNull(in: table)
     }
 
     // Whether every byte settles into this element declaration as itself,
@@ -312,9 +327,7 @@ extension LoweredType {
 
             guard let parameters else { return spelling }
 
-            let written = parameters.map { parameter in
-                "\(parameter.name): \(parameter.type.rendered(in: table))"
-            }
+            let written = parameters.map { parameter in parameter.rendered(in: table) }
 
             return "\(spelling)<(\(written.joined(separator: ", ")))"
                 + " -> \((returns ?? .any).rendered(in: table))>"
@@ -628,7 +641,7 @@ extension LoweredType {
 
     private func settlingProcedure(
         _ value: Value,
-        parameters required: [LoweredParameter]?,
+        parameters required: [LoweredType]?,
         returns: LoweredType?,
         constness: Constness,
         isolation: Isolation,
@@ -661,7 +674,7 @@ extension LoweredType {
         }
 
         let given = LoweredType.procedure(
-            parameters: linked.slots.map(\.parameter),
+            parameters: linked.slots.map(\.type),
             returns: linked.returns,
             constness: linked.constness,
             isolation: linked.isolation

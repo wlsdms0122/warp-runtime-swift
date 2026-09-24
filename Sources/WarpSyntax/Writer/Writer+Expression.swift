@@ -162,9 +162,7 @@ public extension Writer {
             var written: [Name: Value] = ["procedure": try value(of: callee)]
 
             if !arguments.isEmpty {
-                written["arguments"] = .dictionary(
-                    try arguments.mapValues { argument in try value(of: argument) }
-                )
+                written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
             }
 
             return (try spelling(ApplyForm.self), .dictionary(written))

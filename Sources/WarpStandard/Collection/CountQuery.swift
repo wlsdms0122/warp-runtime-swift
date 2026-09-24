@@ -13,10 +13,7 @@ struct CountQuery: Query {
     // What this takes: the thing counted, and nothing else.
     enum Parameters: Int, ParameterSet {
         case of
-
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .named("std.Collection")) }
+        var declared: Parameter { Parameter(name: "of", type: .named("std.Collection")) }
     }
 
     // MARK: - Property

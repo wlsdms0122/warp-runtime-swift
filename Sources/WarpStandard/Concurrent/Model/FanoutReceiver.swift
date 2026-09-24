@@ -15,9 +15,7 @@ enum FanoutReceiver: Int, ParameterSet {
     case of
 
     // MARK: - Property
-    var name: Name { "of" }
-
-    var declared: Parameter { Parameter(type: .named("std.concurrent.Pieces")) }
+    var declared: Parameter { Parameter(name: "of", type: .named("std.concurrent.Pieces")) }
 
     // MARK: - Initializer
     // MARK: - Public

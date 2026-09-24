@@ -34,8 +34,8 @@ struct WriterTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .parameter(name: "T", constraints: ["A"])),
-                            "right": Parameter(type: .parameter(name: "T", constraints: ["B"]))
+                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
+                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
                         ]
                     ),
                     body: [],
@@ -137,7 +137,7 @@ struct WriterTests {
         // document only if the writing side kept a spelling.
         let loader = Loader()
         let module = try await loader.loadProcedure([
-            "parameters": ["ready": ["type": "bool"]],
+            "parameters": [["name": "ready", "type": "bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -172,7 +172,7 @@ struct WriterTests {
             ],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": ["type": "array<string>"], "procedure": ["type": "string"]],
+                    "parameters": [["name": "names", "type": "array<string>"], ["name": "procedure", "type": "string"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -246,7 +246,7 @@ struct WriterTests {
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try await loader.loadProcedure([
-            "parameters": ["procedure": ["type": "string"]],
+            "parameters": [["name": "procedure", "type": "string"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -347,12 +347,12 @@ struct WriterTests {
         // would be a document that reads back meaning something else.
         let bounded = Signature(
             parameters: [
-                "item": Parameter(type: .parameter(name: "T", constraints: ["Scalar"]))
+                Parameter(name: "item", type: .parameter(name: "T", constraints: ["Scalar"]))
             ],
             returns: .bool
         )
         let module = try Module(
-            types: ["Predicate": .procedure(bounded, .unstated)],
+            types: ["Predicate": .procedure(bounded.type, .unstated)],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -367,7 +367,7 @@ struct WriterTests {
         // declaring procedure answers the same way, whichever entry the caller
         // came through
         #expect(throws: WritingError.self) {
-            try sut.value(of: Parameter(type: .parameter(name: "T", constraints: ["Scalar"])))
+            try sut.value(of: Parameter(name: "item", type: .parameter(name: "T", constraints: ["Scalar"])))
         }
 
         // A bounded variable declared as a type directly refuses the same way
@@ -410,14 +410,14 @@ struct WriterTests {
         #expect(entry["bounds"] == .dictionary(["T": .string("Scalar")]))
 
         guard
-            case let .dictionary(parameters) = entry["parameters"]
+            case let .array(parameters) = entry["parameters"]
         else {
-            Issue.record("the parameters did not write as a mapping")
+            Issue.record("the parameters did not write as a list")
 
             return
         }
 
-        #expect(parameters["item"] == .dictionary(["type": .string("some T")]))
+        #expect(parameters == [.dictionary(["name": .string("item"), "type": .string("some T")])])
     }
 
     @Test("a construct binding a name its statement did not give has no document")
@@ -501,7 +501,7 @@ struct WriterTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["payload": Parameter(type: .any)]),
+                    signature: Signature(parameters: [Parameter(name: "payload", type: .any)]),
                     body: [
                         Statement(binding: .constant("named"), expression: .cast(
                                 .reference([.key("payload")]),
@@ -526,7 +526,7 @@ struct WriterTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
                     body: [
                         Statement(binding: .constant("joined"), expression: .call(
                                 Call(
@@ -597,9 +597,9 @@ struct WriterTests {
             "entry": [
                 "description": "every construct, once",
                 "parameters": [
-                    "names": ["type": "array<string>"],
-                    "procedure": ["type": "string", "default": "hey", "description": "what to match"],
-                    "kind": ["type": "string", "enum": ["a", "b"]]
+                    ["name": "kind", "type": "string", "enum": ["a", "b"]],
+                    ["name": "names", "type": "array<string>"],
+                    ["name": "procedure", "type": "string", "description": "what to match"]
                 ],
                 "returns": "dictionary<any>",
                 "body": [
@@ -674,9 +674,9 @@ struct WriterTests {
                         "let": "called",
                         "value": ["apply": [
                             "procedure": [
-                                "closure": ["parameters": ["n": ["type": "int"]], "result": ["ref": "n"]]
+                                "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
                             ],
-                            "arguments": ["n": 1]
+                            "arguments": [1]
                         ]
                     ]]
                 ],
@@ -685,20 +685,12 @@ struct WriterTests {
             "typed": [
                 "receiver": "of",
                 "parameters": [
-                    "of": ["type": "string"],
-                    "how": [
-                        "type": [
-                            "const procedure": [
-                                "receiver": "it",
-                                "parameters": ["it": ["type": "int"]],
-                                "returns": "bool"
-                            ]
-                        ]
-                    ],
-                    "anything": ["type": "procedure"],
-                    "parameter": ["type": "some Element"],
-                    "bounded": ["type": "some T"],
-                    "shaped": ["type": ["done": "bool", "id": "string"]]
+                    ["name": "anything", "type": "procedure"],
+                    ["name": "bounded", "type": "some T"],
+                    ["name": "how", "type": ["const procedure": ["parameters": ["int"], "returns": "bool"]]],
+                    ["name": "of", "type": "string"],
+                    ["name": "parameter", "type": "some Element"],
+                    ["name": "shaped", "type": ["done": "bool", "id": "string"]]
                 ],
                 "returns": "never",
                 "bounds": ["T": "Scalar"],
@@ -719,9 +711,9 @@ struct WriterTests {
             "procedures": [
                 "entry": [
                     "parameters": [
-                        "procedure": ["type": "string"],
-                        "counted": ["type": "int", "default": 1, "description": "how many"],
-                        "kind": ["type": "string", "enum": ["a", "b"]]
+                        ["name": "counted", "type": "int", "description": "how many"],
+                        ["name": "kind", "type": "string", "enum": ["a", "b"]],
+                        ["name": "procedure", "type": "string"]
                     ],
                     "returns": "dictionary<any>",
                     "body": [
@@ -740,7 +732,7 @@ struct WriterTests {
             "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": ["type": "string"], "ready": ["type": "bool"]],
+                    "parameters": [["name": "procedure", "type": "string"], ["name": "ready", "type": "bool"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -792,7 +784,7 @@ struct WriterTests {
             "imports": ["test.fail", "std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": ["type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "array<string>"]],
                     "body": [
                         ["var": "seen", "value": 0],
                         [
@@ -839,7 +831,7 @@ struct WriterTests {
             "imports": ["std.collection.count", "std.math.lessThan"],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": ["type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "array<string>"]],
                     "returns": "any",
                     "body": [
                         [
@@ -884,7 +876,7 @@ struct WriterTests {
             "imports": ["std.collection.filter", "std.text.joined", "std.logic.notEqual", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": ["procedure": ["type": "string"], "names": ["type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "array<string>"], ["name": "procedure", "type": "string"]],
                     "body": [
                         ["let": "shouted", "value": ["call": ["procedure": "shout", "of": ["ref": "procedure"]]]],
                         [
@@ -895,7 +887,7 @@ struct WriterTests {
                                 "arguments": [
                                     "by": [
                                         "closure": [
-                                            "parameters": ["item": ["type": "string"]],
+                                            "parameters": [["name": "item", "type": "string"]],
                                             "returns": "bool",
                                             "result": [
                                                 "call": [
@@ -913,9 +905,9 @@ struct WriterTests {
                             "let": "called",
                             "value": ["apply": [
                                 "procedure": [
-                                    "closure": ["parameters": ["n": ["type": "int"]], "result": ["ref": "n"]]
+                                    "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
                                 ],
-                                "arguments": ["n": 1]
+                                "arguments": [1]
                             ]
                         ]],
                         [
@@ -927,15 +919,15 @@ struct WriterTests {
                 ],
                 "shout": [
                     "receiver": "of",
-                    "parameters": ["of": ["type": "string"]],
+                    "parameters": [["name": "of", "type": "string"]],
                     "returns": "string",
                     "result": ["ref": "of"]
                 ],
                 "typed": [
                     "parameters": [
-                        "how": ["type": ["const procedure": ["parameters": ["it": ["type": "int"]], "returns": "bool"]]],
-                        "anything": ["type": "procedure"],
-                        "parameter": ["type": "some Element"]
+                        ["name": "anything", "type": "procedure"],
+                        ["name": "how", "type": ["const procedure": ["parameters": ["int"], "returns": "bool"]]],
+                        ["name": "parameter", "type": "some Element"]
                     ],
                     "returns": "never",
                     "result": ["ref": "anything"]

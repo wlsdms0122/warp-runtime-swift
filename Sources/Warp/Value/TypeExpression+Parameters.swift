@@ -2,41 +2,38 @@
 //  TypeExpression+Parameters.swift
 //  Warp
 //
-//  Created by JSilver
+//  Created by JSilver on 9/3/26.
 //
 
 import Foundation
 
-// The type parameters a declaration writes: which names it mentions, what each
-// is bounded by, and whether it has any at all. What a call puts in them is
-// read off the lowered declaration, where the readings are.
+// The type parameters a type mentions: each occurrence with the bound it
+// carries, whether there is one at all, and the type with every occurrence
+// carrying the bound its signature declared.
 extension TypeExpression {
-    // Every type parameter mentioned in here, occurrence by occurrence, with
-    // the constraint names that occurrence carries.
-    func parameterOccurrences(_ visit: (Name, [Name]) -> Void) {
+    // Every type parameter mentioned in here, occurrence by occurrence.
+    var parameterOccurrences: [ParameterOccurrence] {
         switch self {
         case let .parameter(name, constraints):
-            visit(name, constraints)
+            return [ParameterOccurrence(name: name, constraints: constraints)]
 
         case .reading, .composition:
-            return
+            return []
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
-            element.parameterOccurrences(visit)
+            return element.parameterOccurrences
 
         case let .record(fields):
-            for field in fields.values {
-                field.parameterOccurrences(visit)
-            }
+            return fields.values.flatMap { field in field.parameterOccurrences }
 
-        case let .procedure(signature, _, _):
-            signature?.parameterOccurrences(visit)
+        case let .procedure(type, _, _):
+            return type?.parameterOccurrences ?? []
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            inner.parameterOccurrences(visit)
+            return inner.parameterOccurrences
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
-            return
+            return []
         }
     }
 
@@ -56,8 +53,8 @@ extension TypeExpression {
         case let .record(fields):
             return fields.values.contains { field in field.isGeneric }
 
-        case let .procedure(signature, _, _):
-            return signature?.isGeneric ?? false
+        case let .procedure(type, _, _):
+            return type?.isGeneric ?? false
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner.isGeneric
@@ -66,104 +63,10 @@ extension TypeExpression {
             return false
         }
     }
-}
 
-public extension Signature {
-    var isGeneric: Bool {
-        parameters.values.contains { parameter in parameter.declared.isGeneric }
-            || (returns?.isGeneric ?? false)
-    }
-
-    // The bounds each type parameter this signature declares is held to: the
-    // set a bounded mention carries, or none where every mention is bare.
-    // What a signature holds a name to is one set, so two mentions carrying
-    // two sets are two claims about one name, and this says which name.
-    //
-    // A nested signature's parameters merge into the same table on purpose.
-    // They are this signature's own slots: `map` takes `array<some Element>`
-    // beside a procedure whose `item` is the same `some Element`, and it is one
-    // parameter filled by one call. Only a parameter behind a `named` type is
-    // not collected, because the link refuses one anywhere but a procedure
-    // signature and never fills one through the name.
-    var parameterBounds: ParameterBounds {
-        var bounds: [Name: [Name]] = [:]
-
-        // Every set a disagreeing name was bound by, so that the two reported
-        // are the two first in name order rather than the two a hash seed
-        // walked first.
-        var disagreeing: [Name: [[Name]]] = [:]
-
-        parameterOccurrences { name, constraints in
-            guard !constraints.isEmpty else {
-                if bounds[name] == nil { bounds[name] = [] }
-
-                return
-            }
-
-            guard let held = bounds[name], !held.isEmpty else {
-                bounds[name] = constraints
-
-                return
-            }
-
-            let sorted = constraints.sorted()
-
-            guard held.sorted() != sorted else { return }
-
-            var sets = disagreeing[name] ?? [held.sorted()]
-
-            if !sets.contains(sorted) { sets.append(sorted) }
-
-            disagreeing[name] = sets
-        }
-
-        guard let (name, sets) = disagreeing.min(by: { $0.key < $1.key }) else { return .held(bounds) }
-
-        let ordered = sets.sorted { one, other in one.lexicographicallyPrecedes(other) }
-
-        return .disagreeing(name, ordered[0], ordered[1])
-    }
-
-    // Every type parameter mentioned in this signature, occurrence by
-    // occurrence, with the constraint names that occurrence carries.
-    func parameterOccurrences(_ visit: (Name, [Name]) -> Void) {
-        for parameter in parameters.values {
-            parameter.declared.parameterOccurrences(visit)
-        }
-
-        returns?.parameterOccurrences(visit)
-    }
-
-    // This signature with each type parameter's occurrences carrying the
-    // constraint declared for its name. The signature owns the bound and the
-    // occurrences read it. A notation writes `bounds: { N: Numeric }` once and
-    // `some N` in the slots, and this is where the one meets the many.
-    //
-    // An occurrence already carrying a bound keeps it: a nested signature may
-    // have declared its own, and overwriting would silently pick between two
-    // claims the link refuses out loud.
-    func bounded(by bounds: [Name: [Name]]) -> Signature {
-        guard !bounds.isEmpty else { return self }
-
-        return Signature(
-            receiver: receiver,
-            parameters: parameters.mapValues { parameter in
-                Parameter(
-                    type: parameter.type?.bounded(by: bounds),
-                    candidates: parameter.candidates,
-                    default: parameter.default,
-                    description: parameter.description
-                )
-            },
-            returns: returns?.bounded(by: bounds)
-        )
-    }
-}
-
-extension TypeExpression {
     // The occurrence side of `Signature.bounded(by:)`, walked through every
-    // place a type parameter may sit. A nested signature's parameters included,
-    // because they are the outer signature's own slots.
+    // place a type parameter may sit. A nested procedure type's parameters
+    // included, because they are the outer signature's own slots.
     func bounded(by bounds: [Name: [Name]]) -> TypeExpression {
         switch self {
         case let .parameter(name, constraints):
@@ -184,8 +87,8 @@ extension TypeExpression {
         case let .record(fields):
             return .record(fields.mapValues { field in field.bounded(by: bounds) })
 
-        case let .procedure(signature, constness, isolation):
-            return .procedure(signature?.bounded(by: bounds), constness, isolation)
+        case let .procedure(type, constness, isolation):
+            return .procedure(type?.bounded(by: bounds), constness, isolation)
 
         case let .nullable(inner):
             return .nullable(inner.bounded(by: bounds))
@@ -204,33 +107,6 @@ extension TypeExpression {
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
             return self
-        }
-    }
-}
-
-public extension Signature {
-    // What a signature holds its type parameters to: one set of bounds per
-    // name, or the name two mentions bound two ways and the two sets.
-    enum ParameterBounds: Equatable {
-        case held([Name: [Name]])
-        case disagreeing(Name, [Name], [Name])
-
-        // The table where one is held; nothing where the signature disagrees
-        // with itself, which is refused where the signature is judged.
-        public var table: [Name: [Name]] {
-            guard case let .held(held) = self else { return [:] }
-
-            return held
-        }
-
-        // The sentence a disagreement is refused with, wherever it is refused.
-        public static func refusal(_ name: Name, _ one: [Name], _ other: [Name]) -> String {
-            let spelled = [one, other]
-                .map { names in names.sorted().map(\.spelling).joined(separator: " & ") }
-                .sorted()
-
-            return "`some \(name)` is bounded by \(spelled[0]) in one place and \(spelled[1]) in another."
-                + " One name is held to one set of bounds"
         }
     }
 }

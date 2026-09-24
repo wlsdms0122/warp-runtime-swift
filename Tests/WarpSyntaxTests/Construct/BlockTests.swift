@@ -21,7 +21,7 @@ struct BlockTests {
     func groupSpeaksWithDeclaredOutput() async throws {
         // Given
         let spec = try await loader.loadProcedure([
-            "parameters": ["who": ["type": "string"]],
+            "parameters": [["name": "who", "type": "string"]],
             "body": [
                 [
                     "let": "greet",

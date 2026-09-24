@@ -87,7 +87,7 @@ struct BoundaryTests {
                 ),
                 "wants": Procedure(
                     signature: Signature(
-                        parameters: ["it": Parameter(type: .int)],
+                        parameters: [Parameter(name: "it", type: .int)],
                         returns: .int
                     ),
                     body: [],
@@ -120,7 +120,7 @@ struct BoundaryTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
+                    signature: Signature(parameters: [Parameter(name: "names", type: .array(.string))]),
                     body: [],
                     result: .call(
                         Call(
@@ -155,7 +155,7 @@ struct BoundaryTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["xs": Parameter(type: .array(.any))]),
+                    signature: Signature(parameters: [Parameter(name: "xs", type: .array(.any))]),
                     body: [
                         Statement(binding: .constant("one"), expression: .call(
                                 Call(
@@ -195,7 +195,7 @@ struct BoundaryTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["trees": Parameter(type: .array(.named("Tree")))]
+                        parameters: [Parameter(name: "trees", type: .array(.named("Tree")))]
                     ),
                     body: [],
                     result: .call(
@@ -225,7 +225,7 @@ struct BoundaryTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["counts": Parameter(type: .array(.named("std.Numeric")))]),
+                    signature: Signature(parameters: [Parameter(name: "counts", type: .array(.named("std.Numeric")))]),
                     body: [],
                     result: .call(
                         Call(

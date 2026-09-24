@@ -305,7 +305,7 @@ private extension ObjectReader {
         case 10: read = .record(try keyed(fields.next(), of: "record", expression))
         case 11:
             read = .procedure(
-                try fields.maybe(signature),
+                try fields.maybe(procedureType),
                 try constness(fields.next()),
                 try isolation(fields.next())
             )
@@ -442,11 +442,23 @@ private extension ObjectReader {
         return read
     }
 
+    func procedureType(_ value: Value) throws -> ProcedureType {
+        var fields = try Fields(value, of: "procedure type")
+        let read = ProcedureType(
+            parameters: try Fields.list(fields.next(), of: "parameters", expression),
+            returns: try fields.maybe(expression)
+        )
+
+        try fields.end()
+
+        return read
+    }
+
     func signature(_ value: Value) throws -> Signature {
         var fields = try Fields(value, of: "signature")
         let read = Signature(
             receiver: try fields.maybe(name),
-            parameters: try keyed(fields.next(), of: "parameters", parameter),
+            parameters: try Fields.list(fields.next(), of: "parameters", parameter),
             returns: try fields.maybe(expression)
         )
 
@@ -458,9 +470,9 @@ private extension ObjectReader {
     func parameter(_ value: Value) throws -> Parameter {
         var fields = try Fields(value, of: "parameter")
         let read = Parameter(
+            name: try name(fields.next()),
             type: try fields.maybe(expression),
             candidates: try fields.maybe { written in try Fields.list(written, of: "candidates", text) },
-            default: try fields.maybe { written in try self.value(written) },
             description: try fields.maybe(text)
         )
 
@@ -659,18 +671,7 @@ private extension ObjectReader {
         case 11:
             read = .procedure(
                 parameters: try fields.maybe { written in
-                    try Fields.list(written, of: "parameters") { parameter in
-                        var held = try Fields(parameter, of: "parameter")
-                        let taken = LoweredParameter(
-                            name: try name(held.next()),
-                            type: try lowered(held.next()),
-                            defaulted: try held.flag()
-                        )
-
-                        try held.end()
-
-                        return taken
-                    }
+                    try Fields.list(written, of: "parameters", lowered)
                 },
                 returns: try fields.maybe(lowered),
                 constness: try constness(fields.next()),
@@ -939,14 +940,7 @@ private extension ObjectReader {
         case 5:
             read = .apply(
                 try operation(fields.next()),
-                arguments: try Fields.list(fields.next(), of: "arguments") { written in
-                    var held = try Fields(written, of: "argument")
-                    let taken = (try name(held.next()), try operation(held.next()))
-
-                    try held.end()
-
-                    return taken
-                }
+                arguments: try Fields.list(fields.next(), of: "arguments", operation)
             )
 
         case 6:

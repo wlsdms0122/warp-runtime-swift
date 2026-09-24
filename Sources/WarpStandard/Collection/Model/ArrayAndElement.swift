@@ -15,23 +15,14 @@ enum ArrayAndElement: Int, ParameterSet {
     case value
 
     // MARK: - Property
-    var name: Name {
-        switch self {
-        case .of:
-            return "of"
-
-        case .value:
-            return "value"
-        }
-    }
 
     var declared: Parameter {
         switch self {
         case .of:
-            return Parameter(type: .array(.parameter(name: "Element")))
+            return Parameter(name: "of", type: .array(.parameter(name: "Element")))
 
         case .value:
-            return Parameter(type: .parameter(name: "Element"))
+            return Parameter(name: "value", type: .parameter(name: "Element"))
         }
     }
 

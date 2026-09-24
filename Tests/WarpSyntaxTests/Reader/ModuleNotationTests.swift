@@ -26,7 +26,7 @@ struct ModuleNotationTests {
             "description": "a document is a module",
             "procedures": [
                 "verify": [
-                    "parameters": ["path": ["type": "string"]],
+                    "parameters": [["name": "path", "type": "string"]],
                     "body": [["let": "done", "value": ["ref": "path"]]]
                 ],
                 "report": ["body": [["let": "done", "value": "reported"]]]

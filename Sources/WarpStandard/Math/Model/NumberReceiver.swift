@@ -15,9 +15,7 @@ enum NumberReceiver: Int, ParameterSet {
     case of
 
     // MARK: - Property
-    var name: Name { "of" }
-
-    var declared: Parameter { Parameter(type: .parameter(name: "N", constraints: ["std.Numeric"])) }
+    var declared: Parameter { Parameter(name: "of", type: .parameter(name: "N", constraints: ["std.Numeric"])) }
 
     // MARK: - Initializer
     // MARK: - Public

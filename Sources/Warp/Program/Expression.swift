@@ -51,7 +51,7 @@ public indirect enum Expression: Sendable {
     // asks the value in hand, and only a run can. Two spellings because they are
     // two questions: fusing them would mean a local name could quietly stand in
     // for a linked one, and linking would stop being a promise.
-    case apply(Expression, arguments: [Name: Expression])
+    case apply(Expression, arguments: [Expression])
 
     // Reading a value as a type the text names. `any` declares nothing, so a
     // dot on one is refused at the link. This is the door: the author says what
@@ -205,7 +205,7 @@ public indirect enum Expression: Sendable {
 
         case let .apply(callee, arguments):
             return callee.holdsConstruct
-                || arguments.values.contains { argument in argument.holdsConstruct }
+                || arguments.contains { argument in argument.holdsConstruct }
 
         case let .call(call):
             return call.receiver?.holdsConstruct ?? false

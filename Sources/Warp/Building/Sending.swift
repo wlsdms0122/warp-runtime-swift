@@ -111,7 +111,7 @@ struct Sending {
 
     // MARK: - Private
     // Where each name a send hands over stands among the parameters it reaches.
-    // The order is the callee's declared names sorted, which is the order its
+    // The order is the callee's declaration order, which is the order its
     // slots stand in and the order a run reads them at, so this is the same
     // answer a call written in a body gets from the build.
     private func positions(of send: Native.Send, called label: Name) throws -> [Int] {

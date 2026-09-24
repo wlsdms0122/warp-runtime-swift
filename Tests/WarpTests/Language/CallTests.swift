@@ -23,7 +23,7 @@ struct CallTests {
         // Given
                 let echo = Procedure(
             signature: Signature(
-                parameters: ["text": Parameter(type: .string)],
+                parameters: [Parameter(name: "text", type: .string)],
                 returns: .record(["said": .string])
             ),
             body: [],
@@ -205,7 +205,7 @@ struct CallTests {
         // Given
         let countdown = Procedure(
                 signature: Signature(
-                    parameters: ["n": Parameter(type: .int)],
+                    parameters: [Parameter(name: "n", type: .int)],
                     returns: .record(["done": .bool])
                 ),
                 body: [

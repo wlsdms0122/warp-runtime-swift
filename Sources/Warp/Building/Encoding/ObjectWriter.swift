@@ -215,7 +215,7 @@ struct ObjectWriter {
         case let .procedure(written, constness, isolation):
             return .array([
                 .int(11),
-                try ObjectWriter.maybe(written, signature),
+                try ObjectWriter.maybe(written, procedureType),
                 self.constness(constness),
                 self.isolation(isolation)
             ])
@@ -296,27 +296,28 @@ struct ObjectWriter {
         }
     }
 
+    // A procedure type is `[parameters, returns]`: the types it is applied
+    // with, in position order, and what it answers or nothing.
+    private func procedureType(_ type: ProcedureType) throws(ObjectUnwritable) -> Value {
+        .array([
+            .array(try type.parameters.map(self.type)),
+            try ObjectWriter.maybe(type.returns, self.type)
+        ])
+    }
+
     private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
         .array([
             ObjectWriter.maybe(signature.receiver, name),
-            try keyed(signature.parameters, parameter),
+            .array(try signature.parameters.map(parameter)),
             try ObjectWriter.maybe(signature.returns, type)
         ])
     }
 
-    // A default is data a document wrote, and a document writes no procedure
-    // as data. Said where a default is written, so every signature written
-    // anywhere in an object is held to it, and the reader says the same
-    // where one is read.
     private func parameter(_ parameter: Parameter) throws(ObjectUnwritable) -> Value {
-        guard parameter.default?.holdsProcedure != true else {
-            throw ObjectUnwritable("a parameter default holding a procedure, which no document writes")
-        }
-
-        return .array([
+        .array([
+            name(parameter.name),
             try ObjectWriter.maybe(parameter.type, type),
             ObjectWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
-            try ObjectWriter.maybe(parameter.default, value),
             ObjectWriter.maybe(parameter.description, Value.string)
         ])
     }
@@ -496,15 +497,7 @@ private extension ObjectWriter {
         case let .procedure(parameters, returns, constness, isolation):
             return .array([
                 .int(11),
-                ObjectWriter.maybe(parameters) { written in
-                    .array(written.map { parameter in
-                        .array([
-                            name(parameter.name),
-                            lowered(parameter.type),
-                            .bool(parameter.defaulted)
-                        ])
-                    })
-                },
+                ObjectWriter.maybe(parameters) { written in .array(written.map(lowered)) },
                 ObjectWriter.maybe(returns, lowered),
                 self.constness(constness),
                 self.isolation(isolation)
@@ -677,7 +670,7 @@ private extension ObjectWriter {
                 .int(5),
                 try self.operation(callee),
                 .array(try arguments.map { (argument) throws(ObjectUnwritable) -> Value in
-                    .array([name(argument.0), try self.operation(argument.1)])
+                    try self.operation(argument)
                 })
             ])
 

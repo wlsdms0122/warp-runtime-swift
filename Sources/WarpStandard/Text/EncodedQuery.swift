@@ -13,26 +13,16 @@ import Warp
 struct EncodedQuery: Query {
     // What this takes: the text, and the encoding to write it in.
     enum Parameters: Int, ParameterSet {
-        case encoding
         case of
-
-        var name: Name {
-            switch self {
-            case .encoding:
-                return "encoding"
-
-            case .of:
-                return "of"
-            }
-        }
+        case encoding
 
         var declared: Parameter {
             switch self {
-            case .encoding:
-                return Parameter(type: .string, candidates: ["utf8"], default: .string("utf8"))
-
             case .of:
-                return Parameter(type: .string)
+                return Parameter(name: "of", type: .string)
+
+            case .encoding:
+                return Parameter(name: "encoding", type: .nullable(.string), candidates: ["utf8"])
             }
         }
     }

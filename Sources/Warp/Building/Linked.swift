@@ -106,7 +106,7 @@ public final class Linked: Sendable {
     ) {
         let slots = signature.lowered(in: table)
         let returns = signature.returns?.lowered(in: table)
-        let receiverPosition = slots.position(of: signature.receiver)
+        let receiverPosition = signature.receiver.flatMap(signature.position(of:))
 
         self.label = label
         self.origin = origin
@@ -224,14 +224,16 @@ public final class Linked: Sendable {
         try signature.settle(given, over: slots, skipping: skipping, in: table)
     }
 
-    // The same, over arguments given by name. `skipping` names the positions
-    // the caller fills another way, as a receiver written in front of the dot
-    // does.
-    func settle(
-        _ given: [(name: Name, value: Value)],
-        skipping: (Int) -> Bool = { _ in false }
-    ) throws -> [Value?] {
-        try signature.settle(given, over: slots, skipping: skipping, in: table)
+    // The same, over arguments handed by position, every position given: the
+    // way a value is applied.
+    func settle(applied given: [Value]) throws -> [Value?] {
+        try signature.settle(applied: given, over: slots, in: table)
+    }
+
+    // The same, over arguments given by name: the door a caller outside the
+    // build comes through.
+    func settle(_ given: [Name: Value]) throws -> [Value?] {
+        try signature.settle(given, over: slots, in: table)
     }
 
     // The receiver settled against the slot at this row's receiver

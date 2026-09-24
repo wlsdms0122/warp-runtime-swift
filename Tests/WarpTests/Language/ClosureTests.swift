@@ -31,7 +31,7 @@ struct ClosureTests {
         let answer = try await answer(
             of: sut + [
                 Statement(binding: .constant("shadow"), expression: .literal(.string("called"))),
-                Statement(binding: .constant("said"), expression: .apply(reference("made"), arguments: [:])
+                Statement(binding: .constant("said"), expression: .apply(reference("made"), arguments: [])
                 )
             ],
             result: reference("said")
@@ -41,27 +41,27 @@ struct ClosureTests {
         #expect(answer == .string("written"))
     }
 
-    @Test("a body declares every name the slot hands and no other", arguments: [
-        (["item": Parameter(type: .int)] as [Name: Parameter], true),
-        ([:], false),
-        (["item": Parameter(type: .int), "index": Parameter(type: .int)], false)
+    @Test("a body declares as many parameters as the slot hands, under any name", arguments: [
+        ([Parameter(name: "item", type: .int)] as [Parameter], true),
+        ([Parameter(name: "anything", type: .int)] as [Parameter], true),
+        ([] as [Parameter], false),
+        ([Parameter(name: "item", type: .int), Parameter(name: "index", type: .int)] as [Parameter], false)
     ])
-    func aBodyDeclaresWhatTheSlotHandsIt(declared: [Name: Parameter], fits: Bool) async throws {
-        // Given. The slot hands one name. A body declaring it stands; one
-        // declaring none is handed a name it does not have, and one writing a
-        // name nothing hands it could only ever read null there.
+    func aBodyDeclaresWhatTheSlotHandsIt(declared: [Parameter], fits: Bool) async throws {
+        // Given. The slot hands one value. A body declaring one parameter
+        // stands whatever it calls it, since a value is applied by position;
+        // one declaring none or two is a different procedure.
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    "by": Parameter(
-                        type: .procedure(Signature(parameters: ["item": Parameter(type: .int)]))
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int]))
                     )
                 ]
             ),
             body: [
                 Statement(
                     binding: .constant("once"),
-                    expression: .apply(reference("by"), arguments: ["item": .literal(.int(1))])
+                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
                 )
             ]
         )
@@ -105,23 +105,22 @@ struct ClosureTests {
         }
     }
 
-    @Test("an extra name a call need not fill is a name the body may declare")
-    func anExtraParameterThatStandsUnfilledFits() async throws {
-        // Given. The slot hands one name and the body writes two, the second
-        // with a default. Nothing has to fill it, so the body reads what it
-        // declared rather than the null the width rule refuses.
+    @Test("an extra parameter the slot never hands does not fit, even a nullable one")
+    func anExtraParameterDoesNotFit() async throws {
+        // Given. The slot hands one value and the body writes two, the second
+        // nullable. A count the slot does not have is a different procedure,
+        // whatever the extra parameter admits.
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    "by": Parameter(
-                        type: .procedure(Signature(parameters: ["item": Parameter(type: .int)]))
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int]))
                     )
                 ]
             ),
             body: [
                 Statement(
                     binding: .constant("once"),
-                    expression: .apply(reference("by"), arguments: ["item": .literal(.int(1))])
+                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
                 )
             ]
         )
@@ -136,8 +135,8 @@ struct ClosureTests {
                             expression: .closure(
                                 Procedure(
                                     signature: Signature(parameters: [
-                                        "item": Parameter(type: .int),
-                                        "index": Parameter(type: .int, default: .int(0))
+                                        Parameter(name: "item", type: .int),
+                                        Parameter(name: "index", type: .nullable(.int))
                                     ]),
                                     body: [],
                                     result: .literal(.int(1))
@@ -157,7 +156,7 @@ struct ClosureTests {
         )
 
         // When / Then
-        await #expect(throws: Never.self) {
+        await #expect(throws: BuildError.self) {
             try await Builder().build([sut] + Module.standard)
         }
     }
@@ -168,10 +167,10 @@ struct ClosureTests {
         // running. The closure handed to it shouts, and shouting is an effect
         let twice = Procedure(
             signature: Signature(
-                parameters: ["body": Parameter(type: .procedure(nil, .const))]
+                parameters: [Parameter(name: "body", type: .procedure(nil, .const))]
             ),
             body: [
-                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [:])
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [])
                 )
             ]
         )
@@ -215,11 +214,11 @@ struct ClosureTests {
         // Given. The same declaration, handed a body that only reads
         let twice = Procedure(
             signature: Signature(
-                parameters: ["body": Parameter(type: .procedure(nil, .const))],
+                parameters: [Parameter(name: "body", type: .procedure(nil, .const))],
                 returns: .string
             ),
             body: [
-                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [:])
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [])
                 )
             ],
             result: reference("once")
@@ -256,11 +255,11 @@ struct ClosureTests {
         // procedure that declares a procedure parameter and calls it, which is
         // the whole of what "the author can make constructs" means here.
         let twice = Procedure(
-            signature: Signature(parameters: ["body": Parameter(type: .procedure(nil))]),
+            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(nil))]),
             body: [
-                Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [:])
+                Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])
                 ),
-                Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: [:])
+                Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: [])
                 )
             ],
             result: .array([reference("first"), reference("second")])
@@ -294,11 +293,11 @@ struct ClosureTests {
         // Given. The returned closure holds the argument its maker was given,
         // which is what makes returning one worth anything
         let makeGreeter = Procedure(
-            signature: Signature(parameters: ["greeting": Parameter(type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "greeting", type: .string)]),
             body: [],
             result: .closure(
                 Procedure(
-                    signature: Signature(parameters: ["name": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "name", type: .string)]),
                     body: [],
                     result: interpolated(spelling(reference("greeting")), literal(", "), spelling(reference("name")))
                 )
@@ -317,7 +316,7 @@ struct ClosureTests {
                 ),
                 Statement(binding: .constant("said"), expression: .apply(
                         reference("hello"),
-                        arguments: ["name": .literal(.string("warp"))]
+                        arguments: [.literal(.string("warp"))]
                     )
                 )
             ],
@@ -338,7 +337,7 @@ struct ClosureTests {
                     "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
                 ])
             ),
-            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: [:])
+            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: [])
             )
         ]
 
@@ -354,7 +353,7 @@ struct ClosureTests {
         // Given
         let sut = [
             Statement(binding: .constant("notCallable"), expression: .literal(.int(1))),
-            Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: [:])
+            Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: [])
             )
         ]
 
@@ -373,7 +372,7 @@ struct ClosureTests {
         )
         let readsItsOwn = Warp.Expression.closure(
             Procedure(
-                signature: Signature(parameters: ["mine": Parameter(type: .int)]),
+                signature: Signature(parameters: [Parameter(name: "mine", type: .int)]),
                 body: [],
                 result: reference("mine")
             )

@@ -179,7 +179,7 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["data": Parameter(type: .bytes)]
+                        parameters: [Parameter(name: "data", type: .bytes)]
                     ),
                     body: [],
                     result: .reference([.key("data"), .index(1)])
@@ -240,7 +240,7 @@ struct BytesTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(
-                            parameters: ["data": Parameter(type: .bytes)]
+                            parameters: [Parameter(name: "data", type: .bytes)]
                         ),
                         body: [],
                         result: expression
@@ -267,7 +267,7 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["data": Parameter(type: .any)]
+                        parameters: [Parameter(name: "data", type: .any)]
                     ),
                     body: [],
                     result: .call(Call(
@@ -297,7 +297,7 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["data": Parameter(type: .bytes)]
+                        parameters: [Parameter(name: "data", type: .bytes)]
                     ),
                     body: [
                         Statement(binding: .variable("sum"), expression: .literal(.int(0))
@@ -390,7 +390,7 @@ struct BytesTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .array(.array(.int)))],
+                        parameters: [Parameter(name: "value", type: .array(.array(.int)))],
                         returns: .array(.array(.int))
                     ),
                     body: [],
@@ -467,7 +467,7 @@ struct BytesTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .array(.int))],
+                        parameters: [Parameter(name: "value", type: .array(.int))],
                         returns: .array(.int)
                     ),
                     body: [],

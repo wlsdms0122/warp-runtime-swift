@@ -7,38 +7,30 @@
 
 import Foundation
 
-// The parameters one native procedure declares: every name it takes, what each is
-// declared as, and where each stands among them.
+// The parameters one native procedure declares: what each is declared as,
+// and where each stands among them.
 //
 // A procedure reads an argument by naming a case, so a name it never declared is
 // a name that does not compile. The place is the case's raw value, which is
 // what lets the run read a place where it read a name.
 //
-// The run keeps parameters in name order, so the cases stand in that order
-// too. `Signature.init(of:receiver:returns:)` is the door that says so.
+// The case order is the declaration order, the order the run keeps the
+// arguments in, which is a fact of the wire.
+// `Signature.init(of:receiver:returns:)` is the door that says so.
 public protocol ParameterSet: CaseIterable, Hashable, Sendable {
-    // What a document writes to fill this.
-    var name: Name { get }
-
-    // What it takes, defaulted, and the members it must be one of.
+    // What it takes: the name a document writes to fill this, the type, and
+    // the members it must be one of.
     var declared: Parameter { get }
 
     // Where it stands among the procedure's parameters.
     var position: Int { get }
 }
 
-public extension ParameterSet where Self: RawRepresentable, RawValue == Int {
-    var position: Int { rawValue }
+public extension ParameterSet {
+    // What a document writes to fill this.
+    var name: Name { declared.name }
 }
 
-// A procedure that declares nothing. Its one case is never reached, which is what
-// having no parameters means.
-public enum NoParameters: Int, ParameterSet {
-    case none
-
-    public static var allCases: [NoParameters] { [] }
-
-    public var name: Name { "" }
-
-    public var declared: Parameter { Parameter() }
+public extension ParameterSet where Self: RawRepresentable, RawValue == Int {
+    var position: Int { rawValue }
 }

@@ -26,7 +26,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "who": Parameter(type: .string)
+                            Parameter(name: "who", type: .string)
                         ]
                     ),
                     body: [
@@ -58,7 +58,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "kind": Parameter(type: .string)
+                            Parameter(name: "kind", type: .string)
                         ]
                     ),
                     body: [
@@ -226,7 +226,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "n": Parameter(type: .int)
+                            Parameter(name: "n", type: .int)
                         ]
                     ),
                     body: [
@@ -264,7 +264,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "data": Parameter(type: .dictionary(.any))
+                            Parameter(name: "data", type: .dictionary(.any))
                         ]
                     ),
                     body: [
@@ -302,7 +302,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "data": Parameter(type: .dictionary(.any))
+                            Parameter(name: "data", type: .dictionary(.any))
                         ],
                         returns: .any
                     ),
@@ -328,7 +328,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "kind": Parameter(type: .string)
+                            Parameter(name: "kind", type: .string)
                         ]
                     ),
                     body: [
@@ -379,7 +379,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "reason": Parameter(type: .string)
+                            Parameter(name: "reason", type: .string)
                         ]
                     ),
                     body: [

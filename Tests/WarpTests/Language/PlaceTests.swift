@@ -74,17 +74,18 @@ struct PlaceTests {
         #expect(named?.steps.contains(.statement(name: "held", at: 0)) == true)
     }
 
-    @Test("a signature's slots are named under the key a procedure declares them with")
-    func parametersAreNamedAsTheDocumentNamesThem() throws {
-        // Given. A default no document can hold, so the refusal is the
-        // declaration's own rather than anything a body did with it When
+    @Test("a signature's slots are named by the position a procedure declares them at")
+    func parametersAreNamedByPosition() throws {
+        // Given. A parameter shadowing a constant, so the refusal is the
+        // declaration's own rather than anything a body did with it
+        // When
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 constants: ["amount": .literal(.int(1))],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                        signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
                         body: []
                     )
                 ]
@@ -92,7 +93,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.parameters.amount")
+        #expect(error?.place?.rendered == "procedures.entry.parameters[0]")
     }
 
     @Test("the place is carried as data, and the sentence is only the reason")
@@ -151,9 +152,9 @@ struct PlaceTests {
                 ]),
                 "helper": Procedure(
                     signature: Signature(parameters: [
-                        "first": Parameter(type: .int),
-                        "second": Parameter(type: .int),
-                        "third": Parameter(type: .int)
+                        Parameter(name: "first", type: .int),
+                        Parameter(name: "second", type: .int),
+                        Parameter(name: "third", type: .int)
                     ]),
                     body: []
                 )
@@ -186,7 +187,7 @@ struct PlaceTests {
                     )
                 ]),
                 "helper": Procedure(
-                    signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
                     body: []
                 )
             ]
@@ -251,7 +252,7 @@ struct PlaceTests {
                         )
                     ]),
                     "helper": Procedure(
-                        signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                        signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
                         body: []
                     )
                 ]
@@ -478,7 +479,7 @@ struct PlaceTests {
                 ]),
                 "stop": Procedure(
                     signature: Signature(
-                        parameters: ["message": Parameter(type: .string)],
+                        parameters: [Parameter(name: "message", type: .string)],
                         returns: .never
                     ),
                     body: [Statement(expression: .leave(Leave(reach: .procedure)))]

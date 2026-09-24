@@ -95,9 +95,7 @@ extension Linked {
         case let .apply(callee, arguments):
             return .apply(
                 try Self.renumbered(callee, answer),
-                arguments: try arguments.map { name, argument in
-                    (name, try Self.renumbered(argument, answer))
-                }
+                arguments: try arguments.map { argument in try Self.renumbered(argument, answer) }
             )
 
         case let .cast(value, type, optional):

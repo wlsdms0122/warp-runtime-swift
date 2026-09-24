@@ -83,7 +83,7 @@ struct FailingTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .any)]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .any)]),
                     body: [],
                     result: .call(Call(receiver: reference("it"), selector: "std.control.abort"))
                 )
@@ -106,7 +106,7 @@ struct FailingTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .any)]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .any)]),
                     body: [],
                     result: .cast(reference("it"), as: .int, optional: false)
                 )
@@ -128,7 +128,7 @@ struct FailingTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .any)]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .any)]),
                     body: [
                         Statement(
                             binding: .constant("tried"),
@@ -194,13 +194,13 @@ struct FailingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: ["piece": Parameter(type: .procedure(nil))]
+                        parameters: [Parameter(name: "piece", type: .procedure(nil))]
                     ),
                     body: [
                         Statement(
                             binding: .constant("tried"),
                             expression: .attempt(
-                                Block(body: [], result: .apply(reference("piece"), arguments: [:])),
+                                Block(body: [], result: .apply(reference("piece"), arguments: [])),
                                 rescue: Block(body: [], result: .literal(.int(2))),
                                 failure: "tried"
                             )

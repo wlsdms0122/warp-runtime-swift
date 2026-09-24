@@ -88,7 +88,7 @@ struct ContractTests {
                 "app.Describable.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -151,7 +151,7 @@ struct ContractTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .int
                     ),
                     body: [],
@@ -182,7 +182,7 @@ struct ContractTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .int
                     ),
                     body: [],
@@ -235,7 +235,7 @@ struct ContractTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraints: ["chart.Plottable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["chart.Plottable"]))
                         ],
                         returns: .int
                     ),
@@ -254,7 +254,7 @@ struct ContractTests {
                 "bank.Account.height": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .int
                     ),
                     body: [],
@@ -300,7 +300,7 @@ struct ContractTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -387,7 +387,7 @@ struct ContractTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -397,7 +397,7 @@ struct ContractTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -454,7 +454,7 @@ struct ContractTests {
                 signature: Signature(
                     receiver: "it",
                     parameters: [
-                        "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                        Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                     ],
                     returns: .string
                 ),
@@ -497,7 +497,7 @@ struct ContractTests {
                     signature: Signature(
                         receiver: "it",
                         parameters: [
-                            "it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -509,7 +509,7 @@ struct ContractTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -521,7 +521,7 @@ struct ContractTests {
                 "bank.Card.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Card"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Card"))],
                         returns: .string
                     ),
                     body: [],

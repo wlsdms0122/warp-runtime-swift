@@ -45,79 +45,6 @@ struct BuilderTests {
         )
     }
 
-    @Test("a default the parameter itself would refuse is refused at link")
-    func aDefaultOutsideTheTypeIsRefused() async throws {
-        // Given. The fallback only ever runs for the one call that leans on it,
-        // which is exactly the call that could not see this coming
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: []),
-                "helper": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "count": Parameter(type: .int, default: .string("three"))
-                        ]
-                    ),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then
-        let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(error?.place?.rendered == "procedures.helper.parameters.count")
-    }
-
-    @Test("a default outside its own enum is refused at link")
-    func aDefaultOutsideOneOfIsRefused() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: []),
-                "helper": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "mode": Parameter(
-                                type: .string,
-                                candidates: ["fast", "slow"],
-                                default: .string("medium")
-                            )
-                        ]
-                    ),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then
-        let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(error?.place?.rendered == "procedures.helper.parameters.mode")
-    }
-
-    @Test("an omitted argument arrives as the settled default")
-    func aDefaultArrivesSettled() async throws {
-        // Given. The fallback walks the same gate an argument does, so a whole
-        // number defaulting a fraction slot arrives as the fraction it settles
-        // to
-        let answer = try await answer(
-            of: [],
-            result: reference("count"),
-            signature: Signature(
-                parameters: ["count": Parameter(type: .double, default: .int(1))]
-            )
-        )
-
-        // Then. Swift-level equality is kind-strict, so this is the settled
-        // kind
-        #expect(answer == .double(1))
-    }
-
     @Test("a enum no candidate of which fits the type is refused at link")
     func anUnsatisfiableOneOfIsRefused() async throws {
         // Given. Admitting nothing is a fact about the type and the set
@@ -127,67 +54,7 @@ struct BuilderTests {
                 entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
-                        parameters: ["count": Parameter(type: .int, candidates: ["fast"])]
-                    ),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then
-        let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(error?.message.contains("admits nothing") == true)
-    }
-
-    @Test("a null default on a type that does not admit null is refused at link")
-    func aNullDefaultOutsideTheTypeIsRefused() async throws {
-        // Given. The explicitly-null default is the value the body receives, so
-        // the declaration must admit it like any other value
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: []),
-                "helper": Procedure(
-                    signature: Signature(
-                        parameters: ["procedure": Parameter(type: .string, default: .null)]
-                    ),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then
-        let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(error?.message.contains("null") == true)
-    }
-
-    @Test("a parameter nested in a procedure type is judged like a top-level one")
-    func aNestedParameterDeclarationIsJudged() async throws {
-        // Given. The declaration facts are the same wherever the parameter is
-        // written, so the judgment rides the same recursion that resolves the
-        // nested type names
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: []),
-                "helper": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "by": Parameter(
-                                type: .procedure(
-                                    Signature(
-                                        parameters: [
-                                            "mode": Parameter(type: .string, candidates: [])
-                                        ],
-                                        returns: .bool
-                                    )
-                                )
-                            )
-                        ]
+                        parameters: [Parameter(name: "count", type: .int, candidates: ["fast"])]
                     ),
                     body: []
                 )
@@ -210,7 +77,7 @@ struct BuilderTests {
                 entryName: Procedure(access: .public, body: []),
                 "helper": Procedure(
                     signature: Signature(
-                        parameters: ["mode": Parameter(type: .string, candidates: [])]
+                        parameters: [Parameter(name: "mode", type: .string, candidates: [])]
                     ),
                     body: []
                 )
@@ -281,7 +148,7 @@ struct BuilderTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: [:])
+                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: [])
                             )
                         ],
                         result: reference("got")
@@ -311,8 +178,8 @@ struct BuilderTests {
                     "apply": .closure(Procedure(
                         signature: Signature(
                             parameters: statement == nil
-                                ? ["zebra": Parameter(type: .int)]
-                                : [:],
+                                ? [Parameter(name: "zebra", type: .int)]
+                                : [],
                             returns: .int
                         ),
                         body: statement.map { one in [one] } ?? [],
@@ -354,7 +221,7 @@ struct BuilderTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: [:])
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: [])
                         )
                     ],
                     result: reference("got")
@@ -389,7 +256,7 @@ struct BuilderTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: [:])
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: [])
                         )
                     ],
                     result: reference("got")
@@ -716,7 +583,7 @@ struct BuilderTests {
                 "callee": Procedure(
                     signature: Signature(
                         parameters: [
-                            "base": Parameter(type: .int)
+                            Parameter(name: "base", type: .int)
                         ]
                     ),
                     body: [
@@ -751,7 +618,7 @@ struct BuilderTests {
                 "callee": Procedure(
                     signature: Signature(
                         parameters: [
-                            "base": Parameter(type: .int)
+                            Parameter(name: "base", type: .int)
                         ]
                     ),
                     body: [
@@ -784,7 +651,7 @@ struct BuilderTests {
                 "callee": Procedure(
                     signature: Signature(
                         parameters: [
-                            "base": Parameter(type: .int)
+                            Parameter(name: "base", type: .int)
                         ]
                     ),
                     body: [
@@ -796,7 +663,7 @@ struct BuilderTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "text": Parameter(type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -827,7 +694,7 @@ struct BuilderTests {
                 "callee": Procedure(
                     signature: Signature(
                         parameters: [
-                            "base": Parameter(type: .int)
+                            Parameter(name: "base", type: .int)
                         ]
                     ),
                     body: [
@@ -866,7 +733,7 @@ struct BuilderTests {
         let sut = try Module(
             procedures: [
                 "callee": Procedure(
-                    signature: Signature(parameters: ["base": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "base", type: .int)]),
                     body: [Statement(binding: .constant("echo"), expression: .reference([.key("base")]))]
                 ),
                 "caller": Procedure(

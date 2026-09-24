@@ -33,7 +33,11 @@ extension Builder {
     // The environment a procedure's body starts from: its own parameters, which
     // are the only names declared before the first statement.
     func environment(of signature: Signature, in table: LoweredTypeTable) -> [Name: Binding] {
-        signature.parameters.mapValues { parameter in Binding(parameter: parameter.declared.lowered(in: table)) }
+        Dictionary(
+            signature.parameters.map { parameter in
+                (parameter.name, Binding(parameter: parameter.declared.lowered(in: table)))
+            }
+        ) { first, _ in first }
     }
 
     // What a body hands its caller: the result it reads, and every `return`
@@ -347,18 +351,14 @@ extension Builder {
             return .refusal(named.joined(separator: ", "))
         }
 
-        let bounds: [Name: [Name]]
+        let bounds = declared.parameterBounds
 
-        switch declared.parameterBounds {
-        case let .held(held):
-            bounds = held
-
-        case let .disagreeing(parameter, one, other):
-            return .refusal(Signature.ParameterBounds.refusal(parameter, one, other))
+        if let refusal = bounds.refusal {
+            return .refusal(refusal)
         }
 
         if let refusal = constraintRefusal(
-            mentions: bounds,
+            mentions: bounds.table,
             readings: substitution.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
@@ -1560,7 +1560,7 @@ extension Builder {
             let isolated = body.map { block in
                 isIsolated(
                     block,
-                    declaring: Set(procedure.signature.parameters.keys),
+                    declaring: Set(procedure.signature.names),
                     given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures
                         .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
@@ -1587,7 +1587,7 @@ extension Builder {
                 rewritten: rewritten,
                 calls: calls,
                 reading: TypeExpression.procedure(
-                    procedure.signature,
+                    procedure.signature.type,
                     const ? .const : .unstated,
                     isolated ? .isolated : .unstated
                 )
@@ -1605,12 +1605,12 @@ extension Builder {
                 return Inspection(rewritten: expression, reading: .any)
             }
 
-            // Named one by one, because a loop over the values alone reports
-            // the third operand from the place the first was.
+            // One by one, because a loop over the values alone reports the
+            // third operand from the place the first was.
             try held(callee, asOperand: place.part(.callee), given: context, when: ask)
 
-            for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                try held(argument, asOperand: place.argument(name.spelling), given: context, when: ask)
+            for (position, argument) in arguments.enumerated() {
+                try held(argument, asOperand: place.part(.arguments).index(position), given: context, when: ask)
             }
 
             let called = try await inspected(
@@ -1620,20 +1620,62 @@ extension Builder {
                 with: context,
                 ask: ask
             )
-            var rewritten: [Name: Expression] = [:]
+            var rewritten: [Expression] = []
             var calls = called.calls
+            var readings: [LoweredType] = []
 
-            for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
+            for (position, argument) in arguments.enumerated() {
                 let inner = try await inspected(
                     argument,
-                    at: place.argument(name.spelling),
+                    at: place.part(.arguments).index(position),
                     in: environment,
                     with: context,
                     ask: ask
                 )
 
-                rewritten[name] = inner.rewritten
+                rewritten.append(inner.rewritten)
+                readings.append(inner.reading)
                 calls += inner.calls
+            }
+
+            // The arguments are handed by position, every position given, so
+            // a count the slot's type does not have is one no run could take,
+            // and an argument the slot's type refuses is refused here the way
+            // a call's is.
+            if case let .procedure(parameters?, _, _, _) = called.reading {
+                guard parameters.count == arguments.count else {
+                    throw BuildError(
+                        "applies a value of \(called.reading.rendered(in: context.loweredTypes))"
+                            + " with \(arguments.count) arguments, and it takes \(parameters.count)",
+                        at: place.part(.arguments)
+                    )
+                }
+
+                for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
+                where !parameter.slotUnwrapped.accepts(reading, in: context.loweredTypes) {
+                    throw BuildError(
+                        "applies a value with \(reading.rendered(in: context.loweredTypes))"
+                            + " where it takes \(parameter.rendered(in: context.loweredTypes))",
+                        at: place.part(.arguments).index(position)
+                    )
+                }
+
+                // A constant is settled here, through the gate the run would
+                // hold it to, since a kind that fits may still hold a value
+                // the slot's type refuses.
+                for (position, (parameter, argument)) in zip(parameters, arguments).enumerated() {
+                    guard let constant = argument.constantValue else { continue }
+
+                    do {
+                        _ = try parameter.slotUnwrapped.checking(
+                            constant,
+                            at: "argument \(position)",
+                            in: context.loweredTypes
+                        )
+                    } catch {
+                        throw BuildError("applies a value: \(error)", at: place.part(.arguments).index(position))
+                    }
+                }
             }
 
             let answers: LoweredType
@@ -2091,7 +2133,7 @@ extension Builder {
         var calls = receiver.calls
 
         for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
-            guard let parameter = asked.signature.parameters[name] else {
+            guard let parameter = asked.signature.parameter(named: name) else {
                 throw BuildError(
                     "sends '\(call.selector)' with '\(name)', which"
                         + " '\(asked.contract)' does not name",
@@ -2132,14 +2174,10 @@ extension Builder {
             calls += inner.calls
         }
 
-        for (name, parameter) in asked.signature.parameters.sorted(by: { $0.key < $1.key })
-        where call.arguments[name] == nil {
-            guard
-                parameter.default != nil
-                    || parameter.declared.lowered(in: context.loweredTypes).declaresNull(in: context.loweredTypes)
-            else {
+        for parameter in asked.signature.parameters where call.arguments[parameter.name] == nil {
+            guard !parameter.mustBeGiven(in: context.types) else {
                 throw BuildError(
-                    "sends '\(call.selector)' without '\(name)', which"
+                    "sends '\(call.selector)' without '\(parameter.name)', which"
                         + " '\(asked.contract)' asks for",
                     at: place.part(.arguments)
                 )
@@ -2853,8 +2891,9 @@ extension Builder {
     ) throws {
         guard case .judging = ask else { return }
 
-        for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key })
-        where parameter.declared.isInout {
+        for parameter in signature.parameters where parameter.declared.isInout {
+            let name = parameter.name
+
             guard let argument = call.handed(name, to: signature) else { continue }
 
             let at = name == signature.receiver

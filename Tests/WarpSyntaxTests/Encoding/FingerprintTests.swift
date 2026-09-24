@@ -31,7 +31,7 @@ struct FingerprintTests {
             "app.main": Procedure(
                 signature: Signature(returns: .int),
                 body: [],
-                result: .call(Call(selector: "a.foo"))
+                result: .call(Call(selector: "a.foo", arguments: ["of": .literal(.null)]))
             )
         ]
     )
@@ -122,7 +122,11 @@ struct FingerprintTests {
     private func answering(_ value: Value) -> Module {
         try! Module(
             procedures: [
-                "a.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(value))
+                "a.foo": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .any)], returns: .int),
+                    body: [],
+                    result: .literal(value)
+                )
             ]
         )
     }
@@ -147,9 +151,7 @@ private struct AnsweringQuery: Query {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .any, default: .null) }
+        var declared: Parameter { Parameter(name: "of", type: .any) }
     }
 
     // MARK: - Property

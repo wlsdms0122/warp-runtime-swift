@@ -52,7 +52,7 @@ extension Builder {
 
         for (place, inner) in closures(in: subexpressions) {
             try judge(inner.signature, at: place, in: table)
-            try judge(carried: inner.signature, at: place, in: table)
+            try judge(carried: inner.signature.type, at: place, in: table)
         }
 
         for (place, named) in castTypes(in: subexpressions) {
@@ -77,19 +77,27 @@ extension Builder {
         at place: Place,
         in table: TypeTable
     ) throws {
-        for (input, parameter) in signature.parameters.sorted { $0.key < $1.key } {
+        for (position, parameter) in signature.parameters.enumerated() {
+            let here = place.part(.parameters).index(position)
+
             try mentioned(
                 in: parameter.declared.slotUnwrapped,
-                at: place.part(.parameters).key(input.spelling),
+                at: here,
                 parameterized: true,
                 resolve: table
             )
-            try saysWhatItDoes(
-                with: parameter.declared,
-                at: place.part(.parameters).key(input.spelling),
-                in: table
+            try saysWhatItDoes(with: parameter.declared, at: here, in: table)
+            try judge(parameter, at: here, in: table)
+        }
+
+        // Two parameters under one name would be one name the body reads
+        // two ways.
+        for (position, parameter) in signature.parameters.enumerated()
+        where signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) {
+            throw BuildError(
+                "declares '\(parameter.name)' twice",
+                at: place.part(.parameters).index(position)
             )
-            try judge(parameter, called: input, at: place.part(.parameters).key(input.spelling), in: table)
         }
 
         try mentioned(
@@ -99,9 +107,9 @@ extension Builder {
             resolve: table
         )
 
-        try judgeConstraints(of: signature, at: place, in: table)
+        try judgeConstraints(signature.parameterOccurrences, at: place, in: table)
 
-        if let receiver = signature.receiver, signature.parameters[receiver] == nil {
+        if let receiver = signature.receiver, signature.parameter(named: receiver) == nil {
             throw BuildError(
                 "receiver names '\(receiver)', which this"
                     + " signature does not declare",
@@ -216,30 +224,29 @@ extension Builder {
         // signature's slot is part of that signature, and one in a declared
         // type is not a filling site. A parameter written there is never bound
         // at any call, so the bound it claims would be a claim nothing judges.
-        case let .procedure(signature, _, _):
-            guard let signature else { return }
+        case let .procedure(type, _, _):
+            guard let type else { return }
 
-            try judge(carried: signature, at: place, in: table)
+            try judge(carried: type, at: place, in: table)
 
-            for (name, parameter) in signature.parameters.sorted { $0.key < $1.key } {
+            for (position, parameter) in type.parameters.enumerated() {
                 try mentioned(
-                    in: parameter.declared.slotUnwrapped,
-                    at: place.key(name.spelling),
+                    in: parameter.slotUnwrapped,
+                    at: place.index(position),
                     parameterized: parameterized,
                     nested: nested,
                     resolve: table
                 )
-                try judge(parameter, called: name, at: place.key(name.spelling), in: table)
             }
 
             try mentioned(
-                in: signature.returns ?? .any,
+                in: type.returns ?? .any,
                 at: place,
                 parameterized: parameterized,
                 resolve: table
             )
 
-            try judgeConstraints(of: signature, at: place, in: table)
+            try judgeConstraints(type.parameterOccurrences, at: place, in: table)
 
         // A value of whatever type answers every name: each has to be a
         // membership's or a contract's, since a type is one thing and not a
@@ -423,8 +430,8 @@ extension Builder {
     //
     // A declaration is not held to this. Its body is text a walk reads, and
     // what it answers lands on the name its caller binds.
-    private func judge(carried signature: Signature, at place: Place, in table: TypeTable) throws {
-        guard let returns = signature.returns, Builder.handedOnce(returns, in: table) else { return }
+    private func judge(carried type: ProcedureType, at place: Place, in table: TypeTable) throws {
+        guard let returns = type.returns, Builder.handedOnce(returns, in: table) else { return }
 
         throw BuildError(
             "writes a procedure answering \(returns.rendered), which is handed on"
@@ -437,11 +444,9 @@ extension Builder {
     // Whether a parameter's own declaration can be satisfied at all. Facts it
     // states about itself, judged wherever a parameter is written: a `enum`
     // none of whose candidates the declared type admits is a parameter no call
-    // could ever fit, and a default the parameter itself would refuse is a
-    // refusal waiting for the one call that leans on it.
+    // could ever fit.
     func judge(
         _ parameter: Parameter,
-        called name: Name,
         at place: Place,
         in table: TypeTable
     ) throws {
@@ -477,32 +482,6 @@ extension Builder {
             }
         }
 
-        guard let fallback = parameter.default else { return }
-
-        // An explicitly-null default is the value the body receives when the
-        // argument is left out, so the declaration must admit null like any
-        // other value, and a `enum` never lists it, since null has no scalar
-        // spelling. Asked of the value judge itself, since the slot reads an
-        // explicit null default as its own legacy spelling of `T?`.
-        if fallback == .null {
-            guard parameter.candidates == nil, type.settles(.null, in: table.loweredTypes) else {
-                throw BuildError(
-                    "its default is not a value it takes: null",
-                    at: place
-                )
-            }
-
-            return
-        }
-
-        do {
-            _ = try parameter.checking(fallback, called: name, in: table)
-        } catch {
-            throw BuildError(
-                "its default is not a value it takes: \(error)",
-                at: place
-            )
-        }
     }
 
     // MARK: - Private
@@ -539,8 +518,11 @@ extension Builder {
     // whichever declares it. Each occurrence carries its bounds separately,
     // so occurrences carrying different sets for one name are two claims
     // about one thing.
+    // The type parameters a signature or a nested procedure type mentions,
+    // each occurrence held to the one spelling and every bound to a name the
+    // link declares.
     private func judgeConstraints(
-        of signature: Signature,
+        _ occurrences: [ParameterOccurrence],
         at place: Place,
         in table: TypeTable
     ) throws {
@@ -548,9 +530,11 @@ extension Builder {
         // one of them stands for the others.
         var misspelled: Set<Name> = []
 
-        signature.parameterOccurrences { parameter, names in
+        for occurrence in occurrences {
+            let names = occurrence.constraints
+
             if Set(names).count != names.count || names != names.sorted() {
-                misspelled.insert(parameter)
+                misspelled.insert(occurrence.name)
             }
         }
 
@@ -558,17 +542,13 @@ extension Builder {
             throw BuildError("`some \(misspelled)` names its bounds once each and in name order", at: place)
         }
 
-        let bounds: [Name: [Name]]
+        let bounds = ParameterBounds(occurrences)
 
-        switch signature.parameterBounds {
-        case let .held(held):
-            bounds = held
-
-        case let .disagreeing(parameter, one, other):
-            throw BuildError(Signature.ParameterBounds.refusal(parameter, one, other), at: place)
+        if let refusal = bounds.refusal {
+            throw BuildError(refusal, at: place)
         }
 
-        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
+        for (parameter, names) in bounds.table.sorted(by: { $0.key < $1.key }) {
             for bound in names where table.constraint(bound) == nil && table.contracts[bound] == nil {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
@@ -665,7 +645,7 @@ extension Builder {
             .union(call.receiver == nil ? [] : [declared.receiver].compactMap { $0 })
 
         let missing = slots
-            .filter { slot in slot.parameter.mustBeGiven(in: context.loweredTypes) && !supplied.contains(slot.name) }
+            .filter { slot in slot.mustBeGiven(in: context.loweredTypes) && !supplied.contains(slot.name) }
             .map(\.name)
             .sorted()
 

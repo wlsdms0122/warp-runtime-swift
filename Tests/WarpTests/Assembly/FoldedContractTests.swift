@@ -17,7 +17,7 @@ struct FoldedContractTests {
                 "app.count": Procedure(
                     signature: Signature(
                         receiver: "it",
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .int
                     ),
                     body: [],
@@ -86,7 +86,7 @@ struct FoldedContractTests {
                 "app.count": Procedure(
                     signature: Signature(
                         receiver: "it",
-                        parameters: ["it": Parameter(type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
                         returns: .int
                     ),
                     body: [],

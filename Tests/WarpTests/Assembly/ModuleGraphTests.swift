@@ -29,7 +29,7 @@ struct ModuleGraphTests {
                 "lib.twice": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .int)],
+                        parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],

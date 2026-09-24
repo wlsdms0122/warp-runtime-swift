@@ -126,7 +126,7 @@ public struct Executor: Sendable {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }
 
-        let settled = try entry.settle(arguments.map { name, value in (name: name, value: value) })
+        let settled = try entry.settle(arguments)
         var activation = try executor.activation(of: entry, in: frame)
 
         for (position, value) in settled.enumerated() {
@@ -137,12 +137,12 @@ public struct Executor: Sendable {
     }
 
     // MARK: - Internal
-    // Calling a closure a procedure holds. The arguments settle against the
-    // closure's declaration the way a written call's do, so a closure written
-    // for this procedure declares every name it is handed.
+    // Calling a closure a procedure holds. The arguments are handed by
+    // position, every position given, and settle against the closure's own
+    // declaration the way a written application's do.
     func call(
         _ closure: Closure,
-        handing arguments: [(name: Name, value: Value)],
+        handing arguments: [Value],
         at trace: Trace
     ) async throws -> Value {
         try await answer(closure, given: arguments, at: trace)
@@ -438,6 +438,8 @@ public struct Executor: Sendable {
         // implementation. It is here only so that `x.count` and the same
         // procedure written as a statement mean the same thing.
         case .native(.query):
+            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
+
             // A variable handed in place is read as what it holds now and
             // settled the way any argument is, since nothing here writes it.
             var values = try await given(call.arguments, in: &activation, at: trace)
@@ -451,7 +453,6 @@ public struct Executor: Sendable {
                 given: values,
                 skipping: skipped(call, of: callee, holding: false, receiving: handed)
             )
-            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
 
             do {
                 return try await answer(callee, for: receiver, with: settled, at: trace)
@@ -471,6 +472,7 @@ public struct Executor: Sendable {
 
         case let .native(.effect(effect)):
             let holds = try holds(call.handed, of: callee, in: activation)
+            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
             let settled = try settled(
                 callee,
                 given: try await given(call.arguments, in: &activation, at: trace),
@@ -483,7 +485,7 @@ public struct Executor: Sendable {
             return try await run(
                 effect,
                 of: callee,
-                receiver: sent(to: callee, receiver: try await received(call, of: callee, handed: handed, in: &activation, at: trace) ?? held, arguments: settled),
+                receiver: sent(to: callee, receiver: receiver ?? held, arguments: settled),
                 settled: settled,
                 holds: holds,
                 trace: trace
@@ -515,7 +517,7 @@ public struct Executor: Sendable {
     // closure is worth passing at all.
     private func apply(
         _ callee: Operation,
-        arguments: [(Name, Operation)],
+        arguments: [Operation],
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -527,15 +529,15 @@ public struct Executor: Sendable {
             )
         }
 
-        // The signature is the value's, so the arguments travel by name and
-        // find their slots here, along the list.
-        var resolved: [(name: Name, value: Value)] = []
+        // A value carries no names, so the arguments travel by position, in
+        // the order they were written, and land in the slots in that order.
+        var given: [Value] = []
 
-        for (name, argument) in arguments {
-            resolved.append((name: name, value: try await evaluate(argument, in: &activation, at: trace)))
+        for argument in arguments {
+            given.append(try await evaluate(argument, in: &activation, at: trace))
         }
 
-        return try await answer(closure, given: resolved, at: trace)
+        return try await answer(closure, given: given, at: trace)
     }
 
     // The one way a closure is called: the arguments settled by the closure's
@@ -547,7 +549,7 @@ public struct Executor: Sendable {
     // holds a frame it has not answered from.
     private func answer(
         _ closure: Closure,
-        given arguments: [(name: Name, value: Value)],
+        given arguments: [Value],
         at trace: Trace
     ) async throws -> Value {
         let linked = try closure.answered()
@@ -561,7 +563,7 @@ public struct Executor: Sendable {
             throw ExecutionError("this call \(Linked.unreadable)")
         }
 
-        let settled = try linked.settle(arguments)
+        let settled = try linked.settle(applied: arguments)
         var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
@@ -896,7 +898,7 @@ public struct Executor: Sendable {
     // answers, and a slot declaring `const procedure` is how a procedure says so.
     func call(
         _ closure: Closure,
-        with arguments: [(name: Name, value: Value)],
+        with arguments: [Value],
         at trace: Trace = Trace()
     ) async throws -> Value {
         try await answer(closure, given: arguments, at: trace)

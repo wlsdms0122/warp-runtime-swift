@@ -45,7 +45,7 @@ struct SwiftAuthoringTests {
         let builder = Builder()
         let index = Expression.reference([.key("counted"), .key("index")])
         let procedure = Procedure(
-            signature: Signature(parameters: ["rounds": Parameter(type: .int)]),
+            signature: Signature(parameters: [Parameter(name: "rounds", type: .int)]),
             body: [
                 Statement(binding: .constant("counted"), expression: .loop(
                         while: differs(
@@ -152,7 +152,7 @@ struct SwiftAuthoringTests {
         // which module declared it is the builder's business.
         let echo = Procedure(
             signature: Signature(
-                parameters: ["procedure": Parameter(type: .string)],
+                parameters: [Parameter(name: "procedure", type: .string)],
                 returns: .record(["said": .string])
             ),
             body: [],

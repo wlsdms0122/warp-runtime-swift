@@ -218,7 +218,7 @@ struct CatalogueTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -266,7 +266,7 @@ struct CatalogueTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -326,7 +326,7 @@ struct CatalogueTests {
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
                         returns: .named("bank.Wording")
                     ),
                     body: [],

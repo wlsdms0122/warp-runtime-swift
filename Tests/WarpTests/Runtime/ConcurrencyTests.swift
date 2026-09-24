@@ -74,8 +74,8 @@ struct ConcurrencyTests {
                             Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        "index": Parameter(type: .any),
-                                        "item": Parameter(type: .any)
+                                        Parameter(name: "item", type: .any),
+                                        Parameter(name: "index", type: .any)
                                     ]
                                 ),
                                 body: [],
@@ -94,11 +94,11 @@ struct ConcurrencyTests {
         #expect(answer == .array([.int(1), .int(2), .int(3)]))
     }
 
-    @Test("a closure a walk calls declares every name the walk hands over")
+    @Test("a closure a walk calls declares as many parameters as the walk hands over")
     func mapHandsOverEveryName() async throws {
-        // Given. `std.concurrent.map` hands over `item` and `index`, and this
-        // closure declares only the second. A name nothing can receive is not
-        // one to hand over quietly
+        // Given. `std.concurrent.map` hands over the item and its index, and
+        // this closure declares one parameter. A value nothing can receive is
+        // not one to hand over quietly
         let sut = Statement(binding: .constant("placed"), expression: .call(
                 Call(
                     receiver: .literal(.array([.string("a"), .string("b")])),
@@ -107,7 +107,7 @@ struct ConcurrencyTests {
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["index": Parameter(type: .any)]
+                                    parameters: [Parameter(name: "index", type: .any)]
                                 ),
                                 body: [],
                                 result: reference("index")
@@ -122,7 +122,8 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("placed"))
         } throws: { error in
-            error is BuildError && "\(error)".contains("where isolated procedure<(index: int, item: string)")
+            error is BuildError
+                && "\(error)".contains("holds const isolated procedure<(any) -> any> where isolated procedure<(")
         }
     }
 
@@ -140,8 +141,8 @@ struct ConcurrencyTests {
                             Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        "index": Parameter(type: .any),
-                                        "item": Parameter(type: .any)
+                                        Parameter(name: "item", type: .any),
+                                        Parameter(name: "index", type: .any)
                                     ]
                                 ),
                                 body: [],
@@ -171,7 +172,7 @@ struct ConcurrencyTests {
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any), "index": Parameter(type: .int)]
+                                    parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)]
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -381,7 +382,7 @@ struct ConcurrencyTests {
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any), "index": Parameter(type: .int)]
+                                    parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)]
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -398,7 +399,7 @@ struct ConcurrencyTests {
                 of: [sut],
                 result: reference("walked"),
                 arguments: ["subject": .string("not a collection")],
-                signature: Signature(parameters: ["subject": Parameter(type: .any)])
+                signature: Signature(parameters: [Parameter(name: "subject", type: .any)])
             )
         } throws: { error in
             "\(error)".contains("expected array") && "\(error)".contains("got string")

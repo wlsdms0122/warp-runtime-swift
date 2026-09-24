@@ -68,7 +68,7 @@ struct CallOperation: Sendable {
         in loweredTypes: LoweredTypeTable,
         at place: Place
     ) throws {
-        if let stray = written.first(where: { name in callee.signature.parameters[name] == nil }) {
+        if let stray = written.first(where: { name in callee.signature.parameter(named: name) == nil }) {
             throw BuildError.unjudged(
                 "an argument '\(stray)' that '\(callee.rendered)' does not declare",
                 at: place

@@ -41,7 +41,7 @@ struct VocabularyTests {
             ]
         )
         let sut = try await loader.loadProcedure([
-            "parameters": ["names": ["type": "array<string>"]],
+            "parameters": [["name": "names", "type": "array<string>"]],
             "body": [
                 ["var": "verdict"],
                 ["let": "head", "value": ["call": ["procedure": "std.collection.first", "of": ["ref": "names"]]]],
@@ -72,7 +72,7 @@ struct VocabularyTests {
         // Given. Nothing is privileged, so the standard module is a file like
         // any other and leaving it out means leaving out what it declares
         let sut = try await loader.loadProcedure([
-            "parameters": ["names": ["type": "array<string>"]],
+            "parameters": [["name": "names", "type": "array<string>"]],
             "body": [
                 ["let": "said", "value": ["call": ["procedure": "std.collection.count"]]]
             ]
@@ -99,9 +99,7 @@ private struct FirstQuery: Query {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .array(.any)) }
+        var declared: Parameter { Parameter(name: "of", type: .array(.any)) }
     }
 
     // MARK: - Property
@@ -121,23 +119,13 @@ private struct LongerThanQuery: Query {
         case of
         case value
 
-        var name: Name {
-            switch self {
-            case .of:
-                return "of"
-
-            case .value:
-                return "value"
-            }
-        }
-
         var declared: Parameter {
             switch self {
             case .of:
-                return Parameter(type: .string)
+                return Parameter(name: "of", type: .string)
 
             case .value:
-                return Parameter(type: .int)
+                return Parameter(name: "value", type: .int)
             }
         }
     }

@@ -16,9 +16,10 @@ import Warp
 //   dictionary<Task>              . The same, for a map of string keys
 //   Task                      . A name some module declares
 //   { id: string, done: bool }. A record, written as the record it describes
-//   { procedure: { parameters:, returns: } }
-//                             . A procedure, written as the signature it takes.
-//                                Bare `procedure` says only that it is one
+//   { procedure: { parameters: [], returns: } }
+//                             . A procedure, written as the types it is applied
+//                                with and what it answers. Bare `procedure` says
+//                                only that it is one
 //
 // A record is a mapping and a parameter is also written as a mapping, which
 // would be ambiguous if both could appear in the same slot. They cannot: a
@@ -419,8 +420,8 @@ public struct TypeReader: Decodable {
             let key = keyed.allKeys.first,
             let (mark, constness, isolation) = procedureKeywords(of: key.stringValue)
         {
-            let signature = try keyed.decode(SignatureFormReader.self, forKey: key)
-            let written = TypeExpression.procedure(signature.signature, constness, isolation)
+            let form = try keyed.decode(ProcedureTypeReader.self, forKey: key)
+            let written = TypeExpression.procedure(form.type, constness, isolation)
 
             return mark?.marking(written) ?? written
         }
@@ -537,21 +538,21 @@ private extension String {
     }
 }
 
-// The signature inside a procedure type: what a call may pass and what it gets
-// back, written the way a procedure writes them.
-private struct SignatureFormReader: Decodable {
-    // No `bounds` here on purpose: a nested signature's parameters are the
-    // declaring procedure's own slots, so the declaring signature owns every
-    // bound. Two `bounds` records binding one name would be two claims about
-    // one thing, written a document apart.
+// The inside of a procedure type: the types a value is applied with, in
+// position order, and what it answers. No names, since a value carries
+// none, and no receiver for the same reason.
+private struct ProcedureTypeReader: Decodable {
+    // No `bounds` here on purpose: a nested procedure type's parameters are
+    // the declaring procedure's own slots, so the declaring signature owns
+    // every bound. Two `bounds` records binding one name would be two claims
+    // about one thing, written a document apart.
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
-        case receiver
         case returns
     }
 
     // MARK: - Property
-    let signature: Signature
+    let type: ProcedureType
 
     // MARK: - Initializer
     init(from decoder: Decoder) throws {
@@ -563,12 +564,10 @@ private struct SignatureFormReader: Decodable {
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.signature = Signature(
-            receiver: try container.decodeIfPresent(String.self, forKey: .receiver)
-                .map { spelling in try Name.read(spelling, at: decoder.steps) },
+        self.type = ProcedureType(
             parameters: try container
-                .decodeIfPresent(SignatureReader.self, forKey: .parameters)?
-                .signature.parameters ?? [:],
+                .decodeIfPresent([TypeReader].self, forKey: .parameters)?
+                .map(\.type) ?? [],
             returns: try container
                 .decodeIfPresent(TypeReader.self, forKey: .returns)?
                 .type

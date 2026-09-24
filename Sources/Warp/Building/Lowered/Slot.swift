@@ -8,47 +8,39 @@
 import Foundation
 
 // A parameter as the run reads it: what the boundary asks of an argument,
-// and nothing else. The name for a refusal, the type to settle against,
-// the default where nothing was given, and the members the settled value
-// must be one of. The declaration's type is not here; its lowering is.
+// and nothing else. The name for a refusal, the type to settle against, and
+// the members the settled value must be one of. The declaration's type is
+// not here; its lowering is.
 final class Slot: Sendable {
     // MARK: - Property
-    // What a procedure type holds of this parameter, and what the boundary
-    // asks beyond it.
-    let parameter: LoweredParameter
-    let `default`: Value?
+    let name: Name
+    let type: LoweredType
     let candidates: [Candidate]?
 
-    var name: Name { parameter.name }
-    var type: LoweredType { parameter.type }
-
     // MARK: - Initializer
-    init(_ parameter: LoweredParameter, default: Value?, candidates: [Candidate]?) {
-        self.parameter = parameter
-        self.default = `default`
+    init(name: Name, type: LoweredType, candidates: [Candidate]?) {
+        self.name = name
+        self.type = type
         self.candidates = candidates
     }
 
     // MARK: - Public
+    // Whether a call must write this argument: the type's one answer, for
+    // the call check, the boundary and path reachability alike.
+    func mustBeGiven(in table: LoweredTypeTable) -> Bool {
+        type.mustBeGiven(in: table)
+    }
 
-    // An argument as given, or the default where nothing was. Nil is the
-    // absence: a key the call never wrote. A null is a value like any other
-    // and goes to the type, which says whether it holds one.
+    // An argument as given, or the null a nullable declares where nothing
+    // was. Nil is the absence: a key the call never wrote. A null is a value
+    // like any other and goes to the type, which says whether it holds one.
     func taking(_ value: Value?, in table: LoweredTypeTable) throws -> Value {
         guard let value else {
-            guard let fallback = self.default else {
-                // A type that declares null answers omission with the null it
-                // holds.
-                guard type.declaresNull(in: table) else {
-                    throw ArgumentError("input '\(name)': required, and nothing was given")
-                }
-
-                return try checking(.null, at: "input '\(name)'", in: table)
+            guard !mustBeGiven(in: table) else {
+                throw ArgumentError("input '\(name)': required, and nothing was given")
             }
 
-            // The fallback walks through the same gate an argument does, so
-            // the body reads the declared representation either way.
-            return try checking(fallback, at: "input '\(name)'", in: table)
+            return try checking(.null, at: "input '\(name)'", in: table)
         }
 
         return try checking(value, at: "input '\(name)'", in: table)
@@ -59,18 +51,9 @@ final class Slot: Sendable {
     // says the value stood, in the caller's terms: an argument is named by
     // its key, and a receiver by the procedure it was sent to.
     func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
-        if value == .null {
-            // Null passes where the declaration says it is a value: a `T?`
-            // slot, or the legacy spelling of the same fact, an explicitly
-            // null default.
-            guard self.default == .null || type.admitsNull(in: table) else {
-                throw ArgumentError("\(locus): expected \(type.rendered(in: table)), got null")
-            }
+        let settled = try type.checking(value, at: locus, in: table)
 
-            return value
-        }
-
-        let settled = try type.settling(value, at: locus, in: table)
+        guard settled != .null else { return settled }
 
         if let candidates {
             let written = candidates.map(\.spelling)
@@ -130,47 +113,5 @@ final class Slot: Sendable {
         default:
             return "\(settled.type)"
         }
-    }
-}
-
-extension Array where Element == Slot {
-    // Where the receiver stands among these, for a declaration that takes
-    // one. A position is a fact about the lowered slots, so it is read off
-    // them rather than worked out from the declaration a second time.
-    func position(of receiver: Name?) -> Int? {
-        receiver.flatMap { name in firstIndex { slot in slot.name == name } }
-    }
-}
-
-extension Parameter {
-    // This parameter as the run reads it. An undeclared type lowers to
-    // `any`: the boundary tells "nothing written" from "`any` written" in no
-    // way, so the slot does not either.
-    // This declaration as a lowered procedure type holds it, over the type it
-    // lowered to. The one place a parameter's lowering is worked out, whether
-    // a procedure type or a boundary's slot is what asks.
-    func lowered(named name: Name, as type: LoweredType) -> LoweredParameter {
-        LoweredParameter(name: name, type: type, defaulted: `default` != nil)
-    }
-
-    func lowered(named name: Name, in table: LoweredTypeTable) -> Slot {
-        slot(named: name, holding: declared.lowered(in: table), in: table)
-    }
-
-    // The same, with what a call put in the type parameters written in. A
-    // parameter nothing filled reads `any`, which is what the call said about
-    // it by saying nothing.
-    func lowered(named name: Name, in table: LoweredTypeTable, filling bound: [Name: LoweredType]) -> Slot {
-        slot(named: name, holding: declared.lowered(in: table).filling(bound), in: table)
-    }
-
-    private func slot(named name: Name, holding type: LoweredType, in table: LoweredTypeTable) -> Slot {
-        Slot(
-            lowered(named: name, as: type),
-            default: `default`,
-            candidates: candidates.map { written in
-                written.map { spelling in Candidate(spelling, in: type, reading: table) }
-            }
-        )
     }
 }

@@ -116,7 +116,7 @@ struct NeverTests {
                     result: reference("kept")
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: ["count": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
                     body: []
                 )
             ]
@@ -164,7 +164,7 @@ struct NeverTests {
                     result: reference("y")
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
                     body: []
                 )
             ]
@@ -189,7 +189,7 @@ struct NeverTests {
                     ]
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: ["count": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
                     body: []
                 )
             ]
@@ -304,7 +304,7 @@ struct NeverTests {
                     ]
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: ["count": Parameter(type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
                     body: []
                 )
             ]

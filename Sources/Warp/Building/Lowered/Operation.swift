@@ -29,7 +29,7 @@ indirect enum Operation: Sendable {
 
     // Calling a value. Which signature it has is the value's, so the
     // arguments travel by name and settle where the closure is known.
-    case apply(Operation, arguments: [(Name, Operation)])
+    case apply(Operation, arguments: [Operation])
 
     case cast(Operation, as: LoweredType, optional: Bool)
     case block(Body)

@@ -61,15 +61,15 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // Named fields with types. The value may carry more.
     case record([Name: TypeExpression])
 
-    // A value that can be called: what it may be called with, and what it must
-    // be. Nil is a declaration that has not been written ("some procedure") the
-    // way `any` is for a value, and it is accepted by anything for the same
-    // reason.
+    // A value that can be called: the types it is applied with, in position
+    // order, and what it answers. Nil is a declaration that has not been
+    // written ("some procedure") the way `any` is for a value, and it is
+    // accepted by anything for the same reason.
     //
     // Constness and isolation are requirements rather than claims. A declaration
     // never states its own (the builder derives both from what a body does) so
     // what is written here is what a slot asks of whatever fills it.
-    case procedure(Signature?, Constness = .unstated, Isolation = .unstated)
+    case procedure(ProcedureType?, Constness = .unstated, Isolation = .unstated)
 
     // A field that a path may write through. Only a declared type's field is
     // one: `var int` in a type declaration says a `set` or an `inout` path may
@@ -110,8 +110,8 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
     // The declared type, or null. The one union the language has, and it is
     // null-only on purpose. `?.` answers this, and a parameter declaring it may
-    // default to null; a general union would put back the "is it this or that"
-    // question the whole type system exists to answer once.
+    // be left out of a call; a general union would put back the "is it this or
+    // that" question the whole type system exists to answer once.
     case nullable(TypeExpression)
 
     // A type a module declared. Kept rather than expanded so that a type may
@@ -252,7 +252,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .borrowing(inner):
             return "borrowing \(inner.rendered)"
 
-        case let .procedure(signature, constness, isolation):
+        case let .procedure(type, constness, isolation):
             let spelling = [
                 constness == .const ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
@@ -261,19 +261,15 @@ public indirect enum TypeExpression: Sendable, Equatable {
             .compactMap { part in part }
             .joined(separator: " ")
 
-            guard let signature else { return spelling }
+            guard let type else { return spelling }
 
-            let written = signature.ordered(
-                { name, parameter in (name: name, declared: parameter.declared.rendered) },
-                standing: { taken in taken.name }
-            )
-            .map { taken in "\(taken.name): \(taken.declared)" }
+            let written = type.parameters.map(\.rendered)
 
             // Rendered as what it accepts, because a message is about what would
             // have fit. Which half was written is a fact about the source rather
             // than about the value being refused.
             return "\(spelling)<(\(written.joined(separator: ", ")))"
-                + " -> \((signature.returns ?? .any).rendered)>"
+                + " -> \((type.returns ?? .any).rendered)>"
 
         case let .array(element):
             return "array<\(element.rendered)>"
@@ -527,9 +523,9 @@ extension TypeExpression {
     // at a `T?` slot is a value the body takes, not a missing argument.
     //
     // `any` is not this. An undeclared type accepts a null that arrives, but
-    // it does not *spell* null as a value. A required `any` parameter still
-    // means "give me something". The looser question, "could a default of null
-    // ever be taken", is the link's and includes `any`.
+    // it does not *spell* null as a value, so an `any` parameter is never
+    // left out. The looser question, "does a null that arrives pass", is
+    // `admitsNull` and includes `any`.
     public func declaresNull(in types: TypeTable) -> Bool {
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }

@@ -72,7 +72,7 @@ struct LinkBoundaryTests {
                         body: [],
                         result: .closure(Procedure(
                             signature: Signature(
-                                parameters: ["it": Parameter(type: .named("app.Thing"))],
+                                parameters: [Parameter(name: "it", type: .named("app.Thing"))],
                                 returns: .any
                             ),
                             body: [],

@@ -31,7 +31,7 @@ struct ModifierNotationTests {
         // without anyone remembering to ask. Both forms a marked type takes:
         // a name, and a procedure under its one key
         let named = mark.marking(.named("Handle"))
-        let form = mark.marking(.procedure(Signature(returns: .int)))
+        let form = mark.marking(.procedure(ProcedureType(returns: .int)))
 
         // When
         let writtenName = try Writer().value(of: named)
@@ -51,10 +51,10 @@ struct ModifierNotationTests {
         let read = try await Loader().load([
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": ["f": ["type": writtenForm]], "result": Value.null]]
+            "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]], "result": Value.null]]
         ])
 
-        #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == form)
+        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == form)
     }
 
     @Test(
@@ -101,12 +101,12 @@ struct ModifierNotationTests {
             "warp": 1,
             "imports": [],
             "procedures": [
-                "entry": ["parameters": ["f": ["type": written]], "result": Value.null]
+                "entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]
             ]
         ])
 
         // Then
-        #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == type)
+        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
     @Test("a marked type is not written under a `?`", arguments: SlotMark.allCases)
@@ -137,11 +137,11 @@ struct ModifierNotationTests {
         let read = try await Loader().load([
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": ["f": ["type": written]], "result": Value.null]]
+            "procedures": ["entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]]
         ])
 
         // Then
-        #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == type)
+        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
     @Test(
@@ -199,19 +199,19 @@ struct ModifierNotationTests {
     func aMarkAndAModifierRoundTrip() async throws {
         // Given. A parameter typed `inout const procedure<...>`, which the
         // writer spells as a form under one key
-        let type = TypeExpression.inout(.procedure(Signature(returns: .int), .const))
+        let type = TypeExpression.inout(.procedure(ProcedureType(returns: .int), .const))
 
         // When
         let written = try Writer().value(of: type)
         let module = try await Loader().load([
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": ["f": ["type": written]], "result": Value.null]]
+            "procedures": ["entry": ["parameters": [["name": "f", "type": written]], "result": Value.null]]
         ])
 
         // Then
         #expect(written == .dictionary(["inout const procedure": .dictionary(["returns": "int"])]))
-        #expect(module.procedures["entry"]?.signature.parameters["f"]?.type == type)
+        #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
     @Test("a procedure written twice is refused", arguments: [

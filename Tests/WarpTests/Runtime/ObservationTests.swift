@@ -147,8 +147,8 @@ struct ObservationTests {
                                             Procedure(
                                                 signature: Signature(
                                                     parameters: [
-                                                        "index": Parameter(type: .any),
-                                                        "item": Parameter(type: .any)
+                                                        Parameter(name: "item", type: .any),
+                                                        Parameter(name: "index", type: .any)
                                                     ]
                                                 ),
                                                 body: [
@@ -274,7 +274,7 @@ struct ObservationTests {
                                 )
                             )
                         ),
-                        Statement(binding: .constant("called"), expression: .apply(reference("second"), arguments: [:]))
+                        Statement(binding: .constant("called"), expression: .apply(reference("second"), arguments: []))
                     ]
                 )
             ]

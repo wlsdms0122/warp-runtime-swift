@@ -96,7 +96,7 @@ struct RefinementTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "level": Parameter(type: .ranged(.whole(from: 5, to: .upTo(5))))
+                            Parameter(name: "level", type: .ranged(.whole(from: 5, to: .upTo(5))))
                         ]
                     ),
                     body: [],
@@ -124,7 +124,7 @@ struct RefinementTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "ratio": Parameter(type: .ranged(.fraction(to: .through(.nan))))
+                            Parameter(name: "ratio", type: .ranged(.fraction(to: .through(.nan))))
                         ]
                     ),
                     body: [],
@@ -264,8 +264,7 @@ struct RefinementTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "blob": Parameter(
-                                type: .array(.ranged(.fraction(from: 0, to: .through(255))))
+                            Parameter(name: "blob", type: .array(.ranged(.fraction(from: 0, to: .through(255))))
                             )
                         ],
                         returns: .array(.double)
@@ -288,8 +287,7 @@ struct RefinementTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "blob": Parameter(
-                                type: .array(.ranged(.whole(from: 0, to: .upTo(256))))
+                            Parameter(name: "blob", type: .array(.ranged(.whole(from: 0, to: .upTo(256))))
                             )
                         ],
                         returns: .any
@@ -311,7 +309,7 @@ struct RefinementTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            "ratio": Parameter(type: .ranged(.fraction(from: 0, to: .upTo(1))))
+                            Parameter(name: "ratio", type: .ranged(.fraction(from: 0, to: .upTo(1))))
                         ],
                         returns: .double
                     ),

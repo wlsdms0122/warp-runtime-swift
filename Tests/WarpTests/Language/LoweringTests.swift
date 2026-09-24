@@ -72,7 +72,7 @@ struct LoweringTests {
                                 result: .reference([.key("x")])
                             )
                         )),
-                        Statement(binding: .constant("got"), expression: .apply(.reference([.key("held")]), arguments: [:]))
+                        Statement(binding: .constant("got"), expression: .apply(.reference([.key("held")]), arguments: []))
                     ],
                     result: .array([.reference([.key("x")]), .reference([.key("got")])])
                 )
@@ -101,7 +101,7 @@ struct LoweringTests {
                             Procedure(body: [], result: .reference([.key("b")]))
                         ))
                     ],
-                    result: .apply(.reference([.key("held")]), arguments: [:])
+                    result: .apply(.reference([.key("held")]), arguments: [])
                 )
             ]
         )
@@ -140,7 +140,7 @@ struct LoweringTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["key": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "key", type: .string)]),
                     body: [Statement(binding: .constant("found"), expression: .reference([.key("digits"), .indexRef([.key("key")])]))],
                     result: .reference([.key("found")])
                 )
@@ -245,9 +245,9 @@ struct LoweringTests {
                     signature: Signature(
                         receiver: "of",
                         parameters: [
-                            "of": Parameter(type: .int),
-                            "first": Parameter(type: .int),
-                            "second": Parameter(type: .int)
+                            Parameter(name: "first", type: .int),
+                            Parameter(name: "of", type: .int),
+                            Parameter(name: "second", type: .int)
                         ],
                         returns: .array(.int)
                     ),
@@ -289,7 +289,7 @@ struct LoweringTests {
             procedures: [
                 "entry": Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.tally": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
+                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("count")])
                 )
@@ -318,7 +318,7 @@ struct LoweringTests {
                 ),
                 "app.bump": Procedure(
                     signature: Signature(
-                        parameters: ["of": Parameter(type: .inout(.named("Count")))],
+                        parameters: [Parameter(name: "of", type: .inout(.named("Count")))],
                         returns: .named("Count")
                     ),
                     body: [],
@@ -346,7 +346,7 @@ struct LoweringTests {
                     body: [
                         Statement(binding: .variable("body"), expression: .closure(
                             Procedure(
-                                signature: Signature(parameters: ["x": Parameter(type: .int)]),
+                                signature: Signature(parameters: [Parameter(name: "x", type: .int)]),
                                 body: [],
                                 result: .literal(.null)
                             )
@@ -357,9 +357,7 @@ struct LoweringTests {
                 "app.take": Procedure(
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(
-                                type: .inout(.procedure(
-                                    Signature(parameters: ["x": Parameter(type: .named("Count"))]),
+                            Parameter(name: "of", type: .inout(.procedure(ProcedureType(parameters: [.named("Count")]),
                                     .const,
                                     .isolated
                                 ))
@@ -404,7 +402,7 @@ struct LoweringTests {
                     ),
                     "app.tag": Procedure(
                         signature: Signature(
-                            parameters: ["of": Parameter(type: .inout(.named("Tag")))],
+                            parameters: [Parameter(name: "of", type: .inout(.named("Tag")))],
                             returns: .named("Tag")
                         ),
                         body: [],
@@ -440,7 +438,7 @@ struct LoweringTests {
             procedures: [
                 "entry": Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.alpha": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
+                    signature: Signature(receiver: "of", parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("of")])
                 )
@@ -491,9 +489,7 @@ private struct EchoEffect: Effect {
     enum Parameters: Int, ParameterSet {
         case of
 
-        var name: Name { "of" }
-
-        var declared: Parameter { Parameter(type: .inout(.int)) }
+        var declared: Parameter { Parameter(name: "of", type: .inout(.int)) }
     }
 
     // MARK: - Property

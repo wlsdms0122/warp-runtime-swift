@@ -14,9 +14,7 @@ enum StringReceiver: Int, ParameterSet {
     case of
 
     // MARK: - Property
-    var name: Name { "of" }
-
-    var declared: Parameter { Parameter(type: .string) }
+    var declared: Parameter { Parameter(name: "of", type: .string) }
 
     // MARK: - Initializer
     // MARK: - Public

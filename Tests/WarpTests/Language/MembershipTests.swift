@@ -31,7 +31,7 @@ struct MembershipTests {
                 ),
                 "app.hold": Procedure(
                     signature: Signature(
-                        parameters: ["it": Parameter(type: .named("app.Text"))],
+                        parameters: [Parameter(name: "it", type: .named("app.Text"))],
                         returns: .named("app.Text")
                     ),
                     body: [],
@@ -56,7 +56,7 @@ struct MembershipTests {
                     result: .call(Call(selector: "app.hold", arguments: ["it": .literal(.int(1))]))
                 ),
                 "app.hold": Procedure(
-                    signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
                     body: [],
                     result: .literal(.null)
                 )
@@ -78,12 +78,12 @@ struct MembershipTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
                     body: [],
                     result: .call(Call(selector: "app.narrow", arguments: ["it": reference("it")]))
                 ),
                 "app.narrow": Procedure(
-                    signature: Signature(parameters: ["it": Parameter(type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .string)]),
                     body: [],
                     result: .literal(.null)
                 )
@@ -105,7 +105,7 @@ struct MembershipTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
+                        signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
                         body: [.init(binding: .constant("narrowed"), expression: .cast(
                             reference("it"),
                             as: type,
@@ -135,7 +135,7 @@ struct MembershipTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["it": Parameter(type: .named("app.Text"))]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
                     body: [],
                     result: reference("it")
                 )

@@ -195,7 +195,7 @@ struct InPlaceTests {
                     result: reference("xs")
                 ),
                 "poke": Procedure(
-                    signature: Signature(parameters: ["count": Parameter(type: .inout(.int))], returns: .never),
+                    signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))], returns: .never),
                     body: [
                         Statement(binding: .assignment([.key("count")]), expression: .literal(.int(9))),
                         Statement(
@@ -257,7 +257,7 @@ struct InPlaceTests {
                     result: .call(Call(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
                 ),
                 "poke": Procedure(
-                    signature: Signature(parameters: ["first": Parameter(type: .inout(.int))], returns: .array(.int)),
+                    signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))], returns: .array(.int)),
                     body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.int(9)))],
                     result: reference("items")
                 )
@@ -283,7 +283,7 @@ struct InPlaceTests {
                     result: .call(Call(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
                 ),
                 "poke": Procedure(
-                    signature: Signature(parameters: ["second": Parameter(type: .inout(.int))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "second", type: .inout(.int))], returns: .int),
                     body: [Statement(binding: .assignment([.key("items")]), expression: .array([.literal(.int(7))]))],
                     result: reference("second")
                 )
@@ -320,7 +320,7 @@ struct InPlaceTests {
                     result: reference("table", "k")
                 ),
                 "fill": Procedure(
-                    signature: Signature(parameters: ["slot": Parameter(type: .inout(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "slot", type: .inout(.int))]),
                     body: [Statement(binding: .assignment([.key("slot")]), expression: .literal(.int(3)))],
                     result: .literal(.null)
                 )
@@ -348,7 +348,7 @@ struct InPlaceTests {
                     result: .literal(.null)
                 ),
                 "poke": Procedure(
-                    signature: Signature(parameters: ["first": Parameter(type: .inout(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))]),
                     body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
                     result: .literal(.null)
                 )
@@ -380,7 +380,7 @@ struct InPlaceTests {
                     result: .literal(.null)
                 ),
                 "poke": Procedure(
-                    signature: Signature(parameters: ["first": Parameter(type: .inout(.string))]),
+                    signature: Signature(parameters: [Parameter(name: "first", type: .inout(.string))]),
                     body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
                     result: .literal(.null)
                 )
@@ -404,7 +404,7 @@ struct InPlaceTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["all": Parameter(type: .inout(.record(["items": .array(.int)])))]),
+                    signature: Signature(parameters: [Parameter(name: "all", type: .inout(.record(["items": .array(.int)])))]),
                     body: [
                         Statement(
                             expression: .call(Call(selector: "other.grow", arguments: ["list": reference("all", "items")]))
@@ -418,7 +418,7 @@ struct InPlaceTests {
             imports: [],
             procedures: [
                 "other.grow": Procedure(
-                    signature: Signature(parameters: ["list": Parameter(type: .inout(.array(.int)))]),
+                    signature: Signature(parameters: [Parameter(name: "list", type: .inout(.array(.int)))]),
                     body: [],
                     result: .literal(.null)
                 )
@@ -456,7 +456,7 @@ struct InPlaceTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["count": Parameter(type: .variable(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "count", type: .variable(.int))]),
                     body: [],
                     result: .literal(.null)
                 )

@@ -11,30 +11,19 @@ import Warp
 // Strings written one after another, with a separator between.
 struct JoinedQuery: Query {
     // What this takes: the strings, and what goes between them. The
-    // separator has a default because joining with nothing between is a
-    // thing to want, and a defaulted parameter is what makes `parts.joined`
-    // reachable from a path.
+    // separator may be left out, and nothing between is what null reads
+    // as, which is what makes `parts.joined` reachable from a path.
     enum Parameters: Int, ParameterSet {
         case of
         case value
 
-        var name: Name {
-            switch self {
-            case .of:
-                return "of"
-
-            case .value:
-                return "value"
-            }
-        }
-
         var declared: Parameter {
             switch self {
             case .of:
-                return Parameter(type: .array(.string))
+                return Parameter(name: "of", type: .array(.string))
 
             case .value:
-                return Parameter(type: .string, default: .string(""))
+                return Parameter(name: "value", type: .nullable(.string))
             }
         }
     }
@@ -54,9 +43,16 @@ struct JoinedQuery: Query {
             )
         }
 
-        let given = question[.value]
+        let separator: String
 
-        guard case let .string(separator) = given else {
+        switch question[.value] {
+        case .null:
+            separator = ""
+
+        case let .string(given):
+            separator = given
+
+        case let given:
             throw ExecutionError("joined asks a string separator, and \(given.type) arrived")
         }
 

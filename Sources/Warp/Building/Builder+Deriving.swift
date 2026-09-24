@@ -374,9 +374,9 @@ extension Builder {
             guard const(call.selector) else { return false }
 
             if let signature = asked(call.selector) {
-                for (name, parameter) in signature.parameters where parameter.declared.isInout {
+                for parameter in signature.parameters where parameter.declared.isInout {
                     guard
-                        case let .reference(path)? = call.handed(name, to: signature),
+                        case let .reference(path)? = call.handed(parameter.name, to: signature),
                         let head = path.head
                     else { continue }
 
@@ -398,7 +398,7 @@ extension Builder {
         // walks into a value the slot said nothing about.
         case let .apply(callee, arguments):
             return applies(callee, given: procedures)
-                && arguments.values.allSatisfy(isConst)
+                && arguments.allSatisfy(isConst)
 
         // Control flow reaches nothing on its own: which part runs is decided
         // inside the body, so a construct is as const as the parts it holds.

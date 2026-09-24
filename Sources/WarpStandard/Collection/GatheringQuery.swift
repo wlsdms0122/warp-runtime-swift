@@ -20,23 +20,13 @@ struct GatheringQuery: Query {
         case of
         case value
 
-        var name: Name {
-            switch self {
-            case .of:
-                return "of"
-
-            case .value:
-                return "value"
-            }
-        }
-
         var declared: Parameter {
             switch self {
             case .of:
-                return Parameter(type: .array(.parameter(name: "Element")))
+                return Parameter(name: "of", type: .array(.parameter(name: "Element")))
 
             case .value:
-                return Parameter(type: .array(.int))
+                return Parameter(name: "value", type: .array(.int))
             }
         }
     }

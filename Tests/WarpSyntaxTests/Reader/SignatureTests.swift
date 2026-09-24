@@ -24,7 +24,7 @@ struct SignatureTests {
         let sut = try await Loader.testing.loadDocument([
             "procedures": [
                 "keep": [
-                    "parameters": ["subject": [:], "labelled": ["type": "any"]],
+                    "parameters": [["name": "labelled", "type": "any"], ["name": "subject"]],
                     "body": [["let": "done", "value": ["ref": "subject"]]]
                 ]
             ]
@@ -33,8 +33,8 @@ struct SignatureTests {
         // Then
         let signature = try #require(sut.procedures["keep"]).signature
 
-        #expect(signature.parameters["subject"]?.type == nil)
-        #expect(signature.parameters["labelled"]?.type == .any)
+        #expect(signature.parameter(named: "subject")?.type == nil)
+        #expect(signature.parameter(named: "labelled")?.type == .any)
 
         // Neither checks, so both take a type nothing was said about.
         let settled = try settled(signature, given: ["subject": .int(1), "labelled": .int(2)])
@@ -58,24 +58,10 @@ struct SignatureTests {
         #expect(try #require(sut.procedures["loud"]).signature.returns == .any)
     }
 
-    @Test("an omitted input fills from its default")
-    func omittedInputFillsDefault() throws {
-        // Given
-        let sut = Signature(parameters: [
-            "mode": Parameter(type: .string, default: .string("fast"))
-        ])
-
-        // When
-        let settled = try settled(sut, given: [:])
-
-        // Then
-        #expect(settled["mode"] == .string("fast"))
-    }
-
     @Test("a missing required input is rejected")
     func missingRequiredInputRejected() {
         // Given
-        let sut = Signature(parameters: ["name": Parameter(type: .string)])
+        let sut = Signature(parameters: [Parameter(name: "name", type: .string)])
 
         // When / Then
         #expect(throws: ArgumentError.self) {
@@ -86,7 +72,7 @@ struct SignatureTests {
     @Test("a type mismatch is rejected")
     func typeMismatchRejected() {
         // Given
-        let sut = Signature(parameters: ["count": Parameter(type: .int)])
+        let sut = Signature(parameters: [Parameter(name: "count", type: .int)])
 
         // When / Then
         #expect(throws: ArgumentError.self) {
@@ -100,7 +86,7 @@ struct SignatureTests {
         // happened to be whole would make the answer to "does this fit" depend
         // on the value rather than the type: `3.0` accepted where `3.5` is
         // refused, by a declaration that names neither.
-        let sut = Signature(parameters: ["count": Parameter(type: .int)])
+        let sut = Signature(parameters: [Parameter(name: "count", type: .int)])
 
         // When / Then
         #expect(throws: ArgumentError.self) {
@@ -108,7 +94,7 @@ struct SignatureTests {
         }
 
         // And the conversion that loses nothing still happens
-        let widened = Signature(parameters: ["ratio": Parameter(type: .double)])
+        let widened = Signature(parameters: [Parameter(name: "ratio", type: .double)])
 
         #expect(try settled(widened, given: ["ratio": .int(3)])["ratio"] == .double(3))
     }
@@ -116,7 +102,7 @@ struct SignatureTests {
     @Test("an undeclared input name is rejected")
     func undeclaredInputRejected() {
         // Given
-        let sut = Signature(parameters: ["a": Parameter(type: .string)])
+        let sut = Signature(parameters: [Parameter(name: "a", type: .string)])
 
         // When / Then. An extra name is a typo surfaced, not a value smuggled
         // in
@@ -129,49 +115,13 @@ struct SignatureTests {
     func valueOutsideOneOfRejected() {
         // Given
         let sut = Signature(parameters: [
-            "mode": Parameter(type: .string, candidates: ["fast", "slow"])
+            Parameter(name: "mode", type: .string, candidates: ["fast", "slow"])
         ])
 
         // When / Then
         #expect(throws: ArgumentError.self) {
             try settled(sut, given: ["mode": .string("medium")])
         }
-    }
-
-    @Test("a default failing its own gate is judged at the build")
-    func defaultFailingOwnGateIsALinkRefusal() async throws {
-        // Given. The declaration is judged where declared type names resolve,
-        // so the document reads fine and the build refuses it
-        let spec = try await Loader.testing.loadProcedure([
-            "parameters": [
-                "mode": ["type": "string", "enum": ["fast", "slow"], "default": "medium"]
-            ],
-            "body": [["let": "noop", "value": "ok"]]
-        ])
-
-        // When / Then
-        await #expect(throws: BuildError.self) {
-            try await Builder().build([spec] + Module.standard)
-        }
-    }
-
-    @Test("a default is stored as written, and arrives settled")
-    func suppliedDefaultArrivesSettled() async throws {
-        // Given. The document holds what was written; taking the default walks
-        // the same gate an argument does, so the body still reads the declared
-        // representation
-        let spec = try await Loader.testing.loadProcedure([
-            "parameters": ["ratio": ["type": "double", "default": 3]],
-            "body": [["let": "echo", "value": ["ref": "ratio"]]],
-            "result": ["result": ["ref": "echo"]]
-        ])
-
-        // When
-        let outputs = try await run(spec)
-
-        // Then
-        #expect(spec.procedures[entryName]?.signature.parameters["ratio"]?.default == .int(3))
-        #expect(outputs["result"] == .double(3))
     }
 
     @Test("no inputs declaration is still a closed contract, and strays are rejected")
@@ -185,36 +135,21 @@ struct SignatureTests {
         }
     }
 
-    @Test("a null default is a declared default, not an absent one")
-    func nullDefaultIsDeclared() async throws {
-        // Given. Declaring `null` is what makes an input optional while still
-        // saying what it is
+    @Test("a parameter declaring null need not be given, and one that does not must")
+    func nullableParameterNeedNotBeGiven() async throws {
+        // Given. Declaring `string?` is what makes an input optional while
+        // still saying what it is
         let sut = try await Loader.testing.loadProcedure([
-            "parameters": ["dir": ["type": "string", "default": .null]],
+            "parameters": [["name": "dir", "type": "string?"], ["name": "file", "type": "string"]],
             "body": [["let": "seen", "value": ["ref": "dir"]]]
         ])
 
         // Then
-        let parameter = try #require(sut.procedures[entryName]?.signature.parameters["dir"])
+        let dir = try #require(sut.procedures[entryName]?.signature.parameter(named: "dir"))
+        let file = try #require(sut.procedures[entryName]?.signature.parameter(named: "file"))
 
-        #expect(parameter.default == .null)
-        #expect(!parameter.mustBeGiven(in: TypeTable()))
-    }
-
-    @Test("probe: a null default inside a whole module document")
-    func probeNullDefaultInModule() async throws {
-        // Given
-        let sut = try await Loader.testing.loadDocument([
-            "procedures": [
-                "nullcwd": [
-                    "parameters": ["dir": ["type": "string", "default": .null]],
-                    "body": [["let": "seen", "value": ["ref": "dir"]]]
-                ]
-            ]
-        ])
-
-        // Then
-        #expect(sut.procedures["nullcwd"]?.signature.parameters["dir"]?.default == .null)
+        #expect(!dir.mustBeGiven(in: TypeTable()))
+        #expect(file.mustBeGiven(in: TypeTable()))
     }
 
     // MARK: - Private

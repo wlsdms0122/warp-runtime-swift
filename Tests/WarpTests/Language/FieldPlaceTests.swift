@@ -26,7 +26,7 @@ struct FieldPlaceTests {
         // the position is the layout's.
         let sut = try Procedure(
             signature: Signature(
-                parameters: ["point": Parameter(type: .record(["x": .int, "y": .int]))]
+                parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
             ),
             body: [],
             result: .reference([.key("point"), .key("y")])
@@ -64,7 +64,7 @@ struct FieldPlaceTests {
         // Given
         let sut = try Procedure(
             signature: Signature(
-                parameters: ["entries": Parameter(type: .dictionary(.int))]
+                parameters: [Parameter(name: "entries", type: .dictionary(.int))]
             ),
             body: [],
             result: .reference([.key("entries"), .key("a")])
@@ -83,7 +83,7 @@ struct FieldPlaceTests {
         let sut = try Procedure(
             signature: Signature(
                 parameters: [
-                    "outer": Parameter(type: .record([
+                    Parameter(name: "outer", type: .record([
                         "head": .int,
                         "inner": .record(["deep": .string, "beside": .int])
                     ]))
@@ -108,7 +108,7 @@ struct FieldPlaceTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: ["point": Parameter(type: .named("Point"))]),
+                    signature: Signature(parameters: [Parameter(name: "point", type: .named("Point"))]),
                     body: [],
             result: .reference([.key("point"), .key("y")])
                 )
@@ -129,7 +129,7 @@ struct FieldPlaceTests {
         // place the field stands in.
         let sut = try Procedure(
             signature: Signature(
-                parameters: ["point": Parameter(type: .record(["x": .int, "y": .int]))]
+                parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
             ),
             body: [],
             result: .reference([.key("point"), .key("y")])
@@ -154,7 +154,7 @@ struct FieldPlaceTests {
         // land on the wrong field. A write settles to what the box said it
         // holds, so the value is laid out the way the declaration says.
         let sut = Procedure(
-            signature: Signature(parameters: ["given": Parameter(type: .any)]),
+            signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
             body: [
                 Statement(
                     binding: .variable("point", declared: .record(["x": .int, "y": .int])),
@@ -187,7 +187,7 @@ struct FieldPlaceTests {
         // Given. Nothing was declared, so there is nothing for a write to
         // settle to and nothing the build laid out
         let sut = Procedure(
-            signature: Signature(parameters: ["given": Parameter(type: .dictionary(.int))]),
+            signature: Signature(parameters: [Parameter(name: "given", type: .dictionary(.int))]),
             body: [
                 Statement(binding: .variable("held"), expression: .record(["y": .literal(.int(0))])),
                 Statement(
@@ -215,7 +215,7 @@ struct FieldPlaceTests {
         // Given. The declaration is the whole of what the box holds, the way
         // it is for a parameter and for a name bound once
         let sut = Procedure(
-            signature: Signature(parameters: ["given": Parameter(type: .any)]),
+            signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
             body: [
                 Statement(
                     binding: .variable("point", declared: .record(["x": .int, "y": .int])),
@@ -247,13 +247,13 @@ struct FieldPlaceTests {
         // whose keys are the value's
         let laid = try Procedure(
             signature: Signature(
-                parameters: ["point": Parameter(type: .record(["x": .int, "y": .int]))]
+                parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
             ),
             body: [],
             result: .reference([.key("point"), .key("y")])
         )
         let named = try Procedure(
-            signature: Signature(parameters: ["point": Parameter(type: .dictionary(.int))]),
+            signature: Signature(parameters: [Parameter(name: "point", type: .dictionary(.int))]),
             body: [],
             result: .reference([.key("point"), .key("y")])
         )

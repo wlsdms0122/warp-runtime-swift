@@ -14,33 +14,20 @@ import Warp
 struct SettingQuery: Query {
     // What this takes: the mapping, the name written, and what it holds.
     enum Parameters: Int, ParameterSet {
-        case key
         case of
+        case key
         case value
-
-        var name: Name {
-            switch self {
-            case .key:
-                return "key"
-
-            case .of:
-                return "of"
-
-            case .value:
-                return "value"
-            }
-        }
 
         var declared: Parameter {
             switch self {
-            case .key:
-                return Parameter(type: .string)
-
             case .of:
-                return Parameter(type: .dictionary(.any))
+                return Parameter(name: "of", type: .dictionary(.any))
+
+            case .key:
+                return Parameter(name: "key", type: .string)
 
             case .value:
-                return Parameter(type: .any)
+                return Parameter(name: "value", type: .any)
             }
         }
     }
