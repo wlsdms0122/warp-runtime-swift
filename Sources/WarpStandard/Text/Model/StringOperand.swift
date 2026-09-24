@@ -10,10 +10,10 @@ import Warp
 
 // The one string a transformation reads. It takes nothing else.
 enum StringOperand: Int, ParameterSet {
-    case of
+    case text
 
     // MARK: - Property
-    var declared: Parameter { Parameter(name: "of", type: .string) }
+    var declared: Parameter { Parameter(name: "text", type: .string) }
 
     // MARK: - Initializer
     // MARK: - Public

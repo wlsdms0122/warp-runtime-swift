@@ -174,7 +174,7 @@ struct LoweredTypeTests {
         let ordered = try #require(image.loweredTypes.constraintRow(named: "std.Comparable"))
 
         // Then
-        #expect(row.slots.map(\.name) == ["of", "value"])
+        #expect(row.slots.map(\.name) == ["lhs", "rhs"])
         #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: [.membership(ordered)]), .parameter(label: "T", bounds: [.membership(ordered)])])
         #expect(row.returns == .bool)
         #expect(try await Executor().run(image) == .bool(true))

@@ -12,8 +12,8 @@ import Warp
 struct CountQuery: Query {
     // What this takes: the thing counted, and nothing else.
     enum Parameters: Int, ParameterSet {
-        case of
-        var declared: Parameter { Parameter(name: "of", type: .named("std.Collection")) }
+        case collection
+        var declared: Parameter { Parameter(name: "collection", type: .named("std.Collection")) }
     }
 
     // MARK: - Property
@@ -23,9 +23,9 @@ struct CountQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         // A list in either spelling. Bytes have a length the way text has a
         // count, and unlike text, no Unicode question about what "one" means.
-        if let elements = question[.of].elements { return .int(elements.count) }
+        if let elements = question[.collection].elements { return .int(elements.count) }
 
-        switch question[.of] {
+        switch question[.collection] {
         case let .string(text):
             return .int(text.count)
 

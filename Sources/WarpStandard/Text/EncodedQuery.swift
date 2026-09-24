@@ -13,13 +13,13 @@ import Warp
 struct EncodedQuery: Query {
     // What this takes: the text, and the encoding to write it in.
     enum Parameters: Int, ParameterSet {
-        case of
+        case text
         case encoding
 
         var declared: Parameter {
             switch self {
-            case .of:
-                return Parameter(name: "of", type: .string)
+            case .text:
+                return Parameter(name: "text", type: .string)
 
             case .encoding:
                 return Parameter(name: "encoding", type: .string, candidates: ["utf8"])
@@ -35,7 +35,7 @@ struct EncodedQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         try encoding.named(question[.encoding])
 
-        guard case let .string(text) = question[.of] else { return nil }
+        guard case let .string(text) = question[.text] else { return nil }
 
         return .bytes(Array(text.utf8))
     }

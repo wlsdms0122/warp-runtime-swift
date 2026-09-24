@@ -14,15 +14,15 @@ import Warp
 struct KeysQuery: Query {
     // What this takes: the mapping, and nothing else.
     enum Parameters: Int, ParameterSet {
-        case of
-        var declared: Parameter { Parameter(name: "of", type: .dictionary(.any)) }
+        case dictionary
+        var declared: Parameter { Parameter(name: "dictionary", type: .dictionary(.any)) }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let held = question[.of].asDictionary else { return nil }
+        guard let held = question[.dictionary].asDictionary else { return nil }
 
         // In name order, the order both spellings hold: a walk that answered a
         // different order each run would make a program that reads it depend on

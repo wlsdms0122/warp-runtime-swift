@@ -12,18 +12,18 @@ import Warp
 // shared ground's `Comparable`, so what orders with what is decided by the
 // membership rather than by each procedure.
 enum ComparablePair: Int, ParameterSet {
-    case of
-    case value
+    case lhs
+    case rhs
 
     // MARK: - Property
 
     var declared: Parameter {
         switch self {
-        case .of:
-            return Parameter(name: "of", type: .parameter(name: "T", constraints: ["std.Comparable"]))
+        case .lhs:
+            return Parameter(name: "lhs", type: .parameter(name: "T", constraints: ["std.Comparable"]))
 
-        case .value:
-            return Parameter(name: "value", type: .parameter(name: "T", constraints: ["std.Comparable"]))
+        case .rhs:
+            return Parameter(name: "rhs", type: .parameter(name: "T", constraints: ["std.Comparable"]))
         }
     }
 

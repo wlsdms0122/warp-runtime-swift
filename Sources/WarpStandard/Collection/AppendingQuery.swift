@@ -22,11 +22,11 @@ struct AppendingQuery: Query {
         // stays compact until an element that is not a byte is put among them,
         // which `adding` reads for itself. Only the arriving element decides
         // that, so only it is looked at.
-        let collection = question[.of]
+        let collection = question[.array]
 
         guard collection.elements != nil else { return nil }
 
-        return collection.adding(question[.value], atFront: false)
+        return collection.adding(question[.element], atFront: false)
     }
 
     // MARK: - Private

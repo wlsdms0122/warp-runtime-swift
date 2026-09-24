@@ -12,10 +12,10 @@ import Warp
 // Two types and no third, which is what the membership says and what `any`
 // could not.
 enum FanoutOperand: Int, ParameterSet {
-    case of
+    case pieces
 
     // MARK: - Property
-    var declared: Parameter { Parameter(name: "of", type: .named("std.concurrent.Pieces")) }
+    var declared: Parameter { Parameter(name: "pieces", type: .named("std.concurrent.Pieces")) }
 
     // MARK: - Initializer
     // MARK: - Public

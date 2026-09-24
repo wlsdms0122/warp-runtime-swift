@@ -127,7 +127,7 @@ struct FirstParameterTests {
         let count = try #require(image["std.collection.count"])
 
         #expect(shout.signature.names.first == "of")
-        #expect(count.signature.names.first == "of")
+        #expect(count.signature.names.first == "collection")
         #expect(shout.isWritten)
         #expect(!count.isWritten)
     }

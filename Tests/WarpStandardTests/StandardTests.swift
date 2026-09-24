@@ -357,13 +357,13 @@ struct StandardTests {
         // When / Then
         #expect(
             try await sut.evaluate(Question(
-                arguments: ["of": .bytes([104]), "encoding": .string("utf8")]
+                arguments: ["bytes": .bytes([104]), "encoding": .string("utf8")]
             )) == .string("h")
         )
 
         await #expect {
             try await sut.evaluate(Question(
-                arguments: ["of": .bytes([104]), "encoding": .string("utf16")]
+                arguments: ["bytes": .bytes([104]), "encoding": .string("utf16")]
             ))
         } throws: { error in
             "\(error)".contains("no encoding named 'utf16'")

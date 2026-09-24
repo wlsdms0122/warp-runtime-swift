@@ -18,15 +18,15 @@ import Warp
 struct SpellingQuery: Query {
     // What this takes: the value spelled, and nothing else.
     enum Parameters: Int, ParameterSet {
-        case of
-        var declared: Parameter { Parameter(name: "of", type: .any) }
+        case value
+        var declared: Parameter { Parameter(name: "value", type: .any) }
     }
 
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .string(Rendering(question[.of]).text())
+        .string(Rendering(question[.value]).text())
     }
 
     // MARK: - Private
