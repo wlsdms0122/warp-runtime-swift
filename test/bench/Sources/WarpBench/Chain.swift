@@ -29,11 +29,9 @@ import WarpStandard
 struct Chain {
     // MARK: - Property
     private let world: [Module]
-    private let entry: Name
 
     // MARK: - Initializer
     init(_ dealing: Dealing) throws {
-        self.entry = try Self.step(dealing.procedures - 1)
         self.world = try (0 ..< dealing.documents).map { document in
             try Self.document(dealing.held(by: document))
         } + Module.standard
@@ -42,7 +40,7 @@ struct Chain {
     // MARK: - Public
     // How long one build of this world takes.
     func build() async throws -> Duration {
-        try await elapsed { _ = try await Builder().build(world, entry: entry) }
+        try await elapsed { _ = try await Builder().build(world) }
     }
 
     // MARK: - Private
@@ -74,7 +72,7 @@ struct Chain {
         let held = Warp.Expression.reference([.key("held"), .key("value")])
 
         return Procedure(
-            signature: Signature(parameters: ["value": Parameter(type: .int)], returns: .int),
+            signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
             body: [
                 Statement(
                     binding: .constant("held"),
@@ -85,7 +83,7 @@ struct Chain {
                     )
                 )
             ],
-            result: ahead.map { name in .call(Call(selector: name, arguments: ["value": held])) } ?? held
+            result: ahead.map { name in .call(Call(selector: name, arguments: [held])) } ?? held
         )
     }
 }

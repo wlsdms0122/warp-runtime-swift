@@ -32,7 +32,6 @@ import WarpStandard
 struct Fanout {
     // MARK: - Property
     private let modules: [Module]
-    private let entry: Name
 
     // The same documents already compiled, which is what `link()` is handed.
     // What that door times is the laying down, so settling the documents again
@@ -50,7 +49,6 @@ struct Fanout {
         }
         let laid = try await Vocabulary.laid.value
 
-        self.entry = try Self.name(0)
         self.modules = modules
         self.laid = laid
         self.compiled = laid.compiled + (try await Builder().compile(modules, against: laid))
@@ -64,7 +62,6 @@ struct Fanout {
         return try await elapsed {
             _ = try builder.link(
                 laid.compiled + (try await builder.compile(modules, against: laid)),
-                entry: entry,
                 supplying: Vocabulary.brought
             )
         }
@@ -93,7 +90,7 @@ struct Fanout {
     // How long laying the compiled documents down together takes.
     func link() throws -> Duration {
         try elapsed {
-            _ = try Builder().link(compiled, entry: entry, supplying: Vocabulary.brought)
+            _ = try Builder().link(compiled, supplying: Vocabulary.brought)
         }
     }
 
@@ -121,7 +118,7 @@ struct Fanout {
         let held = Warp.Expression.reference([.key("held"), .key("value")])
 
         return Procedure(
-            signature: Signature(parameters: ["value": Parameter(type: .int)], returns: .int),
+            signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
             body: [
                 Statement(
                     binding: .constant("held"),

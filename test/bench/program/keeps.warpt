@@ -1,11 +1,12 @@
 warpt 1
 {
   imports [
-    "std.math.lessThan"
     "std.logic.equal"
+    "std.math.lessThan"
   ]
   procedures {
     entry {
+      access "public"
       body [
         {
           let "round"
@@ -20,7 +21,7 @@ warpt 1
                 }
                 {
                   value {
-                    branch {
+                    conditional {
                       then [
                         {
                           value {
@@ -30,12 +31,12 @@ warpt 1
                       ]
                       when {
                         call {
-                          arguments {
-                            value 1
-                          }
-                          of {
-                            ref "round.index"
-                          }
+                          arguments [
+                            {
+                              ref "round.index"
+                            }
+                            1
+                          ]
                           procedure "std.logic.equal"
                         }
                       }
@@ -54,14 +55,14 @@ warpt 1
               }
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -69,9 +70,12 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
+      parameters [
+        {
+          name "rounds"
+          type "int"
+        }
+      ]
       result {
         ref "round"
       }

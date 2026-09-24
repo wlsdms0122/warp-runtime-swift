@@ -5,11 +5,14 @@ warpt 1
   ]
   procedures {
     entry {
+      access "public"
       body [
         {
           let "data"
           value {
-            a 1
+            record {
+              a 1
+            }
           }
         }
         {
@@ -30,14 +33,14 @@ warpt 1
               ]
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -45,9 +48,12 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
+      parameters [
+        {
+          name "rounds"
+          type "int"
+        }
+      ]
       result {
         ref "seen"
       }

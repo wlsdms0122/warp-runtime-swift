@@ -5,20 +5,26 @@ warpt 1
   ]
   procedures {
     "app.read" {
-      parameters {
-        of "app.Account"
-      }
+      parameters [
+        {
+          name "account"
+          type "app.Account"
+        }
+      ]
       result {
-        ref "of.balance"
+        ref "account.balance"
       }
       returns "int"
     }
     entry {
+      access "public"
       body [
         {
           let "account"
           value {
-            balance 1
+            record {
+              balance 1
+            }
           }
         }
         {
@@ -34,11 +40,11 @@ warpt 1
                   set "seen"
                   value {
                     call {
-                      arguments {
-                        of {
+                      arguments [
+                        {
                           ref "account"
                         }
-                      }
+                      ]
                       procedure "app.read"
                     }
                   }
@@ -46,14 +52,14 @@ warpt 1
               ]
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -61,9 +67,12 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
+      parameters [
+        {
+          name "rounds"
+          type "int"
+        }
+      ]
       result {
         ref "seen"
       }
@@ -72,7 +81,9 @@ warpt 1
   }
   types {
     "app.Account" {
-      balance "int"
+      record {
+        balance "int"
+      }
     }
   }
   warp 1

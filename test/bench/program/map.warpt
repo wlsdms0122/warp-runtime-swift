@@ -8,9 +8,12 @@ warpt 1
   ]
   procedures {
     entry {
+      access "public"
       body [
         {
-          value {}
+          value {
+            record {}
+          }
           var "held"
         }
         {
@@ -22,28 +25,30 @@ warpt 1
                   set "held"
                   value {
                     call {
-                      arguments {
-                        key {
+                      arguments [
+                        {
+                          ref "held"
+                        }
+                        {
                           call {
-                            of {
-                              call {
-                                arguments {
-                                  value 100
+                            arguments [
+                              {
+                                call {
+                                  arguments [
+                                    {
+                                      ref "round.index"
+                                    }
+                                    100
+                                  ]
+                                  procedure "std.math.remainder"
                                 }
-                                of {
-                                  ref "round.index"
-                                }
-                                procedure "std.math.remainder"
                               }
-                            }
+                            ]
                             procedure "std.text.text"
                           }
                         }
-                        value 1
-                      }
-                      of {
-                        ref "held"
-                      }
+                        1
+                      ]
                       procedure "std.collection.setting"
                     }
                   }
@@ -51,14 +56,14 @@ warpt 1
               ]
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -66,9 +71,12 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
+      parameters [
+        {
+          name "rounds"
+          type "int"
+        }
+      ]
       result {
         ref "held"
       }

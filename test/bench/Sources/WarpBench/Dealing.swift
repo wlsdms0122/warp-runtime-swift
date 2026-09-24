@@ -35,7 +35,8 @@ struct Dealing {
 
     // MARK: - Private
     private enum Refusal: Error {
-        // A world of no procedures holds nothing to start a build from.
+        // A world of no procedures leaves every document declaring none, and a
+        // document declares at least one.
         case procedureless
 
         // Fewer documents than one, or more documents than there are procedures to

@@ -6,6 +6,7 @@ warpt 1
   ]
   procedures {
     entry {
+      access "public"
       body [
         {
           let "items"
@@ -22,22 +23,24 @@ warpt 1
                   let "mapped"
                   value {
                     call {
-                      arguments {
-                        value {
+                      arguments [
+                        {
+                          ref "items"
+                        }
+                        {
                           closure {
-                            body []
-                            parameters {
-                              item "int"
-                            }
+                            parameters [
+                              {
+                                name "item"
+                                type "int"
+                              }
+                            ]
                             result {
                               ref "item"
                             }
                           }
                         }
-                      }
-                      of {
-                        ref "items"
-                      }
+                      ]
                       procedure "std.collection.map"
                     }
                   }
@@ -45,14 +48,14 @@ warpt 1
               ]
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -60,9 +63,12 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
+      parameters [
+        {
+          name "rounds"
+          type "int"
+        }
+      ]
       result {
         ref "items"
       }

@@ -5,7 +5,42 @@ warpt 1
     "std.math.plus"
   ]
   procedures {
+    counted {
+      body [
+        {
+          value 0
+          var "held"
+        }
+        {
+          set "held"
+          value {
+            call {
+              arguments [
+                {
+                  ref "held"
+                }
+                {
+                  ref "value"
+                }
+              ]
+              procedure "std.math.plus"
+            }
+          }
+        }
+      ]
+      parameters [
+        {
+          name "value"
+          type "int"
+        }
+      ]
+      result {
+        ref "held"
+      }
+      returns "int"
+    }
     entry {
+      access "public"
       body [
         {
           value 0
@@ -20,9 +55,9 @@ warpt 1
                   set "seen"
                   value {
                     call {
-                      arguments {
-                        value 1
-                      }
+                      arguments [
+                        1
+                      ]
                       procedure "counted"
                     }
                   }
@@ -30,14 +65,14 @@ warpt 1
               ]
               while {
                 call {
-                  arguments {
-                    value {
+                  arguments [
+                    {
+                      ref "round.index"
+                    }
+                    {
                       ref "rounds"
                     }
-                  }
-                  of {
-                    ref "round.index"
-                  }
+                  ]
                   procedure "std.math.lessThan"
                 }
               }
@@ -45,42 +80,14 @@ warpt 1
           }
         }
       ]
-      parameters {
-        rounds "int"
-      }
-      result {
-        ref "seen"
-      }
-      returns "int"
-    }
-    counted {
-      body [
+      parameters [
         {
-          value 0
-          var "held"
-        }
-        {
-          set "held"
-          value {
-            call {
-              arguments {
-                value {
-                  ref "value"
-                }
-              }
-              of {
-                ref "held"
-              }
-              procedure "std.math.plus"
-            }
-          }
+          name "rounds"
+          type "int"
         }
       ]
-      parameters {
-        value "int"
-      }
       result {
-        ref "held"
+        ref "seen"
       }
       returns "int"
     }
