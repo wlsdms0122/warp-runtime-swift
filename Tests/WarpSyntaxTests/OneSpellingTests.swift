@@ -101,5 +101,55 @@ struct OneSpellingTests {
         await #expect(throws: Never.self) { try sut.load(document, identity: nil) }
     }
 
+    @Test("a document is read by the standard table, whatever aliases a loader holds")
+    func aDocumentIsReadByTheStandardTable() async throws {
+        // Given. `cond` is this loader's reading convenience, and no document's
+        let sut = Loader(registry: try ConstructRegistry.standard.registering(ConditionalForm.self, as: "cond"))
+        let document: Value = [
+            "warp": 1,
+            "imports": [],
+            "procedures": [
+                "entry": [
+                    "parameters": [["name": "held", "type": "bool"]],
+                    "body": [["value": ["cond": ["when": ["ref": "held"], "then": []]]]]
+                ]
+            ]
+        ]
+
+        // When / Then
+        await #expect(throws: ReadingError.self) { try sut.load(document, identity: nil) }
+    }
+
+    @Test("a record type nested in another keeps its own refusal and place")
+    func aNestedRecordTypeKeepsItsRefusal() async {
+        // Given. The inner record type written bare, the way a document never
+        // writes one
+        let document: Value = [
+            "warp": 1,
+            "imports": [],
+            "types": ["app.Outer": ["record": ["inner": ["id": "string"]]]],
+            "procedures": ["entry": ["result": 1]]
+        ]
+
+        // When / Then
+        await #expect {
+            try Loader().load(document, identity: nil)
+        } throws: { error in
+            (error as? ReadingError)?.place?.rendered == "types.app.Outer.record.inner"
+                && "\(error)".contains("A record type is written")
+        }
+    }
+
+    @Test("a dictionary literal has no document, since record is read back as a record")
+    func aDictionaryLiteralIsNotWritten() throws {
+        // Given
+        let module = try Module(
+            procedures: ["entry": Procedure(access: .public, body: [], result: .literal(.dictionary(["a": .int(1)])))]
+        )
+
+        // When / Then
+        #expect(throws: WritingError.self) { try Writer().value(of: module) }
+    }
+
     // MARK: - Private
 }

@@ -33,9 +33,6 @@ public struct ExpressionReader: Decodable {
     // The keys a mapping is an expression by, one to a mapping.
     public static let tags = Set(ExpressionTag.allCases.map(\.key))
 
-    // The key a closure literal is written under, which a place read in a
-    // document's keys asks for.
-    static let closureKey = ExpressionTag.closure.key
 
     // What a cast reads and the type it reads it as, inside the cast's own
     // mapping.
@@ -297,7 +294,7 @@ public struct ExpressionReader: Decodable {
 
         do {
             return .closure(
-                try ProcedureReader(from: ValueDecoder(below: decoder, key: Self.closureKey.spelling, holding: written, at: steps))
+                try ProcedureReader(from: ValueDecoder(below: decoder, key: ExpressionTag.closure.key.spelling, holding: written, at: steps))
                     .procedure
             )
         } catch let refusal as ReadingError {
@@ -341,9 +338,8 @@ public struct ExpressionReader: Decodable {
     ) throws -> Expression {
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
-        // says a document may not write it. It does not hand the procedures back to
-        // mean something else, which is why the set of form keys is the same in
-        // every notation whether or not each one is offered.
+        // says a text may not write it; it does not hand the keys back to mean
+        // something else.
         let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
 
         guard let interpolation = notation.interpolation else {

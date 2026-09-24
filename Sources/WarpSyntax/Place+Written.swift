@@ -67,7 +67,7 @@ public extension Place {
 
         // A closure is written wherever data is, so its key is the expression
         // grammar's rather than any form's.
-        case .closure: ExpressionReader.closureKey.spelling
+        case .closure: ExpressionTag.closure.rawValue
 
         case .then: ConditionalForm.CodingKeys.then.stringValue
         case .otherwise: ConditionalForm.CodingKeys.else.stringValue

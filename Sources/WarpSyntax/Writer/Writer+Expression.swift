@@ -74,7 +74,7 @@ public extension Writer {
             return .dictionary([ExpressionTag.record.key: .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
 
         case let .closure(procedure):
-            return .dictionary([ExpressionReader.closureKey: try value(of: procedure)])
+            return .dictionary([ExpressionTag.closure.key: try value(of: procedure)])
 
         // The mark rides on the key, the way `?.` rides on a segment: one
         // spelling says the mismatch refuses and the other says it reads as
@@ -291,7 +291,17 @@ public extension Writer {
         case let .array(elements):
             return .array(try elements.map(literal))
 
-        case .record, .dictionary:
+        // A dictionary and a record read back apart only by the type they
+        // stand in, and `record` reads back as a record. A dictionary is
+        // written as a record cast to the dictionary it is, which names what
+        // it holds, and only its author can say that.
+        case .dictionary:
+            throw WritingError(
+                "a dictionary has no document of its own. Write a record and cast it"
+                    + " to the `dictionary<T>` it is"
+            )
+
+        case .record:
             let fields = try (value.asDictionary?.entries ?? []).map { entry in
                 (name: entry.name, value: try literal(entry.value))
             }

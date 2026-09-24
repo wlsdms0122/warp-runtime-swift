@@ -83,7 +83,7 @@ public struct Loader: Sendable {
         // question below. A module is checked where it is made, so the stamp
         // goes in with what is being made rather than onto what came back. A
         // refusal is exactly the moment somebody wants the file it came from.
-        let module = try reading { try Module(try spelled(value, in: document), identity: identity) }
+        let module = try reading { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
 
         // What a document imports is read before the program it belongs to, so
         // a caller decides whether to grant before it decides whether to link.
@@ -110,9 +110,9 @@ public struct Loader: Sendable {
         // A document says each thing one way: what the writer writes for the
         // program it read. Anything else is a second text for one program, and
         // a second identity for it.
-        // Written by the standard table, the one `canonical` writes with: an
-        // alias a caller registers is a reading convenience, and a document
-        // is spelled one way.
+        // A document is read and written by the standard table, the one
+        // `canonical` writes with. A table a caller composes is for what it
+        // lowers into a document, and a document is spelled one way.
         let spelling = try Writer(registry: .standard, readBy: .canonical).value(of: module)
 
         if let (steps, held) = value.divergence(from: spelling) {
@@ -261,9 +261,10 @@ public struct Loader: Sendable {
     private func spelled(
         _ value: Value,
         in document: Place.Document,
-        from notation: Notation = .canonical
+        from notation: Notation = .canonical,
+        by table: ConstructRegistry? = nil
     ) throws -> Draft {
-        try read(ModuleReader.self, from: value, in: document, from: notation).draft
+        try read(ModuleReader.self, from: value, in: document, from: notation, by: table).draft
     }
 
     // The document a refusal about reading this value is in. The identity is
@@ -310,7 +311,8 @@ public struct Loader: Sendable {
         _ type: T.Type,
         from value: Value,
         in document: Place.Document,
-        from notation: Notation = .canonical
+        from notation: Notation = .canonical,
+        by table: ConstructRegistry? = nil
     ) throws -> T {
         // Held here rather than in each reader below: a value a caller built
         // reaches every reader through this one door, and past the bound the
@@ -320,7 +322,7 @@ public struct Loader: Sendable {
         }
 
         let userInfo: [CodingUserInfoKey: Any] = [
-            .constructRegistry: registry,
+            .constructRegistry: table ?? registry,
             .notation: notation
         ]
 

@@ -7,10 +7,8 @@ import Foundation
 import Warp
 
 // A module variable's entry: its start written as an expression, or a record
-// `{ type, value }` saying what the variable holds beside the start. A
-// record carrying `type` at the top is read as that form, so a record literal
-// with such a field is written under `{ value: ... }` the way one carrying a
-// form key is.
+// `{ type, value }` saying what the variable holds beside the start. A record
+// literal is written under `record`, so it never meets this form.
 public struct VariableReader: Decodable {
     // MARK: - Property
     public let variable: ModuleVariable

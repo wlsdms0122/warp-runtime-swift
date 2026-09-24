@@ -41,10 +41,10 @@ public struct TypeReader: Decodable {
 
     // MARK: - Public
     // The one key a type handed on once is written under.
-    public static let linearKey = "linear"
+    public static let linearKey: Name = "linear"
 
     // The one key a record type is written under.
-    public static let recordKey = "record"
+    public static let recordKey: Name = "record"
 
     // A built-in taking another type, written under its own key where the
     // inner type has no spelling of its own. `array<string>` is a name; an
@@ -420,7 +420,7 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            key.stringValue == linearKey
+            key.stringValue == linearKey.spelling
         {
             return .linear(try keyed.decode(TypeReader.self, forKey: key).type)
         }
@@ -453,7 +453,7 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            key.stringValue == recordKey
+            key.stringValue == recordKey.spelling
         {
             return try record(from: try keyed.superDecoder(forKey: key))
         }
@@ -473,15 +473,17 @@ public struct TypeReader: Decodable {
 
     // A record type's fields, each a type.
     private static func record(from decoder: Decoder) throws -> TypeExpression {
-        guard
-            let fields = try? decoder
-                .singleValueContainer()
-                .decode([String: TypeReader].self)
-        else {
+        guard let fields = try? decoder.container(keyedBy: AnyCodingKey.self) else {
             throw ReadingError("a record type is a mapping of its fields to their types", at: decoder.steps)
         }
 
-        return .record(try fields.mapValues(\.type).named(at: decoder.steps))
+        // Each field read where it stands, so a refusal inside one keeps its
+        // own place and its own sentence.
+        let read = try fields.allKeys.reduce(into: [String: TypeExpression]()) { read, key in
+            read[key.stringValue] = try fields.decode(TypeReader.self, forKey: key).type
+        }
+
+        return .record(try read.named(at: decoder.steps))
     }
 
     // One value, one spelling (a padded or signed-zero bound would be a second

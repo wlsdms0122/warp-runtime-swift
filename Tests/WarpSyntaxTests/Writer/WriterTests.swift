@@ -299,7 +299,7 @@ struct WriterTests {
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("payload"), expression: .literal(.dictionary(["ref": .string("not-a-path")]))
+                        Statement(binding: .constant("payload"), expression: .record(["ref": .literal(.string("not-a-path"))])
                         ),
                         Statement(binding: .constant("held"), expression: .record(["ref": .reference([.key("payload")])])
                         )
@@ -586,11 +586,10 @@ struct WriterTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("payload"), expression: .literal(
-                                .dictionary(["ref": .string("not-a-path"), "deep": .array([
-                                    .dictionary(["value": .int(1)])
-                                ])])
-                            )
+                        Statement(binding: .constant("payload"), expression: .record([
+                                "ref": .literal(.string("not-a-path")),
+                                "deep": .array([.record(["value": .literal(.int(1))])])
+                            ])
                         ),
                         Statement(binding: .variable("count"), expression: .literal(.int(0))),
                         Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))

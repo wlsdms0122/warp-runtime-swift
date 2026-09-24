@@ -240,7 +240,7 @@ struct ModifierNotationTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    body: [Statement(binding: .constant("x"), expression: .literal(.dictionary(["loop": .int(1)])))],
+                    body: [Statement(binding: .constant("x"), expression: .record(["loop": .literal(.int(1))]))],
                     result: .reference([.key("x")])
                 )
             ]
