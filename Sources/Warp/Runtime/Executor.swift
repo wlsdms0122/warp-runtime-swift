@@ -435,8 +435,7 @@ public struct Executor: Sendable {
 
         switch callee.implementation {
         // A query answers without running, so the const half is the whole
-        // implementation. It is here only so that `x.count` and the same
-        // procedure written as a statement mean the same thing.
+        // implementation.
         case .native(.query):
             // A variable handed in place is read as what it holds now and
             // settled the way any argument is, since nothing here writes it.
