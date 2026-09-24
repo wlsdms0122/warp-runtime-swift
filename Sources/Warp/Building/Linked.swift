@@ -217,7 +217,7 @@ public final class Linked: Sendable {
 
     // The same, over arguments handed by position: the way every call hands
     // them.
-    func settle(applied given: [Value]) throws -> [Value?] {
+    func settle(applied given: [Value]) throws -> [Value] {
         try signature.settle(applied: given, over: slots, in: table)
     }
 

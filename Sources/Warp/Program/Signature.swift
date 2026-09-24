@@ -154,13 +154,13 @@ public struct Signature: Sendable, Equatable {
     }
 
     // Arguments handed by position, the way every call hands them: one for
-    // each slot.
+    // each slot, and none handed in place.
     func settle(
         applied given: [Value],
         over slots: [Slot],
         in table: LoweredTypeTable
-    ) throws -> [Value?] {
-        try settle(given.map { value in Optional(value) }, over: slots, in: table)
+    ) throws -> [Value] {
+        try settle(given.map { value in Optional(value) }, over: slots, in: table).compactMap { value in value }
     }
 
     // The boundary itself, over arguments standing at their parameter's
@@ -199,7 +199,7 @@ public struct Signature: Sendable, Equatable {
         for (position, slot) in slots.enumerated() {
             guard let value = given[position] else { continue }
 
-            settled[position] = try slot.taking(value, in: table)
+            settled[position] = try slot.checking(value, at: "input '\(slot.name)'", in: table)
         }
 
         return settled

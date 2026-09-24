@@ -98,7 +98,7 @@ struct CallOperation: Sendable {
 
                 guard case let .literal(value) = code else { return code }
 
-                return .literal(try slot.taking(value, in: loweredTypes))
+                return .literal(try slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes))
             })
         }
 

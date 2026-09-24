@@ -25,11 +25,6 @@ final class Slot: Sendable {
     }
 
     // MARK: - Public
-    // An argument as given, settled and held to the declaration.
-    func taking(_ value: Value, in table: LoweredTypeTable) throws -> Value {
-        try checking(value, at: "input '\(name)'", in: table)
-    }
-
     // The value settled to the declared representation, and held to the
     // spellings where the declaration lists them. `locus` is where a refusal
     // says the value stood, in the caller's terms.

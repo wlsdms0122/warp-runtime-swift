@@ -535,7 +535,7 @@ public struct Executor: Sendable {
         }
 
         for (position, value) in settled.enumerated() {
-            activation.cells[frame.parameters[position]] = .value(value ?? .null)
+            activation.cells[frame.parameters[position]] = .value(value)
         }
 
         return try await answer(
@@ -946,7 +946,7 @@ public struct Executor: Sendable {
             )
         }
 
-        return Settled(values: try callee.settle(applied: values))
+        return Settled(values: try callee.settle(applied: values).map { value in Optional(value) })
     }
 
     // Where a walk over a path came down: on a value, or on a reading gone

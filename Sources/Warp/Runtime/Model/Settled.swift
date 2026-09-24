@@ -21,9 +21,9 @@ struct Settled: Sendable {
     }
 
     // MARK: - Public
-    // What the argument at a place holds. An argument nobody wrote and one
-    // written as null are the same fact here, the same as they are everywhere
-    // else, and so is a place this row does not have.
+    // What the argument at a place holds. A place handed in place holds no
+    // value here, since its box is read through the hold, and it reads as
+    // null the way a place this row does not have does.
     subscript(position: Int) -> Value {
         guard values.indices.contains(position) else { return .null }
 
