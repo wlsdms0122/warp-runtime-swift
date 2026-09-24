@@ -871,11 +871,7 @@ public struct Executor: Sendable {
 
     // Sending a procedure a procedure declared it sends. The row the send reaches is
     // numbered by the sender's document, the same as one written in a body, and
-    // the arguments stand at the callee's first positions.
-    //
-    // A procedure may hand over fewer than the callee declares, and a place it
-    // never handed is a place nothing was given for. Which is the one thing
-    // absence means at any boundary.
+    // the arguments stand at the callee's positions.
     func send(
         _ sending: Sent,
         from origin: Int,
@@ -934,7 +930,7 @@ public struct Executor: Sendable {
         )
     }
 
-    // A send's arguments over the callee's boundary, standing at its first
+    // A send's arguments over the callee's boundary, standing at its
     // positions.
     private func settled(
         _ callee: Linked,

@@ -222,7 +222,7 @@ struct FirstParameterTests {
                 returns: .string
             ),
             body: [],
-            result: .call(Call(selector: "std.text.joined", arguments: [reference("of")]))
+            result: .call(Call(selector: "std.text.joined", arguments: [reference("of"), .literal(.string(""))]))
         )
         let sut = try Module(
             procedures: [

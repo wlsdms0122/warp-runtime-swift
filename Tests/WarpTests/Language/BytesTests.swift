@@ -257,7 +257,7 @@ struct BytesTests {
                         parameters: [Parameter(name: "data", type: .any)]
                     ),
                     body: [],
-                    result: .call(Call(selector: "std.text.joined", arguments: [reference("data")]))
+                    result: .call(Call(selector: "std.text.joined", arguments: [reference("data"), .literal(.string(""))]))
                 )
             ]
         )
@@ -319,7 +319,7 @@ struct BytesTests {
                     entryName: Procedure(
                         access: .public,
                         body: [],
-                        result: .call(Call(selector: selector, arguments: [.literal(subject)]))
+                        result: .call(Call(selector: selector, arguments: [.literal(subject), .literal(.string("utf8"))]))
                     )
                 ]
             )

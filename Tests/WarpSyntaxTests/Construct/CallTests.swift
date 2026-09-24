@@ -20,7 +20,7 @@ struct CallTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("the callee signature settles inputs at the call boundary, a nullable one left out reading null")
+    @Test("the callee signature settles inputs at the call boundary, a null handed reading null")
     func calleeSignatureSettlesInputs() async throws {
         // Given
         let sut = try loader.loadDocument([
@@ -29,7 +29,7 @@ struct CallTests {
                     "body": [
                         [
                             "let": "call",
-                            "value": ["call": ["procedure": "callee", "arguments": [41]]
+                            "value": ["call": ["procedure": "callee", "arguments": [41, .null]]
                         ]]
                     ],
                     "result": ["result": ["ref": "call.pair"]]
@@ -51,7 +51,7 @@ struct CallTests {
         // When
         let outputs = try await run(sut, entry: "caller")
 
-        // Then. The omitted `bump` declares null, so it reads null at the
+        // Then. `bump` declares null, so the null handed reads null at the
         // callee boundary
         #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .null]))
     }

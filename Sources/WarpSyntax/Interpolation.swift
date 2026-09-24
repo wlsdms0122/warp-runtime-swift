@@ -26,7 +26,8 @@ public struct Interpolation: Sendable, Equatable {
     // What every piece is asked, so that a value of any kind arrives as text.
     public let read: Name
 
-    // What puts the pieces together.
+    // What puts the pieces together, handed the pieces and the empty text
+    // to write between them.
     public let joined: Name
 
     // MARK: - Initializer

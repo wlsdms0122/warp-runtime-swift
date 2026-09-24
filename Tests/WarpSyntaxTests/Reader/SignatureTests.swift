@@ -135,21 +135,21 @@ struct SignatureTests {
         }
     }
 
-    @Test("a parameter declaring null need not be given, and one that does not must")
-    func nullableParameterNeedNotBeGiven() async throws {
-        // Given. Declaring `string?` is what makes an input optional while
-        // still saying what it is
-        let sut = try await Loader.testing.loadProcedure([
+    @Test("every parameter is given, and one declaring null takes null")
+    func everyParameterIsGiven() async throws {
+        // Given
+        let sut = try #require(try await Loader.testing.loadProcedure([
             "parameters": [["name": "dir", "type": "string?"], ["name": "file", "type": "string"]],
             "body": [["let": "seen", "value": ["ref": "dir"]]]
-        ])
+        ]).procedures[entryName]?.signature)
 
-        // Then
-        let dir = try #require(sut.procedures[entryName]?.signature.parameter(named: "dir"))
-        let file = try #require(sut.procedures[entryName]?.signature.parameter(named: "file"))
-
-        #expect(!dir.mustBeGiven(in: TypeTable()))
-        #expect(file.mustBeGiven(in: TypeTable()))
+        // When / Then
+        #expect(try settled(sut, given: ["dir": .null, "file": "a"]) == ["dir": .null, "file": "a"])
+        #expect {
+            try settled(sut, given: ["file": "a"])
+        } throws: { error in
+            "\(error)".contains("required, and nothing was given for dir")
+        }
     }
 
     // MARK: - Private

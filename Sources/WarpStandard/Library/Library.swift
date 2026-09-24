@@ -2447,6 +2447,7 @@ enum Library {
                                                   {
                                                     ref "current"
                                                   }
+                                                  ""
                                                 ]
                                                 procedure "std.text.joined"
                                               }
@@ -2524,6 +2525,7 @@ enum Library {
                               {
                                 ref "current"
                               }
+                              ""
                             ]
                             procedure "std.text.joined"
                           }

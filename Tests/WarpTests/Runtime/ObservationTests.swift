@@ -300,7 +300,7 @@ struct ObservationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail"))
+                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail", arguments: [.literal(.bool(false))]))
                         )
                     ]
                 )

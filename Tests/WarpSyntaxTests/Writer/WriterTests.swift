@@ -542,7 +542,8 @@ struct WriterTests {
                                                 )
                                             ),
                                             .literal(.string("!"))
-                                        ])
+                                        ]),
+                                        .literal(.string(""))
                                     ]
                                 )
                             )

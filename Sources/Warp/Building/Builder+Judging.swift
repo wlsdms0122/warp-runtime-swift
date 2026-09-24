@@ -559,7 +559,7 @@ extension Builder {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
-        if let refusal = callee.signature.refusal(handing: call.arguments.count, in: loweredTypes) {
+        if let refusal = callee.signature.refusal(handing: call.arguments.count) {
             throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
         }
 

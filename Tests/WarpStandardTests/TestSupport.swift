@@ -32,7 +32,7 @@ func literal(_ text: String) -> Warp.Expression {
 // A template as the language holds one: pieces written one after another, each
 // value asked how it reads.
 func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .call(Call(selector: "std.text.joined", arguments: [.array(pieces)]))
+    .call(Call(selector: "std.text.joined", arguments: [.array(pieces), .literal(.string(""))]))
 }
 
 func spelling(_ value: Warp.Expression) -> Warp.Expression {

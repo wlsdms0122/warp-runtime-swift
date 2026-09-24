@@ -275,7 +275,7 @@ struct LoweredTypeTests {
         }
         #expect(!TypeExpression.named("app.A").declaresNull(in: circular))
         #expect(TypeExpression.named("app.C").accepts(.int, in: circular))
-        #expect(Parameter(name: "c", type: .nullable(.named("app.C"))).mustBeGiven(in: circular) == false)
+        #expect(TypeExpression.nullable(.named("app.C")).declaresNull(in: circular))
     }
 
     @Test("one undeclared name passes every reading and is refused where a value meets it")

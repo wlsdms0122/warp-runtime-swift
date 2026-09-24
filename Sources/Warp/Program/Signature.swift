@@ -114,22 +114,12 @@ public struct Signature: Sendable, Equatable {
 
     // MARK: - Internal
     // Why handing `count` arguments by position does not fit this
-    // declaration, said by the names it declares, or nil where it fits. Asked
-    // of the declared type rather than of what a call filled it with, since
-    // the run's boundary asks the same: a bare type parameter is never left
-    // out, whatever one call read it as.
-    func refusal(handing count: Int, in table: LoweredTypeTable) -> String? {
-        switch TypeExpression.procedure(type).lowered(in: table).arityMismatch(handing: count, in: table) {
-        case let .tooMany(takes)?:
-            return "\(count) arguments, and it takes \(takes)"
+    // declaration, or nil where it fits. A call hands exactly as many as the
+    // declaration takes.
+    func refusal(handing count: Int) -> String? {
+        guard count != parameters.count else { return nil }
 
-        case let .missing(positions)?:
-            return "without \(positions.map { position in parameters[position].name.spelling }.joined(separator: ", ")),"
-                + " which it requires"
-
-        case nil:
-            return nil
-        }
+        return "\(count) arguments, and it takes \(parameters.count)"
     }
 
     // Every declared name this signature reaches, through what it takes and
@@ -141,8 +131,9 @@ public struct Signature: Sendable, Equatable {
     }
 
     // Arguments given by name, settled into the order a run keeps them in.
-    // A name the declaration lacks is refused. The door a caller outside the
-    // build comes through, since the build resolves names itself.
+    // A name the declaration lacks is refused, and so is one it declares that
+    // was not given. The door a caller outside the build comes through, since
+    // the build resolves names itself.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
@@ -162,60 +153,53 @@ public struct Signature: Sendable, Equatable {
         return try settle(slots.map { slot in given[slot.name] }, over: slots, in: table)
     }
 
-    // Arguments handed by position, the way every call hands them. Positions
-    // left off at the end are the ones nothing was given at, which only a
-    // slot that reads absence as null takes; more than the slots is a
-    // different procedure.
+    // Arguments handed by position, the way every call hands them: one for
+    // each slot.
     func settle(
         applied given: [Value],
         over slots: [Slot],
         in table: LoweredTypeTable
     ) throws -> [Value?] {
-        guard given.count <= slots.count else {
-            throw ArgumentError(
-                "parameters: \(slots.count) declared, and \(given.count) given"
-            )
-        }
-
-        let placed = given.map { value in Optional(value) }
-            + Array(repeating: nil, count: slots.count - given.count)
-
-        return try settle(placed, over: slots, in: table)
+        try settle(given.map { value in Optional(value) }, over: slots, in: table)
     }
 
     // The boundary itself, over arguments standing at their parameter's
     // position. `skipping` names the positions a call fills another way, a
-    // parameter handed a variable in place, and those answer nil. The answer is built from the
-    // declaration, never copied from the caller: only declared names exist
-    // inside the boundary.
+    // parameter handed a variable in place, and those answer nil. The answer
+    // is built from the declaration, never copied from the caller: only
+    // declared names exist inside the boundary.
     func settle(
         _ given: [Value?],
         over slots: [Slot],
         skipping: (Int) -> Bool = { _ in false },
         in table: LoweredTypeTable
     ) throws -> [Value?] {
-        // Nothing given is a slot no argument stands at. A null standing at one
-        // was given: null is a value the way any other is, and a caller that
-        // holds one hands it over rather than falling silent.
-        var missing: [Name] = []
-
-        for (position, slot) in slots.enumerated() where !skipping(position) {
-            if given[position] == nil, slot.mustBeGiven(in: table) {
-                missing.append(slot.name)
-            }
+        guard given.count == slots.count else {
+            throw ArgumentError(
+                "parameters: \(slots.count) declared, and \(given.count) given"
+            )
         }
+
+        // A null standing at a slot was given: null is a value the way any
+        // other is, and a caller that holds one hands it over rather than
+        // falling silent.
+        let missing = slots.indices
+            .filter { position in !skipping(position) && given[position] == nil }
+            .map { position in slots[position].name.spelling }
 
         guard missing.isEmpty else {
             throw ArgumentError(
                 "parameters: required, and nothing was given for"
-                    + " \(missing.map(\.spelling).joined(separator: ", "))"
+                    + " \(missing.joined(separator: ", "))"
             )
         }
 
         var settled: [Value?] = Array(repeating: nil, count: slots.count)
 
-        for (position, slot) in slots.enumerated() where !skipping(position) {
-            settled[position] = try slot.taking(given[position], in: table)
+        for (position, slot) in slots.enumerated() {
+            guard let value = given[position] else { continue }
+
+            settled[position] = try slot.taking(value, in: table)
         }
 
         return settled

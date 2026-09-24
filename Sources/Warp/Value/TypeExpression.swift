@@ -109,9 +109,9 @@ public indirect enum TypeExpression: Sendable, Equatable {
     case borrowing(TypeExpression)
 
     // The declared type, or null. The one union the language has, and it is
-    // null-only on purpose. `?.` answers this, and a parameter declaring it may
-    // be left out of a call; a general union would put back the "is it this or
-    // that" question the whole type system exists to answer once.
+    // null-only on purpose. `?.` answers this; a general union would put back
+    // the "is it this or that" question the whole type system exists to
+    // answer once.
     case nullable(TypeExpression)
 
     // A type a module declared. Kept rather than expanded so that a type may
@@ -518,14 +518,12 @@ extension TypeExpression {
         }
     }
 
-    // Whether null is one of this type's values rather than an absence. The
-    // fact `T?` exists to declare, and the boundary reads it: a null arriving
-    // at a `T?` slot is a value the body takes, not a missing argument.
+    // Whether null is one of this type's values. The fact `T?` exists to
+    // declare.
     //
     // `any` is not this. An undeclared type accepts a null that arrives, but
-    // it does not *spell* null as a value, so an `any` parameter is never
-    // left out. The looser question, "does a null that arrives pass", is
-    // `admitsNull` and includes `any`.
+    // it does not *spell* null as a value. The looser question, "does a null
+    // that arrives pass", is `admitsNull` and includes `any`.
     public func declaresNull(in types: TypeTable) -> Bool {
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }

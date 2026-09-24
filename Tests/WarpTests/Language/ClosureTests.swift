@@ -103,15 +103,16 @@ struct ClosureTests {
     }
 
     @Test(
-        "a value applied short or over is refused by what it lacks or by the count",
+        "a value applied short or over is refused by the count",
         arguments: [
-            (handed: 1, refusal: "without what it takes at 1, which it requires"),
+            (handed: 2, refusal: "with 2 arguments, and it takes 3"),
             (handed: 4, refusal: "with 4 arguments, and it takes 3")
         ]
     )
     func anApplicationShortOrOverSaysWhy(handed: Int, refusal: String) async throws {
-        // Given. `made` takes two and a nullable third, so one argument lacks
-        // the second and four is one more than it takes
+        // Given. `made` takes two and a nullable third, so two arguments are
+        // one short even where the missing one is nullable, and four is one
+        // more than it takes
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

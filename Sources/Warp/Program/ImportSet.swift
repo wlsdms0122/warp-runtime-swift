@@ -18,7 +18,7 @@ import Foundation
 // writes its arguments where the link can count them; a Swift body is not text,
 // so the procedure says how many and the build holds that against the
 // callee's parameters. What a run then hands over is a list standing at the
-// callee's first positions, the way every call's arguments stand.
+// callee's positions, the way every call's arguments stand.
 //
 // This is what a document's `imports` is for a body.
 public protocol ImportSet: CaseIterable, Hashable, Sendable {
@@ -28,8 +28,7 @@ public protocol ImportSet: CaseIterable, Hashable, Sendable {
     // Where it stands among the procedure's imports.
     var position: Int { get }
 
-    // How many arguments this send hands over, from the callee's first
-    // position.
+    // How many arguments this send hands over.
     var handing: Int { get }
 }
 

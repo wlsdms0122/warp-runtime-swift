@@ -22,7 +22,7 @@ struct EncodedQuery: Query {
                 return Parameter(name: "of", type: .string)
 
             case .encoding:
-                return Parameter(name: "encoding", type: .nullable(.string), candidates: ["utf8"])
+                return Parameter(name: "encoding", type: .string, candidates: ["utf8"])
             }
         }
     }

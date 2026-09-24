@@ -347,18 +347,6 @@ struct StandardTests {
         )
     }
 
-    @Test("joined asked directly reads a missing separator as nothing between")
-    func joinedAskedDirectlyReadsAMissingSeparatorAsEmpty() async throws {
-        // Given
-        let sut = JoinedQuery()
-
-        // When
-        let joined = try await sut.evaluate(Question(arguments: ["of": .array([.string("a"), .string("b")])]))
-
-        // Then
-        #expect(joined == .string("ab"))
-    }
-
     @Test("a codec keeps its own contract on the encoding name")
     func aCodecReadsItsEncodingArgument() async throws {
         // Given. The declaration's enum says the same names early; this is the

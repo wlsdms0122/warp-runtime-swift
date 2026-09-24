@@ -40,21 +40,8 @@ public struct Parameter: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // Whether a call must write this argument. A type that declares null
-    // reads omission as that null; every other type is given, null included.
-    public func mustBeGiven(in types: TypeTable) -> Bool {
-        declared.lowered(in: types.loweredTypes).mustBeGiven(in: types.loweredTypes)
-    }
-
     // A host's door onto the boundary a run keeps: this parameter lowered
     // into the slot the run reads, and the value settled by it.
-    public func taking(
-        _ value: Value,
-        in types: TypeTable = .empty
-    ) throws -> Value {
-        try lowered(in: types.loweredTypes).taking(value, in: types.loweredTypes)
-    }
-
     public func checking(
         _ value: Value,
         in types: TypeTable = .empty
