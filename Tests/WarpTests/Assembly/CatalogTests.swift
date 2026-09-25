@@ -1,5 +1,5 @@
 //
-//  CatalogueTests.swift
+//  CatalogTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/8/26.
@@ -14,11 +14,11 @@ import WarpStandard
 //
 // A module asks for what it needs and does not carry it, so a caller holding
 // one module does not thereby hold the modules it declares against. The
-// catalogue is where a host writes down what it is willing to supply, and
+// catalog is where a host writes down what it is willing to supply, and
 // closing a list against it is what turns "this program" into "this program
 // and everything it needs, once each".
-@Suite("A catalogue closes the modules a link is handed")
-struct CatalogueTests {
+@Suite("A catalog closes the modules a link is handed")
+struct CatalogTests {
     // MARK: - Property
     private let builder = Builder()
 
@@ -41,7 +41,7 @@ struct CatalogueTests {
         )
 
         // When.
-        let closed = try Catalogue([loweredTypes]).closing([users])
+        let closed = try Catalog([loweredTypes]).closing([users])
 
         // Then. The build has both, and it links.
         #expect(closed.count == 2)
@@ -62,9 +62,9 @@ struct CatalogueTests {
             ]
         )
 
-        // When. The catalogue holds the whole standard vocabulary; the program
+        // When. The catalog holds the whole standard vocabulary; the program
         // names one procedure of it.
-        let closed = try Catalogue(Module.standard).closing([program])
+        let closed = try Catalog(Module.standard).closing([program])
 
         // Then. `math` came for the procedure, and `foundation` came after it for
         // the constraint `math`'s own signatures mention.
@@ -73,7 +73,7 @@ struct CatalogueTests {
     }
 
     @Test("supply handed over as well as held is supply standing twice")
-    func supplyListedBesideTheCatalogueStandsTwice() async throws {
+    func supplyListedBesideTheCatalogStandsTwice() async throws {
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(
             procedures: [
@@ -87,19 +87,19 @@ struct CatalogueTests {
         )
 
         // When. What is asked for is what the caller means to run, so a module
-        // handed over here as well as held in the catalogue is in the answer
+        // handed over here as well as held in the catalog is in the answer
         // twice.
-        let closed = try Catalogue([loweredTypes]).closing([users, loweredTypes])
+        let closed = try Catalog([loweredTypes]).closing([users, loweredTypes])
 
-        // Then. The build says so, rather than the catalogue quietly keeping
+        // Then. The build says so, rather than the catalog quietly keeping
         // one of them.
         #expect(closed.count == 3)
         await #expect(throws: BuildError.self) { try await builder.build(closed) }
     }
 
     @Test("a caller cannot supply a granted procedure to a granted module")
-    func aWantedModuleDoesNotStandInForTheCatalogue() async throws {
-        // Given. `supplier` sends a procedure the catalogue declares, and the
+    func aWantedModuleDoesNotStandInForTheCatalog() async throws {
+        // Given. `supplier` sends a procedure the catalog declares, and the
         // program declares that same procedure itself.
         let real = try Module(
             procedures: ["app.w": Procedure(body: [], result: .literal(.string("host")))]
@@ -114,9 +114,9 @@ struct CatalogueTests {
             ]
         )
 
-        // When. `supplier` needs the procedure, so the catalogue's declarer is
+        // When. `supplier` needs the procedure, so the catalog's declarer is
         // brought whatever else declares it.
-        let closed = try Catalogue([real, supplier]).closing([program])
+        let closed = try Catalog([real, supplier]).closing([program])
 
         // Then. The build meets both and refuses, rather than binding
         // `lib.run` to the procedure the program wrote.
@@ -124,7 +124,7 @@ struct CatalogueTests {
         await #expect(throws: BuildError.self) { try await builder.build(closed) }
     }
 
-    @Test("a name the catalogue does not declare is left to the build")
+    @Test("a name the catalog does not declare is left to the build")
     func anUndeclaredNameIsLeftToTheLink() async throws {
         let users = try Module(
             procedures: [
@@ -137,8 +137,8 @@ struct CatalogueTests {
             ]
         )
 
-        // When. Nothing in the catalogue declares `Age`.
-        let closed = try Catalogue([]).closing([users])
+        // When. Nothing in the catalog declares `Age`.
+        let closed = try Catalog([]).closing([users])
 
         // Then. What comes back is what was asked for, and the refusal is the build's.
         #expect(closed.count == 1)
@@ -150,26 +150,26 @@ struct CatalogueTests {
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
 
         // When.
-        let closed = try Catalogue([]).closing([loweredTypes, loweredTypes])
+        let closed = try Catalog([]).closing([loweredTypes, loweredTypes])
 
         // Then. Both copies stand, and the build says what is wrong with that.
         #expect(closed.count == 2)
         await #expect(throws: BuildError.self) { try await builder.build(closed) }
     }
 
-    @Test("two modules declaring one name leave the catalogue no answer")
+    @Test("two modules declaring one name leave the catalog no answer")
     func twoModulesDeclaringOneNameAreRefused() async throws {
         let mine = try Module(types: ["Age": .int], procedures: [:])
         let theirs = try Module(types: ["Age": .string], procedures: [:])
 
-        #expect(throws: CatalogueError.self) { try Catalogue([mine, theirs]) }
+        #expect(throws: CatalogError.self) { try Catalog([mine, theirs]) }
     }
 
-    @Test("the standard vocabulary is a catalogue")
-    func theStandardVocabularyIsACatalogue() throws {
+    @Test("the standard vocabulary is a catalog")
+    func theStandardVocabularyIsACatalog() throws {
         // The bundles shipped with the language declare no name twice between
         // them, so a host can hand the whole list over as what it supplies.
-        #expect(throws: Never.self) { try Catalogue(Module.standard) }
+        #expect(throws: Never.self) { try Catalog(Module.standard) }
     }
 
     @Test("what a module needs is closed through the modules brought for it")
@@ -189,7 +189,7 @@ struct CatalogueTests {
         )
 
         // When.
-        let closed = try Catalogue(Module.standard).closing([program])
+        let closed = try Catalog(Module.standard).closing([program])
 
         // Then. Whatever came, the build is satisfied by it.
         await #expect(throws: Never.self) { try await builder.build(closed) }
@@ -236,8 +236,8 @@ struct CatalogueTests {
             ]
         )
 
-        // When. The program is closed against the catalogue
-        let closed = try Catalogue([holding, asking, answering]).closing([program])
+        // When. The program is closed against the catalog
+        let closed = try Catalog([holding, asking, answering]).closing([program])
 
         // Then. The document answering the claim came too, and the list links.
         // A claim nothing answers refuses, so a closing that left it out would
@@ -250,7 +250,7 @@ struct CatalogueTests {
 
     @Test("a claim is followed when the program itself declares the contract")
     func aClaimIsFollowedThroughTheProgramsOwnContract() async throws {
-        // Given. The catalogue holds the type and the declaration that answers
+        // Given. The catalog holds the type and the declaration that answers
         // the claim. The contract, and the claim itself, are the program's.
         let holding = try Module(
             types: ["bank.Account": .record(["balance": .int])],
@@ -285,9 +285,9 @@ struct CatalogueTests {
             ]
         )
 
-        // When. The contract is nowhere in the catalogue, so the procedures a claim
+        // When. The contract is nowhere in the catalog, so the procedures a claim
         // is spelled from are read off the answer as it grows
-        let closed = try Catalogue([holding, answering]).closing([program])
+        let closed = try Catalog([holding, answering]).closing([program])
 
         // Then
         #expect(closed.count == 3)
@@ -343,7 +343,7 @@ struct CatalogueTests {
         )
 
         // When
-        let closed = try Catalogue([holding, asking, spelling, answering]).closing([program])
+        let closed = try Catalog([holding, asking, spelling, answering]).closing([program])
 
         // Then. The answer came, and so did the type its signature names
         #expect(closed.count == 5)
@@ -355,7 +355,7 @@ struct CatalogueTests {
     @Test("a document's procedure collides before its type")
     func aProcedureCollidesBeforeAType() throws {
         // Given. One document declaring a procedure and a type, and a second
-        // declaring both of the same names. The catalogue has two answers for
+        // declaring both of the same names. The catalog has two answers for
         // each and reports the first it walks into.
         let first = try Module(
             types: ["a.Type": .record(["x": .int])],
@@ -369,7 +369,7 @@ struct CatalogueTests {
         // When / Then. Procedures stand before types, so the procedure is the one an
         // author is told about.
         #expect {
-            try Catalogue([first, second])
+            try Catalog([first, second])
         } throws: { error in
             "\(error)".contains("the procedure 'a.procedure' is declared by")
         }

@@ -20,7 +20,7 @@ enum Reference: Hashable, Sendable, Comparable {
     case type(Name)
 
     // MARK: - Internal
-    // Procedures before types, and each in name order. A catalogue reports the
+    // Procedures before types, and each in name order. A catalog reports the
     // first collision it walks into, so this is the order an author meets
     // them in.
     static func < (lhs: Reference, rhs: Reference) -> Bool {

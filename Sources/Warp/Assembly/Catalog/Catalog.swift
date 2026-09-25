@@ -1,5 +1,5 @@
 //
-//  Catalogue.swift
+//  Catalog.swift
 //  Warp
 //
 //  Created by JSilver on 9/8/26.
@@ -12,7 +12,7 @@ import Foundation
 // A module says what it asks for and never where to find it, so somebody has
 // to decide which modules stand beside it. That decision is a grant: a program
 // does what the procedures in front of it let it do, and this is where a host
-// writes down which procedures those may be. Closing a list against a catalogue
+// writes down which procedures those may be. Closing a list against a catalog
 // reaches only what the host put in one.
 //
 // The link is not where this happens. It is handed a graph and holds one name
@@ -26,7 +26,7 @@ import Foundation
 // procedure and which declares a type, and a procedure and a type may share a
 // spelling. So the needs are read off the module here, in both kinds, and one
 // table answers them: the kind rides on the reference.
-public struct Catalogue: Sendable {
+public struct Catalog: Sendable {
     // MARK: - Property
     private let modules: [Module]
 
@@ -37,7 +37,7 @@ public struct Catalogue: Sendable {
     // MARK: - Initializer
     // Two modules declaring one name is refused here, because a table that
     // holds the name twice cannot answer the one question this is asked. That
-    // is a fact about the catalogue and not the link's rule stated again: the
+    // is a fact about the catalog and not the link's rule stated again: the
     // link refuses such a pair only when both are in it, and a host may well
     // hold two modules it never puts in one graph.
     public init(_ modules: [Module]) throws {
@@ -60,26 +60,26 @@ public struct Catalogue: Sendable {
             }
 
             // In reference order, which is why they are gathered rather than
-            // thrown on as they are met: a catalogue that holds meets none of
+            // thrown on as they are met: a catalog that holds meets none of
             // them, and ordering what is never there is ordering nothing.
             guard let held = collided.min(by: { one, other in one.reference < other.reference }) else {
                 continue
             }
 
             // Where it was written, read off the document here alone. A
-            // catalogue that holds throws none of these, and a declaration's
+            // catalog that holds throws none of these, and a declaration's
             // place is what a refusal wants and nothing else does.
             let place = module.draft
                 .declarations(in: .of(module))
                 .first { declared in declared.reference == held.reference }?
                 .place
 
-            throw CatalogueError(
+            throw CatalogError(
                 "the \(held.reference.noun) '\(held.reference.name)' is declared by"
                     + " \(Place.Document.of(modules[held.first]).spelled(at: held.first)) and by"
                     + " \(Place.Document.of(module).spelled(at: position)) in this"
-                    + " catalogue, so there is no answer to which one supplies it."
-                    + " A catalogue names each declaration once",
+                    + " catalog, so there is no answer to which one supplies it."
+                    + " A catalog names each declaration once",
                 at: place ?? Place(in: .of(module))
             )
         }
@@ -90,13 +90,13 @@ public struct Catalogue: Sendable {
 
     // MARK: - Public
     // These modules closed over what they need: what was asked for, and
-    // everything in the catalogue that what was asked for needs, and each of
-    // the catalogue's modules at most once.
+    // everything in the catalog that what was asked for needs, and each of
+    // the catalog's modules at most once.
     //
     // What is asked for is what the caller means to run. Supply belongs in the
-    // catalogue, and a module handed over here as well as held there stands in
+    // catalog, and a module handed over here as well as held there stands in
     // the answer twice, which the link refuses. Keeping the second one out
-    // instead would mean a name the catalogue declares could be answered by
+    // instead would mean a name the catalog declares could be answered by
     // whatever the caller listed, so a program declaring one procedure of a granted
     // module would quietly become the module every other module calls.
     //

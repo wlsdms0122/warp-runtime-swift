@@ -1,13 +1,13 @@
 //
-//  CatalogueClaimTests.swift
+//  CatalogClaimTests.swift
 //  Warp
 //
 
 import Testing
 @testable import Warp
 
-@Suite("A catalogue brings what a claim needs")
-struct CatalogueClaimTests {
+@Suite("A catalog brings what a claim needs")
+struct CatalogClaimTests {
     private let entryName: Name = "app.main"
 
     @Test("closing brings a claim about two types the list has")
@@ -66,8 +66,8 @@ struct CatalogueClaimTests {
         )
 
         // When
-        let catalogue = try Catalogue([charting, banking, adapting] + Module.standard)
-        let closed = catalogue.closing([program])
+        let catalog = try Catalog([charting, banking, adapting] + Module.standard)
+        let closed = catalog.closing([program])
 
         // Then. The claim stands in the link, so the pair the program leans on
         // is answered.

@@ -68,8 +68,8 @@ struct UnheldClaimTests {
         )
 
         // When
-        let catalogue = try Catalogue([asking, typed, broken] + Module.standard)
-        let closed = catalogue.closing([program])
+        let catalog = try Catalog([asking, typed, broken] + Module.standard)
+        let closed = catalog.closing([program])
 
         // Then. The claim stands in the link and puts its type under no
         // contract, and the program that never handed the type where the
@@ -143,8 +143,8 @@ struct UnheldClaimTests {
         )
 
         // When
-        let catalogue = try Catalogue([asking, typed, adapting] + Module.standard)
-        let closed = catalogue.closing([program])
+        let catalog = try Catalog([asking, typed, adapting] + Module.standard)
+        let closed = catalog.closing([program])
 
         // Then. The pair the program leans on is answered, and the one beside
         // it that nothing can answer refuses nobody.

@@ -1,5 +1,5 @@
 //
-//  CatalogueError.swift
+//  CatalogError.swift
 //  Warp
 //
 //  Created by JSilver on 9/8/26.
@@ -7,13 +7,13 @@
 
 import Foundation
 
-// What a catalogue refuses. Only one thing: a name it cannot answer for,
+// What a catalog refuses. Only one thing: a name it cannot answer for,
 // because two of the modules in it declare that name and nothing says which
 // one a link asking for it meant.
 //
 // The place is the declaration that could not be added, the way it is wherever
 // two declarations collide, with the first named in the sentence.
-public struct CatalogueError: WarpError {
+public struct CatalogError: WarpError {
     // MARK: - Property
     public let message: String
     public let place: Place?
@@ -26,7 +26,7 @@ public struct CatalogueError: WarpError {
 
     // MARK: - Public
     public func placed(_ place: Place) -> Self {
-        CatalogueError(message, at: place)
+        CatalogError(message, at: place)
     }
 
     // MARK: - Private
