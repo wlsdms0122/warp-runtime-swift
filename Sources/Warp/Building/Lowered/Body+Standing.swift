@@ -160,18 +160,3 @@ extension Body.Node {
         }
     }
 }
-
-extension Address {
-    func stand(in standing: inout Body.Standing) {
-        standing.stand(on: slot)
-        steps.forEach { step in step.stand(in: &standing) }
-    }
-}
-
-extension Step {
-    func stand(in standing: inout Body.Standing) {
-        guard case let .at(address, _) = self else { return }
-
-        address.stand(in: &standing)
-    }
-}

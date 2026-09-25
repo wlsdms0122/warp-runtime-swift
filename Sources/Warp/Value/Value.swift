@@ -297,12 +297,12 @@ public indirect enum Value: Sendable, Equatable {
     public func elements(at positions: some Sequence<Int>) -> Value? {
         switch self {
         case let .bytes(bytes):
-            guard let taken = bytes.taken(at: positions) else { return nil }
+            guard let taken = Self.taken(bytes, at: positions) else { return nil }
 
             return .bytes(taken)
 
         case let .array(array):
-            guard let taken = array.taken(at: positions) else { return nil }
+            guard let taken = Self.taken(array, at: positions) else { return nil }
 
             return .array(taken)
 
@@ -567,6 +567,21 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // These positions taken in order, and nil where one of them is not a
+    // position the elements hold, so a caller that counted wrong is answered
+    // rather than trapped. Written once for both spellings' storage.
+    private static func taken<Element>(_ elements: [Element], at positions: some Sequence<Int>) -> [Element]? {
+        var taken = [Element]()
+
+        for position in positions {
+            guard elements.indices.contains(position) else { return nil }
+
+            taken.append(elements[position])
+        }
+
+        return taken
+    }
+
     // Whether a record and a dictionary hold the same fields. A record that
     // settled to a name is that name's, and no dictionary is.
     private static func same(
@@ -580,22 +595,5 @@ public indirect enum Value: Sendable, Equatable {
             record.names[place] == dictionary.entries[place].name
                 && held(record.values[place], dictionary.entries[place].value)
         }
-    }
-}
-
-private extension Array {
-    // These positions taken in order, and nil where one of them is not a
-    // position this holds, so a caller that counted wrong is answered rather
-    // than trapped. Written once for both spellings' storage.
-    func taken(at positions: some Sequence<Int>) -> [Element]? {
-        var taken = [Element]()
-
-        for position in positions {
-            guard indices.contains(position) else { return nil }
-
-            taken.append(self[position])
-        }
-
-        return taken
     }
 }

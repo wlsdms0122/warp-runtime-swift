@@ -296,10 +296,10 @@ extension LoweredType {
             return refinement.rendered
 
         case let .parameter(label, bounds):
-            return bounds.isEmpty ? "some \(label)" : "some \(label): \(bounds.rendered(in: table))"
+            return bounds.isEmpty ? "some \(label)" : "some \(label): \(Self.rendered(bounds, in: table))"
 
         case let .composition(bounds):
-            return bounds.rendered(in: table)
+            return Self.rendered(bounds, in: table)
 
         case let .variable(inner):
             return "var \(inner.rendered(in: table))"
@@ -348,6 +348,16 @@ extension LoweredType {
     }
 
     // MARK: - Private
+    // The names joined with `&`, as a composition or a bound is spelled.
+    private static func rendered(_ bounds: [Bound], in table: LoweredTypeTable) -> String {
+        bounds.map { bound -> String in
+            switch bound {
+            case let .membership(row): table.constraintLabels[row].spelling
+            case let .contract(name): name.spelling
+            }
+        }.joined(separator: " & ")
+    }
+
     // Every type that reads the value it is given. The two that do not are
     // answered by `settling` and never arrive here; reaching this by another
     // door sends them back to it.
@@ -733,17 +743,5 @@ extension LoweredType {
         default:
             return false
         }
-    }
-}
-
-extension Array where Element == LoweredType.Bound {
-    // The names joined with `&`, as a composition or a bound is spelled.
-    func rendered(in table: LoweredTypeTable) -> String {
-        map { bound -> String in
-            switch bound {
-            case let .membership(row): table.constraintLabels[row].spelling
-            case let .contract(name): name.spelling
-            }
-        }.joined(separator: " & ")
     }
 }

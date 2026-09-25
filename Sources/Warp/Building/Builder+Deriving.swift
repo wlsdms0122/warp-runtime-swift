@@ -7,13 +7,6 @@
 
 import Foundation
 
-// What makes an expression something the run runs rather than reads.
-enum Runs: Sendable {
-    case calling(Name)
-    case applying
-    case construct
-}
-
 // The facts nobody declared, worked out over every declaration at once. A
 // declaration is const until its body shows otherwise, and the answer is the
 // whole link's rather than any one body's.

@@ -66,7 +66,7 @@ public struct Image: Sendable {
     public func reached(from entry: Name) throws -> Set<Name> {
         guard let start = rows[entry] else { return [] }
 
-        let walked = try linked.reached(from: start, starting: variables, in: [])
+        let walked = try reached(from: start, in: linked, starting: variables)
 
         return Set(rows.lazy.filter { row in walked.contains(row.value) }.map(\.key))
     }
@@ -88,4 +88,44 @@ public struct Image: Sendable {
     }
 
     // MARK: - Private
+    // Which rows a run entering at one can reach: what each row reaches,
+    // transitively, by the rows themselves. Every number met is a row of
+    // the table, since the link answered each one before the table was
+    // handed over, and every row a closure holds is one of these, since the
+    // link relocates a row once. The variables are every document's, by the
+    // document and then by the number it gave them.
+    private func reached(
+        from start: Int,
+        in table: [Linked],
+        starting variables: [[(name: Name, value: Value)]]
+    ) throws -> Set<Int> {
+        // Which row of the table each is, by identity, since a row a closure
+        // holds arrives as the row and not as a number. One that is not here
+        // is a row a closure brought in from some other table, and it is
+        // refused where it is met and not walked into.
+        let numbered = Dictionary(
+            table.enumerated().map { row, linked in (ObjectIdentifier(linked), row) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var reached: Set<Int> = []
+        var frontier = [table[start]]
+
+        while let next = frontier.popLast() {
+            guard let row = numbered[ObjectIdentifier(next)] else {
+                throw BuildError.unjudged(
+                    "a closure holding a row of some other table",
+                    at: .procedure(next.label.spelling, in: .assembled)
+                )
+            }
+
+            guard reached.insert(row).inserted else { continue }
+
+            let reach = next.reaches(starting: variables[next.origin])
+
+            frontier.append(contentsOf: reach.rows.map { row in table[row] })
+            frontier.append(contentsOf: reach.held)
+        }
+
+        return reached
+    }
 }
