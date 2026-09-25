@@ -40,13 +40,3 @@ public extension ImportSet {
 public extension ImportSet where Self: RawRepresentable, RawValue == Int {
     var position: Int { rawValue }
 }
-
-// A procedure that sends nothing. Its one case is never reached, which is what
-// sending nothing means.
-public enum NoImports: Int, ImportSet {
-    case none
-
-    public static var allCases: [NoImports] { [] }
-
-    public var selector: Name { "" }
-}

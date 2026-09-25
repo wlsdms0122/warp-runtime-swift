@@ -9,8 +9,8 @@ import Foundation
 
 // Everything this language refuses with says one sentence about why. No area
 // owns that (validation, linking, the runtime and the notation reader all
-// declare it) so it sits at the root rather than being filed under whichever of
-// them is asked to keep it.
+// declare it), so it stands beside `Place` rather than under whichever of them
+// is asked to keep it.
 public protocol WarpError: Error, Sendable, CustomStringConvertible {
     var message: String { get }
 
