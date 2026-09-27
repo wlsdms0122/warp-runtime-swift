@@ -377,7 +377,7 @@ struct ObjectClosureTests {
                 failing: row.failing,
                 sends: row.sends,
                 judging: .body(
-                    Body(instructions: [], result: .apply(.literal(.procedure(closure)), arguments: [])),
+                    LoweredBody(instructions: [], result: .apply(.literal(.procedure(closure)), arguments: [])),
                     frame
                 )
             )

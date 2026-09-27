@@ -464,14 +464,14 @@ struct Lowering {
         // The body with the constants it reads bound before its first
         // statement, so a read the fold could not settle stands on a slot the
         // way any name's does.
-        func binding(_ body: Body) -> Body {
+        func binding(_ body: LoweredBody) -> LoweredBody {
             guard !constantBindings.isEmpty else { return body }
 
             let bindings = constantBindings.map { slot, value in
                 Instruction(binding: .bind(slot, settling: nil), code: .literal(value), label: names[slot].spelling)
             }
 
-            return Body(instructions: bindings + body.instructions, result: body.result)
+            return LoweredBody(instructions: bindings + body.instructions, result: body.result)
         }
     }
 
@@ -481,14 +481,14 @@ struct Lowering {
         on slots: Slots,
         label: Name,
         at place: Place
-    ) throws -> Body {
+    ) throws -> LoweredBody {
         var inner = scope
         let instructions = try lower(block.body, in: &inner, on: slots, label: label, at: place)
         let result = try block.result.map { result in
             try lower(result, in: inner, on: slots, label: label, at: place)
         }
 
-        return Body(instructions: instructions, result: result)
+        return LoweredBody(instructions: instructions, result: result)
     }
 
     // Statements in order: a statement's expression is lowered before the
@@ -844,7 +844,7 @@ struct Lowering {
 
         return .loop(
             while: taking,
-            body: Body(instructions: instructions, result: result),
+            body: LoweredBody(instructions: instructions, result: result),
             round: slot,
             keeps: keeps
         )

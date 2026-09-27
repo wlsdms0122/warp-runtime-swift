@@ -1,5 +1,5 @@
 //
-//  BodyWalkTests.swift
+//  LoweredBodyWalkTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/18/26.
@@ -12,7 +12,7 @@ import Testing
 // which nodes a walk reaches, in what order, and what a rewrite hands its
 // caller.
 @Suite("A body walked and rewritten")
-struct BodyWalkTests {
+struct LoweredBodyWalkTests {
     // MARK: - Property
     // A distinctive leaf, so a test can tell whether a case's children were
     // reached at all.
@@ -24,7 +24,7 @@ struct BodyWalkTests {
     // the leaf where it holds one.
     private var holders: [(name: String, operation: Operation)] {
         get throws {
-            let body = Body(instructions: [Instruction(binding: nil, code: leaf, label: "leaf")], result: nil)
+            let body = LoweredBody(instructions: [Instruction(binding: nil, code: leaf, label: "leaf")], result: nil)
             let call = CallOperation(procedure: 1, arguments: [leaf, nil], handed: [])
 
             return [
@@ -34,8 +34,8 @@ struct BodyWalkTests {
                 ("cast", .cast(leaf, as: .int, optional: false)),
                 ("block", .block(body)),
                 ("conditional", .conditional(leaf, then: [], else: nil)),
-                ("loop", .loop(while: leaf, body: Body(instructions: [], result: nil), round: 0, keeps: nil)),
-                ("attempt", .attempt(body, rescue: Body(instructions: [], result: nil), failure: 0)),
+                ("loop", .loop(while: leaf, body: LoweredBody(instructions: [], result: nil), round: 0, keeps: nil)),
+                ("attempt", .attempt(body, rescue: LoweredBody(instructions: [], result: nil), failure: 0)),
                 ("call", .call(call)),
                 ("dispatch", .dispatch(DispatchOperation(contract: "c", procedure: "p", first: leaf, arguments: []))),
                 ("dispatch argument", .dispatch(DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [.value(leaf)]))),
@@ -160,7 +160,7 @@ struct BodyWalkTests {
 
     @Test("an instruction is a node of its own, and its binding is what the node reads")
     func anInstructionIsANode() {
-        let sut = Body(
+        let sut = LoweredBody(
             instructions: [Instruction(binding: .assign(address, settling: nil), code: leaf, label: "write")],
             result: nil
         )
@@ -196,7 +196,7 @@ struct BodyWalkTests {
         #expect(sut.reads(3..<4))
         #expect(sut.reads(4..<5))
 
-        let standing = Body(instructions: [], result: sut).standing
+        let standing = LoweredBody(instructions: [], result: sut).standing
 
         #expect(standing.slots.contains(3))
         #expect(standing.slots.contains(4))
@@ -233,7 +233,7 @@ struct BodyWalkTests {
 
     @Test("a rewrite hands a cast's type and a binding's settling to the type door")
     func aRewriteHandsTypesOver() {
-        let sut = Body(
+        let sut = LoweredBody(
             instructions: [Instruction(binding: .bind(0, settling: .int), code: .cast(leaf, as: .string, optional: false), label: "cast")],
             result: nil
         )

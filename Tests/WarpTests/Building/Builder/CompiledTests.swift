@@ -860,7 +860,7 @@ struct CompiledTests {
     }
 
     // The code a declaration's row holds, whichever table it was read out of.
-    private func code(of declared: Name, in compiled: [Compiled]) throws -> Body {
+    private func code(of declared: Name, in compiled: [Compiled]) throws -> LoweredBody {
         let assembled = try Assembled(compiled)
 
         guard
@@ -872,7 +872,7 @@ struct CompiledTests {
         return body
     }
 
-    private func code(of declared: Name, in image: Image) throws -> Body {
+    private func code(of declared: Name, in image: Image) throws -> LoweredBody {
         guard case let .body(body, _) = try image.linked[#require(image.rows[declared])].implementation else {
             throw BuildError("'\(declared)' holds no written body", at: nil)
         }
@@ -881,7 +881,7 @@ struct CompiledTests {
     }
 
     // The type the cast in a row's result stands on.
-    private func cast(in body: Body) throws -> LoweredType {
+    private func cast(in body: LoweredBody) throws -> LoweredType {
         guard case let .cast(_, type, _)? = body.result else {
             throw BuildError("the entry holds no cast", at: nil)
         }
@@ -910,7 +910,7 @@ struct CompiledTests {
     }
 
     // The call through a contract a row's result holds.
-    private func dispatch(in body: Body) throws -> DispatchOperation {
+    private func dispatch(in body: LoweredBody) throws -> DispatchOperation {
         guard case let .dispatch(dispatch)? = body.result else {
             throw BuildError("'app.tell' holds no call through a contract", at: nil)
         }
@@ -1003,7 +1003,7 @@ struct CompiledTests {
     }
 
     // The number the call in a row's result carries.
-    private func called(in body: Body) throws -> Int {
+    private func called(in body: LoweredBody) throws -> Int {
         guard case let .call(call)? = body.result else {
             throw BuildError("'b.asks' holds no call", at: nil)
         }

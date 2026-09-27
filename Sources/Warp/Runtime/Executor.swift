@@ -181,7 +181,7 @@ public struct Executor: Sendable {
     // here: a run starting, a written procedure being called, and a closure
     // being invoked.
     private func answer(
-        _ body: Body,
+        _ body: LoweredBody,
         of callee: Linked,
         in activation: inout Activation,
         at trace: Trace
@@ -213,7 +213,7 @@ public struct Executor: Sendable {
 
     // A body answers what it says it answers, and a body that says nothing
     // answers nothing.
-    private func run(_ body: Body, in activation: inout Activation, at trace: Trace) async throws -> Value {
+    private func run(_ body: LoweredBody, in activation: inout Activation, at trace: Trace) async throws -> Value {
         try await perform(body.instructions, in: &activation, at: trace)
 
         guard let result = body.result else { return .null }
@@ -551,7 +551,7 @@ public struct Executor: Sendable {
     // box, and the body answered in that frame.
     private func answer(
         _ callee: Linked,
-        running body: Body,
+        running body: LoweredBody,
         in frame: Frame,
         settled arguments: Settled,
         holding holds: [(position: Int, handle: Handle)],
@@ -577,7 +577,7 @@ public struct Executor: Sendable {
 
     private func loop(
         while condition: Operation,
-        body: Body,
+        body: LoweredBody,
         round: Int?,
         keeps: Range<Int>?,
         in activation: inout Activation,
@@ -623,8 +623,8 @@ public struct Executor: Sendable {
     }
 
     private func attempt(
-        _ body: Body,
-        rescue: Body,
+        _ body: LoweredBody,
+        rescue: LoweredBody,
         failure: Int?,
         in activation: inout Activation,
         at trace: Trace

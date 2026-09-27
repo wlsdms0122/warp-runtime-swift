@@ -47,7 +47,7 @@ struct Instruction: Sendable {
 
     // MARK: - Public
     @discardableResult
-    func walk(_ visit: (Body.Node) -> Bool) -> Bool {
+    func walk(_ visit: (LoweredBody.Node) -> Bool) -> Bool {
         visit(.instruction(self)) && code.walk(visit)
     }
 

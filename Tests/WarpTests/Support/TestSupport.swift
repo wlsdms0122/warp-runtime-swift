@@ -375,7 +375,7 @@ extension Closure {
                 isolation: .unstated,
                 failing: .unstated,
                 implementation: .body(
-                    Body(instructions: [], result: result.map(Operation.literal)),
+                    LoweredBody(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
                 ),
                 foldable: true,

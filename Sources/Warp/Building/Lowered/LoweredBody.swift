@@ -1,5 +1,5 @@
 //
-//  Body.swift
+//  LoweredBody.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Body: Sendable {
+struct LoweredBody: Sendable {
     // MARK: - Property
     let instructions: [Instruction]
     let result: Operation?
@@ -49,8 +49,8 @@ struct Body: Sendable {
     func rewritten(
         operation: (Operation) throws -> Operation,
         type: (LoweredType) throws -> LoweredType
-    ) rethrows -> Body {
-        Body(
+    ) rethrows -> LoweredBody {
+        LoweredBody(
             instructions: try instructions.map { instruction in
                 try instruction.rewritten(operation: operation, type: type)
             },
@@ -73,7 +73,7 @@ struct Body: Sendable {
     // MARK: - Private
 }
 
-extension Body {
+extension LoweredBody {
     enum Node {
         case operation(Operation)
         case instruction(Instruction)
@@ -114,7 +114,7 @@ extension Body {
         }
 
         // What this one node stands on, apart from what nests in it.
-        func stand(in standing: inout Body.Standing) {
+        func stand(in standing: inout LoweredBody.Standing) {
             switch self {
             case let .instruction(instruction):
                 switch instruction.binding {
@@ -176,7 +176,7 @@ extension Body {
 // One walk answers all of them, because they are read off the same places, and
 // one door asks it: the row the body belongs to, handed what only the list
 // beside it knows.
-extension Body {
+extension LoweredBody {
     struct Standing {
         // MARK: - Property
         // Every slot of this frame the body names, whether it reads it or

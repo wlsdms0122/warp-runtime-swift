@@ -249,7 +249,7 @@ final class Relocating {
 
     // The closures its literal values hold are the door's to answer; the
     // numbers are this link's.
-    private func filled(_ body: Body, in standing: Standing) throws -> Body {
+    private func filled(_ body: LoweredBody, in standing: Standing) throws -> LoweredBody {
         try answering.answered(
             body,
             at: standing.place,

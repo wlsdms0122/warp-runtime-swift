@@ -24,7 +24,7 @@ struct Judged: Sendable {
     // spelling and the claims standing beside it, and the code a run calls
     // comes from the host.
     enum Implementation: Sendable {
-        case body(Body, Frame)
+        case body(LoweredBody, Frame)
 
         // The spellings the procedure this row was compiled against said it
         // sends, in the places it names them at. What it reads is the

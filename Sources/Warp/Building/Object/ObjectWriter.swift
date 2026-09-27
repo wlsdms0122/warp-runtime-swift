@@ -593,7 +593,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func body(_ body: Body) throws(ObjectUnwritable) -> Value {
+    func body(_ body: LoweredBody) throws(ObjectUnwritable) -> Value {
         .array([
             .array(try body.instructions.map(instruction)),
             try ObjectWriter.maybe(body.result, operation)

@@ -205,7 +205,7 @@ enum ObjectCoverageFixture {
             failing: .unstated,
             sends: [],
             judging: .body(
-                Body(instructions: [], result: .literal(.int(0))),
+                LoweredBody(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
             )
         )
@@ -236,7 +236,7 @@ enum ObjectCoverageFixture {
     }
 
     // Every case of `Operation`, `Instruction.Binding`, `Step` and `Argument`.
-    static let everyOperation = Body(
+    static let everyOperation = LoweredBody(
         instructions: [
             Instruction(binding: .bind(0, settling: .int), code: .literal(.int(1)), label: "bind"),
             Instruction(binding: .declare(1, settling: nil), code: .literal(.string("s")), label: "declare"),
@@ -257,7 +257,7 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
-            Instruction(binding: nil, code: .block(Body(instructions: [], result: .literal(.int(4)))), label: "block"),
+            Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,
                 code: .conditional(
@@ -271,7 +271,7 @@ enum ObjectCoverageFixture {
                 binding: nil,
                 code: .loop(
                     while: .literal(.bool(true)),
-                    body: Body(instructions: [], result: nil),
+                    body: LoweredBody(instructions: [], result: nil),
                     round: 7,
                     keeps: 8 ..< 9
                 ),
@@ -280,8 +280,8 @@ enum ObjectCoverageFixture {
             Instruction(
                 binding: nil,
                 code: .attempt(
-                    Body(instructions: [], result: .literal(.int(7))),
-                    rescue: Body(instructions: [], result: .literal(.int(8))),
+                    LoweredBody(instructions: [], result: .literal(.int(7))),
+                    rescue: LoweredBody(instructions: [], result: .literal(.int(8))),
                     failure: 10
                 ),
                 label: "attempt"

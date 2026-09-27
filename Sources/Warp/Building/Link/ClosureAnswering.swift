@@ -86,11 +86,11 @@ final class ClosureAnswering {
     // answered literal included. One pass, since a body is rebuilt by the
     // rewriting and the asker's reading rides on the same one.
     func answered(
-        _ body: Body,
+        _ body: LoweredBody,
         at place: Place,
         operation reading: (Operation) throws -> Operation = { operation in operation },
         type: (LoweredType) throws -> LoweredType = { type in type }
-    ) throws -> Body {
+    ) throws -> LoweredBody {
         try body.rewritten(
             operation: { operation in
                 guard case let .literal(value) = operation, value.holdsProcedure else { return try reading(operation) }

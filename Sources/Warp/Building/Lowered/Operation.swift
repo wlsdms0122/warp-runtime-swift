@@ -32,16 +32,16 @@ indirect enum Operation: Sendable {
     case apply(Operation, arguments: [Operation])
 
     case cast(Operation, as: LoweredType, optional: Bool)
-    case block(Body)
+    case block(LoweredBody)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
 
     // `keeps` is the range of body slots the result reads: the result reads
     // what the last finished round bound, so a round cut short is put back
     // before the result reads. Nil where the result reads none of them.
     // The round's slot, and the failure's, where the statement bound one.
-    case loop(while: Operation, body: Body, round: Int?, keeps: Range<Int>?)
+    case loop(while: Operation, body: LoweredBody, round: Int?, keeps: Range<Int>?)
 
-    case attempt(Body, rescue: Body, failure: Int?)
+    case attempt(LoweredBody, rescue: LoweredBody, failure: Int?)
     case call(CallOperation)
 
     // A call through a contract: which row answers is the first argument's
@@ -59,7 +59,7 @@ indirect enum Operation: Sendable {
     }
 
     @discardableResult
-    func walk(_ visit: (Body.Node) -> Bool) -> Bool {
+    func walk(_ visit: (LoweredBody.Node) -> Bool) -> Bool {
         guard visit(.operation(self)) else { return false }
 
         switch self {
@@ -113,7 +113,7 @@ indirect enum Operation: Sendable {
         }
     }
 
-    func contains(where predicate: (Body.Node) -> Bool) -> Bool {
+    func contains(where predicate: (LoweredBody.Node) -> Bool) -> Bool {
         !walk { node in !predicate(node) }
     }
 

@@ -291,7 +291,7 @@ extension Closure {
                 isolation: .unstated,
                 failing: .unstated,
                 implementation: .body(
-                    Body(instructions: [], result: nil),
+                    LoweredBody(instructions: [], result: nil),
                     Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
                 ),
                 foldable: true,

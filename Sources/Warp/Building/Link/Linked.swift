@@ -20,7 +20,7 @@ import Foundation
 // carries the number that does.
 public final class Linked: Sendable {
     enum Implementation: Sendable {
-        case body(Body, Frame)
+        case body(LoweredBody, Frame)
         case native(Native)
     }
 
@@ -288,10 +288,10 @@ public final class Linked: Sendable {
 
     // MARK: - Private
     private static func renumbered(
-        _ body: Body,
+        _ body: LoweredBody,
         _ answer: (LoweredType) throws -> LoweredType
-    ) rethrows -> Body {
-        Body(
+    ) rethrows -> LoweredBody {
+        LoweredBody(
             instructions: try body.instructions.map { instruction in
                 try Self.renumbered(instruction, answer)
             },
@@ -452,7 +452,7 @@ public final class Linked: Sendable {
     // whose body is a row of its own. Read once the link has answered every
     // number with a row, so what comes back is rows of this link. A closure a
     // value holds is spelled by its writer, and the link says which row that is.
-    private static func reached(by body: Body) -> (rows: [Int], held: [Linked]) {
+    private static func reached(by body: LoweredBody) -> (rows: [Int], held: [Linked]) {
         var rows: [Int] = []
         var held: [Linked] = []
 
@@ -469,7 +469,7 @@ public final class Linked: Sendable {
     // rows the closures its values hold stand in. A closure a value holds was
     // answered by the link before this is asked, so one holding no row is none
     // this walk was handed.
-    private static func reached(by node: Body.Node, into rows: inout [Int], holding held: inout [Linked]) {
+    private static func reached(by node: LoweredBody.Node, into rows: inout [Int], holding held: inout [Linked]) {
         guard case let .operation(operation) = node else { return }
 
         switch operation {

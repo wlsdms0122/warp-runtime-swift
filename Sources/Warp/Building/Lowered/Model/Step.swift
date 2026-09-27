@@ -39,7 +39,7 @@ enum Step: Sendable {
         return address.reads(slots)
     }
 
-    func stand(in standing: inout Body.Standing) {
+    func stand(in standing: inout LoweredBody.Standing) {
         guard case let .at(address, _) = self else { return }
 
         address.stand(in: &standing)

@@ -845,9 +845,9 @@ private extension ObjectReader {
         return read
     }
 
-    func body(_ value: Value) throws -> Body {
+    func body(_ value: Value) throws -> LoweredBody {
         var fields = try Fields(value, of: "body")
-        let read = Body(
+        let read = LoweredBody(
             instructions: try Fields.list(fields.next(), of: "body", instruction),
             result: try fields.maybe(operation)
         )

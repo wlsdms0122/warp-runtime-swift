@@ -33,7 +33,7 @@ struct Address: Sendable {
         slots.contains(slot) || steps.contains { step in step.reads(slots) }
     }
 
-    func stand(in standing: inout Body.Standing) {
+    func stand(in standing: inout LoweredBody.Standing) {
         standing.stand(on: slot)
         steps.forEach { step in step.stand(in: &standing) }
     }
