@@ -1,8 +1,8 @@
 //
-//  Builder+Contracting.swift
+//  ClaimChecker.swift
 //  Warp
 //
-//  Created by JSilver
+//  Created by JSilver on 9/27/26.
 //
 
 import Foundation
@@ -29,45 +29,20 @@ import Foundation
 // Every claim is read, not the reached ones, the way constness is worked out over
 // every declaration. A slot bounded by a contract may be filled by a type no
 // call in this link mentions.
-extension Builder {
-    // MARK: - Internal
-    // For each contract, which declaration answers each of its procedures, keyed by
-    // the type that satisfies it, and beside it the reason each claim that did
-    // not hold does not.
-    //
-    // The run reads a row out of the first by the name its first argument
-    // wears, and a type standing in it has every procedure behind it.
-    func witnesses(
-        of claims: [Placed<Claim>],
-        asking contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over types: [Name: Placed<TypeExpression>],
-        among space: [Name: Placed<Declared>],
-        concealed: Set<Name>,
-        in table: TypeTable
-    ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
-        // Every contract, answered or not. The entry is what says a name is a
-        // contract at all, so a bound naming one no type answers stays a
-        // different thing from a bound naming nothing.
-        var gathered = contracts.keys.reduce(into: [Name: [Name: [Name: Name]]]()) { table, contract in
-            table[contract] = [:]
-        }
-        var unheld: [Claim: String] = [:]
+struct ClaimChecker {
+    // What a claim came to: the procedure behind each one the contract asks, or the
+    // reason it came to nothing where another document could still supply it.
+    private enum Holding {
+        case holds([Name: Name])
 
-        for claim in claims {
-            let (type, contract) = (claim.held.type, claim.held.contract)
-
-            switch try holding(claim, asking: contracts, over: types, among: space, concealed: concealed, in: table) {
-            case let .holds(answering):
-                gathered[contract]?[type] = answering
-
-            case let .waits(reason):
-                unheld[claim.held] = reason
-            }
-        }
-
-        return (gathered, unheld)
+        // The reason, not a refusal: this does not know the place a refusal
+        // would stand at.
+        case waits(String)
     }
 
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
     // Every pair a document leaned on, answered by the claims of the whole
     // list.
     //
@@ -96,15 +71,131 @@ extension Builder {
         }
     }
 
-    // MARK: - Private
-    // What a claim came to: the procedure behind each one the contract asks, or the
-    // reason it came to nothing where another document could still supply it.
-    private enum Holding {
-        case holds([Name: Name])
+    // Which types answer which contracts, read off what the documents claimed.
+    //
+    // The table is remade holding the answer. Its rows are numbered from the
+    // declarations alone, so a type lowered against either table is the same
+    // type.
+    func lowered(
+        _ declaring: TypeTable,
+        claims: [Placed<Claim>],
+        contracts: [Name: Placed<[Name: ContractProcedure]>],
+        over declaredTypes: [Name: Placed<TypeExpression>],
+        among signatures: [Name: Placed<Declared>],
+        concealed: Set<Name> = [],
+        unsettled: Fulfillment? = nil
+    ) throws -> (
+        types: TypeTable,
+        contractProcedures: [Name: LoweredContractProcedure],
+        unheld: [Claim: String]
+    ) {
+        // The witnesses are judged against a table that says which types
+        // answer which contracts, so a contract named in a contract's own
+        // signature stands as one, and an answer that leans on a claim is
+        // held to what holds. What holds is read off the claims and cut down
+        // to what the witnesses hold up, until nothing more falls: a claim
+        // that leans on one that fell falls with it.
+        var held = claims.reduce(
+            into: contracts.keys.reduce(into: [Name: Set<Name>]()) { table, contract in table[contract] = [] }
+        ) { table, placed in
+            guard table[placed.held.contract] != nil else { return }
 
-        // The reason, not a refusal: this does not know the place a refusal
-        // would stand at.
-        case waits(String)
+            table[placed.held.contract]?.insert(placed.held.type)
+        }
+        var table: TypeTable
+        var witnessed: (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String])
+
+        // The table the last pass was judged against holds exactly what the
+        // witnesses hold up, so it is the table the link reads.
+        repeat {
+            table = declaring.satisfying(held, unsettled: unsettled)
+            witnessed = try witnesses(
+                of: claims,
+                asking: contracts,
+                over: declaredTypes,
+                among: signatures,
+                concealed: concealed,
+                in: table
+            )
+
+            let answering = witnessed.answering.mapValues { answering in Set(answering.keys) }
+
+            guard answering != held else { break }
+
+            held = answering
+        } while true
+
+        // The procedures the contracts ask, under the spellings a call writes to
+        // reach them. Read off the table the satisfaction was just written
+        // into, so what a call reaches and what a judgment reads are one
+        // reading rather than two.
+        let contractProcedures = LoweredContractProcedure.table(in: table)
+
+        // A contract's procedure and a declaration cannot take one spelling. A call
+        // writing it lowers to the pick the contract makes, so the declaration
+        // standing under it is reachable by nothing and the two readings of
+        // one name never meet.
+        //
+        // In name order, so which collision is reported first is the text's
+        // fact rather than a hash seed's.
+        if
+            let spelling = contractProcedures.keys.sorted()
+                .first(where: { taken in signatures[taken] != nil }),
+            let declared = signatures[spelling],
+            let asked = contractProcedures[spelling]
+        {
+            throw BuildError(
+                "'\(spelling)' is declared by \(declared.spelled) and asked as a procedure"
+                    + " of '\(asked.contract)', so there is no answer to which one a"
+                    + " call reaches. A contract's procedure and a declaration cannot take"
+                    + " one spelling",
+                at: declared.place
+            )
+        }
+
+        return (
+            types: table,
+            contractProcedures: contractProcedures,
+            unheld: witnessed.unheld
+        )
+    }
+
+    // MARK: - Private
+    // For each contract, which declaration answers each of its procedures, keyed by
+    // the type that satisfies it, and beside it the reason each claim that did
+    // not hold does not.
+    //
+    // The run reads a row out of the first by the name its first argument
+    // wears, and a type standing in it has every procedure behind it.
+    private func witnesses(
+        of claims: [Placed<Claim>],
+        asking contracts: [Name: Placed<[Name: ContractProcedure]>],
+        over types: [Name: Placed<TypeExpression>],
+        among space: [Name: Placed<Declared>],
+        concealed: Set<Name>,
+        in table: TypeTable
+    ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
+        // Every contract, answered or not. The entry is what says a name is a
+        // contract at all, so a bound naming one no type answers stays a
+        // different thing from a bound naming nothing.
+        var gathered = contracts.keys.reduce(into: [Name: [Name: [Name: Name]]]()) { table, contract in
+            table[contract] = [:]
+        }
+        var unheld: [Claim: String] = [:]
+
+        for claim in claims {
+            let (type, contract) = (claim.held.type, claim.held.contract)
+
+            switch try holding(claim, asking: contracts, over: types, among: space, concealed: concealed, in: table) {
+            case let .holds(answering):
+                gathered[contract]?[type] = answering
+
+            case let .waits(reason):
+                unheld[claim.held] = reason
+            }
+        }
+
+        return (gathered, unheld)
     }
 
     // One claim held to what stands behind it: the two names declared, every
@@ -148,7 +239,7 @@ extension Builder {
         // A value written `linear` is followed by the name that holds it, and
         // a contract standing where a type is written holds a value under no
         // name of its own.
-        guard !Builder.handedOnce(.named(type), in: table) else {
+        guard !TypeExpression.named(type).handedOnce(in: table) else {
             throw BuildError(
                 "'\(type)' is handed on once and answers no contract. A value written"
                     + " `linear` is followed by the name that holds it, and a contract"
@@ -286,7 +377,7 @@ extension Builder {
         // stands, is held the way a slot holds what arrives. Nothing is
         // written down: a witness reads what the documents say, and where
         // they are all in what they say is settled.
-        if let refusal = refusal(
+        if let refusal = TypeChecker().refusal(
             holding: answered,
             to: promised,
             as: "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)' asks, and answers",

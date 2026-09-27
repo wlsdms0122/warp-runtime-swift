@@ -642,6 +642,14 @@ public indirect enum TypeExpression: Sendable, Equatable {
         lowered(in: types.loweredTypes).accepts(other.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
+    // Whether values of this type are handed on once, through the names it may
+    // hide behind. The one door: what the walk below could not decide is folded
+    // to "not one" here and nowhere inside it, so the answer does not depend on
+    // how many wrappers a type was written under.
+    func handedOnce(in table: TypeTable) -> Bool {
+        Self.reaches(self, in: table, assuming: []) ?? false
+    }
+
     // MARK: - Private
     // A name already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
@@ -675,6 +683,80 @@ public indirect enum TypeExpression: Sendable, Equatable {
         default:
             return self
         }
+    }
+
+    // The same question, answering nil where the walk only ever came back to a
+    // membership it was already inside. A ring says nothing new, so a ring of
+    // nothing else says nothing at all, and folding that to "not one" is done
+    // at the one door above rather than partway down: fold it inside the
+    // recursion and the answer starts depending on how many wrappers a member
+    // was written under.
+    //
+    // No `default`: a type nobody thought about must be a compile error here
+    // rather than an answer of no.
+    private static func reaches(
+        _ type: TypeExpression,
+        in table: TypeTable,
+        assuming: Set<Name>
+    ) -> Bool? {
+        switch type {
+        case .linear:
+            return true
+
+        case let .named(name):
+            if let declared = table.resolve(name) {
+                return reaches(declared, in: table, assuming: assuming)
+            }
+
+            return reaches(membership: name, in: table, assuming: assuming)
+
+        // A parameter bounded by a membership stands for some member of it, so
+        // what every member is, it is. An unbounded one stands for whatever the
+        // call put there, which the build never wrote down. A composition
+        // stands for a member of every membership it names.
+        case let .parameter(_, bounds), let .composition(bounds):
+            let answers = bounds.compactMap { bound in reaches(membership: bound, in: table, assuming: assuming) }
+
+            return answers.isEmpty ? nil : answers.contains(true)
+
+        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
+            return reaches(inner, in: table, assuming: assuming)
+
+        // A nullable of one is refused where it is written, because "hand it on
+        // if it is there" is not something this language says. So nothing is
+        // one behind a `?`.
+        case .nullable:
+            return false
+
+        // None of these is one, and none of them carries one: a value handed on
+        // once is followed by the name that holds it, and a name does not go
+        // into a type.
+        case .any, .never, .null, .bool, .int, .double, .string,
+            .ranged, .array, .dictionary, .record, .procedure, .reading:
+            return false
+        }
+    }
+
+    // A membership is one when every member is. A membership this question is
+    // already inside is taken as it stood rather than asked again, which is
+    // what every other question about a membership does here, and one that
+    // reached no member of its own answers nothing at all.
+    private static func reaches(
+        membership name: Name,
+        in table: TypeTable,
+        assuming: Set<Name>
+    ) -> Bool? {
+        guard !assuming.contains(name) else { return nil }
+
+        guard let members = table.constraint(name), !members.isEmpty else { return false }
+
+        let answers = members.compactMap { member in
+            reaches(member, in: table, assuming: assuming.union([name]))
+        }
+
+        guard !answers.isEmpty else { return nil }
+
+        return answers.allSatisfy { answer in answer }
     }
 }
 
@@ -1030,4 +1112,3 @@ public extension TypeExpression {
         }
     }
 }
-

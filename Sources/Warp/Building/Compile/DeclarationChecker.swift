@@ -1,42 +1,19 @@
 //
-//  Builder+Judging.swift
+//  DeclarationChecker.swift
 //  Warp
 //
-//  Created by JSilver
+//  Created by JSilver on 9/27/26.
 //
 
 import Foundation
 
 // What the link refuses about a declaration on its own: a type mention that
-// resolves to nothing, a parameter no call could fit, a constraint no value
-// satisfies, and a call site whose arguments do not answer what the callee
-// asked. The walk through a body is `Builder+Typing`.
-extension Builder {
-    // MARK: - Internal
-    // Why a doubt and an obligation do not stand over one value. Said once
-    // because the two doors that refuse it (a `?` written on a declared type,
-    // an `as?` reading one) refuse it for the one reason; what each of them is
-    // refusing is its own sentence, because the subjects differ.
-    static let followedByAName =
-        "A value handed on once is followed by a name that holds it on every way"
-            + " through"
-
-    // The one gate every gathered call passes, wherever its body sits. A
-    // native procedure, a written body, a constant's closure. The call carries the
-    // the walk found for it, and is judged against that.
-    func checked(_ calls: [CallSite], in context: TypingContext, writing fulfillment: Fulfillment) throws {
-        for call in calls {
-            guard let callee = context.declared(call.callee) else {
-                throw BuildError.unjudged(
-                    "a call to '\(call.callee)', which has no row",
-                    at: call.place
-                )
-            }
-
-            try check(call, against: callee, with: context, writing: fulfillment)
-        }
-    }
-
+// resolves to nothing, a parameter no call could fit, and a constraint no value
+// satisfies.
+struct DeclarationChecker {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
     // Every type a body mentions, held where it is written: the signatures its
     // closures carry, the types its casts name, and what its names say they
     // hold. Three name spaces bury a body (a procedure's, a constant's and a
@@ -127,6 +104,224 @@ extension Builder {
         }
     }
 
+    // Whether a parameter's own declaration can be satisfied at all. Facts it
+    // states about itself, judged wherever a parameter is written: a `enum`
+    // none of whose candidates the declared type admits is a parameter no call
+    // could ever fit.
+    func judge(
+        _ parameter: Parameter,
+        at place: Place,
+        in table: TypeTable
+    ) throws {
+        // The declaration as the boundary reads it, so what the link calls
+        // dead is exactly what the boundary would never match.
+        let type = parameter.declared.lowered(in: table.loweredTypes)
+
+        if let allowed = parameter.candidates {
+            // Candidate by candidate: a spelling the declared type cannot spell
+            // is a member no call could ever match, and a dead member is the
+            // declaration's own defect whether live ones stand beside it or
+            // not. One pass reads both facts. A list that is empty or entirely
+            // dead refuses by the plainer name, a dead member among live ones
+            // is named.
+            let dead = allowed.filter { candidate in
+                !type.spells(candidate, in: table.loweredTypes)
+            }
+
+            if dead.count == allowed.count {
+                throw BuildError(
+                    "enum admits nothing, so no call could ever fit",
+                    at: place
+                )
+            }
+
+            if let first = dead.first {
+                throw BuildError(
+                    "enum lists '\(first)', which"
+                        + " \(parameter.declared.rendered) does not admit."
+                        + " No call could ever match it",
+                    at: place
+                )
+            }
+        }
+
+    }
+
+    // Every type the modules declared, and the check that each name a
+    // declaration mentions is one of them. A type name is resolved here for the
+    // same reason a procedure name is: unreached code still has to compile, and
+    // a signature naming a type nobody declared is a defect whether or not
+    // this run walks that way. The spaces arrive gathered from the qualifying
+    // pass. The one place their uniqueness is refused, so what this judges is
+    // what that fact was proved on. This judges content: what a declaration
+    // holds, not what it is called.
+    func types(
+        declared: [Name: Placed<TypeExpression>],
+        constraints members: [Name: Placed<[TypeExpression]>],
+        contracts: [Name: Placed<[Name: ContractProcedure]>],
+        of documents: [any Declaring],
+        standing: [Int],
+        numbered linkage: Linkage
+    ) throws -> TypeTable {
+        // A document's types and its memberships each take a run of type rows
+        // the way its declarations take a run of table rows, in the standing
+        // order, so a document's types are behind the types it names.
+        let table = TypeTable(
+            types: declared.mapValues(\.held),
+            constraints: members.mapValues(\.held),
+            contracts: contracts.mapValues(\.held),
+            standing: standing.flatMap { position in documents[position].types.keys.sorted() },
+            constraintStanding: standing.flatMap { position in
+                documents[position].constraints.keys.sorted()
+            },
+            of: linkage
+        )
+
+        // A name that reaches a type may name itself along the way: `Tree`
+        // holding `array<Tree>` is a type. A name that reaches only names
+        // never becomes one, and the lowering says which do, so the refusal
+        // reads the lowering rather than walking the names a second way.
+        // Refused first, so every walk below through `named` is finite.
+        // In name order rather than the rows', so which of two names that
+        // name themselves is reported does not follow how the documents were
+        // handed over.
+        for label in table.loweredTypes.cycling.map({ row in table.loweredTypes.labels[row] }).sorted() {
+            guard let declaration = declared[label] else { continue }
+
+            throw BuildError(
+                "reaches itself through nothing but names, and a name"
+                    + " that only names names never reaches a type",
+                at: declaration.place
+            )
+        }
+
+        for (_, declaration) in members.sorted { $0.key < $1.key } {
+            let admitted = declaration.held
+
+            guard !admitted.isEmpty else {
+                throw BuildError(
+                    "admits nothing, so no parameter it"
+                        + " bounds could ever be filled",
+                    at: declaration.place
+                )
+            }
+
+            // A member is a concrete type. `some` stands for a type and names
+            // none, `any` would admit everything a membership exists to narrow,
+            // and `never` admits nothing. Each is a declaration that says
+            // nothing a membership could hold, and a member that names another
+            // constraint is what keeps the membership judgment from ever
+            // chasing itself. Judged through every name a member hides behind,
+            // or one alias would carry the refused type in. The chain is
+            // finite because a name-only cycle was refused above.
+            for member in admitted {
+                var resolved = member
+
+                while case let .named(next) = resolved, let underneath = declared[next] {
+                    resolved = underneath.held
+                }
+
+                // A name left standing names no declared type: another
+                // membership, which is a set of types and stands; a
+                // contract, which is not a type; or nothing, which the
+                // mention below refuses by its own name.
+                let concrete = switch resolved {
+                case let .named(name): contracts[name] == nil
+                case .parameter, .any, .never, .composition: false
+                case .null, .bool, .int, .double, .string, .ranged, .array,
+                    .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
+                    .borrowing, .nullable, .reading: true
+                }
+
+                guard concrete else {
+                    throw BuildError(
+                        "a member is a concrete type."
+                            + " `\(member.rendered)` says nothing a"
+                            + " membership could hold",
+                        at: declaration.place
+                    )
+                }
+            }
+        }
+
+        // The two tables are walked whole rather than per module:
+        // they arrive carrying where each name was written, and asking a module
+        // again would be spelling that a second way.
+        for (_, declaration) in declared.sorted { $0.key < $1.key } {
+            try mentioned(
+                in: declaration.held,
+                at: declaration.place,
+                parameterized: false,
+                declaring: true,
+                resolve: table
+            )
+        }
+
+        for (_, declaration) in members.sorted { $0.key < $1.key } {
+            for member in declaration.held {
+                try mentioned(
+                    in: member,
+                    at: declaration.place,
+                    parameterized: false,
+                    resolve: table
+                )
+            }
+        }
+
+        return table
+    }
+
+    // Every type a document names, held to being one the link declares. A
+    // document is read on its own: what is judged is its own text, and the
+    // table is what the whole link declared.
+    func judge(_ modules: [Module], in table: TypeTable) throws {
+        try judge(memberships: modules, in: table)
+
+        for module in modules {
+            for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
+                try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
+
+                // A closure literal carries a signature the way a declaration
+                // does, and unreached code still has to compile, so what the
+                // top level is held to, a signature written inline is held to
+                // in the same pass, wherever a body buries it.
+                if case let .body(block) = procedure.implementation {
+                    try judge(subexpressions: block, at: .procedure(name.spelling, in: .of(module)), in: table)
+                }
+            }
+
+            // A contract's procedures are declarations the way the module's
+            // own are, and what a call is judged against is what was judged.
+            // Each is answered about the value it takes first, so that value
+            // is written as the contract itself.
+            for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
+                for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
+                    let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
+
+                    guard asked.signature.parameters.first?.type == .named(contract) else {
+                        throw BuildError(
+                            "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
+                                + " A contract's procedure takes '\(contract)' first,"
+                                + " the value it is answered about",
+                            at: place.part(.parameters)
+                        )
+                    }
+
+                    try judge(asked.signature, at: place, in: table)
+                }
+            }
+
+            for (name, constant) in module.constants.sorted { $0.key < $1.key } {
+                try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
+            }
+
+            for (name, variable) in module.variables.sorted { $0.key < $1.key } {
+                try judge(subexpressions: variable.start, at: .variable(name.spelling, in: .of(module)), in: table)
+            }
+        }
+    }
+
+    // MARK: - Private
     // A named type may name itself, so this checks that a name resolves rather
     // than walking into what it resolves to.
     //
@@ -135,11 +330,8 @@ extension Builder {
     // on) and a declared type or a constraint member does not: a parameter
     // there would stand for nothing any call ever decides, so it is refused
     // where it is declared, and everything a `named` type can hide is judged
-    // here rather than at the sites that name it. Internal, because a cast asks
-    // it too: a type spelling in a body is a mention like any other, and a
-    // second copy of "this name is declared" living in the typing walk is
-    // exactly the drift the rule exists against.
-    func mentioned(
+    // here rather than at the sites that name it.
+    private func mentioned(
         in type: TypeExpression,
         at place: Place,
         parameterized: Bool,
@@ -151,7 +343,7 @@ extension Builder {
         // it stands where a name can hold it and nowhere else. Inside another
         // type there is no name to follow, and what the type does with what
         // it carries is not something the link can read.
-        guard !nested || !Builder.handedOnce(type, in: table) else {
+        guard !nested || !type.handedOnce(in: table) else {
             throw BuildError(
                 "carries '\(type.rendered)' inside another type, and a value written"
                     + " `linear` is followed by the name that holds it."
@@ -304,10 +496,10 @@ extension Builder {
             // What a value handed on once needs is a name holding it on every way
             // through, and a `?` says there is a way through where nothing is
             // there. So the mark and the doubt do not stand together.
-            guard !Builder.handedOnce(inner, in: table) else {
+            guard !inner.handedOnce(in: table) else {
                 throw BuildError(
                     "writes `?` on \(inner.rendered), which is handed on exactly"
-                        + " once. \(Builder.followedByAName)",
+                        + " once. \(LinearityChecker.followedByAName)",
                     at: place
                 )
             }
@@ -392,7 +584,7 @@ extension Builder {
         // so a body taking one there has no name to carry the obligation on
         // and the proof would end at this slot.
         case .consuming, .borrowing:
-            guard !Builder.handedOnce(declared.slotUnwrapped, in: table) else { return }
+            guard !declared.slotUnwrapped.handedOnce(in: table) else { return }
 
             throw BuildError(
                 "takes '\(declared.rendered)', and a slot says what it does with a"
@@ -402,7 +594,7 @@ extension Builder {
             )
 
         default:
-            guard Builder.handedOnce(declared.slotUnwrapped, in: table) else { return }
+            guard declared.slotUnwrapped.handedOnce(in: table) else { return }
 
             throw BuildError(
                 "takes '\(declared.rendered)', which is handed on once, and says"
@@ -422,60 +614,16 @@ extension Builder {
     // A declaration is not held to this. Its body is text a walk reads, and
     // what it answers lands on the name its caller binds.
     private func judge(carried type: ProcedureType, at place: Place, in table: TypeTable) throws {
-        guard let returns = type.returns, Builder.handedOnce(returns, in: table) else { return }
+        guard let returns = type.returns, returns.handedOnce(in: table) else { return }
 
         throw BuildError(
             "writes a procedure answering \(returns.rendered), which is handed on"
-                + " exactly once. \(Builder.followedByAName), and a body carried as a"
+                + " exactly once. \(LinearityChecker.followedByAName), and a body carried as a"
                 + " value runs where no name is watching",
             at: place
         )
     }
 
-    // Whether a parameter's own declaration can be satisfied at all. Facts it
-    // states about itself, judged wherever a parameter is written: a `enum`
-    // none of whose candidates the declared type admits is a parameter no call
-    // could ever fit.
-    func judge(
-        _ parameter: Parameter,
-        at place: Place,
-        in table: TypeTable
-    ) throws {
-        // The declaration as the boundary reads it, so what the link calls
-        // dead is exactly what the boundary would never match.
-        let type = parameter.declared.lowered(in: table.loweredTypes)
-
-        if let allowed = parameter.candidates {
-            // Candidate by candidate: a spelling the declared type cannot spell
-            // is a member no call could ever match, and a dead member is the
-            // declaration's own defect whether live ones stand beside it or
-            // not. One pass reads both facts. A list that is empty or entirely
-            // dead refuses by the plainer name, a dead member among live ones
-            // is named.
-            let dead = allowed.filter { candidate in
-                !type.spells(candidate, in: table.loweredTypes)
-            }
-
-            if dead.count == allowed.count {
-                throw BuildError(
-                    "enum admits nothing, so no call could ever fit",
-                    at: place
-                )
-            }
-
-            if let first = dead.first {
-                throw BuildError(
-                    "enum lists '\(first)', which"
-                        + " \(parameter.declared.rendered) does not admit."
-                        + " No call could ever match it",
-                    at: place
-                )
-            }
-        }
-
-    }
-
-    // MARK: - Private
     // Every type a cast names in here, however deep, each with where it was
     // found. What the walk holds is `subexpressions`'s to know. This says only which
     // of it a cast scan keeps.
@@ -550,116 +698,38 @@ extension Builder {
         }
     }
 
-    private func check(
-        _ site: CallSite,
-        against callee: Linked,
-        with context: TypingContext,
-        writing fulfillment: Fulfillment
-    ) throws {
-        let call = site.call
-        let loweredTypes = context.loweredTypes
+    // A membership is handed on once when every member is, so one that mixes
+    // has no answer: a value of it would carry an obligation on some readings
+    // and not on others, and which it was is exactly what a membership does not
+    // say.
+    //
+    // Asked of every module before any procedure is judged, and in name order,
+    // because a slot naming such a membership reads its answer off this. A
+    // procedure judged first would be told its slot is the mistake, and the
+    // mistake is the declaration.
+    private func judge(memberships modules: [Module], in table: TypeTable) throws {
+        let declared = modules
+            .flatMap { module in module.constraints.map { name, members in (name, members, module) } }
+            .sorted { one, other in one.0 < other.0 }
 
-        if let refusal = callee.signature.refusal(handing: call.arguments.count) {
-            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
-        }
-
-        // A declaration with a type parameter in it is checked with the
-        // parameter filled, or a slot standing for whatever arrives would
-        // refuse whatever arrived. The judgment (a parameter read two ways has
-        // no answer, a bounded one takes only what its constraint admits) is
-        // the one every call surface shares, so this only gathers what the call
-        // wrote into each slot. This is what one signature says in place of the
-        // several a language with overloading would need: `some N` on both
-        // sides and on the way out is a whole number and a whole number
-        // answering a whole number, and a whole number and a fraction refused,
-        // without a way to declare a name twice.
-        let declared = callee.signature
-
-        let declaredSlots = context.slots(of: call.selector)
-
-        let slots: [Slot]
-
-        switch judged(
-            declared,
-            over: declaredSlots,
-            answering: context.answer(of: call.selector),
-            filledWith: substitution(
-                over: declaredSlots,
-                readings: site.readings,
-                in: loweredTypes
-            ),
-            in: loweredTypes,
-            fulfillment: fulfillment,
-            at: site.place
-        ) {
-        case let .refusal(reason):
-            throw BuildError(
-                "sending '\(call.selector)': \(reason)",
-                at: site.place
-            )
-
-        case let .fits(filled, _):
-            slots = filled
-        }
-
-        // An argument that needs a scope cannot be judged here. Only the ones
-        // that already are what they will be, each through the gate the run
-        // would hold it to.
-        for (position, (slot, argument)) in zip(slots, call.arguments).enumerated() {
-            guard let constant = argument.constantValue else { continue }
-
-            do {
-                _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
-            } catch {
-                throw BuildError(
-                    "sending '\(call.selector)': \(error)",
-                    at: site.place.argument(position)
-                )
-            }
-        }
-
-        // A procedure may judge its own constant arguments before any run. A type
-        // cannot say that a string a host parses is well formed, and the
-        // procedure can. It happens here rather than while decoding, because a
-        // notation judging arguments would have to know the vocabulary; judging
-        // belongs where names resolve. The procedure's own keys name its
-        // parameters, so each constant is asked for under the name of the slot
-        // it stands at, through the same door the procedure reads an argument
-        // through when it answers.
-        func validate(_ query: some Query, given constants: [Name: Value]) throws {
-            try query.validate(Question(arguments: constants))
-        }
-
-        if case let .native(.query(query)) = callee.implementation {
-            var constants: [Name: Value] = [:]
-
-            for (slot, argument) in zip(slots, call.arguments) {
-                constants[slot.name] = argument.constantValue
+        for (name, members, module) in declared {
+            let (handed, rest) = members.reduce(into: ([TypeExpression](), [TypeExpression]())) { split, member in
+                if member.handedOnce(in: table) {
+                    split.0.append(member)
+                } else {
+                    split.1.append(member)
+                }
             }
 
-            do {
-                try validate(query, given: constants)
-            } catch {
-                throw BuildError(
-                    "sending '\(call.selector)': \(error)",
-                    at: site.place.part(.arguments)
-                )
-            }
-        }
-
-        // What an argument holds is read from the body it was written in, so a
-        // name bound to a call carries that call's declared answer. This is what
-        // makes declaring an answer worth anything before a run: both sides are
-        // declarations, and a declaration is text. The site carries the walk's
-        // readings, so nothing is walked again for the asking.
-        for (position, (slot, written)) in zip(slots, site.readings).enumerated() {
-            guard !slot.type.accepts(written, in: loweredTypes) else { continue }
+            guard !handed.isEmpty, !rest.isEmpty else { continue }
 
             throw BuildError(
-                "sending '\(call.selector)' with \(slot.name),"
-                    + " which holds \(written.rendered(in: loweredTypes))"
-                    + " where \(slot.type.rendered(in: loweredTypes)) is declared",
-                at: site.place.argument(position)
+                "admits \(handed.map(\.rendered).sorted().joined(separator: " and ")),"
+                    + " which is handed on exactly once, beside"
+                    + " \(rest.map(\.rendered).sorted().joined(separator: " and ")),"
+                    + " which is not. A value of a membership is followed the same"
+                    + " way whichever member it is",
+                at: .constraint(name.spelling, in: .of(module))
             )
         }
     }

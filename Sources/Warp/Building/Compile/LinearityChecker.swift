@@ -1,8 +1,8 @@
 //
-//  Builder+Consuming.swift
+//  LinearityChecker.swift
 //  Warp
 //
-//  Created by JSilver
+//  Created by JSilver on 9/27/26.
 //
 
 import Foundation
@@ -18,138 +18,7 @@ import Foundation
 // value a closure captured, a value moved inside a loop round or an attempt.
 // Each of those is a place where "how many times" is not a fact the text shows,
 // and a proof that admits one of them is not a proof.
-extension Builder {
-    // MARK: - Internal
-    // Whether values of this type are handed on once, through the names it may
-    // hide behind. The one door: what the walk below could not decide is folded
-    // to "not one" here and nowhere inside it, so the answer does not depend on
-    // how many wrappers a type was written under.
-    static func handedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
-        reaches(type, in: table, assuming: []) ?? false
-    }
-
-    // The same question, answering nil where the walk only ever came back to a
-    // membership it was already inside. A ring says nothing new, so a ring of
-    // nothing else says nothing at all, and folding that to "not one" is done
-    // at the one door above rather than partway down: fold it inside the
-    // recursion and the answer starts depending on how many wrappers a member
-    // was written under.
-    //
-    // No `default`: a type nobody thought about must be a compile error here
-    // rather than an answer of no.
-    private static func reaches(
-        _ type: TypeExpression,
-        in table: TypeTable,
-        assuming: Set<Name>
-    ) -> Bool? {
-        switch type {
-        case .linear:
-            return true
-
-        case let .named(name):
-            if let declared = table.resolve(name) {
-                return reaches(declared, in: table, assuming: assuming)
-            }
-
-            return reaches(membership: name, in: table, assuming: assuming)
-
-        // A parameter bounded by a membership stands for some member of it, so
-        // what every member is, it is. An unbounded one stands for whatever the
-        // call put there, which the build never wrote down. A composition
-        // stands for a member of every membership it names.
-        case let .parameter(_, bounds), let .composition(bounds):
-            let answers = bounds.compactMap { bound in reaches(membership: bound, in: table, assuming: assuming) }
-
-            return answers.isEmpty ? nil : answers.contains(true)
-
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return reaches(inner, in: table, assuming: assuming)
-
-        // A nullable of one is refused where it is written, because "hand it on
-        // if it is there" is not something this language says. So nothing is
-        // one behind a `?`.
-        case .nullable:
-            return false
-
-        // None of these is one, and none of them carries one: a value handed on
-        // once is followed by the name that holds it, and a name does not go
-        // into a type.
-        case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .reading:
-            return false
-        }
-    }
-
-    // A membership is one when every member is. A membership this question is
-    // already inside is taken as it stood rather than asked again, which is
-    // what every other question about a membership does here, and one that
-    // reached no member of its own answers nothing at all.
-    private static func reaches(
-        membership name: Name,
-        in table: TypeTable,
-        assuming: Set<Name>
-    ) -> Bool? {
-        guard !assuming.contains(name) else { return nil }
-
-        guard let members = table.constraint(name), !members.isEmpty else { return false }
-
-        let answers = members.compactMap { member in
-            reaches(member, in: table, assuming: assuming.union([name]))
-        }
-
-        guard !answers.isEmpty else { return nil }
-
-        return answers.allSatisfy { answer in answer }
-    }
-
-    // Every value a body must hand on, handed on once. The declaration's own
-    // slots are where such a value enters a body: `linear` is a document's
-    // spelling and a value the link folded is a value, never a promise.
-    func consumed(
-        _ block: Block,
-        at place: Place,
-        holding signature: Signature,
-        in context: TypingContext
-    ) throws {
-        let taken = signature.parameters.filter { parameter in
-            if case .consuming = parameter.declared { return true }
-
-            return false
-        }
-        let borrowed = signature.parameters.filter { parameter in
-            if case .borrowing = parameter.declared { return true }
-
-            return false
-        }
-
-        guard !taken.isEmpty || !borrowed.isEmpty || context.types.types.values.contains(where: { type in
-            Builder.handedOnce(type, in: context.types)
-        }) else {
-            return
-        }
-
-        let walk = Consuming(context: context, place: place)
-        try walk.answering(
-            block,
-            held: Consuming.Held(live: Set(taken.map(\.name)), borrowed: Set(borrowed.map(\.name)))
-        )
-
-        // What a declaration answers is read off its body where nobody wrote
-        // `returns`, and the mark does not survive that reading. So a body
-        // answering one is held to writing what it answers, or the caller
-        // binding it would take an obligation nothing told it about.
-        if signature.returns == nil, walk.handsOut {
-            throw BuildError(
-                "answers a value handed on exactly once and does not write"
-                    + " `returns`. What a declaration answers is read off its body"
-                    + " where nobody wrote it, and the mark is not something a"
-                    + " reading keeps",
-                at: place.part(.result)
-            )
-        }
-    }
-
-    // MARK: - Private
+struct LinearityChecker {
     private final class Consuming {
         // What a body is holding, and what it has already handed on. The two
         // are apart because they answer different refusals: one is a value
@@ -385,7 +254,7 @@ extension Builder {
                 guard !inside.handsOut else {
                     throw refusal(
                         "carries a body answering a value handed on exactly once."
-                            + " \(Builder.followedByAName), and a body carried as a"
+                            + " \(LinearityChecker.followedByAName), and a body carried as a"
                             + " value runs where no name is watching"
                     )
                 }
@@ -671,7 +540,7 @@ extension Builder {
 
                 guard
                     let returns = signature?.returns,
-                    Builder.handedOnce(returns, in: context.types)
+                    returns.handedOnce(in: context.types)
                 else {
                     return .nothing
                 }
@@ -683,7 +552,7 @@ extension Builder {
             case let .cast(value, type, _):
                 switch handedOut(value, held: held) {
                 case .nothing:
-                    return Builder.handedOnce(type, in: context.types) ? .value : .nothing
+                    return type.handedOnce(in: context.types) ? .value : .nothing
 
                 case let answered:
                     return answered
@@ -794,4 +663,64 @@ extension Builder {
             BuildError(said, at: place)
         }
     }
+
+    // MARK: - Property
+    // Why a doubt and an obligation do not stand over one value. Said once
+    // because the two doors that refuse it (a `?` written on a declared type,
+    // an `as?` reading one) refuse it for the one reason; what each of them is
+    // refusing is its own sentence, because the subjects differ.
+    static let followedByAName =
+        "A value handed on once is followed by a name that holds it on every way"
+            + " through"
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // Every value a body must hand on, handed on once. The declaration's own
+    // slots are where such a value enters a body: `linear` is a document's
+    // spelling and a value the link folded is a value, never a promise.
+    func consumed(
+        _ block: Block,
+        at place: Place,
+        holding signature: Signature,
+        in context: TypingContext
+    ) throws {
+        let taken = signature.parameters.filter { parameter in
+            if case .consuming = parameter.declared { return true }
+
+            return false
+        }
+        let borrowed = signature.parameters.filter { parameter in
+            if case .borrowing = parameter.declared { return true }
+
+            return false
+        }
+
+        guard !taken.isEmpty || !borrowed.isEmpty || context.types.types.values.contains(where: { type in
+            type.handedOnce(in: context.types)
+        }) else {
+            return
+        }
+
+        let walk = Consuming(context: context, place: place)
+        try walk.answering(
+            block,
+            held: Consuming.Held(live: Set(taken.map(\.name)), borrowed: Set(borrowed.map(\.name)))
+        )
+
+        // What a declaration answers is read off its body where nobody wrote
+        // `returns`, and the mark does not survive that reading. So a body
+        // answering one is held to writing what it answers, or the caller
+        // binding it would take an obligation nothing told it about.
+        if signature.returns == nil, walk.handsOut {
+            throw BuildError(
+                "answers a value handed on exactly once and does not write"
+                    + " `returns`. What a declaration answers is read off its body"
+                    + " where nobody wrote it, and the mark is not something a"
+                    + " reading keeps",
+                at: place.part(.result)
+            )
+        }
+    }
+
+    // MARK: - Private
 }

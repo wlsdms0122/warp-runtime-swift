@@ -38,13 +38,13 @@ import Foundation
 // the types of *constant* arguments. Calling a value is outside the promise
 // entirely, because a closure's callee is a run-time fact.
 //
-// Two stages. Compiling settles
-// everything a document says against the interfaces it reaches: resolving
-// (`Builder+Resolving`), the facts nobody declared (`Builder+Deriving`,
-// `Builder+Isolating`), judging (`Builder+Judging`, `Builder+Typing`) and
-// lowering (`Lowering`). It runs the procedures a constant calls, which is what
-// folding is. Linking takes what that answered and one name to start from,
-// judges what only the whole list can answer, and runs nothing.
+// Two stages. Compiling settles everything a document says against the
+// interfaces it reaches: its declarations (`DeclarationChecker`), what it
+// claims (`ClaimChecker`), the facts nobody declared (`Derivation`), its
+// bodies (`TypeChecker`, `LinearityChecker`) and lowering (`Lowering`). It
+// runs the procedures a constant calls, which is what folding is. Linking
+// takes what that answered and one name to start from, judges what only the
+// whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a caller wants its
@@ -122,7 +122,7 @@ public struct Builder: Sendable {
 
         let linkage = Linkage()
         let declared = try declared(in: compiled)
-        let declaring = try types(
+        let declaring = try DeclarationChecker().types(
             declared: declared.types,
             constraints: declared.constraints,
             contracts: declared.contracts,
@@ -136,7 +136,7 @@ public struct Builder: Sendable {
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
         // is worked out here rather than left to the compile that asks.
-        let lowered = try lowered(
+        let lowered = try ClaimChecker().lowered(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
@@ -196,70 +196,6 @@ public struct Builder: Sendable {
             identities: Set(compiled.indices.compactMap { origin in compiled[origin].identity }),
             declarers: declarers
         )
-    }
-
-    // Every object standing beside what it was compiled against. An object
-    // says what it leaned on by fingerprint, and what it settled, a closure
-    // spelled by a document's name and count among them, is true against
-    // exactly those compiles of them. A document that leaned on nothing a
-    // fingerprint was worked out for says nothing here. One that did is
-    // held to it, document by document: what it leaned on stands beside it
-    // under the fingerprint it had then, or the document is not laid.
-    private func against(_ compiled: [Compiled]) throws {
-        let present = Set(compiled.indices.compactMap { origin in compiled[origin].fingerprint })
-
-        for origin in compiled.indices {
-            guard let dependencies = compiled[origin].dependencies,
-                  let missing = dependencies.first(where: { fingerprint in !present.contains(fingerprint) })
-            else {
-                continue
-            }
-
-            throw BuildError(
-                "\(compiled[origin].document.spelled(at: origin)) was compiled against a document"
-                    + " (\(missing)) that is not laid beside it as it was then",
-                at: Place(in: compiled[origin].document)
-            )
-        }
-    }
-
-    // An object said as what it is, where the caller handed over how that is
-    // worked out. One that cannot be written down has nothing to work it out
-    // from, which is the same absence said one step earlier.
-    private func fingerprinted(_ object: Compiled) throws -> Compiled {
-        guard let fingerprinting else { return object }
-
-        // Nothing to work a fingerprint out from, for one of the reasons an
-        // object has none, and none of them is something that went wrong. The
-        // document stands without one.
-        guard let written = try? object.object() else { return object }
-
-        return object.fingerprinted(try fingerprinting(written))
-    }
-
-    // Every declaration a compiled document made, under the spelling it was
-    // declared by and at the place it was written. What a document declares is
-    // its own; where it stands among the documents is the caller's order.
-    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Declared>] {
-        var signatures: [Name: Placed<Declared>] = [:]
-
-        for (position, document) in compiled.enumerated() {
-            let hidden = document.hidden
-
-            for (offset, name) in document.declared.enumerated() where !hidden.contains(name) {
-                signatures[name] = Placed(
-                    Declared(
-                        signature: document.table[offset].signature,
-                        access: document.table[offset].access,
-                        facts: (document.table[offset].constness, document.table[offset].isolation)
-                    ),
-                    at: .procedure(name.spelling, in: document.document),
-                    of: position
-                )
-            }
-        }
-
-        return signatures
     }
 
     // The same, against documents a caller already laid down.
@@ -322,7 +258,7 @@ public struct Builder: Sendable {
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
 
-        let declaring = try types(
+        let declaring = try DeclarationChecker().types(
             declared: declared.types,
             constraints: declared.constraints,
             contracts: declared.contracts,
@@ -331,7 +267,7 @@ public struct Builder: Sendable {
             numbered: laid.linkage
         )
 
-        try judge(laying, in: declaring)
+        try DeclarationChecker().judge(laying, in: declaring)
 
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
@@ -389,7 +325,7 @@ public struct Builder: Sendable {
         // contract, and what it hands over is written here rather than passed
         // over.
         let fulfillment = Fulfillment()
-        let lowered = try self.lowered(
+        let lowered = try ClaimChecker().lowered(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
@@ -495,7 +431,7 @@ public struct Builder: Sendable {
         // as, through every write, because every body of the document reads
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
-            environment(of: signature, in: loweredTypes)
+            TypeChecker().environment(of: signature, in: loweredTypes)
                 .merging(typedConstants.mapValues { constant in .fixed(constant.type) }) { _, constant in
                     constant
                 }
@@ -503,7 +439,7 @@ public struct Builder: Sendable {
                     variables.reduce(into: [Name: Binding]()) { held, entry in
                         held[entry.key] = .declared(
                             module.variables[entry.key]?.declared?.lowered(in: loweredTypes)
-                                ?? type(of: entry.value, in: loweredTypes)
+                                ?? TypeChecker().type(of: entry.value, in: loweredTypes)
                         )
                     }
                 ) { _, variable in variable }
@@ -542,7 +478,7 @@ public struct Builder: Sendable {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered) = try await resolvedSites(
+                let (rewritten, gathered) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
@@ -565,12 +501,12 @@ public struct Builder: Sendable {
 
             resolvedBodies[symbol.declared] = answer.procedure
 
-            try checked(answer.calls, in: context(), writing: fulfillment)
+            try TypeChecker().checked(answer.calls, in: context(), writing: fulfillment)
 
             // Read off the body the build is about to lower, so what is proven
             // is what runs. The environment is the one the body was judged in.
             if let rewritten = answer.procedure.block {
-                try consumed(
+                try LinearityChecker().consumed(
                     rewritten,
                     at: symbol.place,
                     holding: declaration.signature,
@@ -630,9 +566,9 @@ public struct Builder: Sendable {
             beyond(selector)?.isolation == .isolated || asked[selector]?.isolation == .isolated
         }
 
-        self.const(among: holding, settling: &const, reading: reading, taking: taking, beyond: answersWithoutRunning)
-        self.isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared)
-        self.failing(among: holding, settling: &failing) { selector in beyond(selector)?.failing }
+        Derivation().const(among: holding, settling: &const, reading: reading, taking: taking, beyond: answersWithoutRunning)
+        Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared)
+        Derivation().failing(among: holding, settling: &failing) { selector in beyond(selector)?.failing }
 
         let ownNames = Set(holding.map(\.declared))
         let constant: @Sendable (Name) -> Bool = { [const] selector in
@@ -707,7 +643,7 @@ public struct Builder: Sendable {
             in: context()
         )
 
-        typedConstants = constants.mapValues { value in (value: value, type: type(of: value, in: loweredTypes)) }
+        typedConstants = constants.mapValues { value in (value: value, type: TypeChecker().type(of: value, in: loweredTypes)) }
 
         variables = try await self.variables(
             of: module,
@@ -721,18 +657,18 @@ public struct Builder: Sendable {
 
         // What every declaration of this document whose `returns` nobody
         // wrote answers, read off its body.
-        await answers(
-            of: holding.compactMap { symbol -> Unsaid? in
+        await TypeChecker().answers(
+            of: holding.compactMap { symbol -> TypeChecker.Unsaid? in
                 guard
                     symbol.procedure.signature.returns == nil,
                     let block = symbol.procedure.block
                 else { return nil }
 
-                return Unsaid(
+                return TypeChecker.Unsaid(
                     symbol: symbol,
                     block: block,
                     environment: opening(symbol.procedure.signature),
-                    sends: sent(in: block)
+                    sends: TypeChecker().sent(in: block)
                 )
             },
             reading: context,
@@ -828,7 +764,7 @@ public struct Builder: Sendable {
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.
         let declared = try declared(in: compiled)
-        let declaring = try self.types(
+        let declaring = try DeclarationChecker().types(
             declared: declared.types,
             constraints: declared.constraints,
             contracts: declared.contracts,
@@ -850,7 +786,7 @@ public struct Builder: Sendable {
             )
         }
 
-        let lowered = try lowered(
+        let lowered = try ClaimChecker().lowered(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
@@ -862,7 +798,7 @@ public struct Builder: Sendable {
 
         // What each document leaned on, answered by every claim in the list.
         for document in compiled {
-            try leaning(
+            try ClaimChecker().leaning(
                 document.leaned,
                 on: types.loweredTypes.satisfying,
                 unheld: lowered.unheld
@@ -886,4 +822,518 @@ public struct Builder: Sendable {
     }
 
     // MARK: - Private
+    // Every object standing beside what it was compiled against. An object
+    // says what it leaned on by fingerprint, and what it settled, a closure
+    // spelled by a document's name and count among them, is true against
+    // exactly those compiles of them. A document that leaned on nothing a
+    // fingerprint was worked out for says nothing here. One that did is
+    // held to it, document by document: what it leaned on stands beside it
+    // under the fingerprint it had then, or the document is not laid.
+    private func against(_ compiled: [Compiled]) throws {
+        let present = Set(compiled.indices.compactMap { origin in compiled[origin].fingerprint })
+
+        for origin in compiled.indices {
+            guard let dependencies = compiled[origin].dependencies,
+                  let missing = dependencies.first(where: { fingerprint in !present.contains(fingerprint) })
+            else {
+                continue
+            }
+
+            throw BuildError(
+                "\(compiled[origin].document.spelled(at: origin)) was compiled against a document"
+                    + " (\(missing)) that is not laid beside it as it was then",
+                at: Place(in: compiled[origin].document)
+            )
+        }
+    }
+
+    // An object said as what it is, where the caller handed over how that is
+    // worked out. One that cannot be written down has nothing to work it out
+    // from, which is the same absence said one step earlier.
+    private func fingerprinted(_ object: Compiled) throws -> Compiled {
+        guard let fingerprinting else { return object }
+
+        // Nothing to work a fingerprint out from, for one of the reasons an
+        // object has none, and none of them is something that went wrong. The
+        // document stands without one.
+        guard let written = try? object.object() else { return object }
+
+        return object.fingerprinted(try fingerprinting(written))
+    }
+
+    // Every declaration a compiled document made, under the spelling it was
+    // declared by and at the place it was written. What a document declares is
+    // its own; where it stands among the documents is the caller's order.
+    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Declared>] {
+        var signatures: [Name: Placed<Declared>] = [:]
+
+        for (position, document) in compiled.enumerated() {
+            let hidden = document.hidden
+
+            for (offset, name) in document.declared.enumerated() where !hidden.contains(name) {
+                signatures[name] = Placed(
+                    Declared(
+                        signature: document.table[offset].signature,
+                        access: document.table[offset].access,
+                        facts: (document.table[offset].constness, document.table[offset].isolation)
+                    ),
+                    at: .procedure(name.spelling, in: document.document),
+                    of: position
+                )
+            }
+        }
+
+        return signatures
+    }
+
+    // No document twice. An identity is derived from the text, so two copies of
+    // one are one document, and every name in it collides with itself.
+    //
+    // Refused here rather than left to the collision, because the collision has
+    // nothing to say: both sides of its sentence are the same document, and the
+    // fix is not a spelling but a caller holding what it already had.
+    //
+    // What the caller already compiled counts: those documents are in this
+    // link too, and handing one over again is the same document twice however
+    // it arrived.
+    private func once(_ modules: [Module], held: Set<Identity> = []) throws {
+        var held = held
+
+        for module in modules {
+            guard let identity = module.identity else { continue }
+            guard held.insert(identity).inserted else {
+                throw BuildError(
+                    "this document was handed to the build twice. A build states"
+                        + " its whole graph once, so a document already in it is"
+                        + " not something to add",
+                    at: Place(in: .of(module))
+                )
+            }
+        }
+    }
+
+    // Every declaration under the spelling it was declared by. Two modules
+    // cannot both declare one spelling, for the same reason two `.c` files
+    // cannot both define a symbol.
+    private func symbols(of modules: [Module], after held: Int = 0) throws -> [Symbol] {
+        var symbols: [Symbol] = []
+
+        // The declaration that took each name, rather than only that the name
+        // is taken. A refusal about a name declared twice is addressed to the
+        // declaration that cannot be added and names both in the sentence. A
+        // set answers neither half, and the place alone answers neither when
+        // the two documents were never written down.
+        var claimed: [Name: Symbol] = [:]
+
+        for (origin, module) in modules.enumerated() {
+            for name in module.procedures.keys.sorted() {
+                guard let procedure = module.procedures[name] else { continue }
+
+                let symbol = Symbol(
+                    declared: name,
+                    document: .of(module),
+                    origin: origin,
+                    handed: held + origin,
+                    procedure: procedure
+                )
+
+                if let first = claimed[name], symbol.supplies {
+                    throw BuildError(
+                        "'\(name)' is declared more than once in this link, by"
+                            + " \(first.spelled) and \(symbol.spelled). Two declarations"
+                            + " of a name have no way to be told apart",
+                        at: symbol.place
+                    )
+                }
+
+                if symbol.supplies {
+                    claimed[name] = symbol
+                }
+
+                symbols.append(symbol)
+            }
+        }
+
+        return symbols
+    }
+
+    // A document's constants, settled. They are evaluated here because there is
+    // nothing about them left for a run to do: a constant sees no scope, so what
+    // it will be is knowable the moment the document is read.
+    //
+    // One may name another declared beside it, so they are settled in the order
+    // they read each other and that order is worked out first. What is wrong
+    // with a set of constants is a fact about that order, and asking the order
+    // is the whole of finding it.
+    private func constants(
+        of module: Module,
+        at origin: Int,
+        folding answered: Answered,
+        writing lowering: inout Lowering,
+        leaning fulfillment: Fulfillment,
+        in context: TypingContext
+    ) async throws -> [Name: Value] {
+        // Folding runs what it reads, and running reads rows. A lowered body
+        // carries its document's own numbers, so the table handed here is one
+        // that says which row each of those numbers stands for.
+        //
+        // The context is the document's own, since a document reads its own
+        // constants, and it is handed over rather than asked for: the lowering
+        // this writes into is one of the tables a context is read off.
+        guard !module.constants.isEmpty else { return [:] }
+
+        var known: [Name: Value] = [:]
+
+        // Handed over with what each one reads, so nothing looks a name
+        // back up in the table the order was read from. Everything this one
+        // needs comes before it, and asking again is a second chance to ask
+        // a different table.
+        for (name, expression) in try order(module.constants, in: module) {
+            let place = Place.constant(name.spelling, in: .of(module))
+
+            try await fulfillment.folding(place) {
+                // A constant's dots are judged before it settles, the way a
+                // body's are: the settled neighbours' types are the
+                // environment, so an absent field or a needless `?.` refuses
+                // here by the one rule, and carries its own place.
+                let (judged, calls) = try await TypeChecker().resolvedSites(
+                    in: expression,
+                    at: place,
+                    in: known.mapValues { value in .fixed(TypeChecker().type(of: value, in: context.loweredTypes)) },
+                    with: context,
+                    folding: nil,
+                    writing: fulfillment
+                )
+
+                // A closure a constant holds runs later, so evaluating the
+                // constant proves nothing about the sends inside it. They pass
+                // the same gate every gathered call does.
+                try TypeChecker().checked(calls, in: context, writing: fulfillment)
+
+                // A constant settles at the build, so what it is written from
+                // is read rather than run. The same gate an operand passes,
+                // asked here because a constant is the one other place the
+                // build reads an expression instead of running it.
+                try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
+
+                do {
+                    known[name] = try await Folding(
+                        constants: known,
+                        origin: origin,
+                        in: answered,
+                        loweredTypes: context.loweredTypes
+                    ).read(judged, as: name, writing: &lowering, at: place)
+                } catch let refused as BuildError {
+                    throw refused
+                } catch {
+                    throw BuildError("\(error)", at: place)
+                }
+            }
+        }
+
+        return known
+    }
+
+    // What a document's variables start a run holding. Settled the way a
+    // constant is, from what a constant settles from, reading those beside it
+    // and no variable; the starting value is a fact the link reads. A variable
+    // that declares what it holds has its start settled into that, the way an
+    // argument is settled into its slot, and holds that type; one that
+    // declares nothing holds the type of the settled value.
+    private func variables(
+        of module: Module,
+        at origin: Int,
+        beside known: [Name: Value],
+        folding answered: Answered,
+        writing lowering: inout Lowering,
+        leaning fulfillment: Fulfillment,
+        in context: TypingContext
+    ) async throws -> [Name: Value] {
+        guard !module.variables.isEmpty else { return [:] }
+
+        var started: [Name: Value] = [:]
+
+        for (name, variable) in module.variables.sorted { $0.key < $1.key } {
+            let place = Place.variable(name.spelling, in: .of(module))
+
+            try await fulfillment.folding(place) {
+                let (judged, calls) = try await TypeChecker().resolvedSites(
+                    in: variable.start,
+                    at: place,
+                    in: known.mapValues { value in .fixed(TypeChecker().type(of: value, in: context.loweredTypes)) },
+                    with: context,
+                    folding: nil,
+                    writing: fulfillment
+                )
+
+                try TypeChecker().checked(calls, in: context, writing: fulfillment)
+
+                // A variable's starting value settles at the build the way a
+                // constant's does, so it passes the same gate.
+                try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
+
+                let settled: Value
+
+                do {
+                    settled = try await Folding(
+                        constants: known,
+                        origin: origin,
+                        in: answered,
+                        loweredTypes: context.loweredTypes
+                    ).read(judged, as: name, writing: &lowering, at: place)
+                } catch let refused as BuildError {
+                    throw refused
+                } catch {
+                    throw BuildError("\(error)", at: place)
+                }
+
+                guard let declared = variable.declared else {
+                    started[name] = settled
+                    return
+                }
+
+                let holding = declared.lowered(in: context.loweredTypes)
+
+                if case let .undeclared(label, _) = holding {
+                    throw BuildError("declares type '\(label)', which nothing declares", at: place)
+                }
+
+                do {
+                    started[name] = try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes)
+                } catch {
+                    throw BuildError(
+                        "starts as \(TypeChecker().type(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
+                            + " and declares \(declared): \(error)",
+                        at: place
+                    )
+                }
+            }
+        }
+
+        return started
+    }
+
+    // The order a module's constants settle in: what a constant reads comes
+    // before it. Constants that wait on each other have no such order, and that
+    // is refused here, standing on one of them.
+    private func order(
+        _ constants: [Name: Expression],
+        in module: Module
+    ) throws -> [(name: Name, expression: Expression)] {
+
+        var ordered: [(name: Name, expression: Expression)] = []
+        var settled: Set<Name> = []
+
+        // What the walk is standing on, root first. Where it meets a name
+        // already on it, everything from that name down is the cycle, and
+        // nothing above it is, which is the difference between what names
+        // itself back and what merely waits on something that does.
+        var walking: [Name] = []
+
+        func place(_ name: Name, reading expression: Expression) throws {
+            guard !settled.contains(name) else { return }
+
+            if let met = walking.firstIndex(of: name) {
+                let cycle = walking[met...].sorted()
+
+                throw BuildError(
+                    "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
+                        + " cycle. A constant may name another declared beside it, but"
+                        + " not one that names it back",
+                    // Any of them is where the fix can be made, so the one
+                    // walked to is the first in sorted order: a cycle has no
+                    // first member, and reading one off the walk would name a
+                    // different constant depending on where the walk started.
+                    at: .constant(cycle[0].spelling, in: .of(module))
+                )
+            }
+
+            walking.append(name)
+
+            // Sorted, so a module with two mistakes in it refuses the same one
+            // every run. What a set hands back is seeded per process.
+            for read in mentions(of: expression).sorted() {
+                // The walk goes only to names this module declared as constants.
+                guard let reading = constants[read] else { continue }
+
+                try place(read, reading: reading)
+            }
+
+            walking.removeLast()
+            settled.insert(name)
+            ordered.append((name, expression))
+        }
+
+        for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
+            try place(name, reading: expression)
+        }
+
+        return ordered
+    }
+
+    // Every constant this expression names, at whatever depth.
+    //
+    // Flat, because nothing in here can mean anything but a constant: a body
+    // may not introduce a name the module bound, which is settled where a
+    // module is made, so no scope between a mention and this one can have taken
+    // the spelling. A closure's body is walked with the rest. Making one
+    // captures the scope it was written in, so a sibling it reads has to be
+    // settled by then.
+    private func mentions(of expression: Expression) -> Set<Name> {
+        expression.subexpressions.reduce(into: Set<Name>()) { names, held in
+            guard case let .reference(path) = held else { return }
+
+            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
+        }
+    }
+
+    // Type, constraint and contract names are their declared spelling, the way
+    // procedure names are: the standard bundles declare `std.Numeric` under that
+    // key, and a document declaring a bare `Numeric` of its own declares a
+    // different name.
+    //
+    // The three tables gathered whole, here and nowhere else, so the uniqueness
+    // this pass refuses on is the same fact the tables are built from: each is
+    // filled as it is walked. A mention nothing declares is
+    // refused by the judgment that owns undeclared names, which says where the
+    // mention lives.
+    private func declared(in documents: [any Declaring]) throws -> (
+        types: [Name: Placed<TypeExpression>],
+        constraints: [Name: Placed<[TypeExpression]>],
+        contracts: [Name: Placed<[Name: ContractProcedure]>],
+        claims: [Placed<Claim>]
+    ) {
+        // Where each name was written, gathered here and carried with what it
+        // holds. This is where both halves of the joining are in hand. Anywhere
+        // later has only the joined name, and taking it apart again is a second
+        // copy of a rule that has to be right once.
+        //
+        // One table per space, and the table is what says a name is taken. A
+        // second table beside it saying the same thing is a second answer to
+        // one question.
+        //
+        // Each space is walked whole before the two are held against each
+        // other, so what a link concludes cannot depend on the order the caller
+        // happened to list the documents in.
+        var declaredTypes: [Name: Placed<TypeExpression>] = [:]
+        var declaredConstraints: [Name: Placed<[TypeExpression]>] = [:]
+        var declaredContracts: [Name: Placed<[Name: ContractProcedure]>] = [:]
+
+        for (origin, held) in documents.enumerated() {
+            for (name, type) in held.types.sorted(by: { $0.key < $1.key }) {
+                let declaration = Placed(type, at: .type(name.spelling, in: held.document), of: origin)
+
+                // Read before written. Written first, the entry that says what
+                // this collides with is the one this call overwrote.
+                if let first = declaredTypes[name] {
+                    throw BuildError(
+                        "type '\(name)' is declared more than once in this link, by"
+                            + " \(first.spelled) and \(declaration.spelled)",
+                        at: declaration.place
+                    )
+                }
+
+                declaredTypes[name] = declaration
+            }
+        }
+
+        for (origin, held) in documents.enumerated() {
+            for (name, members) in held.constraints.sorted(by: { $0.key < $1.key }) {
+                let declaration = Placed(
+                    members,
+                    at: .constraint(name.spelling, in: held.document),
+                    of: origin
+                )
+
+                if let declared = declaredTypes[name] {
+                    throw BuildError(
+                        "'\(name)' is declared as both a type and a constraint in"
+                            + " this link, as a type by \(declared.spelled) and as a"
+                            + " constraint by \(declaration.spelled). One name cannot"
+                            + " stand for a type and a membership at once",
+                        at: declaration.place
+                    )
+                }
+
+                if let first = declaredConstraints[name] {
+                    throw BuildError(
+                        "constraint '\(name)' is declared more than once in this"
+                            + " link, by \(first.spelled) and \(declaration.spelled)",
+                        at: declaration.place
+                    )
+                }
+
+                declaredConstraints[name] = declaration
+            }
+        }
+
+        for (origin, held) in documents.enumerated() {
+            for (name, procedures) in held.contracts.sorted(by: { $0.key < $1.key }) {
+                let declaration = Placed(
+                    procedures,
+                    at: .contract(name.spelling, in: held.document),
+                    of: origin
+                )
+
+                if let declared = declaredTypes[name]?.spelled ?? declaredConstraints[name]?.spelled {
+                    throw BuildError(
+                        "'\(name)' is declared as a contract in this link and as"
+                            + " something else by \(declared). One name"
+                            + " cannot be a type, a membership and a contract"
+                            + " at once",
+                        at: declaration.place
+                    )
+                }
+
+                if let first = declaredContracts[name] {
+                    throw BuildError(
+                        "contract '\(name)' is declared more than once in this"
+                            + " link, by \(first.spelled) and \(declaration.spelled)",
+                        at: declaration.place
+                    )
+                }
+
+                guard !procedures.isEmpty else {
+                    throw BuildError(
+                        "asks nothing, so every type satisfies it. A contract is"
+                            + " the procedures a value answers, and one with no procedures"
+                            + " says nothing a slot could lean on",
+                        at: declaration.place
+                    )
+                }
+
+                declaredContracts[name] = declaration
+            }
+        }
+
+        // What each document said one of its types, or another document's,
+        // answers. Handed on as a list, since a claim declares no name for a
+        // table to be keyed by.
+        //
+        // A pair two documents claim is one claim. A claim holds nothing but
+        // the pair, so two of them cannot disagree, and the second says what
+        // the first said.
+        var claimed: Set<Claim> = []
+        var claims: [Placed<Claim>] = []
+
+        for (origin, held) in documents.enumerated() {
+            for (type, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
+                for contract in contracts.sorted() {
+                    let claim = Claim(type: type, contract: contract)
+
+                    guard claimed.insert(claim).inserted else { continue }
+
+                    claims.append(
+                        Placed(
+                            claim,
+                            at: .satisfies(type.spelling, in: held.document),
+                            of: origin
+                        )
+                    )
+                }
+            }
+        }
+
+        return (declaredTypes, declaredConstraints, declaredContracts, claims)
+    }
 }

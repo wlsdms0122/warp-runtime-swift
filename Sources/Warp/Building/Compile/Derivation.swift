@@ -1,8 +1,8 @@
 //
-//  Builder+Deriving.swift
+//  Derivation.swift
 //  Warp
 //
-//  Created by JSilver
+//  Created by JSilver on 9/27/26.
 //
 
 import Foundation
@@ -10,8 +10,162 @@ import Foundation
 // The facts nobody declared, worked out over every declaration at once. A
 // declaration is const until its body shows otherwise, and the answer is the
 // whole link's rather than any one body's.
-extension Builder {
-    // MARK: - Internal
+struct Derivation {
+    private struct Isolating {
+        let isolated: (Name) -> Bool
+
+        // What a callee takes, which is where a call handing something in
+        // place says which slot it lands in. Asked rather than held, because
+        // where a declaration's signature is read from is the caller's: the
+        // link's rows once they stand, and the documents themselves before.
+        let asked: (Name) -> Signature?
+
+        func holds(_ block: Block, declared: Set<Name>, applying procedures: Set<Name>) -> Bool {
+            var declared = declared
+            var procedures = procedures
+
+            return holds(block.body, declared: &declared, applying: &procedures)
+                && (
+                    block.result.map { result in
+                        holds(result, declared: declared, applying: procedures)
+                    } ?? true
+                )
+        }
+
+        // A body in order. Each statement is judged against what was declared
+        // before it, and a variable it introduces is declared for the rest.
+        private func holds(
+            _ body: [Statement],
+            declared: inout Set<Name>,
+            applying procedures: inout Set<Name>
+        ) -> Bool {
+            for statement in body {
+                switch statement.binding {
+                case let .assignment(path)?:
+                    guard let head = path.head, declared.contains(head) else { return false }
+
+                case .constant?, .variable?, nil:
+                    break
+                }
+
+                guard holds(statement.expression, declared: declared, applying: procedures) else {
+                    return false
+                }
+
+                if case let .variable(name, _)? = statement.binding {
+                    declared.insert(name)
+                }
+
+                guard let introduced = statement.binding?.introduced else { continue }
+
+                // Read forward, the way constness reads it: what a name said is
+                // what stands until something else takes the spelling.
+                if
+                    statement.binding?.declared?.isIsolatedProcedure == true
+                        || applies(statement.expression, given: procedures)
+                {
+                    procedures.insert(introduced)
+                } else {
+                    procedures.remove(introduced)
+                }
+            }
+
+            return true
+        }
+
+        // Whether what this reads came out of a slot that said its procedures
+        // touch no name another body could touch at the same time. The head is
+        // the name the slot gave, and indexing past it keeps the claim.
+        private func applies(_ expression: Expression, given procedures: Set<Name>) -> Bool {
+            guard case let .reference(path) = expression, let head = path.head else { return false }
+
+            return procedures.contains(head)
+                && path.dropFirst().allSatisfy { segment in segment.named == nil }
+        }
+
+        private func holds(
+            _ body: [Statement],
+            declared: Set<Name>,
+            applying procedures: Set<Name>
+        ) -> Bool {
+            var inner = declared
+            var applying = procedures
+
+            return holds(body, declared: &inner, applying: &applying)
+        }
+
+        private func holds(
+            _ expression: Expression,
+            declared: Set<Name>,
+            applying procedures: Set<Name>
+        ) -> Bool {
+            switch expression {
+            case .literal, .reference:
+                return true
+
+            // Applying a name a slot said holds an isolated procedure runs a
+            // body that writes only its own names, which is the whole of what
+            // is asked here. Any other value is the run's answer and says
+            // nothing.
+            case let .apply(callee, arguments):
+                return applies(callee, given: procedures)
+                    && arguments.allSatisfy { argument in
+                        holds(argument, declared: declared, applying: procedures)
+                    }
+
+            case let .cast(value, _, _):
+                return holds(value, declared: declared, applying: procedures)
+
+            case let .array(array):
+                return array.allSatisfy { element in holds(element, declared: declared, applying: procedures) }
+
+            case let .record(record):
+                return record.values.allSatisfy { field in holds(field, declared: declared, applying: procedures) }
+
+            // A closure written here is judged for its own isolation when it is
+            // made; making it touches nothing.
+            case .closure:
+                return true
+
+            case let .call(call):
+                guard
+                    isolated(call.selector),
+                    let signature = asked(call.selector)
+                else {
+                    return false
+                }
+
+                for (parameter, argument) in zip(signature.parameters, call.arguments) where parameter.declared.isInout {
+                    guard case let .reference(path) = argument, let head = path.head else { continue }
+
+                    guard declared.contains(head) else { return false }
+                }
+
+                return call.arguments.allSatisfy { argument in holds(argument, declared: declared, applying: procedures) }
+
+            case let .block(block):
+                return holds(block, declared: declared, applying: procedures)
+
+            case let .conditional(condition, then, otherwise):
+                return holds(condition, declared: declared, applying: procedures)
+                    && holds(then, declared: declared, applying: procedures)
+                    && (otherwise.map { arm in holds(arm, declared: declared, applying: procedures) } ?? true)
+
+            case let .loop(condition, body, _):
+                return holds(condition, declared: declared, applying: procedures) && holds(body, declared: declared, applying: procedures)
+
+            case let .attempt(body, rescue, _):
+                return holds(body, declared: declared, applying: procedures) && holds(rescue, declared: declared, applying: procedures)
+
+            case let .leave(leave):
+                return leave.value.map { value in holds(value, declared: declared, applying: procedures) } ?? true
+            }
+        }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
     // Which of these answer without running. A native says so about itself; a
     // body cannot, so it is read off what it calls.
     //
@@ -246,75 +400,6 @@ extension Builder {
         } ?? true
     }
 
-    // Whether what this reads came out of a slot that said its procedures
-    // answer without running. The head is the name the slot gave, and indexing
-    // past it keeps the claim, since a slot asking for an array of them says
-    // it about every element. Reading a field walks into a value the slot said
-    // nothing about, and so does anything that is not a name at all.
-    private func applies(_ expression: Expression, given procedures: Set<Name>) -> Bool {
-        guard case let .reference(path) = expression, let head = path.head else { return false }
-
-        return procedures.contains(head)
-            && path.dropFirst().allSatisfy { segment in segment.named == nil }
-    }
-
-    // What a binding reaches. Introducing a name reaches nothing; writing one
-    // reaches whatever the path's head names, and a name the body does not
-    // own is the run's state.
-    private func isConst(_ binding: Statement.Binding?, declaring names: Set<Name>) -> Bool {
-        guard case let .assignment(path)? = binding else { return true }
-
-        return path.head.map { head in names.contains(head) } ?? true
-    }
-
-    // What an operand or a condition answers only by running, if anything. An
-    // operand is data: the run reads it rather than running it, so what it may
-    // hold is a literal, a name, a record, a cast and a call whose declaration
-    // answers without running. Anything else is found here rather than at the
-    // run.
-    //
-    // The module variables constness strikes a body for reading are not struck
-    // here. Reading one is what reading a name is; what it costs a body is the
-    // promise of answering the same thing twice, and an operand makes no such
-    // promise.
-    func runs(in expression: Expression, given context: TypingContext) -> Runs? {
-        switch expression {
-        case .literal, .reference, .closure:
-            return nil
-
-        case let .cast(value, _, _):
-            return runs(in: value, given: context)
-
-        case let .array(array):
-            return array.lazy.compactMap { element in runs(in: element, given: context) }.first
-
-        case let .record(record):
-            return record.values.lazy.compactMap { field in runs(in: field, given: context) }.first
-
-        // A contract's procedure is answered by whatever type the value turns
-        // out to be, so what a call through one reads as is what the contract
-        // asked of every declaration answering it.
-        case let .call(call):
-            guard
-                context.signature(of: call.selector) != nil || context.contractProcedures[call.selector] != nil,
-                !context.isConst(call.selector)
-            else {
-                return call.arguments.lazy
-                    .compactMap { argument in runs(in: argument, given: context) }.first
-            }
-
-            return .calling(call.selector)
-
-        // Which procedure a value is, is the run's answer, so nothing here says
-        // whether calling it runs.
-        case .apply:
-            return .applying
-
-        case .block, .conditional, .loop, .attempt, .leave:
-            return .construct
-        }
-    }
-
     func isConst(
         _ expression: Expression,
         declaring names: Set<Name>,
@@ -402,5 +487,104 @@ extension Builder {
             return self.isConst(body, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
                 && self.isConst(rescue, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
         }
+    }
+
+    // Which declarations touch no name another body could touch at the same time.
+    // Worked out the way constness is: a native says so about itself, a body starts
+    // isolated, and one is struck when its body writes a name it did not declare,
+    // hands one in place, calls a value, or calls a declaration that was struck,
+    // until nothing more is struck.
+    func isolated(
+        among symbols: [Symbol],
+        settling isolated: inout Set<Name>,
+        taking asked: @escaping (Name) -> Signature?,
+        beyond: @escaping (Name) -> Bool
+    ) {
+        let own = Set(symbols.map(\.declared))
+
+        let bodies = symbols.reduce(
+            into: [Name: (block: Block, declaring: Set<Name>, applying: Set<Name>)]()
+        ) { table, symbol in
+            guard let block = symbol.procedure.block else { return }
+
+            table[symbol.declared] = (
+                block,
+                Set(symbol.procedure.signature.names),
+                symbol.procedure.signature.isolatedProcedures
+            )
+        }
+
+        isolated.formUnion(
+            symbols
+                .filter { symbol in symbol.procedure.implementation.isNativelyIsolated != false }
+                .map(\.declared)
+        )
+
+        // Only what this call was handed can be struck, for the reason constness
+        // reads the same way: what was settled before it stands in front of
+        // it and reaches nothing here.
+        while true {
+            let settled = isolated
+            let given: (Name) -> Bool = { name in own.contains(name) ? settled.contains(name) : beyond(name) }
+            let struck = bodies.compactMap { name, body in
+                isolated.contains(name)
+                    && !isIsolated(
+                        body.block,
+                        declaring: body.declaring,
+                        given: given,
+                        applying: body.applying,
+                        taking: asked
+                    )
+                    ? name
+                    : nil
+            }
+
+            guard !struck.isEmpty else { return }
+
+            isolated.subtract(struck)
+        }
+    }
+
+    // Whether a body writes only names it declares and calls only isolated
+    // declarations. The names it declares are read in scope order: a
+    // variable is written only after the statement that introduced it, in
+    // that body or one it encloses, so a name introduced inside a nested body
+    // or a nested closure is nobody else's. A name written that was not
+    // declared here is a name the body reached from outside: a module
+    // variable, or one a closure captured.
+    func isIsolated(
+        _ block: Block,
+        declaring parameters: Set<Name>,
+        given isolated: @escaping (Name) -> Bool,
+        applying procedures: Set<Name>,
+        taking asked: @escaping (Name) -> Signature?
+    ) -> Bool {
+        Isolating(isolated: isolated, asked: asked).holds(
+            block,
+            declared: parameters,
+            applying: procedures
+        )
+    }
+
+    // MARK: - Private
+    // Whether what this reads came out of a slot that said its procedures
+    // answer without running. The head is the name the slot gave, and indexing
+    // past it keeps the claim, since a slot asking for an array of them says
+    // it about every element. Reading a field walks into a value the slot said
+    // nothing about, and so does anything that is not a name at all.
+    private func applies(_ expression: Expression, given procedures: Set<Name>) -> Bool {
+        guard case let .reference(path) = expression, let head = path.head else { return false }
+
+        return procedures.contains(head)
+            && path.dropFirst().allSatisfy { segment in segment.named == nil }
+    }
+
+    // What a binding reaches. Introducing a name reaches nothing; writing one
+    // reaches whatever the path's head names, and a name the body does not
+    // own is the run's state.
+    private func isConst(_ binding: Statement.Binding?, declaring names: Set<Name>) -> Bool {
+        guard case let .assignment(path)? = binding else { return true }
+
+        return path.head.map { head in names.contains(head) } ?? true
     }
 }
