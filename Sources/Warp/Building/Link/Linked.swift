@@ -84,6 +84,10 @@ public final class Linked: Sendable {
     // written down nowhere the object goes.
     let foldable: Bool
 
+    static let unreadable = "got a procedure a row of this link cannot read."
+        + " One is read where the link that made it is being read, which"
+        + " for a judgment is the image's own types"
+
     // MARK: - Initializer
     init(
         label: Name,
@@ -240,10 +244,6 @@ public final class Linked: Sendable {
         table.linkage === other.linkage
     }
 
-    static let unreadable = "got a procedure a row of this link cannot read."
-        + " One is read where the link that made it is being read, which"
-        + " for a judgment is the image's own types"
-
     // Whether this row is a written body.
     public var isWritten: Bool {
         if case .body = implementation { return true }
@@ -251,5 +251,242 @@ public final class Linked: Sendable {
         return false
     }
 
+    // One row with every lowered type its body stands on answered again. The
+    // only: what a row's slots and answer lower to is its signature read
+    // against a table, which is the link's reading and not a number the
+    // document gave. That holds for a native, which has no body at all, and
+    // for a written one.
+    func renumbered(_ answer: (LoweredType) throws -> LoweredType) rethrows -> Linked {
+        guard case let .body(body, frame) = implementation else { return self }
+
+        return Linked(
+            self,
+            implementation: .body(try Self.renumbered(body, answer), frame),
+            sends: sends
+        )
+    }
+
+    // What this row can send a run into: what its body names, the closures
+    // the variables it reads start out holding, since a body applies what it
+    // reads out of one without naming it, or the sends a native declared.
+    // The variables are its own document's, by the number it gave them.
+    func reaches(starting variables: [(name: Name, value: Value)]) -> (rows: [Int], held: [Linked]) {
+        switch implementation {
+        case let .body(body, frame):
+            var reach = Self.reached(by: body)
+
+            for (variable, _) in frame.variables {
+                variables[variable].value.closures { closure in closure.linked.map { linked in reach.held.append(linked) } }
+            }
+
+            return reach
+
+        case .native:
+            return (sends.map(\.row), [])
+        }
+    }
+
     // MARK: - Private
+    private static func renumbered(
+        _ body: Body,
+        _ answer: (LoweredType) throws -> LoweredType
+    ) rethrows -> Body {
+        Body(
+            instructions: try body.instructions.map { instruction in
+                try Self.renumbered(instruction, answer)
+            },
+            result: try body.result.map { result in try Self.renumbered(result, answer) }
+        )
+    }
+
+    private static func renumbered(
+        _ instruction: Instruction,
+        _ answer: (LoweredType) throws -> LoweredType
+    ) rethrows -> Instruction {
+        Instruction(
+            binding: try Self.renumbered(instruction.binding, answer),
+            code: try Self.renumbered(instruction.code, answer),
+            label: instruction.label
+        )
+    }
+
+    private static func renumbered(
+        _ binding: Instruction.Binding?,
+        _ answer: (LoweredType) throws -> LoweredType
+    ) rethrows -> Instruction.Binding? {
+        switch binding {
+        case let .bind(slot, settling)?:
+            return .bind(slot, settling: try settling.map { type in try answer(type) })
+
+        case let .declare(slot, settling)?:
+            return .declare(slot, settling: try settling.map { type in try answer(type) })
+
+        case let .assign(address, settling)?:
+            return .assign(address, settling: try settling.map { type in try answer(type) })
+
+        case nil:
+            return nil
+        }
+    }
+
+    private static func renumbered(
+        _ operation: Operation,
+        _ answer: (LoweredType) throws -> LoweredType
+    ) rethrows -> Operation {
+        switch operation {
+        case .literal, .local:
+            return operation
+
+        case let .array(elements):
+            return .array(try elements.map { element in try Self.renumbered(element, answer) })
+
+        case let .record(held):
+            return .record(
+                RecordOperation(
+                    layout: held.layout,
+                    fields: try held.fields.map { field in try Self.renumbered(field, answer) }
+                )
+            )
+
+        // A closure stands as a row of its own, which this walk reaches on its
+        // own turn. What is written here is the number that reaches it, and a
+        // number carries no type.
+        case .closure:
+            return operation
+
+        case let .apply(callee, arguments):
+            return .apply(
+                try Self.renumbered(callee, answer),
+                arguments: try arguments.map { argument in try Self.renumbered(argument, answer) }
+            )
+
+        case let .cast(value, type, optional):
+            return .cast(
+                try Self.renumbered(value, answer),
+                as: try answer(type),
+                optional: optional
+            )
+
+        case let .block(body):
+            return .block(try Self.renumbered(body, answer))
+
+        case let .conditional(condition, then, otherwise):
+            return .conditional(
+                try Self.renumbered(condition, answer),
+                then: try then.map { instruction in try Self.renumbered(instruction, answer) },
+                else: try otherwise.map { instructions in
+                    try instructions.map { instruction in try Self.renumbered(instruction, answer) }
+                }
+            )
+
+        case let .loop(condition, body, round, keeps):
+            return .loop(
+                while: try Self.renumbered(condition, answer),
+                body: try Self.renumbered(body, answer),
+                round: round,
+                keeps: keeps
+            )
+
+        case let .attempt(body, rescue, failure):
+            return .attempt(
+                try Self.renumbered(body, answer),
+                rescue: try Self.renumbered(rescue, answer),
+                failure: failure
+            )
+
+        case let .call(call):
+            return .call(try Self.renumbered(call, answer))
+
+        // The calls a dispatch picks from are the link's to fill, so there is
+        // nothing here for a document to number.
+        case let .dispatch(dispatch):
+            return .dispatch(
+                DispatchOperation(
+                    contract: dispatch.contract,
+                    procedure: dispatch.procedure,
+                    first: try Self.renumbered(dispatch.first, answer),
+                    arguments: try dispatch.arguments.map { argument in
+                        try Self.renumbered(argument, answer)
+                    },
+                    calls: dispatch.calls
+                )
+            )
+
+        case let .leave(reach, target, value):
+            return .leave(
+                reach,
+                target: target,
+                try value.map { value in try Self.renumbered(value, answer) }
+            )
+        }
+    }
+
+    private static func renumbered(
+        _ call: CallOperation,
+        _ answer: (LoweredType) throws -> LoweredType
+    ) rethrows -> CallOperation {
+        CallOperation(
+            procedure: call.procedure,
+            arguments: try call.arguments.map { argument in
+                try argument.map { operation in try Self.renumbered(operation, answer) }
+            },
+            handed: call.handed
+        )
+    }
+
+    private static func renumbered(
+        _ argument: Argument,
+        _ answer: (LoweredType) throws -> LoweredType
+    ) rethrows -> Argument {
+        switch argument {
+        case let .value(operation):
+            return .value(try Self.renumbered(operation, answer))
+
+        case .reference:
+            return argument
+        }
+    }
+
+    // The rows a body can send a run into, read off its code: every call, every
+    // row that answers a contract it calls through, and every closure it writes,
+    // whose body is a row of its own. Read once the link has answered every
+    // number with a row, so what comes back is rows of this link. A closure a
+    // value holds is spelled by its writer, and the link says which row that is.
+    private static func reached(by body: Body) -> (rows: [Int], held: [Linked]) {
+        var rows: [Int] = []
+        var held: [Linked] = []
+
+        body.walk { node in
+            reached(by: node, into: &rows, holding: &held)
+
+            return true
+        }
+
+        return (rows, held)
+    }
+
+    // The rows one node sends a run into, apart from what nests in it, and the
+    // rows the closures its values hold stand in. A closure a value holds was
+    // answered by the link before this is asked, so one holding no row is none
+    // this walk was handed.
+    private static func reached(by node: Body.Node, into rows: inout [Int], holding held: inout [Linked]) {
+        guard case let .operation(operation) = node else { return }
+
+        switch operation {
+        case let .literal(value):
+            value.closures { closure in closure.linked.map { linked in held.append(linked) } }
+
+        case let .closure(row, _):
+            rows.append(row)
+
+        case let .call(call):
+            rows.append(call.procedure)
+
+        case let .dispatch(dispatch):
+            dispatch.calls.values.forEach { call in rows.append(call.procedure) }
+
+        case .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+            break
+        }
+    }
 }

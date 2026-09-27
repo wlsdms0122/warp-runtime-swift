@@ -18,6 +18,19 @@ struct Instruction: Sendable {
         case bind(Int, settling: LoweredType?)
         case declare(Int, settling: LoweredType?)
         case assign(Address, settling: LoweredType?)
+
+        func rewritten(type: (LoweredType) throws -> LoweredType) rethrows -> Instruction.Binding {
+            switch self {
+            case let .bind(slot, settling):
+                return .bind(slot, settling: try settling.map(type))
+
+            case let .declare(slot, settling):
+                return .declare(slot, settling: try settling.map(type))
+
+            case let .assign(address, settling):
+                return .assign(address, settling: try settling.map(type))
+            }
+        }
     }
 
     // MARK: - Property
@@ -33,5 +46,22 @@ struct Instruction: Sendable {
     }
 
     // MARK: - Public
+    @discardableResult
+    func walk(_ visit: (Body.Node) -> Bool) -> Bool {
+        visit(.instruction(self)) && code.walk(visit)
+    }
+
+    func rewritten(
+        operation: (Operation) throws -> Operation,
+        type: (LoweredType) throws -> LoweredType
+    ) rethrows -> Instruction {
+        Instruction(
+            binding: try binding.map { binding in try binding.rewritten(type: type) },
+            code: try code.rewritten(operation: operation, type: type),
+            label: label
+        )
+    }
+
     // MARK: - Private
 }
+

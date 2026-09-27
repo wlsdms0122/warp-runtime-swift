@@ -29,12 +29,21 @@ enum Step: Sendable {
             return optional
         }
     }
-}
 
-extension Step {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
     func reads(_ slots: Range<Int>) -> Bool {
         guard case let .at(address, _) = self else { return false }
 
         return address.reads(slots)
     }
+
+    func stand(in standing: inout Body.Standing) {
+        guard case let .at(address, _) = self else { return }
+
+        address.stand(in: &standing)
+    }
+
+    // MARK: - Private
 }

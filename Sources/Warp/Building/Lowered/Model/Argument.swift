@@ -18,9 +18,10 @@ enum Argument: Sendable {
     // A name handed in place, kept as the place rather than as a read of it:
     // a slot taking it in place takes the slot holding it and the path below.
     case reference(Address)
-}
 
-extension Argument {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
     // The argument read as a value, for a slot that does not take it in place.
     var read: Operation {
         switch self {
@@ -31,4 +32,19 @@ extension Argument {
             return .local(address)
         }
     }
+
+    func rewritten(
+        operation: (Operation) throws -> Operation,
+        type: (LoweredType) throws -> LoweredType
+    ) rethrows -> Argument {
+        switch self {
+        case let .value(held):
+            return .value(try held.rewritten(operation: operation, type: type))
+
+        case .reference:
+            return self
+        }
+    }
+
+    // MARK: - Private
 }
