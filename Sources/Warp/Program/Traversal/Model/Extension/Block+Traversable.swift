@@ -7,10 +7,8 @@
 
 import Foundation
 
-extension Block: Traversable {}
-
-public extension Block {
-    func walked<Trail>(
+extension Block: Traversable {
+    public func walked<Trail>(
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Node)] {
