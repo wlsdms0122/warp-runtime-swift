@@ -161,8 +161,8 @@ struct ValidationTests {
         // Given. A document cannot even write one there, and the run would
         // refuse it; a program assembled directly meets the same rule before
         // anything runs. The body a procedure is to run travels as a closure.
-        let arm = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
-        let sut = [
+        let arm: Body = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
+        let sut: Body = [
             Statement(binding: .constant("said"), expression: .call(
                     Call(selector: "app.shout", arguments: [.conditional(.literal(.bool(true)), then: arm, else: nil)])
                 )
@@ -235,11 +235,11 @@ struct ValidationTests {
     @Test("a name is visible only after the statement that introduced it")
     func namesAreVisibleAfterTheirStatement() {
         // Given
-        let forward = [
+        let forward: Body = [
             Statement(binding: .constant("first"), expression: reference("second")),
             Statement(binding: .constant("second"), expression: .literal(.int(1)))
         ]
-        let backward = [
+        let backward: Body = [
             Statement(binding: .constant("first"), expression: .literal(.int(1))),
             Statement(binding: .constant("second"), expression: reference("first"))
         ]
@@ -252,7 +252,7 @@ struct ValidationTests {
     @Test("two statements at one level may not share a name")
     func siblingNamesMustDiffer() {
         // Given
-        let sut = [
+        let sut: Body = [
             Statement(binding: .constant("same"), expression: .literal(.int(1))),
             Statement(binding: .constant("same"), expression: .literal(.int(2)))
         ]

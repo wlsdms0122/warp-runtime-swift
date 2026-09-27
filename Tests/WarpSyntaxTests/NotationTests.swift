@@ -109,7 +109,7 @@ struct NotationTests {
         // Then
         guard
             case let .body(block) = sut.procedures[entryName]?.implementation,
-            case let .conditional(condition, _, _) = block.body.first?.expression
+            case let .conditional(condition, _, _) = block.body.statements.first?.expression
         else {
             Issue.record("a conditional reads a condition")
 
@@ -140,7 +140,7 @@ struct NotationTests {
             case let .array(body)? = written["procedures"]?["entry"]?["body"],
             let condition = body.first?["value"]?["conditional"]?["when"],
             case let .body(block) = read.procedures[entryName]?.implementation,
-            case let .conditional(.record(fields), _, _) = block.body.first?.expression
+            case let .conditional(.record(fields), _, _) = block.body.statements.first?.expression
         else {
             Issue.record("a record written for a notation reads back as a record there")
 
@@ -182,7 +182,7 @@ struct NotationTests {
         // Then. The same record arrived, rather than a message
         guard
             case let .body(block) = read.procedures[entryName]?.implementation,
-            case let .conditional(condition, _, _) = block.body.first?.expression,
+            case let .conditional(condition, _, _) = block.body.statements.first?.expression,
             case let .record(fields) = condition
         else {
             Issue.record("a record written in a condition slot reads back as a record")
@@ -233,7 +233,7 @@ struct NotationTests {
         // Then
         guard
             case let .body(block) = sut.procedures[entryName]?.implementation,
-            case let .call(call) = block.body.first?.expression
+            case let .call(call) = block.body.statements.first?.expression
         else {
             Issue.record("a template is the procedures that put text together")
 
@@ -267,7 +267,7 @@ struct NotationTests {
             guard
                 case let .body(block) = try await sut.loadProcedure(written, from: notation)
                     .procedures[entryName]?.implementation,
-                case let .conditional(condition, _, _) = block.body.first?.expression,
+                case let .conditional(condition, _, _) = block.body.statements.first?.expression,
                 case .cast = condition
             else {
                 Issue.record("`as` is a cast in every notation")
@@ -311,7 +311,7 @@ struct NotationTests {
         }
         guard
             case let .body(block) = module.procedures[entryName]?.implementation,
-            case let .record(fields) = block.body.first?.expression
+            case let .record(fields) = block.body.statements.first?.expression
         else {
             Issue.record("a document read with no notation reads a record as a record")
 

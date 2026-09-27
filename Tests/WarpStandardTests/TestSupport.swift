@@ -121,7 +121,7 @@ func run(
 // What a body answers with, for the tests that care about one value rather
 // than a result map.
 func answer(
-    of body: [Statement],
+    of body: Body,
     result: Warp.Expression,
     beside others: [Name: Procedure] = [:],
     arguments: [Name: Value] = [:],

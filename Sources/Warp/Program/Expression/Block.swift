@@ -15,7 +15,7 @@ import Foundation
 // that says so. Naming the answer costs one line and says which line it is.
 public struct Block: Sendable {
     // MARK: - Property
-    public let body: [Statement]
+    public let body: Body
     public let result: Expression?
 
     // Whether every way through this block leaves. True of the block alone,
@@ -30,7 +30,7 @@ public struct Block: Sendable {
     // MARK: - Initializer
     // A result of null is no result: a document reads `result null` as
     // nothing written, so the model holds the one shape either way.
-    public init(body: [Statement], result: Expression? = nil) {
+    public init(body: Body, result: Expression? = nil) {
         self.body = body
 
         if case .literal(.null)? = result {

@@ -69,7 +69,7 @@ public indirect enum Expression: Sendable {
     // statements alone. What an arm keeps it writes to an outer variable, and a
     // value leaves through `return`. A condition chooses a way through the body,
     // not a value.
-    case conditional(Expression, then: [Statement], else: [Statement]?)
+    case conditional(Expression, then: Body, else: Body?)
     // Repetition carries no budget of its own. Bounding a loop is the author's
     // to write (a counter and `std.control.abort` say it exactly) and stopping
     // one is the receiver's cancellation; a kernel budget would promise neither

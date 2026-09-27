@@ -16,7 +16,7 @@ import Warp
 // not `StatementReader`'s.
 public struct BodyReader: Decodable {
     // MARK: - Property
-    public let statements: [Statement]
+    public let body: Body
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -37,7 +37,7 @@ public struct BodyReader: Decodable {
             )
         }
 
-        self.statements = statements
+        self.body = Body(statements)
     }
 
     // MARK: - Public
@@ -52,7 +52,7 @@ extension Block {
     // `BodyReader`) so the pair rule cannot be forgotten one assembler at a
     // time.
     static func reading(
-        body: [Statement],
+        body: Body,
         result: Expression?,
         at steps: [Place.Step]
     ) throws -> Block {

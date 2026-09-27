@@ -471,7 +471,7 @@ struct ContractTests {
     private func describing(
         types extra: [Name: TypeExpression] = [:],
         procedures added: [Name: Procedure] = [:],
-        body: [Statement],
+        body: Body,
         result: Warp.Expression
     ) throws -> Module {
         try Module(

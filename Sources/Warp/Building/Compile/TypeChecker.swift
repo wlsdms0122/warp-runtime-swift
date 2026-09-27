@@ -147,7 +147,7 @@ struct TypeChecker {
     // The statement walk's answers, named once. The fixpoint hands one back, so
     // its asker and the walk cannot disagree about the type.
     private typealias BodyWalk = (
-        body: [Statement],
+        body: Body,
         calls: [CallSite],
         environment: [Name: Binding],
         reading: LoweredType,
@@ -2562,7 +2562,7 @@ struct TypeChecker {
     // itself, which die with it. Only the box a `set` writes outlives the
     // block. The one statement of the sequence rule, whichever ask is walking.
     private func inspected(
-        _ body: [Statement],
+        _ body: Body,
         at place: Place,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -2571,10 +2571,10 @@ struct TypeChecker {
         var environment = environment
         var locals: Set<Name> = []
         var flowed = Flow()
-        var rewritten: [Statement] = []
+        var rewritten: Body = []
         var calls: [CallSite] = []
 
-        for (position, statement) in body.enumerated() {
+        for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
 
             let inner = try await inspected(
@@ -2618,7 +2618,7 @@ struct TypeChecker {
                     try refuseNeverBinding(at: here, when: ask)
                 }
 
-                if position != body.count - 1 {
+                if position != body.statements.count - 1 {
                     // The leaving statement, not what follows it: what an
                     // author has to change is the one that ends the body, and
                     // the load says the same thing from the same place.

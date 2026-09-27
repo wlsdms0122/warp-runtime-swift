@@ -38,7 +38,7 @@ public struct Procedure: Sendable {
     public let failing: Failing
 
     public var block: Block? { implementation.block }
-    public var body: [Statement] { block?.body ?? [] }
+    public var body: Body { block?.body ?? [] }
     public var result: Expression? { block?.result }
 
     // MARK: - Initializer
@@ -66,7 +66,7 @@ public struct Procedure: Sendable {
         description: String? = nil,
         access: Access = .internal,
         signature: Signature = Signature(),
-        body: [Statement],
+        body: Body,
         result: Expression? = nil
     ) {
         self.init(

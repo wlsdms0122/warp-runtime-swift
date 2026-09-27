@@ -66,7 +66,7 @@ struct ControlFlowTests {
     @Test("what a block binds does not escape it")
     func blockBindingsDoNotEscape() {
         // Given
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .constant("probe"), expression: .block(
                     Block(body: [Statement(binding: .constant("inner"), expression: .literal(.int(1)))])
                 )

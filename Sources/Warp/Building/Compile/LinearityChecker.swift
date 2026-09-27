@@ -101,7 +101,7 @@ struct LinearityChecker {
         func through(_ block: Block, held: Held, guarded: String?) throws -> Held {
             var held = held
 
-            for statement in block.body {
+            for statement in block.body.statements {
                 // A borrowed name written bare is judged here, before the walk,
                 // because the walk refuses one wherever a value leaves by and
                 // a second name for the same borrow is not that.

@@ -29,7 +29,7 @@ struct CallTests {
             body: [],
             result: .record(["said": reference("text")])
         )
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .constant("counted"), expression: .call(
                     Call(selector: "std.collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
                 )

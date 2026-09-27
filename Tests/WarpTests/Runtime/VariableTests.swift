@@ -20,7 +20,7 @@ struct VariableTests {
     @Test("a write inside a block outlives the block")
     func assignmentOutlivesItsBlock() async throws {
         // Given. The one thing a constant binding cannot do
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("verdict"), expression: .literal(.string("untouched"))),
             Statement(
                 expression: .conditional(
@@ -44,7 +44,7 @@ struct VariableTests {
     @Test("a block that did not run writes nothing")
     func untakenBlockWritesNothing() async throws {
         // Given
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("verdict"), expression: .literal(.string("untouched"))),
             Statement(
                 expression: .conditional(
@@ -68,7 +68,7 @@ struct VariableTests {
     @Test("a variable declared inside a block does not escape it")
     func declarationDoesNotEscape() {
         // Given. The box is shared; which names exist is not
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(
                 expression: .conditional(
                     .literal(.bool(true)),
@@ -89,7 +89,7 @@ struct VariableTests {
     func declarationShadowsOuterVariable() async throws {
         // Given. A declaration always introduces, so the inner name has a box
         // of its own
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("verdict"), expression: .literal(.string("outer"))),
             Statement(
                 expression: .conditional(
@@ -113,7 +113,7 @@ struct VariableTests {
     @Test("a variable reads back what was last written to it")
     func variableReadsBackLastWrite() async throws {
         // Given
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("tally"), expression: .literal(.int(1))),
             Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(2))),
             Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(3)))
@@ -130,7 +130,7 @@ struct VariableTests {
     func assignmentReadsItsOwnPriorValue() async throws {
         // Given. The expression is settled before the write lands, which is
         // what makes an accumulator work at all
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("text"), expression: .literal(.string("a"))),
             Statement(binding: .assignment([.key("text")]), expression: interpolated(literal("<"), spelling(reference("text")), literal(">"))
             )
@@ -146,7 +146,7 @@ struct VariableTests {
     @Test("writing a fixed name is refused")
     func writingConstantRefused() {
         // Given
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .constant("verdict"), expression: .literal(.string("first"))),
             Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("second")))
         ]
@@ -158,7 +158,7 @@ struct VariableTests {
     @Test("writing a name nothing declared is refused")
     func writingUndeclaredRefused() {
         // Given
-        let sut = [
+        let sut: Body = [
             Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("x")))
         ]
 
@@ -171,7 +171,7 @@ struct VariableTests {
         // Given. Shadowing runs both ways: an inner constant of the same name
         // is a different, fixed name, and the outer box is not reachable
         // through it
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("verdict"), expression: .literal(.int(1))),
             Statement(binding: .constant("gate"), expression: .block(
                     Block(body: [
@@ -191,7 +191,7 @@ struct VariableTests {
     func closureWritesWhatItCaptured() {
         // Given. A variable's box is one thing under one name everywhere the
         // name is visible, and the closure's body is one of those places
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("tally"), expression: .literal(.int(0))),
             Statement(binding: .constant("later"), expression: .closure(
                     Procedure(
@@ -212,7 +212,7 @@ struct VariableTests {
     @Test("a closure owns the variables it declares")
     func closureOwnsItsVariables() async throws {
         // Given. What is refused is reaching outward, not variables
-        let sut = [
+        let sut: Body = [
             Statement(binding: .constant("both"), expression: .call(
                     Call(
                         selector: "std.concurrent.all",
@@ -240,14 +240,14 @@ struct VariableTests {
         // When. `all` answers `any` by its declaration, so the type the author
         // expects is named before a dot reads it
         let answer = try await answer(
-            of: sut + [
+            of: Body(sut.statements + [
                 Statement(binding: .constant("read"), expression: .cast(
                         reference("both"),
                         as: .record(["left": .int]),
                         optional: false
                     )
                 )
-            ],
+            ]),
             result: reference("read", "left")
         )
 
@@ -259,7 +259,7 @@ struct VariableTests {
     func loopCarriesOnlyVariables() async throws {
         // Given. The round writes a variable declared outside it and binds a
         // constant that must not survive the round
-        let sut: [Statement] = [
+        let sut: Body = [
             Statement(binding: .variable("latest"), expression: .literal(.int(0))),
             Statement(binding: .constant("gate"), expression: .loop(
                     while: differs(reference("round", "index"), .literal(.int(3))),
@@ -277,6 +277,6 @@ struct VariableTests {
 
         // Then. Rounds 0/1/2 ran, and only `latest` came out
         #expect(answer == .int(2))
-        #expect(!validates(body: sut + [Statement(binding: .constant("read"), expression: reference("transient"))]))
+        #expect(!validates(body: Body(sut.statements + [Statement(binding: .constant("read"), expression: reference("transient"))])))
     }
 }

@@ -21,7 +21,7 @@ struct ClosureTests {
     func closureCapturesLexically() async throws {
         // Given. `made` is written where `outer` says "written"; the call site
         // has an `outer` of its own saying something else
-        let sut = [
+        let sut: Body = [
             Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
             Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer")))
             )
@@ -29,11 +29,11 @@ struct ClosureTests {
 
         // When
         let answer = try await answer(
-            of: sut + [
+            of: Body(sut.statements + [
                 Statement(binding: .constant("shadow"), expression: .literal(.string("called"))),
                 Statement(binding: .constant("said"), expression: .apply(reference("made"), arguments: [])
                 )
-            ],
+            ]),
             result: reference("said")
         )
 
@@ -369,7 +369,7 @@ struct ClosureTests {
     @Test("closures travel in arrays and records like any other value")
     func closuresTravelInStructures() async throws {
         // Given
-        let sut = [
+        let sut: Body = [
             Statement(binding: .constant("table"), expression: .record([
                     "yes": .closure(Procedure(body: [], result: .literal(.string("y")))),
                     "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
@@ -389,7 +389,7 @@ struct ClosureTests {
     @Test("calling a value no procedure could be is refused at the build")
     func callingNonProcedureIsRefused() async {
         // Given
-        let sut = [
+        let sut: Body = [
             Statement(binding: .constant("notCallable"), expression: .literal(.int(1))),
             Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: [])
             )

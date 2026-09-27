@@ -205,7 +205,7 @@ public struct Loader: Sendable {
     // no signature of its own, so what comes back still has to reach a link
     // inside something that does.
     public func statements(from value: Value, in notation: Notation = .canonical) throws -> [Statement] {
-        try read(BodyReader.self, from: value, in: .assembled, from: notation).statements
+        try read(BodyReader.self, from: value, in: .assembled, from: notation).body.statements
     }
 
     public func statement(from value: Value, in notation: Notation = .canonical) throws -> Statement {

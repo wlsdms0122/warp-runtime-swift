@@ -495,7 +495,7 @@ struct Lowering {
     // name it binds exists, so a name reads what the statement before it
     // bound.
     private mutating func lower(
-        _ statements: [Statement],
+        _ body: Body,
         in scope: inout Names,
         on slots: Slots,
         label: Name,
@@ -503,7 +503,7 @@ struct Lowering {
     ) throws -> [Instruction] {
         var instructions: [Instruction] = []
 
-        for (position, statement) in statements.enumerated() {
+        for (position, statement) in body.statements.enumerated() {
             let code = try lower(statement.expression, in: scope, on: slots, label: label, at: place)
             let binding: Instruction.Binding?
 
@@ -792,8 +792,8 @@ struct Lowering {
 
     private mutating func lower(
         conditional condition: Expression,
-        then: [Statement],
-        else otherwise: [Statement]?,
+        then: Body,
+        else otherwise: Body?,
         in scope: Names,
         on slots: Slots,
         label: Name,
@@ -805,8 +805,8 @@ struct Lowering {
         return .conditional(
             try lower(condition, in: scope, on: slots, label: label, at: place),
             then: try lower(then, in: &thenScope, on: slots, label: label, at: place),
-            else: try otherwise.map { statements in
-                try lower(statements, in: &elseScope, on: slots, label: label, at: place)
+            else: try otherwise.map { otherwise in
+                try lower(otherwise, in: &elseScope, on: slots, label: label, at: place)
             }
         )
     }

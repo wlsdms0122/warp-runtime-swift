@@ -145,7 +145,7 @@ func run(
 // What a body answers with, for the many tests that care about one value rather
 // than a result map.
 func answer(
-    of body: [Statement],
+    of body: Body,
     result: Warp.Expression,
     beside others: [Name: Procedure] = [:],
     arguments: [Name: Value] = [:],
@@ -169,7 +169,7 @@ func validates(
     validates(body: [Statement(binding: .constant("probe"), expression: expression)], visible: visible)
 }
 
-func validates(body: [Statement], visible: Set<Name> = []) -> Bool {
+func validates(body: Body, visible: Set<Name> = []) -> Bool {
     do {
         try Validator().validate(body: body, visible: visible)
 
@@ -268,7 +268,7 @@ func walking(
     _ material: Path,
     element: Name,
     round: Name = "walk",
-    body: [Statement]
+    body: Body
 ) -> Warp.Expression {
     .loop(
         while: .call(
@@ -281,12 +281,12 @@ func walking(
             )
         ),
         body: Block(
-            body: [
+            body: Body([
                 Statement(
                     binding: .constant(element),
                     expression: .reference(material.appending(contentsOf: [.indexRef([.key(round), .key("index")])]))
                 )
-            ] + body
+            ] + body.statements)
         ),
         round: round
     )

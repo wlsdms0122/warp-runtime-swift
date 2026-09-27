@@ -131,13 +131,13 @@ public extension Writer {
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
                 "when": try value(of: condition),
-                "then": .array(try then.map(value(of:)))
+                "then": .array(try then.statements.map(value(of:)))
             ]
 
             // An empty `else` runs what no `else` runs, so it is written the
             // one way: not at all.
-            if let otherwise, !otherwise.isEmpty {
-                written["else"] = .array(try otherwise.map(value(of:)))
+            if let otherwise, !otherwise.statements.isEmpty {
+                written["else"] = .array(try otherwise.statements.map(value(of:)))
             }
 
             return (try spelling(ConditionalForm.self), .dictionary(written))
@@ -231,8 +231,8 @@ public extension Writer {
     ) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 
-        if form?.requiresBody == true || !block.body.isEmpty {
-            written["body"] = .array(try block.body.map(value(of:)))
+        if form?.requiresBody == true || !block.body.statements.isEmpty {
+            written["body"] = .array(try block.body.statements.map(value(of:)))
         }
 
         if let result = block.result {

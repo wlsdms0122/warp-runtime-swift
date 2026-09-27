@@ -1761,9 +1761,9 @@ struct InferenceTests {
         // walk that stopped counting early would return the head still plain
         // and link a lie.
         let names: [Name] = ["a", "b", "c", "d", "e", "f"]
-        let chain: [Statement] = zip(names, names.dropFirst()).map { name, next in
+        let chain = Body(zip(names, names.dropFirst()).map { name, next in
             Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))
-        } + [Statement(binding: .assignment([.key("f")]), expression: .literal(.null))]
+        } + [Statement(binding: .assignment([.key("f")]), expression: .literal(.null))])
 
         let sut = try Module(
             procedures: [
@@ -1774,7 +1774,7 @@ struct InferenceTests {
                             Parameter(name: "ready", type: .bool)
                         ]
                     ),
-                    body: names.map { name in
+                    body: Body(names.map { name in
                         Statement(binding: .variable(name), expression: .literal(.string("s")))
                     } + [
                         Statement(binding: .constant("spin"), expression: .loop(
@@ -1788,7 +1788,7 @@ struct InferenceTests {
                             arguments: [.reference([.key("a")])]
                         ))
                         )
-                    ]
+                    ])
                 ),
                 "wants": Procedure(
                     signature: Signature(

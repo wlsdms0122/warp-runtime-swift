@@ -1240,7 +1240,7 @@ struct LinearTests {
         // through unless the body ends on its own end too. This arm closes the
         // handle and then ends the body; the arm beside it still holds one, so
         // whether the two are asked to agree is what the propagation decides
-        func body(rescueEnds: Bool) async -> [Statement] {
+        func body(rescueEnds: Bool) async -> Body {
             let ending = Statement(
                 binding: .none,
                 expression: .leave(Leave(reach: .procedure, value: .literal(.null)))
@@ -1559,7 +1559,7 @@ struct LinearTests {
     // A handle that must be closed, a procedure that makes one, a procedure that takes
     // one, and a procedure that only looks.
     private func holding(
-        body: [Statement],
+        body: Body,
         result: Warp.Expression,
         constraints: [Name: [TypeExpression]] = [:],
         taking parameters: [Parameter] = [],

@@ -173,7 +173,7 @@ struct LoweringTests {
     func aLoopKeepsOnlyWhereTheResultCouldTell() async throws {
         // Given. One loop whose result reads a body name; another whose result
         // reads nothing the body bound
-        func loop(_ body: [Statement], result: Warp.Expression?) -> Warp.Expression {
+        func loop(_ body: Body, result: Warp.Expression?) -> Warp.Expression {
             .loop(
                 while: .call(Call(
                     selector: "std.math.lessThan",

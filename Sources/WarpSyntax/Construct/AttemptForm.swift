@@ -36,7 +36,7 @@ public struct AttemptForm: ConstructForm {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "attempt")
 
         self.attempted = try .reading(
-            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).statements,
+            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body,
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?
                 .read(ExpressionReader.self)
                 .expression,
@@ -46,7 +46,7 @@ public struct AttemptForm: ConstructForm {
 
         // An empty rescue would swallow a failure into null without a trace. If
         // the alternate path produces nothing, the honest form is no attempt.
-        guard !rescue.body.isEmpty || rescue.result != nil else {
+        guard !rescue.body.statements.isEmpty || rescue.result != nil else {
             throw ReadingError(
                 "attempt `rescue` must not be empty",
                 at: decoder.steps

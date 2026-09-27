@@ -316,9 +316,9 @@ struct WriterTests {
         guard
             case let .array(body)? = written["procedures"]?["entry"]?["body"],
             case let .body(block) = read.procedures["entry"]?.implementation,
-            block.body.count == 2,
-            case let .record(payload) = block.body[0].expression,
-            case let .record(held) = block.body[1].expression
+            block.body.statements.count == 2,
+            case let .record(payload) = block.body.statements[0].expression,
+            case let .record(held) = block.body.statements[1].expression
         else {
             Issue.record("a record written under `record` reads back as a record")
 

@@ -35,11 +35,11 @@ struct Derivation {
         // A body in order. Each statement is judged against what was declared
         // before it, and a variable it introduces is declared for the rest.
         private func holds(
-            _ body: [Statement],
+            _ body: Body,
             declared: inout Set<Name>,
             applying procedures: inout Set<Name>
         ) -> Bool {
-            for statement in body {
+            for statement in body.statements {
                 switch statement.binding {
                 case let .assignment(path)?:
                     guard let head = path.head, declared.contains(head) else { return false }
@@ -84,7 +84,7 @@ struct Derivation {
         }
 
         private func holds(
-            _ body: [Statement],
+            _ body: Body,
             declared: Set<Name>,
             applying procedures: Set<Name>
         ) -> Bool {
@@ -280,15 +280,15 @@ struct Derivation {
     // What may come out of a block: everything its statements and its result
     // may fail with.
     func failing(_ block: Block, given failing: (Name) -> Failing?) -> Failing {
-        block.body
+        block.body.statements
             .reduce(Failing.these([])) { carried, statement in
                 carried.joined(self.failing(statement.expression, given: failing))
             }
             .joined(block.result.map { result in self.failing(result, given: failing) } ?? .these([]))
     }
 
-    func failing(_ body: [Statement], given failing: (Name) -> Failing?) -> Failing {
-        body.reduce(Failing.these([])) { carried, statement in
+    func failing(_ body: Body, given failing: (Name) -> Failing?) -> Failing {
+        body.statements.reduce(Failing.these([])) { carried, statement in
             carried.joined(self.failing(statement.expression, given: failing))
         }
     }
@@ -370,7 +370,7 @@ struct Derivation {
         var declared = names
         var procedures = procedures
 
-        for statement in block.body {
+        for statement in block.body.statements {
             guard
                 isConst(statement.binding, declaring: declared),
                 isConst(statement.expression, declaring: declared, given: const, reading: variables, applying: procedures, taking: asked)
@@ -412,8 +412,8 @@ struct Derivation {
             self.isConst(inner, declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
         }
 
-        func isConst(_ statements: [Statement]) -> Bool {
-            self.isConst(Block(body: statements), declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
+        func isConst(_ body: Body) -> Bool {
+            self.isConst(Block(body: body), declaring: names, given: const, reading: variables, applying: procedures, taking: asked)
         }
 
         switch expression {

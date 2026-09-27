@@ -24,7 +24,7 @@ public struct Validator: Sendable {
     // The door for a caller holding statements it assembled itself, without a
     // document: the same gate the load path passes, against the heads visible
     // where the body will run.
-    public func validate(body: [Statement], visible: Set<Name>) throws {
+    public func validate(body: Body, visible: Set<Name>) throws {
         try validate(body, visible: visible, at: .given("lowered"))
     }
 
@@ -234,7 +234,7 @@ public struct Validator: Sendable {
     // sees both.
     @discardableResult
     private func validate(
-        _ body: [Statement],
+        _ body: Body,
         visible startVisible: Set<Name>,
         variables startVariables: Set<Name> = [],
         declared startDeclared: Set<Name> = [],
@@ -245,7 +245,7 @@ public struct Validator: Sendable {
         var variables = startVariables
         var declared = startDeclared
 
-        for (position, statement) in body.enumerated() {
+        for (position, statement) in body.statements.enumerated() {
             // A statement is its name and the construct it writes under. Both,
             // because a document writes both and following one at a time is
             // what a place is for.
@@ -306,7 +306,7 @@ public struct Validator: Sendable {
                 }
             }
 
-            if statement.expression.alwaysLeaves, position != body.count - 1 {
+            if statement.expression.alwaysLeaves, position != body.statements.count - 1 {
                 throw ValidationError(
                     "every way through this"
                         + " statement leaves, and what follows it here"
@@ -539,7 +539,7 @@ public struct Validator: Sendable {
                 at: place
             )
 
-            guard !rescue.body.isEmpty || rescue.result != nil else {
+            guard !rescue.body.statements.isEmpty || rescue.result != nil else {
                 // An empty rescue would swallow a failure into null without a
                 // trace. If the alternate path produces nothing, the author's
                 // honest form is no rescue at all.

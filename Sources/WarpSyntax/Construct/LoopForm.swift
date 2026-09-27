@@ -34,7 +34,7 @@ public struct LoopForm: ConstructForm {
 
         self.condition = try decoder.descending(to: CodingKeys.while).read(ExpressionReader.self).expression
         self.body = try .reading(
-            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).statements,
+            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body,
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?
                 .read(ExpressionReader.self)
                 .expression,
