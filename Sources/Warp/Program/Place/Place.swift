@@ -26,6 +26,171 @@ import Foundation
 // document's keys would lead it anywhere. A reading in a document's keys is
 // the reading side's, and a reading in lines and columns is the front end's.
 public struct Place: Sendable, Equatable {
+    // Which document a place is an address in.
+    public struct Document: Sendable, Equatable {
+        // Which text this is. Nil where the program was never written down (a
+        // caller that built it in memory) and that is the whole of what nil
+        // means here: there is no file for a reader to be pointed back into.
+        public let identity: Identity?
+
+        // A program nobody wrote down, which is what a caller holding a body it
+        // assembled has. Spelled out rather than left to a default, so that a
+        // place meaning to say which text it is in cannot get this one by
+        // saying nothing.
+        public static let assembled = Document(identity: nil)
+
+        public init(identity: Identity?) {
+            self.identity = identity
+        }
+
+        public static func of(_ module: Module) -> Document {
+            Document(identity: module.identity)
+        }
+
+        // How the document reads on its own. An identity tells one document
+        // from every other in a link, since a link refuses the same one twice.
+        var rendered: String? {
+            identity?.short
+        }
+
+        // What a sentence calls this document when it names one among several.
+        // Without an identity there is only where the caller put it: the
+        // caller counts its own modules, in the order it handed them over.
+        func spelled(at origin: Int) -> String {
+            rendered ?? "the module at \(origin) in this link"
+        }
+    }
+
+    // Every part a program has, by the language's own name for it. A part is
+    // where something sits in the structure of a program; the boundary's `Slot` is
+    // what a call fills, and the two are named apart because they are two
+    // things. No spelling rides along: what a document writes a part under is
+    // the reading side's, and a procedure declared in two places is a procedure the two
+    // can come to disagree about with nothing going wrong loudly enough to
+    // notice.
+    //
+    // One case per part and not per key. A conditional and a loop both hold a
+    // condition; that a document writes the two under different keys is a fact
+    // about the document.
+    public enum Part: Sendable, Equatable {
+        case procedures
+        case constants
+        case variables
+        case types
+        case constraints
+        case contracts
+        case satisfies
+        case imports
+
+        case parameters
+        case returns
+        case body
+        case result
+
+        // What a cast reads, and whether the cast reads a mismatch as null,
+        // which a document writes under a key of its own.
+        case subject(optional: Bool)
+        case callee
+        case arguments
+        case closure
+
+        // What a record is written with: its fields, each under its name.
+        case fields
+
+        // A condition, and which construct holds it. The construct is carried
+        // because a document does not write the two under one key (a
+        // conditional asks `when` and a loop asks `while`) and a part that had
+        // to be told by whatever step came before it is a part that can be
+        // reached from somewhere nobody remembered to tell.
+        //
+        // Only what can hold one, so a side spelling this has nothing to
+        // guess at and a construct added later cannot be spelled by a default
+        // arm that nobody looked at.
+        case condition(of: ConditionHolder)
+        case then
+        case otherwise
+        case rescue
+
+        // What the language calls this part.
+        var rendered: String {
+            switch self {
+            case .procedures: "procedures"
+            case .constants: "constants"
+            case .variables: "variables"
+            case .types: "types"
+            case .constraints: "constraints"
+            case .contracts: "contracts"
+            case .satisfies: "satisfies"
+            case .imports: "imports"
+            case .parameters: "parameters"
+            case .returns: "returns"
+            case .body: "body"
+            case .result: "result"
+            case .subject: "subject"
+            case .fields: "fields"
+            case .callee: "callee"
+            case .arguments: "arguments"
+            case .closure: "closure"
+            case .condition: "condition"
+            case .then: "then"
+            case .otherwise: "otherwise"
+            case .rescue: "rescue"
+            }
+        }
+    }
+
+    // A construct that holds a condition. Two of them, and a third would be a
+    // third here, which is the point: whoever spells a condition for a document
+    // is asked about every one of these by name.
+    public enum ConditionHolder: Sendable, Equatable {
+        case conditional
+        case loop
+    }
+
+    // What one step of a place is. The cases divide on who chose the procedure,
+    // because that is the division a reader that maps a place back to a file
+    // has to make.
+    public enum Step: Sendable, Equatable {
+        // A name the document itself writes: a procedure's, a field's, an
+        // argument's. The author typed it, so it is carried as it was typed.
+        case key(String)
+
+        // A part of the program, which every side names for itself. Carried as
+        // the part and not as a spelling, so the side spelling it is the side that
+        // knows what its reader is looking at.
+        case part(Part)
+
+        // The type a statement writes, carried the same way and for the same
+        // reason: two texts spelling one type two ways arrive as one type.
+        case construct(Construct)
+
+        // A position in an array the document writes.
+        case index(Int)
+
+        // A statement, which a document writes as an array element and an
+        // author knows by the name it fixes. Both are carried: the name is what
+        // a person looks for, and the position is what finds it. The name alone
+        // finds nothing when a `var` and the `set` writing it share one.
+        case statement(name: String?, at: Int)
+
+        // A body a caller assembled and handed over, which has no document
+        // under it to have a key in. It renders like a key on purpose, since a
+        // person reading a line wants a line. What tells the two apart is this
+        // case, for the reader that has to know which of the procedures it may look
+        // for in a file.
+        case landmark(String)
+
+        // A statement step, with a name written empty read as no name.
+        //
+        // The rule is on the case rather than beside each caller: a step
+        // rendering an empty name puts a dot in front of nothing, and every
+        // stage that spells a statement (reading a document, validating a
+        // module, linking one) makes this step from a name it did not write.
+        public static func statement(_ name: String?, at position: Int) -> Step {
+            .statement(name: name?.isEmpty == true ? nil : name, at: position)
+        }
+    }
+
     // MARK: - Property
     // Which document the steps are in. A declared spelling is unique across a
     // link, so steps that reach a declaration already say which one; what
@@ -186,171 +351,4 @@ public struct Place: Sendable, Equatable {
     }
 
     // MARK: - Private
-}
-
-public extension Place {
-    // Which document a place is an address in.
-    struct Document: Sendable, Equatable {
-        // Which text this is. Nil where the program was never written down (a
-        // caller that built it in memory) and that is the whole of what nil
-        // means here: there is no file for a reader to be pointed back into.
-        public let identity: Identity?
-
-        // A program nobody wrote down, which is what a caller holding a body it
-        // assembled has. Spelled out rather than left to a default, so that a
-        // place meaning to say which text it is in cannot get this one by
-        // saying nothing.
-        public static let assembled = Document(identity: nil)
-
-        public init(identity: Identity?) {
-            self.identity = identity
-        }
-
-        public static func of(_ module: Module) -> Document {
-            Document(identity: module.identity)
-        }
-
-        // How the document reads on its own. An identity tells one document
-        // from every other in a link, since a link refuses the same one twice.
-        var rendered: String? {
-            identity?.short
-        }
-
-        // What a sentence calls this document when it names one among several.
-        // Without an identity there is only where the caller put it: the
-        // caller counts its own modules, in the order it handed them over.
-        func spelled(at origin: Int) -> String {
-            rendered ?? "the module at \(origin) in this link"
-        }
-    }
-
-    // Every part a program has, by the language's own name for it. A part is
-    // where something sits in the structure of a program; the boundary's `Slot` is
-    // what a call fills, and the two are named apart because they are two
-    // things. No spelling rides along: what a document writes a part under is
-    // the reading side's, and a procedure declared in two places is a procedure the two
-    // can come to disagree about with nothing going wrong loudly enough to
-    // notice.
-    //
-    // One case per part and not per key. A conditional and a loop both hold a
-    // condition; that a document writes the two under different keys is a fact
-    // about the document.
-    enum Part: Sendable, Equatable {
-        case procedures
-        case constants
-        case variables
-        case types
-        case constraints
-        case contracts
-        case satisfies
-        case imports
-
-        case parameters
-        case returns
-        case body
-        case result
-
-        // What a cast reads, and whether the cast reads a mismatch as null,
-        // which a document writes under a key of its own.
-        case subject(optional: Bool)
-        case callee
-        case arguments
-        case closure
-
-        // What a record is written with: its fields, each under its name.
-        case fields
-
-        // A condition, and which construct holds it. The construct is carried
-        // because a document does not write the two under one key (a
-        // conditional asks `when` and a loop asks `while`) and a part that had
-        // to be told by whatever step came before it is a part that can be
-        // reached from somewhere nobody remembered to tell.
-        //
-        // Only what can hold one, so a side spelling this has nothing to
-        // guess at and a construct added later cannot be spelled by a default
-        // arm that nobody looked at.
-        case condition(of: ConditionHolder)
-        case then
-        case otherwise
-        case rescue
-
-        // What the language calls this part.
-        var rendered: String {
-            switch self {
-            case .procedures: "procedures"
-            case .constants: "constants"
-            case .variables: "variables"
-            case .types: "types"
-            case .constraints: "constraints"
-            case .contracts: "contracts"
-            case .satisfies: "satisfies"
-            case .imports: "imports"
-            case .parameters: "parameters"
-            case .returns: "returns"
-            case .body: "body"
-            case .result: "result"
-            case .subject: "subject"
-            case .fields: "fields"
-            case .callee: "callee"
-            case .arguments: "arguments"
-            case .closure: "closure"
-            case .condition: "condition"
-            case .then: "then"
-            case .otherwise: "otherwise"
-            case .rescue: "rescue"
-            }
-        }
-    }
-
-    // A construct that holds a condition. Two of them, and a third would be a
-    // third here, which is the point: whoever spells a condition for a document
-    // is asked about every one of these by name.
-    enum ConditionHolder: Sendable, Equatable {
-        case conditional
-        case loop
-    }
-
-    // What one step of a place is. The cases divide on who chose the procedure,
-    // because that is the division a reader that maps a place back to a file
-    // has to make.
-    enum Step: Sendable, Equatable {
-        // A name the document itself writes: a procedure's, a field's, an
-        // argument's. The author typed it, so it is carried as it was typed.
-        case key(String)
-
-        // A part of the program, which every side names for itself. Carried as
-        // the part and not as a spelling, so the side spelling it is the side that
-        // knows what its reader is looking at.
-        case part(Part)
-
-        // The type a statement writes, carried the same way and for the same
-        // reason: two texts spelling one type two ways arrive as one type.
-        case construct(Construct)
-
-        // A position in an array the document writes.
-        case index(Int)
-
-        // A statement, which a document writes as an array element and an
-        // author knows by the name it fixes. Both are carried: the name is what
-        // a person looks for, and the position is what finds it. The name alone
-        // finds nothing when a `var` and the `set` writing it share one.
-        case statement(name: String?, at: Int)
-
-        // A body a caller assembled and handed over, which has no document
-        // under it to have a key in. It renders like a key on purpose, since a
-        // person reading a line wants a line. What tells the two apart is this
-        // case, for the reader that has to know which of the procedures it may look
-        // for in a file.
-        case landmark(String)
-
-        // A statement step, with a name written empty read as no name.
-        //
-        // The rule is on the case rather than beside each caller: a step
-        // rendering an empty name puts a dot in front of nothing, and every
-        // stage that spells a statement (reading a document, validating a
-        // module, linking one) makes this step from a name it did not write.
-        public static func statement(_ name: String?, at position: Int) -> Step {
-            .statement(name: name?.isEmpty == true ? nil : name, at: position)
-        }
-    }
 }
