@@ -75,7 +75,7 @@ struct FailForm: ConstructForm {
 }
 
 
-func path(_ text: String) -> [PathSegment] {
+func path(_ text: String) -> Path {
     try! TemplateParser().parseRefPath(text)
 }
 

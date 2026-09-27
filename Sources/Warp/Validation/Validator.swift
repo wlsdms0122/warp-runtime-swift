@@ -693,7 +693,7 @@ public struct Validator: Sendable {
     }
 
     private func validate(
-        paths: [[PathSegment]],
+        paths: [Path],
         visible: Set<Name>,
         at place: Place
     ) throws {

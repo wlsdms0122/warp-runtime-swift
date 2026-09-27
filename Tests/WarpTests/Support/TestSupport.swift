@@ -79,7 +79,7 @@ func mayFail(_ name: Name = "checked") -> Statement {
 // A reference from segment names, written directly. A path is what the language
 // has, and the spelling belongs to whatever produced it.
 func reference(_ names: Name...) -> Warp.Expression {
-    .reference(names.map { name in .key(name) })
+    .reference(Path(names.map { name in .key(name) }))
 }
 
 // MARK: - Running
@@ -265,7 +265,7 @@ struct ShoutEffect: Effect {
 // the type a notation spells `each` with: the round's index against the
 // material's count, and the element read at that index.
 func walking(
-    _ material: [PathSegment],
+    _ material: Path,
     element: Name,
     round: Name = "walk",
     body: [Statement]
@@ -284,7 +284,7 @@ func walking(
             body: [
                 Statement(
                     binding: .constant(element),
-                    expression: .reference(material + [.indexRef([.key(round), .key("index")])])
+                    expression: .reference(material.appending(contentsOf: [.indexRef([.key(round), .key("index")])]))
                 )
             ] + body
         ),
@@ -394,7 +394,7 @@ enum Lookup: Equatable {
 }
 
 extension Folding {
-    func lookup(_ path: [PathSegment]) async -> Lookup {
+    func lookup(_ path: Path) async -> Lookup {
         do {
             return .found(try await read(path, at: .given("test")))
         } catch let unfit as ReferenceUnfit {

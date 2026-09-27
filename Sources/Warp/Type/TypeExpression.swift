@@ -172,7 +172,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // The path is segments and not their spelling for the same reason: `.a`
     // and `?.a` land on one field, and a spelling would make them two unknowns
     // that never meet.
-    case reading(of: Name, path: [PathSegment])
+    case reading(of: Name, path: Path)
 
     // MARK: - Property
     // The types the language names, by the spelling a document writes each
@@ -261,7 +261,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         // writes this, so the spelling answers to the message alone: an author
         // reading a refusal about `item.a` should see where it came from.
         case let .reading(of, path):
-            return "some \(([PathSegment.key(of)] + path).rendered)"
+            return "some \(Path([.key(of)] + path.segments).rendered)"
 
         case let .variable(inner):
             return "var \(inner.rendered)"

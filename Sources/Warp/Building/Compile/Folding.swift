@@ -148,10 +148,10 @@ struct Folding {
     // bound here, and indexed by nothing still a reference. Asked of a path
     // whose index references have been folded, so one still a reference is
     // one only a run settles.
-    func settled(_ path: [PathSegment]) -> Name? {
-        guard case let .key(head, _)? = path.first, holds(head) else { return nil }
+    func settled(_ path: Path) -> Name? {
+        guard let head = path.head, holds(head) else { return nil }
 
-        let indexedByTheRun = path.contains { segment in
+        let indexedByTheRun = path.segments.contains { segment in
             if case .indexRef = segment { return true }
 
             return false
@@ -161,7 +161,7 @@ struct Folding {
     }
 
     // What a path reads here.
-    func read(_ path: [PathSegment], at place: Place) async throws -> Value {
+    func read(_ path: Path, at place: Place) async throws -> Value {
         try await read(.reference(path), at: place)
     }
 

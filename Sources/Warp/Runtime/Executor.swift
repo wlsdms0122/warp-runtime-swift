@@ -974,7 +974,7 @@ public struct Executor: Sendable {
         for (index, step) in steps.enumerated() {
             // The path as far as this step, spelled for a refusal. Only a
             // refusal reads it, so a read that lands spells nothing.
-            func walked() -> [PathSegment] {
+            func walked() -> Path {
                 spelled(Address(slot: slot, steps: Array(steps[...index])), in: activation)
             }
 
@@ -1093,7 +1093,7 @@ public struct Executor: Sendable {
     // elements: the projection owns the `array<byte>` equation, lazily, so
     // one element read does not unpack a compact spelling. Past the end is a
     // defect, not absence: the array is there and says how long it is.
-    private func indexed(_ current: Value, at index: Int, walked: () -> [PathSegment]) -> Walk {
+    private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {
         guard let elements = current.elements else {
             return .unfit("\(walked().rendered) indexes into \(current.type), expected array")
         }
@@ -1113,7 +1113,7 @@ public struct Executor: Sendable {
         _ current: Value,
         at key: String,
         optional: Bool,
-        walked: () -> [PathSegment],
+        walked: () -> Path,
         segment: () -> PathSegment
     ) -> Walk {
         guard current.holdsFields else {
@@ -1166,8 +1166,8 @@ public struct Executor: Sendable {
     }
 
     // The path as the author wrote it, for a sentence that reads it back.
-    private func spelled(_ address: Address, in activation: Activation) -> [PathSegment] {
-        [.key(activation.frame.names[address.slot])] + spelled(address.steps, in: activation)
+    private func spelled(_ address: Address, in activation: Activation) -> Path {
+        Path([.key(activation.frame.names[address.slot])] + spelled(address.steps, in: activation))
     }
 
     private func spelled(_ steps: [Step], in activation: Activation) -> [PathSegment] {

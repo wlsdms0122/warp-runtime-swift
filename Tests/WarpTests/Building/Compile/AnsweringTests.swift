@@ -207,7 +207,7 @@ struct AnsweringTests {
         // itself: the parameter is a slot the signature declares and the call
         // fills it, and what a walk *through* a parameter reached is named for
         // a path only that body can read, which nothing fills.
-        func module(reading path: [PathSegment], answering answer: [PathSegment]) async throws -> Module {
+        func module(reading path: Path, answering answer: Path) async throws -> Module {
             try Module(
                 procedures: [
                     "peek": Procedure(

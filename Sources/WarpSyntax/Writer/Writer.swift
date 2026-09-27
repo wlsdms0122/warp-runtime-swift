@@ -224,7 +224,7 @@ public struct Writer: Sendable {
         // written as something else.
         case let .reading(of, path):
             throw WritingError(
-                "`some \(([PathSegment.key(of)] + path).rendered)` is a type"
+                "`some \(Path([.key(of)] + path.segments).rendered)` is a type"
                     + " the build read out of a body,"
                     + " and no document writes one. A declaration says what a call"
                     + " fills"

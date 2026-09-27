@@ -80,7 +80,7 @@ struct Derivation {
             guard case let .reference(path) = expression, let head = path.head else { return false }
 
             return procedures.contains(head)
-                && path.dropFirst().allSatisfy { segment in segment.named == nil }
+                && path.segments.dropFirst().allSatisfy { segment in segment.named == nil }
         }
 
         private func holds(
@@ -576,7 +576,7 @@ struct Derivation {
         guard case let .reference(path) = expression, let head = path.head else { return false }
 
         return procedures.contains(head)
-            && path.dropFirst().allSatisfy { segment in segment.named == nil }
+            && path.segments.dropFirst().allSatisfy { segment in segment.named == nil }
     }
 
     // What a binding reaches. Introducing a name reaches nothing; writing one

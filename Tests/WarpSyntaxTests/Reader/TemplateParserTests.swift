@@ -70,7 +70,7 @@ struct TemplateParserTests {
                 == [.key("a"), .key("b"), .key("c", optional: true), .index(0), .key("d", optional: true)]
         )
 
-        #expect([PathSegment.key("task"), .key("name", optional: true)].rendered == "task?.name")
+        #expect(Path([.key("task"), .key("name", optional: true)]).rendered == "task?.name")
 
         // A space before the `?` belongs to nobody. The name comes out trimmed,
         // the way every other segment does.
@@ -102,9 +102,9 @@ struct TemplateParserTests {
         // absence nothing stands before. Refused the way `?.` is there.
         #expect(throws: TemplateSyntaxError.self) { try sut.parseRefPath("?[0]") }
 
-        #expect([PathSegment.key("items"), .index(0, optional: true)].rendered == "items?[0]")
+        #expect(Path([.key("items"), .index(0, optional: true)]).rendered == "items?[0]")
         #expect(
-            [PathSegment.key("a"), .indexRef([.key("i")], optional: true)].rendered == "a?[i]"
+            Path([.key("a"), .indexRef([.key("i")], optional: true)]).rendered == "a?[i]"
         )
     }
 

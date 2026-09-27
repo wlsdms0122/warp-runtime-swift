@@ -86,7 +86,7 @@ indirect enum LoweredType: Sendable {
     // walked from it, so two walks landing on one field land on one type.
     // Nothing is proven about what it holds, so every judgment answers it the
     // way it answers `any`; it stands apart for the walk's own naming.
-    case reading(of: Name, path: [PathSegment])
+    case reading(of: Name, path: Path)
 
     // A name the table does not answer, and why. Nothing can be said about
     // it, so every judgment over readings lets it pass, and the value judge
@@ -192,13 +192,13 @@ indirect enum LoweredType: Sendable {
     //
     // The marks come off on the way in: what a mark says is expected of the
     // value, and where the walk landed is the same field either way.
-    func reaching(_ path: [PathSegment]) -> LoweredType? {
+    func reaching(_ path: Path) -> LoweredType? {
         switch self {
         case let .parameter(name, _):
-            return .reading(of: name, path: path.map(\.unmarked))
+            return .reading(of: name, path: path.unmarked)
 
         case let .reading(of, walked):
-            return .reading(of: of, path: walked + path.map(\.unmarked))
+            return .reading(of: of, path: walked.appending(contentsOf: path.unmarked.segments))
 
         default:
             return nil
@@ -1235,7 +1235,7 @@ indirect enum LoweredType: Sendable {
         // writes this, so the spelling answers to the message alone, and an
         // author reading a refusal about `item.a` sees where it came from.
         case let .reading(of, path):
-            return "some \(([PathSegment.key(of)] + path).rendered)"
+            return "some \(Path([.key(of)] + path.segments).rendered)"
 
         case .never:
             return "never"

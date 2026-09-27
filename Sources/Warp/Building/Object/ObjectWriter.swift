@@ -245,7 +245,7 @@ struct ObjectWriter {
             return .array([.int(19), name(spelling), .array(constraints.sorted().map(name))])
 
         case let .reading(of: read, path: path):
-            return .array([.int(21), name(read), .array(path.map(segment))])
+            return .array([.int(21), name(read), self.path(path)])
 
         case let .composition(names):
             return .array([.int(20), .array(names.sorted().map(name))])
@@ -283,6 +283,10 @@ struct ObjectWriter {
         }
     }
 
+    private func path(_ path: Path) -> Value {
+        .array(path.segments.map(segment))
+    }
+
     private func segment(_ segment: PathSegment) -> Value {
         switch segment {
         case let .key(spelling, optional):
@@ -292,7 +296,7 @@ struct ObjectWriter {
             return .array([.int(1), .int(index), .bool(optional)])
 
         case let .indexRef(path, optional):
-            return .array([.int(2), .array(path.map(self.segment)), .bool(optional)])
+            return .array([.int(2), self.path(path), .bool(optional)])
         }
     }
 
@@ -521,7 +525,7 @@ private extension ObjectWriter {
             return .array([.int(17), .array(bounds.sorted().map(bound))])
 
         case let .reading(of: read, path: path):
-            return .array([.int(18), name(read), .array(path.map(segment))])
+            return .array([.int(18), name(read), self.path(path)])
 
         case let .undeclared(label, because):
             return .array([.int(19), .string(label), undeclared(because)])

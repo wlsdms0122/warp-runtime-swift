@@ -9,7 +9,7 @@ import Foundation
 
 public struct ReferenceUnfit: WarpError {
     // MARK: - Property
-    public let path: [PathSegment]
+    public let path: Path
     public let reason: String
 
     public var message: String {
@@ -19,7 +19,7 @@ public struct ReferenceUnfit: WarpError {
     public let trace: Trace?
 
     // MARK: - Initializer
-    public init(path: [PathSegment], reason: String, trace: Trace? = nil) {
+    public init(path: Path, reason: String, trace: Trace? = nil) {
         self.path = path
         self.reason = reason
         self.trace = trace

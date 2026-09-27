@@ -12,7 +12,7 @@ import Foundation
 // Swift's own literals already spell seven of the eight kinds, and each maps
 // to exactly one case, so this is a spelling and not a conversion. `"a"` is
 // `.string("a")` for the same reason `"a"` is a `String`. Nothing here reads
-// structure out of a string: a path is still `[PathSegment]` and a reference is
+// structure out of a string: a path is still a `Path` and a reference is
 // still an `Expression`, because the language does not re-parse text into
 // anything live and a convenience is not a reason to start.
 //

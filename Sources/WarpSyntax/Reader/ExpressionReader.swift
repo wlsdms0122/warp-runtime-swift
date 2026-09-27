@@ -454,7 +454,7 @@ public struct ExpressionReader: Decodable {
     // the one thing a closed template must never do, and which `validateClosed`
     // has already made the author declare a binding for.
     private static func substituted(
-        _ path: [PathSegment],
+        _ path: Path,
         over bindings: [Name: Expression]
     ) throws -> Expression {
         guard let head = path.head, let bound = bindings[head] else {
@@ -464,7 +464,7 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        let rest = try Array(path.dropFirst()).map { segment in
+        let rest = try path.segments.dropFirst().map { segment in
             try closing(segment, over: bindings)
         }
 
@@ -480,7 +480,7 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        return .reference(prefix + rest)
+        return .reference(prefix.appending(contentsOf: rest))
     }
 
     // A segment with any path inside it closed over the same bindings. Only an

@@ -545,7 +545,7 @@ public indirect enum Value: Sendable, Equatable {
 
         default:
             throw ExecutionError(
-                "'\(rendered)' reads \([step.spelled].rendered) of \(type), which has no such part"
+                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(type), which has no such part"
             )
         }
     }
@@ -593,13 +593,13 @@ public indirect enum Value: Sendable, Equatable {
 
         case (.null, _):
             throw ExecutionError(
-                "'\(rendered)' writes through \([step.spelled].rendered), which holds nothing yet."
+                "'\(rendered)' writes through \(Path([step.spelled]).rendered), which holds nothing yet."
                     + " Write the whole entry first"
             )
 
         default:
             throw ExecutionError(
-                "'\(rendered)' writes \([step.spelled].rendered) into \(type), which has no such part"
+                "'\(rendered)' writes \(Path([step.spelled]).rendered) into \(type), which has no such part"
             )
         }
     }

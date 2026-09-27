@@ -28,7 +28,7 @@ public struct Statement: Sendable {
     public enum Binding: Sendable, Equatable {
         case constant(Name, declared: TypeExpression? = nil)
         case variable(Name, declared: TypeExpression? = nil)
-        case assignment([PathSegment])
+        case assignment(Path)
 
         // The name a statement introduces, where it introduces one. A write
         // introduces nothing.

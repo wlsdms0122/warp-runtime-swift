@@ -326,7 +326,7 @@ private extension ObjectReader {
         case 21:
             read = .reading(
                 of: try name(fields.next()),
-                path: try Fields.list(fields.next(), of: "path", segment)
+                path: try path(fields.next())
             )
 
         case 20:
@@ -407,6 +407,10 @@ private extension ObjectReader {
         try Fields.text(value, of: "a text")
     }
 
+    func path(_ value: Value) throws -> Path {
+        Path(try Fields.list(value, of: "path", segment))
+    }
+
     func segment(_ value: Value) throws -> PathSegment {
         var fields = try Fields(value, of: "path segment")
         let read: PathSegment
@@ -416,7 +420,7 @@ private extension ObjectReader {
         case 1: read = .index(try fields.integer(), optional: try fields.flag())
         case 2:
             read = .indexRef(
-                try Fields.list(fields.next(), of: "path", segment),
+                try path(fields.next()),
                 optional: try fields.flag()
             )
 
@@ -692,7 +696,7 @@ private extension ObjectReader {
         case 18:
             read = .reading(
                 of: try name(fields.next()),
-                path: try Fields.list(fields.next(), of: "path", segment)
+                path: try path(fields.next())
             )
 
         case 19: read = .undeclared(label: try fields.text(), because: try undeclared(fields.next()))

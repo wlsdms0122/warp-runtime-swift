@@ -132,7 +132,7 @@ struct LinearityChecker {
                 // A write puts something else in the box, so what was there is
                 // gone without having been handed on.
                 case let .assignment(path)?:
-                    guard let head = path.head, held.live.contains(head), path.count == 1 else { continue }
+                    guard let head = path.head, held.live.contains(head), path.segments.count == 1 else { continue }
 
                     throw refusal("writes over '\(head)', which it is still holding")
 
@@ -179,7 +179,7 @@ struct LinearityChecker {
             // A bare name is the value itself, so reading it is handing it on.
             // A path below the name reads a part of it and hands nothing on.
             case let .reference(path):
-                guard let head = path.head, path.count == 1 else { return held }
+                guard let head = path.head, path.segments.count == 1 else { return held }
 
                 // Everywhere a borrowed name may stand is read before the walk
                 // reaches it: an operand of a slot that borrows, a second name
@@ -441,7 +441,7 @@ struct LinearityChecker {
             guard
                 case let .reference(path) = expression,
                 let head = path.head,
-                path.count == 1,
+                path.segments.count == 1,
                 let holding = held.holding(head)
             else {
                 return nil
@@ -523,7 +523,7 @@ struct LinearityChecker {
             case let .reference(path):
                 guard
                     let head = path.head,
-                    path.count == 1,
+                    path.segments.count == 1,
                     let holding = held.holding(head)
                 else {
                     return .nothing

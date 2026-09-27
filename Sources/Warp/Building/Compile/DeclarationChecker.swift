@@ -366,7 +366,7 @@ struct DeclarationChecker {
             throw BuildError(
                 "writes `\(type.rendered)`, which is a type the build"
                     + " read out of a body. A declaration says what a call fills,"
-                    + " and `\(([PathSegment.key(of)] + path).rendered)` is a path"
+                    + " and `\(Path([.key(of)] + path.segments).rendered)` is a path"
                     + " only that body can read",
                 at: place
             )

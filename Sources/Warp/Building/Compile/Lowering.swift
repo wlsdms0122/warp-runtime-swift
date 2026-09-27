@@ -973,7 +973,7 @@ struct Lowering {
     }
 
     private mutating func lower(
-        _ path: [PathSegment],
+        _ path: Path,
         in scope: Names,
         on slots: Slots,
         at place: Place
@@ -984,7 +984,7 @@ struct Lowering {
             throw BuildError(refusal, at: place)
         }
 
-        guard case let .key(head, _)? = path.first else {
+        guard let head = path.head else {
             throw BuildError.unjudged("a path '\(path.rendered)' with no name at its head", at: place)
         }
 
@@ -998,7 +998,7 @@ struct Lowering {
         // there reads by name.
         var reached = slots.held(at: slot)
 
-        let steps = try path.dropFirst().map { segment -> Step in
+        let steps = try path.segments.dropFirst().map { segment -> Step in
             switch segment {
             case let .key(name, optional):
                 guard let place = reached?.place(of: name, in: loweredTypes) else {

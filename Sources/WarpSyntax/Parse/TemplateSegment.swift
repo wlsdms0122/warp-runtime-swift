@@ -10,5 +10,5 @@ import Warp
 
 public enum TemplateSegment: Sendable, Equatable {
     case text(String)
-    case ref(path: [PathSegment])
+    case ref(path: Path)
 }

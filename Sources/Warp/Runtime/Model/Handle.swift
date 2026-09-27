@@ -55,6 +55,6 @@ struct Handle: Sendable {
 
     // MARK: - Private
     private func rendered(_ path: [Projection]) -> String {
-        ([.key(head)] + path.map(\.spelled)).rendered
+        Path([.key(head)] + path.map(\.spelled)).rendered
     }
 }

@@ -22,7 +22,7 @@ import WarpStandard
 // A reference from segment names, written directly: a path is what the
 // language has, and the spelling belongs to whatever produced it.
 func reference(_ names: Name...) -> Warp.Expression {
-    .reference(names.map { name in .key(name) })
+    .reference(Path(names.map { name in .key(name) }))
 }
 
 func literal(_ text: String) -> Warp.Expression {

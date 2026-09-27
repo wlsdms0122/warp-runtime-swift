@@ -43,7 +43,7 @@ struct TypeChecker {
     // answers, because they are read off one walk. A second walk for the
     // rewrite would be a second copy of the rules.
     private enum PathReading {
-        case reads([PathSegment], LoweredType)
+        case reads(Path, LoweredType)
         case refused(String)
     }
 
@@ -55,7 +55,7 @@ struct TypeChecker {
     // what the walk could not read might be anything. Everything else provably
     // is not, and a text-proven defect is refused here.
     private enum IndexReading {
-        case judged([PathSegment])
+        case judged(Path)
         case refused(String)
     }
 
@@ -740,7 +740,7 @@ struct TypeChecker {
     // the call filled in answers them. On `never` nothing arrives to be read at
     // all, so there is nothing to judge and nothing to refuse.
     private func reading(
-        of path: [PathSegment],
+        of path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
@@ -748,27 +748,27 @@ struct TypeChecker {
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
 
-        guard case let .key(head, _)? = path.first, let bound = environment[head] else {
+        guard let head = path.head, let bound = environment[head] else {
             return asWritten(path, in: environment, with: context, at: place, writing: fulfillment)
         }
 
         var current = bound.type
 
-        var resolved: [PathSegment] = [.key(head)]
-        var walked: [PathSegment] = [.key(head)]
+        var resolved: Path = [.key(head)]
+        var walked: Path = [.key(head)]
 
         // Whether an optional segment read past a possible absence. The one
         // thing that makes the whole path's answer nullable.
         var optional = false
 
-        for (offset, segment) in path.dropFirst().enumerated() {
+        for (offset, segment) in path.segments.dropFirst().enumerated() {
             current = context.resolve(current)
             walked.append(segment)
 
-            // The segments after this one, as written. For the walks that stop
-            // judging early.
-            func rest() -> [PathSegment] {
-                Array(path.dropFirst(offset + 2))
+            // This segment and the ones after it, as written. For the walks
+            // that stop judging early.
+            func rest() -> Path {
+                Path(Array(path.segments.dropFirst(offset + 1)))
             }
 
             // Whether this segment's `?.` read past a possible absence. A
@@ -845,13 +845,13 @@ struct TypeChecker {
                 // body may name a step on the way (`held = of.inner`, then
                 // `held.count`), and the field it lands on is the same field
                 // either way.
-                if let reached = current.reaching([segment] + rest()) {
-                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: fulfillment) {
+                if let reached = current.reaching(rest()) {
+                    switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
                         return .refused(reason)
 
                     case let .reads(judged, _):
-                        return .reads(resolved + judged, reached)
+                        return .reads(resolved.appending(contentsOf: judged.segments), reached)
                     }
                 }
 
@@ -860,12 +860,12 @@ struct TypeChecker {
                 // stops. That the reading is unreachable is the leaving rules'
                 // fact, said where they are said.
                 if current == .never {
-                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: fulfillment) {
+                    switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
                         return .refused(reason)
 
                     case let .reads(judged, _):
-                        return .reads(resolved + judged, .never)
+                        return .reads(resolved.appending(contentsOf: judged.segments), .never)
                     }
                 }
 
@@ -881,12 +881,12 @@ struct TypeChecker {
                         break
                     }
 
-                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: fulfillment) {
+                    switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
                         return .refused(reason)
 
                     case let .reads(judged, _):
-                        return .reads(resolved + judged, .null)
+                        return .reads(resolved.appending(contentsOf: judged.segments), .null)
                     }
                 }
 
@@ -1031,13 +1031,13 @@ struct TypeChecker {
     // into the image. Recursive, because an index path holds index paths of its
     // own (`items[names[C]]`) and the promise is about all of them.
     private func foldedIndexReferences(
-        _ segments: [PathSegment],
+        _ path: Path,
         at place: Place,
         folding: Folding
-    ) async throws -> [PathSegment] {
-        var folded: [PathSegment] = []
+    ) async throws -> Path {
+        var folded: Path = []
 
-        for segment in segments {
+        for segment in path.segments {
             folded.append(try await self.folded(segment, at: place, folding: folding))
         }
 
@@ -1049,20 +1049,20 @@ struct TypeChecker {
     // type no declaration named; an element is written through its index. A
     // type that may be null is not written into, and neither is `any`.
     private func writable(
-        _ path: [PathSegment],
+        _ path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
     ) -> Writable {
-        guard case let .key(head, _)? = path.first, let box = environment[head] else {
+        guard let head = path.head, let box = environment[head] else {
             return .refused("writes '\(path.rendered)', and its head is not a name here")
         }
 
         var current = box.type
-        var walked: [PathSegment] = [.key(head)]
+        var walked: Path = [.key(head)]
 
-        for segment in path.dropFirst() {
+        for segment in path.segments.dropFirst() {
             walked.append(segment)
 
             if segment.optional {
@@ -1242,15 +1242,15 @@ struct TypeChecker {
     // reference is a path of its own and is judged wherever the outer walk
     // stops.
     private func asWritten(
-        _ segments: [PathSegment],
+        _ path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
     ) -> PathReading {
-        var judged: [PathSegment] = []
+        var judged: Path = []
 
-        for segment in segments {
+        for segment in path.segments {
             guard case let .indexRef(inner, optionally) = segment else {
                 judged.append(segment)
 
@@ -1270,7 +1270,7 @@ struct TypeChecker {
     }
 
     private func indexReference(
-        _ inner: [PathSegment],
+        _ inner: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
@@ -1299,7 +1299,7 @@ struct TypeChecker {
     // one; what the walk could not read might be anything, and everything else
     // provably is not.
     private func keyReference(
-        _ inner: [PathSegment],
+        _ inner: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
@@ -2680,7 +2680,7 @@ struct TypeChecker {
                     )
 
                 case .assigned?:
-                    if path.count == 1 {
+                    if path.segments.count == 1 {
                         environment[id] = .assigned(inner.reading)
 
                         if !locals.contains(id) {
@@ -3080,7 +3080,7 @@ struct TypeChecker {
 
     private func refuseUnfit(
         _ written: LoweredType,
-        writtenTo path: [PathSegment],
+        writtenTo path: Path,
         holding fixed: LoweredType?,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -3089,7 +3089,7 @@ struct TypeChecker {
     ) throws {
         let slot: LoweredType
 
-        if path.count == 1, let fixed {
+        if path.segments.count == 1, let fixed {
             slot = fixed
         } else {
             switch writable(path, in: environment, with: context, at: place, writing: ask.fulfillment) {

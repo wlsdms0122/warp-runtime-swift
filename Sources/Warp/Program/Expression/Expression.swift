@@ -38,7 +38,7 @@ import Foundation
 // How a document writes any of this is `WarpSyntax`.
 public indirect enum Expression: Sendable {
     case literal(Value)
-    case reference([PathSegment])
+    case reference(Path)
     case array([Expression])
     case record([Name: Expression])
 
@@ -118,7 +118,7 @@ public indirect enum Expression: Sendable {
 
     // The path of a plain reference. An effect that requires one names it
     // through this.
-    public var referencePath: [PathSegment]? {
+    public var referencePath: Path? {
         guard case let .reference(path) = self else { return nil }
 
         return path
