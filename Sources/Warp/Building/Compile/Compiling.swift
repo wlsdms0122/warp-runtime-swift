@@ -181,11 +181,7 @@ struct Compiling {
     // reaches a name it declared or one behind it, so the answer never moves
     // after this.
     mutating func answering(_ origin: Int) {
-        named[origin] = Answered.answering(
-            lowering.numbering[origin] ?? Numbering(sends: [], declared: []),
-            rows: lowering.rows,
-            own: lowering.own(origin)
-        )
+        named[origin] = lowering.numbering[origin]?.answers(rows: lowering.rows, own: lowering.own(origin)) ?? []
     }
 
     // The same for every document laid down, said once they all stand. This
@@ -200,33 +196,31 @@ struct Compiling {
         for origin in documents.indices {
             answering(origin)
 
-            guard let unfound = (named[origin] ?? []).firstIndex(where: { row in row == nil }) else {
-                continue
+            for (number, row) in (named[origin] ?? []).enumerated() where row == nil {
+                guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
+                    number,
+                    rows: lowering.rows,
+                    own: lowering.own(origin),
+                    closures: []
+                ) else {
+                    continue
+                }
+
+                // A contract's procedure has no row: a call to it is a dispatch
+                // the link answers through the contract, so a document sending
+                // one is missing nothing.
+                guard contractProcedures[declared] == nil else { continue }
+
+                guard lowering.concealed.contains(declared) else {
+                    throw BuildError(
+                        "'\(declared)' is sent by this document, and no document laid"
+                            + " beside it declares one",
+                        at: Place(in: documents[origin])
+                    )
+                }
+
+                throw BuildError.concealed(declared, at: Place(in: documents[origin]))
             }
-
-            guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
-                unfound,
-                rows: lowering.rows,
-                own: lowering.own(origin),
-                closures: []
-            ) else {
-                continue
-            }
-
-            // A contract's procedure has no row: a call to it is a dispatch
-            // the link answers through the contract, so a document sending
-            // one is missing nothing.
-            guard contractProcedures[declared] == nil else { continue }
-
-            guard lowering.concealed.contains(declared) else {
-                throw BuildError(
-                    "'\(declared)' is sent by this document, and no document laid"
-                        + " beside it declares one",
-                    at: Place(in: documents[origin])
-                )
-            }
-
-            throw BuildError.concealed(declared, at: Place(in: documents[origin]))
         }
     }
 

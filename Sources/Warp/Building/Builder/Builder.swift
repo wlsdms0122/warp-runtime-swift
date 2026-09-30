@@ -33,18 +33,13 @@ import Foundation
 // value at load has nothing left to do at run time, so compiling folds it into
 // the literal it always was.
 //
-// What it can promise is narrower than "nothing unresolved remains": arguments
-// are mostly references that settle at run time, so this checks names, arity and
-// the types of *constant* arguments. Calling a value is outside the promise
-// entirely, because a closure's callee is a run-time fact.
-//
 // Two stages. Compiling settles everything a document says against the
 // interfaces it reaches: its declarations (`DeclarationChecker`), what it
 // claims (`ClaimChecker`), the facts nobody declared (`Derivation`), its
 // bodies (`TypeChecker`, `LinearityChecker`) and lowering (`Lowering`). It
 // runs the procedures a constant calls, which is what folding is. Linking
-// takes what that answered and one name to start from, judges what only the
-// whole list can answer, and runs nothing.
+// takes what that answered, judges what only the whole list can answer, and
+// runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a caller wants its
@@ -85,7 +80,6 @@ public struct Builder: Sendable {
     // The order is worked out here. What a document reaches is read off the
     // procedures it sends and the types its signatures name, neither of which a
     // caller wrote down, so a caller has nothing to sort by.
-    //
     public func compile(_ modules: [Module]) async throws -> [Compiled] {
         try await compile(modules, against: [], supplying: .none)
     }
@@ -118,8 +112,12 @@ public struct Builder: Sendable {
     public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
         guard !compiled.isEmpty else { return .none }
 
+        try once(compiled.map(\.document))
         try against(compiled)
 
+        // Laid end to end through the door a link lays documents through, so a
+        // name two of them declare is refused here as it is there.
+        let assembled = try Assembled(compiled)
         let linkage = Linkage()
         let declared = try declared(in: compiled)
         let declaring = try DeclarationChecker().types(
@@ -131,7 +129,7 @@ public struct Builder: Sendable {
             numbered: linkage
         )
 
-        let signatures = signatures(of: compiled)
+        let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
@@ -202,7 +200,7 @@ public struct Builder: Sendable {
     public func compile(_ modules: [Module], against laid: Laid) async throws -> [Compiled] {
         let compiled = laid.compiled
 
-        try once(modules, held: laid.identities)
+        try once(modules.map(Place.Document.of), held: laid.identities)
 
         // Every name held to one declarer before the standing is read.
         // Standing reads a name as whichever document declared it, and where
@@ -272,8 +270,7 @@ public struct Builder: Sendable {
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
         // their rows, and what they wrote themselves. A name two of them
-        // declare is refused here, for the same reason two `.c` files cannot
-        // both define a symbol.
+        // declare is refused here.
         //
         // Refused rather than taken as the caller's statement, which the order
         // is: a doubled spelling is not a question of which document to read
@@ -526,9 +523,7 @@ public struct Builder: Sendable {
         // The facts nobody declared. All three are fixed points over what a
         // body reaches, so a document's answer is settled once the documents
         // it reaches have theirs, and the standing refused a ring where that
-        // is not so. Read over every declaration the document holds rather
-        // than the reached ones: a path names a procedure the call graph never
-        // mentions.
+        // is not so. Read over every declaration the document holds.
         //
         // What this document declares, by the spelling a call in it writes.
         // Its own rows do not stand yet, and this is what says what they take
@@ -619,9 +614,8 @@ public struct Builder: Sendable {
         compiling.foldable()
 
         // Settled after the procedures are known, because a constant may call
-        // one: interpolation is `joined` now, and a constant that spells a
-        // URL out of other constants is spelling it with procedures like any
-        // other expression.
+        // one: a constant that spells a URL out of other constants spells it
+        // with procedures like any other expression.
         //
         // The context is read before the lowering is handed over, since one of
         // the tables a context stands on is the lowering this writes into.
@@ -728,6 +722,7 @@ public struct Builder: Sendable {
         _ compiled: [Compiled],
         supplying natives: Supplying
     ) throws -> Image {
+        try once(compiled.map(\.document))
         try against(compiled)
 
         // Every document's block laid down, which is where its rows first
@@ -747,19 +742,7 @@ public struct Builder: Sendable {
             standing: Array(compiled.indices),
             numbered: Linkage()
         )
-        let signatures = assembled.rows.reduce(into: [Name: Placed<Declared>]()) { table, entry in
-            let origin = assembled.table[entry.value].origin
-
-            table[entry.key] = Placed(
-                Declared(
-                    signature: assembled.table[entry.value].judged.signature,
-                    access: assembled.table[entry.value].judged.access,
-                    facts: (assembled.table[entry.value].judged.constness, assembled.table[entry.value].judged.isolation)
-                ),
-                at: .procedure(entry.key.spelling, in: compiled[origin].document),
-                of: origin
-            )
-        }
+        let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         let lowered = try ClaimChecker().lowered(
             declaring,
@@ -836,26 +819,41 @@ public struct Builder: Sendable {
         return object.fingerprinted(try fingerprinting(written))
     }
 
-    // Every declaration a compiled document made, under the spelling it was
-    // declared by and at the place it was written. What a document declares is
-    // its own; where it stands among the documents is the caller's order.
-    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Declared>] {
+    // Every declaration the documents laid down made, under the spelling it
+    // was declared by and at the place it was written. What a document
+    // declares is its own; where it stands among the documents is the
+    // caller's order.
+    //
+    // What the build read off a body is written in its document's type
+    // numbers, so it is read as the rows of `loweredTypes`.
+    private func signatures(
+        of assembled: Assembled,
+        in loweredTypes: LoweredTypeTable
+    ) throws -> [Name: Placed<Declared>] {
         var signatures: [Name: Placed<Declared>] = [:]
+        var numbered: [Int: LoweredTypeNumbering.Rows] = [:]
 
-        for (position, document) in compiled.enumerated() {
-            let hidden = document.hidden
+        for (name, number) in assembled.rows {
+            let row = assembled.table[number]
+            let place = Place.procedure(name.spelling, in: assembled.documents[row.origin])
+            var answer: LoweredType?
 
-            for (offset, name) in document.declared.enumerated() where !hidden.contains(name) {
-                signatures[name] = Placed(
-                    Declared(
-                        signature: document.table[offset].signature,
-                        access: document.table[offset].access,
-                        facts: (document.table[offset].constness, document.table[offset].isolation)
-                    ),
-                    at: .procedure(name.spelling, in: document.document),
-                    of: position
-                )
+            if let read = assembled.answers[number] {
+                let rows = numbered[row.origin] ?? assembled.typeNumbering[row.origin].rows(in: loweredTypes)
+
+                numbered[row.origin] = rows
+                answer = try rows.read(read, at: place)
             }
+
+            signatures[name] = Placed(
+                Declared(
+                    signature: row.judged.signature,
+                    access: row.judged.access,
+                    facts: (row.judged.constness, row.judged.isolation, answer)
+                ),
+                at: place,
+                of: row.origin
+            )
         }
 
         return signatures
@@ -871,25 +869,24 @@ public struct Builder: Sendable {
     // What the caller already compiled counts: those documents are in this
     // link too, and handing one over again is the same document twice however
     // it arrived.
-    private func once(_ modules: [Module], held: Set<Identity> = []) throws {
+    private func once(_ documents: [Place.Document], held: Set<Identity> = []) throws {
         var held = held
 
-        for module in modules {
-            guard let identity = module.identity else { continue }
+        for document in documents {
+            guard let identity = document.identity else { continue }
             guard held.insert(identity).inserted else {
                 throw BuildError(
                     "this document was handed to the build twice. A build states"
                         + " its whole graph once, so a document already in it is"
                         + " not something to add",
-                    at: Place(in: .of(module))
+                    at: Place(in: document)
                 )
             }
         }
     }
 
     // Every declaration under the spelling it was declared by. Two modules
-    // cannot both declare one spelling, for the same reason two `.c` files
-    // cannot both define a symbol.
+    // cannot both declare one spelling.
     private func symbols(of modules: [Module], after held: Int = 0) throws -> [Symbol] {
         var symbols: [Symbol] = []
 
@@ -1264,15 +1261,6 @@ public struct Builder: Sendable {
                     throw BuildError(
                         "contract '\(name)' is declared more than once in this"
                             + " link, by \(first.spelled) and \(declaration.spelled)",
-                        at: declaration.place
-                    )
-                }
-
-                guard !procedures.isEmpty else {
-                    throw BuildError(
-                        "asks nothing, so every type satisfies it. A contract is"
-                            + " the procedures a value answers, and one with no procedures"
-                            + " says nothing a slot could lean on",
                         at: declaration.place
                     )
                 }

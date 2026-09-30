@@ -283,12 +283,15 @@ struct Numbering: Sendable {
     // is not part of the question.
     //
     // The names only. The closures run after them and a link answers those by
-    // the rows they took, which is a list it already holds.
-    func answers(rows: [Name: Int], own: [Name: Int]) -> [Answer] {
+    // the rows they took, which is a list it already holds. A number standing
+    // at no row answers nil.
+    func answers(rows: [Name: Int], own: [Name: Int]) -> [Int?] {
         guard case .document = space else { return [] }
 
         return (0..<opening).map { number in
-            row(number, rows: rows, own: own, closures: [])
+            guard case let .row(row) = row(number, rows: rows, own: own, closures: []) else { return nil }
+
+            return row
         }
     }
 

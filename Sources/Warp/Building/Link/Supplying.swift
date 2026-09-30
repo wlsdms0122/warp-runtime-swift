@@ -50,8 +50,8 @@ public struct Supplying: Sendable {
 
     // What a module brings under a private spelling, by the document that
     // declares it: named by that document alone, so two modules may each bring
-    // one, and a module never written down stands under no document.
-    private let hidden: [Identity: [Name: Brought]]
+    // one. A module that is no document brings none.
+    private let hidden: [Identity?: [Name: Brought]]
 
     // MARK: - Initializer
     private init() {
@@ -65,7 +65,7 @@ public struct Supplying: Sendable {
     // the caller happened to write.
     public init(_ modules: [Module]) throws {
         var procedures: [Name: Brought] = [:]
-        var hidden: [Identity: [Name: Brought]] = [:]
+        var hidden: [Identity?: [Name: Brought]] = [:]
 
         for module in modules {
             for (name, procedure) in module.procedures {
@@ -78,18 +78,9 @@ public struct Supplying: Sendable {
                     builtin: module.builtin
                 )
 
-                // Named by its document alone, so it is kept by its document,
-                // which a module never written down does not have.
+                // Named by its document alone, so it is kept by its document.
                 guard procedure.access.reachesOtherDocuments else {
-                    guard let identity = module.identity else {
-                        throw BuildError(
-                            "'\(name)' is brought privately by a module that is no document,"
-                                + " and a private procedure is named by its document",
-                            at: .procedure(name.spelling, in: .of(module))
-                        )
-                    }
-
-                    guard hidden[identity]?[name] == nil else {
+                    guard hidden[module.identity]?[name] == nil else {
                         throw BuildError(
                             "'\(name)' is brought by two of the modules handed over under one document."
                                 + " Two procedures under one spelling have no way to be told apart",
@@ -97,7 +88,7 @@ public struct Supplying: Sendable {
                         )
                     }
 
-                    hidden[identity, default: [:]][name] = brought
+                    hidden[module.identity, default: [:]][name] = brought
 
                     continue
                 }
@@ -119,13 +110,11 @@ public struct Supplying: Sendable {
     }
 
     // MARK: - Public
-    // The code brought under that spelling, or nil where the host brought
-    // none. What a row does about that is the row's: it is the one holding
-    // what its document was compiled against.
     // What was brought under a spelling for the document at hand: its own
-    // private procedure first, then what any document may name.
+    // private procedure first, then what any document may name. Nil where the
+    // host brought none, and what a row does about that is the row's.
     subscript(_ name: Name, at document: Place.Document) -> Brought? {
-        document.identity.flatMap { identity in hidden[identity]?[name] } ?? procedures[name]
+        hidden[document.identity]?[name] ?? procedures[name]
     }
 
     // MARK: - Private

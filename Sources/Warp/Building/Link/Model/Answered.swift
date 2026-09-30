@@ -69,9 +69,9 @@ struct Answered: Sendable {
     }
 
     // MARK: - Public
-    // A table holding nothing a link could answer: rows built from native
-    // procedures alone, which carry no lowered body and send nothing.
-    static func unanswerable(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
+    // A table every number of which is a row of it: what `Relocating` made,
+    // or rows that carry no lowered body.
+    static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
         Answered(table: table, rows: rows, naming: naming, numbers: .rows)
     }
 
@@ -93,22 +93,6 @@ struct Answered: Sendable {
             naming: naming,
             numbers: .documents(numbering, named: named, closures: closures)
         )
-    }
-
-    // Which row each of one document's numbers stands for, worked out once per
-    // number rather than once per body standing on one.
-    static func answering(_ numbering: Numbering, rows: [Name: Int], own: [Name: Int]) -> [Int?] {
-        numbering.answers(rows: rows, own: own).map { answer -> Int? in
-            guard case let .row(row) = answer else { return nil }
-
-            return row
-        }
-    }
-
-    // A table every number of which `Relocating` made to stand here. The same
-    // value as one nothing numbered, since every number is a row now.
-    static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
-        unanswerable(table, rows: rows, naming: naming)
     }
 
     // The same answer over a table lowered since, with the closure rows that

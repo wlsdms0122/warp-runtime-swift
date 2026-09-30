@@ -27,11 +27,7 @@ public struct BuildError: WarpError {
     //
     // A document and no steps is what is wrong with a document rather than with
     // anything in it: the same text handed over twice.
-    //
-    // Nil is for what no address is known for, said out loud rather than left
-    // to a default. The entry, which is an argument to building and written in
-    // no text.
-    public init(_ message: String, at place: Place?) {
+    public init(_ message: String, at place: Place) {
         self.message = message
         self.place = place
     }
@@ -50,7 +46,7 @@ public struct BuildError: WarpError {
 
     // A spelling reached from outside the one document that may name it. Said
     // once, wherever a lookup fails on one.
-    static func concealed(_ name: Name, at place: Place?) -> BuildError {
+    static func concealed(_ name: Name, at place: Place) -> BuildError {
         BuildError(
             "'\(name)' is private to the document that declares it, and nothing outside"
                 + " that document names it",
