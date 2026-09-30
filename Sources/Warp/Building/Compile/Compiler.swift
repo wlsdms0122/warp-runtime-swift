@@ -155,7 +155,7 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, constants: typedConstants, at: symbol.place)
+                try compiling.settle(try row(of: symbol), body: rewritten, at: symbol.place)
             }
 
             return answer.procedure
@@ -270,6 +270,7 @@ struct Compiler {
         )
 
         typedConstants = constants.mapValues { value in (value: value, type: LoweredType(of: value, in: loweredTypes)) }
+        compiling.lowering.settle(constants: typedConstants, of: origin)
 
         variables = try await self.variables(
             of: module,

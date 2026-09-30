@@ -258,6 +258,9 @@ struct Lowering {
     // out from it once everything is lowered.
     private(set) var standing: [Int: Standing] = [:]
 
+    // Each document's constants, settled, with what each reads as.
+    private var constants: [Int: [Name: (value: Value, type: LoweredType)]] = [:]
+
     // The spellings of the private declarations held so far, for the refusal
     // alone: not in `rows`, since nothing outside their documents names them,
     // and read only after a row lookup has failed, to say why it did.
@@ -386,15 +389,19 @@ struct Lowering {
         standing[origin] = stood
     }
 
+    // A document's constants, once they settle.
+    mutating func settle(constants settled: [Name: (value: Value, type: LoweredType)], of origin: Int) {
+        constants[origin] = settled
+    }
+
     // Lowers a declaration's body into its row.
-    mutating func settle(
-        _ row: Int,
-        body block: Block,
-        constants: [Name: (value: Value, type: LoweredType)],
-        at place: Place
-    ) throws {
+    mutating func settle(_ row: Int, body block: Block, at place: Place) throws {
         let declared = table[row]
-        let slots = Slots(origin: declared.origin, variables: documents[declared.origin].variables, constants: constants)
+        let slots = Slots(
+            origin: declared.origin,
+            variables: documents[declared.origin].variables,
+            constants: constants[declared.origin] ?? [:]
+        )
         var scope = Names()
 
         for slot in declared.slots {
@@ -716,7 +723,7 @@ struct Lowering {
         // A closure reaches a constant the way it reaches a module variable,
         // through the body it was written in, so the slot it takes is that
         // body's and the binding is that body's.
-        let inner = Slots(origin: slots.origin, variables: slots.variables, constants: [:], outer: (slots, scope))
+        let inner = Slots(origin: slots.origin, variables: [:], constants: [:], outer: (slots, scope))
         var innerScope = Names()
 
         for name in procedure.signature.names {
