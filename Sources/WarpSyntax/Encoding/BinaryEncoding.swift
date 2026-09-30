@@ -530,7 +530,7 @@ public struct BinaryEncoding {
             throw refused("the bytes end inside text")
         }
 
-        guard let string = String(bytes: bytes, encoding: .utf8) else {
+        guard let string = String(utf8: bytes) else {
             throw refused("the text is not UTF-8")
         }
 

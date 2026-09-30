@@ -116,7 +116,7 @@ public struct TextEncoding {
     }
 
     public func value(from data: Data) throws -> Value {
-        guard let text = String(bytes: data, encoding: .utf8) else {
+        guard let text = String(utf8: data) else {
             throw refused("the text is not UTF-8")
         }
 

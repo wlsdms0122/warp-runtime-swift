@@ -377,6 +377,18 @@ struct TextEncodingTests {
         }
     }
 
+    @Test("a text led by a byte order mark does not begin as a document")
+    func aLeadingByteOrderMarkIsRefused() {
+        // Given
+        let bytes = Data([0xEF, 0xBB, 0xBF] + Array("warpt 1\n1\n".utf8))
+
+        #expect {
+            try TextEncoding().value(from: bytes)
+        } throws: { error in
+            "\(error)".contains("does not begin as a warp document begins")
+        }
+    }
+
     @Test("a refusal says the line and column the reader stood at")
     func aRefusalIsPlaced() {
         // A value where a field name is due: the reader stands on the `2`.

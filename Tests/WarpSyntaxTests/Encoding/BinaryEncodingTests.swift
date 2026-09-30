@@ -351,6 +351,26 @@ struct BinaryEncodingTests {
         }
     }
 
+    @Test(
+        "a byte order mark is text like any other, in a string and in a key",
+        arguments: [
+            (Value.string("\u{FEFF}A"), [0x05, 0x04, 0xEF, 0xBB, 0xBF, 0x41]),
+            (Value.dictionary(["\u{FEFF}": .int(1)]), [0x07, 0x01, 0x03, 0xEF, 0xBB, 0xBF, 0x03, 0x02]),
+            (
+                Value.dictionary(["b": .int(1), "\u{FEFF}a": .int(2)]),
+                [0x07, 0x02, 0x01, 0x62, 0x03, 0x02, 0x04, 0xEF, 0xBB, 0xBF, 0x61, 0x03, 0x04]
+            )
+        ] as [(Value, [UInt8])]
+    )
+    func aByteOrderMarkIsKept(value: Value, body: [UInt8]) throws {
+        // Given
+        let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01] + body)
+
+        // Then. Written as its bytes, and read back as the value it was
+        #expect(try BinaryEncoding().data(from: value) == bytes)
+        #expect(try BinaryEncoding().value(from: bytes) == value)
+    }
+
     @Test("what a document cannot carry is refused on the way out")
     func theUnwritableIsRefusedWhenWriting() {
         // Given. The value model's edges, not this encoding's: these bytes
