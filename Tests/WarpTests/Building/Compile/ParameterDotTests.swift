@@ -11,7 +11,7 @@ import Testing
 
 // A dot on a type parameter. The type is the call's fact, so the build leaves
 // the segments as written rather than judging on nothing.
-@Suite
+@Suite("A dot on a type parameter")
 struct ParameterDotTests {
     // MARK: - Property
     private let builder = Builder()

@@ -83,7 +83,6 @@ struct ContractTests {
         // Given. `app.Describable.describe` is both a contract's procedure and a
         // declaration, so a call writing that spelling has two readings
         let sut = try describing(
-            types: ["bank.Plain": .record(["note": .string])],
             procedures: [
                 "app.Describable.describe": Procedure(
                     signature: Signature(

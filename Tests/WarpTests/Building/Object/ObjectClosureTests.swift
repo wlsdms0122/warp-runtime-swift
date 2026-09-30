@@ -126,7 +126,7 @@ struct ObjectClosureTests {
         }
 
         // When
-        let image = try await builder.link(read, supplying: Supplying(Module.standard))
+        let image = try builder.link(read, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.two") == .int(6))
@@ -172,7 +172,7 @@ struct ObjectClosureTests {
         let other = try await builder.compile([madeOf(6, entry: "app.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
 
         // When
-        let image = try await builder.link(one + other, supplying: Supplying(Module.standard))
+        let image = try builder.link(one + other, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.two") == .int(6))
@@ -213,7 +213,7 @@ struct ObjectClosureTests {
         // When
         let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
         let against = try await builder.compile([folding], against: laid)
-        let image = try await builder.link(reordered + against, supplying: Supplying(Module.standard))
+        let image = try builder.link(reordered + against, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
@@ -278,7 +278,7 @@ struct ObjectClosureTests {
         let compiled = try (await builder.compile([folding], against: try builder.lay(read, supplying: Supplying(Module.standard)))).map { document in
             try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
         }
-        let image = try await builder.link(read + compiled, supplying: Supplying(Module.standard))
+        let image = try builder.link(read + compiled, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
@@ -515,7 +515,7 @@ struct ObjectClosureTests {
 
             return try Compiled(written: written, of: one.document.identity, fingerprint: one.fingerprint)
         }
-        let image = try await builder.link(read, supplying: Supplying(Module.standard))
+        let image = try builder.link(read, supplying: Supplying(Module.standard))
 
         return try await Executor().run(image, entry: entry)
     }

@@ -51,7 +51,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["greet": procedure.with(access: .public)]), .shouting] + Module.standard
+            [try Module(procedures: ["greet": procedure.with(access: .public)])] + Module.standard
         )
         let outputs = try await Executor().run(image, entry: "greet")
 

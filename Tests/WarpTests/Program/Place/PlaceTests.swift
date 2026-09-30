@@ -19,7 +19,7 @@ import Testing
 //
 // The steps are what makes both readings possible: a slot and a construct
 // travel as themselves, and only what an author named travels as a key.
-@Suite
+@Suite("Where a refusal says the words are")
 struct PlaceTests {
     // MARK: - Property
     // A document to stand in for one that was read. What derives an identity is
@@ -283,7 +283,7 @@ struct PlaceTests {
         #expect(typed?.place?.rendered?.hasPrefix(reached) == true)
 
         // And the walk that only gathers puts it in the same place
-        let gathered = try await #require(
+        let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
                 .procedures[entryName]?.block?
                 .subexpressions(at: .procedure(entryName.spelling, in: .assembled))

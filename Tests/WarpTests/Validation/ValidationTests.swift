@@ -12,7 +12,7 @@ import Testing
 // A document is checked against itself, before anything is resolved. The walk
 // is structural, which is what these ask: not whether a particular notation
 // rejects a particular text, but what the language considers visible where.
-@Suite
+@Suite("A document checked against itself")
 struct ValidationTests {
     // MARK: - Property
     // MARK: - Initializer

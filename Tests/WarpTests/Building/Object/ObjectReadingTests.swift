@@ -431,7 +431,7 @@ struct ObjectReadingTests {
               case var .array(body) = implementation[1],
               case var .array(result) = body[1],
               case var .array(operation) = result[0],
-              case let .int(9) = operation[0],
+              case .int(9) = operation[0],
               case let .array(keeps) = operation[4],
               keeps.count == 1
         else {

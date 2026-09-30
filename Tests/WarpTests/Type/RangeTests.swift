@@ -13,7 +13,7 @@ import Testing
 // is judged where `enum` is: at the build for what the text shows, at the
 // boundary for what only the run can see. What the condition may say is
 // `RefinementTests`'; this suite is where a whole range is judged.
-@Suite
+@Suite("A whole range")
 struct RangeTests {
     // MARK: - Property
     private let builder = Builder()

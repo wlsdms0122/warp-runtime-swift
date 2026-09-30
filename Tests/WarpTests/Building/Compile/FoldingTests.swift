@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-@Suite
+@Suite("Reading a reference at the build")
 struct FoldingTests {
     // MARK: - Property
     private let sut: Folding

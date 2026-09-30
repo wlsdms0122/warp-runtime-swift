@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // `T?`. The declared type or null, and the `?.` that reads through it.
-@Suite
+@Suite("A nullable type")
 struct NullableTests {
     // MARK: - Property
     private let builder = Builder()

@@ -109,7 +109,7 @@ struct SeparateCompilationTests {
 
         // Then. Each document's rows are next to each other, and in name
         // order inside the run.
-        let ours = try await #require(rows["a.one"])
+        let ours = try #require(rows["a.one"])
 
         #expect(rows["c.three"] == ours + 1)
         #expect(rows["b.two"] == ours + 2)
@@ -279,7 +279,7 @@ struct SeparateCompilationTests {
     @Test("a pair no claim answers is refused by the list and not by a compile")
     func aPairNoClaimAnswersIsRefusedByTheList() async throws {
         // Given. The same, with nobody making the claim.
-        let (typed, asking, _, program) = try await leaning()
+        let (typed, asking, _, program) = try leaning()
         let modules = [typed, asking, program] + Module.standard
 
         // When. Compiled one at a time, which settles nothing about a claim.
@@ -347,7 +347,7 @@ struct SeparateCompilationTests {
         // the order the graph says they stand.
         var compiled: [Compiled] = []
 
-        for origin in try await ModuleGraph(modules).standing {
+        for origin in try ModuleGraph(modules).standing {
             compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
@@ -360,7 +360,7 @@ struct SeparateCompilationTests {
     @Test("a document numbers its calls from itself, and the link answers with rows")
     func aCallCarriesTheDocumentsOwnNumber() async throws {
         // Given. A document calling a procedure it does not declare.
-        let sut = try await calling()
+        let sut = try calling()
 
         // When. Compiled.
         let compiled = try await compiled(sut + Module.standard)

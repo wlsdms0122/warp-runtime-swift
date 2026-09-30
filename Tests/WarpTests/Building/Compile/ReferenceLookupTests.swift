@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-@Suite
+@Suite("Reading a path")
 struct ReferenceLookupTests {
     // What a path holds, or why the reading went wrong.
     private enum Lookup: Equatable {

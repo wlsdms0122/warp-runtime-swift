@@ -103,7 +103,7 @@ struct EnumTests {
         // Given. A fraction spells with its point, so `1` on a double slot is
         // the int's spelling and a member no fraction could ever match, and
         // `1e0`/`1.00` are second spellings of a fraction that has one
-        func module(candidates candidates: [String]) async throws -> Module {
+        func module(candidates: [String]) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -199,7 +199,7 @@ struct EnumTests {
     func anEnumOutsideTheRangeRefuses() async throws {
         // Given. No candidate is a value the range could hold, so the parameter
         // fits no call: the same judgment an empty enum gets
-        func module(candidates candidates: [String]) async throws -> Module {
+        func module(candidates: [String]) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(

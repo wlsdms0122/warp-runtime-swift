@@ -11,7 +11,7 @@ import Testing
 
 // Building, asked the way a caller asks it: modules loaded from documents,
 // handed over as a set.
-@Suite
+@Suite("Building a set of modules")
 struct BuilderTests {
     // MARK: - Property
     private let builder = Builder()

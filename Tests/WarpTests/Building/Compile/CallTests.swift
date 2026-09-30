@@ -13,7 +13,7 @@ import WarpStandard
 // A procedure, a library procedure and a caller reaching outside are one expression, and
 // the only difference is where the selector was found. These ask the language
 // that directly, without a notation in between to spell the three differently.
-@Suite
+@Suite("A call")
 struct CallTests {
     // MARK: - Property
     // MARK: - Initializer

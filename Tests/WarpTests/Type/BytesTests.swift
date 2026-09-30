@@ -14,7 +14,7 @@ import WarpStandard
 // spelling of an array of small whole numbers. The worth is the elements', the
 // collection vocabulary applies, and only the spelling differs. `1` and `1.0`,
 // one collection up.
-@Suite
+@Suite("Bytes")
 struct BytesTests {
     // MARK: - Property
     // MARK: - Initializer

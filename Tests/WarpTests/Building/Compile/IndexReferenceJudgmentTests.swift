@@ -11,7 +11,7 @@ import Testing
 
 // The dot judged behind an index reference. The walk continues through `[i]`
 // the way it does through `[0]`, so nothing after one escapes the build.
-@Suite
+@Suite("The dot judged behind an index reference")
 struct IndexReferenceJudgmentTests {
     // MARK: - Property
     private let builder = Builder()

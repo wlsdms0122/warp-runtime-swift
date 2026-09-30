@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-@Suite
+@Suite("Control flow as it runs")
 struct ControlFlowTests {
     // MARK: - Property
     // MARK: - Initializer
