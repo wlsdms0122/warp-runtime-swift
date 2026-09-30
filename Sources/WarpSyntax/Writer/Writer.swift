@@ -161,10 +161,10 @@ public struct Writer: Sendable {
         // (slots, nested procedure types) writes types as they arrive and
         // refuses a bound it meets, so a bound can neither be written twice nor
         // quietly dropped.
-        written.merge(try fields(of: TypeWriter().stripped(procedure.signature))) { one, _ in one }
+        written.merge(try fields(of: TypeWriter(readBy: readBy).stripped(procedure.signature))) { one, _ in one }
         written.merge(try fields(of: block, in: nil)) { one, _ in one }
 
-        if let bounds = try TypeWriter().bounds(of: procedure.signature) {
+        if let bounds = try TypeWriter(readBy: readBy).bounds(of: procedure.signature) {
             written["bounds"] = bounds
         }
 
@@ -172,7 +172,7 @@ public struct Writer: Sendable {
     }
 
     public func value(of type: TypeExpression) throws -> Value {
-        try TypeWriter().value(of: type)
+        try TypeWriter(readBy: readBy).value(of: type)
     }
 
     public func value(of parameter: Parameter) throws -> Value {

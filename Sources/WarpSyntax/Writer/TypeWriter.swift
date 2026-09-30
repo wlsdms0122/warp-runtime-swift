@@ -12,9 +12,74 @@ import Warp
 // one, and a mapping under the one key its form is read by where it has none.
 struct TypeWriter {
     // MARK: - Property
+    // Who reads the spelling back, which says what a declared name written
+    // short stands for.
+    let readBy: Notation
+
     // MARK: - Initializer
     // MARK: - Public
+    // A spelling is kept only where the reading takes it back as this type.
+    // Asked of the reading by reading it, at the one place a type becomes
+    // text, so whatever the reading makes of a spelling is what is asked.
     func value(of type: TypeExpression) throws -> Value {
+        let written = try form(of: type)
+
+        guard case let .string(spelling) = written else { return written }
+
+        let read: TypeExpression
+
+        do {
+            read = try TypeReader.parse(spelling) { name in readBy.qualified(name, as: .type) }
+        } catch {
+            throw WritingError("the type is written '\(spelling)', which the reading refuses: \(error)")
+        }
+
+        guard read == canonical(type) else {
+            throw WritingError(
+                "the type is written '\(spelling)', which the reading takes as \(read.rendered),"
+                    + " and a document has no way to tell the two apart"
+            )
+        }
+
+        return written
+    }
+
+    func stripped(_ signature: Signature) -> Signature {
+        Signature(
+            parameters: signature.parameters.map { parameter in
+                Parameter(
+                    name: parameter.name,
+                    type: parameter.type.map(stripped),
+                    candidates: parameter.candidates,
+                    description: parameter.description
+                )
+            },
+            returns: signature.returns.map(stripped)
+        )
+    }
+
+    // The bounds, gathered from every occurrence (the nested ones included,
+    // because a nested signature's parameters are this signature's own slots)
+    // and written once, at the declaring signature. A name two occurrences
+    // bound differently is two claims about one thing: a signature the link
+    // refuses has no document.
+    func bounds(of signature: Signature) throws -> Value? {
+        let held = signature.parameterBounds
+
+        if let refusal = held.refusal {
+            throw WritingError(refusal + ", so there is no `bounds` to write")
+        }
+
+        let bounds = held.table
+            .filter { _, constraints in !constraints.isEmpty }
+            .mapValues { constraints in Value.string(constraints.sorted().map(\.spelling).joined(separator: " & ")) }
+
+        return bounds.isEmpty ? nil : .dictionary(bounds)
+    }
+
+    // MARK: - Private
+    // What a type is written as, before the reading is asked about it.
+    private func form(of type: TypeExpression) throws -> Value {
         switch type {
         case .any: return .string("any")
         case .never: return .string("never")
@@ -40,19 +105,7 @@ struct TypeWriter {
 
             return .string(type.rendered)
 
-        // A declared name is written as itself, so the reading has to take that
-        // spelling back as the same name. Nothing stops a module declaring a
-        // type called `int`, or `var Task`, or `array<int>`; a document just
-        // has no way to say which one it meant.
         case let .named(name):
-            guard TypeReader.readsBackAsAName(name) else {
-                throw WritingError(
-                    "a type declared as '\(name)' is written the same way the reading"
-                        + " takes for something else, and a document has no way to tell"
-                        + " them apart"
-                )
-            }
-
             return .string(name.spelling)
 
         // Bare, because an occurrence names the parameter and its constraint is
@@ -108,20 +161,7 @@ struct TypeWriter {
         // Spelt with the trailing `?` the reader takes, which is why the
         // declared half has to have a name of its own. A record has no spelling
         // for a `?` to trail.
-        // A mark stands in front of the whole spelling, the trailing `?`
-        // included, so `var Task?` is read as a `var` of a nullable and there
-        // is no spelling left for a nullable of a `var`. Refused rather than
-        // written, or two types would share one spelling and only one of them
-        // would come back.
         case let .nullable(inner):
-            if let inside = SlotMark.marked(inner) {
-                throw WritingError(
-                    "`?` is written on \(inner.rendered), and a `\(inside.rawValue)`"
-                        + " stands in front of the `?` rather than under it, so the two"
-                        + " would share one spelling and only one would come back"
-                )
-            }
-
             return .string(
                 "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
@@ -174,40 +214,28 @@ struct TypeWriter {
         }
     }
 
-    func stripped(_ signature: Signature) -> Signature {
-        Signature(
-            parameters: signature.parameters.map { parameter in
-                Parameter(
-                    name: parameter.name,
-                    type: parameter.type.map(stripped),
-                    candidates: parameter.candidates,
-                    description: parameter.description
-                )
-            },
-            returns: signature.returns.map(stripped)
-        )
-    }
+    // The type the reading gives back for this one's spelling. Names that
+    // compose are spelled in name order, and one name composing is spelled as
+    // the name, which the build reads back as the composition where the name
+    // is a contract's.
+    private func canonical(_ type: TypeExpression) -> TypeExpression {
+        switch type {
+        case let .composition(names):
+            guard names.count == 1 else { return .composition(names.sorted()) }
 
-    // The bounds, gathered from every occurrence (the nested ones included,
-    // because a nested signature's parameters are this signature's own slots)
-    // and written once, at the declaring signature. A name two occurrences
-    // bound differently is two claims about one thing: a signature the link
-    // refuses has no document.
-    func bounds(of signature: Signature) throws -> Value? {
-        let held = signature.parameterBounds
+            return .named(names[0])
 
-        if let refusal = held.refusal {
-            throw WritingError(refusal + ", so there is no `bounds` to write")
+        case let .array(element): return .array(canonical(element))
+        case let .dictionary(element): return .dictionary(canonical(element))
+        case let .nullable(inner): return .nullable(canonical(inner))
+        case let .variable(inner): return .variable(canonical(inner))
+        case let .inout(inner): return .inout(canonical(inner))
+        case let .consuming(inner): return .consuming(canonical(inner))
+        case let .borrowing(inner): return .borrowing(canonical(inner))
+        default: return type
         }
-
-        let bounds = held.table
-            .filter { _, constraints in !constraints.isEmpty }
-            .mapValues { constraints in Value.string(constraints.sorted().map(\.spelling).joined(separator: " & ")) }
-
-        return bounds.isEmpty ? nil : .dictionary(bounds)
     }
 
-    // MARK: - Private
     // A marked slot is written with the mark in front of the inner type,
     // whichever form that type takes: a bare name, or a procedure form under
     // its one key. An inline record has no front to write a mark on, and a
@@ -221,7 +249,7 @@ struct TypeWriter {
             throw WritingError(refusal)
         }
 
-        switch try value(of: inner) {
+        switch try form(of: inner) {
         case let .string(written):
             return .string(mark.marking(written))
 
@@ -302,13 +330,13 @@ struct TypeWriter {
     // The name this type is written as, or nil where it is written as a
     // mapping instead.
     private func named(_ type: TypeExpression) throws -> String? {
-        guard case let .string(name) = try value(of: type) else { return nil }
+        guard case let .string(name) = try form(of: type) else { return nil }
 
         return name
     }
 
     private func spelt(_ type: TypeExpression, at context: String) throws -> String {
-        guard case let .string(name) = try value(of: type) else {
+        guard case let .string(name) = try form(of: type) else {
             throw WritingError("only a type with a name is written \(context)")
         }
 

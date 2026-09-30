@@ -67,6 +67,65 @@ struct UnwritableTests {
         }
     }
 
+    @Test(
+        "a type whose spelling the reading refuses, or reads as another type, has no document",
+        arguments: [
+            TypeExpression.nullable(.composition(["app.A", "app.B"])),
+            .nullable(.nullable(.int)),
+            .nullable(.any),
+            .nullable(.parameter(name: "T")),
+            .nullable(.variable(.int)),
+            .composition(["Foo", "int"]),
+            .composition(["Foo", "array<int>"]),
+            .parameter(name: "a.b"),
+            .parameter(name: "a<b>"),
+            .named("array<int>"),
+            .array(.named("int"))
+        ]
+    )
+    func aSpellingThatDoesNotReadBackIsRefused(type: TypeExpression) {
+        #expect(throws: WritingError.self) {
+            try sut.value(of: type)
+        }
+    }
+
+    @Test("a procedure whose parameter type has no spelling has no document, though it builds")
+    func aBuiltParameterTypeWithNoSpellingIsRefused() async throws {
+        // Given. Two contracts that each ask one procedure, and a slot taking
+        // either or null
+        let module = try Module(
+            contracts: [
+                "app.A": ["a": Signature(parameters: [Parameter(name: "of", type: .named("app.A"))], returns: .int)],
+                "app.B": ["b": Signature(parameters: [Parameter(name: "of", type: .named("app.B"))], returns: .int)]
+            ],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "either", type: .nullable(.composition(["app.A", "app.B"])))]
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When
+        await #expect(throws: Never.self) { try await Builder().build([module] + Module.standard) }
+
+        // Then
+        #expect(throws: WritingError.self) {
+            try sut.value(of: module)
+        }
+    }
+
+    @Test("one name composing is written as the name, and names in any order are written in name order")
+    func aCompositionIsWrittenInItsOneSpelling() throws {
+        #expect(try sut.value(of: TypeExpression.composition(["app.A"])) == .string("app.A"))
+        #expect(try sut.value(of: TypeExpression.array(.composition(["app.A"]))) == .string("array<app.A>"))
+        #expect(try sut.value(of: TypeExpression.composition(["app.B", "app.A"])) == .string("app.A & app.B"))
+    }
+
     @Test("a nullable writes its trailing ?, and one with no spelling inside has no document")
     func aNullableSpellsOrRefuses() throws {
         // Given. The trailing `?` needs a name in front of it, and a record
