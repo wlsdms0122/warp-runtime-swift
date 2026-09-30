@@ -24,9 +24,10 @@ struct Folding {
     // so one run stands in one numbering.
     private let resolved: ResolvedTable
 
-    // What a fold with no document behind it writes under. Its table numbers
-    // its own rows, so nothing looks the name up.
-    static let assembled: Name = "folding"
+    // What a closure written in an expression folded outside any
+    // declaration is written by. Its table numbers its own rows, so nothing
+    // looks the name up.
+    static let writer = Closure.Declaration.binding("folding")
 
     // MARK: - Initializer
     // The table is one that says how its numbers read, since folding runs what
@@ -117,7 +118,7 @@ struct Folding {
             expression,
             reading: names,
             origin: origin,
-            writer: .binding(Folding.assembled),
+            writer: Folding.writer,
             at: place
         )
 
