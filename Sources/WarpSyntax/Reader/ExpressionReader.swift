@@ -30,9 +30,6 @@ import Warp
 // A string is never re-parsed into anything live.
 public struct ExpressionReader: Decodable {
     // MARK: - Property
-    // The keys a mapping is an expression by, one to a mapping.
-    public static let tags = Set(ExpressionTag.allCases.map(\.key))
-
     // What a cast reads and the type it reads it as, inside the cast's own
     // mapping.
     static let subjectKey: Name = "of"
@@ -47,15 +44,14 @@ public struct ExpressionReader: Decodable {
 
     // MARK: - Public
     // The decoder comes along because one form needs more than the value: a
-    // closure carries statements, and which procedures a statement may write is the
+    // closure carries statements, and which construct keys a statement may write is the
     // registry's answer, which travels in the decoder rather than in the data.
     //
     // Not public: a form reading an expression goes through `init(from:)`, which
     // is where a refusal from this grammar is given the address of the walk
-    // that asked for it. A door around that boundary is a way to refuse with no
-    // address at all, and one existed for exactly as long as this was public.
-    static func read(_ value: Value, in decoder: Decoder? = nil) throws -> Expression {
-        try read(value, at: decoder?.steps ?? [], in: decoder)
+    // that asked for it.
+    static func read(_ value: Value, in decoder: Decoder) throws -> Expression {
+        try read(value, at: decoder.steps, in: decoder)
     }
 
     // MARK: - Private
@@ -73,7 +69,7 @@ public struct ExpressionReader: Decodable {
     private static func read(
         _ value: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         do {
             switch value {
@@ -99,9 +95,8 @@ public struct ExpressionReader: Decodable {
             case let .record(record):
                 return try read(record: record.asDictionary, at: steps, in: decoder)
 
-            // A document is text. Nothing it parses to is ever a procedure, so
-            // this arm is unreachable rather than unwritten. A closure reaches
-            // the language by being spelled, and spelling it is a form.
+            // A closure reaches the language by being spelled, and spelling it
+            // is a form.
             case .procedure:
                 throw ExpressionFormError("a document cannot contain a procedure value")
             }
@@ -116,14 +111,14 @@ public struct ExpressionReader: Decodable {
     private static func read(
         record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         switch Tagging(record.entries, reading: ExpressionTag.init) {
         case let .one(tag, written):
             let inside = steps + [.key(tag.rawValue)]
 
             switch tag {
-            case .reference: return try reference(written)
+            case .reference: return try reference(written, at: inside)
             case .record: return try fields(under: written, at: inside, in: decoder)
             case .call: return try call(written, at: steps, in: decoder)
             case .closure: return try closure(written, at: steps, in: decoder)
@@ -148,12 +143,10 @@ public struct ExpressionReader: Decodable {
 
         if !Set(record.names).isDisjoint(with: Interpolation.keys) { return try template(in: record, at: steps, in: decoder) }
 
-        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
-
-        guard notation.readsBareRecords else {
+        guard decoder.notation.readsBareRecords else {
             throw ExpressionFormError(
                 "a mapping where a value is wanted is one of"
-                    + " \(Self.tags.map { tag in "`\(tag)`" }.sorted().joined(separator: ", ")),"
+                    + " \(ExpressionTag.allCases.map { tag in "`\(tag.key)`" }.sorted().joined(separator: ", ")),"
                     + " under its one key. A record is written { record: { … } }"
                     + " (found keys: \(record.names))"
             )
@@ -168,15 +161,11 @@ public struct ExpressionReader: Decodable {
     private static func spelled(
         _ record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression? {
-        // A surface reading expressions alone reads with no notation, so a
-        // record it meets is the record it is.
         guard
-            let decoder,
-            let notation = decoder.userInfo[.notation] as? Notation,
-            let spelling = notation.spelling,
-            spelling.claims(Set(record.names), in: notation)
+            let spelling = decoder.notation.spelling,
+            spelling.claims(Set(record.names), in: decoder.notation)
         else { return nil }
 
         return try spelling.expression(from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder))
@@ -186,7 +175,7 @@ public struct ExpressionReader: Decodable {
     private static func fields(
         under written: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         // A named record is data written as itself, so the name has no place
         // under the tag: kept, it would be a second spelling of that data, and
@@ -203,7 +192,7 @@ public struct ExpressionReader: Decodable {
     private static func fields(
         in record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         .record(
             try record.entries.reduce(into: [Name: Expression]()) { fields, entry in
@@ -216,17 +205,15 @@ public struct ExpressionReader: Decodable {
         )
     }
 
-    private static func reference(_ written: Value) throws -> Expression {
+    private static func reference(_ written: Value, at steps: [Place.Step]) throws -> Expression {
         guard case let .string(rendered) = written else {
-            throw ExpressionFormError(
-                "{ ref: } takes a path string like a.b[0]"
-            )
+            throw ReadingError("{ ref: } takes a path string like a.b[0]", at: steps)
         }
 
         do {
-            return .reference(try TemplateParser().parseRefPath(rendered))
+            return .reference(try PathParser().parse(rendered))
         } catch {
-            throw ExpressionFormError("{ ref: \(rendered) }: \(error)")
+            throw ReadingError("{ ref: \(rendered) }: \(error)", at: steps)
         }
     }
 
@@ -236,7 +223,7 @@ public struct ExpressionReader: Decodable {
         _ written: Value,
         optional: Bool,
         at inside: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         let key = (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key
 
@@ -256,17 +243,10 @@ public struct ExpressionReader: Decodable {
 
         do {
             if case let .string(spelling) = spelled {
-                let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
+                let notation = decoder.notation
 
                 type = try TypeReader.parse(spelling) { name in notation.qualified(name, as: .type) }
             } else {
-                guard let decoder else {
-                    throw ExpressionFormError(
-                        "{ \(key): } with a type written as a mapping cannot be read here."
-                            + " This surface reads a type by its name alone"
-                    )
-                }
-
                 type = try TypeReader(from: ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside))
                     .type
             }
@@ -284,15 +264,8 @@ public struct ExpressionReader: Decodable {
     private static func closure(
         _ written: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
-        guard let decoder else {
-            throw ExpressionFormError(
-                "{ closure: } cannot be read here. A closure carries statements,"
-                    + " and this surface reads expressions alone"
-            )
-        }
-
         do {
             return .closure(
                 try ProcedureReader(from: ValueDecoder(below: decoder, key: ExpressionTag.closure.key.spelling, holding: written, at: steps))
@@ -301,7 +274,7 @@ public struct ExpressionReader: Decodable {
         } catch let refusal as ReadingError {
             // A reading that says where it is says it deeper than here, and
             // folding it into this form's sentence would spend the address
-            // to say the procedures again.
+            // to say it again.
             throw refusal
         } catch {
             throw ExpressionFormError("{ closure: }: \(error)")
@@ -311,15 +284,8 @@ public struct ExpressionReader: Decodable {
     private static func call(
         _ written: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
-        guard let decoder else {
-            throw ExpressionFormError(
-                "{ call: } cannot be read here. A call may carry bodies,"
-                    + " and this surface reads expressions alone"
-            )
-        }
-
         do {
             return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.rawValue, holding: written, at: steps))
                 .expression
@@ -333,22 +299,20 @@ public struct ExpressionReader: Decodable {
     private static func template(
         in record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
         // says a text may not write it; it does not hand the keys back to mean
         // something else.
-        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
-
-        guard let interpolation = notation.interpolation else {
+        guard let interpolation = decoder.notation.interpolation else {
             throw ExpressionFormError(
                 "this notation does not spell a template. Put the text together"
                     + " by sending the procedures that put text together"
             )
         }
 
-        guard record.names.contains("format") else {
+        guard record.names.contains(Interpolation.formatKey) else {
             // Only `with` remains, with is format's companion, meaningless
             // alone.
             throw ExpressionFormError(
@@ -356,20 +320,20 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        guard Set(record.names).subtracting(["format", "with"]).isEmpty else {
+        guard Set(record.names).subtracting(Interpolation.keys).isEmpty else {
             throw ExpressionFormError(
                 "a record with `format` must be exactly { format: <template>,"
                     + " with: <bindings> } (found keys: \(record.names))"
             )
         }
 
-        guard case let .string(template)? = record["format"] else {
+        guard case let .string(template)? = record[Interpolation.formatKey] else {
             throw ExpressionFormError("{ format: } takes a template string")
         }
 
         let bindings: [Name: Expression]
 
-        switch record["with"] {
+        switch record[Interpolation.withKey] {
         case nil:
             bindings = [:]
 
@@ -377,7 +341,7 @@ public struct ExpressionReader: Decodable {
             bindings = try withRecord.entries.reduce(into: [Name: Expression]()) { bound, entry in
                 bound[entry.name] = try read(
                     entry.value,
-                    at: steps + [.key("with"), .key(entry.name.spelling)],
+                    at: steps + [.key(Interpolation.withKey.spelling), .key(entry.name.spelling)],
                     in: decoder
                 )
             }
@@ -396,11 +360,6 @@ public struct ExpressionReader: Decodable {
         } catch {
             throw ExpressionFormError("{ format: } template: \(error)")
         }
-
-        // The format surface is closed: every placeholder must name a declared
-        // binding. An undeclared name is an author mistake caught at load, never
-        // an ambient lookup at run time.
-        try validateClosed(segments, over: Set(bindings.keys))
 
         return try lowered(segments, over: bindings, spending: interpolation)
     }
@@ -448,9 +407,8 @@ public struct ExpressionReader: Decodable {
     //
     // Every name in the path is substituted, not only the head. An index
     // reference is a path of its own inside this one, and leaving it as written
-    // would have it read from whatever scope the statement runs in, which is
-    // the one thing a closed template must never do, and which `validateClosed`
-    // has already made the author declare a binding for.
+    // would have it read from whatever scope the statement runs in. A template
+    // sees only its own bindings, so a name `with` does not bind is refused.
     private static func substituted(
         _ path: Path,
         over bindings: [Name: Expression]
@@ -497,25 +455,5 @@ public struct ExpressionReader: Decodable {
         }
 
         return .indexRef(closed, optional: optionally)
-    }
-
-    private static func validateClosed(
-        _ segments: [TemplateSegment],
-        over declared: Set<Name>
-    ) throws {
-        for segment in segments {
-            guard case let .ref(path) = segment else { continue }
-
-            for referenced in path.expandingIndexReferences {
-                guard let head = referenced.head, declared.contains(head) else {
-                    throw ExpressionFormError(
-                        "{ format: } placeholder ${\(referenced.rendered)} names"
-                            + " '\(referenced.head?.spelling ?? referenced.rendered)', which is"
-                            + " not declared in `with`. A format template sees only"
-                            + " its own bindings"
-                    )
-                }
-            }
-        }
     }
 }

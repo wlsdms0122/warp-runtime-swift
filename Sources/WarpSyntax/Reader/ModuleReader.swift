@@ -17,7 +17,6 @@ import Warp
 // document that declares three of them is ordinary rather than a special case.
 public struct ModuleReader: Decodable {
     public enum CodingKeys: String, CodingKey, CaseIterable {
-        case warp
         case imports
         case description
         case types
@@ -43,18 +42,19 @@ public struct ModuleReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
+            extra: [Envelope.versionKey.spelling],
             context: "module"
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+        let notation = decoder.notation
 
         // Read standing on the procedures rather than on the module holding
         // them, because what is refused just below is about the procedures. A
         // reading is addressed where it is, so being where the answer is is
         // the whole of what puts an author on the right line.
         let written = try container.superDecoder(forKey: .procedures)
-        let procedures = try written.read([String: ProcedureReader].self).named(at: written.steps)
+        let procedures = try written.read([Name: ProcedureReader].self)
 
         guard !procedures.isEmpty else {
             throw ReadingError(
@@ -71,14 +71,9 @@ public struct ModuleReader: Decodable {
                 .mapValues(\.type),
             constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
                 .mapValues { members in members.map(\.type) },
-            contracts: try Self.record(
-                [String: ContractProcedureReader].self,
-                in: container,
-                forKey: .contracts
-            )
-                .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
-            // In key order, so that two claims that read as one refuse the same
-            // one every run.
+            contracts: try Self.record(ContractReader.self, in: container, forKey: .contracts)
+                .mapValues(\.procedures),
+            // In key order, so that the same refusal comes first every run.
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
                 .sorted { one, other in one.key < other.key }
                 .reduce(into: [Name: Set<Name>]()) { claims, entry in
@@ -87,13 +82,8 @@ public struct ModuleReader: Decodable {
                     let type = entry.key
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
 
-                    // Two keys that read as one type are one type claimed
-                    // twice, however the text spelled them, and so are two
-                    // contracts that read as one.
-                    guard claims[type] == nil else {
-                        throw ReadingError("'\(type)' claims twice under satisfies", at: steps)
-                    }
-
+                    // Two contracts that read as one are one contract claimed
+                    // twice, however the text spelled them.
                     let contracts = try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
 
                     guard Set(contracts).count == contracts.count else {
@@ -126,7 +116,7 @@ public struct ModuleReader: Decodable {
 
         let written = try container.superDecoder(forKey: .imports)
 
-        return try Set(written.read([String].self)).named(at: written.steps)
+        return Set(try written.read([String].self).map { spelled in try Name.read(spelled, at: written.steps) })
     }
 
     // One of the slots a module declares a record of things under, read
@@ -142,7 +132,7 @@ public struct ModuleReader: Decodable {
 
         let written = try container.superDecoder(forKey: key)
 
-        return try written.read([String: T].self).named(at: written.steps)
+        return try written.read([Name: T].self)
     }
 
     // A document says which language it is written for, and one that does not
@@ -173,7 +163,7 @@ public struct ModuleReader: Decodable {
             )
         }
 
-        // The rest is about the procedure that is written, so it is read standing on
+        // The rest is about the version that is written, so it is read standing on
         // it. Refusing from out here would put the answer at the document's
         // first character, which is a line the author has no reason to look at.
         let written = try envelope.superDecoder(forKey: key)

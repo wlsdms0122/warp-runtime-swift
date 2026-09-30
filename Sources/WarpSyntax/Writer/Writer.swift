@@ -94,8 +94,13 @@ public struct Writer: Sendable {
                         try procedures.mapValues { asked in
                             var written = try fields(of: asked.signature)
 
-                            if asked.constness == .const { written["const"] = .bool(true) }
-                            if asked.isolation == .isolated { written["isolated"] = .bool(true) }
+                            if asked.constness == .const {
+                                written[ContractProcedureReader.CodingKeys.const.name] = .bool(true)
+                            }
+
+                            if asked.isolation == .isolated {
+                                written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
+                            }
 
                             return .dictionary(written)
                         }
@@ -161,189 +166,33 @@ public struct Writer: Sendable {
         // (slots, nested procedure types) writes types as they arrive and
         // refuses a bound it meets, so a bound can neither be written twice nor
         // quietly dropped.
-        written.merge(try fields(of: stripped(procedure.signature))) { one, _ in one }
+        written.merge(try fields(of: TypeWriter(readBy: readBy).stripped(procedure.signature))) { one, _ in one }
         written.merge(try fields(of: block, in: nil)) { one, _ in one }
 
-        if let bounds = try bounds(of: procedure.signature) {
-            written["bounds"] = bounds
+        if let bounds = try TypeWriter(readBy: readBy).bounds(of: procedure.signature) {
+            written[ProcedureReader.CodingKeys.bounds.name] = bounds
         }
 
         return .dictionary(written)
     }
 
     public func value(of type: TypeExpression) throws -> Value {
-        switch type {
-        case .any: return .string("any")
-        case .never: return .string("never")
-        case .null: return .string("null")
-        case .bool: return .string("bool")
-        case .int: return .string("int")
-        case .double: return .string("double")
-        case .string: return .string("string")
-
-        // The range rides in the name's spelling (`int(0...255)`) the way the
-        // reader takes it in. A bound with no spelling has nothing to ride in:
-        // the language admits an infinity, because it orders like any other
-        // bound, and a document that carried the procedures a message shows it in
-        // would read back as an error. Said rather than written as something
-        // else, the way an unwritable type is.
-        case let .ranged(refinement):
-            guard refinement.spellable else {
-                throw WritingError(
-                    "'\(type.rendered)' is bounded by a fraction no document spells,"
-                        + " and a range is written as its bounds"
-                )
-            }
-
-            return .string(type.rendered)
-
-        // A declared name is written as itself, so the reading has to take that
-        // spelling back as the same name. Nothing stops a module declaring a
-        // type called `int`, or `var Task`, or `array<int>`; a document just
-        // has no way to say which one it meant.
-        case let .named(name):
-            guard TypeReader.readsBackAsAName(name) else {
-                throw WritingError(
-                    "a type declared as '\(name)' is written the same way the reading"
-                        + " takes for something else, and a document has no way to tell"
-                        + " them apart"
-                )
-            }
-
-            return .string(name.spelling)
-
-        // Bare, because an occurrence names the parameter and its constraint is
-        // written once, in the `bounds` of the signature that declares the
-        // name. A signature entry strips the bound before writing and emits it
-        // there, so a bound still on the type here means no signature owns it,
-        // and no surface of the document could carry it: writing the name alone
-        // would be a document that reads back meaning something else. No
-        // document spells this. It is a type the link worked out from a body,
-        // and the link refuses one written into a declaration. Reaching here
-        // means a type got past that, so it is said rather than silently
-        // written as something else.
-        case let .reading(of, path):
-            throw WritingError(
-                "`some \(Path([.key(of)] + path.segments).rendered)` is a type"
-                    + " the build read out of a body,"
-                    + " and no document writes one. A declaration says what a call"
-                    + " fills"
-            )
-
-        case let .parameter(name, constraints):
-            guard constraints.isEmpty else {
-                throw WritingError(
-                    "'some \(name)' is bounded by"
-                        + " '\(constraints.map(\.spelling).joined(separator: " & "))', and nothing"
-                        + " here declares it. A bound is written in the `bounds` of"
-                        + " a procedure's signature, which this type is not part of"
-                )
-            }
-
-            return .string("some \(name)")
-
-        case let .composition(names):
-            return .string(names.sorted().map(\.spelling).joined(separator: " & "))
-
-        // Written as the name it is where the element has one, and under its
-        // own key where the element has none. An array of procedures is the
-        // case with none.
-        case let .array(element):
-            guard let spelling = try named(element) else {
-                return .dictionary([try Name("array"): try value(of: element)])
-            }
-
-            return .string("array<\(spelling)>")
-
-        case let .dictionary(element):
-            guard let spelling = try named(element) else {
-                return .dictionary([try Name("dictionary"): try value(of: element)])
-            }
-
-            return .string("dictionary<\(spelling)>")
-
-        // Spelt with the trailing `?` the reader takes, which is why the
-        // declared half has to have a name of its own. A record has no spelling
-        // for a `?` to trail.
-        // A mark stands in front of the whole spelling, the trailing `?`
-        // included, so `var Task?` is read as a `var` of a nullable and there
-        // is no spelling left for a nullable of a `var`. Refused rather than
-        // written, or two types would share one spelling and only one of them
-        // would come back.
-        case let .nullable(inner):
-            if let inside = SlotMark.marked(inner) {
-                throw WritingError(
-                    "`?` is written on \(inner.rendered), and a `\(inside.rawValue)`"
-                        + " stands in front of the `?` rather than under it, so the two"
-                        + " would share one spelling and only one would come back"
-                )
-            }
-
-            return .string(
-                "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
-            )
-
-        // A record, a procedure and a type handed on once are all written as a
-        // mapping, and the one key is what tells them apart.
-        case let .record(fields):
-            return .dictionary([TypeReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
-
-        // Written under its own key, which is where a record can carry it: the
-        // type a declared type is handed on once is usually written inline,
-        // and there is no front of a record to write a keyword on.
-        case let .linear(inner):
-            return .dictionary([TypeReader.linearKey: try value(of: inner)])
-
-        // All four marks are written the same way, so the writing is said once
-        // below. They are matched one to a case because the mark a case carries
-        // is what the writing needs and a pattern cannot hand it over.
-        case let .variable(inner):
-            return try value(of: inner, under: .variable)
-
-        case let .inout(inner):
-            return try value(of: inner, under: .inout)
-
-        case let .consuming(inner):
-            return try value(of: inner, under: .consuming)
-
-        case let .borrowing(inner):
-            return try value(of: inner, under: .borrowing)
-
-        case let .procedure(type, constness, isolation):
-            let spelling = TypeReader.procedureSpelling(constness, isolation)
-
-            guard let type else { return .string(spelling) }
-
-            // No bound check of its own: a procedure type written as a type has
-            // no `bounds` surface, and the `.parameter` case refuses any bound
-            // the walk below meets. One guard, wherever the walk started.
-            var written: [Name: Value] = [:]
-
-            if !type.parameters.isEmpty {
-                written["parameters"] = .array(try type.parameters.map(value(of:)))
-            }
-
-            if let returns = type.returns {
-                written["returns"] = try value(of: returns)
-            }
-
-            return .dictionary([try Name(spelling): .dictionary(written)])
-        }
+        try TypeWriter(readBy: readBy).value(of: type)
     }
 
     public func value(of parameter: Parameter) throws -> Value {
-        var written: [Name: Value] = ["name": .string(parameter.name.spelling)]
+        var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 
         if let type = parameter.type {
-            written["type"] = try value(of: type)
+            written[ParameterReader.CodingKeys.type.name] = try value(of: type)
         }
 
         if let candidates = parameter.candidates {
-            written["enum"] = .array(candidates.map(Value.string))
+            written[ParameterReader.CodingKeys.candidates.name] = .array(candidates.map(Value.string))
         }
 
         if let description = parameter.description {
-            written["description"] = .string(description)
+            written[ParameterReader.CodingKeys.description.name] = .string(description)
         }
 
         // A record holding nothing but the name is one pair, which a notation
@@ -361,25 +210,10 @@ public struct Writer: Sendable {
     // can be written there; inside another expression there is no name to give, so
     // only the types that need none can.
     public func value(of statement: Statement) throws -> Value {
-        // The reader cannot produce a named conditional, so this guards the caller
-        // that builds statements directly, with the validator's own terms:
-        // writing one silently would make a document that reads back as
-        // something else.
-        if statement.binding != nil, statement.expression.answersNothing {
-            throw WritingError(
-                "a conditional answers nothing, so its name could never bind."
-                    + " It takes no name"
-            )
-        }
-
-        if statement.binding?.declared != nil, statement.expression.namesItsOwn {
-            throw WritingError(Expression.declarationOnABoundName)
-        }
-
         var written: [Name: Value] = [:]
 
         if let binding = statement.binding {
-            written[key(of: binding)] = .string(binding.spelled)
+            written[key(of: binding)] = .string(try spelling(of: binding))
 
             if let declared = binding.declared {
                 written[StatementReader.typeKey] = try value(of: declared)
@@ -411,7 +245,7 @@ public struct Writer: Sendable {
             return try literal(value)
 
         case let .reference(path):
-            return .dictionary([ExpressionTag.reference.key: .string(path.rendered)])
+            return .dictionary([ExpressionTag.reference.key: .string(try spelling(of: path))])
 
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
@@ -452,6 +286,7 @@ public struct Writer: Sendable {
         }
     }
 
+    // MARK: - Private
     // The keys a block writes, with whoever reads it asked whether an empty
     // `body` is written or dropped. Asked rather than remembered: a writer
     // carrying its own list of which forms demand the key is a list that goes
@@ -463,40 +298,40 @@ public struct Writer: Sendable {
     // take `body` as a key that may be absent. Said out loud because a way of
     // writing a block without saying who reads it is a way of skipping the
     // question, and skipping it is the failure this asks about.
-    internal func fields(
+    private func fields(
         of block: Block,
         in form: (any ConstructForm.Type)?
     ) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 
         if form?.requiresBody == true || !block.body.statements.isEmpty {
-            written["body"] = .array(try block.body.statements.map(value(of:)))
+            written[BlockReader.CodingKeys.body.name] = .array(try block.body.statements.map(value(of:)))
         }
 
         if let result = block.result {
-            written["result"] = try value(of: result)
+            written[BlockReader.CodingKeys.result.name] = try value(of: result)
         }
 
         return written
     }
 
     // A signature is written flat into whatever declares it. A procedure and a
-    // procedure type both spell it as their own keys rather than nesting it.
-    func fields(of signature: Signature) throws -> [Name: Value] {
+    // contract's procedure both spell it as their own keys rather than nesting
+    // it.
+    private func fields(of signature: Signature) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 
         if !signature.parameters.isEmpty {
-            written["parameters"] = .array(try signature.parameters.map(value(of:)))
+            written[ProcedureReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
         }
 
         if let returns = signature.returns {
-            written["returns"] = try value(of: returns)
+            written[ProcedureReader.CodingKeys.returns.name] = try value(of: returns)
         }
 
         return written
     }
 
-    // MARK: - Private
     // A construct key and what goes under it. The key comes from the registry
     // rather than from the form, because a notation may have respelled it or
     // given it up.
@@ -516,18 +351,16 @@ public struct Writer: Sendable {
         case let .block(block):
             return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
 
-        // A name on a conditional was already refused where the statement's envelope
-        // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
-                "when": try value(of: condition),
-                "then": .array(try then.statements.map(value(of:)))
+                ConditionalForm.CodingKeys.when.name: try value(of: condition),
+                ConditionalForm.CodingKeys.then.name: .array(try then.statements.map(value(of:)))
             ]
 
             // An empty `else` runs what no `else` runs, so it is written the
             // one way: not at all.
             if let otherwise, !otherwise.statements.isEmpty {
-                written["else"] = .array(try otherwise.statements.map(value(of:)))
+                written[ConditionalForm.CodingKeys.else.name] = .array(try otherwise.statements.map(value(of:)))
             }
 
             return (try spelling(ConditionalForm.self), .dictionary(written))
@@ -536,7 +369,7 @@ public struct Writer: Sendable {
             try named(round, matches: id, in: "loop", binding: "round")
 
             var written: [Name: Value] = [
-                "while": try value(of: condition)
+                LoopForm.CodingKeys.while.name: try value(of: condition)
             ]
 
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
@@ -566,7 +399,7 @@ public struct Writer: Sendable {
 
             var written = try fields(of: attempted, in: AttemptForm.self)
 
-            written["rescue"] = .dictionary(try fields(of: rescue, in: nil))
+            written[AttemptForm.CodingKeys.rescue.name] = .dictionary(try fields(of: rescue, in: nil))
 
             return (try spelling(AttemptForm.self), .dictionary(written))
 
@@ -585,20 +418,24 @@ public struct Writer: Sendable {
             throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
         }
 
-        var written: [Name: Value] = ["procedure": try value(of: callee)]
+        var written: [Name: Value] = [CallForm.CodingKeys.procedure.name: try value(of: callee)]
 
         if !arguments.isEmpty {
-            written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
+            written[CallForm.CodingKeys.arguments.name] = .array(
+                try arguments.map { argument in try value(of: argument) }
+            )
         }
 
         return .dictionary(written)
     }
 
     private func call(of call: Call) throws -> Value {
-        var written: [Name: Value] = ["procedure": .string(call.selector.spelling)]
+        var written: [Name: Value] = [CallForm.CodingKeys.procedure.name: .string(call.selector.spelling)]
 
         if !call.arguments.isEmpty {
-            written["arguments"] = .array(try call.arguments.map { argument in try value(of: argument) })
+            written[CallForm.CodingKeys.arguments.name] = .array(
+                try call.arguments.map { argument in try value(of: argument) }
+            )
         }
 
         return .dictionary(written)
@@ -637,10 +474,37 @@ public struct Writer: Sendable {
 
     private func key(of binding: Statement.Binding) -> Name {
         switch binding {
-        case .constant: "let"
-        case .variable: "var"
-        case .assignment: "set"
+        case .constant: StatementReader.NamingKeys.constant.name
+        case .variable: StatementReader.NamingKeys.variable.name
+        case .assignment: StatementReader.NamingKeys.assignment.name
         }
+    }
+
+    // What a naming key holds: the name, or the path a `set` writes.
+    private func spelling(of binding: Statement.Binding) throws -> String {
+        switch binding {
+        case let .constant(name, _), let .variable(name, _):
+            return name.spelling
+
+        case let .assignment(path):
+            return try spelling(of: path)
+        }
+    }
+
+    // A path as the reading takes it back. A name holding what a path is
+    // spelled with (`.`, `[`) is one segment here and reads back as others.
+    private func spelling(of path: Path) throws -> String {
+        let spelled = path.rendered
+
+        guard (try? PathParser().parse(spelled)) == path else {
+            throw WritingError(
+                "'\(spelled)' reads back as another path. A name in it holds what"
+                    + " a path is spelled with, and a document has no way to tell"
+                    + " them apart"
+            )
+        }
+
+        return spelled
     }
 
     // Data as a document writes it: a record under `record` like every
@@ -697,145 +561,5 @@ public struct Writer: Sendable {
         case .call: "a call"
         case .cast: "a cast"
         }
-    }
-
-    // A marked slot is written with the mark in front of the inner type,
-    // whichever form that type takes: a bare name, or a procedure form under
-    // its one key. An inline record has no front to write a mark on, and a
-    // declaration's field is the one place a procedure type goes anyway.
-    private func value(of inner: TypeExpression, under mark: SlotMark) throws -> Value {
-        // The same thing the reading refuses, refused where the writing is: a
-        // slot says one thing about what it takes. Both marks would land in one
-        // key, and a key the reading cannot take apart comes back as a record
-        // whose field is named after them.
-        if let refusal = SlotMark.refusal(marking: inner, under: mark) {
-            throw WritingError(refusal)
-        }
-
-        switch try value(of: inner) {
-        case let .string(written):
-            return .string(mark.marking(written))
-
-        case let .dictionary(form) where form.count == 1
-            && TypeReader.readsAsAProcedure(form.entries[0].name):
-            return .dictionary([
-                try Name(mark.marking(form.entries[0].name.spelling)): form.entries[0].value
-            ])
-
-        default:
-            throw WritingError(
-                "`\(mark.rawValue)` is written in front of a type name, and"
-                    + " \(inner.rendered) is not written as one. Declare it under a"
-                    + " name and write `\(mark.rawValue)` on the name"
-            )
-        }
-    }
-
-    // The type with every occurrence's bound removed. What a signature's slots
-    // spell, the bound having moved to the signature's own `bounds`. Nested
-    // signatures are walked too: their parameters are the declaring signature's
-    // slots, and the one `bounds` at the declaration speaks for every
-    // occurrence in them.
-    private func stripped(_ type: TypeExpression) -> TypeExpression {
-        switch type {
-        case let .parameter(name, _):
-            return .parameter(name: name)
-
-        // Neither carries a bound to strip: a composition is its bounds, and
-        // a slot spells it whole.
-        case .reading, .composition:
-            return type
-
-        case let .array(element):
-            return .array(stripped(element))
-
-        case let .dictionary(entry):
-            return .dictionary(stripped(entry))
-
-        case let .record(fields):
-            return .record(fields.mapValues(stripped))
-
-        case let .procedure(type, constness, isolation):
-            return .procedure(type.map(stripped), constness, isolation)
-
-        case let .nullable(inner):
-            return .nullable(stripped(inner))
-
-        case let .variable(inner):
-            return .variable(stripped(inner))
-
-        case let .inout(inner):
-            return .inout(stripped(inner))
-
-        case let .linear(inner):
-            return .linear(stripped(inner))
-
-        case let .consuming(inner):
-            return .consuming(stripped(inner))
-
-        case let .borrowing(inner):
-            return .borrowing(stripped(inner))
-
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
-            return type
-        }
-    }
-
-    private func stripped(_ signature: Signature) -> Signature {
-        Signature(
-            parameters: signature.parameters.map { parameter in
-                Parameter(
-                    name: parameter.name,
-                    type: parameter.type.map(stripped),
-                    candidates: parameter.candidates,
-                    description: parameter.description
-                )
-            },
-            returns: signature.returns.map(stripped)
-        )
-    }
-
-    private func stripped(_ type: ProcedureType) -> ProcedureType {
-        ProcedureType(
-            parameters: type.parameters.map(stripped),
-            returns: type.returns.map(stripped)
-        )
-    }
-
-    // The bounds, gathered from every occurrence (the nested ones included,
-    // because a nested signature's parameters are this signature's own slots)
-    // and written once, at the declaring signature. A name two occurrences
-    // bound differently is two claims about one thing: a signature the link
-    // refuses has no document.
-    private func bounds(of signature: Signature) throws -> Value? {
-        let held = signature.parameterBounds
-
-        if let refusal = held.refusal {
-            throw WritingError(refusal + ", so there is no `bounds` to write")
-        }
-
-        let bounds = held.table
-            .filter { _, constraints in !constraints.isEmpty }
-            .mapValues { constraints in Value.string(constraints.sorted().map(\.spelling).joined(separator: " & ")) }
-
-        return bounds.isEmpty ? nil : .dictionary(bounds)
-    }
-
-    // One fact (only a type with a spelling of its own composes) said with the
-    // place the author wrote, so the refusal points at their text.
-    // The name this type is written as, or nil where it is written as a
-    // mapping instead.
-    private func named(_ type: TypeExpression) throws -> String? {
-        guard case let .string(name) = try value(of: type) else { return nil }
-
-        return name
-    }
-
-    private func spelt(_ type: TypeExpression, at context: String) throws -> String {
-        guard case let .string(name) = try value(of: type) else {
-            throw WritingError("only a type with a name is written \(context)")
-        }
-
-        return name
     }
 }

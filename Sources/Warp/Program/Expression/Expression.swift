@@ -141,10 +141,8 @@ public indirect enum Expression: Sendable {
 
     // Whether this construct answers nothing by its own grammar. A conditional
     // chooses a way through a body, not a value, so it has nothing to give a
-    // slot that holds an answer and nothing for a name to bind. The reader, the
-    // validator and the writer each ask this; the other nameless family (what
-    // never finishes) is `alwaysLeaves`'s to say, and stays its own question
-    // because the two facts are refused with two different sentences.
+    // slot that holds an answer and nothing for a name to bind. What never
+    // finishes is `alwaysLeaves`'s to say, refused with its own sentence.
     public var answersNothing: Bool {
         if case .conditional = self { return true }
 

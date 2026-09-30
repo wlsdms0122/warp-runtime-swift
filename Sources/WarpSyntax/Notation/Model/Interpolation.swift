@@ -21,8 +21,11 @@ import Warp
 // instead of a silent winner.
 public struct Interpolation: Sendable, Equatable {
     // MARK: - Property
-    // The keys a template is written under.
-    public static let keys: Set<Name> = ["format", "with"]
+    // The keys a template is written under: the text, and what its
+    // placeholders are bound to.
+    static let formatKey: Name = "format"
+    static let withKey: Name = "with"
+    public static let keys: Set<Name> = [formatKey, withKey]
 
     // What every piece is asked, so that a value of any kind arrives as text.
     public let read: Name

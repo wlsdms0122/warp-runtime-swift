@@ -20,9 +20,8 @@ public struct Block: Sendable {
 
     // Whether every way through this block leaves. True of the block alone,
     // validated or not: a leaving body never reaches the result, and a leaving
-    // result leaves the block the body finished. (A result under a leaving body
-    // is separately refused as unreachable. Where a document assembles the
-    // pair, and where a hand-assembled block is validated.)
+    // result leaves the block the body finished. (`Validator` refuses a result
+    // under a leaving body as unreachable.)
     public var alwaysLeaves: Bool {
         body.alwaysLeaves || result?.alwaysLeaves == true
     }

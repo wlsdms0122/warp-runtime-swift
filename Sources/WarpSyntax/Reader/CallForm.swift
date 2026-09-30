@@ -38,7 +38,7 @@ public struct CallForm: Decodable, Sendable {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "call")
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+        let notation = decoder.notation
 
         let arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
             .read([ExpressionReader].self)

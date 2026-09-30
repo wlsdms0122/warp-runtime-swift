@@ -198,28 +198,22 @@ struct DeclaredNameTests {
     }
 
     @Test("a construct that binds the name says what it holds, and the author does not")
-    func aConstructBoundNameTakesNoDeclaration() async throws {
+    func aConstructBoundNameTakesNoDeclaration() throws {
         // Given. A loop binds the round under the statement's name
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(
-                            binding: .constant("walk", declared: .int),
-                            expression: .loop(while: .literal(.bool(false)), body: Block(body: []), round: "walk")
-                        )
-                    ],
-                    result: .literal(.int(1))
-                )
-            ]
+        let statement = Statement(
+            binding: .constant("walk", declared: .int),
+            expression: .loop(while: .literal(.bool(false)), body: Block(body: []), round: "walk")
         )
 
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
+        // When / Then. Refused where the module is made
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(access: .public, body: [statement], result: .literal(.int(1)))
+                ]
+            )
         } throws: { error in
-            "\(error)".contains("this construct binds the name")
+            error is ValidationError && "\(error)".contains("this construct binds the name")
         }
     }
 

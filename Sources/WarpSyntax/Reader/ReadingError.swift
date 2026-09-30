@@ -27,8 +27,7 @@ import Warp
 // and nothing anybody adds later can take an address back to where it was.
 // `read(in:)` keeps the first document it was told; `asked(at:)` keeps the
 // deeper of two addresses; `addressed(from:)` lets a caller spell its own part
-// better and never touches what is past it. Three questions, three guards, and
-// the fourth one that gets added answers to the same sentence.
+// better and never touches what is past it.
 public struct ReadingError: WarpError {
     // MARK: - Property
     public let message: String

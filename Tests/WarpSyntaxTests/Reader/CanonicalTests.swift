@@ -102,7 +102,7 @@ struct CanonicalTests {
         // to is writable, so nothing is only reachable by spelling it.
         func picking(on condition: Value) async throws -> Module {
             try await loader.loadProcedure([
-                "parameters": [["name": "procedure", "type": "string"]],
+                "parameters": [["name": "word", "type": "string"]],
                 "body": [
                     ["var": "pick"],
                     [
@@ -117,22 +117,22 @@ struct CanonicalTests {
             ], importing: ["std.logic.equal"])
         }
 
-        let spelled = try await picking(on: ["of": ["ref": "procedure"], "equal": "hey"])
+        let spelled = try await picking(on: ["of": ["ref": "word"], "equal": "hey"])
         let plainly = try await picking(on: [
             "call": [
                 "procedure": "std.logic.equal",
-                "arguments": [["ref": "procedure"], "hey"]
+                "arguments": [["ref": "word"], "hey"]
             ]
         ])
 
         // When
         let hit = (
-            try await run(spelled, arguments: ["procedure": .string("hey")]),
-            try await run(plainly, arguments: ["procedure": .string("hey")])
+            try await run(spelled, arguments: ["word": .string("hey")]),
+            try await run(plainly, arguments: ["word": .string("hey")])
         )
         let miss = (
-            try await run(spelled, arguments: ["procedure": .string("ho")]),
-            try await run(plainly, arguments: ["procedure": .string("ho")])
+            try await run(spelled, arguments: ["word": .string("ho")]),
+            try await run(plainly, arguments: ["word": .string("ho")])
         )
 
         // Then

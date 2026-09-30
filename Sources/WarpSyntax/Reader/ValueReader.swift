@@ -72,7 +72,11 @@ public struct ValueReader: Decodable {
         }
 
         if let fields = try? container.decode([String: ValueReader].self) {
-            self.value = .dictionary(try fields.mapValues(\.value).named(at: decoder.steps))
+            self.value = .dictionary(
+                try fields.reduce(into: [Name: Value]()) { named, field in
+                    named[try Name.read(field.key, at: decoder.steps)] = field.value.value
+                }
+            )
 
             return
         }

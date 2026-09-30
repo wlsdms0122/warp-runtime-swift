@@ -22,14 +22,13 @@ public struct BlockReader: Decodable {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "block")
 
-        self.block = try .reading(
+        self.block = Block(
             body: try decoder.descendingIfPresent(to: CodingKeys.body)?
                 .read(BodyReader.self)
                 .body ?? [],
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?
                 .read(ExpressionReader.self)
-                .expression,
-            at: decoder.steps
+                .expression
         )
     }
 
