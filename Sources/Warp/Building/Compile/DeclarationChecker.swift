@@ -14,33 +14,25 @@ struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // Every type the modules declared, and the check that each name a
-    // declaration mentions is one of them. A type name is resolved here for the
-    // same reason a procedure name is: unreached code still has to compile, and
-    // a signature naming a type nobody declared is a defect whether or not
-    // this run walks that way. The spaces arrive gathered from the qualifying
-    // pass. The one place their uniqueness is refused, so what this judges is
-    // what that fact was proved on. This judges content: what a declaration
-    // holds, not what it is called.
-    func types(
-        declared: [Name: Placed<TypeExpression>],
-        constraints members: [Name: Placed<[TypeExpression]>],
-        contracts: [Name: Placed<[Name: ContractProcedure]>],
-        of documents: [any Declaring],
-        standing: [Int],
-        numbered linkage: Linkage
-    ) throws -> TypeTable {
+    // The type table of a namespace, and the check that each name a
+    // declaration mentions is declared in it. A type name is resolved here for
+    // the same reason a procedure name is: unreached code still has to
+    // compile, and a signature naming a type nobody declared is a defect
+    // whether or not this run walks that way. This judges content: what a
+    // declaration holds, not what it is called.
+    func types(of namespace: TypeNamespace, numbered linkage: Linkage) throws -> TypeTable {
+        let declared = namespace.types
+        let members = namespace.constraints
+
         // A document's types and its memberships each take a run of type rows
-        // the way its declarations take a run of table rows, in the standing
-        // order, so a document's types are behind the types it names.
+        // the way its declarations take a run of table rows, in the order the
+        // documents stand, so a document's types are behind the types it names.
         let table = TypeTable(
             types: declared.mapValues(\.held),
             constraints: members.mapValues(\.held),
-            contracts: contracts.mapValues(\.held),
-            standing: standing.flatMap { position in documents[position].types.keys.sorted() },
-            constraintStanding: standing.flatMap { position in
-                documents[position].constraints.keys.sorted()
-            },
+            contracts: namespace.contracts.mapValues(\.held),
+            standing: namespace.typeOrder,
+            constraintStanding: namespace.constraintOrder,
             of: linkage
         )
 
@@ -93,7 +85,7 @@ struct DeclarationChecker {
                 // contract, which is not a type; or nothing, which the
                 // mention below refuses by its own name.
                 let concrete = switch resolved {
-                case let .named(name): contracts[name] == nil
+                case let .named(name): namespace.contracts[name] == nil
                 case .parameter, .any, .never, .composition: false
                 case .null, .bool, .int, .double, .string, .ranged, .array,
                     .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,

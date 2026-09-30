@@ -119,28 +119,15 @@ public struct Builder: Sendable {
         // name two of them declare is refused here as it is there.
         let assembled = try Assembled(compiled)
         let linkage = Linkage()
-        let declared = try declared(in: compiled)
-        let declaring = try DeclarationChecker().types(
-            declared: declared.types,
-            constraints: declared.constraints,
-            contracts: declared.contracts,
-            of: compiled,
-            standing: Array(compiled.indices),
-            numbered: linkage
-        )
+        let namespace = try TypeNamespace(compiled)
+        let declaring = try DeclarationChecker().types(of: namespace, numbered: linkage)
 
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
         // is worked out here rather than left to the compile that asks.
-        let lowered = try ClaimChecker().lowered(
-            declaring,
-            claims: declared.claims,
-            contracts: declared.contracts,
-            over: declared.types,
-            among: signatures
-        )
+        let lowered = try ClaimChecker().lowered(declaring, in: namespace, among: signatures)
 
         var compiling = Compiling(
             types: lowered.types,
@@ -208,13 +195,13 @@ public struct Builder: Sendable {
         // document in its own reach and call the pair a ring. The doubled name
         // is the defect, so it is the refusal an author gets.
         let held = try symbols(of: modules, after: compiled.count)
-        let declared = try declared(in: compiled + modules)
+        let namespace = try TypeNamespace(compiled + modules)
         let standing = try ModuleGraph(modules, after: compiled.count).standing
         let lowered = try await compile(
             modules,
             at: standing,
             declaring: held,
-            over: declared,
+            over: namespace,
             against: laid
         )
 
@@ -244,26 +231,14 @@ public struct Builder: Sendable {
         _ modules: [Module],
         at standing: [Int],
         declaring symbols: [Symbol],
-        over declared: (
-            types: [Name: Placed<TypeExpression>],
-            constraints: [Name: Placed<[TypeExpression]>],
-            contracts: [Name: Placed<[Name: ContractProcedure]>],
-            claims: [Placed<Claim>]
-        ),
+        over namespace: TypeNamespace,
         against laid: Laid
     ) async throws -> [Compiled] {
         let compiled = laid.compiled
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
 
-        let declaring = try DeclarationChecker().types(
-            declared: declared.types,
-            constraints: declared.constraints,
-            contracts: declared.contracts,
-            of: documents,
-            standing: Array(documents.indices),
-            numbered: laid.linkage
-        )
+        let declaring = try DeclarationChecker().types(of: namespace, numbered: laid.linkage)
 
         try DeclarationChecker().judge(laying, in: declaring)
 
@@ -324,9 +299,7 @@ public struct Builder: Sendable {
         let fulfillment = Fulfillment()
         let lowered = try ClaimChecker().lowered(
             declaring,
-            claims: declared.claims,
-            contracts: declared.contracts,
-            over: declared.types,
+            in: namespace,
             among: signatures,
             concealed: laid.carried.concealed.union(holding.flatMap { symbols in
                 symbols.filter { symbol in !symbol.supplies }.map(\.declared)
@@ -733,22 +706,13 @@ public struct Builder: Sendable {
         // laid down in the order their blocks are. Which types answer which
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.
-        let declared = try declared(in: compiled)
-        let declaring = try DeclarationChecker().types(
-            declared: declared.types,
-            constraints: declared.constraints,
-            contracts: declared.contracts,
-            of: compiled,
-            standing: Array(compiled.indices),
-            numbered: Linkage()
-        )
+        let namespace = try TypeNamespace(compiled)
+        let declaring = try DeclarationChecker().types(of: namespace, numbered: Linkage())
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         let lowered = try ClaimChecker().lowered(
             declaring,
-            claims: declared.claims,
-            contracts: declared.contracts,
-            over: declared.types,
+            in: namespace,
             among: signatures,
             concealed: assembled.concealed
         )
@@ -1157,146 +1121,5 @@ public struct Builder: Sendable {
 
             names.formUnion(path.expandingIndexReferences.compactMap(\.head))
         }
-    }
-
-    // Type, constraint and contract names are their declared spelling, the way
-    // procedure names are: the standard bundles declare `std.Numeric` under that
-    // key, and a document declaring a bare `Numeric` of its own declares a
-    // different name.
-    //
-    // The three tables gathered whole, here and nowhere else, so the uniqueness
-    // this pass refuses on is the same fact the tables are built from: each is
-    // filled as it is walked. A mention nothing declares is
-    // refused by the judgment that owns undeclared names, which says where the
-    // mention lives.
-    private func declared(in documents: [any Declaring]) throws -> (
-        types: [Name: Placed<TypeExpression>],
-        constraints: [Name: Placed<[TypeExpression]>],
-        contracts: [Name: Placed<[Name: ContractProcedure]>],
-        claims: [Placed<Claim>]
-    ) {
-        // Where each name was written, gathered here and carried with what it
-        // holds. This is where both halves of the joining are in hand. Anywhere
-        // later has only the joined name, and taking it apart again is a second
-        // copy of a rule that has to be right once.
-        //
-        // One table per space, and the table is what says a name is taken. A
-        // second table beside it saying the same thing is a second answer to
-        // one question.
-        //
-        // Each space is walked whole before the two are held against each
-        // other, so what a link concludes cannot depend on the order the caller
-        // happened to list the documents in.
-        var declaredTypes: [Name: Placed<TypeExpression>] = [:]
-        var declaredConstraints: [Name: Placed<[TypeExpression]>] = [:]
-        var declaredContracts: [Name: Placed<[Name: ContractProcedure]>] = [:]
-
-        for (origin, held) in documents.enumerated() {
-            for (name, type) in held.types.sorted(by: { $0.key < $1.key }) {
-                let declaration = Placed(type, at: .type(name.spelling, in: held.document), of: origin)
-
-                // Read before written. Written first, the entry that says what
-                // this collides with is the one this call overwrote.
-                if let first = declaredTypes[name] {
-                    throw BuildError(
-                        "type '\(name)' is declared more than once in this link, by"
-                            + " \(first.spelled) and \(declaration.spelled)",
-                        at: declaration.place
-                    )
-                }
-
-                declaredTypes[name] = declaration
-            }
-        }
-
-        for (origin, held) in documents.enumerated() {
-            for (name, members) in held.constraints.sorted(by: { $0.key < $1.key }) {
-                let declaration = Placed(
-                    members,
-                    at: .constraint(name.spelling, in: held.document),
-                    of: origin
-                )
-
-                if let declared = declaredTypes[name] {
-                    throw BuildError(
-                        "'\(name)' is declared as both a type and a constraint in"
-                            + " this link, as a type by \(declared.spelled) and as a"
-                            + " constraint by \(declaration.spelled). One name cannot"
-                            + " stand for a type and a membership at once",
-                        at: declaration.place
-                    )
-                }
-
-                if let first = declaredConstraints[name] {
-                    throw BuildError(
-                        "constraint '\(name)' is declared more than once in this"
-                            + " link, by \(first.spelled) and \(declaration.spelled)",
-                        at: declaration.place
-                    )
-                }
-
-                declaredConstraints[name] = declaration
-            }
-        }
-
-        for (origin, held) in documents.enumerated() {
-            for (name, procedures) in held.contracts.sorted(by: { $0.key < $1.key }) {
-                let declaration = Placed(
-                    procedures,
-                    at: .contract(name.spelling, in: held.document),
-                    of: origin
-                )
-
-                if let declared = declaredTypes[name]?.spelled ?? declaredConstraints[name]?.spelled {
-                    throw BuildError(
-                        "'\(name)' is declared as a contract in this link and as"
-                            + " something else by \(declared). One name"
-                            + " cannot be a type, a membership and a contract"
-                            + " at once",
-                        at: declaration.place
-                    )
-                }
-
-                if let first = declaredContracts[name] {
-                    throw BuildError(
-                        "contract '\(name)' is declared more than once in this"
-                            + " link, by \(first.spelled) and \(declaration.spelled)",
-                        at: declaration.place
-                    )
-                }
-
-                declaredContracts[name] = declaration
-            }
-        }
-
-        // What each document said one of its types, or another document's,
-        // answers. Handed on as a list, since a claim declares no name for a
-        // table to be keyed by.
-        //
-        // A pair two documents claim is one claim. A claim holds nothing but
-        // the pair, so two of them cannot disagree, and the second says what
-        // the first said.
-        var claimed: Set<Claim> = []
-        var claims: [Placed<Claim>] = []
-
-        for (origin, held) in documents.enumerated() {
-            for (type, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
-                for contract in contracts.sorted() {
-                    let claim = Claim(type: type, contract: contract)
-
-                    guard claimed.insert(claim).inserted else { continue }
-
-                    claims.append(
-                        Placed(
-                            claim,
-                            at: .satisfies(type.spelling, in: held.document),
-                            of: origin
-                        )
-                    )
-                }
-            }
-        }
-
-        return (declaredTypes, declaredConstraints, declaredContracts, claims)
     }
 }
