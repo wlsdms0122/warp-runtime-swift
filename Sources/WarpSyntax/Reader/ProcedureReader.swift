@@ -69,7 +69,7 @@ public struct ProcedureReader: Decodable {
             // signature. What a call may pass, what comes back, and what each
             // type parameter admits.
             signature: try BoundsReader().apply(
-                try bounds?.read([String: String].self),
+                try bounds?.read([Name: String].self),
                 qualifying: { [notation = decoder.notation] name in notation.qualified(name, as: .type) },
                 to: Signature(
                     parameters: try container

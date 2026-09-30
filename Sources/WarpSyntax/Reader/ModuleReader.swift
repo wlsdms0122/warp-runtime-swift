@@ -54,7 +54,7 @@ public struct ModuleReader: Decodable {
         // reading is addressed where it is, so being where the answer is is
         // the whole of what puts an author on the right line.
         let written = try container.superDecoder(forKey: .procedures)
-        let procedures = try written.read([String: ProcedureReader].self).named(at: written.steps)
+        let procedures = try written.read([Name: ProcedureReader].self)
 
         guard !procedures.isEmpty else {
             throw ReadingError(
@@ -71,12 +71,8 @@ public struct ModuleReader: Decodable {
                 .mapValues(\.type),
             constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
                 .mapValues { members in members.map(\.type) },
-            contracts: try Self.record(
-                [String: ContractProcedureReader].self,
-                in: container,
-                forKey: .contracts
-            )
-                .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
+            contracts: try Self.record(ContractReader.self, in: container, forKey: .contracts)
+                .mapValues(\.procedures),
             // In key order, so that the same refusal comes first every run.
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
                 .sorted { one, other in one.key < other.key }
@@ -120,7 +116,7 @@ public struct ModuleReader: Decodable {
 
         let written = try container.superDecoder(forKey: .imports)
 
-        return try Set(written.read([String].self)).named(at: written.steps)
+        return Set(try written.read([String].self).map { spelled in try Name.read(spelled, at: written.steps) })
     }
 
     // One of the slots a module declares a record of things under, read
@@ -136,7 +132,7 @@ public struct ModuleReader: Decodable {
 
         let written = try container.superDecoder(forKey: key)
 
-        return try written.read([String: T].self).named(at: written.steps)
+        return try written.read([Name: T].self)
     }
 
     // A document says which language it is written for, and one that does not

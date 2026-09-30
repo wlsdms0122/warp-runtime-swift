@@ -395,15 +395,15 @@ struct ValueDecoder: Decoder {
     // be the same line twice, which is the whole of what an address is for.
     // Sorted rather than as-written because a document is a value by then and a
     // value's record has no order to have kept.
-    func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
+    func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
         guard let record = value.asDictionary else {
             throw ReadingError("expected a record, found \(value.type)", at: steps)
         }
 
         return try record.entries
             .sorted { left, right in left.name.spelling < right.name.spelling }
-            .reduce(into: [String: T]()) { read, entry in
-                read[entry.name.spelling] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
+            .reduce(into: [Name: T]()) { read, entry in
+                read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
             }
     }
 

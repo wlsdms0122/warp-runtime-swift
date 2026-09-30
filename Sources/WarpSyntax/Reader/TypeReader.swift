@@ -492,17 +492,13 @@ public struct TypeReader: Decodable {
 
     // A record type's fields, each a type.
     private static func record(from decoder: Decoder) throws -> TypeExpression {
-        guard let fields = try? decoder.container(keyedBy: AnyCodingKey.self) else {
+        guard (try? decoder.container(keyedBy: AnyCodingKey.self)) != nil else {
             throw ReadingError("a record type is a mapping of its fields to their types", at: decoder.steps)
         }
 
         // Each field read where it stands, so a refusal inside one keeps its
         // own place and its own sentence.
-        let read = try fields.allKeys.reduce(into: [String: TypeExpression]()) { read, key in
-            read[key.stringValue] = try fields.decode(TypeReader.self, forKey: key).type
-        }
-
-        return .record(try read.named(at: decoder.steps))
+        return .record(try decoder.read([Name: TypeReader].self).mapValues(\.type))
     }
 
     // One value, one spelling (a padded or signed-zero bound would be a second
