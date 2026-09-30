@@ -12,8 +12,8 @@ import Warp
 // beside another (it writes no name it captured, touches no module variable and
 // cannot leave past its own edge) so "run these concurrently" is a thing a procedure
 // can be handed, and the grammar does not need a construct to say it. Which
-// closures are isolated the link derived, and each piece is asked as it is
-// started.
+// closures are isolated the link derived, and the slot holds every piece to it
+// before this runs.
 //
 // One machine under two procedures, because what a piece is, how it is started
 // and how a failure is reported are the same for both, and only what "done"
