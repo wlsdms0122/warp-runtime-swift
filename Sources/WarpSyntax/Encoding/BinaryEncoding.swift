@@ -138,15 +138,15 @@ public struct BinaryEncoding {
         var reading = Cursor(data)
 
         guard reading.take(Self.magic.count).elementsEqual(Self.magic) else {
-            throw refused("the bytes do not begin as a warp document begins")
+            throw EncodingRefused("the bytes do not begin as a warp document begins")
         }
 
         guard let version = reading.byte() else {
-            throw refused("the bytes end before saying how they are laid out")
+            throw EncodingRefused("the bytes end before saying how they are laid out")
         }
 
         guard version == Self.format else {
-            throw refused(
+            throw EncodingRefused(
                 version > Self.format
                     ? "the document is laid out as format \(version), and this reader lays out \(Self.format)"
                     : "format \(version) never existed"
@@ -156,7 +156,7 @@ public struct BinaryEncoding {
         let value = try read(from: &reading)
 
         guard reading.isDone else {
-            throw refused("the document ended and the bytes did not")
+            throw EncodingRefused("the document ended and the bytes did not")
         }
 
         return value
@@ -221,13 +221,7 @@ public struct BinaryEncoding {
             // in any encoding, so they are refused rather than becoming a
             // document only this encoding reads.
             guard double.isFinite else {
-                throw EncodingError.invalidValue(
-                    value,
-                    .init(
-                        codingPath: [],
-                        debugDescription: "a document has no way to carry \(double)"
-                    )
-                )
+                throw EncodingRefused("a document has no way to carry \(double)")
             }
 
             bytes.append(Tag.double.rawValue)
@@ -269,13 +263,7 @@ public struct BinaryEncoding {
             try write(held, named: nil, into: &bytes, within: depth, opening: &open)
 
         case .procedure:
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "a procedure is code, and data is what a document spells"
-                )
-            )
+            throw EncodingRefused("a procedure is code, and data is what a document spells")
         }
     }
 
@@ -284,13 +272,7 @@ public struct BinaryEncoding {
     // empty one past the bound is refused the same as a full one.
     private func opening(_ value: Value, within depth: Int) throws {
         guard depth > 0 else {
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "the value nests deeper than a document may"
-                )
-            )
+            throw EncodingRefused("the value nests deeper than a document may")
         }
     }
 
@@ -305,10 +287,7 @@ public struct BinaryEncoding {
     ) throws {
         if let name {
             guard name.isDeclarable else {
-                throw EncodingError.invalidValue(
-                    Value.string(name.spelling),
-                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
-                )
+                throw EncodingRefused("the record's name is not a type's name")
             }
 
             bytes.append(Tag.namedRecord.rawValue)
@@ -355,11 +334,11 @@ public struct BinaryEncoding {
 
         while true {
             guard let raw = reading.byte() else {
-                throw refused("the bytes end where a value should begin")
+                throw EncodingRefused("the bytes end where a value should begin")
             }
 
             guard let tag = Tag(rawValue: raw) else {
-                throw refused("nothing in this format begins with \(raw)")
+                throw EncodingRefused("nothing in this format begins with \(raw)")
             }
 
             var settled: Value?
@@ -381,14 +360,14 @@ public struct BinaryEncoding {
                 let raw = reading.take(8)
 
                 guard reading.lastTakeWasComplete else {
-                    throw refused("the bytes end inside a fraction")
+                    throw EncodingRefused("the bytes end inside a fraction")
                 }
 
                 let bits = raw.reduce(UInt64(0)) { held, byte in held << 8 | UInt64(byte) }
                 let double = Double(bitPattern: bits)
 
                 guard double.isFinite else {
-                    throw refused("a document has no way to carry \(double)")
+                    throw EncodingRefused("a document has no way to carry \(double)")
                 }
 
                 settled = .double(double)
@@ -401,7 +380,7 @@ public struct BinaryEncoding {
                 let raw = reading.take(count)
 
                 guard reading.lastTakeWasComplete else {
-                    throw refused("the bytes end inside bytes")
+                    throw EncodingRefused("the bytes end inside bytes")
                 }
 
                 settled = .bytes(Array(raw))
@@ -492,13 +471,13 @@ public struct BinaryEncoding {
         let raw = Array(key.utf8)
 
         if let previous, !previous.lexicographicallyPrecedes(raw) {
-            throw refused("the record's keys are not written in order")
+            throw EncodingRefused("the record's keys are not written in order")
         }
 
         do {
             return (try Name(key), raw)
         } catch let refusal as NameRefused {
-            throw refused(refusal.message)
+            throw EncodingRefused(refusal.message)
         }
     }
 
@@ -511,11 +490,11 @@ public struct BinaryEncoding {
         do {
             name = try Name(spelling)
         } catch let refusal as NameRefused {
-            throw refused(refusal.message)
+            throw EncodingRefused(refusal.message)
         }
 
         guard name.isDeclarable else {
-            throw refused("the record's name is not a type's name")
+            throw EncodingRefused("the record's name is not a type's name")
         }
 
         return name
@@ -527,11 +506,11 @@ public struct BinaryEncoding {
         let bytes = reading.take(count)
 
         guard reading.lastTakeWasComplete else {
-            throw refused("the bytes end inside text")
+            throw EncodingRefused("the bytes end inside text")
         }
 
         guard let string = String(utf8: bytes) else {
-            throw refused("the text is not UTF-8")
+            throw EncodingRefused("the text is not UTF-8")
         }
 
         return string
@@ -551,7 +530,7 @@ public struct BinaryEncoding {
         let claimed = try unsigned(from: &reading)
 
         guard claimed <= UInt64(Int.max), reading.claim(Int(claimed), costing: cost) else {
-            throw refused("\(what) claims more than the document holds")
+            throw EncodingRefused("\(what) claims more than the document holds")
         }
 
         return Int(claimed)
@@ -564,11 +543,11 @@ public struct BinaryEncoding {
 
         while true {
             guard let byte = reading.byte() else {
-                throw refused("the bytes end inside a number")
+                throw EncodingRefused("the bytes end inside a number")
             }
 
             guard shift < 64, shift < 63 || byte <= 0x01 else {
-                throw refused("the number does not fit in 64 bits")
+                throw EncodingRefused("the number does not fit in 64 bits")
             }
 
             value |= UInt64(byte & 0x7f) << shift
@@ -582,7 +561,7 @@ public struct BinaryEncoding {
         // A trailing zero group is a longer spelling of the same number, and a
         // canonical wire has one spelling.
         guard shift == 0 || last != 0 else {
-            throw refused("the number is written longer than it is")
+            throw EncodingRefused("the number is written longer than it is")
         }
 
         return value
@@ -604,11 +583,7 @@ public struct BinaryEncoding {
     // one about to open is one more of them.
     private func opening(_ opened: [Opened]) throws {
         guard opened.count < Envelope.nesting else {
-            throw refused("the document nests deeper than a reader must follow")
+            throw EncodingRefused("the document nests deeper than a reader must follow")
         }
-    }
-
-    private func refused(_ said: String) -> Error {
-        DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: said))
     }
 }

@@ -117,7 +117,7 @@ public struct TextEncoding {
 
     public func value(from data: Data) throws -> Value {
         guard let text = String(utf8: data) else {
-            throw refused("the text is not UTF-8")
+            throw EncodingRefused("the text is not UTF-8")
         }
 
         return try value(from: text)
@@ -581,10 +581,7 @@ public struct TextEncoding {
     ) throws {
         if let name {
             guard name.isDeclarable else {
-                throw EncodingError.invalidValue(
-                    Value.string(name.spelling),
-                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
-                )
+                throw EncodingRefused("the record's name is not a type's name")
             }
 
             text += name.spelling + " "
@@ -638,13 +635,7 @@ public struct TextEncoding {
         // once. The spelling itself is the judge.
         case let .double(double):
             guard let spelling = double.spelling else {
-                throw EncodingError.invalidValue(
-                    value,
-                    .init(
-                        codingPath: [],
-                        debugDescription: "a document has no way to carry \(double)"
-                    )
-                )
+                throw EncodingRefused("a document has no way to carry \(double)")
             }
 
             text += spelling
@@ -687,13 +678,7 @@ public struct TextEncoding {
             try write(held, named: nil, at: indent, into: &text, within: depth)
 
         case .procedure:
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "a procedure is code, and data is what a document spells"
-                )
-            )
+            throw EncodingRefused("a procedure is code, and data is what a document spells")
         }
     }
 
@@ -734,18 +719,8 @@ public struct TextEncoding {
     // written one container deeper.
     private func opening(_ value: Value, within depth: Int) throws {
         guard depth > 0 else {
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "the value nests deeper than a document may"
-                )
-            )
+            throw EncodingRefused("the value nests deeper than a document may")
         }
-    }
-
-    private func refused(_ said: String) -> Error {
-        DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: said))
     }
 
     private func refused(_ said: String, at offset: Int) -> Error {
@@ -767,6 +742,6 @@ public struct TextEncoding {
             }
         }
 
-        return refused("\(said), at line \(line) column \(column)")
+        return EncodingRefused(said, at: EncodingRefused.Position(line: line, column: column))
     }
 }

@@ -347,7 +347,7 @@ struct BinaryEncodingTests {
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
-            "\(error)".contains("UTF-8")
+            (error as? EncodingRefused)?.message == "the text is not UTF-8"
         }
     }
 
@@ -376,13 +376,13 @@ struct BinaryEncodingTests {
         // Given. The value model's edges, not this encoding's: these bytes
         // could be written, and the refusal is that no encoding may
         for value in [Value.double(.infinity), .double(.nan)] {
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try BinaryEncoding().data(from: value)
             }
         }
 
         // And code is not data in any encoding
-        #expect(throws: (any Error).self) {
+        #expect(throws: EncodingRefused.self) {
             try BinaryEncoding().data(
                 from: .procedure(Closure.assembled())
             )

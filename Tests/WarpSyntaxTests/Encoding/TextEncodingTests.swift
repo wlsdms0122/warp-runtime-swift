@@ -395,24 +395,29 @@ struct TextEncodingTests {
         #expect {
             try TextEncoding().value(from: "warpt 1\n{\n  a 1\n  2\n}\n")
         } throws: { error in
-            "\(error)".hasSuffix("a record writes a field name here, at line 4 column 3")
+            Self.refused(error, "a record writes a field name here", at: 4, 3)
         }
 
         // Text that ends inside a record: the reader stands past the last line.
         #expect {
             try TextEncoding().value(from: "warpt 1\n{\n  a\n")
         } throws: { error in
-            "\(error)".hasSuffix("the text ends where a value should begin, at line 4 column 1")
+            Self.refused(error, "the text ends where a value should begin", at: 4, 1)
         }
 
         // A token the tokenizer refuses, before any value is read.
         #expect {
             try TextEncoding().value(from: "warpt 1\n[\n  \"a\"b\n]\n")
         } throws: { error in
-            "\(error)".contains("at line 3 column 6")
+            (error as? EncodingRefused)?.position == EncodingRefused.Position(line: 3, column: 6)
         }
     }
 
     // MARK: - Public
     // MARK: - Private
+    private static func refused(_ error: any Error, _ message: String, at line: Int, _ column: Int) -> Bool {
+        guard let refused = error as? EncodingRefused else { return false }
+
+        return refused.message == message && refused.position == EncodingRefused.Position(line: line, column: column)
+    }
 }
