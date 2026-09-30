@@ -8,8 +8,7 @@
 import Foundation
 import Warp
 
-// The quotient. Always a fraction, even between wholes, which is why
-// `remainder` exists to read a whole division's other half.
+// The quotient. Always a fraction, even between wholes.
 struct DividedByQuery: Query {
     typealias Parameters = NumericPair
 

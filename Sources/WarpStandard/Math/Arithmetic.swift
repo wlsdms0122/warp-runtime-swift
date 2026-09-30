@@ -13,8 +13,7 @@ import Warp
 // ends and the fraction path begins, and which answers fall off the edge.
 //
 // Ints stay ints, so `2 plus 2` answers 4 rather than 4.0. Division is the
-// exception, because a quotient is not generally whole. `remainder` is where a
-// whole division's other half is read.
+// exception, because a quotient is not generally whole.
 //
 // `int` is 64 bits, so a whole answer can fall off its edge. That is a
 // fault of the program, not a condition of its data: an overflow and a divisor
@@ -99,7 +98,7 @@ struct Arithmetic: Sendable {
         case .dividedBy:
             return nil
 
-        // A remainder is smaller than its divisor, so it always fits the int.
+        // A remainder is smaller in size than its divisor, so it always fits the int.
         // The overflow guard below is not its judge. The one divisor that trips
         // the hardware's division (`Int.min % -1`) still has the answer 0, so
         // it is answered directly.
@@ -130,8 +129,8 @@ struct Arithmetic: Sendable {
         case .dividedBy:
             return left / right
 
-        // Truncating toward zero, the same as the whole answer. A wrap written
-        // over doubles reads the way the same wrap written over ints does.
+        // Truncating toward zero, the same as the whole answer, so both take
+        // the dividend's sign.
         case .remainder:
             return left.truncatingRemainder(dividingBy: right)
         }

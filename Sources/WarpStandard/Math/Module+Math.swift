@@ -45,7 +45,7 @@ public extension Module {
                     implementation: .query(DividedByQuery())
                 ),
                 "std.math.remainder": Procedure(
-                    description: "What is left of a whole division.",
+                    description: "What is left of a division truncated toward zero.",
                     signature: Signature(
                         of: RemainderQuery.self,
                         returns: .parameter(name: "N", constraints: ["std.Numeric"])

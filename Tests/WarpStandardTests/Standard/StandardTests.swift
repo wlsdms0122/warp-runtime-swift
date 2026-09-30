@@ -445,47 +445,6 @@ struct StandardTests {
         }
     }
 
-    @Test("a whole division reads both halves")
-    func wholeDivisionIsWritable() async throws {
-        // Given. `dividedBy` always answers a double, so a whole division is
-        // that floored, and what it left over is `remainder`
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(parameters: [Parameter(name: "n", type: .int)]),
-                    body: [
-                        Statement(binding: .constant("quotient"), expression: .call(Call(
-                            selector: "std.math.dividedBy",
-                            arguments: [reference("n"), .literal(.int(4))]
-                        ))
-                        ),
-                        Statement(binding: .constant("whole"), expression: .call(Call(
-                            selector: "std.math.floored",
-                            arguments: [reference("quotient")]
-                        ))
-                        ),
-                        Statement(binding: .constant("left"), expression: .call(Call(
-                            selector: "std.math.remainder",
-                            arguments: [reference("n"), .literal(.int(4))]
-                        ))
-                        )
-                    ],
-                    result: .record([
-                        "left": reference("left"),
-                        "whole": reference("whole")
-                    ])
-                )
-            ]
-        )
-
-        // When
-        let answer = try await run(sut, arguments: ["n": .int(11)])
-
-        // Then
-        #expect(answer == .dictionary(["whole": .int(2), "left": .int(3)]))
-    }
-
     @Test("an array grows and shrinks, which is a length the text did not write")
     func anArrayIsBuiltRatherThanSpelled() async throws {
         // Given. A body walking a grid: the head moves and wraps, the trail

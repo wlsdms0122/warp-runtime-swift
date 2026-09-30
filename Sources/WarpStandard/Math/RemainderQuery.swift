@@ -8,8 +8,8 @@
 import Foundation
 import Warp
 
-// What is left of a whole division. The half `dividedBy` cannot answer,
-// since a quotient is a fraction.
+// What is left of a division truncated toward zero, which takes the
+// dividend's sign.
 struct RemainderQuery: Query {
     typealias Parameters = NumericPair
 

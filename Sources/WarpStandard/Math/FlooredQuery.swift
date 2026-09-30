@@ -10,7 +10,7 @@ import Warp
 
 // The whole number at or below this one. Answers an int whatever it was sent,
 // which is how a quotient becomes a whole number again: `dividedBy` always
-// answers a double, and this is the other half of writing a whole division.
+// answers a double.
 struct FlooredQuery: Query {
     typealias Parameters = NumberOperand
 
