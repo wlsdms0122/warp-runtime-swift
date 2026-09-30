@@ -117,14 +117,6 @@ public struct TypeTable: Sendable {
         )
     }
 
-    public func resolve(_ name: Name) -> TypeExpression? {
-        types[name]
-    }
-
-    public func constraint(_ name: Name) -> [TypeExpression]? {
-        constraints[name]
-    }
-
     // Whether a reading could be a member of a constraint, or nil when nothing
     // declares the name. The caller says what an undeclared constraint means on
     // its surface, rather than this deciding for both. Membership is one-sided

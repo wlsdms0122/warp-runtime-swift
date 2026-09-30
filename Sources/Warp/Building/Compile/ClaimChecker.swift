@@ -218,7 +218,7 @@ struct ClaimChecker {
 
             // Declared as something else here, which no document arriving
             // later undoes: one name has one declarer.
-            guard contracts[type] == nil, table.constraint(type) == nil else {
+            guard contracts[type] == nil, table.constraints[type] == nil else {
                 throw BuildError(reason, at: claim.place)
             }
 
@@ -229,7 +229,7 @@ struct ClaimChecker {
             let reason = "'\(contract)' is not a contract this link declares,"
                 + " so there are no procedures for '\(type)' to answer"
 
-            guard types[contract] == nil, table.constraint(contract) == nil else {
+            guard types[contract] == nil, table.constraints[contract] == nil else {
                 throw BuildError(reason, at: claim.place)
             }
 

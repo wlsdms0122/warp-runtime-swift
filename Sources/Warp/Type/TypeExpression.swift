@@ -1009,7 +1009,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     private func resolved(in types: TypeTable, assuming: Set<Name>) -> TypeExpression {
         switch self {
         case let .named(name):
-            guard !assuming.contains(name), let declared = types.resolve(name) else {
+            guard !assuming.contains(name), let declared = types.types[name] else {
                 return self
             }
 
@@ -1053,7 +1053,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return true
 
         case let .named(name):
-            if let declared = table.resolve(name) {
+            if let declared = table.types[name] {
                 return reaches(declared, in: table, assuming: assuming)
             }
 
@@ -1097,7 +1097,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     ) -> Bool? {
         guard !assuming.contains(name) else { return nil }
 
-        guard let members = table.constraint(name), !members.isEmpty else { return false }
+        guard let members = table.constraints[name], !members.isEmpty else { return false }
 
         let answers = members.compactMap { member in
             reaches(member, in: table, assuming: assuming.union([name]))

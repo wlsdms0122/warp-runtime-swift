@@ -56,8 +56,8 @@ struct DeclaredSpellingTests {
         let image = try await builder.build([sut, store] + Module.standard)
 
         // Then. The declaration is under the declared spelling alone
-        #expect(image.types.resolve("store.Task") == .record(["id": .string]))
-        #expect(image.types.resolve("Task") == nil)
+        #expect(image.types.types["store.Task"] == .record(["id": .string]))
+        #expect(image.types.types["Task"] == nil)
     }
 
     @Test("a module names its own type by its declared spelling")
