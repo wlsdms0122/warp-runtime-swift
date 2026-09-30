@@ -379,7 +379,7 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [:]
 
         if let binding = statement.binding {
-            written[key(of: binding)] = .string(binding.spelled)
+            written[key(of: binding)] = .string(try spelling(of: binding))
 
             if let declared = binding.declared {
                 written[StatementReader.typeKey] = try value(of: declared)
@@ -411,7 +411,7 @@ public struct Writer: Sendable {
             return try literal(value)
 
         case let .reference(path):
-            return .dictionary([ExpressionTag.reference.key: .string(path.rendered)])
+            return .dictionary([ExpressionTag.reference.key: .string(try spelling(of: path))])
 
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
@@ -641,6 +641,33 @@ public struct Writer: Sendable {
         case .variable: "var"
         case .assignment: "set"
         }
+    }
+
+    // What a naming key holds: the name, or the path a `set` writes.
+    private func spelling(of binding: Statement.Binding) throws -> String {
+        switch binding {
+        case let .constant(name, _), let .variable(name, _):
+            return name.spelling
+
+        case let .assignment(path):
+            return try spelling(of: path)
+        }
+    }
+
+    // A path as the reading takes it back. A name holding what a path is
+    // spelled with (`.`, `[`) is one segment here and reads back as others.
+    private func spelling(of path: Path) throws -> String {
+        let spelled = path.rendered
+
+        guard (try? PathParser().parse(spelled)) == path else {
+            throw WritingError(
+                "'\(spelled)' reads back as another path. A name in it holds what"
+                    + " a path is spelled with, and a document has no way to tell"
+                    + " them apart"
+            )
+        }
+
+        return spelled
     }
 
     // Data as a document writes it: a record under `record` like every

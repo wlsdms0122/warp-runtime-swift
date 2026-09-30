@@ -115,6 +115,20 @@ struct PathParserTests {
         )
     }
 
+    @Test("a bracket is closed, and closes one opened before it")
+    func unbalancedBracketsAreRefused() throws {
+        // Given
+        let sut = PathParser()
+
+        // Then. Neither bracket is folded into a name
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a[0") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a[i[0]") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a]") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a[0]]") }
+
+        #expect(try sut.parse("a[i[0]]") == [.key("a"), .indexRef([.key("i"), .index(0)])])
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

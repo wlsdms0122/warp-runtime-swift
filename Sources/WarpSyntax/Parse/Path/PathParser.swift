@@ -108,6 +108,10 @@ public struct PathParser: Sendable {
                 buffer.append(character)
 
             case "]":
+                guard depth > 0 else {
+                    throw PathSyntaxError("`]` closes no `[`")
+                }
+
                 depth -= 1
                 buffer.append(character)
 
@@ -149,6 +153,10 @@ public struct PathParser: Sendable {
             default:
                 buffer.append(character)
             }
+        }
+
+        guard depth == 0 else {
+            throw PathSyntaxError("the path ends inside `[`, and a `[` is closed by `]`")
         }
 
         try flushKey()
