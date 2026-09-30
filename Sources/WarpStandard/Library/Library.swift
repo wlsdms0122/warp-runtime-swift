@@ -1434,9 +1434,8 @@ enum Library {
                                         {
                                           ref "answered"
                                         }
-                                        false
                                       ]
-                                      procedure "std.logic.equal"
+                                      procedure "std.logic.not"
                                     }
                                   }
                                 }
