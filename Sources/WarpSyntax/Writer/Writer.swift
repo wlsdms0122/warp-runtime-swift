@@ -361,21 +361,6 @@ public struct Writer: Sendable {
     // can be written there; inside another expression there is no name to give, so
     // only the types that need none can.
     public func value(of statement: Statement) throws -> Value {
-        // The reader cannot produce a named conditional, so this guards the caller
-        // that builds statements directly, with the validator's own terms:
-        // writing one silently would make a document that reads back as
-        // something else.
-        if statement.binding != nil, statement.expression.answersNothing {
-            throw WritingError(
-                "a conditional answers nothing, so its name could never bind."
-                    + " It takes no name"
-            )
-        }
-
-        if statement.binding?.declared != nil, statement.expression.namesItsOwn {
-            throw WritingError(Expression.declarationOnABoundName)
-        }
-
         var written: [Name: Value] = [:]
 
         if let binding = statement.binding {
@@ -516,8 +501,6 @@ public struct Writer: Sendable {
         case let .block(block):
             return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
 
-        // A name on a conditional was already refused where the statement's envelope
-        // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
                 "when": try value(of: condition),

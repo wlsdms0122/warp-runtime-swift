@@ -114,8 +114,10 @@ struct LoadGateTests {
         ]
 
         // When / Then
-        #expect(throws: ReadingError.self) {
+        #expect {
             try loader.loadProcedure(fixture)
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("attempt.rescue: must not be empty")
         }
     }
 

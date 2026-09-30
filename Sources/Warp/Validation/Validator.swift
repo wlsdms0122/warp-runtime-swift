@@ -264,9 +264,14 @@ public struct Validator: Sendable {
                 if statement.expression.answersNothing {
                     throw ValidationError(
                         "a conditional answers nothing, so its name"
-                            + " could never bind. It takes no name",
+                            + " could never bind. It takes no name; what an arm"
+                            + " keeps is written to an outer variable with 'set'",
                         at: here
                     )
+                }
+
+                if binding.declared != nil, statement.expression.namesItsOwn {
+                    throw ValidationError(Expression.declarationOnABoundName, at: here)
                 }
 
                 switch binding {

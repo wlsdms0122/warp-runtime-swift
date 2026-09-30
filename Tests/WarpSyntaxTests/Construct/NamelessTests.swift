@@ -88,39 +88,43 @@ struct NamelessTests {
         }
     }
 
-    @Test("a name on a conditional both of whose arms leave is refused at reading")
-    func aNamedStructuralLeaveIsRefusedAtReading() {
-        // Given. The leave rules reach through structure, and the reading sees
-        // the structure: fragments read on their own pass through no
-        // validation, so this is where the fact is caught for them
+    @Test("a name on a conditional both of whose arms leave is refused")
+    func aNamedStructuralLeaveIsRefused() {
+        // Given. The leave rules reach through structure
         #expect {
-            try loader.body(from: [
-                [
+            try loader.loadProcedure([
+                "returns": "int",
+                "body": [[
                     "let": "done",
                     "value": ["conditional": [
                         "when": true,
                         "then": [["value": ["return": 1]]],
                         "else": [["value": ["return": 2]]]
-                    ]
+                    ]]
                 ]]
             ])
         } throws: { error in
-            "\(error)".contains("takes no name")
+            error is ValidationError
+                && "\(error)".contains("body.done[0].conditional:")
+                && "\(error)".contains("takes no name")
         }
     }
 
-    @Test("a statement after one that leaves is refused at reading")
-    func aTrailingStatementAfterALeaveIsRefusedAtReading() {
-        // Given. Order is a fact only the sequence shows, so the sequence's
-        // reading holds it: fragments pass through no validation, and the rule
-        // must not wait for a link they may never reach
+    @Test("a statement after one that leaves is refused on the leaving one")
+    func aTrailingStatementAfterALeaveIsRefused() {
+        // Given. Order is a fact only the sequence shows
         #expect {
-            try loader.body(from: [
-                ["value": ["return": 1]],
-                ["let": "unreachable", "value": 2]
+            try loader.loadProcedure([
+                "returns": "int",
+                "body": [
+                    ["value": ["return": 1]],
+                    ["let": "unreachable", "value": 2]
+                ]
             ])
         } throws: { error in
-            "\(error)".contains("would never run")
+            error is ValidationError
+                && "\(error)".contains("body[0].return:")
+                && "\(error)".contains("would never run")
         }
     }
 

@@ -435,20 +435,22 @@ struct LeaveTests {
         #expect(try await answer(sut) == .int(2))
     }
 
-    @Test("a result under a body that always leaves is refused at reading")
-    func aResultUnderALeavingBodyIsRefusedAtReading() {
+    @Test("a result under a body that always leaves is refused on the result")
+    func aResultUnderALeavingBodyIsRefused() {
         // Given. The result runs after the body, so it is "after" the same way
-        // a trailing statement is; the pair is refused where a document
-        // assembles it, validation or no validation to follow
+        // a trailing statement is
         #expect {
-            try loader.statement(from: [
-                "value": ["block": [
+            try loader.loadProcedure([
+                "returns": "int",
+                "body": [["value": ["block": [
                     "body": [["value": ["return": 1]]],
                     "result": 2
-                ]]
+                ]]]],
+                "result": 3
             ])
         } throws: { error in
-            "\(error)".contains("would never be reached")
+            error is ValidationError
+                && "\(error)".contains("block.result: nothing runs after leaving")
         }
     }
 

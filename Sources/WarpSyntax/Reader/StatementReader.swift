@@ -199,33 +199,11 @@ public struct StatementReader: Decodable {
             )
         }
 
-        let inside = try decoder.descending(to: valueKey)
         let expression = try Self.expression(
-            in: inside,
+            in: try decoder.descending(to: valueKey),
             registry: registry,
             boundTo: binding?.spelled
         )
-
-        if binding != nil, expression.alwaysLeaves {
-            throw ReadingError(
-                "every way through this statement leaves,"
-                    + " so its name could never bind. It takes no name",
-                at: decoder.steps
-            )
-        }
-
-        if declared != nil, expression.namesItsOwn {
-            throw ReadingError(Expression.declarationOnABoundName, at: decoder.steps)
-        }
-
-        if binding != nil, expression.answersNothing {
-            throw ReadingError(
-                "a conditional answers nothing, so its name"
-                    + " could never bind. It takes no name; what an arm"
-                    + " keeps is written to an outer variable with 'set'",
-                at: decoder.steps
-            )
-        }
 
         return Statement(binding: binding, expression: expression)
     }
