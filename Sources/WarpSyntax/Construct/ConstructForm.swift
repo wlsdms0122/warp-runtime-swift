@@ -40,7 +40,7 @@ public protocol ConstructForm: Sendable, Decodable {
     static func vocabulary(with notation: Notation) -> Set<Name>
 
     // Throws when the form cannot be the statement it was written as.
-    func expression(boundTo id: String?) throws -> Expression
+    func expression(boundTo name: String?) throws -> Expression
 }
 
 public extension ConstructForm {
@@ -50,7 +50,7 @@ public extension ConstructForm {
 
     // The name a binding construct binds through. It is the statement's own,
     // and a statement written nameless binds nothing through it.
-    func named(_ id: String?) throws -> Name? {
-        try id.map { id in try Name.read(id, at: []) }
+    func named(_ name: String?) throws -> Name? {
+        try name.map { name in try Name.read(name, at: []) }
     }
 }

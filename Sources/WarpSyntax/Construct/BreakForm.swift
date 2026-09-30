@@ -22,7 +22,7 @@ public struct BreakForm: ConstructForm {
     }
 
     // MARK: - Public
-    public func expression(boundTo id: String?) -> Expression {
+    public func expression(boundTo name: String?) -> Expression {
         .leave(Leave(reach: .construct, target: target))
     }
 

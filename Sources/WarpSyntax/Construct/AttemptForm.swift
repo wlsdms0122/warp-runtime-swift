@@ -45,8 +45,8 @@ public struct AttemptForm: ConstructForm {
     }
 
     // MARK: - Public
-    public func expression(boundTo id: String?) throws -> Expression {
-        .attempt(attempted, rescue: rescue, failure: try named(id))
+    public func expression(boundTo name: String?) throws -> Expression {
+        .attempt(attempted, rescue: rescue, failure: try named(name))
     }
 
     // MARK: - Private

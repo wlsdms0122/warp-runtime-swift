@@ -44,8 +44,8 @@ public struct LoopForm: ConstructForm {
     // MARK: - Public
     // The round state is bound under the statement's own id, which is how a
     // document writes `${<id>.index}`. A nameless loop binds none.
-    public func expression(boundTo id: String?) throws -> Expression {
-        .loop(while: condition, body: body, round: try named(id))
+    public func expression(boundTo name: String?) throws -> Expression {
+        .loop(while: condition, body: body, round: try named(name))
     }
 
     // MARK: - Private

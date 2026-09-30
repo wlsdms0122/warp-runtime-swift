@@ -30,7 +30,7 @@ import Warp
 // A name may say what it holds, under `type`. `set` writes a name something
 // else declared, so it takes no type of its own.
 public struct StatementReader: Decodable {
-    private enum EnvelopeKeys: String, CodingKey, CaseIterable {
+    private enum NamingKeys: String, CodingKey, CaseIterable {
         case constant = "let"
         case variable = "var"
         case assignment = "set"
@@ -81,8 +81,8 @@ public struct StatementReader: Decodable {
         // out from the data again once something has failed. A second reading
         // is a second rule, and two rules for one name is a document called one
         // thing while being refused as another.
-        let envelope = try decoder.container(keyedBy: EnvelopeKeys.self)
-        let names = EnvelopeKeys.allCases.filter { name in envelope.contains(name) }
+        let naming = try decoder.container(keyedBy: NamingKeys.self)
+        let names = NamingKeys.allCases.filter { name in naming.contains(name) }
 
         // Only a name that is one. Whether naming itself twice, or with
         // something that is not text, is a refusal is the reading's question
@@ -93,12 +93,12 @@ public struct StatementReader: Decodable {
         // only in what it does with a failure: an address that refused on its
         // own would decide which refusal an author sees first, and that is the
         // reading's to decide.
-        let id = names.count == 1 ? try? Self.name(names[0], in: envelope) : nil
+        let written = names.count == 1 ? try? Self.name(names[0], in: naming) : nil
 
         do {
-            self.statement = try Self.read(from: decoder, envelope: envelope, names: names)
+            self.statement = try Self.read(from: decoder, naming: naming, names: names)
         } catch let refusal as ReadingError {
-            throw refusal.addressed(from: Self.address(of: id, in: decoder.steps))
+            throw refusal.addressed(from: Self.address(of: written, in: decoder.steps))
         }
     }
 
@@ -108,7 +108,7 @@ public struct StatementReader: Decodable {
     // else declared, and a statement with no name has none to declare.
     private static func declared(
         in container: KeyedDecodingContainer<AnyCodingKey>,
-        named name: EnvelopeKeys?,
+        named name: NamingKeys?,
         at steps: [Place.Step]
     ) throws -> TypeExpression? {
         let key = AnyCodingKey(stringValue: Self.typeKey.spelling)
@@ -118,8 +118,8 @@ public struct StatementReader: Decodable {
         guard let name, name != .assignment else {
             throw ReadingError(
                 "writes '\(Self.typeKey)', which says what a name holds."
-                    + " '\(EnvelopeKeys.constant.stringValue)' and"
-                    + " '\(EnvelopeKeys.variable.stringValue)' introduce a name,"
+                    + " '\(NamingKeys.constant.stringValue)' and"
+                    + " '\(NamingKeys.variable.stringValue)' introduce a name,"
                     + " and this statement introduces none",
                 at: steps
             )
@@ -130,25 +130,25 @@ public struct StatementReader: Decodable {
 
     // What a naming key holds, read the one way it is read.
     private static func name(
-        _ key: EnvelopeKeys,
-        in envelope: KeyedDecodingContainer<EnvelopeKeys>
+        _ key: NamingKeys,
+        in naming: KeyedDecodingContainer<NamingKeys>
     ) throws -> String {
-        try envelope.decode(String.self, forKey: key)
+        try naming.decode(String.self, forKey: key)
     }
 
     // This statement's own address, with the name on it. The position stays:
     // two statements of one name are told apart by it, and a `var` and the
     // `set` that writes it are exactly that.
-    private static func address(of id: String?, in steps: [Place.Step]) -> [Place.Step] {
+    private static func address(of name: String?, in steps: [Place.Step]) -> [Place.Step] {
         guard case let .index(position)? = steps.last else { return steps }
 
-        return Array(steps.dropLast()) + [Place.Step.statement(id, at: position)]
+        return Array(steps.dropLast()) + [Place.Step.statement(name, at: position)]
     }
 
     private static func read(
         from decoder: Decoder,
-        envelope: KeyedDecodingContainer<EnvelopeKeys>,
-        names: [EnvelopeKeys]
+        naming: KeyedDecodingContainer<NamingKeys>,
+        names: [NamingKeys]
     ) throws -> Statement {
         guard let registry = decoder.userInfo[.constructRegistry] as? ConstructRegistry else {
             throw ReadingError(
@@ -160,7 +160,7 @@ public struct StatementReader: Decodable {
 
         try KeyGate().rejectUnknownKeys(
             in: decoder,
-            known: EnvelopeKeys.allCases.map(\.stringValue)
+            known: NamingKeys.allCases.map(\.stringValue)
                 + [Self.valueKey.spelling, Self.typeKey.spelling],
             context: "statement"
         )
@@ -171,7 +171,7 @@ public struct StatementReader: Decodable {
         guard names.count <= 1 else {
             throw ReadingError(
                 "a statement names itself at most once with"
-                    + " \(EnvelopeKeys.allCases.map { key in "'\(key.stringValue)'" }.joined(separator: ", "));"
+                    + " \(NamingKeys.allCases.map { key in "'\(key.stringValue)'" }.joined(separator: ", "));"
                     + " found: \(names.map { name in "'\(name.stringValue)'" })",
                 at: decoder.steps
             )
@@ -182,7 +182,7 @@ public struct StatementReader: Decodable {
         let binding: Statement.Binding?
 
         do {
-            binding = try name.map { name in try name.binding(Self.name(name, in: envelope), declaring: declared) }
+            binding = try name.map { name in try name.binding(Self.name(name, in: naming), declaring: declared) }
         } catch let refusal as ReadingError {
             throw refusal.asked(at: decoder.steps)
         }
