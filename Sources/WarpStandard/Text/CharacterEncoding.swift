@@ -1,5 +1,5 @@
 //
-//  Encoding.swift
+//  CharacterEncoding.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/24/26.
@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // The named mapping between bytes and text, in both directions.
-struct Encoding: Sendable {
+struct CharacterEncoding: Sendable {
     // MARK: - Property
     // The names a declaration offers, which are the mappings this writes.
     static let names = ["utf8"]

@@ -23,7 +23,7 @@ struct EncodedQuery: Query {
                 return Parameter(name: "text", type: .string)
 
             case .encoding:
-                return Parameter(name: "encoding", type: .string, candidates: Encoding.names)
+                return Parameter(name: "encoding", type: .string, candidates: CharacterEncoding.names)
             }
         }
 
@@ -33,7 +33,7 @@ struct EncodedQuery: Query {
     }
 
     // MARK: - Property
-    private let encoding = Encoding()
+    private let encoding = CharacterEncoding()
 
     // MARK: - Initializer
     // MARK: - Public

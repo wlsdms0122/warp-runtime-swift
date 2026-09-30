@@ -24,7 +24,7 @@ struct DecodedQuery: Query {
                 return Parameter(name: "bytes", type: .bytes)
 
             case .encoding:
-                return Parameter(name: "encoding", type: .string, candidates: Encoding.names)
+                return Parameter(name: "encoding", type: .string, candidates: CharacterEncoding.names)
             }
         }
 
@@ -34,7 +34,7 @@ struct DecodedQuery: Query {
     }
 
     // MARK: - Property
-    private let encoding = Encoding()
+    private let encoding = CharacterEncoding()
 
     // MARK: - Initializer
     // MARK: - Public
