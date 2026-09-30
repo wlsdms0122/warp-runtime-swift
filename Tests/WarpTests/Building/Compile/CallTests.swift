@@ -175,6 +175,26 @@ struct CallTests {
         }
     }
 
+    @Test("a call to another document's private declaration is refused as private, at the call")
+    func aCallToAPrivateDeclarationIsRefusedAsPrivate() async throws {
+        // Given. `lib` declares `lib.hidden` privately, and `app` calls it
+        let lib = try Module(procedures: [
+            "lib.hidden": Procedure(access: .private, signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
+        ])
+        let app = try Module(procedures: [
+            "entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "lib.hidden")))
+        ])
+
+        // When
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([lib, app] + Module.standard)
+        }
+
+        // Then
+        #expect(refusal?.message == BuildError.concealed("lib.hidden", at: nil).message)
+        #expect(refusal?.place?.rendered == "procedures.entry.result")
+    }
+
     @Test("a typo in an arm today's arguments never take is still refused")
     func unreachedArmIsStillLinked() async throws {
         // Given. The warrant is compilation, not loading: a run with expensive

@@ -30,6 +30,9 @@ struct TypingContext: Sendable {
     // included. Read before the link's spellings.
     let own: [Name: Int]
 
+    // The spellings only another document's private declarations wear.
+    let concealed: Set<Name>
+
     // What the link read off a body whose declaration wrote no `returns`.
     // Only those, for the same reason: what a declaration wrote is on its row.
     let answers: [Int: LoweredType]

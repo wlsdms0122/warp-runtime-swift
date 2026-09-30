@@ -2136,11 +2136,15 @@ struct TypeChecker {
                 )
             }
 
-            // A selector no module declares is refused where the walk meets
-            // it. Its answer is unknown, and a dot on an unknown answer would
-            // be refused first for what the dot reads, which is not what the
-            // author got wrong.
+            // A selector this document cannot name is refused where the walk
+            // meets it. Its answer is unknown, and a dot on an unknown answer
+            // would be refused first for what the dot reads, which is not what
+            // the author got wrong.
             guard let callee = context.declared(call.selector) else {
+                guard !context.concealed.contains(call.selector) else {
+                    throw BuildError.concealed(call.selector, at: place)
+                }
+
                 throw BuildError(
                     "sends '\(call.selector)', which no module in this link declares",
                     at: place
