@@ -9,10 +9,9 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A value handed on exactly once. What the type says is that the values of it
-// are given away: to a procedure, or as the body's answer. What the build proves is
-// that every way through a body does that once, which is what "this resource
-// is closed exactly once" comes to.
+// Values of a type written `linear`, and the build's proof that every way
+// through a body hands each one on exactly once: to a procedure, or as the
+// body's answer.
 @Suite("A value handed on once")
 struct LinearTests {
     struct CloseEffect: Effect {
@@ -60,7 +59,7 @@ struct LinearTests {
     @Test("a body that opens and does not close refuses")
     func openedAndDropped() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
             ],
@@ -78,7 +77,7 @@ struct LinearTests {
     @Test("a body that closes twice refuses")
     func closedTwice() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))),
@@ -87,17 +86,18 @@ struct LinearTests {
             result: .literal(.null)
         )
 
-        // When / Then. The second send reads a name that holds nothing, which
-        // is what the reading walk calls it before this one is asked
-        await #expect(throws: BuildError.self) {
+        // When / Then
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("hands 'handle' on a second time")
         }
     }
 
     @Test("closing in one arm and not the other refuses")
     func closedInOneArm() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -126,7 +126,7 @@ struct LinearTests {
     @Test("closing inside a loop refuses, since a round runs no fixed number of times")
     func closedInsideALoop() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -157,7 +157,7 @@ struct LinearTests {
     @Test("handing it to a slot that says neither refuses")
     func handedToAPlainSlot() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -179,7 +179,7 @@ struct LinearTests {
     @Test("a body may hand it on by answering it, and its caller then owes it")
     func handedOnByAnswering() async throws {
         // Given. `app.borrow` answers the handle, so the entry owes it
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.borrow"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -201,7 +201,7 @@ struct LinearTests {
     }
 
     @Test("`linear` is written on a type and not on a slot")
-    func onceOutsideATypeRefuses() async throws {
+    func linearOutsideATypeRefuses() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -223,7 +223,7 @@ struct LinearTests {
     }
 
     @Test("a value handed on once is not carried inside another type")
-    func onceInsideAnotherTypeRefuses() async throws {
+    func linearInsideAnotherTypeRefuses() async throws {
         // Given. Nothing follows a value into a list, so nothing could say the
         // list handed each of them on
         let sut = try Module(
@@ -267,7 +267,7 @@ struct LinearTests {
     @Test("a borrowing slot does not end the obligation")
     func borrowingIsNotClosing() async throws {
         // Given. Only `app.name` is called, so the handle is still held at the end
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -289,7 +289,7 @@ struct LinearTests {
     @Test("a body cannot hand on what it only borrowed")
     func borrowedIsNotHandedOn() async throws {
         // Given. `app.give` borrows and then closes what it was lent
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.give", arguments: [reference("handle")]))),
@@ -320,7 +320,7 @@ struct LinearTests {
     @Test("a body cannot answer what it only borrowed")
     func borrowedIsNotAnswered() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -349,7 +349,7 @@ struct LinearTests {
     @Test("a body cannot keep what it only borrowed in a box")
     func borrowedIsNotKept() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -405,9 +405,7 @@ struct LinearTests {
 
     @Test("inout is not one of the two things a slot may say about it")
     func inoutIsNotAConvention() async throws {
-        // Given. Writing in place and taking the obligation are two different
-        // things, and a slot that said both would leave what it holds
-        // afterwards undecided
+        // Given. `app.swap` writes `inout` on the type and neither mark
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
@@ -435,9 +433,7 @@ struct LinearTests {
 
     @Test("a conditional in the body does not forget what was borrowed")
     func aConditionalKeepsTheBorrow() async throws {
-        // Given. Two ways through join what either made, and being borrowed is
-        // one of those facts. A join that dropped it would let every borrow
-        // rule go by writing an `if` first
+        // Given. `app.leak` answers what it borrowed after a conditional
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
@@ -495,8 +491,8 @@ struct LinearTests {
 
     @Test("a closure does not capture what was borrowed")
     func aClosureDoesNotCaptureABorrow() async throws {
-        // Given. This walk never enters a closure, so what a borrowed name does
-        // in one is not something the text shows
+        // Given. `app.stash` answers a closure that reads a part of what it
+        // borrowed
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
@@ -747,10 +743,8 @@ struct LinearTests {
 
     @Test("two memberships that name each other are all of one thing or not")
     func aRingOfMembershipsAnswersAsItStood() async throws {
-        // Given. Every leaf here is handed on once, and the ring between them
-        // says nothing new. A ring answered as "not one" would make each of
-        // these read as mixing one with something else, which is the opposite
-        // of what they are
+        // Given. `app.A` and `app.B` name each other, and every other member of
+        // either is `app.Handle`
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
@@ -771,9 +765,7 @@ struct LinearTests {
 
     @Test("a cast that may answer nothing does not take one")
     func anOptionalCastRefuses() async throws {
-        // Given. What a value handed on once needs is a name that holds it on
-        // every way through, and a `?` says there is a way through where
-        // nothing is there. The mark and the doubt are refused together
+        // Given. `payload` is read as `app.Handle` with `as?`
         let sut = try holding(
             body: [
                 Statement(
@@ -874,9 +866,8 @@ struct LinearTests {
 
     @Test("an attempt does not drop what a body already handed out")
     func anAttemptKeepsWhatWasHandedOut() async throws {
-        // Given. What a body still holds dies with a way through that dies, and
-        // an attempt drops its body's way. What it has already handed out is
-        // not that kind of fact and does not die with it
+        // Given. `app.make` returns one from inside the attempt's body and
+        // writes no `returns`
         let sut = try holding(
             body: [
                 Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
@@ -925,9 +916,7 @@ struct LinearTests {
 
     @Test("a body carried as a value does not answer one")
     func aCarriedBodyDoesNotAnswerOne() async throws {
-        // Given. No walk enters a closure, so what it hands back would arrive
-        // with nothing to say it is owed. A declaration is not held to this:
-        // its body is text a walk reads
+        // Given. The closure writes `returns` naming `app.Handle`
         let sut = try holding(
             body: [
                 Statement(
@@ -1010,9 +999,8 @@ struct LinearTests {
     }
 
     @Test("a carried body one closure deeper is walked too")
-    func aCarriedBodyOneCloserDeeper() async throws {
-        // Given. The walk enters a closure now, so a rule about carried bodies
-        // does not turn on how deeply one was written
+    func aCarriedBodyOneClosureDeeper() async throws {
+        // Given. The closure answering one stands inside another closure
         let sut = try holding(
             body: [
                 Statement(
@@ -1258,11 +1246,9 @@ struct LinearTests {
 
     @Test("an attempt ends the body only where its body and its rescue both do")
     func anAttemptEndsTheBodyWhereBothDo() async throws {
-        // Given. A failure lands anywhere in the body, so the rescue is a way
-        // through unless the body ends on its own end too. This arm closes the
-        // handle and then ends the body; the arm beside it still holds one, so
-        // whether the two are asked to agree is what the propagation decides
-        func body(rescueEnds: Bool) async -> Body {
+        // Given. One arm closes the handle and then ends the body inside an
+        // attempt, and the arm beside it still holds the handle
+        func body(rescueEnds: Bool) -> Body {
             let ending = Statement(
                 binding: .none,
                 expression: .leave(Leave(reach: .procedure, value: .literal(.null)))
@@ -1403,10 +1389,7 @@ struct LinearTests {
 
     @Test("a slot does not say what it does with a type parameter")
     func aTypeParameterTakesNoMark() async throws {
-        // Given. What fills `some T` is the call's, so after this slot took the
-        // obligation there is no name for the build to follow it by: what the
-        // call answers is read off the declaration, and the declaration says
-        // `some T`. The proof would end here
+        // Given. `app.pass` writes `consuming` on `some T`
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
@@ -1549,8 +1532,7 @@ struct LinearTests {
 
     @Test("a parameter naming a type handed on once says what it does with it")
     func aSilentSlotRefuses() async throws {
-        // Given. `app.take` names the type and says nothing, which used to read
-        // as taking the obligation and is what hid borrowing
+        // Given. `app.take` names the type and writes neither mark
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
@@ -1578,8 +1560,9 @@ struct LinearTests {
 
     // MARK: - Public
     // MARK: - Private
-    // A handle that must be closed, a procedure that makes one, a procedure that takes
-    // one, and a procedure that only looks.
+    // A linear handle, the entry, and procedures that make one (`app.open`),
+    // take one (`app.close`), say neither (`app.peek`) and borrow one
+    // (`app.name`).
     private func holding(
         body: Body,
         result: Warp.Expression,
