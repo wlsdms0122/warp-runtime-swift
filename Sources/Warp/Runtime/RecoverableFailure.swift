@@ -13,12 +13,11 @@ import Foundation
 //
 // It lives beside the runtime because it is `attempt`'s half of a contract, not
 // a taxonomy of errors: the executor is the only thing that reads it, and what
-// declares it is whatever can fail while a body runs. Three constructs here,
-// and a caller's own procedures out beyond the package.
+// declares it is whatever can fail while a body runs.
 //
 // While a rescue runs, the failure exists as a value: the executor binds
-// `payload` under the failed statement's id, so a rescue body can read what
-// went wrong through `<id>.message` and, under `<id>.details`, whatever else
+// `payload` under the attempt's name, so a rescue body can read what went
+// wrong through `<name>.message` and, under `<name>.details`, whatever else
 // that failure carries. The envelope is the same for every failure and what
 // rides inside it is the failing procedure's own. The runtime owns the
 // mechanism, the error owns the vocabulary.

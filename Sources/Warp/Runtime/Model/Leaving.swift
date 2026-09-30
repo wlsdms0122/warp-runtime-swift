@@ -13,8 +13,7 @@ import Foundation
 // between here and where it lands is abandoned) but it is not a failure, and
 // the difference is load-bearing: `attempt` catches what the world did, and
 // this is what the program said. Leaving a body an `attempt` was watching runs
-// no rescue, which is the whole reason the language needed this and could not
-// go on borrowing the failure channel to say it.
+// no rescue, and an observer is told of no failure.
 //
 // Nothing catches it but the construct it names. A document may only write one
 // that something around it will catch, which the validator settles before

@@ -19,16 +19,51 @@ import Foundation
 // rides along: a compiled document is laid into whatever link a caller makes
 // of it, in whatever order, and a spelling is what survives that.
 public struct Closure: Sendable {
-    // The declaration, constant or variable that wrote a closure, in the
-    // document it stands in. A constant's spelling is its document's own, so
-    // the document is part of the name.
+    // The declaration that wrote a closure, in the document it stands in. A
+    // constant's spelling is its document's own, so the document is part of
+    // the name.
     struct Writer: Hashable, Sendable {
         // MARK: - Property
         let document: Document
-        let name: Name
+        let declaration: Declaration
 
         // MARK: - Initializer
         // MARK: - Public
+        // MARK: - Private
+    }
+
+    // Which of its document's declarations wrote a closure. A procedure and a
+    // constant may be spelled alike, so the kind is part of it.
+    enum Declaration: Hashable, Comparable, Sendable {
+        case procedure(Name)
+
+        // A constant or a variable, which share one namespace.
+        case binding(Name)
+
+        // MARK: - Property
+        var name: Name {
+            switch self {
+            case let .procedure(name), let .binding(name): name
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // Procedures before bindings, and each in name order: the order a
+        // document numbers the closures its declarations wrote in.
+        static func < (lhs: Declaration, rhs: Declaration) -> Bool {
+            switch (lhs, rhs) {
+            case let (.procedure(left), .procedure(right)), let (.binding(left), .binding(right)):
+                return left < right
+
+            case (.procedure, .binding):
+                return true
+
+            case (.binding, .procedure):
+                return false
+            }
+        }
+
         // MARK: - Private
     }
 
@@ -61,7 +96,7 @@ public struct Closure: Sendable {
     // What a refusal calls this closure, spelled as the hop a trace takes
     // into its body.
     var rendered: String {
-        Trace.Hop.closure(of: writer.name.spelling, nth: nth).rendered
+        Trace.Hop.closure(of: writer.declaration.name.spelling, nth: nth).rendered
     }
 
     // Whether a cell it took is a hold rather than a copy: a box of the

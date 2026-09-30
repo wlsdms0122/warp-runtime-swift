@@ -156,7 +156,7 @@ public struct Builder: Sendable {
                 let row = try judged.folding(
                     in: lowered.types.loweredTypes,
                     of: origin,
-                    nth: document.nth(ofRow: index),
+                    closure: document.closure(ofRow: index),
                     supplied: natives,
                     at: document.document
                 )
@@ -994,7 +994,7 @@ public struct Builder: Sendable {
                         origin: origin,
                         in: answered,
                         loweredTypes: context.loweredTypes
-                    ).read(judged, as: name, writing: &lowering, at: place)
+                    ).read(judged, as: .binding(name), writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -1052,7 +1052,7 @@ public struct Builder: Sendable {
                         origin: origin,
                         in: answered,
                         loweredTypes: context.loweredTypes
-                    ).read(judged, as: name, writing: &lowering, at: place)
+                    ).read(judged, as: .binding(name), writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
                 } catch {

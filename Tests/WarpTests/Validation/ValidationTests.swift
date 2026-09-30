@@ -103,8 +103,8 @@ struct ValidationTests {
     @Test("nor by the name a construct hands its body")
     func aBoundNameIsNotWhatAConstructHandsItsBody() {
         // Given. The same rule where the name is the language's to introduce
-        // rather than a statement's: a walk's element, a loop's round, and the
-        // failure an attempt rescues.
+        // rather than a statement's: a loop's round and the failure an
+        // attempt rescues.
         func module(running expression: Warp.Expression) throws -> Module {
             try Module(
                 constants: ["limit": .literal(.int(3))],

@@ -10,8 +10,8 @@ import Foundation
 // What standing a module graph up refuses. Only one thing: modules that need
 // each other, which have no order to be compiled in.
 //
-// The place is the declaration the cycle was closed on, so the sentence names
-// a step of the ring rather than the ring as a whole.
+// The place is the document the cycle was closed on, and the sentence names
+// every step of the ring.
 public struct ModuleGraphError: WarpError {
     // MARK: - Property
     public let message: String

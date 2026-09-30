@@ -8,12 +8,8 @@
 import Foundation
 
 // The type table: every type the modules in a link declared, and what each
-// name stands for. The counterpart of `Library` on the other axis. That one
-// holds the procedures a caller installed, this one the types a document declared.
-//
-// It exists because a named type is kept rather than expanded. Expanding at link
-// would make a self-naming type a regress, so the name survives into the run and
-// something has to be able to answer it.
+// name stands for. A named type is kept rather than expanded, so a type that
+// names itself is a row and not a regress.
 //
 // Constraints live beside the types rather than among them. A constraint is a
 // name for a membership (which types a bounded parameter admits) and nothing is

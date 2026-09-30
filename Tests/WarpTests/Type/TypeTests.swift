@@ -17,7 +17,7 @@ struct TypeTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a name is identifiers joined by dots, and never a scalar's procedure", arguments: [
+    @Test("a name is identifiers joined by dots, and never a scalar's keyword", arguments: [
         ("Account", true), ("bank.Account", true), ("_x1", true),
         ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
     ])

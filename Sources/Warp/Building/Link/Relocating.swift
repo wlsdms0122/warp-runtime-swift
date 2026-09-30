@@ -124,7 +124,7 @@ final class Relocating {
                 try row.judged.linked(
                     in: loweredTypes,
                     of: row.origin,
-                    nth: row.nth,
+                    closure: row.closure,
                     supplied: supplied,
                     at: assembled.documents[row.origin]
                 )

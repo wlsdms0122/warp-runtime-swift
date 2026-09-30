@@ -7,13 +7,9 @@
 
 import Foundation
 
-// What a value is. One case per `Value` case and nothing else. This answers
-// about a value in hand, so there is no `any` here and nothing to compose.
-//
-// What a *declaration* says is `TypeExpression`. The two were one enumeration
-// while a declaration could say no more than a value could be; they parted when
-// `array<string>` became sayable, and the `any` that never belonged in a value's
-// type went with the declarations.
+// What a value is: a `Value` case, with a record and a dictionary both a
+// record. This answers about a value in hand, so there is no `any` here and
+// nothing to compose. What a *declaration* says is `TypeExpression`.
 public enum ValueType: String, Sendable, CaseIterable, CustomStringConvertible {
     case null
     case bool

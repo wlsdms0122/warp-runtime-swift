@@ -58,12 +58,12 @@ struct Numbering: Sendable {
     // what it sends.
     private let sent: Int
 
-    // How many closures each declaration wrote, in name order, over the ones
-    // that wrote any. The order is the document's own: a closure is the nth
-    // one its declaration wrote, and the declarations run in name order, so
+    // How many closures each declaration wrote, over the ones that wrote any,
+    // in the order `Closure.Declaration` sorts them. The order is the
+    // document's own: a closure is the nth one its declaration wrote, so
     // which number a closure takes is the document's text and not the order
     // the link happened to lower in.
-    private let runs: [(name: Name, count: Int)]
+    private let runs: [(declaration: Closure.Declaration, count: Int)]
 
     // Whether the numbers here are already rows. A table's own numbering
     // answers every number with itself, so what it lowers stands where it was
@@ -84,8 +84,8 @@ struct Numbering: Sendable {
     }
 
     // Every declaration that wrote a closure here.
-    var writers: [Name] {
-        runs.map(\.name)
+    var writers: [Closure.Declaration] {
+        runs.map(\.declaration)
     }
 
     // The first number the closures take. What a body carries is a number of
@@ -97,16 +97,17 @@ struct Numbering: Sendable {
     }
 
     // MARK: - Initializer
-    // A document's own. What it sends, its own declarations, and the closures
-    // those declarations wrote, each in name order: the numbering is the
-    // document's fact and a set has no order to lend it.
+    // A document's own. What it sends and its own declarations, each in name
+    // order, and the closures those declarations wrote, in the order their
+    // writers sort: the numbering is the document's fact and a set has no
+    // order to lend it.
     //
-    // `closures` says how many each of the document's names wrote, which is
+    // `closures` says how many each of the document's declarations wrote, which is
     // read off the document rather than counted while lowering. Lowering runs the procedures
     // before the rest, and which declarations are procedures is a fact of the graph,
     // so a number counted in that order would move when an unrelated module
     // joins the link.
-    init(sends: Set<Name>, declared: [Name], closures: [Name: Int] = [:]) {
+    init(sends: Set<Name>, declared: [Name], closures: [Closure.Declaration: Int] = [:]) {
         let sent = sends.sorted()
         let counted = closures.filter { _, count in count > 0 }
 
@@ -114,7 +115,8 @@ struct Numbering: Sendable {
         space = .document(spellings: sent + declared, closures: counted.values.reduce(0, +))
         called = Self.placed(sent, from: 0)
             .merging(Self.placed(declared, from: sent.count)) { _, own in own }
-        runs = counted.keys.sorted().map { name in (name: name, count: counted[name] ?? 0) }
+        runs = counted.sorted { one, other in one.key < other.key }
+            .map { declaration, count in (declaration: declaration, count: count) }
     }
 
     // A table's own. The number a body carries here is the row.
@@ -186,7 +188,7 @@ struct Numbering: Sendable {
 
         return .array([
             .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
-            .array(runs.map { run in .array([.string(run.name.spelling), .int(run.count)]) })
+            .array(runs.map { run in .array([ObjectWriter().declaration(run.declaration), .int(run.count)]) })
         ])
     }
 
@@ -214,11 +216,11 @@ struct Numbering: Sendable {
     // by, wherever the value goes. The closures run in declaration order
     // behind the spellings, so which one owns a number is where that number
     // falls among the runs.
-    func writer(of standing: Int) -> (by: Name, nth: Int)? {
+    func writer(of standing: Int) -> (by: Closure.Declaration, nth: Int)? {
         var passed = 0
 
         for run in runs {
-            if standing < passed + run.count { return (by: run.name, nth: standing - passed) }
+            if standing < passed + run.count { return (by: run.declaration, nth: standing - passed) }
 
             passed += run.count
         }
@@ -228,7 +230,7 @@ struct Numbering: Sendable {
 
     // How many closures a declaration wrote here, or nil where the document
     // was never read for that declaration's closures.
-    func count(of declared: Name) -> Int? {
+    func count(of declared: Closure.Declaration) -> Int? {
         run(of: declared)?.count
     }
 
@@ -305,7 +307,7 @@ struct Numbering: Sendable {
     // carries, and which of the document's closures that is. Nil where the
     // document was never read for that declaration's closures, which is a link
     // lowering a body it never scanned, and nil past the ones it wrote.
-    func closure(_ nth: Int, of declared: Name) -> (number: Int, nth: Int)? {
+    func closure(_ nth: Int, of declared: Closure.Declaration) -> (number: Int, nth: Int)? {
         guard let run = run(of: declared), nth >= 0, nth < run.count else { return nil }
 
         return (number: opening + run.start + nth, nth: run.start + nth)
@@ -313,14 +315,14 @@ struct Numbering: Sendable {
 
     // MARK: - Private
     // Where a declaration's closures stand among this document's, and how
-    // many there are. The runs stand in name order, so a declaration's own
-    // begin behind everything the names before it wrote. Nil where the
+    // many there are. The runs stand in declaration order, so a declaration's
+    // own begin behind everything the ones before it wrote. Nil where the
     // document was never read for that declaration's closures.
-    private func run(of declared: Name) -> (start: Int, count: Int)? {
+    private func run(of declared: Closure.Declaration) -> (start: Int, count: Int)? {
         var standing = 0
 
         for run in runs {
-            guard run.name != declared else { return (start: standing, count: run.count) }
+            guard run.declaration != declared else { return (start: standing, count: run.count) }
 
             standing += run.count
         }
@@ -328,14 +330,14 @@ struct Numbering: Sendable {
         return nil
     }
 
-    private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
+    private static func read(_ value: Value, of part: String) throws -> [Closure.Declaration: Int] {
         guard case let .array(written) = value else {
             throw ObjectRefused("'\(part)' is not written as a list")
         }
 
         return try Fields.gathered(try written.map { entry in
             var place = try Fields(entry, of: part)
-            let held = (try place.name(), try place.count())
+            let held = (try Fields.declaration(place.next(), of: part), try place.count())
 
             try place.end()
 
