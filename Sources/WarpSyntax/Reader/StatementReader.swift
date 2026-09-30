@@ -50,7 +50,7 @@ public struct StatementReader: Decodable {
 
             case .assignment:
                 do {
-                    return .assignment(try TemplateParser().parseRefPath(written))
+                    return .assignment(try PathParser().parse(written))
                 } catch {
                     throw ReadingError("set \(written): \(error)", at: [])
                 }

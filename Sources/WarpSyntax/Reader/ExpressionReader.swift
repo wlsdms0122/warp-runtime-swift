@@ -224,7 +224,7 @@ public struct ExpressionReader: Decodable {
         }
 
         do {
-            return .reference(try TemplateParser().parseRefPath(rendered))
+            return .reference(try PathParser().parse(rendered))
         } catch {
             throw ExpressionFormError("{ ref: \(rendered) }: \(error)")
         }
