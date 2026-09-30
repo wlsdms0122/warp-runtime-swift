@@ -200,33 +200,31 @@ struct Compiling {
         for origin in documents.indices {
             answering(origin)
 
-            guard let unfound = (named[origin] ?? []).firstIndex(where: { row in row == nil }) else {
-                continue
+            for (number, row) in (named[origin] ?? []).enumerated() where row == nil {
+                guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
+                    number,
+                    rows: lowering.rows,
+                    own: lowering.own(origin),
+                    closures: []
+                ) else {
+                    continue
+                }
+
+                // A contract's procedure has no row: a call to it is a dispatch
+                // the link answers through the contract, so a document sending
+                // one is missing nothing.
+                guard contractProcedures[declared] == nil else { continue }
+
+                guard lowering.concealed.contains(declared) else {
+                    throw BuildError(
+                        "'\(declared)' is sent by this document, and no document laid"
+                            + " beside it declares one",
+                        at: Place(in: documents[origin])
+                    )
+                }
+
+                throw BuildError.concealed(declared, at: Place(in: documents[origin]))
             }
-
-            guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
-                unfound,
-                rows: lowering.rows,
-                own: lowering.own(origin),
-                closures: []
-            ) else {
-                continue
-            }
-
-            // A contract's procedure has no row: a call to it is a dispatch
-            // the link answers through the contract, so a document sending
-            // one is missing nothing.
-            guard contractProcedures[declared] == nil else { continue }
-
-            guard lowering.concealed.contains(declared) else {
-                throw BuildError(
-                    "'\(declared)' is sent by this document, and no document laid"
-                        + " beside it declares one",
-                    at: Place(in: documents[origin])
-                )
-            }
-
-            throw BuildError.concealed(declared, at: Place(in: documents[origin]))
         }
     }
 

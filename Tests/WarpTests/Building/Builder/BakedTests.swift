@@ -163,6 +163,56 @@ struct BakedTests {
         }
     }
 
+    @Test("a document laid without what it sends is refused past a call through a contract")
+    func aDocumentLaidWithoutWhatItSendsIsRefused() async throws {
+        // Given. A document sending a contract's procedure, which no row
+        // answers, before a procedure another document declares.
+        let shapes = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            contracts: [
+                "app.Describable": [
+                    "describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)
+                ]
+            ],
+            claims: ["bank.Account": ["app.Describable"]],
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    access: .public,
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                    body: [],
+                    result: .literal(.string("a"))
+                )
+            ]
+        )
+        let sending = try Module(
+            procedures: [
+                "app.main": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .constant("account"),
+                            expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("bank.Account"), optional: false)
+                        ),
+                        Statement(
+                            binding: .constant("said"),
+                            expression: .call(Call(selector: "app.Describable.describe", arguments: [reference("account")]))
+                        )
+                    ],
+                    result: .call(Call(selector: "app.add1", arguments: [.literal(.int(1))]))
+                )
+            ]
+        )
+        let compiled = try await builder.compile([shapes, try adding(1), sending] + Module.standard)
+
+        // When / Then. Laid without the document declaring `app.add1`.
+        #expect {
+            try builder.lay([compiled[0], compiled[2]] + compiled[3...], supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("'app.add1' is sent by this document, and no document laid beside it declares one")
+        }
+    }
+
     @Test("two objects declaring one name are refused where they meet")
     func twoObjectsDeclaringOneNameAreRefused() async throws {
         // Given. Two documents compiled apart, so neither compile saw the
