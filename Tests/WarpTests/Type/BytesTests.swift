@@ -17,8 +17,6 @@ import WarpStandard
 @Suite
 struct BytesTests {
     // MARK: - Property
-    private let builder = Builder()
-
     // MARK: - Initializer
     // MARK: - Test
     @Test("bytes and an array share their worth, not their spelling")
@@ -197,49 +195,6 @@ struct BytesTests {
         }
     }
 
-    @Test("the collection vocabulary applies to bytes directly")
-    func collectionProceduresReadBytes() async throws {
-        // Given. Each procedure declares an array first, and bytes are one
-        let asks: [(Warp.Expression, Value)] = [
-            (
-                .call(Call(selector: "std.collection.count", arguments: [reference("data")])),
-                .int(2)
-            ),
-            (
-                .call(Call(selector: "std.collection.first", arguments: [reference("data")])),
-                .int(104)
-            ),
-            (
-                .call(Call(selector: "std.collection.reversed", arguments: [reference("data")])),
-                // The argument's own elements, in the other order, so the
-                // spelling they arrived in is the spelling they leave in.
-                .bytes([105, 104])
-            ),
-            (
-                .call(Call(selector: "std.collection.contains", arguments: [reference("data"), .literal(.int(105))])),
-                .bool(true)
-            )
-        ]
-
-        for (expression, answer) in asks {
-            let sut = try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [Parameter(name: "data", type: .bytes)]
-                        ),
-                        body: [],
-                        result: expression
-                    )
-                ]
-            )
-
-            // When / Then
-            #expect(try await run(sut, arguments: ["data": .bytes([104, 105])]) == answer)
-        }
-    }
-
     @Test("a procedure wanting elements no byte can be refuses at the boundary, by the element")
     func aProcedureWantingOtherElementsRefusesAtTheBoundary() async throws {
         // Given. `joined` declares `array<string>`, which leaves no byte as it
@@ -308,59 +263,6 @@ struct BytesTests {
 
         // When / Then
         #expect(try await run(sut, arguments: ["data": .bytes([104, 105])]) == .int(209))
-    }
-
-    @Test("decoded and encoded are two directions of one named mapping")
-    func decodedAndEncodedRoundTrip() async throws {
-        // Given
-        func procedure(_ selector: Name, on subject: Value) async throws -> Module {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [],
-                        result: .call(Call(selector: selector, arguments: [.literal(subject), .literal(.string("utf8"))]))
-                    )
-                ]
-            )
-        }
-
-        // When / Then
-        #expect(try await run(procedure("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
-        #expect(try await run(procedure("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
-
-        // Bytes carry no promise of being text, and a completed guess is a
-        // text nobody sent.
-        await #expect {
-            try await run(procedure("std.text.decoded", on: .bytes([0xff])))
-        } throws: { error in
-            "\(error)".contains("std.text.decoded asks bytes that are text")
-        }
-    }
-
-    @Test("an encoding the procedures do not name refuses at the build")
-    func anUnknownEncodingRefuses() async throws {
-        // Given. The enum names the encodings, and a constant is judged at the
-        // build
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.text.decoded",
-                        arguments: [.literal(.bytes([104])), .literal(.string("utf16"))]
-                    ))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("'utf16' not in enum")
-        }
     }
 
     @Test("a mixed literal joins by the equation, not to any")

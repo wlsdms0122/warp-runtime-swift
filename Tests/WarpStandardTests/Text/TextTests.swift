@@ -113,6 +113,59 @@ struct TextTests {
         }
     }
 
+    @Test("decoded and encoded are two directions of one named mapping")
+    func decodedAndEncodedRoundTrip() async throws {
+        // Given
+        func procedure(_ selector: Name, on subject: Value) async throws -> Module {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        body: [],
+                        result: .call(Call(selector: selector, arguments: [.literal(subject), .literal(.string("utf8"))]))
+                    )
+                ]
+            )
+        }
+
+        // When / Then
+        #expect(try await run(procedure("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
+        #expect(try await run(procedure("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
+
+        // Bytes carry no promise of being text, and a completed guess is a
+        // text nobody sent.
+        await #expect {
+            try await run(procedure("std.text.decoded", on: .bytes([0xff])))
+        } throws: { error in
+            "\(error)".contains("std.text.decoded asks bytes that are text")
+        }
+    }
+
+    @Test("an encoding the procedures do not name refuses at the build")
+    func anUnknownEncodingRefuses() async throws {
+        // Given. The enum names the encodings, and a constant is judged at the
+        // build
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.text.decoded",
+                        arguments: [.literal(.bytes([104])), .literal(.string("utf16"))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'utf16' not in enum")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
