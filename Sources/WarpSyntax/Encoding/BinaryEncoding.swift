@@ -8,16 +8,15 @@
 import Foundation
 import Warp
 
-// The encoding a document travels in. This is Warp's own, and it exists because
-// the things a wire format must promise are things a borrowed format cannot:
+// The encoding a document travels in, and what it promises:
 //
 // - **A whole number and a fraction are different bytes.** They are different
-//   tags, so no general-purpose encoder can collapse them into one kind of
-//   number the way a borrowed text format would.
-// - **The same document is the same bytes, both ways.** The writer sorts record
-//   keys and writes every number minimally, and the reader refuses bytes the
-//   writer would not have written, so byte equality and document equality are
-//   the same question, which is what makes a document signable and cacheable.
+//   tags.
+// - **The same document is the same bytes, both ways.** The writer writes
+//   record keys in byte order and every number minimally, and the reader
+//   refuses bytes the writer would not have written, so byte equality and
+//   document equality are the same question, which is what makes a document
+//   signable and cacheable.
 // - **What cannot arrive is refused before it arrives.** Truncation, trailing
 //   bytes, an unknown tag, a key out of order. Each is a refusal with a name,
 //   not a value somebody guessed.
@@ -40,15 +39,6 @@ public struct BinaryEncoding {
         case namedRecord = 0x09
     }
 
-    // A container part-written: what of it is still to go, and how deep its
-    // parts stand. The mirror of `Opened` on the reading side, and open for
-    // the same reason: what a container holds is written after it rather than
-    // inside it, so nothing here stands on a call frame.
-    private enum Writing {
-        case elements(ArraySlice<Value>, within: Int)
-        case fields(ArraySlice<(name: Name, value: Value)>, within: Int)
-    }
-
     // A container being put back together: what it still expects, what it holds
     // so far, and (for a record) the key the next value belongs to and the last
     // key seen, so order can be held without keeping the keys. A sum rather
@@ -59,8 +49,7 @@ public struct BinaryEncoding {
         case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
     }
 
-    // A place in the bytes. `take` answers what it can and remembers whether
-    // that was everything asked for, so a caller checks the one fact it needs.
+    // A place in the bytes.
     private struct Cursor {
         // MARK: - Property
         private let bytes: [UInt8]
@@ -73,7 +62,6 @@ public struct BinaryEncoding {
 
         var remaining: Int { bytes.count - index }
         var isDone: Bool { remaining == 0 }
-        private(set) var lastTakeWasComplete = true
 
         // MARK: - Initializer
         init(_ data: Data) {
@@ -100,15 +88,13 @@ public struct BinaryEncoding {
             return bytes[index]
         }
 
-        mutating func take(_ count: Int) -> ArraySlice<UInt8> {
-            let end = Swift.min(index + count, bytes.count)
+        // The next `count` bytes, or nil where fewer remain.
+        mutating func take(_ count: Int) -> ArraySlice<UInt8>? {
+            guard count <= remaining else { return nil }
 
-            defer {
-                lastTakeWasComplete = end - index == count
-                index = end
-            }
+            defer { index += count }
 
-            return bytes[index..<end]
+            return bytes[index..<index + count]
         }
 
         // MARK: - Private
@@ -137,16 +123,16 @@ public struct BinaryEncoding {
     public func value(from data: Data) throws -> Value {
         var reading = Cursor(data)
 
-        guard reading.take(Self.magic.count).elementsEqual(Self.magic) else {
-            throw refused("the bytes do not begin as a warp document begins")
+        guard let head = reading.take(Self.magic.count), head.elementsEqual(Self.magic) else {
+            throw EncodingRefused("the bytes do not begin as a warp document begins")
         }
 
         guard let version = reading.byte() else {
-            throw refused("the bytes end before saying how they are laid out")
+            throw EncodingRefused("the bytes end before saying how they are laid out")
         }
 
         guard version == Self.format else {
-            throw refused(
+            throw EncodingRefused(
                 version > Self.format
                     ? "the document is laid out as format \(version), and this reader lays out \(Self.format)"
                     : "format \(version) never existed"
@@ -156,172 +142,69 @@ public struct BinaryEncoding {
         let value = try read(from: &reading)
 
         guard reading.isDone else {
-            throw refused("the document ended and the bytes did not")
+            throw EncodingRefused("the document ended and the bytes did not")
         }
 
         return value
     }
 
     // MARK: - Private
-    // One pass with an explicit stack, for the reason the reader has one: the
-    // depth of a document must never be the depth of the host's call stack.
-    // What a writer is handed is a value a caller built, and a caller that
-    // built a deep one is owed the refusal rather than the process.
-    //
-    // `within` runs out where the reader's limit runs out, so the writer cannot
-    // produce a document its own reader would refuse.
     private func write(_ value: Value, into bytes: inout Data) throws {
-        var open: [Writing] = []
+        var walk = ValueWalk(value)
 
-        try write(value, into: &bytes, within: Envelope.nesting, opening: &open)
+        while let step = try walk.next() {
+            switch step {
+            case .null:
+                bytes.append(Tag.null.rawValue)
 
-        while let container = open.popLast() {
-            switch container {
-            case var .elements(rest, within):
-                guard let next = rest.popFirst() else { continue }
+            case let .bool(bool):
+                bytes.append((bool ? Tag.true : Tag.false).rawValue)
 
-                open.append(.elements(rest, within: within))
+            case let .int(int):
+                bytes.append(Tag.int.rawValue)
 
-                try write(next, into: &bytes, within: within, opening: &open)
+                write(zigzagged(int), into: &bytes)
 
-            case var .fields(rest, within):
-                guard let next = rest.popFirst() else { continue }
+            case let .double(double):
+                bytes.append(Tag.double.rawValue)
 
-                open.append(.fields(rest, within: within))
+                withUnsafeBytes(of: double.bitPattern.bigEndian) { bytes.append(contentsOf: $0) }
 
-                write(Array(next.name.spelling.utf8), into: &bytes)
+            case let .string(string):
+                bytes.append(Tag.string.rawValue)
 
-                try write(next.value, into: &bytes, within: within, opening: &open)
+                write(Array(string.utf8), into: &bytes)
+
+            case let .bytes(raw):
+                bytes.append(Tag.bytes.rawValue)
+
+                write(raw, into: &bytes)
+
+            case let .array(count):
+                bytes.append(Tag.array.rawValue)
+
+                write(UInt64(count), into: &bytes)
+
+            // A record under a name is written under its own tag with the name
+            // in front, so a reader that met the tag knows a name follows.
+            case let .record(name, count):
+                if let name {
+                    bytes.append(Tag.namedRecord.rawValue)
+
+                    write(Array(name.spelling.utf8), into: &bytes)
+                } else {
+                    bytes.append(Tag.record.rawValue)
+                }
+
+                write(UInt64(count), into: &bytes)
+
+            case let .key(name):
+                write(Array(name.spelling.utf8), into: &bytes)
+
+            // A count said how much was held, so nothing marks the end.
+            case .arrayClose, .recordClose:
+                break
             }
-        }
-    }
-
-    // One value's own bytes. What it holds is left open on the stack rather
-    // than written here, so nothing on this path calls itself.
-    private func write(
-        _ value: Value,
-        into bytes: inout Data,
-        within depth: Int,
-        opening open: inout [Writing]
-    ) throws {
-        switch value {
-        case .null:
-            bytes.append(Tag.null.rawValue)
-
-        case let .bool(bool):
-            bytes.append((bool ? Tag.true : Tag.false).rawValue)
-
-        case let .int(int):
-            bytes.append(Tag.int.rawValue)
-
-            write(zigzagged(int), into: &bytes)
-
-        case let .double(double):
-            // The bytes could carry these; the document's value model cannot,
-            // in any encoding, so they are refused rather than becoming a
-            // document only this encoding reads.
-            guard double.isFinite else {
-                throw EncodingError.invalidValue(
-                    value,
-                    .init(
-                        codingPath: [],
-                        debugDescription: "a document has no way to carry \(double)"
-                    )
-                )
-            }
-
-            bytes.append(Tag.double.rawValue)
-
-            withUnsafeBytes(of: double.bitPattern.bigEndian) { bytes.append(contentsOf: $0) }
-
-        case let .string(string):
-            bytes.append(Tag.string.rawValue)
-
-            write(Array(string.utf8), into: &bytes)
-
-        case let .bytes(raw):
-            bytes.append(Tag.bytes.rawValue)
-
-            write(raw, into: &bytes)
-
-        case let .array(array):
-            try opening(value, within: depth)
-
-            bytes.append(Tag.array.rawValue)
-
-            write(UInt64(array.count), into: &bytes)
-
-            if !array.isEmpty {
-                open.append(.elements(array[...], within: depth - 1))
-            }
-
-        // Sorted by their UTF-8 bytes, so that the same document is the same
-        // bytes in every implementation. A language's own string ordering is
-        // whatever that language decided, and the wire cannot depend on it.
-        // A record under a name is written under its own tag with the name in
-        // front, so a reader that met the tag knows a name follows.
-        case let .record(record):
-            try opening(value, within: depth)
-            try write(record.asDictionary, named: record.name, into: &bytes, within: depth, opening: &open)
-
-        case let .dictionary(held):
-            try opening(value, within: depth)
-            try write(held, named: nil, into: &bytes, within: depth, opening: &open)
-
-        case .procedure:
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "a procedure is code, and data is what a document spells"
-                )
-            )
-        }
-    }
-
-    // A container opens within the bound or not at all, and what it holds is
-    // written one container deeper. Counted where a container opens, so an
-    // empty one past the bound is refused the same as a full one.
-    private func opening(_ value: Value, within depth: Int) throws {
-        guard depth > 0 else {
-            throw EncodingError.invalidValue(
-                value,
-                .init(
-                    codingPath: [],
-                    debugDescription: "the value nests deeper than a document may"
-                )
-            )
-        }
-    }
-
-    // Fields under names, with the name of the layout they stood on where
-    // there was one.
-    private func write(
-        _ held: Value.Dictionary,
-        named name: Name?,
-        into bytes: inout Data,
-        within depth: Int,
-        opening open: inout [Writing]
-    ) throws {
-        if let name {
-            guard name.isDeclarable else {
-                throw EncodingError.invalidValue(
-                    Value.string(name.spelling),
-                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
-                )
-            }
-
-            bytes.append(Tag.namedRecord.rawValue)
-            write(Array(name.spelling.utf8), into: &bytes)
-        } else {
-            bytes.append(Tag.record.rawValue)
-        }
-
-        write(UInt64(held.count), into: &bytes)
-
-        // Both spellings hold their fields in byte order, the order written.
-        if !held.isEmpty {
-            open.append(.fields(held.entries[...], within: depth - 1))
         }
     }
 
@@ -355,11 +238,11 @@ public struct BinaryEncoding {
 
         while true {
             guard let raw = reading.byte() else {
-                throw refused("the bytes end where a value should begin")
+                throw EncodingRefused("the bytes end where a value should begin")
             }
 
             guard let tag = Tag(rawValue: raw) else {
-                throw refused("nothing in this format begins with \(raw)")
+                throw EncodingRefused("nothing in this format begins with \(raw)")
             }
 
             var settled: Value?
@@ -378,17 +261,15 @@ public struct BinaryEncoding {
                 settled = .int(unzigzagged(try unsigned(from: &reading)))
 
             case .double:
-                let raw = reading.take(8)
-
-                guard reading.lastTakeWasComplete else {
-                    throw refused("the bytes end inside a fraction")
+                guard let raw = reading.take(8) else {
+                    throw EncodingRefused("the bytes end inside a fraction")
                 }
 
                 let bits = raw.reduce(UInt64(0)) { held, byte in held << 8 | UInt64(byte) }
                 let double = Double(bitPattern: bits)
 
                 guard double.isFinite else {
-                    throw refused("a document has no way to carry \(double)")
+                    throw EncodingRefused("a document has no way to carry \(double)")
                 }
 
                 settled = .double(double)
@@ -398,10 +279,8 @@ public struct BinaryEncoding {
 
             case .bytes:
                 let count = try length(from: &reading, of: "bytes", costing: 1)
-                let raw = reading.take(count)
-
-                guard reading.lastTakeWasComplete else {
-                    throw refused("the bytes end inside bytes")
+                guard let raw = reading.take(count) else {
+                    throw EncodingRefused("the bytes end inside bytes")
                 }
 
                 settled = .bytes(Array(raw))
@@ -492,13 +371,13 @@ public struct BinaryEncoding {
         let raw = Array(key.utf8)
 
         if let previous, !previous.lexicographicallyPrecedes(raw) {
-            throw refused("the record's keys are not written in order")
+            throw EncodingRefused("the record's keys are not written in order")
         }
 
         do {
             return (try Name(key), raw)
         } catch let refusal as NameRefused {
-            throw refused(refusal.message)
+            throw EncodingRefused(refusal.message)
         }
     }
 
@@ -511,11 +390,11 @@ public struct BinaryEncoding {
         do {
             name = try Name(spelling)
         } catch let refusal as NameRefused {
-            throw refused(refusal.message)
+            throw EncodingRefused(refusal.message)
         }
 
         guard name.isDeclarable else {
-            throw refused("the record's name is not a type's name")
+            throw EncodingRefused("the record's name is not a type's name")
         }
 
         return name
@@ -524,14 +403,12 @@ public struct BinaryEncoding {
     private func text(from reading: inout Cursor) throws -> String {
         let count = try length(from: &reading, of: "text", costing: 1)
 
-        let bytes = reading.take(count)
-
-        guard reading.lastTakeWasComplete else {
-            throw refused("the bytes end inside text")
+        guard let bytes = reading.take(count) else {
+            throw EncodingRefused("the bytes end inside text")
         }
 
-        guard let string = String(bytes: bytes, encoding: .utf8) else {
-            throw refused("the text is not UTF-8")
+        guard let string = String(utf8: bytes) else {
+            throw EncodingRefused("the text is not UTF-8")
         }
 
         return string
@@ -540,9 +417,7 @@ public struct BinaryEncoding {
     // A claimed length, charged against the one budget all claims share: the
     // bytes of the document itself. Each claimed thing costs at least `cost`
     // bytes to actually write, so however deeply the claimants nest, their
-    // claims cannot sum past the document. A check against only the bytes
-    // *remaining* was local to each claim, and five hundred nested containers
-    // could each claim the whole document and have memory set aside for it.
+    // claims cannot sum past the document.
     private func length(
         from reading: inout Cursor,
         of what: String,
@@ -551,7 +426,7 @@ public struct BinaryEncoding {
         let claimed = try unsigned(from: &reading)
 
         guard claimed <= UInt64(Int.max), reading.claim(Int(claimed), costing: cost) else {
-            throw refused("\(what) claims more than the document holds")
+            throw EncodingRefused("\(what) claims more than the document holds")
         }
 
         return Int(claimed)
@@ -564,11 +439,11 @@ public struct BinaryEncoding {
 
         while true {
             guard let byte = reading.byte() else {
-                throw refused("the bytes end inside a number")
+                throw EncodingRefused("the bytes end inside a number")
             }
 
             guard shift < 64, shift < 63 || byte <= 0x01 else {
-                throw refused("the number does not fit in 64 bits")
+                throw EncodingRefused("the number does not fit in 64 bits")
             }
 
             value |= UInt64(byte & 0x7f) << shift
@@ -582,7 +457,7 @@ public struct BinaryEncoding {
         // A trailing zero group is a longer spelling of the same number, and a
         // canonical wire has one spelling.
         guard shift == 0 || last != 0 else {
-            throw refused("the number is written longer than it is")
+            throw EncodingRefused("the number is written longer than it is")
         }
 
         return value
@@ -595,7 +470,7 @@ public struct BinaryEncoding {
     }
 
     // `unsigned(from:)` already held the 64-bit line, so the exact conversion
-    // to the procedure cannot miss. A truncating one here would say otherwise.
+    // to `Int` cannot miss. A truncating one here would say otherwise.
     private func unzigzagged(_ unsigned: UInt64) -> Int {
         Int(Int64(bitPattern: unsigned >> 1 ^ (0 &- (unsigned & 1))))
     }
@@ -604,11 +479,7 @@ public struct BinaryEncoding {
     // one about to open is one more of them.
     private func opening(_ opened: [Opened]) throws {
         guard opened.count < Envelope.nesting else {
-            throw refused("the document nests deeper than a reader must follow")
+            throw EncodingRefused("the document nests deeper than a reader must follow")
         }
-    }
-
-    private func refused(_ said: String) -> Error {
-        DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: said))
     }
 }

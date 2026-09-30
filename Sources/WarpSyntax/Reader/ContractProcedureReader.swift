@@ -14,7 +14,7 @@ import Warp
 // No `bounds`: the bound a type parameter carries is owned by the signature
 // that declares it.
 public struct ContractProcedureReader: Decodable {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
         case returns
         case const

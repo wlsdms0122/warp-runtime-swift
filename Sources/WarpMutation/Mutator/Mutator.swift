@@ -18,7 +18,8 @@ import Warp
 // One place at a time, because a mutant that differs in two places cannot say
 // which of them the answer was about.
 public struct Mutator: Sendable {
-    // One step down into a value: a position in a list, or a key in a record.
+    // One step down into a value: a position in a list, or a key in a record
+    // or a dictionary.
     private enum Step {
         case position(Int)
         case key(Name)
@@ -121,6 +122,11 @@ public struct Mutator: Sendable {
                 walk(entry.value, at: steps + [.key(entry.name)], visit)
             }
 
+        case let .record(record):
+            for entry in record.asDictionary.entries {
+                walk(entry.value, at: steps + [.key(entry.name)], visit)
+            }
+
         default:
             return
         }
@@ -141,6 +147,13 @@ public struct Mutator: Sendable {
             guard let held = record[key] else { return value }
 
             return .dictionary(record.writing(key, with: replacing(steps.dropFirst(), in: held, with: mutated)))
+
+        case let (.key(key), .record(record)):
+            guard let held = record[key] else { return value }
+
+            let replaced = replacing(steps.dropFirst(), in: held, with: mutated)
+
+            return .record(record.mapValues { name, field in name == key ? replaced : field })
 
         default:
             return value

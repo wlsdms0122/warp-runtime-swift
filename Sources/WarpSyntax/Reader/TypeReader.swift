@@ -27,12 +27,12 @@ public struct TypeReader: Decodable {
     // The inside of a procedure type: the types a value is applied with, in
     // position order, and what it answers. No names, since a value carries
     // none.
-    private struct ProcedureTypeReader: Decodable {
+    struct ProcedureTypeReader: Decodable {
         // No `bounds` here on purpose: a nested procedure type's parameters are
         // the declaring procedure's own slots, so the declaring signature owns
         // every bound. Two `bounds` records binding one name would be two claims
         // about one thing, written a document apart.
-        private enum CodingKeys: String, CodingKey, CaseIterable {
+        enum CodingKeys: String, CodingKey, CaseIterable {
             case parameters
             case returns
         }
@@ -322,15 +322,6 @@ public struct TypeReader: Decodable {
         }
 
         return holding.holding(try parse(inner, qualifying: qualifying))
-    }
-
-    // Whether the reading takes this spelling back as the name it is. A name
-    // is written as itself, so a spelling the reading makes anything else of
-    // (a built-in, a mark in front of something, brackets, a type parameter)
-    // is a name no document can say. Asked of the reading rather than of a
-    // list, because a list and a parser drift.
-    public static func readsBackAsAName(_ name: Name) -> Bool {
-        ((try? parse(name.spelling)) ?? nil) == .named(name)
     }
 
     // Whether the reading takes this key as a procedure form's. Asked of the

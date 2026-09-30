@@ -9,13 +9,6 @@ import Foundation
 
 // FIPS 180-4, written out here.
 //
-// Not borrowed from a package, because the one thing this target promises is
-// that another implementation can speak the wire without taking on anything of
-// ours, and a dependency in the way of that would be an odd thing to add to the
-// target that says so. Not taken from the platform either: the one that ships
-// it is one platform, and what this computes has to be the same number
-// everywhere or it is not an identity.
-//
 // Everything below is the published algorithm. The only judgment in it is the
 // choice of algorithm, which the specification names.
 struct SHA256 {
@@ -111,19 +104,19 @@ struct SHA256 {
             state[7] &+= h
         }
 
-        return state.flatMap { procedure in
+        return state.flatMap { word in
             [
-                UInt8(truncatingIfNeeded: procedure >> 24),
-                UInt8(truncatingIfNeeded: procedure >> 16),
-                UInt8(truncatingIfNeeded: procedure >> 8),
-                UInt8(truncatingIfNeeded: procedure)
+                UInt8(truncatingIfNeeded: word >> 24),
+                UInt8(truncatingIfNeeded: word >> 16),
+                UInt8(truncatingIfNeeded: word >> 8),
+                UInt8(truncatingIfNeeded: word)
             ]
         }
     }
 
     // MARK: - Private
-    private func rotated(_ procedure: UInt32, _ places: UInt32) -> UInt32 {
-        (procedure >> places) | (procedure << (32 - places))
+    private func rotated(_ word: UInt32, _ places: UInt32) -> UInt32 {
+        (word >> places) | (word << (32 - places))
     }
 
     private func padded(_ data: Data) -> [UInt8] {
