@@ -73,8 +73,8 @@ struct ObjectWriter {
                 }
             },
             "claims": keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
-            "leaned": .array(compiled.leaned.keys.sorted().map { claim in
-                .array([name(claim.type), name(claim.contract), place(compiled.leaned[claim]!)])
+            "leaned": .array(compiled.leaned.sorted { one, other in one.key < other.key }.map { claim, place in
+                .array([name(claim.type), name(claim.contract), self.place(place)])
             }),
             // The rows the document declares stand under their spellings; the
             // rows its bodies lifted stand apart, and what wrote each is the
@@ -172,8 +172,8 @@ struct ObjectWriter {
     private func keyed<T, Failure: Error>(_ entries: [Name: T], _ write: (T) throws(Failure) -> Value) throws(Failure) -> Value {
         var written: [Value] = []
 
-        for key in entries.keys.sorted() {
-            written.append(.array([name(key), try write(entries[key]!)]))
+        for (key, entry) in entries.sorted(by: { one, other in one.key < other.key }) {
+            written.append(.array([name(key), try write(entry)]))
         }
 
         return .array(written)
