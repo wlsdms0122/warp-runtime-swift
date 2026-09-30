@@ -128,24 +128,20 @@ struct LinearityChecker {
                     continue
                 }
 
-                held = try moving(statement.expression, held: held, guarded: guarded)
-
                 switch statement.binding {
                 case let .constant(name, _)?, let .variable(name, _)?:
+                    held = try moving(statement.expression, held: held, guarded: guarded)
+
                     guard carriesObligation(statement.expression, held: held) else { continue }
 
                     held.live.insert(name)
                     held.moved.remove(name)
 
-                // A write puts something else in the box, so what was there is
-                // gone without having been handed on.
                 case let .assignment(path)?:
-                    guard let head = path.head, held.live.contains(head), path.segments.count == 1 else { continue }
-
-                    throw refusal("writes over '\(head)', which it is still holding")
+                    held = try written(statement.expression, into: path, held: held, guarded: guarded)
 
                 case nil:
-                    break
+                    held = try moving(statement.expression, held: held, guarded: guarded)
                 }
             }
 
@@ -415,6 +411,33 @@ struct LinearityChecker {
             }
 
             return carried
+        }
+
+        // A write into a box. Written whole, the box takes what the value
+        // carries the way a binding does, and what was there is gone without
+        // having been handed on. Written below the name, the value goes inside
+        // the list or record the box holds.
+        private func written(_ expression: Expression, into path: Path, held: Held, guarded: String?) throws -> Held {
+            guard let head = path.head, path.segments.count == 1 else {
+                return try carrying(expression, held: held, guarded: guarded)
+            }
+
+            var written = try moving(expression, held: held, guarded: guarded)
+
+            guard !written.live.contains(head) else {
+                throw refusal("writes over '\(head)', which it is still holding")
+            }
+
+            guard carriesObligation(expression, held: written) else { return written }
+
+            if let guarded {
+                throw refusal("writes one into '\(head)' \(guarded), which happens no fixed number of times")
+            }
+
+            written.live.insert(head)
+            written.moved.remove(head)
+
+            return written
         }
 
         // One element of a list or one field of a record. What a value written
