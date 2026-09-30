@@ -60,7 +60,7 @@ struct Fanout {
     func build() async throws -> Duration {
         let builder = Builder()
 
-        return try await elapsed {
+        return try await Stopwatch().elapsed {
             _ = try builder.link(
                 vocabulary.laid.compiled + (try await builder.compile(modules, against: vocabulary.laid)),
                 supplying: vocabulary.brought
@@ -72,7 +72,7 @@ struct Fanout {
     func compile() async throws -> Duration {
         let builder = Builder()
 
-        return try await elapsed {
+        return try await Stopwatch().elapsed {
             _ = try await builder.compile(modules, against: vocabulary.laid)
         }
     }
@@ -81,7 +81,7 @@ struct Fanout {
     func alone() async throws -> Duration {
         let builder = Builder()
 
-        return try await elapsed {
+        return try await Stopwatch().elapsed {
             for module in modules {
                 _ = try await builder.compile([module], against: vocabulary.laid)
             }
@@ -90,7 +90,7 @@ struct Fanout {
 
     // How long laying the compiled documents down together takes.
     func link() throws -> Duration {
-        try elapsed {
+        try Stopwatch().elapsed {
             _ = try Builder().link(compiled, supplying: vocabulary.brought)
         }
     }

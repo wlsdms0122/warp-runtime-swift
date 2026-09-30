@@ -37,6 +37,137 @@ struct Bench {
         var description: String { "--against takes the path of a table this bench printed" }
     }
 
+    private struct Measurement {
+        // MARK: - Property
+        let perRound: Double
+        let load: Double
+        let build: Double
+        let baked: Double
+        let once: Double
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // What one world of fanned-out procedures costs, by the door that was asked.
+    private struct Cost {
+        // MARK: - Property
+        let build: Double
+        let compile: Double
+        let alone: Double
+        let link: Double
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // A table read to compare a run against, and what it turned out not to
+    // carry.
+    //
+    // A table taken before a figure existed is not a table this run moved from,
+    // and the figure beside a missing one is the worst of it: the columns keep
+    // their spellings while what they measure is split, so the arithmetic runs
+    // and reads as a change. So a table that is missing any figure the table
+    // asking compares is not compared at all, and the reader is told which
+    // figure said so.
+    //
+    // Which figures those are is the asking table's, said beside the rows that
+    // read them.
+    private struct Comparison {
+        // MARK: - Property
+        let rows: [String: [String: Double]]?
+
+        private let missing: String?
+        private let path: String?
+
+        // MARK: - Initializer
+        init(_ read: [String: [String: Double]]?, over figures: [String], from path: String?) {
+            self.path = path
+
+            guard let path else {
+                self.rows = nil
+                self.missing = nil
+
+                return
+            }
+
+            guard let read else {
+                self.rows = nil
+                self.missing = "does not carry this table"
+
+                return
+            }
+
+            let absent = figures.filter { figure in
+                read.values.allSatisfy { row in row[figure] == nil }
+            }
+
+            guard absent.isEmpty else {
+                self.rows = nil
+                self.missing = "carries no "
+                    + absent.map { figure in "`\(figure)`" }.joined(separator: ", ")
+
+                return
+            }
+
+            self.rows = read
+            self.missing = nil
+        }
+
+        // MARK: - Public
+        // The heading, saying what this run was read against or why it was not.
+        func said(beside heading: String) -> String {
+            guard let path else { return heading }
+
+            guard let missing else { return heading + "; against \(path)" }
+
+            return heading + "\n\nNot compared against \(path): it \(missing)."
+                + " Take it again before reading this against it."
+        }
+
+        // MARK: - Private
+    }
+
+    // One column of a table: what it is called, what it prints for a row, and
+    // what a table compared against is asked for where the column moves at
+    // all.
+    //
+    // A column named once is a column that cannot be printed and not compared,
+    // which is what happened twice while the name lived in five places.
+    private struct Column<Row> {
+        // MARK: - Property
+        let heading: String
+
+        // The cell, for a row.
+        let text: (Row) -> String
+
+        // What it reads, where it moves: the cell and the comparison stand on
+        // the same arithmetic rather than on two copies of it. Nil for a
+        // column read off the loop of this same run, which has nothing to
+        // move from.
+        let read: ((Row) -> Double)?
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // A figure printed to a number of decimals.
+        static func figure(
+            _ heading: String,
+            decimals: Int,
+            moves: Bool,
+            _ read: @escaping (Row) -> Double
+        ) -> Column {
+            Column(
+                heading: heading,
+                text: { row in String(format: "%.\(decimals)f", read(row)) },
+                read: moves ? read : nil
+            )
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private static let defaultRounds = 1_000_000
     private static let defaultRepeats = 3
@@ -155,32 +286,17 @@ struct Bench {
     }
 
     // MARK: - Private
-    private struct Measurement {
-        let perRound: Double
-        let load: Double
-        let build: Double
-        let baked: Double
-        let once: Double
-    }
-
-    // What one world of fanned-out procedures costs, by the door that was asked.
-    private struct Cost {
-        let build: Double
-        let compile: Double
-        let alone: Double
-        let link: Double
-    }
-
     private static func workloads() async throws -> [Workload] {
         let directory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("program")
         let files = try FileManager.default
             .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "warpt" }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .filter { file in file.pathExtension == "warpt" }
+            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
 
         var workloads: [Workload] = []
 
@@ -267,106 +383,6 @@ struct Bench {
         }
 
         return read
-    }
-
-    // A table read to compare a run against, and what it turned out not to
-    // carry.
-    //
-    // A table taken before a figure existed is not a table this run moved from,
-    // and the figure beside a missing one is the worst of it: the columns keep
-    // their spellings while what they measure is split, so the arithmetic runs
-    // and reads as a change. So a table that is missing any figure the table
-    // asking compares is not compared at all, and the reader is told which
-    // figure said so.
-    //
-    // Which figures those are is the asking table's, said beside the rows that
-    // read them.
-    private struct Comparison {
-        // MARK: - Property
-        let rows: [String: [String: Double]]?
-
-        private let missing: String?
-        private let path: String?
-
-        // MARK: - Initializer
-        init(_ read: [String: [String: Double]]?, over figures: [String], from path: String?) {
-            self.path = path
-
-            guard let path else {
-                self.rows = nil
-                self.missing = nil
-
-                return
-            }
-
-            guard let read else {
-                self.rows = nil
-                self.missing = "does not carry this table"
-
-                return
-            }
-
-            let absent = figures.filter { figure in
-                read.values.allSatisfy { row in row[figure] == nil }
-            }
-
-            guard absent.isEmpty else {
-                self.rows = nil
-                self.missing = "carries no "
-                    + absent.map { figure in "`\(figure)`" }.joined(separator: ", ")
-
-                return
-            }
-
-            self.rows = read
-            self.missing = nil
-        }
-
-        // MARK: - Public
-        // The heading, saying what this run was read against or why it was not.
-        func said(beside heading: String) -> String {
-            guard let path else { return heading }
-
-            guard let missing else { return heading + "; against \(path)" }
-
-            return heading + "\n\nNot compared against \(path): it \(missing)."
-                + " Take it again before reading this against it."
-        }
-
-        // MARK: - Private
-    }
-
-    // One column of a table: what it is called, what it prints for a row, and
-    // what a table compared against is asked for where the column moves at
-    // all.
-    //
-    // A column named once is a column that cannot be printed and not compared,
-    // which is what happened twice while the name lived in five places.
-    private struct Column<Row> {
-        let heading: String
-
-        // The cell, for a row.
-        let text: (Row) -> String
-
-        // What it reads, where it moves: the cell and the comparison stand on
-        // the same arithmetic rather than on two copies of it. Nil for a
-        // column read off the loop of this same run, which has nothing to
-        // move from.
-        let read: ((Row) -> Double)?
-
-        // A figure printed to a number of decimals.
-        static func figure(
-            _ heading: String,
-            decimals: Int,
-            moves: Bool,
-            _ read: @escaping (Row) -> Double
-        ) -> Column {
-            Column(
-                heading: heading,
-                text: { row in String(format: "%.\(decimals)f", read(row)) },
-                read: moves ? read : nil
-            )
-        }
     }
 
     private static func moved(_ now: Double, from before: Double?) -> String {
