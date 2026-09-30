@@ -63,4 +63,6 @@ struct Keyed {
 
         throw ObjectRefused("'\(part)' writes '\(forgotten)', which this reading left unread")
     }
+
+    // MARK: - Private
 }

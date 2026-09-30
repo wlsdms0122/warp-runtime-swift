@@ -20,8 +20,6 @@ enum Argument: Sendable {
     case reference(Address)
 
     // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
     // The argument read as a value, for a slot that does not take it in place.
     var read: Operation {
         switch self {
@@ -33,6 +31,8 @@ enum Argument: Sendable {
         }
     }
 
+    // MARK: - Initializer
+    // MARK: - Public
     func rewritten(
         operation: (Operation) throws -> Operation,
         type: (LoweredType) throws -> LoweredType

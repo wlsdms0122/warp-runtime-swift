@@ -66,6 +66,7 @@ struct TypeChecker {
     // finishing way through made the write. A definite write retypes the name;
     // an indefinite one joins with what the name held.
     private struct Flow {
+        // MARK: - Property
         var written: [Name: (type: LoweredType, definite: Bool)] = [:]
 
         // What was written on ways that left. It flows past nothing here (no
@@ -93,6 +94,10 @@ struct TypeChecker {
         // about a name the body around this one holds, and this is about the
         // value the procedure hands its caller.
         var answered: [(reading: LoweredType, place: Place)] = []
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // The two asks the one walk answers. Judging is the link's own pass (every
@@ -111,6 +116,7 @@ struct TypeChecker {
         case judging(folding: Folding?, origin: Int? = nil, writing: Fulfillment? = nil)
         case reading
 
+        // MARK: - Property
         // Where a walk writes down the pairs its calls lean on. A walk that
         // reads rather than judges has none, so a probe cannot write.
         var fulfillment: Fulfillment? {
@@ -131,6 +137,10 @@ struct TypeChecker {
 
             return false
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // One walk's answers: the expression with every dot's meaning written
@@ -138,10 +148,15 @@ struct TypeChecker {
     // what it wrote to the names around it. The reading ask hands the
     // expression back as written and gathers nothing.
     private struct Inspection {
+        // MARK: - Property
         var rewritten: Expression
         var calls: [CallSite] = []
         var reading: LoweredType
         var flow = Flow()
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // The statement walk's answers, named once. The fixpoint hands one back, so
@@ -165,6 +180,7 @@ struct TypeChecker {
     // off the body: the body itself, the names in scope before its first
     // statement, and which other unwritten answers its own may come from.
     struct Unsaid {
+        // MARK: - Property
         // The declaration itself, rather than the two things this walk asks of
         // it. What it is called across the link and where its procedures are in the
         // document are both the symbol's to say, and copying either out here
@@ -174,6 +190,10 @@ struct TypeChecker {
         let block: Block
         let environment: [Name: Binding]
         let sends: Set<Name>
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property
@@ -453,7 +473,7 @@ struct TypeChecker {
             uniquingKeysWith: { first, _ in first }
         )
 
-        for component in StronglyConnected.components(among: edges) {
+        for component in StronglyConnected(among: edges).components() {
             // One declaration that does not reach its own answer is the only
             // type a body can be read for. Everything else is a cycle, and
             // a cycle says nothing.

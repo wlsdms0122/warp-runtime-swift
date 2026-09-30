@@ -41,6 +41,11 @@ public struct ModuleGraph: Sendable {
 
     private let given: [Module]
 
+    // The modules themselves, in that order.
+    public var modules: [Module] {
+        standing.map { position in given[position] }
+    }
+
     // MARK: - Initializer
     // `held` is how many documents stand in the link before these, so a
     // refusal counts the list the caller handed over rather than this array.
@@ -127,10 +132,5 @@ public struct ModuleGraph: Sendable {
     }
 
     // MARK: - Public
-    // The modules themselves, in that order.
-    public var modules: [Module] {
-        standing.map { position in given[position] }
-    }
-
     // MARK: - Private
 }

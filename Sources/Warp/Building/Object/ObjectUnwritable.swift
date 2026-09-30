@@ -20,4 +20,7 @@ public struct ObjectUnwritable: WarpError {
     init(_ message: String) {
         self.message = message
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

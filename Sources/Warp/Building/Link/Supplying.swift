@@ -23,6 +23,7 @@ public struct Supplying: Sendable {
     // once when the supply is built: a link asks the same questions of the
     // same procedures every time it joins them up.
     struct Brought: Sendable {
+        // MARK: - Property
         let native: Native
 
         // What the module bringing it declared it takes and answers. A row
@@ -34,6 +35,10 @@ public struct Supplying: Sendable {
         // Whether the module bringing it is one the specification names. What
         // a constant settles from is read off this.
         let builtin: Bool
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

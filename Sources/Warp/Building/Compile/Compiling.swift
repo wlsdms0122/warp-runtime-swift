@@ -57,6 +57,21 @@ struct Compiling {
     private var foldingRows: [Linked] = []
     private var loweredRows: [Int] = []
 
+    // What a compile laying more documents beside these takes from them.
+    var carried: Carried {
+        Carried(
+            table: lowering.table,
+            rows: lowering.rows,
+            owned: lowering.owned,
+            concealed: lowering.concealed,
+            named: named,
+            numbering: lowering.numbering,
+            closureRows: lowering.closureRows,
+            variables: lowering.variables,
+            answers: answers
+        )
+    }
+
     // MARK: - Initializer
     // Nothing laid down yet.
     init(
@@ -107,21 +122,6 @@ struct Compiling {
     }
 
     // MARK: - Public
-    // What a compile laying more documents beside these takes from them.
-    var carried: Carried {
-        Carried(
-            table: lowering.table,
-            rows: lowering.rows,
-            owned: lowering.owned,
-            concealed: lowering.concealed,
-            named: named,
-            numbering: lowering.numbering,
-            closureRows: lowering.closureRows,
-            variables: lowering.variables,
-            answers: answers
-        )
-    }
-
     // One document already compiled laid down, as the document itself wrote
     // it.
     //

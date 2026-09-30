@@ -11,6 +11,7 @@ import Foundation
 // specification, the key it is said under, and the keys the record carries.
 // What the writer lays down and the reader holds a record to, said once.
 enum ObjectLayout {
+    // MARK: - Property
     // The format, which moves when the layout moves and for no other reason.
     // Every change before the first release folds into this one. Which Warp
     // wrote an object is not written, because what an object holds is the
@@ -27,4 +28,8 @@ enum ObjectLayout {
         formatKey, "document", "dependencies", "types", "constraints", "contracts", "claims", "leaned",
         "rows", "lifted", "answers", "numbering", "typeNumbering", "variables", "constants"
     ]
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

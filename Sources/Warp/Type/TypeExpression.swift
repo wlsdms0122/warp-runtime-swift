@@ -202,6 +202,16 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             case upTo(Bound)
         }
 
+        // What this admits, or why not. The two refusals are different facts (a
+        // text where a number was wanted missed the kind, and a number outside the
+        // bounds missed the condition) so the boundary can say which.
+        public enum Settlement: Sendable, Equatable {
+            case settled(Value)
+            case outside(String)
+            case otherKind
+        }
+
+        // MARK: - Property
         // What a value has to be before the bounds have anything to say. A range
         // is a condition on a number, and this is which number.
         public var kind: TypeExpression {
@@ -222,38 +232,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
             case .fraction:
                 return .double
-            }
-        }
-
-        // What this admits, or why not. The two refusals are different facts (a
-        // text where a number was wanted missed the kind, and a number outside the
-        // bounds missed the condition) so the boundary can say which.
-        public enum Settlement: Sendable, Equatable {
-            case settled(Value)
-            case outside(String)
-            case otherKind
-        }
-
-        public func settling(_ value: Value) -> Settlement {
-            switch self {
-            case let .whole(from, to):
-                guard case let .int(number) = value else { return .otherKind }
-
-                return Self.holds(number, from: from, to: to)
-                    ? .settled(value)
-                    : .outside(String(number))
-
-            // A whole number arrives at a fraction slot as the fraction it widens
-            // to, which is the one conversion the language has, so the bounds judge
-            // what the slot would hold rather than what was written.
-            case let .fraction(from, to):
-                guard let number = Self.fraction(of: value) else { return .otherKind }
-
-                guard Self.holds(number, from: from, to: to) else {
-                    return .outside(number.shown)
-                }
-
-                return .settled(.double(number))
             }
         }
 
@@ -331,6 +309,79 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             }
         }
 
+        // How the range reads in a document, and in a message: one value, one
+        // spelling, because this is written back out and compared as the type's
+        // identity.
+        public var rendered: String {
+            // A range with neither bound is the kind itself, so it reads as the
+            // kind: one type has one spelling here, and `double(...)` would be a
+            // second one for what `saysNothing` already calls the same thing.
+            guard !saysNothing else { return kind.rendered }
+
+            switch self {
+            case let .whole(from, to):
+                let floor = from.map(String.init) ?? ""
+
+                return "\(kind.rendered)(\(floor)\(Self.spelled(to, String.init)))"
+
+            case let .fraction(from, to):
+                let floor = Self.fraction(from)
+
+                return "\(kind.rendered)(\(floor)\(Self.spelled(to, Self.fraction)))"
+            }
+        }
+
+        // The interval as fractions, for the one question two ranges of different
+        // kinds share, and for that pair alone: a whole bound past 2^53 arrives as
+        // a neighbour, and round-to-nearest-even picks it by the tie, so the edge
+        // may move inward as easily as outward. Two ranges of one kind are compared
+        // in that kind and never come through here.
+        private var span: (lower: Double?, upper: Edge<Double>?) {
+            switch self {
+            case let .whole(from, to):
+                let floor = from.map(Double.init)
+
+                switch to {
+                case let .through(bound):
+                    return (floor, .through(Double(bound)))
+
+                case let .upTo(bound):
+                    return (floor, .upTo(Double(bound)))
+
+                case nil:
+                    return (floor, nil)
+                }
+
+            case let .fraction(from, to):
+                return (from, to)
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        public func settling(_ value: Value) -> Settlement {
+            switch self {
+            case let .whole(from, to):
+                guard case let .int(number) = value else { return .otherKind }
+
+                return Self.holds(number, from: from, to: to)
+                    ? .settled(value)
+                    : .outside(String(number))
+
+            // A whole number arrives at a fraction slot as the fraction it widens
+            // to, which is the one conversion the language has, so the bounds judge
+            // what the slot would hold rather than what was written.
+            case let .fraction(from, to):
+                guard let number = Self.fraction(of: value) else { return .otherKind }
+
+                guard Self.holds(number, from: from, to: to) else {
+                    return .outside(number.shown)
+                }
+
+                return .settled(.double(number))
+            }
+        }
+
         // Whether some value is inside both. Asked across kinds as well as within
         // one: a whole number widens into a fraction slot, so `int(0...5)` and
         // `double(0.0...5.0)` are two ranges one value satisfies.
@@ -357,28 +408,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return Self.meeting(span, other.span, floor: -.infinity)
         }
 
-        // How the range reads in a document, and in a message: one value, one
-        // spelling, because this is written back out and compared as the type's
-        // identity.
-        public var rendered: String {
-            // A range with neither bound is the kind itself, so it reads as the
-            // kind: one type has one spelling here, and `double(...)` would be a
-            // second one for what `saysNothing` already calls the same thing.
-            guard !saysNothing else { return kind.rendered }
-
-            switch self {
-            case let .whole(from, to):
-                let floor = from.map(String.init) ?? ""
-
-                return "\(kind.rendered)(\(floor)\(Self.spelled(to, String.init)))"
-
-            case let .fraction(from, to):
-                let floor = Self.fraction(from)
-
-                return "\(kind.rendered)(\(floor)\(Self.spelled(to, Self.fraction)))"
-            }
-        }
-
+        // MARK: - Private
         // Whether two intervals of one kind have anything between them. Said once,
         // for the pair compared as whole numbers and the pair compared as fractions
         // alike.
@@ -493,32 +523,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
                 return "..."
             }
         }
-
-        // The interval as fractions, for the one question two ranges of different
-        // kinds share, and for that pair alone: a whole bound past 2^53 arrives as
-        // a neighbour, and round-to-nearest-even picks it by the tie, so the edge
-        // may move inward as easily as outward. Two ranges of one kind are compared
-        // in that kind and never come through here.
-        private var span: (lower: Double?, upper: Edge<Double>?) {
-            switch self {
-            case let .whole(from, to):
-                let floor = from.map(Double.init)
-
-                switch to {
-                case let .through(bound):
-                    return (floor, .through(Double(bound)))
-
-                case let .upTo(bound):
-                    return (floor, .upTo(Double(bound)))
-
-                case nil:
-                    return (floor, nil)
-                }
-
-            case let .fraction(from, to):
-                return (from, to)
-            }
-        }
     }
 
     // MARK: - Property
@@ -547,19 +551,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Bytes are an array of that element. What a procedure the host answers
     // declares, without a link to name the range through.
     public static let bytes = TypeExpression.array(.byteElement)
-
-    // MARK: - Initializer
-    // MARK: - Public
-    // What this type accepts, settled to the declared representation, or a
-    // refusal saying which part disagreed. `at` is the path into the value so
-    // the message names the field rather than the whole argument.
-    public func settling(
-        _ value: Value,
-        at path: @autoclosure () -> String,
-        in types: TypeTable = .empty
-    ) throws -> Value {
-        try lowered(in: types.loweredTypes).settling(value, at: path(), in: types.loweredTypes)
-    }
 
     // How the type reads in a message. A declaration an author wrote should come
     // back to them in the spelling they wrote it in.
@@ -767,18 +758,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         return nil
     }
 
-    // The same type with every name it holds walked through to what that name
-    // declares. At every depth, not only the outermost.
-    //
-    // A name is a spelling, and two spellings of one type are one type: a
-    // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
-    // are the same thing said twice. Resolving only the outermost made that
-    // depend on where the author happened to write the name, so the same
-    // question got two answers depending on nesting.
-    func resolved(in types: TypeTable) -> TypeExpression {
-        resolved(in: types, assuming: [])
-    }
-
     // Every declared name this reaches: the types it names, and the
     // memberships it bounds a parameter by.
     //
@@ -879,6 +858,75 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
+    // The type a slot's mark stands in front of, where it has one, and the type
+    // itself otherwise. What arrives through `inout`, `consuming` or
+    // `borrowing` is the inner type, and every question about what fits asks
+    // that.
+    //
+    // No `default`: a mark nobody thought about must be a compile error here
+    // rather than an answer of "no mark".
+    public var slotUnwrapped: TypeExpression {
+        switch self {
+        case let .inout(inner), let .consuming(inner), let .borrowing(inner):
+            return inner
+
+        case .any, .never, .null, .bool, .int, .double, .string,
+            .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
+            .nullable, .named, .parameter, .reading, .composition:
+            return self
+        }
+    }
+
+    public var isInout: Bool {
+        if case .inout = self { return true }
+        return false
+    }
+
+    public var isVariable: Bool {
+        if case .variable = self { return true }
+        return false
+    }
+
+    // The type a field holds, whether or not a path may write through it.
+    public var fieldUnwrapped: TypeExpression {
+        switch self {
+        case let .variable(inner):
+            return inner
+
+        case .any, .never, .null, .bool, .int, .double, .string,
+            .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
+            .consuming, .borrowing, .nullable, .named, .parameter, .reading, .composition:
+            return self
+        }
+    }
+
+    public var description: String { rendered }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // What this type accepts, settled to the declared representation, or a
+    // refusal saying which part disagreed. `at` is the path into the value so
+    // the message names the field rather than the whole argument.
+    public func settling(
+        _ value: Value,
+        at path: @autoclosure () -> String,
+        in types: TypeTable = .empty
+    ) throws -> Value {
+        try lowered(in: types.loweredTypes).settling(value, at: path(), in: types.loweredTypes)
+    }
+
+    // The same type with every name it holds walked through to what that name
+    // declares. At every depth, not only the outermost.
+    //
+    // A name is a spelling, and two spellings of one type are one type: a
+    // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
+    // are the same thing said twice. Resolving only the outermost made that
+    // depend on where the author happened to write the name, so the same
+    // question got two answers depending on nesting.
+    func resolved(in types: TypeTable) -> TypeExpression {
+        resolved(in: types, assuming: [])
+    }
+
     // The occurrence side of `Signature.bounded(by:)`, walked through every
     // place a type parameter may sit. A nested procedure type's parameters
     // included, because they are the outer signature's own slots.
@@ -925,48 +973,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // The type a slot's mark stands in front of, where it has one, and the type
-    // itself otherwise. What arrives through `inout`, `consuming` or
-    // `borrowing` is the inner type, and every question about what fits asks
-    // that.
-    //
-    // No `default`: a mark nobody thought about must be a compile error here
-    // rather than an answer of "no mark".
-    public var slotUnwrapped: TypeExpression {
-        switch self {
-        case let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return inner
-
-        case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
-            .nullable, .named, .parameter, .reading, .composition:
-            return self
-        }
-    }
-
-    public var isInout: Bool {
-        if case .inout = self { return true }
-        return false
-    }
-
-    public var isVariable: Bool {
-        if case .variable = self { return true }
-        return false
-    }
-
-    // The type a field holds, whether or not a path may write through it.
-    public var fieldUnwrapped: TypeExpression {
-        switch self {
-        case let .variable(inner):
-            return inner
-
-        case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
-            .consuming, .borrowing, .nullable, .named, .parameter, .reading, .composition:
-            return self
-        }
-    }
-
     // Whether null is one of this type's values. The fact `T?` exists to
     // declare.
     //
@@ -996,8 +1002,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     func handedOnce(in table: TypeTable) -> Bool {
         Self.reaches(self, in: table, assuming: []) ?? false
     }
-
-    public var description: String { rendered }
 
     // MARK: - Private
     // A name already being walked through stands as itself. A type may name

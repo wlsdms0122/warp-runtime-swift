@@ -19,6 +19,7 @@ import Foundation
 // value and one value is one writing of bytes. The layout is the language's,
 // under *objects* in the specification.
 struct ObjectWriter {
+    // MARK: - Property
     // MARK: - Initializer
     init() { }
 
@@ -151,11 +152,11 @@ struct ObjectWriter {
         }
     }
 
+    // MARK: - Private
     private func tagged(_ tag: ValueTag, _ fields: Value...) -> Value {
         .array([.int(tag.rawValue)] + fields)
     }
 
-    // MARK: - Private
     // A list a name keys, in name order. The order is the whole of what makes
     // two writings of one object the same bytes, since a dictionary has none
     // to lend.

@@ -12,7 +12,12 @@ import Foundation
 public enum NoParameters: Int, ParameterSet {
     case none
 
+    // MARK: - Property
     public static var allCases: [NoParameters] { [] }
 
     public var declared: Parameter { Parameter(name: "") }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

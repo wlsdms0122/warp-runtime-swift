@@ -20,6 +20,24 @@ import Foundation
 // The two are done in one walk because each of them walks every body, and
 // there is nothing the second needs that the first has not already read.
 final class Relocating {
+    // Where the walk is: which document wrote this row, what a refusal calls
+    // it, and this link's answers to the type numbers that document gave.
+    // Read once on entering a row rather than at every type inside it.
+    private struct Standing {
+        // MARK: - Property
+        let origin: Int
+
+        // Where a refusal about what is being walked points. Read once on
+        // entering rather than built at every refusal that never happens.
+        let place: Place
+
+        let loweredTypes: LoweredTypeNumbering.Rows
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // The rows of this link, every one of them standing before the first body
     // is walked.
@@ -154,19 +172,6 @@ final class Relocating {
     }
 
     // MARK: - Private
-    // Where the walk is: which document wrote this row, what a refusal calls
-    // it, and this link's answers to the type numbers that document gave.
-    // Read once on entering a row rather than at every type inside it.
-    private struct Standing {
-        let origin: Int
-
-        // Where a refusal about what is being walked points. Read once on
-        // entering rather than built at every refusal that never happens.
-        let place: Place
-
-        let loweredTypes: LoweredTypeNumbering.Rows
-    }
-
     // A folded value read as this link's rows. A closure was made by running a
     // closure literal before anything was relocated, so it holds the number
     // its document gave and a body standing in the tables the fold read. Both

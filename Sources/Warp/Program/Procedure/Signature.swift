@@ -53,6 +53,34 @@ public struct Signature: Sendable, Equatable {
         Set(parameters.compactMap { parameter in parameter.declared.isInout ? nil : parameter.name })
     }
 
+    // The type parameters a declaration writes: which names it mentions, what
+    // each is bounded by, and whether it has any at all. What a call puts in them
+    // is read off the lowered declaration, where the readings are.
+    public var isGeneric: Bool { type.isGeneric }
+
+    // Every type parameter mentioned in this signature, occurrence by
+    // occurrence. A nested procedure type's parameters are collected too:
+    // they are this signature's own slots, `map` takes `array<some Element>`
+    // beside a procedure taking the same `some Element`, and it is one
+    // parameter filled by one call. Only a parameter behind a `named`
+    // type is not collected, because the link refuses one anywhere but a
+    // procedure signature and never fills one through the name.
+    public var parameterOccurrences: [ParameterOccurrence] { type.parameterOccurrences }
+
+    // The bounds each type parameter this signature declares is held to: the
+    // set a bounded mention carries, or none where every mention is bare.
+    // What a signature holds a name to is one set, so two mentions carrying
+    // two sets are two claims about one name, and this says which name.
+    public var parameterBounds: ParameterBounds { type.parameterBounds }
+
+    // Every declared name this signature reaches, through what it takes and
+    // what it answers.
+    var mentions: Set<Name> {
+        parameters.reduce(into: returns?.mentions ?? []) { mentioned, parameter in
+            mentioned.formUnion(parameter.declared.mentions)
+        }
+    }
+
     // MARK: - Initializer
     public init(parameters: [Parameter] = [], returns: TypeExpression? = nil) {
         self.parameters = parameters
@@ -112,26 +140,6 @@ public struct Signature: Sendable, Equatable {
         TypeExpression.procedure(type).accepts(.procedure(given.type), in: types)
     }
 
-    // The type parameters a declaration writes: which names it mentions, what
-    // each is bounded by, and whether it has any at all. What a call puts in them
-    // is read off the lowered declaration, where the readings are.
-    public var isGeneric: Bool { type.isGeneric }
-
-    // Every type parameter mentioned in this signature, occurrence by
-    // occurrence. A nested procedure type's parameters are collected too:
-    // they are this signature's own slots, `map` takes `array<some Element>`
-    // beside a procedure taking the same `some Element`, and it is one
-    // parameter filled by one call. Only a parameter behind a `named`
-    // type is not collected, because the link refuses one anywhere but a
-    // procedure signature and never fills one through the name.
-    public var parameterOccurrences: [ParameterOccurrence] { type.parameterOccurrences }
-
-    // The bounds each type parameter this signature declares is held to: the
-    // set a bounded mention carries, or none where every mention is bare.
-    // What a signature holds a name to is one set, so two mentions carrying
-    // two sets are two claims about one name, and this says which name.
-    public var parameterBounds: ParameterBounds { type.parameterBounds }
-
     // This signature with each type parameter's occurrences carrying the
     // constraint declared for its name. The signature owns the bound and the
     // occurrences read it. A notation writes `bounds: { N: Numeric }` once and
@@ -163,14 +171,6 @@ public struct Signature: Sendable, Equatable {
         guard count != parameters.count else { return nil }
 
         return "\(count) arguments, and it takes \(parameters.count)"
-    }
-
-    // Every declared name this signature reaches, through what it takes and
-    // what it answers.
-    var mentions: Set<Name> {
-        parameters.reduce(into: returns?.mentions ?? []) { mentioned, parameter in
-            mentioned.formUnion(parameter.declared.mentions)
-        }
     }
 
     // Arguments given by name, settled into the order a run keeps them in.

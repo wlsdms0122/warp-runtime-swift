@@ -19,6 +19,9 @@ struct Instruction: Sendable {
         case declare(Int, settling: LoweredType?)
         case assign(Address, settling: LoweredType?)
 
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
         func rewritten(type: (LoweredType) throws -> LoweredType) rethrows -> Instruction.Binding {
             switch self {
             case let .bind(slot, settling):
@@ -31,6 +34,8 @@ struct Instruction: Sendable {
                 return .assign(address, settling: try settling.map(type))
             }
         }
+
+        // MARK: - Private
     }
 
     // MARK: - Property

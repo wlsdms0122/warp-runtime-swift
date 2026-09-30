@@ -12,15 +12,20 @@ import Foundation
 // handed in place takes the caller's hold: the slot holding it and the path
 // below it.
 struct CallOperation: Sendable {
+    struct Handed: Sendable {
+        // MARK: - Property
+        let position: Int
+        let address: Address
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     let procedure: Int
     let arguments: [Operation?]
     let handed: [Handed]
-
-    struct Handed: Sendable {
-        let position: Int
-        let address: Address
-    }
 
     // MARK: - Initializer
     // The same, where the parts were read apart. What is handed in place

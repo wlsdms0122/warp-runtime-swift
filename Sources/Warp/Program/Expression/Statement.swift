@@ -30,6 +30,7 @@ public struct Statement: Sendable {
         case variable(Name, declared: TypeExpression? = nil)
         case assignment(Path)
 
+        // MARK: - Property
         // The name a statement introduces, where it introduces one. A write
         // introduces nothing.
         public var introduced: Name? {
@@ -88,11 +89,18 @@ public struct Statement: Sendable {
             if case .assignment = self { return true }
             return false
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property
     public let binding: Binding?
     public let expression: Expression
+
+    // The name a statement is called by, for a place that points at it.
+    public var name: Name? { binding?.name }
 
     // MARK: - Initializer
     public init(binding: Binding? = nil, expression: Expression) {
@@ -101,8 +109,5 @@ public struct Statement: Sendable {
     }
 
     // MARK: - Public
-    // The name a statement is called by, for a place that points at it.
-    public var name: Name? { binding?.name }
-
     // MARK: - Private
 }

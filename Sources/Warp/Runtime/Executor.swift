@@ -12,6 +12,14 @@ import Foundation
 // const body and a procedure handed a procedure need; `evaluate` runs constructs,
 // effects and calls of values, and hands every data case to `read`.
 public struct Executor: Sendable {
+    // Where a walk over a path came down: on a value, or on a reading gone
+    // wrong. Every slot is there from the frame's making, so there is no
+    // third answer.
+    private enum Walk {
+        case found(Value)
+        case unfit(String)
+    }
+
     // MARK: - Property
     public let observer: (any ExecutionObserver)?
     public let environment: (any Environment)?
@@ -154,6 +162,78 @@ public struct Executor: Sendable {
         var activation = activation
 
         return try await evaluate(code, in: &activation, at: Trace())
+    }
+
+    // Running a closure here rather than in `evaluate`, which is what makes a
+    // procedure able to take one. What may be called is what the link proved
+    // answers, and a slot declaring `const procedure` is how a procedure says so.
+    func call(
+        _ closure: Closure,
+        with arguments: [Value],
+        at trace: Trace = Trace()
+    ) async throws -> Value {
+        try await answer(closure, given: arguments, at: trace)
+    }
+
+    // Sending a procedure a procedure declared it sends. The row the send reaches is
+    // numbered by the sender's document, the same as one written in a body, and
+    // the arguments stand at the callee's positions.
+    func send(
+        _ sending: Sent,
+        from origin: Int,
+        handing values: [Value],
+        at trace: Trace
+    ) async throws -> Value {
+        let callee = linked[try row(sending.row, from: origin)]
+        let settled = try settled(callee, sending: sending, handing: values)
+
+        switch callee.implementation {
+        case .native(.query):
+            return try await answer(callee, with: settled, at: trace)
+
+        case let .native(.effect(effect)):
+            return try await run(
+                effect,
+                of: callee,
+                settled: settled,
+                holds: [],
+                trace: trace.appending(callee.hop)
+            )
+
+        case let .body(body, frame):
+            return try await answer(
+                callee,
+                running: body,
+                in: frame,
+                settled: settled,
+                holding: [],
+                at: trace.appending(callee.hop)
+            )
+        }
+    }
+
+    // The same send, where the sender answers without running. The link
+    // refused a query sending anything that runs, so what reaches here answers
+    // as data.
+    func send(
+        _ sending: Sent,
+        from origin: Int,
+        handing values: [Value]
+    ) async throws -> Value {
+        let callee = linked[try row(sending.row, from: origin)]
+
+        guard callee.constness == .const else {
+            throw ExecutionError(
+                "'\(callee.rendered)' answers only by running, so it cannot be"
+                    + " read as data here"
+            )
+        }
+
+        return try await answer(
+            callee,
+            with: try settled(callee, sending: sending, handing: values),
+            at: Trace()
+        )
     }
 
     // MARK: - Private
@@ -790,17 +870,6 @@ public struct Executor: Sendable {
         }
     }
 
-    // Running a closure here rather than in `evaluate`, which is what makes a
-    // procedure able to take one. What may be called is what the link proved
-    // answers, and a slot declaring `const procedure` is how a procedure says so.
-    func call(
-        _ closure: Closure,
-        with arguments: [Value],
-        at trace: Trace = Trace()
-    ) async throws -> Value {
-        try await answer(closure, given: arguments, at: trace)
-    }
-
     private func bool(_ value: Value) throws -> Bool {
         guard case let .bool(answer) = value else {
             throw ExecutionError("a condition must answer bool, got \(value.type)")
@@ -868,67 +937,6 @@ public struct Executor: Sendable {
         return row
     }
 
-    // Sending a procedure a procedure declared it sends. The row the send reaches is
-    // numbered by the sender's document, the same as one written in a body, and
-    // the arguments stand at the callee's positions.
-    func send(
-        _ sending: Sent,
-        from origin: Int,
-        handing values: [Value],
-        at trace: Trace
-    ) async throws -> Value {
-        let callee = linked[try row(sending.row, from: origin)]
-        let settled = try settled(callee, sending: sending, handing: values)
-
-        switch callee.implementation {
-        case .native(.query):
-            return try await answer(callee, with: settled, at: trace)
-
-        case let .native(.effect(effect)):
-            return try await run(
-                effect,
-                of: callee,
-                settled: settled,
-                holds: [],
-                trace: trace.appending(callee.hop)
-            )
-
-        case let .body(body, frame):
-            return try await answer(
-                callee,
-                running: body,
-                in: frame,
-                settled: settled,
-                holding: [],
-                at: trace.appending(callee.hop)
-            )
-        }
-    }
-
-    // The same send, where the sender answers without running. The link
-    // refused a query sending anything that runs, so what reaches here answers
-    // as data.
-    func send(
-        _ sending: Sent,
-        from origin: Int,
-        handing values: [Value]
-    ) async throws -> Value {
-        let callee = linked[try row(sending.row, from: origin)]
-
-        guard callee.constness == .const else {
-            throw ExecutionError(
-                "'\(callee.rendered)' answers only by running, so it cannot be"
-                    + " read as data here"
-            )
-        }
-
-        return try await answer(
-            callee,
-            with: try settled(callee, sending: sending, handing: values),
-            at: Trace()
-        )
-    }
-
     // A send's arguments over the callee's boundary, standing at its
     // positions.
     private func settled(
@@ -946,14 +954,6 @@ public struct Executor: Sendable {
         }
 
         return Settled(values: try callee.settle(applied: values).map { value in Optional(value) })
-    }
-
-    // Where a walk over a path came down: on a value, or on a reading gone
-    // wrong. Every slot is there from the frame's making, so there is no
-    // third answer.
-    private enum Walk {
-        case found(Value)
-        case unfit(String)
     }
 
     // A dot reads a name and nothing else, and the link judged every one and

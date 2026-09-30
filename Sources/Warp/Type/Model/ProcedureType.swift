@@ -21,13 +21,6 @@ public struct ProcedureType: Sendable, Equatable {
     // What an application answers, or nil where nothing was declared.
     public let returns: TypeExpression?
 
-    // MARK: - Initializer
-    public init(parameters: [TypeExpression] = [], returns: TypeExpression? = nil) {
-        self.parameters = parameters
-        self.returns = returns
-    }
-
-    // MARK: - Public
     // Every declared name this type reaches, through what it takes and what
     // it answers.
     var mentions: Set<Name> {
@@ -55,6 +48,13 @@ public struct ProcedureType: Sendable, Equatable {
         ParameterBounds(parameterOccurrences)
     }
 
+    // MARK: - Initializer
+    public init(parameters: [TypeExpression] = [], returns: TypeExpression? = nil) {
+        self.parameters = parameters
+        self.returns = returns
+    }
+
+    // MARK: - Public
     // This type with each occurrence carrying the bound declared for its
     // name. The one `bounds` at the declaration speaks for a nested type.
     public func bounded(by bounds: [Name: [Name]]) -> ProcedureType {

@@ -28,9 +28,9 @@ public enum ValueType: String, Sendable, CaseIterable, CustomStringConvertible {
     case procedure
 
     // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
     public var description: String { rawValue }
 
+    // MARK: - Initializer
+    // MARK: - Public
     // MARK: - Private
 }

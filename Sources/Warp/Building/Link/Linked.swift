@@ -88,6 +88,21 @@ public final class Linked: Sendable {
         + " One is read where the link that made it is being read, which"
         + " for a judgment is the image's own types"
 
+    // The same row as a fold reads it: what a caller brought answers with the
+    // refusal it earns there, and everything else answers as it is.
+    var folding: Linked {
+        guard !foldable else { return self }
+
+        return Linked(self, implementation: .native(.query(UnfoldableProcedure(label))), sends: sends)
+    }
+
+    // Whether this row is a written body.
+    public var isWritten: Bool {
+        if case .body = implementation { return true }
+
+        return false
+    }
+
     // MARK: - Initializer
     init(
         label: Name,
@@ -200,14 +215,6 @@ public final class Linked: Sendable {
         )
     }
 
-    // The same row as a fold reads it: what a caller brought answers with the
-    // refusal it earns there, and everything else answers as it is.
-    var folding: Linked {
-        guard !foldable else { return self }
-
-        return Linked(self, implementation: .native(.query(UnfoldableProcedure(label))), sends: sends)
-    }
-
     // The boundary this row keeps, over arguments standing at their slot's
     // position, read by this row's own table: the slots' rows are numbered by
     // it and by nothing else. `skipping` names the positions a call fills
@@ -242,13 +249,6 @@ public final class Linked: Sendable {
     // by the same link.
     func readable(in other: LoweredTypeTable) -> Bool {
         table.linkage === other.linkage
-    }
-
-    // Whether this row is a written body.
-    public var isWritten: Bool {
-        if case .body = implementation { return true }
-
-        return false
     }
 
     // One row with every lowered type its body stands on answered again. The

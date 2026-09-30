@@ -18,6 +18,23 @@ import Foundation
 // nothing in this and one document compiled once answers every entry asked
 // of it.
 public struct Compiled: Sendable, Declaring {
+    // What tells this compile of the document from any other, where the
+    // document was never written down and so has no identity. Minted once
+    // per compile and carried by every value the compile made, so a closure
+    // a fold settled says which document wrote it wherever the document is
+    // laid.
+    struct Token: Hashable, Sendable {
+        // MARK: - Property
+        private let id = UUID()
+
+        // MARK: - Initializer
+        init() {}
+
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // MARK: - Property
     // Which document this is, so a refusal a build makes about it says
     // where the procedures are.
     let document: Place.Document
@@ -104,23 +121,55 @@ public struct Compiled: Sendable, Declaring {
     // names a closure may be written under.
     let constants: [Name]
 
-    // What tells this compile of the document from any other, where the
-    // document was never written down and so has no identity. Minted once
-    // per compile and carried by every value the compile made, so a closure
-    // a fold settled says which document wrote it wherever the document is
-    // laid.
-    struct Token: Hashable, Sendable {
-        private let id = UUID()
-
-        init() {}
-    }
-
     let token: Token
 
     // What a closure written by this document is spelled with: the text it
     // was read from, or this compile of it.
     var naming: Closure.Document {
         Closure.Document(identity: identity, token: token)
+    }
+
+    // Every name this document declares, as a link asks for them. The exact
+    // dual of a module's `uses`, and held here for the reason that one is held
+    // there: a reader assembling it from the four tables is one more place to
+    // fix when a fifth kind of declaration arrives, and forgetting that place
+    // is a name that quietly declares nothing.
+    // The spellings its private declarations wear: rows of this document,
+    // and in no table of names another document reads.
+    let hidden: Set<Name>
+
+    var declares: Set<Reference> {
+        Set(
+            declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
+                + types.keys.map(Reference.type)
+                + constraints.keys.map(Reference.type)
+                + contracts.keys.map(Reference.type)
+        )
+    }
+
+    // Which document this stands against, which is what a caller keeps it
+    // under and hands back when it reads one.
+    public var identity: Identity? {
+        document.identity
+    }
+
+    // This object said as a value, so a caller can keep it where bytes are
+    // kept. What carries it from there is the writing a document already
+    // travels in, and a caller that reads it back is handed this again.
+    //
+    // Which document it belongs to and what it was compiled against are the
+    // first two things written, so an object says what it stands against
+    // before it says anything it stood on that.
+    // Nothing on any of four counts, and none is something that went wrong.
+    // A document numbered by a link's rows is no object. A build handed no
+    // way to work a fingerprint out leaves every document that leaned on
+    // another unable to say what it is true against. A value holding a
+    // closure a document nobody wrote down wrote holds what no object can
+    // spell. And a value holding a closure that holds a box of the run that
+    // folded it holds what no object carries. Which one it was is what
+    // `object()` says.
+    public var written: Value? {
+        try? object()
     }
 
     // MARK: - Initializer
@@ -235,6 +284,22 @@ public struct Compiled: Sendable, Declaring {
         }
     }
 
+    // Read back beside the document it was filed under, because what an
+    // object says about which document it is, is the one thing about it
+    // nothing else can check.
+    //
+    // An identity is derived and never declared, which is what makes it worth
+    // having: nobody writes one down, so nobody writes one down wrongly. An
+    // object does write one down. So a caller hands over the one it keeps
+    // the object under, and an object saying it belongs somewhere else is
+    // one that belongs to no cache this caller holds.
+    // `fingerprint` is what the caller kept it under, carried in the same way
+    // and for the same reason: an object cannot work out what it is, because
+    // that answer is about bytes and reading bytes is another package's.
+    public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
+        self = try ObjectReader(of: identity, fingerprint: fingerprint).compiled(from: value)
+    }
+
     // MARK: - Public
     // Which of its writer's closures the row at a position is, for a row a
     // closure was lifted into, and nil for a declaration's own row. The
@@ -244,49 +309,6 @@ public struct Compiled: Sendable, Declaring {
         guard lifted.contains(index) else { return nil }
 
         return numbering.writer(of: index - lifted.lowerBound)?.nth
-    }
-
-    // Every name this document declares, as a link asks for them. The exact
-    // dual of a module's `uses`, and held here for the reason that one is held
-    // there: a reader assembling it from the four tables is one more place to
-    // fix when a fifth kind of declaration arrives, and forgetting that place
-    // is a name that quietly declares nothing.
-    // The spellings its private declarations wear: rows of this document,
-    // and in no table of names another document reads.
-    let hidden: Set<Name>
-
-    var declares: Set<Reference> {
-        Set(
-            declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
-                + types.keys.map(Reference.type)
-                + constraints.keys.map(Reference.type)
-                + contracts.keys.map(Reference.type)
-        )
-    }
-
-    // Which document this stands against, which is what a caller keeps it
-    // under and hands back when it reads one.
-    public var identity: Identity? {
-        document.identity
-    }
-
-    // This object said as a value, so a caller can keep it where bytes are
-    // kept. What carries it from there is the writing a document already
-    // travels in, and a caller that reads it back is handed this again.
-    //
-    // Which document it belongs to and what it was compiled against are the
-    // first two things written, so an object says what it stands against
-    // before it says anything it stood on that.
-    // Nothing on any of four counts, and none is something that went wrong.
-    // A document numbered by a link's rows is no object. A build handed no
-    // way to work a fingerprint out leaves every document that leaned on
-    // another unable to say what it is true against. A value holding a
-    // closure a document nobody wrote down wrote holds what no object can
-    // spell. And a value holding a closure that holds a box of the run that
-    // folded it holds what no object carries. Which one it was is what
-    // `object()` says.
-    public var written: Value? {
-        try? object()
     }
 
     // The same, saying why there is none where there is none.
@@ -319,22 +341,6 @@ public struct Compiled: Sendable, Declaring {
             token: token,
             fingerprint: fingerprint
         )
-    }
-
-    // Read back beside the document it was filed under, because what an
-    // object says about which document it is, is the one thing about it
-    // nothing else can check.
-    //
-    // An identity is derived and never declared, which is what makes it worth
-    // having: nobody writes one down, so nobody writes one down wrongly. An
-    // object does write one down. So a caller hands over the one it keeps
-    // the object under, and an object saying it belongs somewhere else is
-    // one that belongs to no cache this caller holds.
-    // `fingerprint` is what the caller kept it under, carried in the same way
-    // and for the same reason: an object cannot work out what it is, because
-    // that answer is about bytes and reading bytes is another package's.
-    public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
-        self = try ObjectReader(of: identity, fingerprint: fingerprint).compiled(from: value)
     }
 
     // MARK: - Private

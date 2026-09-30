@@ -33,11 +33,12 @@ struct UnbroughtProcedure: Query {
         throw UnbroughtProcedure.refusal(label)
     }
 
-    // MARK: - Private
     static func refusal(_ label: Name) -> ExecutionError {
         ExecutionError(
             "'\(label)' is implemented in native code and this compile was handed none."
                 + " A constant folding through it settles from the code the run will use"
         )
     }
+
+    // MARK: - Private
 }

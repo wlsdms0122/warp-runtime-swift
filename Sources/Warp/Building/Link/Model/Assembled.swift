@@ -14,16 +14,21 @@ import Foundation
 // order the caller handed them over, and the names are answered with where
 // their block began.
 struct Assembled: Sendable {
-    // MARK: - Property
     // One row of the link: the judged row, which document it came out of,
     // and which of its writer's closures it is where a closure was lifted
     // into it. One value per row, so the three cannot come apart.
     struct Row: Sendable {
+        // MARK: - Property
         let judged: Judged
         let origin: Int
         let nth: Int?
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
+    // MARK: - Property
     let table: [Row]
 
     // Which document each block came out of, for a refusal that names one.

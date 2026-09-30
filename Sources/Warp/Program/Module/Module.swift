@@ -122,6 +122,19 @@ public struct Module: Sendable {
     // travel with the draft.
     public let builtin: Bool
 
+    // What this declares, on its own and without the checking. It is what a
+    // writing takes, so a module and a document that was never a module are
+    // written by one call, and `imports` here is the resolved list rather than
+    // the claim, since by now the two are the same.
+    public var draft: Draft {
+        source.resolving(imports)
+    }
+
+    // The key a document says its language version under, which is what tells a
+    // document from anything else at a door: an object says `object` where a
+    // document says this.
+    public static let versionKey: Name = "warp"
+
     // MARK: - Initializer
     // Making one is checking one, so a module that exists has been checked
     // against itself.
@@ -224,18 +237,5 @@ public struct Module: Sendable {
     }
 
     // MARK: - Public
-    // What this declares, on its own and without the checking. It is what a
-    // writing takes, so a module and a document that was never a module are
-    // written by one call, and `imports` here is the resolved list rather than
-    // the claim, since by now the two are the same.
-    public var draft: Draft {
-        source.resolving(imports)
-    }
-
-    // The key a document says its language version under, which is what tells a
-    // document from anything else at a door: an object says `object` where a
-    // document says this.
-    public static let versionKey: Name = "warp"
-
     // MARK: - Private
 }

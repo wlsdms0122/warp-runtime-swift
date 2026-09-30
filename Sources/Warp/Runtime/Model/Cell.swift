@@ -15,6 +15,9 @@ enum Cell: Sendable {
     case value(Value)
     case hold(Handle)
 
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
     // The slot's value, read through the hold where it is one.
     func value() throws -> Value {
         switch self {
@@ -25,4 +28,6 @@ enum Cell: Sendable {
             return try handle.value()
         }
     }
+
+    // MARK: - Private
 }

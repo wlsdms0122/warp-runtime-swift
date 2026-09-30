@@ -26,6 +26,16 @@ struct LinearityChecker {
         // gone from the first without reaching the second is a name that was
         // never one of these.
         struct Held {
+            // How a name is being held, where it is one of these at all. One
+            // reading, so every judgment about an operand is made from the
+            // same fact rather than each asking the sets again.
+            enum Holding {
+                case live
+                case borrowed
+                case gone
+            }
+
+            // MARK: - Property
             var live: Set<Name>
             var moved: Set<Name> = []
 
@@ -40,15 +50,8 @@ struct LinearityChecker {
             // still holding what the way through held.
             var endsTheBody = false
 
-            // How a name is being held, where it is one of these at all. One
-            // reading, so every judgment about an operand is made from the
-            // same fact rather than each asking the sets again.
-            enum Holding {
-                case live
-                case borrowed
-                case gone
-            }
-
+            // MARK: - Initializer
+            // MARK: - Public
             func holding(_ name: Name) -> Holding? {
                 if live.contains(name) { return .live }
                 if borrowed.contains(name) { return .borrowed }
@@ -70,6 +73,8 @@ struct LinearityChecker {
                     endsTheBody: endsTheBody && other.endsTheBody
                 )
             }
+
+            // MARK: - Private
         }
 
         // What an expression hands out.
@@ -79,6 +84,7 @@ struct LinearityChecker {
             case nothing
         }
 
+        // MARK: - Property
         let context: TypingContext
         let place: Place
 
@@ -91,11 +97,13 @@ struct LinearityChecker {
         // setting it is possible.
         private(set) var handsOut = false
 
+        // MARK: - Initializer
         init(context: TypingContext, place: Place) {
             self.context = context
             self.place = place
         }
 
+        // MARK: - Public
         // What is still held after this block. `guarded` is why a move is
         // refused here, and nil where one is allowed.
         func through(_ block: Block, held: Held, guarded: String?) throws -> Held {

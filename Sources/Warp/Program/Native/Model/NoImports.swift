@@ -12,7 +12,12 @@ import Foundation
 public enum NoImports: Int, ImportSet {
     case none
 
+    // MARK: - Property
     public static var allCases: [NoImports] { [] }
 
     public var selector: Name { "" }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

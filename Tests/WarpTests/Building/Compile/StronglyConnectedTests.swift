@@ -21,12 +21,12 @@ struct StronglyConnectedTests {
     @Test("everything a name reaches is closed before the name is")
     func calleesComeFirst() {
         // Given. A line of three, and a fourth nobody calls.
-        let found = StronglyConnected.components(among: [
+        let found = StronglyConnected(among: [
             "a": ["b"],
             "b": ["c"],
             "c": [],
             "loner": []
-        ])
+        ]).components()
 
         #expect(found.map(\.count).allSatisfy { count in count == 1 })
 
@@ -39,7 +39,7 @@ struct StronglyConnectedTests {
 
     @Test("names that reach one another are one component, a self-call included")
     func cyclesAreOneComponent() {
-        let mutual = StronglyConnected.components(among: ["ping": ["pong"], "pong": ["ping"]])
+        let mutual = StronglyConnected(among: ["ping": ["pong"], "pong": ["ping"]]).components()
 
         #expect(mutual.count == 1)
         #expect(Set(mutual[0]) == ["ping", "pong"])
@@ -47,7 +47,7 @@ struct StronglyConnectedTests {
         // A name that reaches itself is its own cycle. One member, and the
         // caller tells it from a plain singleton by asking whether it sends to
         // itself.
-        let alone = StronglyConnected.components(among: ["self": ["self"]])
+        let alone = StronglyConnected(among: ["self": ["self"]]).components()
 
         #expect(alone == [["self"]])
     }
@@ -56,7 +56,7 @@ struct StronglyConnectedTests {
     func unknownNamesAreNotWalked() {
         // Every selector a body sends is gathered, and most of them name
         // declarations that said what they answer. Those are not in here.
-        let found = StronglyConnected.components(among: ["a": ["declared", "b"], "b": []])
+        let found = StronglyConnected(among: ["a": ["declared", "b"], "b": []]).components()
 
         #expect(found.flatMap { cycle in cycle }.sorted() == ["a", "b"])
     }
@@ -73,7 +73,7 @@ struct StronglyConnectedTests {
             }
         )
 
-        let found = StronglyConnected.components(among: edges)
+        let found = StronglyConnected(among: edges).components()
 
         #expect(found.count == names.count)
         #expect(found.flatMap { cycle in cycle }.first == names.last)

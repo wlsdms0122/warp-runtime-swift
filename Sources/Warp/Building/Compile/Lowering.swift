@@ -17,6 +17,199 @@ import Foundation
 // document wrote inside another, so it is lifted out into a row of its own and
 // the code that made it holds the number that reaches it.
 struct Lowering {
+    // What one document's lowered bodies stand on, by the rows of the table
+    // they were lowered against.
+    struct Standing {
+        // MARK: - Property
+        var types: Set<Int> = []
+        var memberships: Set<Int> = []
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // The names visible at one point of a body, by slot. A value, so a block
+    // takes a copy and what it introduces dies with it.
+    private struct Names {
+        // MARK: - Property
+        var slots: [Name: Int] = [:]
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // The slots of one body being lowered. A closure's slots know the slots
+    // and names of the body it was written in, and take a cell from there
+    // the first time the closure reads a name it did not declare.
+    private final class Slots {
+        // MARK: - Property
+        let origin: Int
+        let variables: [Name: Int]
+
+        // The document's constants, settled, for the slots of a declaration's
+        // own body. A body names one only where the fold could not settle the
+        // read, an index the run settles, and then the constant takes a slot
+        // the body binds before its first statement.
+        let constants: [Name: (value: Value, type: LoweredType)]
+        let outer: (slots: Slots, names: Names)?
+
+        private(set) var names: [Name] = []
+        private(set) var parameters: [Int] = []
+        private(set) var reads: [(variable: Int, slot: Int)] = []
+        private(set) var captures: [(Int, Int)] = []
+        private(set) var constantBindings: [(slot: Int, value: Value)] = []
+
+        private var variableSlots: [Name: Int] = [:]
+        private var capturedSlots: [Name: Int] = [:]
+        private var constantSlots: [Name: Int] = [:]
+
+        // What the build proved stands in a slot, for the slots it proved
+        // anything about. A path reads its head here, so a field of a type
+        // the build laid out is lowered to the place it stands in.
+        private var held: [Int: LoweredType] = [:]
+
+        // The declarations the types written into this body stand on, by the
+        // rows of the table it was lowered against. Read where the document's
+        // own numbering is worked out.
+        private(set) var types: Set<Int> = []
+        private(set) var memberships: Set<Int> = []
+
+        var size: Int { names.count }
+
+        private var root: Slots {
+            outer?.slots.root ?? self
+        }
+
+        var frame: Frame {
+            Frame(size: size, parameters: parameters, variables: reads, captures: captures.map { _, inner in inner }, names: names)
+        }
+
+        // MARK: - Initializer
+        init(
+            origin: Int,
+            variables: [Name: Int],
+            constants: [Name: (value: Value, type: LoweredType)],
+            outer: (slots: Slots, names: Names)? = nil
+        ) {
+            self.origin = origin
+            self.variables = variables
+            self.constants = constants
+            self.outer = outer
+        }
+
+        // MARK: - Public
+        // Notes what a type written into this body stands on. A closure notes
+        // into the body it was written in: the two are one document, and a
+        // document has one numbering.
+        //
+        // Read through the walk that rewrites a type's rows, so which cases
+        // hold a row is answered in one place. What that walk rebuilds is
+        // dropped here.
+        func note(_ type: LoweredType?) {
+            guard let type else { return }
+
+            note(type)
+        }
+
+        func note(_ type: LoweredType) {
+            let root = self.root
+
+            _ = type.renumbered(
+                type: { row in
+                    root.types.insert(row)
+
+                    return row
+                },
+                membership: { row in
+                    root.memberships.insert(row)
+
+                    return row
+                }
+            )
+        }
+
+        func allocate(_ name: Name) -> Int {
+            names.append(name)
+
+            return names.count - 1
+        }
+
+        // A slot holds what the build proved, and holds nothing where it
+        // proved nothing.
+        func hold(_ slot: Int, _ type: LoweredType?) {
+            held[slot] = type
+        }
+
+        func held(at slot: Int) -> LoweredType? {
+            held[slot]
+        }
+
+        func allocateParameter(_ name: Name) -> Int {
+            let slot = allocate(name)
+            parameters.append(slot)
+
+            return slot
+        }
+
+        // The slot a name reads from here, the way scope reads a name: what
+        // this body declared, then what the body it was written in holds,
+        // then the module's variables. A closure reaches a module variable
+        // through the body it was written in, so the hold it takes is that
+        // body's.
+        func slot(of name: Name, in names: Names) -> Int? {
+            if let slot = names.slots[name] { return slot }
+
+            if let slot = capturedSlots[name] { return slot }
+
+            if let outer, let taken = outer.slots.slot(of: name, in: outer.names) {
+                let slot = allocate(name)
+                capturedSlots[name] = slot
+                captures.append((taken, slot))
+                hold(slot, outer.slots.held(at: taken))
+
+                return slot
+            }
+
+            if let slot = variableSlots[name] { return slot }
+
+            if let variable = variables[name] {
+                let slot = allocate(name)
+                variableSlots[name] = slot
+                reads.append((variable: variable, slot: slot))
+
+                return slot
+            }
+
+            if let slot = constantSlots[name] { return slot }
+
+            guard let constant = constants[name] else { return nil }
+
+            let slot = allocate(name)
+            constantSlots[name] = slot
+            constantBindings.append((slot: slot, value: constant.value))
+            hold(slot, constant.type)
+
+            return slot
+        }
+
+        // The body with the constants it reads bound before its first
+        // statement, so a read the fold could not settle stands on a slot the
+        // way any name's does.
+        func binding(_ body: LoweredBody) -> LoweredBody {
+            guard !constantBindings.isEmpty else { return body }
+
+            let bindings = constantBindings.map { slot, value in
+                Instruction(binding: .bind(slot, settling: nil), code: .literal(value), label: names[slot].spelling)
+            }
+
+            return LoweredBody(instructions: bindings + body.instructions, result: body.result)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private(set) var table: [Linked]
 
@@ -240,13 +433,6 @@ struct Lowering {
         return (code, slots.frame)
     }
 
-    // What one document's lowered bodies stand on, by the rows of the table
-    // they were lowered against.
-    struct Standing {
-        var types: Set<Int> = []
-        var memberships: Set<Int> = []
-    }
-
     // One document's rows with the types in them numbered by that document,
     // beside the numbering that says what those numbers stand for.
     //
@@ -303,177 +489,6 @@ struct Lowering {
     }
 
     // MARK: - Private
-    // The names visible at one point of a body, by slot. A value, so a block
-    // takes a copy and what it introduces dies with it.
-    private struct Names {
-        var slots: [Name: Int] = [:]
-    }
-
-    // The slots of one body being lowered. A closure's slots know the slots
-    // and names of the body it was written in, and take a cell from there
-    // the first time the closure reads a name it did not declare.
-    private final class Slots {
-        let origin: Int
-        let variables: [Name: Int]
-
-        // The document's constants, settled, for the slots of a declaration's
-        // own body. A body names one only where the fold could not settle the
-        // read, an index the run settles, and then the constant takes a slot
-        // the body binds before its first statement.
-        let constants: [Name: (value: Value, type: LoweredType)]
-        let outer: (slots: Slots, names: Names)?
-
-        private(set) var names: [Name] = []
-        private(set) var parameters: [Int] = []
-        private(set) var reads: [(variable: Int, slot: Int)] = []
-        private(set) var captures: [(Int, Int)] = []
-        private(set) var constantBindings: [(slot: Int, value: Value)] = []
-
-        private var variableSlots: [Name: Int] = [:]
-        private var capturedSlots: [Name: Int] = [:]
-        private var constantSlots: [Name: Int] = [:]
-
-        // What the build proved stands in a slot, for the slots it proved
-        // anything about. A path reads its head here, so a field of a type
-        // the build laid out is lowered to the place it stands in.
-        private var held: [Int: LoweredType] = [:]
-
-        // The declarations the types written into this body stand on, by the
-        // rows of the table it was lowered against. Read where the document's
-        // own numbering is worked out.
-        private(set) var types: Set<Int> = []
-        private(set) var memberships: Set<Int> = []
-
-        init(
-            origin: Int,
-            variables: [Name: Int],
-            constants: [Name: (value: Value, type: LoweredType)],
-            outer: (slots: Slots, names: Names)? = nil
-        ) {
-            self.origin = origin
-            self.variables = variables
-            self.constants = constants
-            self.outer = outer
-        }
-
-        var size: Int { names.count }
-
-        // Notes what a type written into this body stands on. A closure notes
-        // into the body it was written in: the two are one document, and a
-        // document has one numbering.
-        //
-        // Read through the walk that rewrites a type's rows, so which cases
-        // hold a row is answered in one place. What that walk rebuilds is
-        // dropped here.
-        func note(_ type: LoweredType?) {
-            guard let type else { return }
-
-            note(type)
-        }
-
-        func note(_ type: LoweredType) {
-            let root = self.root
-
-            _ = type.renumbered(
-                type: { row in
-                    root.types.insert(row)
-
-                    return row
-                },
-                membership: { row in
-                    root.memberships.insert(row)
-
-                    return row
-                }
-            )
-        }
-
-        private var root: Slots {
-            outer?.slots.root ?? self
-        }
-
-        func allocate(_ name: Name) -> Int {
-            names.append(name)
-
-            return names.count - 1
-        }
-
-        // A slot holds what the build proved, and holds nothing where it
-        // proved nothing.
-        func hold(_ slot: Int, _ type: LoweredType?) {
-            held[slot] = type
-        }
-
-        func held(at slot: Int) -> LoweredType? {
-            held[slot]
-        }
-
-        func allocateParameter(_ name: Name) -> Int {
-            let slot = allocate(name)
-            parameters.append(slot)
-
-            return slot
-        }
-
-        // The slot a name reads from here, the way scope reads a name: what
-        // this body declared, then what the body it was written in holds,
-        // then the module's variables. A closure reaches a module variable
-        // through the body it was written in, so the hold it takes is that
-        // body's.
-        func slot(of name: Name, in names: Names) -> Int? {
-            if let slot = names.slots[name] { return slot }
-
-            if let slot = capturedSlots[name] { return slot }
-
-            if let outer, let taken = outer.slots.slot(of: name, in: outer.names) {
-                let slot = allocate(name)
-                capturedSlots[name] = slot
-                captures.append((taken, slot))
-                hold(slot, outer.slots.held(at: taken))
-
-                return slot
-            }
-
-            if let slot = variableSlots[name] { return slot }
-
-            if let variable = variables[name] {
-                let slot = allocate(name)
-                variableSlots[name] = slot
-                reads.append((variable: variable, slot: slot))
-
-                return slot
-            }
-
-            if let slot = constantSlots[name] { return slot }
-
-            guard let constant = constants[name] else { return nil }
-
-            let slot = allocate(name)
-            constantSlots[name] = slot
-            constantBindings.append((slot: slot, value: constant.value))
-            hold(slot, constant.type)
-
-            return slot
-        }
-
-        var frame: Frame {
-            Frame(size: size, parameters: parameters, variables: reads, captures: captures.map { _, inner in inner }, names: names)
-        }
-
-        // The body with the constants it reads bound before its first
-        // statement, so a read the fold could not settle stands on a slot the
-        // way any name's does.
-        func binding(_ body: LoweredBody) -> LoweredBody {
-            guard !constantBindings.isEmpty else { return body }
-
-            let bindings = constantBindings.map { slot, value in
-                Instruction(binding: .bind(slot, settling: nil), code: .literal(value), label: names[slot].spelling)
-            }
-
-            return LoweredBody(instructions: bindings + body.instructions, result: body.result)
-        }
-    }
-
     private mutating func lower(
         _ block: Block,
         in scope: Names,

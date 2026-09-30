@@ -53,6 +53,21 @@ indirect enum LoweredType: Sendable, Equatable {
     // fills a parameter cannot pass for what holds a value to its bounds.
     case composition([Bound])
 
+    // The type a walk reached by taking a path through one a call decides.
+    // The root is the type parameter's spelling and the path is what was
+    // walked from it, so two walks landing on one field land on one type.
+    // Nothing is proven about what it holds, so every judgment answers it the
+    // way it answers `any`; it stands apart for the walk's own naming.
+    case reading(of: Name, path: Path)
+
+    // A name the table does not answer, and why. Nothing can be said about
+    // it, so every judgment over readings lets it pass, and the value judge
+    // refuses it with the reason. A table a host built by hand answers instead
+    // of failing to lower, and only the judgments that reach the name are
+    // touched by it. The link refuses such a name as it lowers the table, so a
+    // run never meets one.
+    case undeclared(label: String, because: Undeclared)
+
     // What a type parameter is held to. Two, because the two are answered
     // differently: a membership lists types and the table lowered them into
     // rows, a contract lists procedures and what answers it is a type's own name.
@@ -60,6 +75,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case membership(Int)
         case contract(Name)
 
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
         // Whether null is a value of what this holds to: a membership's
         // where a member admits one, and a contract's never, since a
         // contract is answered by a type and null wears none.
@@ -79,22 +97,9 @@ indirect enum LoweredType: Sendable, Equatable {
             case let (.contract(mine), .contract(theirs)): mine < theirs
             }
         }
+
+        // MARK: - Private
     }
-
-    // The type a walk reached by taking a path through one a call decides.
-    // The root is the type parameter's spelling and the path is what was
-    // walked from it, so two walks landing on one field land on one type.
-    // Nothing is proven about what it holds, so every judgment answers it the
-    // way it answers `any`; it stands apart for the walk's own naming.
-    case reading(of: Name, path: Path)
-
-    // A name the table does not answer, and why. Nothing can be said about
-    // it, so every judgment over readings lets it pass, and the value judge
-    // refuses it with the reason. A table a host built by hand answers instead
-    // of failing to lower, and only the judgments that reach the name are
-    // touched by it. The link refuses such a name as it lowers the table, so a
-    // run never meets one.
-    case undeclared(label: String, because: Undeclared)
 
     // Why a name is not answered: nothing declares it as a type, nothing
     // declares it as a membership or a contract, or it names itself.
@@ -182,6 +187,73 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // What a judgment sees. A reading says a path was taken through a type
+    // the call decides, which proves nothing about what it holds, and that is
+    // what `any` says.
+    var judged: LoweredType {
+        if case .reading = self { return .any }
+
+        return self
+    }
+
+    // Whether this type proves nothing about the value it holds.
+    var provesNothing: Bool {
+        self == .any || self == .never || decidedAtCall
+    }
+
+    // Whether this names one of the kinds a value simply is.
+    var isDecidedKind: Bool {
+        switch self {
+        case .bool, .int, .double, .string, .null, .array, .dictionary, .record:
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    // What one element of bytes is: the range `std` names `byte`.
+    static let byteElement = LoweredType.ranged(.whole(from: 0, to: .through(255)))
+
+    // What a slot said about the procedures it holds. A body applying a name a
+    // slot declared this way is judged on the slot's word, since the slot is what
+    // says which values may arrive there. An array or a dictionary of them says it
+    // about every element.
+    var isConstProcedure: Bool {
+        switch self {
+        case .procedure(_, _, .const, _):
+            return true
+
+        case let .array(element), let .dictionary(element):
+            return element.isConstProcedure
+
+        default:
+            return false
+        }
+    }
+
+    var isIsolatedProcedure: Bool {
+        switch self {
+        case .procedure(_, _, _, .isolated):
+            return true
+
+        case let .array(element), let .dictionary(element):
+            return element.isIsolatedProcedure
+
+        default:
+            return false
+        }
+    }
+
+    // One value of every kind a decided type can hold, for asking the judge
+    // rather than restating it.
+    private static let witnesses: [Value] = [
+        .null, .bool(false), .int(0), .double(0), .string(""),
+        .array([]), .dictionary([:]), .bytes([])
+    ]
+
+    // MARK: - Initializer
+    // MARK: - Public
     // What a walk through this type reaches by taking those segments. Nil
     // where this is not a type a call decides, which is where a walk has a
     // type to read the segments against and no need for one of these.
@@ -279,34 +351,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a judgment sees. A reading says a path was taken through a type
-    // the call decides, which proves nothing about what it holds, and that is
-    // what `any` says.
-    var judged: LoweredType {
-        if case .reading = self { return .any }
-
-        return self
-    }
-
-    // Whether this type proves nothing about the value it holds.
-    var provesNothing: Bool {
-        self == .any || self == .never || decidedAtCall
-    }
-
-    // Whether this names one of the kinds a value simply is.
-    var isDecidedKind: Bool {
-        switch self {
-        case .bool, .int, .double, .string, .null, .array, .dictionary, .record:
-            return true
-
-        default:
-            return false
-        }
-    }
-
-    // What one element of bytes is: the range `std` names `byte`.
-    static let byteElement = LoweredType.ranged(.whole(from: 0, to: .through(255)))
-
     // A record of these fields, laid out the way the link lays every record
     // out: by the order of the field spellings.
     static func record(_ fields: [Name: LoweredType]) -> LoweredType {
@@ -320,8 +364,6 @@ indirect enum LoweredType: Sendable, Equatable {
         )
     }
 
-    // MARK: - Initializer
-    // MARK: - Public
     // The reading judges: whether one type may stand where another is
     // declared, whether two types are one type, whether some value could
     // satisfy two types at once, and whether a candidate spelling could ever be
@@ -1310,36 +1352,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a slot said about the procedures it holds. A body applying a name a
-    // slot declared this way is judged on the slot's word, since the slot is what
-    // says which values may arrive there. An array or a dictionary of them says it
-    // about every element.
-    var isConstProcedure: Bool {
-        switch self {
-        case .procedure(_, _, .const, _):
-            return true
-
-        case let .array(element), let .dictionary(element):
-            return element.isConstProcedure
-
-        default:
-            return false
-        }
-    }
-
-    var isIsolatedProcedure: Bool {
-        switch self {
-        case .procedure(_, _, _, .isolated):
-            return true
-
-        case let .array(element), let .dictionary(element):
-            return element.isIsolatedProcedure
-
-        default:
-            return false
-        }
-    }
-
     static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
         switch (lhs, rhs) {
         case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
@@ -1510,13 +1522,6 @@ indirect enum LoweredType: Sendable, Equatable {
             }
         }
     }
-
-    // One value of every kind a decided type can hold, for asking the judge
-    // rather than restating it.
-    private static let witnesses: [Value] = [
-        .null, .bool(false), .int(0), .double(0), .string(""),
-        .array([]), .dictionary([:]), .bytes([])
-    ]
 
     // Names are peeled one layer at a time, with the rows already being asked
     // about remembered, since a membership may name itself through a row.

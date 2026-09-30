@@ -28,15 +28,6 @@ struct Scope: Sendable {
     // A procedure's own body: no loop yet.
     static let procedure = Scope(rounds: [], constants: [])
 
-    static func procedure(constants: Set<Name>) -> Scope {
-        Scope(rounds: [], constants: constants)
-    }
-
-    // MARK: - Public
-    func inside(_ round: Name?) -> Scope {
-        Scope(rounds: rounds + [round], constants: constants)
-    }
-
     // A procedure written inside another. It may be called anywhere and long
     // after, so the loops around where it was *written* are not around where it
     // runs, and its own answer is its own. What it captured it may write: a
@@ -44,6 +35,16 @@ struct Scope: Sendable {
     // visible, and this body is one of those places.
     var enclosed: Scope {
         Scope(rounds: [], constants: constants)
+    }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    static func procedure(constants: Set<Name>) -> Scope {
+        Scope(rounds: [], constants: constants)
+    }
+
+    func inside(_ round: Name?) -> Scope {
+        Scope(rounds: rounds + [round], constants: constants)
     }
 
     // MARK: - Private

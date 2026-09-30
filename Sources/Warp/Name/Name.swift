@@ -85,6 +85,10 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         return Name(normal: String(decoding: bytes[last], as: UTF8.self))
     }
 
+    public var description: String { spelling }
+
+    private static let dot = UInt8(ascii: ".")
+
     // MARK: - Initializer
     public init(_ spelling: String) throws {
         // A name with nothing in it is no name: it is what a declaration is
@@ -142,11 +146,7 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         hasher.combine(digest)
     }
 
-    public var description: String { spelling }
-
     // MARK: - Private
-    private static let dot = UInt8(ascii: ".")
-
     // The segment of a dotted spelling ending where the caller says, beside
     // where the one before it ends. Nothing where that segment is the first,
     // so a caller steps from the end until it stops.

@@ -61,4 +61,8 @@ public struct Laid: Sendable {
         identities: [],
         declarers: DeclarerTable()
     )
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

@@ -22,6 +22,7 @@ enum Step: Sendable {
     case index(Int, optional: Bool)
     case at(Address, optional: Bool)
 
+    // MARK: - Property
     var optional: Bool {
         switch self {
         case let .field(_, _, optional), let .key(_, optional), let .index(_, optional),
@@ -30,7 +31,6 @@ enum Step: Sendable {
         }
     }
 
-    // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
     func reads(_ slots: Range<Int>) -> Bool {

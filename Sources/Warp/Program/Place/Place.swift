@@ -28,6 +28,7 @@ import Foundation
 public struct Place: Sendable, Equatable {
     // Which document a place is an address in.
     public struct Document: Sendable, Equatable {
+        // MARK: - Property
         // Which text this is. Nil where the program was never written down (a
         // caller that built it in memory) and that is the whole of what nil
         // means here: there is no file for a reader to be pointed back into.
@@ -39,18 +40,20 @@ public struct Place: Sendable, Equatable {
         // saying nothing.
         public static let assembled = Document(identity: nil)
 
-        public init(identity: Identity?) {
-            self.identity = identity
-        }
-
-        public static func of(_ module: Module) -> Document {
-            Document(identity: module.identity)
-        }
-
         // How the document reads on its own. An identity tells one document
         // from every other in a link, since a link refuses the same one twice.
         var rendered: String? {
             identity?.short
+        }
+
+        // MARK: - Initializer
+        public init(identity: Identity?) {
+            self.identity = identity
+        }
+
+        // MARK: - Public
+        public static func of(_ module: Module) -> Document {
+            Document(identity: module.identity)
         }
 
         // What a sentence calls this document when it names one among several.
@@ -59,6 +62,8 @@ public struct Place: Sendable, Equatable {
         func spelled(at origin: Int) -> String {
             rendered ?? "the module at \(origin) in this link"
         }
+
+        // MARK: - Private
     }
 
     // Every part a program has, by the language's own name for it. A part is
@@ -111,6 +116,7 @@ public struct Place: Sendable, Equatable {
         case otherwise
         case rescue
 
+        // MARK: - Property
         // What the language calls this part.
         var rendered: String {
             switch self {
@@ -137,6 +143,10 @@ public struct Place: Sendable, Equatable {
             case .rescue: "rescue"
             }
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // A construct that holds a condition. Two of them, and a third would be a
@@ -180,6 +190,9 @@ public struct Place: Sendable, Equatable {
         // for in a file.
         case landmark(String)
 
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
         // A statement step, with a name written empty read as no name.
         //
         // The rule is on the case rather than beside each caller: a step
@@ -189,6 +202,8 @@ public struct Place: Sendable, Equatable {
         public static func statement(_ name: String?, at position: Int) -> Step {
             .statement(name: name?.isEmpty == true ? nil : name, at: position)
         }
+
+        // MARK: - Private
     }
 
     // MARK: - Property

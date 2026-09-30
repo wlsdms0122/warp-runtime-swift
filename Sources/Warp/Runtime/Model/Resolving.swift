@@ -23,6 +23,8 @@ enum Resolving: Sendable {
     // number. A number the link found no row for stands as nothing.
     case documents([Int: [Int?]])
 
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Public
     func row(_ number: Int, from origin: Int) -> Int? {
         switch self {
@@ -35,4 +37,6 @@ enum Resolving: Sendable {
             return view[number]
         }
     }
+
+    // MARK: - Private
 }

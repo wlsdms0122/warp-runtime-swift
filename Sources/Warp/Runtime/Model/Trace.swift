@@ -29,6 +29,7 @@ public struct Trace: Sendable, Equatable, CustomStringConvertible {
         case round(Int)
         case piece(String)
 
+        // MARK: - Property
         // How the hop reads on its own, which is also what a refusal calls
         // the body it enters.
         var rendered: String {
@@ -39,6 +40,25 @@ public struct Trace: Sendable, Equatable, CustomStringConvertible {
             case let .piece(name): "[\(name)]"
             }
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    private final class Link: Sendable {
+        // MARK: - Property
+        let hop: Hop
+        let parent: Link?
+
+        // MARK: - Initializer
+        init(_ hop: Hop, under parent: Link?) {
+            self.hop = hop
+            self.parent = parent
+        }
+
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property
@@ -78,6 +98,8 @@ public struct Trace: Sendable, Equatable, CustomStringConvertible {
 
     private let last: Link?
 
+    public var description: String { rendered }
+
     // MARK: - Initializer
     public init(hops: [Hop] = []) {
         self.last = hops.reduce(nil) { parent, hop in Link(hop, under: parent) }
@@ -96,16 +118,5 @@ public struct Trace: Sendable, Equatable, CustomStringConvertible {
         lhs.hops == rhs.hops
     }
 
-    public var description: String { rendered }
-
     // MARK: - Private
-    private final class Link: Sendable {
-        let hop: Hop
-        let parent: Link?
-
-        init(_ hop: Hop, under parent: Link?) {
-            self.hop = hop
-            self.parent = parent
-        }
-    }
 }

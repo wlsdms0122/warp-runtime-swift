@@ -12,6 +12,7 @@ import Foundation
 // whole link's rather than any one body's.
 struct Derivation {
     private struct Isolating {
+        // MARK: - Property
         let isolated: (Name) -> Bool
 
         // What a callee takes, which is where a call handing something in
@@ -20,6 +21,8 @@ struct Derivation {
         // link's rows once they stand, and the documents themselves before.
         let asked: (Name) -> Signature?
 
+        // MARK: - Initializer
+        // MARK: - Public
         func holds(_ block: Block, declared: Set<Name>, applying procedures: Set<Name>) -> Bool {
             var declared = declared
             var procedures = procedures
@@ -32,6 +35,7 @@ struct Derivation {
                 )
         }
 
+        // MARK: - Private
         // A body in order. Each statement is judged against what was declared
         // before it, and a variable it introduces is declared for the rest.
         private func holds(

@@ -82,4 +82,6 @@ struct ClosureRows {
 
         return closures[origin][nth]
     }
+
+    // MARK: - Private
 }

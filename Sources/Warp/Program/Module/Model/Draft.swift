@@ -18,6 +18,51 @@ import Foundation
 // with a name nothing declares is still a document. So the writing takes a
 // draft, and a text nobody can run still has a canonical form and an identity.
 public struct Draft: Sendable {
+    // What reading a document once answers: what it declares, what it leans on
+    // another document for, and how many closures each of its declarations
+    // wrote.
+    //
+    // One value rather than one question at a time, because every one of these
+    // is answered by walking the same text and the same tables. Asking for them
+    // apart walks the document once for each.
+    struct Reading: Sendable {
+        // MARK: - Property
+        let sends: Set<Name>
+
+        // The types this names and does not itself declare. Read off the
+        // declarations and off the bodies alike: a local binding says what it
+        // holds, a cast asks for a type, and a closure literal writes a
+        // signature of its own.
+        let mentions: Set<Name>
+
+        // What this declares, by the name a link resolves to it.
+        let declaredProcedures: Set<Name>
+        let declaredTypes: Set<Name>
+
+        // The two as one list of spellings, which is what a document's
+        // `imports` holds.
+        var uses: Set<Name> { sends.union(mentions) }
+
+        // How many closure literals each declaration wrote, at whatever depth.
+        // A closure inside a closure counts with the rest: what the number
+        // tells apart is which of its declaration's closures this is, and
+        // nesting does not change that.
+        //
+        // A constant and a variable are expressions like a body, so a closure
+        // written in one is the document's the way a closure written in a body
+        // is. The same three the document is read over everywhere else.
+        //
+        // Read off the document so a closure's number is the document's fact.
+        // The link lowers the procedures before the rest, and which declarations
+        // are procedures depends on the whole graph, so a count taken while
+        // lowering would move when an unrelated module joins.
+        let closures: [Name: Int]
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     public let description: String?
 
@@ -60,6 +105,23 @@ public struct Draft: Sendable {
     // changes this one field of a copy.
     public private(set) var procedures: [Name: Procedure]
 
+    // The same two, when only the names are wanted. Read off the lists above
+    // rather than gathered again, so what counts as a procedure and what counts as
+    // a type is said in one place.
+    var declaredProcedures: Set<Name> {
+        read().declaredProcedures
+    }
+
+    var declaredTypes: Set<Name> {
+        read().declaredTypes
+    }
+
+    // Every name this uses and does not itself declare, which is what `imports`
+    // says where a document wrote one.
+    public var uses: Set<Name> {
+        read().uses
+    }
+
     // MARK: - Initializer
     public init(
         description: String? = nil,
@@ -83,6 +145,7 @@ public struct Draft: Sendable {
         self.procedures = procedures
     }
 
+    // MARK: - Public
     // The same document declaring these procedures instead.
     public func declaring(_ procedures: [Name: Procedure]) -> Draft {
         var held = self
@@ -101,7 +164,6 @@ public struct Draft: Sendable {
         return held
     }
 
-    // MARK: - Public
     // What this declares in the procedure namespace, each under the place it was
     // written at. A contract's procedure is one of them, by the spelling a call
     // writes to reach it, and its place is the two steps the document nests it
@@ -142,63 +204,6 @@ public struct Draft: Sendable {
     func declarations(in document: Place.Document) -> [(reference: Reference, place: Place)] {
         procedures(in: document).map { declared in (.procedure(declared.name), declared.place) }
             + types(in: document).map { declared in (.type(declared.name), declared.place) }
-    }
-
-    // The same two, when only the names are wanted. Read off the lists above
-    // rather than gathered again, so what counts as a procedure and what counts as
-    // a type is said in one place.
-    var declaredProcedures: Set<Name> {
-        read().declaredProcedures
-    }
-
-    var declaredTypes: Set<Name> {
-        read().declaredTypes
-    }
-
-    // Every name this uses and does not itself declare, which is what `imports`
-    // says where a document wrote one.
-    public var uses: Set<Name> {
-        read().uses
-    }
-
-    // What reading a document once answers: what it declares, what it leans on
-    // another document for, and how many closures each of its declarations
-    // wrote.
-    //
-    // One value rather than one question at a time, because every one of these
-    // is answered by walking the same text and the same tables. Asking for them
-    // apart walks the document once for each.
-    struct Reading: Sendable {
-        let sends: Set<Name>
-
-        // The types this names and does not itself declare. Read off the
-        // declarations and off the bodies alike: a local binding says what it
-        // holds, a cast asks for a type, and a closure literal writes a
-        // signature of its own.
-        let mentions: Set<Name>
-
-        // What this declares, by the name a link resolves to it.
-        let declaredProcedures: Set<Name>
-        let declaredTypes: Set<Name>
-
-        // The two as one list of spellings, which is what a document's
-        // `imports` holds.
-        var uses: Set<Name> { sends.union(mentions) }
-
-        // How many closure literals each declaration wrote, at whatever depth.
-        // A closure inside a closure counts with the rest: what the number
-        // tells apart is which of its declaration's closures this is, and
-        // nesting does not change that.
-        //
-        // A constant and a variable are expressions like a body, so a closure
-        // written in one is the document's the way a closure written in a body
-        // is. The same three the document is read over everywhere else.
-        //
-        // Read off the document so a closure's number is the document's fact.
-        // The link lowers the procedures before the rest, and which declarations
-        // are procedures depends on the whole graph, so a count taken while
-        // lowering would move when an unrelated module joins.
-        let closures: [Name: Int]
     }
 
     // What this document says it leans on and how many closures it wrote,

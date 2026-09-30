@@ -104,4 +104,6 @@ public struct Question<P: NativeProcedure>: Sendable {
 
         return try await executor.call(closure, with: arguments)
     }
+
+    // MARK: - Private
 }

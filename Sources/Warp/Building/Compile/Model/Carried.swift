@@ -54,4 +54,8 @@ struct Carried: Sendable {
         variables: [:],
         answers: [:]
     )
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

@@ -24,6 +24,10 @@ struct Folding {
     // so one run stands in one numbering.
     private let answered: Answered
 
+    // What a fold with no document behind it writes under. Its table numbers
+    // its own rows, so nothing looks the name up.
+    static let assembled: Name = "folding"
+
     // MARK: - Initializer
     // The table is one that says how its numbers read, since folding runs what
     // it lowers and running reads rows.
@@ -106,10 +110,6 @@ struct Folding {
     }
 
     // MARK: - Public
-    // What a fold with no document behind it writes under. Its table numbers
-    // its own rows, so nothing looks the name up.
-    static let assembled: Name = "folding"
-
     // What an expression a document's declaration wrote reads here, lowered
     // into the document's own rows. A closure it holds is a closure literal of
     // its document, so it takes a row of that document's block and a number of

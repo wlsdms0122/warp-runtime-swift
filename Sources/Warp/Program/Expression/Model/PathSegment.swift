@@ -20,6 +20,10 @@ import Foundation
 // an index) the one mark that says absence is expected here. A plain segment
 // refuses what an optional one reads as null.
 public enum PathSegment: Sendable, Equatable {
+    case key(Name, optional: Bool)
+    case index(Int, optional: Bool)
+    case indexRef(Path, optional: Bool)
+
     // Where a segment came down. The walk's fact, not the segment's, and the
     // one thing the mark's rule needs that the segment cannot know. A landing
     // is spelled out rather than implied, so a type added later cannot join
@@ -32,10 +36,6 @@ public enum PathSegment: Sendable, Equatable {
         case entry
         case element
     }
-
-    case key(Name, optional: Bool)
-    case index(Int, optional: Bool)
-    case indexRef(Path, optional: Bool)
 
     // MARK: - Property
     // Whether the author expects absence here. The one axis every access

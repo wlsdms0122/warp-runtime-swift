@@ -33,6 +33,12 @@ public struct Record: Sendable, Equatable {
         values.isEmpty
     }
 
+    // This record's fields as names beside values, for a reader that walks
+    // names rather than a layout.
+    public var asDictionary: Value.Dictionary {
+        Value.Dictionary(ordered: zip(layout.fields, values).map { name, value in (name: name, value: value) })
+    }
+
     // MARK: - Initializer
     // A record of the fields a caller hands in, under a layout of their names.
     init(name: Name?, _ fields: [Name: Value]) {
@@ -61,12 +67,6 @@ public struct Record: Sendable, Equatable {
 
         self.layout = layout
         self.values = values
-    }
-
-    // This record's fields as names beside values, for a reader that walks
-    // names rather than a layout.
-    public var asDictionary: Value.Dictionary {
-        Value.Dictionary(ordered: zip(layout.fields, values).map { name, value in (name: name, value: value) })
     }
 
     // MARK: - Public

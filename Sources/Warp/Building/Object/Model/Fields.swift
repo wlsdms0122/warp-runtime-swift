@@ -226,15 +226,6 @@ struct Fields {
         return entries
     }
 
-    @discardableResult
-    private static func judged<T: Comparable>(_ written: [T], of part: String) throws -> [T] {
-        guard written.ordered else {
-            throw ObjectRefused("'\(part)' writes its names out of order, or one of them twice")
-        }
-
-        return written
-    }
-
     // A writing that may hold nothing: a list of none or one, so a value that
     // is itself null is told from no value at all. What lays one down is
     // `ObjectWriter.maybe`, and the two are one rule said from each side.
@@ -253,4 +244,13 @@ struct Fields {
         }
     }
 
+    // MARK: - Private
+    @discardableResult
+    private static func judged<T: Comparable>(_ written: [T], of part: String) throws -> [T] {
+        guard written.ordered else {
+            throw ObjectRefused("'\(part)' writes its names out of order, or one of them twice")
+        }
+
+        return written
+    }
 }

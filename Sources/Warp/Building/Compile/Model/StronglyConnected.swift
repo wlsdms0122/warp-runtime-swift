@@ -21,9 +21,17 @@ import Foundation
 // calling one another in a line is an ordinary program and was enough to end
 // the process on the host's stack. Nesting depth is a document's own fact and
 // the walks over expressions may lean on it; call depth is not.
-enum StronglyConnected {
+struct StronglyConnected {
+    // MARK: - Property
+    private let edges: [Name: [Name]]
+
+    // MARK: - Initializer
+    init(among edges: [Name: [Name]]) {
+        self.edges = edges
+    }
+
     // MARK: - Public
-    static func components(among edges: [Name: [Name]]) -> [[Name]] {
+    func components() -> [[Name]] {
         // Where each was met, and the earliest any way on from it can reach
         // back to. A component closes where the two agree.
         var met: [Name: Int] = [:]
@@ -35,9 +43,14 @@ enum StronglyConnected {
 
         // One name being walked, and how far along its sends the walk is.
         struct Step {
+            // MARK: - Property
             let name: Name
             let sends: [Name]
             var position = 0
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
         }
 
         func meet(_ name: Name) {
@@ -104,4 +117,6 @@ enum StronglyConnected {
 
         return found
     }
+
+    // MARK: - Private
 }

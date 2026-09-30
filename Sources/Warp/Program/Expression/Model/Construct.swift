@@ -29,7 +29,7 @@ public enum Construct: Sendable, Equatable {
     case call
     case leave(Leave.Reach)
 
-    // MARK: - Public
+    // MARK: - Property
     // What the language calls this construct. A document calls several of them
     // something else, and the reading that knows which is not this one.
     //
@@ -53,4 +53,8 @@ public enum Construct: Sendable, Equatable {
         case .leave: "leave"
         }
     }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

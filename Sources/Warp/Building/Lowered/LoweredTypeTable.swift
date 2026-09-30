@@ -16,6 +16,57 @@ import Foundation
 // A class, so a judgment that recurses passes one reference down rather than
 // a copy of every array the table holds.
 final class LoweredTypeTable: Sendable {
+    // What a reading standing where a contract is asked comes to. What the
+    // type alone settles is settled here; a named type settles nothing,
+    // since which types answer a contract is read off the claims of the whole
+    // list, so the name comes back and the asker writes it down.
+    enum Answering {
+        case settled(Bool)
+        case leansOn([Name])
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        // Two answers about one contract from two memberships one value belongs
+        // to, read as one: what either settles is settled, what both refuse is
+        // refused, and what one alone leans on is leaned on. Where both lean, a
+        // claim written down is one every name has to answer, and one of the
+        // two would do, so nothing is written and the value is judged where it
+        // arrives.
+        func either(_ other: LoweredTypeTable.Answering) -> LoweredTypeTable.Answering {
+            switch (self, other) {
+            case (.settled(true), _), (_, .settled(true)), (.leansOn, .leansOn):
+                .settled(true)
+
+            case let (.leansOn(names), .settled(false)), let (.settled(false), .leansOn(names)):
+                .leansOn(names)
+
+            case (.settled(false), .settled(false)):
+                .settled(false)
+            }
+        }
+
+        // Two answers about one contract read as one: a refusal on either side
+        // refuses, what either side leans on is leaned on, and settled otherwise.
+        func joined(_ other: LoweredTypeTable.Answering) -> LoweredTypeTable.Answering {
+            switch (self, other) {
+            case (.settled(false), _), (_, .settled(false)):
+                .settled(false)
+
+            case let (.leansOn(mine), .leansOn(theirs)):
+                .leansOn(mine + theirs)
+
+            case let (.leansOn(names), .settled), let (.settled, .leansOn(names)):
+                .leansOn(names)
+
+            case (.settled, .settled):
+                .settled(true)
+            }
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // The declared types, in the order of their spellings.
     let loweredTypes: [LoweredType]
@@ -136,52 +187,6 @@ final class LoweredTypeTable: Sendable {
         return members.contains(type)
     }
 
-    // What a reading standing where a contract is asked comes to. What the
-    // type alone settles is settled here; a named type settles nothing,
-    // since which types answer a contract is read off the claims of the whole
-    // list, so the name comes back and the asker writes it down.
-    enum Answering {
-        case settled(Bool)
-        case leansOn([Name])
-
-        // Two answers about one contract from two memberships one value belongs
-        // to, read as one: what either settles is settled, what both refuse is
-        // refused, and what one alone leans on is leaned on. Where both lean, a
-        // claim written down is one every name has to answer, and one of the
-        // two would do, so nothing is written and the value is judged where it
-        // arrives.
-        func either(_ other: LoweredTypeTable.Answering) -> LoweredTypeTable.Answering {
-            switch (self, other) {
-            case (.settled(true), _), (_, .settled(true)), (.leansOn, .leansOn):
-                .settled(true)
-
-            case let (.leansOn(names), .settled(false)), let (.settled(false), .leansOn(names)):
-                .leansOn(names)
-
-            case (.settled(false), .settled(false)):
-                .settled(false)
-            }
-        }
-
-        // Two answers about one contract read as one: a refusal on either side
-        // refuses, what either side leans on is leaned on, and settled otherwise.
-        func joined(_ other: LoweredTypeTable.Answering) -> LoweredTypeTable.Answering {
-            switch (self, other) {
-            case (.settled(false), _), (_, .settled(false)):
-                .settled(false)
-
-            case let (.leansOn(mine), .leansOn(theirs)):
-                .leansOn(mine + theirs)
-
-            case let (.leansOn(names), .settled), let (.settled, .leansOn(names)):
-                .leansOn(names)
-
-            case (.settled, .settled):
-                .settled(true)
-            }
-        }
-    }
-
     // The bound a name stands for: a membership by its row, a contract by
     // its name, and nothing where the name is neither.
     func bound(named name: Name) -> LoweredType.Bound? {
@@ -197,58 +202,6 @@ final class LoweredTypeTable: Sendable {
     // passes here and is judged again where the value arrives.
     func answering(contract name: Name, reading: LoweredType) -> Answering {
         answering(contract: name, reading: reading, assuming: [])
-    }
-
-    private func answering(contract name: Name, reading: LoweredType, assuming: [Int]) -> Answering {
-        switch reading {
-        case .any, .reading, .undeclared, .never:
-            return .settled(true)
-
-        case let .named(row):
-            return .leansOn([labels[row]])
-
-        // A parameter stands for whatever fills it, and a call fills it with
-        // something every bound was asked of. A composition bounded by the
-        // contract answers; one bounded by memberships answers where every
-        // member of some membership does, since its value is one of them.
-        // A parameter bounded by nothing that answers is refused, since a
-        // slot says what a call may fill it with; a composition bounded by
-        // contracts alone stands for a type nothing here lists, so nothing
-        // is provable and it passes to be judged where the value arrives.
-        case let .parameter(_, bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming) ?? .settled(false)
-
-        case let .composition(bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming) ?? .settled(true)
-
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return answering(contract: name, reading: inner, assuming: assuming)
-
-        default:
-            return .settled(false)
-        }
-    }
-
-    // What bounds answer about a contract, or nothing where none of them
-    // says anything: a bound naming the contract settles it, and a
-    // membership answers where every member does. Memberships are asked
-    // apart, since a value is a member of each of them: one that settles the
-    // contract settles it for all, and what leans on claims is leaned on only
-    // where no membership settles it.
-    private func answering(contract name: Name, boundedBy bounds: [LoweredType.Bound], assuming: [Int]) -> Answering? {
-        guard !bounds.contains(.contract(name)) else { return .settled(true) }
-
-        var answers: [Answering] = []
-
-        for bound in bounds {
-            guard case let .membership(row) = bound, !assuming.contains(row) else { continue }
-
-            answers.append(constraints[row].reduce(.settled(true)) { answered, member in
-                answered.joined(answering(contract: name, reading: member, assuming: assuming + [row]))
-            })
-        }
-
-        return answers.reduce(nil) { answered, next in answered.map { answered in answered.either(next) } ?? next }
     }
 
     // Whether a value is a member of a constraint. A member speaks through
@@ -427,5 +380,56 @@ final class LoweredTypeTable: Sendable {
     }
 
     // MARK: - Private
+    private func answering(contract name: Name, reading: LoweredType, assuming: [Int]) -> Answering {
+        switch reading {
+        case .any, .reading, .undeclared, .never:
+            return .settled(true)
+
+        case let .named(row):
+            return .leansOn([labels[row]])
+
+        // A parameter stands for whatever fills it, and a call fills it with
+        // something every bound was asked of. A composition bounded by the
+        // contract answers; one bounded by memberships answers where every
+        // member of some membership does, since its value is one of them.
+        // A parameter bounded by nothing that answers is refused, since a
+        // slot says what a call may fill it with; a composition bounded by
+        // contracts alone stands for a type nothing here lists, so nothing
+        // is provable and it passes to be judged where the value arrives.
+        case let .parameter(_, bounds):
+            return answering(contract: name, boundedBy: bounds, assuming: assuming) ?? .settled(false)
+
+        case let .composition(bounds):
+            return answering(contract: name, boundedBy: bounds, assuming: assuming) ?? .settled(true)
+
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return answering(contract: name, reading: inner, assuming: assuming)
+
+        default:
+            return .settled(false)
+        }
+    }
+
+    // What bounds answer about a contract, or nothing where none of them
+    // says anything: a bound naming the contract settles it, and a
+    // membership answers where every member does. Memberships are asked
+    // apart, since a value is a member of each of them: one that settles the
+    // contract settles it for all, and what leans on claims is leaned on only
+    // where no membership settles it.
+    private func answering(contract name: Name, boundedBy bounds: [LoweredType.Bound], assuming: [Int]) -> Answering? {
+        guard !bounds.contains(.contract(name)) else { return .settled(true) }
+
+        var answers: [Answering] = []
+
+        for bound in bounds {
+            guard case let .membership(row) = bound, !assuming.contains(row) else { continue }
+
+            answers.append(constraints[row].reduce(.settled(true)) { answered, member in
+                answered.joined(answering(contract: name, reading: member, assuming: assuming + [row]))
+            })
+        }
+
+        return answers.reduce(nil) { answered, next in answered.map { answered in answered.either(next) } ?? next }
+    }
 }
 

@@ -57,4 +57,6 @@ public struct CastRefused: RecoverableFailure {
     public func tracing(_ trace: Trace) -> CastRefused {
         CastRefused(message, expected: expected, actual: actual, trace: trace)
     }
+
+    // MARK: - Private
 }

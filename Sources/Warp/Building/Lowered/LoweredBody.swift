@@ -12,6 +12,9 @@ struct LoweredBody: Sendable {
         case operation(Operation)
         case instruction(Instruction)
 
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
         // Whether this one node reads a slot of the range, apart from what nests
         // in it. A further question over the same shape as `stand`, and it stays
         // apart: this counts only the slots a body's value depends on, and leaves
@@ -101,6 +104,8 @@ struct LoweredBody: Sendable {
                 }
             }
         }
+
+        // MARK: - Private
     }
 
     // What a body stands on: the frame slots it names, and the closures it stands
@@ -182,11 +187,25 @@ struct LoweredBody: Sendable {
         mutating func stand(up number: Int, taking inner: [Int]) {
             closures.append((number: number, inner: inner))
         }
+
+        // MARK: - Private
     }
 
     // MARK: - Property
     let instructions: [Instruction]
     let result: Operation?
+
+    var standing: Standing {
+        var standing = Standing()
+
+        walk { node in
+            node.stand(in: &standing)
+
+            return true
+        }
+
+        return standing
+    }
 
     // MARK: - Initializer
     init(instructions: [Instruction], result: Operation?) {
@@ -232,18 +251,6 @@ struct LoweredBody: Sendable {
             },
             result: try result.map { result in try result.rewritten(operation: operation, type: type) }
         )
-    }
-
-    var standing: Standing {
-        var standing = Standing()
-
-        walk { node in
-            node.stand(in: &standing)
-
-            return true
-        }
-
-        return standing
     }
 
     // MARK: - Private

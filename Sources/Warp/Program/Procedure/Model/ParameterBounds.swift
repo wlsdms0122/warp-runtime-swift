@@ -84,6 +84,5 @@ public enum ParameterBounds: Equatable {
     }
 
     // MARK: - Public
-
     // MARK: - Private
 }

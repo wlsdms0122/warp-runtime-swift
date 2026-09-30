@@ -14,16 +14,21 @@ import Foundation
 // isolation and failing are what its code turns out to do and a link works
 // them out; a native says, and the row a compile settles records what it said.
 enum Native: Sendable {
+    case query(any Query)
+    case effect(any Effect)
+
     // One of the procedures it declared it sends: the spelling it reaches,
     // where it stands among them, and how many arguments it hands over there.
     struct Send: Hashable, Sendable {
+        // MARK: - Property
         let position: Int
         let selector: Name
         let handing: Int
-    }
 
-    case query(any Query)
-    case effect(any Effect)
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
 
     // MARK: - Property
     // Answers without running, which is what lets it be asked inside a

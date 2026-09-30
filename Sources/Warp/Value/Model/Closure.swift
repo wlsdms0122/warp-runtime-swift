@@ -23,8 +23,13 @@ public struct Closure: Sendable {
     // document it stands in. A constant's spelling is its document's own, so
     // the document is part of the name.
     struct Writer: Hashable, Sendable {
+        // MARK: - Property
         let document: Document
         let name: Name
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // How a writer's document is told from another: by the text it was read
@@ -35,10 +40,15 @@ public struct Closure: Sendable {
         case written(Identity)
         case compiled(Compiled.Token)
 
+        // MARK: - Property
+        // MARK: - Initializer
         // The one rule: the text where there is one, the compile otherwise.
         init(identity: Identity?, token: Compiled.Token) {
             self = identity.map(Document.written) ?? .compiled(token)
         }
+
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property
@@ -52,15 +62,6 @@ public struct Closure: Sendable {
     // into its body.
     var rendered: String {
         Trace.Hop.closure(of: writer.name.spelling, nth: nth).rendered
-    }
-
-    // Whether this may run beside another body. Constness does not answer it: a
-    // const body can still call a native procedure that holds state, and that procedure
-    // is what two of these would meet in. Asked of the row the link answered,
-    // so a closure no link answered is refused here rather than read as one
-    // that may not.
-    public func runsBeside() throws -> Bool {
-        try answered().isolation == .isolated
     }
 
     // Whether a cell it took is a hold rather than a copy: a box of the
@@ -82,6 +83,15 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Public
+    // Whether this may run beside another body. Constness does not answer it: a
+    // const body can still call a native procedure that holds state, and that procedure
+    // is what two of these would meet in. Asked of the row the link answered,
+    // so a closure no link answered is refused here rather than read as one
+    // that may not.
+    public func runsBeside() throws -> Bool {
+        try answered().isolation == .isolated
+    }
+
     // The row a link answered for this closure. A closure reaches a run only
     // through a link, so one without a row there is one no link read. A
     // settling reads the row for itself, since it refuses in its caller's

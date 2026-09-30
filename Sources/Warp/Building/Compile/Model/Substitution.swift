@@ -16,6 +16,18 @@ import Foundation
 // checker that folded a disagreement would go on as though nothing had been
 // declared.
 struct Substitution: Sendable {
+    // A value that arrived where a composition stands, beside what the
+    // composition holds it to.
+    struct Held: Sendable {
+        // MARK: - Property
+        let reading: LoweredType
+        let bounds: [LoweredType.Bound]
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // The first reading of each type parameter.
     let readings: [Name: LoweredType]
@@ -28,13 +40,6 @@ struct Substitution: Sendable {
     // fills a composition and no name ties it to another slot, so it is
     // judged where it stands rather than read.
     let holding: [(slot: Name, held: Held)]
-
-    // A value that arrived where a composition stands, beside what the
-    // composition holds it to.
-    struct Held: Sendable {
-        let reading: LoweredType
-        let bounds: [LoweredType.Bound]
-    }
 
     // MARK: - Initializer
     // MARK: - Public

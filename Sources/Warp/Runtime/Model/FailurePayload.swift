@@ -16,9 +16,14 @@ import Foundation
 // carried by naming it, without the type of the box being part of what a
 // runtime must implement.
 public enum FailurePayload {
+    // MARK: - Property
     public static let declared = TypeExpression.record([
         "type": .string,
         "message": .string,
         "details": .dictionary(.any),
     ])
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

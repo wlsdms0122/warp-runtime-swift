@@ -19,6 +19,24 @@ enum Reference: Hashable, Sendable, Comparable {
     case procedure(Name)
     case type(Name)
 
+    // MARK: - Property
+    // What a sentence calls this kind where it names one.
+    var noun: String {
+        switch self {
+        case .procedure: "procedure"
+        case .type: "type"
+        }
+    }
+
+    // The name itself, for the tables and sentences that want it without the
+    // kind.
+    var name: Name {
+        switch self {
+        case let .procedure(name), let .type(name): name
+        }
+    }
+
+    // MARK: - Initializer
     // MARK: - Public
     // Procedures before types, and each in name order. A catalog reports the
     // first collision it walks into, so this is the order an author meets
@@ -36,19 +54,5 @@ enum Reference: Hashable, Sendable, Comparable {
         }
     }
 
-    // What a sentence calls this kind where it names one.
-    var noun: String {
-        switch self {
-        case .procedure: "procedure"
-        case .type: "type"
-        }
-    }
-
-    // The name itself, for the tables and sentences that want it without the
-    // kind.
-    var name: Name {
-        switch self {
-        case let .procedure(name), let .type(name): name
-        }
-    }
+    // MARK: - Private
 }
