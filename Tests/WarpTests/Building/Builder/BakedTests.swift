@@ -417,7 +417,7 @@ struct BakedTests {
     }
 
     @Test("a constant folding through a procedure no code was brought for is refused")
-    func aFoldThroughAnUnbroughtProcedureIsRefused() async throws {
+    func aFoldThroughAnUnbroughtQueryIsRefused() async throws {
         // Given. A vocabulary compiled, and a document whose constant runs one
         // of its procedures.
         let baked = try await builder.compile(Module.standard)
