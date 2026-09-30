@@ -283,7 +283,7 @@ struct InferenceTests {
                     ],
                     result: .reference([.key("done")])
                 ),
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "counts"))
@@ -329,7 +329,7 @@ struct InferenceTests {
                     ])
             ],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -373,7 +373,7 @@ struct InferenceTests {
         // Given
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -424,7 +424,7 @@ struct InferenceTests {
         // on, so where two readings disagree nothing is claimed
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -483,7 +483,7 @@ struct InferenceTests {
                     ],
                     result: .reference([.key("done")])
                 ),
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -584,7 +584,7 @@ struct InferenceTests {
         // value plain refuses
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -639,7 +639,7 @@ struct InferenceTests {
         // Given
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -667,7 +667,7 @@ struct InferenceTests {
         // Given
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -696,7 +696,7 @@ struct InferenceTests {
         // Given
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -722,7 +722,7 @@ struct InferenceTests {
         // Given
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -753,7 +753,7 @@ struct InferenceTests {
         // body is held to the rule a type spelled in a signature is
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -784,7 +784,7 @@ struct InferenceTests {
         // `any` operand any more than it does over an `int` one
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -819,7 +819,7 @@ struct InferenceTests {
         // specification gives for reading what a failure carries
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -851,7 +851,7 @@ struct InferenceTests {
         let sut = try Module(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -883,7 +883,7 @@ struct InferenceTests {
         // string, and it cannot: this would answer null on every run
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -911,7 +911,7 @@ struct InferenceTests {
         // repeat through while the same repeat written with a name was caught
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -952,7 +952,7 @@ struct InferenceTests {
         // never` slipping through here would answer null forever
         let sut = try Module(
             procedures: [
-                "entry": Procedure(access: .public, body: [], result: .literal(.int(0))),
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(0))),
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
@@ -986,7 +986,7 @@ struct InferenceTests {
         let sut = try Module(
             types: ["Maybe": .nullable(.int)],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1027,7 +1027,7 @@ struct InferenceTests {
         // held to its names; so is a cast
         let sut = try Module(
             procedures: [
-                "entry": Procedure(access: .public, body: [], result: .literal(.int(0))),
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(0))),
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
@@ -1058,7 +1058,7 @@ struct InferenceTests {
         // would refuse a cast that settles on every run
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1081,7 +1081,7 @@ struct InferenceTests {
         // written with `?`
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1103,7 +1103,7 @@ struct InferenceTests {
         // Given. Null satisfies both, so a value both types hold exists
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1130,7 +1130,7 @@ struct InferenceTests {
         // refusing this would refuse a cast that succeeds
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1165,7 +1165,7 @@ struct InferenceTests {
         let sut = try Module(
             types: ["Person": .record(["name": .string])],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1206,7 +1206,7 @@ struct InferenceTests {
         // permanent silent null `as?` exists not to be
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1244,7 +1244,7 @@ struct InferenceTests {
                     ],
                     result: .reference([.key("held"), .key("b")])
                 ),
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [],
@@ -1275,7 +1275,7 @@ struct InferenceTests {
                 )
             ],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [],
@@ -1296,7 +1296,7 @@ struct InferenceTests {
         // opened, and only that one
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1328,7 +1328,7 @@ struct InferenceTests {
         // unjudgeable
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1360,7 +1360,7 @@ struct InferenceTests {
         let sut = try Module(
             types: ["Person": .record(["name": .string])],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1404,7 +1404,7 @@ struct InferenceTests {
         // question of what arrived
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1436,7 +1436,7 @@ struct InferenceTests {
         // declaration already settled
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1461,7 +1461,7 @@ struct InferenceTests {
         // The optional spelling changes nothing a declaration settled.
         let optional = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1492,7 +1492,7 @@ struct InferenceTests {
         // left with the break would have said `string` and linked a lie.
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1561,7 +1561,7 @@ struct InferenceTests {
         // was entered with.
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.null)
@@ -1610,7 +1610,7 @@ struct InferenceTests {
         // reads `string?` and the plain string slot refuses.
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))
@@ -1664,7 +1664,7 @@ struct InferenceTests {
         // lied about the rest.
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1725,7 +1725,7 @@ struct InferenceTests {
 
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1779,7 +1779,7 @@ struct InferenceTests {
         // slot refuses.
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))
@@ -1838,7 +1838,7 @@ struct InferenceTests {
         // rescue's int would have refused it wrongly.
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.null)
@@ -1888,7 +1888,7 @@ struct InferenceTests {
         // alone, not as a maybe
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
@@ -1943,7 +1943,7 @@ struct InferenceTests {
         // Given
         let sut = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .attempt(
@@ -1998,7 +1998,7 @@ struct InferenceTests {
                         )
                     ]
                 ),
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "gives_up"))

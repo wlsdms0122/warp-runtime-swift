@@ -11,7 +11,7 @@ import Testing
 @Suite("A folded constant is held to the contract it was handed to")
 struct FoldedContractTests {
     // MARK: - Property
-    private let entryName: Name = "app.main"
+    private let main: Name = "app.main"
 
     // MARK: - Initializer
     // MARK: - Test
@@ -82,7 +82,7 @@ struct FoldedContractTests {
                 "app.zzz": .call(Call(selector: "app.count", arguments: [.call(Call(selector: "app.giveLate"))]))
             ],
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
@@ -162,7 +162,7 @@ struct FoldedContractTests {
                 )
             ],
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],

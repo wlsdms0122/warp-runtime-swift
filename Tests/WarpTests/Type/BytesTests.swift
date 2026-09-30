@@ -18,7 +18,6 @@ import WarpStandard
 struct BytesTests {
     // MARK: - Property
     private let builder = Builder()
-    private let entryName: Name = "entry"
 
     // MARK: - Initializer
     // MARK: - Test

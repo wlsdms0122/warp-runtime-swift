@@ -11,7 +11,7 @@ import Testing
 @Suite("A claim nobody leans on refuses nobody")
 struct UnheldClaimTests {
     // MARK: - Property
-    private let entryName: Name = "app.main"
+    private let main: Name = "app.main"
 
     // MARK: - Initializer
     // MARK: - Test
@@ -54,7 +54,7 @@ struct UnheldClaimTests {
                     body: [],
                     result: .call(Call(selector: "app.tell", arguments: [.reference([.key("it")])]))
                 ),
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [
@@ -127,7 +127,7 @@ struct UnheldClaimTests {
         )
         let program = try Module(
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
                     body: [
@@ -184,7 +184,7 @@ struct UnheldClaimTests {
         )
         let program = try Module(
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
                     body: [
@@ -266,7 +266,7 @@ struct UnheldClaimTests {
                 )
             ],
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],

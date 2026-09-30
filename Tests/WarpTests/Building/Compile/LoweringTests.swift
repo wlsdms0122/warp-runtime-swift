@@ -47,7 +47,7 @@ struct LoweringTests {
         // it was after the block
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
@@ -85,7 +85,7 @@ struct LoweringTests {
         // captured name and a module variable is never observed.
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
@@ -114,7 +114,7 @@ struct LoweringTests {
         // Given. Three names in scope, one read
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("a"), expression: .literal(.int(1))),
@@ -161,7 +161,7 @@ struct LoweringTests {
                 )
             ],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "key", type: .string)]),
                     body: [Statement(binding: .constant("found"), expression: .reference([.key("digits"), .indexRef([.key("key")])]))],
@@ -214,7 +214,7 @@ struct LoweringTests {
         ))
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("told"), expression: loop(
@@ -255,7 +255,7 @@ struct LoweringTests {
         // is not the order the body reads them in
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [],
                     result: .call(Call(
@@ -307,7 +307,7 @@ struct LoweringTests {
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [
-                "entry": Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.tally": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
@@ -331,7 +331,7 @@ struct LoweringTests {
         let sut = try Module(
             types: ["Count": .int],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
                     result: .call(Call(selector: "app.bump", arguments: [.reference([.key("n")])]))
@@ -361,7 +361,7 @@ struct LoweringTests {
         let sut = try Module(
             types: ["Count": .int],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("body"), expression: .closure(
@@ -408,7 +408,7 @@ struct LoweringTests {
             try Module(
                 types: ["Tag": .record(["a": .int])],
                 procedures: [
-                    "entry": Procedure(
+                    entryName: Procedure(
                         access: .public,
                         body: [Statement(binding: .variable("held"), expression: held)],
                         result: .call(Call(
@@ -458,7 +458,7 @@ struct LoweringTests {
                 "J": .call(Call(selector: "app.alpha", arguments: [reference("K")]))
             ],
             procedures: [
-                "entry": Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.alpha": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
@@ -481,7 +481,7 @@ struct LoweringTests {
         // and reads what the hold holds now
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
