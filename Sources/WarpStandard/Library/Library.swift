@@ -1794,7 +1794,7 @@ enum Library {
                             {
                               value {
                                 return {
-                                  ref "rhs"
+                                  ref "lhs"
                                 }
                               }
                             }
@@ -1803,10 +1803,10 @@ enum Library {
                             call {
                               arguments [
                                 {
-                                  ref "lhs"
+                                  ref "rhs"
                                 }
                                 {
-                                  ref "rhs"
+                                  ref "lhs"
                                 }
                               ]
                               procedure "std.math.lessThan"
@@ -1831,7 +1831,7 @@ enum Library {
                     }
                   ]
                   result {
-                    ref "lhs"
+                    ref "rhs"
                   }
                   returns "some T"
                 }
@@ -1844,7 +1844,7 @@ enum Library {
                             {
                               value {
                                 return {
-                                  ref "lhs"
+                                  ref "rhs"
                                 }
                               }
                             }
@@ -1853,10 +1853,10 @@ enum Library {
                             call {
                               arguments [
                                 {
-                                  ref "lhs"
+                                  ref "rhs"
                                 }
                                 {
-                                  ref "rhs"
+                                  ref "lhs"
                                 }
                               ]
                               procedure "std.math.lessThan"
@@ -1881,7 +1881,7 @@ enum Library {
                     }
                   ]
                   result {
-                    ref "rhs"
+                    ref "lhs"
                   }
                   returns "some T"
                 }

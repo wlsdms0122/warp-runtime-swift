@@ -874,8 +874,8 @@ struct StandardTests {
         #expect(Value.order(.int(.min), .double(-0x1p63)) == .orderedSame)
         #expect(Value.order(.int(0), .double(.nan)) == nil)
 
-        // min and max pick between the values as they arrived. The int wins
-        // here, and no conversion flattens it into a tie.
+        // max answers `rhs` on a tie, so `above` coming back is the int
+        // winning rather than a conversion flattening the two into a tie.
         let picked = try await run(
             Procedure(
                 body: [],
