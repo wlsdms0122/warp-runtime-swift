@@ -28,11 +28,7 @@ struct ObjectMutationTests {
     // MARK: - Test
     @Test("is refused wherever it is mutated, and never traps")
     func everyMutationIsAnswered() throws {
-        guard let written = Self.everything.written else {
-            Issue.record("an object of one of everything is one an object can hold")
-
-            return
-        }
+        let written = try Self.everything.object()
 
         let mutator = Mutator()
         var mutations = 0
@@ -51,8 +47,12 @@ struct ObjectMutationTests {
                 // admits a value it cannot write back, or writes back as
                 // something else, has taken the object somewhere the pair
                 // does not agree on.
-                guard let once = read.written else {
-                    Issue.record("a mutation at \(path) read back as an object that cannot be written")
+                let once: Value
+
+                do {
+                    once = try read.object()
+                } catch {
+                    Issue.record("a mutation at \(path) read back as an object that cannot be written: \(error)")
 
                     continue
                 }

@@ -750,13 +750,10 @@ struct ObjectReadingTests {
         )
         let compiled = try await builder.compile([sut] + Module.standard)
 
-        guard let mine = compiled.first(where: { one in one.identity != nil }),
-              let written = mine.written
-        else {
-            Issue.record("a document with an identity compiles to an object standing against it")
-
-            return
-        }
+        let written = try #require(
+            compiled.first(where: { one in one.identity != nil }),
+            "a document with an identity compiles to an object standing against it"
+        ).object()
 
         // When / Then. Read under the identity it stands against, and refused
         // under any other: what an object says about which document it is,
@@ -863,7 +860,7 @@ struct ObjectReadingTests {
         let compiled = try await builder.compile([module] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
-              case let .dictionary(written) = mine.written
+              case let .dictionary(written) = try mine.object()
         else {
             throw ObjectMissing()
         }

@@ -110,7 +110,7 @@ struct ObjectDependencyTests {
         // Then. It leaned on something it cannot name, so it cannot be filed,
         // and saying so is not the same as saying it leaned on nothing.
         #expect(compiled[0].dependencies == nil)
-        #expect(compiled[0].written == nil)
+        #expect(throws: ObjectUnwritable.self) { try compiled[0].object() }
     }
 
     @Test("tells a document written in Warp from one the host answers")
@@ -159,7 +159,7 @@ struct ObjectDependencyTests {
         )
 
         // When.
-        let written = try #require(compiled[0].written)
+        let written = try compiled[0].object()
         let read = try Compiled(written: written, of: compiled[0].identity)
 
         // Then.
@@ -182,7 +182,7 @@ struct ObjectDependencyTests {
     private func written(
         calling selector: Name,
         behind vocabulary: Module
-    ) async throws -> (behind: Value?, calling: Value?) {
+    ) async throws -> (behind: Value, calling: Value) {
         let caller = try Module(
             procedures: [
                 "app.main": Procedure(
@@ -199,6 +199,6 @@ struct ObjectDependencyTests {
             supplying: Supplying([vocabulary, caller])
         )
 
-        return (behind: behind[0].written, calling: compiled[0].written)
+        return (behind: try behind[0].object(), calling: try compiled[0].object())
     }
 }

@@ -149,22 +149,6 @@ public struct Compiled: Sendable, Declaring {
         document.identity
     }
 
-    // This object said as a value, so a caller can keep it where bytes are
-    // kept. What carries it from there is the writing a document already
-    // travels in, and a caller that reads it back is handed this again.
-    //
-    // Nothing on any of four counts, and none is something that went wrong.
-    // A document numbered by a link's rows is no object. A build handed no
-    // way to work a fingerprint out leaves every document that leaned on
-    // another unable to say what it is true against. A value holding a
-    // closure a document nobody wrote down wrote holds what no object can
-    // spell. And a value holding a closure that holds a box of the run that
-    // folded it holds what no object carries. Which one it was is what
-    // `object()` says.
-    var written: Value? {
-        try? object()
-    }
-
     // MARK: - Initializer
     private init(
         document: Place.Document,
@@ -308,7 +292,8 @@ public struct Compiled: Sendable, Declaring {
         return numbering.writer(of: index - lifted.lowerBound)
     }
 
-    // The same, saying why there is none where there is none.
+    // This object said as a value, so a caller can keep it where bytes are
+    // kept, or what keeps it from being one.
     public func object() throws(ObjectUnwritable) -> Value {
         try ObjectWriter().value(of: self)
     }

@@ -116,7 +116,7 @@ struct ObjectClosureTests {
             against: try builder.lay(one, supplying: Supplying(Module.standard))
         )
         let read = try (one + other).map { document in
-            try Compiled(written: try #require(document.written), of: document.identity, fingerprint: document.fingerprint)
+            try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
         }
 
         // When
@@ -315,7 +315,7 @@ struct ObjectClosureTests {
         let compiled = try await builder.compile(Module.standard + [maker, sut])
 
         // Then
-        #expect(compiled.last?.written == nil)
+        #expect(throws: ObjectUnwritable.self) { try #require(compiled.last).object() }
     }
 
     @Test("a closure holding a cell its frame has not is refused at the link")
@@ -490,7 +490,7 @@ struct ObjectClosureTests {
     private func roundTripped(_ module: Module, beside others: [Module] = [], entry: Name) async throws -> Value? {
         let compiled = try await builder.compile(Module.standard + others + [module])
         let read = try compiled.map { one -> Compiled in
-            let written = try #require(one.written, "an object is written for \(one.document.spelled(at: 0))")
+            let written = try one.object()
 
             return try Compiled(written: written, of: one.document.identity, fingerprint: one.fingerprint)
         }
