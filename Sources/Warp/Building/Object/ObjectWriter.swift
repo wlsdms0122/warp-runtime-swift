@@ -44,57 +44,16 @@ struct ObjectWriter {
         }
     }
 
+    // Every part by the key it stands under. What this cannot write is a
+    // closure: one holding a box of the run that made it, or one a document
+    // nobody wrote down wrote. Either is the one error thrown on the way
+    // down, and an object of what holds it is not written.
     func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
-        // A document compiled against an object nobody worked a fingerprint
-        // out for cannot say what it is true against, and an object that says
-        // less than it leans on is one a cache would hand back wrongly.
-        guard let dependencies = compiled.dependencies else {
-            throw ObjectUnwritable("the document leans on one no fingerprint was worked out for")
+        let parts = try ObjectLayout.Key.allCases.map { (key) throws(ObjectUnwritable) -> (Name, Value) in
+            (key.name, try part(key, of: compiled))
         }
 
-        // What this cannot write is a closure: one holding a box of the run
-        // that made it, or one a document nobody wrote down wrote. Either is
-        // the one error thrown on the way down, and an object of what holds
-        // it is not written.
-        let parts: [ObjectLayout.Key: Value] = [
-            .object: .int(ObjectLayout.format),
-            .document: document(compiled.document),
-            .dependencies: .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
-            .types: try keyed(compiled.types, type),
-            .constraints: try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in
-                .array(try types.map(type))
-            },
-            .contracts: try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
-                try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
-                    .array([try signature(asked.signature), constness(asked.constness), isolation(asked.isolation)])
-                }
-            },
-            .claims: keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) },
-            .leaned: .array(compiled.leaned.sorted { one, other in one.key < other.key }.map { claim, place in
-                .array([name(claim.type), name(claim.contract), self.place(place)])
-            }),
-            // The rows the document declares stand under their spellings; the
-            // rows its bodies lifted stand apart, and what wrote each is the
-            // numbering's answer, so they carry no spelling.
-            .rows: .array(try compiled.table[compiled.standing].map { (row) throws(ObjectUnwritable) -> Value in
-                try judged(row, spelled: true)
-            }),
-            .lifted: .array(try compiled.table[compiled.lifted].map { (row) throws(ObjectUnwritable) -> Value in
-                try judged(row, spelled: false)
-            }),
-            .answers: keyed(compiled.answers, lowered),
-            // What the bodies number their calls from, and their types.
-            .numbering: compiled.numbering.written(dropping: compiled.declared.count),
-            .typeNumbering: compiled.typeNumbering.written,
-            .variables: .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
-                .array([name(entry.name), try value(entry.value)])
-            }),
-            .constants: .array(compiled.constants.map(name))
-        ]
-
-        return .dictionary(
-            Value.Dictionary(Dictionary(uniqueKeysWithValues: parts.map { key, part in (key.name, part) }))
-        )
+        return .dictionary(Value.Dictionary(Dictionary(uniqueKeysWithValues: parts)))
     }
 
     // A value written down: the data as it is, and a closure by what it is
@@ -165,6 +124,82 @@ struct ObjectWriter {
     }
 
     // MARK: - Private
+    // One part of an object, by the one case that names its key, so a key the
+    // layout gains is a case this has to write.
+    private func part(_ key: ObjectLayout.Key, of compiled: Compiled) throws(ObjectUnwritable) -> Value {
+        switch key {
+        case .object:
+            return .int(ObjectLayout.format)
+
+        case .document:
+            return document(compiled.document)
+
+        // A document compiled against an object nobody worked a fingerprint
+        // out for cannot say what it is true against, and an object that says
+        // less than it leans on is one a cache would hand back wrongly.
+        case .dependencies:
+            guard let dependencies = compiled.dependencies else {
+                throw ObjectUnwritable("the document leans on one no fingerprint was worked out for")
+            }
+
+            return .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) })
+
+        case .types:
+            return try keyed(compiled.types, type)
+
+        case .constraints:
+            return try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in
+                .array(try types.map(type))
+            }
+
+        case .contracts:
+            return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
+                try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
+                    .array([try signature(asked.signature), constness(asked.constness), isolation(asked.isolation)])
+                }
+            }
+
+        case .claims:
+            return keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) }
+
+        case .leaned:
+            return .array(compiled.leaned.sorted { one, other in one.key < other.key }.map { claim, place in
+                .array([name(claim.type), name(claim.contract), self.place(place)])
+            })
+
+        // The rows the document declares stand under their spellings; the
+        // rows its bodies lifted stand apart, and what wrote each is the
+        // numbering's answer, so they carry no spelling.
+        case .rows:
+            return .array(try compiled.table[compiled.standing].map { (row) throws(ObjectUnwritable) -> Value in
+                try judged(row, spelled: true)
+            })
+
+        case .lifted:
+            return .array(try compiled.table[compiled.lifted].map { (row) throws(ObjectUnwritable) -> Value in
+                try judged(row, spelled: false)
+            })
+
+        case .answers:
+            return keyed(compiled.answers, lowered)
+
+        // What the bodies number their calls from, and their types.
+        case .numbering:
+            return compiled.numbering.written(dropping: compiled.declared.count)
+
+        case .typeNumbering:
+            return compiled.typeNumbering.written
+
+        case .variables:
+            return .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
+                .array([name(entry.name), try value(entry.value)])
+            })
+
+        case .constants:
+            return .array(compiled.constants.map(name))
+        }
+    }
+
     // A kind as its layout writes it: the tag, and what the kind holds after it.
     private func tagged(_ tag: some RawRepresentable<Int>, _ fields: Value...) -> Value {
         .array([self.tag(tag)] + fields)
