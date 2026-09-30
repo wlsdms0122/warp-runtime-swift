@@ -7,25 +7,11 @@
 
 import Foundation
 
-// The modules a host is willing to supply, and the graph it hands a link.
-//
-// A module says what it asks for and never where to find it, so somebody has
-// to decide which modules stand beside it. That decision is a grant: a program
-// does what the procedures in front of it let it do, and this is where a host
-// writes down which procedures those may be. Closing a list against a catalog
-// reaches only what the host put in one.
-//
-// The link is not where this happens. It is handed a graph and holds one name
-// to one declarer, and a graph holding two copies of a module gives that rule
-// nothing to say about which copy was meant. Here the modules are rows of a
-// table and a row is brought in once, so a second copy is not a thing that can
-// be written.
-//
-// What a link needs is what a document discloses, said with the kind on it.
-// `imports` is one list of spellings; a link asks which document declares a
-// procedure and which declares a type, and a procedure and a type may share a
-// spelling. So the needs are read off the module here, in both kinds, and one
-// table answers them: the kind rides on the reference.
+// The modules a host is willing to supply, and the list it hands a build: the
+// host's grant, held as one table of which module declares each reference, the
+// kind riding on the reference because a procedure and a type may share a
+// spelling. A module is a row of the table and is brought in once, so a list
+// closed against a catalog never holds two copies of one.
 public struct Catalog: Sendable {
     // MARK: - Property
     private let modules: [Module]
