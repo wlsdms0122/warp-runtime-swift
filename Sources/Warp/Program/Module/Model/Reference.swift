@@ -20,14 +20,6 @@ enum Reference: Hashable, Sendable, Comparable {
     case type(Name)
 
     // MARK: - Property
-    // What a sentence calls this kind where it names one.
-    var noun: String {
-        switch self {
-        case .procedure: "procedure"
-        case .type: "type"
-        }
-    }
-
     // The name itself, for the tables and sentences that want it without the
     // kind.
     var name: Name {

@@ -47,12 +47,6 @@ public struct Module: Sendable {
     // the document's fact, so it is settled with the document.
     let closures: [Closure.Declaration: Int]
 
-    // What this declares, by the name a link resolves to it. Where each one
-    // was written is not here: a refusal that names a place reads it off the
-    // draft, and every other reader wants the names alone.
-    let declaredProcedures: Set<Name>
-    let declaredTypes: Set<Name>
-
     // What this supplies to a link under a spelling another document may
     // name: its types, and the procedures that are not private. One answer,
     // read by everything that asks which module supplies a reference.
@@ -230,11 +224,9 @@ public struct Module: Sendable {
         self.references = Set(reading.sends.map(Reference.procedure))
             .union(reading.mentions.map(Reference.type))
         self.closures = reading.closures
-        self.declaredProcedures = reading.declaredProcedures
-        self.declaredTypes = reading.declaredTypes
         let hidden = Set(draft.procedures.filter { _, procedure in !procedure.access.reachesOtherDocuments }.keys)
-        self.supplies = Set(reading.declaredProcedures.subtracting(hidden).map(Reference.procedure))
-            .union(reading.declaredTypes.map(Reference.type))
+        self.supplies = Set(draft.declaredProcedures.subtracting(hidden).map(Reference.procedure))
+            .union(draft.declaredTypes.map(Reference.type))
     }
 
     // MARK: - Public
