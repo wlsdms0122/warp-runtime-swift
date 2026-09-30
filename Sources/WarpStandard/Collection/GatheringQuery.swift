@@ -39,7 +39,7 @@ struct GatheringQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, so bytes are read where an array is, on either side.
         let collection = question[.array]
@@ -65,7 +65,11 @@ struct GatheringQuery: Query {
             return number
         }
 
-        return collection.elements(at: positions)
+        guard let gathered = collection.elements(at: positions) else {
+            throw ExecutionError("std.collection.gathering asks two arrays")
+        }
+
+        return gathered
     }
 
     // MARK: - Private

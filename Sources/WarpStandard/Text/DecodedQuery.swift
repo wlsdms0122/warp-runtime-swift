@@ -40,7 +40,7 @@ struct DecodedQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         guard let bytes = question[.bytes].bytes else {
             throw ExecutionError("std.text.decoded asks bytes")
         }

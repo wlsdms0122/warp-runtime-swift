@@ -17,7 +17,7 @@ struct MinusQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         try arithmetic.answer(question[.lhs], question[.rhs])
     }
 

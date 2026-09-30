@@ -27,7 +27,7 @@ struct CountQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         let collection = question[.collection]
 
         if let elements = collection.elements { return .int(elements.count) }

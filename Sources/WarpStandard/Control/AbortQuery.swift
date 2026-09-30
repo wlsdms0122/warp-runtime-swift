@@ -37,7 +37,7 @@ struct AbortQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         let message = question[.message]
 
         guard message != .null else {

@@ -30,10 +30,12 @@ struct VocabularyTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
-            guard case let .array(elements) = question[.of] else { return nil }
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            guard case let .array(elements) = question[.of] else {
+                throw ExecutionError("extra.head asks an array")
+            }
 
-            return elements.first
+            return elements.first ?? .null
         }
 
         // MARK: - Private
@@ -63,12 +65,12 @@ struct VocabularyTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             guard
                 case let .string(text) = question[.of],
                 case let .int(limit) = question[.value]
             else {
-                return nil
+                throw ExecutionError("extra.longerThan asks a string and an int")
             }
 
             return .bool(text.count > limit)
