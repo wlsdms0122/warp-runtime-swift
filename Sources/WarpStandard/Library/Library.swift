@@ -1712,15 +1712,7 @@ enum Library {
                             {
                               value {
                                 return {
-                                  call {
-                                    arguments [
-                                      0
-                                      {
-                                        ref "number"
-                                      }
-                                    ]
-                                    procedure "std.math.minus"
-                                  }
+                                  ref "number"
                                 }
                               }
                             }
@@ -1728,10 +1720,10 @@ enum Library {
                           when {
                             call {
                               arguments [
+                                0
                                 {
                                   ref "number"
                                 }
-                                0
                               ]
                               procedure "std.math.lessThan"
                             }
@@ -1751,7 +1743,15 @@ enum Library {
                     }
                   ]
                   result {
-                    ref "number"
+                    call {
+                      arguments [
+                        0
+                        {
+                          ref "number"
+                        }
+                      ]
+                      procedure "std.math.minus"
+                    }
                   }
                   returns "some N"
                 }
