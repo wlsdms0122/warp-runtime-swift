@@ -604,7 +604,7 @@ public struct Builder: Sendable {
                     isolated: isolated.contains(symbol.declared),
                     failing: failing[symbol.declared] ?? .unstated,
                     builtin: module.builtin,
-                    sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
+                    sends: try sending.rows(of: symbol),
                     in: loweredTypes
                 )
             },
