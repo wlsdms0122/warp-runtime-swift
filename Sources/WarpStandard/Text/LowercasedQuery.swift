@@ -44,8 +44,12 @@ struct LowercasedQuery: Query {
     // A cased letter before it and none after, looking past the case-ignorable
     // code points on either side.
     private func endsWord(_ scalars: [Unicode.Scalar], at position: Int) -> Bool {
-        let before = scalars[..<position].last { scalar in !scalar.properties.isCaseIgnorable }
-        let after = scalars[(position + 1)...].first { scalar in !scalar.properties.isCaseIgnorable }
+        let before = scalars[..<position].last { scalar in
+            !scalar.properties.isCaseIgnorable
+        }
+        let after = scalars[(position + 1)...].first { scalar in
+            !scalar.properties.isCaseIgnorable
+        }
 
         return before?.properties.isCased == true && after?.properties.isCased != true
     }

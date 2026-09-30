@@ -66,7 +66,9 @@ struct Fanout: Sendable {
     // Every piece, waited for. A failure fails the whole procedure, and every
     // piece's failure is reported, keyed by the piece's label: which failures
     // there are is not allowed to depend on timing.
-    func all<P: NativeProcedure>(_ invocation: Invocation<P>) async throws -> Value where P.Parameters == FanoutOperand {
+    func all<P: NativeProcedure>(
+        _ invocation: Invocation<P>
+    ) async throws -> Value where P.Parameters == FanoutOperand {
         let (pieces, keyed) = try closures(of: invocation)
         let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
 
@@ -79,7 +81,9 @@ struct Fanout: Sendable {
 
     // The first success, with the rest asked to stop. Which piece wins is the
     // one fact here that timing decides, and the procedure's name says so.
-    func first<P: NativeProcedure>(_ invocation: Invocation<P>) async throws -> Value where P.Parameters == FanoutOperand {
+    func first<P: NativeProcedure>(
+        _ invocation: Invocation<P>
+    ) async throws -> Value where P.Parameters == FanoutOperand {
         // The keys of a record are not wasted on a `first`. The winner's is
         // not reported, but a failure's is: when nothing wins, every piece's
         // failure comes back keyed by the name its author gave it.
@@ -244,7 +248,9 @@ struct Fanout: Sendable {
             return authorMistake.value
         }
 
-        return ConcurrentFailed(failures: failures.compactMapValues { error in (error as? any RecoverableFailure)?.payload })
+        return ConcurrentFailed(
+            failures: failures.compactMapValues { error in (error as? any RecoverableFailure)?.payload }
+        )
     }
 
     private func answered(_ outcomes: [Outcome], keyed: Bool) throws -> Value {

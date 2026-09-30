@@ -15,7 +15,9 @@ struct CountQuery: Query {
         case collection
 
         // MARK: - Property
-        var declared: Parameter { Parameter(name: "collection", type: .named("std.Collection")) }
+        var declared: Parameter {
+            Parameter(name: "collection", type: .named("std.Collection"))
+        }
 
         // MARK: - Initializer
         // MARK: - Public

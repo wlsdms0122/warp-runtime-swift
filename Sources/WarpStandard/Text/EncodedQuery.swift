@@ -23,7 +23,11 @@ struct EncodedQuery: Query {
                 return Parameter(name: "text", type: .string)
 
             case .encoding:
-                return Parameter(name: "encoding", type: .string, candidates: CharacterEncoding.names)
+                return Parameter(
+                    name: "encoding",
+                    type: .string,
+                    candidates: CharacterEncoding.names
+                )
             }
         }
 

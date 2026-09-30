@@ -24,7 +24,11 @@ struct DecodedQuery: Query {
                 return Parameter(name: "bytes", type: .bytes)
 
             case .encoding:
-                return Parameter(name: "encoding", type: .string, candidates: CharacterEncoding.names)
+                return Parameter(
+                    name: "encoding",
+                    type: .string,
+                    candidates: CharacterEncoding.names
+                )
             }
         }
 

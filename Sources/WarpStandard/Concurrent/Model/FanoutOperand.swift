@@ -15,7 +15,9 @@ enum FanoutOperand: Int, ParameterSet {
     case pieces
 
     // MARK: - Property
-    var declared: Parameter { Parameter(name: "pieces", type: .named("std.concurrent.Pieces")) }
+    var declared: Parameter {
+        Parameter(name: "pieces", type: .named("std.concurrent.Pieces"))
+    }
 
     // MARK: - Initializer
     // MARK: - Public
