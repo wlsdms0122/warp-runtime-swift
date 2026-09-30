@@ -13,6 +13,45 @@ import WarpStandard
 
 @Suite
 struct ConditionTests {
+    // A condition read by a run against the standard vocabulary as a caller
+    // gets it, so the procedures written in Warp answer here the way the
+    // native ones do. The bindings are handed over as arguments.
+    private struct Scope {
+        // MARK: - Property
+        let bindings: [Name: Value]
+
+        // MARK: - Initializer
+        init(_ bindings: [Name: Value]) {
+            self.bindings = bindings
+        }
+
+        // MARK: - Public
+        func evaluate(_ condition: Warp.Expression) async throws -> Bool {
+            let image = try await Builder().build(
+                [
+                    try Module(procedures: [
+                        entryName: Procedure(
+                            access: .public,
+                            signature: Signature(
+                                parameters: bindings.keys.sorted().map { name in Parameter(name: name, type: .any) }
+                            ),
+                            body: [],
+                            result: condition
+                        )
+                    ])
+                ] + Module.standard
+            )
+
+            guard case let .bool(answer) = try await Executor().run(image, arguments: bindings) else {
+                throw ReadingError("a condition must answer bool")
+            }
+
+            return answer
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let scope: [Name: Value] = ["kind": .string("a"), "n": .int(3), "none": .null, "gone": .null]
 
@@ -21,7 +60,7 @@ struct ConditionTests {
     @Test("predicates evaluate against scope values")
     func predicatesEvaluateAgainstScope() async throws {
         // Given
-        let sut = try await folding(scope)
+        let sut = Scope(scope)
 
         // Then
         #expect(try await sut.evaluate(
@@ -47,7 +86,7 @@ struct ConditionTests {
     @Test("both sides of a predicate are expressions")
     func bothSidesAreExpressions() async throws {
         // Given
-        let sut = try await folding([
+        let sut = Scope([
             "left": .string("same"),
             "right": .string("same"),
             "candidates": .array([.string("same"), .string("other")])
@@ -67,7 +106,7 @@ struct ConditionTests {
     @Test("numeric equality crosses int and double")
     func numericEqualityCrossesIntAndDouble() async throws {
         // Given
-        let sut = try await folding(scope)
+        let sut = Scope(scope)
 
         // Then
         #expect(try await sut.evaluate(
@@ -78,7 +117,7 @@ struct ConditionTests {
     @Test("combinators compose nested conditions")
     func combinatorsCompose() async throws {
         // Given
-        let sut = try await folding(scope)
+        let sut = Scope(scope)
         let condition = every(
             equals(.reference(path("kind")), .literal(.string("a"))),
             negating(equals(.reference(path("n")), .literal(.int(4))))
@@ -91,7 +130,7 @@ struct ConditionTests {
     @Test("text atoms evaluate on strings; asking a number is refused")
     func textAtomsEvaluateOnStrings() async throws {
         // Given
-        let sut = try await folding([
+        let sut = Scope([
             "title": .string("hello, spec"),
             "tags": .array([.string("a"), .string("b")]),
             "n": .int(3),
@@ -126,13 +165,13 @@ struct ConditionTests {
         }
     }
 
-    @Test("type misuse in a condition is unfit, not false")
-    func conditionTypeMisuseThrowsUnfit() async throws {
+    @Test("type misuse in a condition is refused, not false")
+    func conditionTypeMisuseIsRefused() async throws {
         // Given
-        let sut = try await folding(scope)
+        let sut = Scope(scope)
 
         // When / Then. A typo'd drill must not silently read as false
-        await #expect(throws: ReferenceUnfit.self) {
+        await #expect(throws: BuildError.self) {
             try await sut.evaluate(
                 differs(.reference(path("n.field")), .literal(.null))
             )
@@ -176,19 +215,4 @@ struct ConditionTests {
 
     // MARK: - Public
     // MARK: - Private
-    // A fold against the standard vocabulary as a caller gets it: built, so
-    // the procedures written in Warp answer here the way the native ones do.
-    private func folding(_ bindings: [Name: Value]) async throws -> Folding {
-        let image = try await Builder().build(
-            [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
-                + Module.standard
-        )
-
-        return Folding(
-            constants: bindings,
-            origin: 0,
-            in: .relocated(image.linked, rows: image.rows, naming: image.naming),
-            loweredTypes: image.loweredTypes
-        )
-    }
 }

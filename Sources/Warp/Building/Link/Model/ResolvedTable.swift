@@ -114,19 +114,5 @@ struct ResolvedTable: Sendable {
         }
     }
 
-    // How an expression folded beside a document's bodies is numbered, so that
-    // what is lowered now and what was lowered before stand in one numbering.
-    // Every number of a table of rows is a row, whichever document it is read
-    // for.
-    var numbering: [Numbering] {
-        switch numbers {
-        case .rows:
-            return naming.map { _ in Numbering(rows: rows) }
-
-        case let .documents(numbering, _, _):
-            return numbering
-        }
-    }
-
     // MARK: - Private
 }

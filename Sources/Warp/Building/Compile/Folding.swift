@@ -24,11 +24,6 @@ struct Folding {
     // so one run stands in one numbering.
     private let resolved: ResolvedTable
 
-    // What a closure written in an expression folded outside any
-    // declaration is written by. Its table numbers its own rows, so nothing
-    // looks the name up.
-    static let writer = Closure.Declaration.binding("folding")
-
     // MARK: - Initializer
     // The table is one that says how its numbers read, since folding runs what
     // it lowers and running reads rows.
@@ -98,38 +93,17 @@ struct Folding {
         return indexedByTheRun ? nil : head
     }
 
-    // What a path reads here.
+    // What a path reads here. A path calls nothing and makes no closure, so
+    // it lowers against the types alone and reads the table as it stands.
     func read(_ path: Path, at place: Place) async throws -> Value {
-        try await read(.reference(path), at: place)
-    }
-
-    // What an expression reads here, lowered into a table of its own. For what
-    // is folded where no declaration is being read, a path a body writes. A
-    // closure written in one is numbered by nothing this document holds and is
-    // refused where it is lowered.
-    func read(_ expression: Expression, at place: Place) async throws -> Value {
-        var lowering = Lowering(
-            table: resolved.table,
-            rows: resolved.rows,
-            numbering: resolved.numbering,
-            loweredTypes: loweredTypes
-        )
-        let (code, frame) = try lowering.lower(
-            expression,
+        let (code, frame) = try Lowering(loweredTypes: loweredTypes).lower(
+            path,
             reading: names,
             origin: origin,
-            writer: Folding.writer,
             at: place
         )
 
-        // Against the table lowering just grew: what it wrote takes rows of
-        // that table and nothing else answers them.
-        return try await read(
-            code,
-            in: frame,
-            of: resolved.holding(lowering.table, closures: lowering.documents.map(\.closureRows)),
-            at: place
-        )
+        return try await read(code, in: frame, of: resolved, at: place)
     }
 
     // MARK: - Private

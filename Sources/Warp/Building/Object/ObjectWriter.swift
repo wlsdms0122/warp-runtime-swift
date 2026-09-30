@@ -45,12 +45,6 @@ struct ObjectWriter {
     }
 
     func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
-        // A numbering counting from a link's own rows belongs to no document,
-        // so what holds one is not an object and there is none to write.
-        guard let numbering = compiled.numbering.written(dropping: compiled.declared.count) else {
-            throw ObjectUnwritable("the document is numbered by a link's rows, and is no object")
-        }
-
         // A document compiled against an object nobody worked a fingerprint
         // out for cannot say what it is true against, and an object that says
         // less than it leans on is one a cache would hand back wrongly.
@@ -90,7 +84,7 @@ struct ObjectWriter {
             }),
             .answers: keyed(compiled.answers, lowered),
             // What the bodies number their calls from, and their types.
-            .numbering: numbering,
+            .numbering: compiled.numbering.written(dropping: compiled.declared.count),
             .typeNumbering: compiled.typeNumbering.written,
             .variables: .array(try compiled.variables.map { (entry) throws(ObjectUnwritable) -> Value in
                 .array([name(entry.name), try value(entry.value)])

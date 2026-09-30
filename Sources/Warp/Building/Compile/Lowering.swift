@@ -300,23 +300,6 @@ struct Lowering {
         self.loweredTypes = loweredTypes
     }
 
-    // A lowering standing on tables something else holds: an expression
-    // folded beside a document's bodies rather than into a row of its own.
-    init(
-        table: [Linked],
-        rows: [Name: Int],
-        numbering: [Numbering],
-        loweredTypes: LoweredTypeTable
-    ) {
-        self.table = table
-        self.rows = rows
-        self.documents = numbering.map { held in
-            Document(numbering: held, owned: [:], variables: [:], closureRows: [])
-        }
-        self.contractProcedures = [:]
-        self.loweredTypes = loweredTypes
-    }
-
     // MARK: - Public
     // One document laid down: its declarations take the rows after the ones
     // already here, in the order they are handed over, then the closures its
@@ -424,9 +407,8 @@ struct Lowering {
     }
 
     // Lowers one expression read against a frame of constants, as a constant's
-    // own expression is, and as a body's constant path is when it folds. The
-    // frame starts as `names` in slot order and grows with what the
-    // expression declares; the frame says how large it is.
+    // own expression is. The frame starts as `names` in slot order and grows
+    // with what the expression declares; the frame says how large it is.
     mutating func lower(
         _ expression: Expression,
         reading names: [Name],
@@ -444,6 +426,26 @@ struct Lowering {
         let code = try lower(expression, in: scope, on: slots, writer: writer, at: place)
 
         return (code, slots.frame)
+    }
+
+    // Lowers a path read against a frame of constants in slot order, as a
+    // body's constant path is when it folds.
+    func lower(
+        _ path: Path,
+        reading names: [Name],
+        origin: Int,
+        at place: Place
+    ) throws -> (Operation, Frame) {
+        let slots = Slots(origin: origin, variables: [:], constants: [:])
+        var scope = Names()
+
+        for name in names {
+            scope.slots[name] = slots.allocate(name)
+        }
+
+        let (address, _) = try lower(path, in: scope, on: slots, at: place)
+
+        return (.local(address), slots.frame)
     }
 
     // One document's rows with the types in them numbered by that document,
@@ -740,16 +742,13 @@ struct Lowering {
 
         let held = documents[slots.origin].numbering
         let row = table.count
-        let stands: (number: Int, nth: Int)?
 
-        if held.numbersAreRows {
-            stands = nil
-        } else if let given = held.closure(count, of: writer) {
-            stands = given
-        } else if let counted = held.count(of: writer) {
+        guard let stands = held.closure(count, of: writer) else {
+            guard let counted = held.count(of: writer) else {
+                throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
+            }
+
             throw BuildError.unjudged("closure \(count) of a declaration whose document numbered \(counted)", at: place)
-        } else {
-            throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
         }
 
         table.append(
@@ -767,8 +766,6 @@ struct Lowering {
                 in: loweredTypes
             )
         )
-
-        guard let stands else { return .closure(row, captures: inner.captures) }
 
         var taken = documents[slots.origin].closureRows
 
@@ -994,7 +991,7 @@ struct Lowering {
         )
     }
 
-    private mutating func lower(
+    private func lower(
         _ path: Path,
         in scope: Names,
         on slots: Slots,

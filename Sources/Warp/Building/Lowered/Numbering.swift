@@ -13,11 +13,6 @@ import Foundation
 // its own declarations after. A call in its body is one of those numbers and
 // nothing else, so what the document lowers to says nothing about the graph it
 // was linked into, and the same text numbers the same way in every link.
-//
-// What runs while a document is still being compiled is numbered by the
-// compile's table instead. Folding a constant lowers an expression and runs it
-// there and then, and code that never leaves has no link afterwards to resolve
-// it.
 struct Numbering: Sendable {
     // One name a document looks for, by the declared spelling it writes. A
     // document's own declaration is looked for the same way an imported one
@@ -39,20 +34,18 @@ struct Numbering: Sendable {
         case unnumbered
     }
 
-    // What a number is counted from. The document's list is the whole of the
-    // difference: the tables below resolve a spelling either way.
-    //
-    // The closures are a count and not a list. A closure's reference is the
-    // position it stands at, so a row per closure would hold nothing the
+    // MARK: - Property
+    // What the numbers count: the spellings, then the closures.
+    private let spellings: [Name]
+
+    // How many closures this document numbers. A link resolves them by the rows
+    // they took, and a list shorter than this is a document whose bodies are
+    // not all lowered yet. A count and not a list: a closure's reference is
+    // the position it stands at, so a row per closure would hold nothing the
     // count does not already say, and a number read off an object would
     // decide how many of them to stand up.
-    private enum Space: Sendable {
-        case document(spellings: [Name], closures: Int)
-        case table
-    }
+    let closureCount: Int
 
-    // MARK: - Property
-    private let space: Space
     private let called: [Name: Int]
 
     // How many spellings stand in front of the document's own declarations:
@@ -66,24 +59,6 @@ struct Numbering: Sendable {
     // the build happened to lower in.
     private let runs: [(declaration: Closure.Declaration, count: Int)]
 
-    // Whether the numbers here are already rows. A table's own numbering
-    // resolves every number to itself, so what it lowers stands where it was
-    // put rather than where a document said.
-    var numbersAreRows: Bool {
-        guard case .table = space else { return false }
-
-        return true
-    }
-
-    // How many closures this document numbers. A link resolves them by the rows
-    // they took, and a list shorter than this is a document whose bodies are
-    // not all lowered yet.
-    var closureCount: Int {
-        guard case let .document(_, closures) = space else { return 0 }
-
-        return closures
-    }
-
     // Every declaration that wrote a closure here.
     var writers: [Closure.Declaration] {
         runs.map(\.declaration)
@@ -92,9 +67,7 @@ struct Numbering: Sendable {
     // The first number the closures take. What a body carries is a number of
     // this document; which of its closures that is, is the number less this.
     private var opening: Int {
-        guard case let .document(spellings, _) = space else { return 0 }
-
-        return spellings.count
+        spellings.count
     }
 
     // MARK: - Initializer
@@ -111,19 +84,12 @@ struct Numbering: Sendable {
         let counted = closures.filter { _, count in count > 0 }
 
         self.sent = sent.count
-        space = .document(spellings: sent + declared, closures: counted.values.reduce(0, +))
+        spellings = sent + declared
+        closureCount = counted.values.reduce(0, +)
         called = Self.placed(sent, from: 0)
             .merging(Self.placed(declared, from: sent.count)) { _, own in own }
         runs = counted.sorted { one, other in one.key < other.key }
             .map { declaration, count in (declaration: declaration, count: count) }
-    }
-
-    // A table's own. The number a body carries here is the row.
-    init(rows: [Name: Int]) {
-        space = .table
-        called = rows
-        sent = 0
-        runs = []
     }
 
     // Read back beside the spellings the document declares, because what a
@@ -182,10 +148,8 @@ struct Numbering: Sendable {
     // asks where that declaration's run begins.
     // The spellings this document declares are written once, beside the
     // table, so only what it sends and what it counted stand here.
-    func written(dropping declared: Int) -> Value? {
-        guard case let .document(spellings, _) = space else { return nil }
-
-        return .array([
+    func written(dropping declared: Int) -> Value {
+        .array([
             .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
             .array(runs.map { run in .array([ObjectWriter().declaration(run.declaration), .int(run.count)]) })
         ])
@@ -195,17 +159,13 @@ struct Numbering: Sendable {
     // link's resolution and moves with the link; that it was given is the
     // document's own fact and does not.
     func gave(_ number: Int) -> Bool {
-        guard case let .document(spellings, closures) = space else { return true }
-
-        return number >= 0 && number < spellings.count + closures
+        number >= 0 && number < spellings.count + closureCount
     }
 
     // Which of this document's own declarations a number stands at, or
     // nothing where it stands for what the document sends or for a closure.
     func declaring(_ number: Int) -> Int? {
-        guard case let .document(spellings, _) = space, number >= sent, number < spellings.count else {
-            return nil
-        }
+        guard number >= sent, number < spellings.count else { return nil }
 
         return number - sent
     }
@@ -237,12 +197,7 @@ struct Numbering: Sendable {
     // it stands for a spelling instead. A body carries reference numbers, and
     // which closure one of them is, is this document's own arithmetic.
     func lifted(_ number: Int) -> Int? {
-        guard case let .document(spellings, closures) = space,
-              number >= spellings.count,
-              number < spellings.count + closures
-        else {
-            return nil
-        }
+        guard number >= spellings.count, number < spellings.count + closureCount else { return nil }
 
         return number - spellings.count
     }
@@ -255,8 +210,7 @@ struct Numbering: Sendable {
     // may name it, and a private declaration is in no table of the link's
     // names.
     func row(_ number: Int, rows: [Name: Int], own: [Name: Int], closures: [Int]) -> Resolution {
-        guard case let .document(spellings, standing) = space else { return .row(number) }
-        guard number >= 0, number < spellings.count + standing else { return .unnumbered }
+        guard number >= 0, number < spellings.count + closureCount else { return .unnumbered }
 
         guard number >= spellings.count else {
             let declared = spellings[number]
@@ -276,8 +230,7 @@ struct Numbering: Sendable {
     }
 
     // Which row of a link each number this document gave stands for, in
-    // number order. A numbering that took the link's rows gave no numbers of
-    // its own, so it resolves nothing.
+    // number order.
     //
     // Read once per number rather than once per body standing on one: a
     // document gives a number to a name, and how many bodies write that name
@@ -287,9 +240,7 @@ struct Numbering: Sendable {
     // the rows they took, which is a list it already holds. A number standing
     // at no row resolves to nil.
     func resolved(rows: [Name: Int], own: [Name: Int]) -> [Int?] {
-        guard case .document = space else { return [] }
-
-        return (0..<opening).map { number in
+        (0..<opening).map { number in
             guard case let .row(row) = row(number, rows: rows, own: own, closures: []) else { return nil }
 
             return row
