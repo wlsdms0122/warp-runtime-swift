@@ -224,9 +224,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What one element of bytes is: the range `std` names `byte`.
-    static let byteElement = LoweredType.ranged(.whole(from: 0, to: .through(255)))
-
     // What a slot said about the procedures it holds. A body applying a name a
     // slot declared this way is judged on the slot's word, since the slot is what
     // says which values may arrive there. An array or a dictionary of them says it
@@ -284,7 +281,7 @@ indirect enum LoweredType: Sendable, Equatable {
             self = .string
 
         case .bytes:
-            self = .array(.byteElement)
+            self = TypeExpression.bytes.lowered(in: table)
 
         // A procedure that already exists as a value says nothing about itself
         // that a walk can read.
