@@ -115,7 +115,7 @@ struct Judged: Sendable {
             implementation = .body(body, frame)
 
         case let .native(procedure):
-            implementation = Self.native(procedure)
+            implementation = .native(sending: procedure.sending)
         }
 
         do {
@@ -330,13 +330,6 @@ struct Judged: Sendable {
             closure: closure,
             in: table
         )
-    }
-
-    // What this row was compiled against, where it was left to native code.
-    // A body reads and sends nothing a procedure declared, so it answers with
-    // neither.
-    private static func native(_ procedure: Native) -> Implementation {
-        .native(sending: procedure.sending)
     }
 
     // A row whose document left it to native code, and a link that brought
