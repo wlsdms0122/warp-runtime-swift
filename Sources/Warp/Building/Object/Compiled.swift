@@ -161,7 +161,7 @@ public struct Compiled: Sendable, Declaring {
     // spell. And a value holding a closure that holds a box of the run that
     // folded it holds what no object carries. Which one it was is what
     // `object()` says.
-    public var written: Value? {
+    var written: Value? {
         try? object()
     }
 

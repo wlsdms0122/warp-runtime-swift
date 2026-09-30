@@ -9,10 +9,8 @@ import Foundation
 
 // Checks that every name a procedure reads is one it can see, before it runs.
 //
-// The walk is structural, and it stays structural through call: a message
-// carries expressions whose insides this can read, so what exists inside a
-// caller's body is read here rather than asked of whatever answers the
-// selector. Which means validation never consults the procedure table. A document is
+// The walk is structural: a call's arguments are expressions whose insides
+// this reads, so validation never consults the procedure table. A document is
 // checked against itself, before anything is resolved.
 public struct Validator: Sendable {
     // MARK: - Property
@@ -21,17 +19,10 @@ public struct Validator: Sendable {
     }
 
     // MARK: - Public
-    // The door for a caller holding statements it assembled itself, without a
-    // document: the same gate the load path passes, against the heads visible
-    // where the body will run.
-    public func validate(body: Body, visible: Set<Name>) throws {
+    // Statements assembled without a document: the same gate the load path
+    // passes, against the heads visible where the body will run.
+    func validate(body: Body, visible: Set<Name>) throws {
         try validate(body, visible: visible, at: .given("lowered"))
-    }
-
-    // A single expression, checked where a caller is about to evaluate one it
-    // assembled itself.
-    public func validate(_ expression: Expression, visible: Set<Name>) throws {
-        try validate(expression, visible: visible, at: .given("expression"))
     }
 
     // Every declaration a module makes, in name order so the first refusal is

@@ -38,7 +38,7 @@ struct ObjectWritingTests {
         // document of the specification's is one an object can hold, so one
         // that answers nothing here is the failure rather than a case to skip.
         let bytes = try compiled.map { one in
-            guard let written = one.written else { throw ObjectNotWritten() }
+            guard let written = try? one.object() else { throw ObjectNotWritten() }
 
             return try BinaryEncoding().data(from: written)
         }
@@ -48,7 +48,7 @@ struct ObjectWritingTests {
 
         // Then. One object is one writing, both ways.
         for (before, after) in zip(bytes, read) {
-            #expect(before == (try? BinaryEncoding().data(from: after.written ?? .null)), "\(sut.name)")
+            #expect(before == (try? BinaryEncoding().data(from: (try? after.object()) ?? .null)), "\(sut.name)")
         }
 
         // And the program those objects build answers what the written ones
