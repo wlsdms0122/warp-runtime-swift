@@ -98,8 +98,6 @@ struct ClaimChecker {
         var held = claims.reduce(
             into: contracts.keys.reduce(into: [Name: Set<Name>]()) { table, contract in table[contract] = [] }
         ) { table, placed in
-            guard table[placed.held.contract] != nil else { return }
-
             table[placed.held.contract]?.insert(placed.held.type)
         }
         var table: TypeTable
