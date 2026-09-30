@@ -19,10 +19,16 @@ enum NumericPair: Int, ParameterSet {
     var declared: Parameter {
         switch self {
         case .lhs:
-            return Parameter(name: "lhs", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+            return Parameter(
+                name: "lhs",
+                type: .parameter(name: "N", constraints: ["std.Numeric"])
+            )
 
         case .rhs:
-            return Parameter(name: "rhs", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+            return Parameter(
+                name: "rhs",
+                type: .parameter(name: "N", constraints: ["std.Numeric"])
+            )
         }
     }
 

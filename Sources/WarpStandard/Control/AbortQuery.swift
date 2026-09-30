@@ -8,16 +8,16 @@
 import Foundation
 import Warp
 
-// Leaving instead of answering. The only procedure that never returns, which is what
-// `returns: never` on its declaration says and what lets the arm that leaves
-// stay out of the type the arm that stays decides.
+// Failing on purpose instead of answering. The only procedure that never
+// returns, which is what `returns: never` on its declaration says and what lets
+// the arm that fails stay out of the type the arm that stays decides.
 //
-// The refusal it raises carries the recoverable marker, so `attempt` around it
+// The failure it raises carries the recoverable marker, so `attempt` around it
 // catches it and nothing else does.
 struct AbortQuery: Query {
-    // What this takes: the message it refuses with. Anything spells, so a
-    // refusal can name what it was holding rather than only a sentence
-    // written ahead of time. Null spells as `null`, and a refusal saying that
+    // What this takes: the message it fails with. Anything spells, so a
+    // failure can name what it was holding rather than only a sentence
+    // written ahead of time. Null spells as `null`, and a failure saying that
     // word would be saying nothing, so null says `aborted`.
     enum Parameters: Int, ParameterSet {
         case message
@@ -37,7 +37,7 @@ struct AbortQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         let message = question[.message]
 
         guard message != .null else {

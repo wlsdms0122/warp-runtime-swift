@@ -45,7 +45,7 @@ public extension Module {
                     implementation: .query(DividedByQuery())
                 ),
                 "std.math.remainder": Procedure(
-                    description: "What is left of a whole division.",
+                    description: "What is left of a division truncated toward zero.",
                     signature: Signature(
                         of: RemainderQuery.self,
                         returns: .parameter(name: "N", constraints: ["std.Numeric"])
@@ -53,7 +53,7 @@ public extension Module {
                     implementation: .query(RemainderQuery())
                 ),
                 "std.math.floored": Procedure(
-                    description: "The whole number at or below this one.",
+                    description: "The whole number at or below a number.",
                     signature: Signature(of: FlooredQuery.self, returns: .int),
                     implementation: .query(FlooredQuery())
                 ),
@@ -63,7 +63,7 @@ public extension Module {
                     implementation: .query(RoundedQuery())
                 ),
                 "std.math.lessThan": Procedure(
-                    description: "Whether this orders before another.",
+                    description: "Whether one orders before the other.",
                     signature: Signature(of: LessThanQuery.self, returns: .bool),
                     implementation: .query(LessThanQuery())
                 )
