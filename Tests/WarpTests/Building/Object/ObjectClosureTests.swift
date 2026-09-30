@@ -380,7 +380,7 @@ struct ObjectClosureTests {
     private func holdingInBody(_ closure: Closure, in compiled: [Compiled]) throws -> [Compiled] {
         try compiled.map { one in
             guard let entry = one.declared.firstIndex(of: "app.entry"),
-                  case let .body(_, frame) = one.table[entry].implementation
+                case let .body(_, frame) = one.table[entry].implementation
             else {
                 return one
             }

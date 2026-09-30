@@ -244,9 +244,8 @@ struct ControlFlowTests {
             element: "element",
             body: [
                 Statement(binding: .assignment([.key("sum")]), expression: .call(
-                        Call(selector: "std.math.plus", arguments: [reference("sum"), reference("element")])
-                    )
-                )
+                    Call(selector: "std.math.plus", arguments: [reference("sum"), reference("element")])
+                ))
             ]
         )
 
@@ -272,9 +271,8 @@ struct ControlFlowTests {
         let sut = Warp.Expression.attempt(
             Block(body: [
                 Statement(binding: .constant("boom"), expression: .call(
-                        Call(selector: "app.fail", arguments: [.literal(.bool(false))])
-                    )
-                )
+                    Call(selector: "app.fail", arguments: [.literal(.bool(false))])
+                ))
             ]),
             rescue: Block(body: [], result: .literal(.string("recovered"))),
             failure: "failure"

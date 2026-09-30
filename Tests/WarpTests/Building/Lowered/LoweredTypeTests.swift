@@ -197,7 +197,7 @@ struct LoweredTypeTests {
 
         // Then. The parameter naming the nullable type need not be given.
         guard case let .record(fields)? = table["app.Kinds"],
-              case let .procedure(soft?, _, _)? = fields["soft"]
+            case let .procedure(soft?, _, _)? = fields["soft"]
         else {
             Issue.record("the declared record holds its procedure type")
 

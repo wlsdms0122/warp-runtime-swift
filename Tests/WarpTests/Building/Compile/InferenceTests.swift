@@ -528,9 +528,8 @@ struct InferenceTests {
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(
-                                Call(selector: "wants", arguments: [reference("kept")])
-                            )
-                        )
+                            Call(selector: "wants", arguments: [reference("kept")])
+                        ))
                     ]
                 ),
                 "wants": Procedure(

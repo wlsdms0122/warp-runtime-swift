@@ -35,9 +35,9 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(frame) = implementation[2]
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(frame) = implementation[2]
         else {
             Issue.record("an object writes a row's frame beside its body")
 
@@ -64,7 +64,7 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case let .array(types) = parts["types"],
-              let first = types.first
+            let first = types.first
         else {
             Issue.record("an object is written as its parts under their keys")
 
@@ -127,8 +127,8 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case var .array(numbering) = parts["typeNumbering"],
-              case let .array(types) = numbering[0],
-              let first = types.first
+            case let .array(types) = numbering[0],
+            let first = types.first
         else {
             Issue.record("an object writes its type numbering as a part")
 
@@ -166,11 +166,11 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(frame) = implementation[2],
-              case let .int(size) = frame[0], size > 0,
-              case let .array(parameters) = frame[1], parameters.isEmpty
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(frame) = implementation[2],
+            case let .int(size) = frame[0], size > 0,
+            case let .array(parameters) = frame[1], parameters.isEmpty
         else {
             Issue.record("a row with a local stands on a slot no parameter holds")
 
@@ -224,12 +224,12 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(answers) = parts["answers"],
-              case var .array(entry) = answers[0],
-              case var .array(answer) = entry[1],
-              case var .array(record) = answer[1],
-              case var .array(layout) = record[0],
-              case let .array(names) = layout[1],
-              names.count > 1
+            case var .array(entry) = answers[0],
+            case var .array(answer) = entry[1],
+            case var .array(record) = answer[1],
+            case var .array(layout) = record[0],
+            case let .array(names) = layout[1],
+            names.count > 1
         else {
             Issue.record("a declaration that wrote no answer stands one as a lowered record")
 
@@ -258,11 +258,11 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(frame) = implementation[2],
-              case let .array(names) = frame[4],
-              !names.isEmpty
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(frame) = implementation[2],
+            case let .array(names) = frame[4],
+            !names.isEmpty
         else {
             Issue.record("an object writes a row's frame beside its body")
 
@@ -305,13 +305,13 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(body) = implementation[1],
-              case var .array(result) = body[1],
-              case var .array(operation) = result[0],
-              case var .array(call) = operation[1],
-              case let .array(arguments) = call[1]
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(operation) = result[0],
+            case var .array(call) = operation[1],
+            case let .array(arguments) = call[1]
         else {
             Issue.record("an object writes a body whose result is a call")
 
@@ -345,7 +345,7 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case var .array(declared) = parts["rows"],
-              case var .array(row) = declared.first
+            case var .array(row) = declared.first
         else {
             Issue.record("an object writes its declared rows as a part")
 
@@ -379,7 +379,7 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case let .array(types) = parts["types"],
-              types.count == 2
+            types.count == 2
         else {
             Issue.record("an object writes its declared types in name order")
 
@@ -426,14 +426,14 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(body) = implementation[1],
-              case var .array(result) = body[1],
-              case var .array(operation) = result[0],
-              case .int(9) = operation[0],
-              case let .array(keeps) = operation[4],
-              keeps.count == 1
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(operation) = result[0],
+            case .int(9) = operation[0],
+            case let .array(keeps) = operation[4],
+            keeps.count == 1
         else {
             Issue.record("an object writes a loop that keeps a run of its slots")
 
@@ -492,9 +492,9 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(claims) = parts["claims"],
-              case var .array(entry) = claims[0],
-              case let .array(contracts) = entry[1],
-              contracts.count == 2
+            case var .array(entry) = claims[0],
+            case let .array(contracts) = entry[1],
+            contracts.count == 2
         else {
             Issue.record("an object writes which contracts each type answers")
 
@@ -543,8 +543,8 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(closing) = numbering[1],
-              closing.count == 2
+            case let .array(closing) = numbering[1],
+            closing.count == 2
         else {
             Issue.record("an object writes where each declaration's closures begin")
 
@@ -591,8 +591,8 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(sent) = numbering[0],
-              sent.count == 2
+            case let .array(sent) = numbering[0],
+            sent.count == 2
         else {
             Issue.record("an object writes what its document sends")
 
@@ -680,9 +680,9 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(counts) = numbering[1],
-              case let .array(entry) = counts.first,
-              counts.count == 1
+            case let .array(counts) = numbering[1],
+            case let .array(entry) = counts.first,
+            counts.count == 1
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
@@ -759,7 +759,7 @@ struct ObjectReadingTests {
         let compiled = try await builder.compile([sut] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.identity != nil }),
-              let written = mine.written
+            let written = mine.written
         else {
             Issue.record("a document with an identity compiles to an object standing against it")
 
@@ -844,8 +844,8 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(counts) = numbering[1],
-              counts.count == 1
+            case let .array(counts) = numbering[1],
+            counts.count == 1
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
@@ -885,7 +885,7 @@ struct ObjectReadingTests {
         let compiled = try await builder.compile([module] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
-              case let .dictionary(written) = mine.written
+            case let .dictionary(written) = mine.written
         else {
             throw ObjectMissing()
         }

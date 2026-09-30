@@ -176,9 +176,8 @@ struct TypeTests {
         let entry = Procedure(
             body: [
                 Statement(binding: .constant("said"), expression: .call(
-                        Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
-                    )
-                )
+                    Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
+                ))
             ]
         )
 
@@ -207,9 +206,8 @@ struct TypeTests {
         let entry = Procedure(
             body: [
                 Statement(binding: .constant("said"), expression: .call(
-                        Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
-                    )
-                )
+                    Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
+                ))
             ]
         )
 

@@ -110,7 +110,7 @@ struct FieldPlaceTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "point", type: .named("Point"))]),
                     body: [],
-            result: .reference([.key("point"), .key("y")])
+                    result: .reference([.key("point"), .key("y")])
                 )
             ]
         )

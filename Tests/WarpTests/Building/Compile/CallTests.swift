@@ -21,7 +21,7 @@ struct CallTests {
     @Test("a library procedure, a native procedure and a procedure are sent the same way")
     func threeKindsOfProcedureAreOneExpression() async throws {
         // Given
-                let echo = Procedure(
+        let echo = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "text", type: .string)],
                 returns: .record(["said": .string])
@@ -31,17 +31,14 @@ struct CallTests {
         )
         let sut: Body = [
             Statement(binding: .constant("counted"), expression: .call(
-                    Call(selector: "std.collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
-                )
-            ),
+                Call(selector: "std.collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
+            )),
             Statement(binding: .constant("shouted"), expression: .call(
-                    Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
-                )
-            ),
+                Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
+            )),
             Statement(binding: .constant("echoed"), expression: .call(
-                    Call(selector: "echo", arguments: [.literal(.string("back"))])
-                )
-            )
+                Call(selector: "echo", arguments: [.literal(.string("back"))])
+            ))
         ]
 
         // When
@@ -155,9 +152,8 @@ struct CallTests {
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(
-                        Call(selector: "app.shout", arguments: [.literal(.int(7))])
-                    )
-                )
+                    Call(selector: "app.shout", arguments: [.literal(.int(7))])
+                ))
             ]
         )
 
@@ -235,32 +231,30 @@ struct CallTests {
     func recursiveProcedureBuildsOnce() async throws {
         // Given
         let countdown = Procedure(
-                signature: Signature(
-                    parameters: [Parameter(name: "n", type: .int)],
-                    returns: .record(["done": .bool])
-                ),
-                body: [
-                    Statement(
-                        expression: .conditional(
-                            differs(reference("n"), .literal(.int(0))),
-                            then: [
-                                Statement(binding: .constant("recur"), expression: .call(
-                                        Call(selector: "countdown", arguments: [.literal(.int(0))])
-                                    )
-                                )
-                            ],
-                            else: nil
-                        )
+            signature: Signature(
+                parameters: [Parameter(name: "n", type: .int)],
+                returns: .record(["done": .bool])
+            ),
+            body: [
+                Statement(
+                    expression: .conditional(
+                        differs(reference("n"), .literal(.int(0))),
+                        then: [
+                            Statement(binding: .constant("recur"), expression: .call(
+                                Call(selector: "countdown", arguments: [.literal(.int(0))])
+                            ))
+                        ],
+                        else: nil
                     )
-                ],
+                )
+            ],
             result: .record(["done": .literal(.bool(true))])
         )
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("run"), expression: .call(
-                        Call(selector: "countdown", arguments: [.literal(.int(1))])
-                    )
-                )
+                    Call(selector: "countdown", arguments: [.literal(.int(1))])
+                ))
             ],
             result: .record(["done": reference("run", "done")])
         )

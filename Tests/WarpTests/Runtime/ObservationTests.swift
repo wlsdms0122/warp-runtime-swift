@@ -399,9 +399,8 @@ struct ObservationTests {
                                 Block(
                                     body: [
                                         Statement(binding: .constant("doomed"), expression: .call(
-                                                Call(selector: "app.fail", arguments: [.literal(.bool(true))])
-                                            )
-                                        )
+                                            Call(selector: "app.fail", arguments: [.literal(.bool(true))])
+                                        ))
                                     ]
                                 ),
                                 rescue: Block(body: [], result: .literal(.string("caught"))),

@@ -105,9 +105,7 @@ struct ReturnTypeTests {
         // Given
         let sut = try Module(
             types: [
-                "Task": .record([
-                        "id": .string
-                    ])
+                "Task": .record(["id": .string])
             ],
             procedures: [
                 "entry": Procedure(
@@ -117,11 +115,8 @@ struct ReturnTypeTests {
                     ),
                     body: [
                         Statement(binding: .constant("made"), expression: .array([
-                                    .record([
-                                            "id": .literal(.string("a"))
-                                        ])
-                                ])
-                        )
+                            .record(["id": .literal(.string("a"))])
+                        ]))
                     ],
                     result: .reference([.key("made")])
                 )

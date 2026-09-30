@@ -226,14 +226,15 @@ struct BuilderTests {
                     access: .public,
                     body: [
                         Statement(
-                            expression: .conditional(equals(
-                                        .literal(.string("yes")),
-                                        .literal(.string("yes"))
-                                        ), then: [
-                                        Statement(binding: .constant("safe"), expression: .literal(.string("fine")))
-                                    ], else: [
-                                        Statement(binding: .constant("risky"), expression: .call(Call(selector: "missing")))
-                                    ])
+                            expression: .conditional(
+                                equals(.literal(.string("yes")), .literal(.string("yes"))),
+                                then: [
+                                    Statement(binding: .constant("safe"), expression: .literal(.string("fine")))
+                                ],
+                                else: [
+                                    Statement(binding: .constant("risky"), expression: .call(Call(selector: "missing")))
+                                ]
+                            )
                         )
                     ]
                 )
@@ -379,9 +380,8 @@ struct BuilderTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("got"), expression: .call(
-                                Call(selector: "plus", arguments: [.literal(.int(1)), .literal(.int(2))])
-                            )
-                        )
+                            Call(selector: "plus", arguments: [.literal(.int(1)), .literal(.int(2))])
+                        ))
                     ],
                     result: .reference([.key("got"), .key("field")])
                 )

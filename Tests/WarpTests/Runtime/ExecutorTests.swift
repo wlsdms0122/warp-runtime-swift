@@ -260,12 +260,13 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .variable("maybe"), expression: .literal(.null)),
                         Statement(
-                            expression: .conditional(equals(
-                                        .reference([.key("kind")]),
-                                        .literal(.string("a"))
-                                        ), then: [
-                                        Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made")))
-                                    ], else: nil)
+                            expression: .conditional(
+                                equals(.reference([.key("kind")]), .literal(.string("a"))),
+                                then: [
+                                    Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made")))
+                                ],
+                                else: nil
+                            )
                         ),
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),

@@ -809,9 +809,8 @@ struct ConstraintTests {
         let sut = try Module(
             types: [
                 "Callback": .procedure(ProcedureType(
-                        parameters: [.parameter(name: "T", constraints: ["Scalar"])]
-                    )
-                )
+                    parameters: [.parameter(name: "T", constraints: ["Scalar"])]
+                ))
             ],
             constraints: ["Scalar": [.int, .string]],
             procedures: [

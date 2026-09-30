@@ -208,9 +208,8 @@ struct ValidationTests {
         let arm: Body = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
         let sut: Body = [
             Statement(binding: .constant("said"), expression: .call(
-                    Call(selector: "app.shout", arguments: [.conditional(.literal(.bool(true)), then: arm, else: nil)])
-                )
-            )
+                Call(selector: "app.shout", arguments: [.conditional(.literal(.bool(true)), then: arm, else: nil)])
+            ))
         ]
 
         // When / Then. Bare, and held inside a value type alike

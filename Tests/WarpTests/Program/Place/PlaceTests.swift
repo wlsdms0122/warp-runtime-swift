@@ -53,9 +53,8 @@ struct PlaceTests {
         // thing is wrong and does not say which of the several written there.
         let sut = place(
             refusing: Statement(binding: .constant("sent"), expression: .call(
-                    Call(selector: "send", arguments: [reference("missing")])
-                )
-            )
+                Call(selector: "send", arguments: [reference("missing")])
+            ))
         )
 
         // Then
@@ -186,9 +185,8 @@ struct PlaceTests {
             procedures: [
                 entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(
-                            Call(selector: "helper", arguments: [.literal(.string("x"))])
-                        )
-                    )
+                        Call(selector: "helper", arguments: [.literal(.string("x"))])
+                    ))
                 ]),
                 "helper": Procedure(
                     signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
@@ -203,9 +201,8 @@ struct PlaceTests {
                 procedures: [
                     entryName: Procedure(access: .public, body: [
                         Statement(binding: .constant("sent"), expression: .call(
-                                Call(selector: "helper", arguments: [reference("missing")])
-                            )
-                        )
+                            Call(selector: "helper", arguments: [reference("missing")])
+                        ))
                     ])
                 ]
             )
@@ -241,9 +238,8 @@ struct PlaceTests {
                                 Block(body: [mayFail()]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("sent"), expression: .call(
-                                            Call(selector: selector, arguments: [argument])
-                                        )
-                                    )
+                                        Call(selector: selector, arguments: [argument])
+                                    ))
                                 ]),
                                 failure: "guarded"
                             )
@@ -423,9 +419,8 @@ struct PlaceTests {
         let sut = try #require(
             place(
                 refusing: Statement(binding: .constant("sent"), expression: .call(
-                        Call(selector: "send", arguments: [reference("missing")])
-                    )
-                )
+                    Call(selector: "send", arguments: [reference("missing")])
+                ))
             )
         )
 

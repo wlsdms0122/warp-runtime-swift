@@ -248,9 +248,8 @@ struct ClosureTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("quiet"), expression: .closure(
-                                Procedure(body: [], result: .literal(.string("read")))
-                            )
-                        )
+                            Procedure(body: [], result: .literal(.string("read")))
+                        ))
                     ],
                     result: .call(Call(selector: "twice", arguments: [reference("quiet")]))
                 )
@@ -321,9 +320,8 @@ struct ClosureTests {
         let answer = try await answer(
             of: [
                 Statement(binding: .constant("hello"), expression: .call(
-                        Call(selector: "makeGreeter", arguments: [.literal(.string("hello"))])
-                    )
-                ),
+                    Call(selector: "makeGreeter", arguments: [.literal(.string("hello"))])
+                )),
                 Statement(binding: .constant("said"), expression: .apply(
                         reference("hello"),
                         arguments: [.literal(.string("warp"))]

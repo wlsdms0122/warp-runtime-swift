@@ -119,9 +119,8 @@ struct SwiftAuthoringTests {
         let procedure = Procedure(
             body: [
                 Statement(binding: .constant("shout"), expression: .call(
-                        Call(selector: "app.shout", arguments: [.literal(.string("hey"))])
-                    )
-                )
+                    Call(selector: "app.shout", arguments: [.literal(.string("hey"))])
+                ))
             ],
             result: .record(["shout": .reference([.key("shout")])])
         )
@@ -145,17 +144,14 @@ struct SwiftAuthoringTests {
             body: [
                 Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
                 Statement(binding: .constant("counted"), expression: .call(
-                        Call(selector: "std.collection.count", arguments: [.reference([.key("names")])])
-                    )
-                ),
+                    Call(selector: "std.collection.count", arguments: [.reference([.key("names")])])
+                )),
                 Statement(binding: .constant("shouted"), expression: .call(
-                        Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
-                    )
-                ),
+                    Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
+                )),
                 Statement(binding: .constant("called"), expression: .call(
-                        Call(selector: "echo", arguments: [.literal(.string("yo"))])
-                    )
-                )
+                    Call(selector: "echo", arguments: [.literal(.string("yo"))])
+                ))
             ],
             result: .record([
                 "counted": .reference([.key("counted")]),
