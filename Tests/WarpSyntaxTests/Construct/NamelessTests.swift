@@ -94,7 +94,7 @@ struct NamelessTests {
         // the structure: fragments read on their own pass through no
         // validation, so this is where the fact is caught for them
         #expect {
-            try loader.statements(from: [
+            try loader.body(from: [
                 [
                     "let": "done",
                     "value": ["conditional": [
@@ -115,7 +115,7 @@ struct NamelessTests {
         // reading holds it: fragments pass through no validation, and the rule
         // must not wait for a link they may never reach
         #expect {
-            try loader.statements(from: [
+            try loader.body(from: [
                 ["value": ["return": 1]],
                 ["let": "unreachable", "value": 2]
             ])

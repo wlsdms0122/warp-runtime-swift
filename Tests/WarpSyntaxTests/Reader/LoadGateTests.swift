@@ -178,12 +178,12 @@ struct LoadGateTests {
         ])
 
         // When
-        let statements = try loader.statements(from: carried)
+        let body = try loader.body(from: carried)
 
         // Then
-        #expect(statements.count == 1)
-        #expect(statements[0].binding == .constant("greet"))
-        #expect(statements[0].expression.constantValue == .string("hello there"))
+        #expect(body.statements.count == 1)
+        #expect(body.statements[0].binding == .constant("greet"))
+        #expect(body.statements[0].expression.constantValue == .string("hello there"))
     }
 
     // MARK: - Public
