@@ -1,6 +1,8 @@
 //
 //  UnheldClaimTests.swift
-//  Warp
+//  WarpTests
+//
+//  Created by JSilver on 9/10/26.
 //
 
 import Testing
@@ -63,7 +65,7 @@ struct UnheldClaimTests {
                                 as: .named("bank.Account"),
                                 optional: false
                             )
-                        ),
+                        )
                     ],
                     result: .reference([.key("account"), .key("balance")])
                 )

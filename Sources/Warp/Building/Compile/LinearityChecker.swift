@@ -113,7 +113,7 @@ struct LinearityChecker {
                 // A borrowed name written bare is judged here, before the walk,
                 // because the walk refuses one wherever a value leaves by and
                 // a second name for the same borrow is not that.
-                if case (let borrowed, .borrowed)? = operand(statement.expression, held: held) {
+                if case let (borrowed, .borrowed)? = operand(statement.expression, held: held) {
                     switch statement.binding {
                     case let .constant(name, _)?:
                         held.borrowed.insert(name)
@@ -151,7 +151,7 @@ struct LinearityChecker {
 
             guard let result = block.result else { return held }
 
-            if case (let name, .borrowed)? = operand(result, held: held) {
+            if case let (name, .borrowed)? = operand(result, held: held) {
                 throw refusal(answered: name)
             }
 
@@ -366,7 +366,7 @@ struct LinearityChecker {
                 return rescued
 
             case let .leave(leave):
-                if let value = leave.value, case (let name, .borrowed)? = operand(value, held: held) {
+                if let value = leave.value, case let (name, .borrowed)? = operand(value, held: held) {
                     throw refusal(answered: name)
                 }
 

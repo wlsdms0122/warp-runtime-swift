@@ -127,7 +127,7 @@ struct LoopTests {
                     "let": "gate",
                     "value": ["loop": [
                         "while": ["of": ["ref": "gate.index"], "equal": 0],
-                        "body": [["let": "format", "value": "retried"]],
+                        "body": [["let": "format", "value": "retried"]]
                     ]
                 ]]
             ]

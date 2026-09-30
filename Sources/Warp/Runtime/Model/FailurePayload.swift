@@ -20,7 +20,7 @@ public enum FailurePayload {
     public static let declared = TypeExpression.record([
         "type": .string,
         "message": .string,
-        "details": .dictionary(.any),
+        "details": .dictionary(.any)
     ])
 
     // MARK: - Initializer

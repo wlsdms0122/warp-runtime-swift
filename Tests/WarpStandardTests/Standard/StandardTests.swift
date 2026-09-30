@@ -977,7 +977,7 @@ struct StandardTests {
                                 Call(selector: "wants", arguments: [reference("either")])
                             )
                         )
-                    ],
+                    ]
                 ),
                 "app.wants": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .int)]),
