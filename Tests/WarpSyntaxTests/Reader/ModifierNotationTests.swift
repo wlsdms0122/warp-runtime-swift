@@ -12,6 +12,9 @@ import Warp
 
 @Suite("The procedures a slot writes about itself")
 struct ModifierNotationTests {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Test
     @Test("a mark stands in front of the whole type", arguments: [
         ("inout int", TypeExpression.inout(.int)),
         ("inout int?", .inout(.nullable(.int))),
@@ -291,4 +294,7 @@ struct ModifierNotationTests {
         )
         #expect(try Writer(registry: loader.registry).value(of: module) == written)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

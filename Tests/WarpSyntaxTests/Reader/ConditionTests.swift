@@ -160,19 +160,6 @@ struct ConditionTests {
         }
     }
 
-    // MARK: - Private
-    // A fold against the standard vocabulary as a caller gets it: built, so
-    // the procedures written in Warp answer here the way the native ones do.
-    private func folding(_ bindings: [Name: Value]) async throws -> Folding {
-        Folding(
-            bindings: bindings,
-            in: try await Builder().build(
-                [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
-                    + Module.standard
-            )
-        )
-    }
-
     @Test("validation covers both sides of a predicate")
     func validationCoversBothSides() {
         // Given
@@ -185,5 +172,19 @@ struct ConditionTests {
         #expect(validates(condition, visible: ["left", "outer"]))
         #expect(!validates(condition, visible: ["left"]))
         #expect(!validates(condition, visible: ["outer"]))
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // A fold against the standard vocabulary as a caller gets it: built, so
+    // the procedures written in Warp answer here the way the native ones do.
+    private func folding(_ bindings: [Name: Value]) async throws -> Folding {
+        Folding(
+            bindings: bindings,
+            in: try await Builder().build(
+                [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
+                    + Module.standard
+            )
+        )
     }
 }

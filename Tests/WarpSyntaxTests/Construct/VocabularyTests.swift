@@ -15,10 +15,72 @@ import WarpStandard
 // registration, namespace and lookup order. These are the facts that follow.
 @Suite("Vocabulary is modules")
 struct VocabularyTests {
+    private struct FirstQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .array(.any)) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            guard case let .array(elements) = question[.of] else { return nil }
+
+            return elements.first
+        }
+
+        // MARK: - Private
+    }
+
+    private struct LongerThanQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+            case value
+
+            // MARK: - Property
+            var declared: Parameter {
+                switch self {
+                case .of:
+                    return Parameter(name: "of", type: .string)
+
+                case .value:
+                    return Parameter(name: "value", type: .int)
+                }
+            }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            guard
+                case let .string(text) = question[.of],
+                case let .int(limit) = question[.value]
+            else {
+                return nil
+            }
+
+            return .bool(text.count > limit)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let loader = Loader.testing
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a procedure is a declaration, so a module can add one")
     func moduleAddsProcedures() async throws {
@@ -90,59 +152,7 @@ struct VocabularyTests {
             try ConstructRegistry.standard.registering(LoopForm.self)
         }
     }
-}
 
-// MARK: - Procedures a test brings
-
-private struct FirstQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case of
-
-        var declared: Parameter { Parameter(name: "of", type: .array(.any)) }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard case let .array(elements) = question[.of] else { return nil }
-
-        return elements.first
-    }
-
     // MARK: - Private
-}
-
-private struct LongerThanQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case of
-        case value
-
-        var declared: Parameter {
-            switch self {
-            case .of:
-                return Parameter(name: "of", type: .string)
-
-            case .value:
-                return Parameter(name: "value", type: .int)
-            }
-        }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard
-            case let .string(text) = question[.of],
-            case let .int(limit) = question[.value]
-        else {
-            return nil
-        }
-
-        return .bool(text.count > limit)
-    }
-
-    // MARK: - Private
-
 }

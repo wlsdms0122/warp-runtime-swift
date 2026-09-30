@@ -15,6 +15,8 @@ import Testing
 // that waits for the next value and a count that opens the container part.
 @Suite("Nesting is counted alike at every door")
 struct NestingCountTests {
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("the value model counts the empty container at the bottom")
     func theValueModelCountsTheEmptyContainer() {
@@ -62,6 +64,7 @@ struct NestingCountTests {
         }
     }
 
+    // MARK: - Public
     // MARK: - Private
     // `deep` containers on one path, the innermost holding nothing.
     private static func nested(_ deep: Int) -> Value {

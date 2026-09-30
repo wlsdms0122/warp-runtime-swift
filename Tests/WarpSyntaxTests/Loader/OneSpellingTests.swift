@@ -171,5 +171,6 @@ struct OneSpellingTests {
         }
     }
 
+    // MARK: - Public
     // MARK: - Private
 }

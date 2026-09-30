@@ -221,4 +221,7 @@ struct VariableNotationTests {
             try loader.loadProcedure(fixture)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

@@ -21,6 +21,7 @@ struct NestingBoundTests {
         case call
         case closure
 
+        // MARK: - Property
         // How many levels of this shape fit under the bound. A level of a
         // call opens three containers, the last its list of arguments, where
         // the next level and the other argument both stand; a level of a
@@ -33,6 +34,8 @@ struct NestingBoundTests {
             }
         }
 
+        // MARK: - Initializer
+        // MARK: - Public
         // The whole document, `deep` levels of the shape around a reference to
         // a constant one.
         func document(deep: Int) -> Value {
@@ -76,8 +79,12 @@ struct NestingBoundTests {
             case .closure: .int(1)
             }
         }
+
+        // MARK: - Private
     }
 
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("is read, built and run", arguments: [Shape.call, .closure])
     func isReadBuiltAndRun(_ shape: Shape) async throws {
@@ -110,4 +117,7 @@ struct NestingBoundTests {
         // Then. It answers.
         #expect(try await Executor().run(image) == shape.answer(deep: shape.levels))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

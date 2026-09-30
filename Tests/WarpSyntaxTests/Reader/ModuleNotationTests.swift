@@ -125,4 +125,7 @@ struct ModuleNotationTests {
             try loader.loadDocument(fixture)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

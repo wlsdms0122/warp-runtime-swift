@@ -321,7 +321,6 @@ struct NotationTests {
         #expect(Set(fields.keys) == ["of", "is"])
     }
 
-
     // MARK: - Public
     // MARK: - Private
     // One conditional around a condition, since a condition slot is a slot rather

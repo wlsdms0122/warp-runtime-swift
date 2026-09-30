@@ -407,7 +407,7 @@ public struct TextEncoding {
 
             // A record waits for a key where everything else waits for a value,
             // and a closing brace is only honest in that position
-            if case .record(let held, .none, let name) = opened.last {
+            if case let .record(held, .none, name) = opened.last {
                 switch token {
                 case .recordClose:
                     opened.removeLast()
@@ -492,12 +492,14 @@ public struct TextEncoding {
                 guard let open = opened.popLast() else { return value }
 
                 switch open {
-                case .array(var held):
+                case let .array(held):
+                    var held = held
                     held.append(value)
 
                     opened.append(.array(held))
 
-                case .record(var held, let key?, let name):
+                case let .record(held, key?, name):
+                    var held = held
                     // Unique: the key was refused where it was read if the
                     // record already held it.
                     held[key] = value

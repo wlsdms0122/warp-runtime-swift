@@ -448,7 +448,8 @@ public struct BinaryEncoding {
                 settled = nil
 
                 switch open {
-                case .array(let expecting, var held):
+                case let .array(expecting, held):
+                    var held = held
                     held.append(value)
 
                     if expecting == 1 {
@@ -457,7 +458,8 @@ public struct BinaryEncoding {
                         opened.append(.array(expecting: expecting - 1, held: held))
                     }
 
-                case .record(let expecting, var held, let key, let previous, let name):
+                case let .record(expecting, held, key, previous, name):
+                    var held = held
                     // Ordered and unique because the keys arrived strictly
                     // ascending and in NFC: byte order refuses a byte-equal
                     // duplicate, and NFC leaves one name one byte spelling to

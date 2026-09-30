@@ -15,7 +15,7 @@ struct TypeNotationTests {
     // MARK: - Property
     private let loader = Loader.testing
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a built-in reads as its own name, applied or not")
     func builtinsParse() throws {
@@ -371,4 +371,7 @@ struct TypeNotationTests {
             try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .int(1)])])])
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

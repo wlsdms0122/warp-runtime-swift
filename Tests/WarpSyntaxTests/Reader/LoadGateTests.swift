@@ -186,4 +186,6 @@ struct LoadGateTests {
         #expect(statements[0].expression.constantValue == .string("hello there"))
     }
 
+    // MARK: - Public
+    // MARK: - Private
 }

@@ -43,6 +43,7 @@ struct BinaryDepthTests {
         }
     }
 
+    // MARK: - Public
     // MARK: - Private
     private static func nested(_ deep: Int) -> Value {
         (0 ..< deep).reduce(Value.int(1)) { held, _ in .array([held]) }

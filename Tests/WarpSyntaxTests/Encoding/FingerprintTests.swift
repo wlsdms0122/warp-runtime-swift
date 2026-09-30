@@ -23,6 +23,30 @@ import WarpSyntax
 // where readings are refused.
 @Suite("A fingerprint stands for everything an object was compiled from")
 struct FingerprintTests {
+    private struct AnsweringQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .any) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        let value: Value
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            value
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder(fingerprinting: Fingerprint.of)
 
@@ -143,25 +167,4 @@ struct FingerprintTests {
         print("PROBE count=\(stored.bytes.count) stored=\(stored.rendered) behind=\(behind.map { $0.fingerprint?.rendered ?? "nil" })")
         return stored
     }
-}
-
-// MARK: - Procedures a test brings
-
-private struct AnsweringQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case of
-
-        var declared: Parameter { Parameter(name: "of", type: .any) }
-    }
-
-    // MARK: - Property
-    let value: Value
-
-    // MARK: - Initializer
-    // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        value
-    }
-
-    // MARK: - Private
 }

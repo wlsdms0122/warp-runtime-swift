@@ -16,6 +16,7 @@ import Warp
 @Suite("The binary encoding")
 struct BinaryEncodingTests {
     // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("every kind of value survives the round trip")
     func everyKindComesBack() throws {

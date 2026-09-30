@@ -156,4 +156,7 @@ struct TemplateParserTests {
         // Then
         #expect(rendered == text)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

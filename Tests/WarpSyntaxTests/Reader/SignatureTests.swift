@@ -152,6 +152,7 @@ struct SignatureTests {
         }
     }
 
+    // MARK: - Public
     // MARK: - Private
     // The boundary over no table, answered by name.
     private func settled(_ signature: Signature, given: [Name: Value]) throws -> [Name: Value] {

@@ -15,6 +15,29 @@ import Testing
 // what makes it safe is what a closure already is.
 @Suite
 struct ConcurrentTests {
+    // Probe environment counting how many pieces pass through the isolation hook.
+    private final class IsolationBoundaryProbe: Environment, @unchecked Sendable {
+        // MARK: - Property
+        private let lock = NSLock()
+        private var count = 0
+
+        var isolatedCount: Int {
+            lock.withLock { count }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func isolateConcurrentWork<T: Sendable>(
+            _ work: @Sendable () async throws -> T
+        ) async throws -> T {
+            lock.withLock { count += 1 }
+
+            return try await work()
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let loader = Loader.testing
 
@@ -215,27 +238,7 @@ struct ConcurrentTests {
         // Then
         #expect(outputs["result"] == .string("answered"))
     }
-}
 
-// Probe environment counting how many pieces pass through the isolation hook.
-private final class IsolationBoundaryProbe: Environment, @unchecked Sendable {
-    // MARK: - Property
-    private let lock = NSLock()
-    private var count = 0
-
-    var isolatedCount: Int {
-        lock.withLock { count }
-    }
-
-    // MARK: - Initializer
     // MARK: - Public
-    func isolateConcurrentWork<T: Sendable>(
-        _ work: @Sendable () async throws -> T
-    ) async throws -> T {
-        lock.withLock { count += 1 }
-
-        return try await work()
-    }
-
     // MARK: - Private
 }

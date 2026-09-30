@@ -18,7 +18,7 @@ struct ModuleDeclarationTests {
     // MARK: - Property
     private let loader = Loader.testing
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a spelling names the declaration written under it, in its own document too")
     func ownDeclarationIsSpelledQualified() async throws {
@@ -176,7 +176,7 @@ struct ModuleDeclarationTests {
 
         // When / Then
         #expect(throws: ValidationError.self) {
-            try loader.loadDocument(fixture).validated()
+            try validated(try loader.loadDocument(fixture))
         }
     }
 
@@ -233,12 +233,11 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .string("a card"))
     }
 
-}
+    // MARK: - Public
+    // MARK: - Private
+    private func validated(_ module: Module) throws -> Module {
+        try Validator().validate(module)
 
-private extension Module {
-    func validated() throws -> Module {
-        try Validator().validate(self)
-
-        return self
+        return module
     }
 }

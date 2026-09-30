@@ -1,13 +1,13 @@
 //
-//  TestNotation.swift
+//  TestConditions.swift
 //  WarpSyntaxTests
 //
-//  Created by JSilver
+//  Created by JSilver on 9/27/26.
 //
 
 import Foundation
-import Warp
-import WarpSyntax
+@testable import Warp
+@testable import WarpSyntax
 
 // A notation of the plainest kind: an operator record is a subject and a
 // procedure sent to it, `{ of: <expression>, <procedure>: <expression> }`. The
@@ -22,12 +22,6 @@ import WarpSyntax
 struct TestConditions: ExpressionSpelling {
     // MARK: - Property
     static let subjectKey: Name = "of"
-
-    // A record carrying a subject is a message written this way, and a record
-    // that is not is the expression it is.
-    func claims(_ names: Set<Name>, in notation: Notation) -> Bool {
-        names.contains(Self.subjectKey)
-    }
 
     // What the table stands in for, and so what this spelling owes the build.
     var vocabulary: Set<Name> { Set(Self.procedures.values) }
@@ -45,6 +39,12 @@ struct TestConditions: ExpressionSpelling {
 
     // MARK: - Initializer
     // MARK: - Public
+    // A record carrying a subject is a message written this way, and a record
+    // that is not is the expression it is.
+    func claims(_ names: Set<Name>, in notation: Notation) -> Bool {
+        names.contains(Self.subjectKey)
+    }
+
     func expression(from decoder: Decoder) throws -> Warp.Expression {
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
         let found = container.allKeys
@@ -75,45 +75,6 @@ struct TestConditions: ExpressionSpelling {
                         forKey: AnyCodingKey(stringValue: procedure)
                     )
                     .expression
-                ]
-            )
-        )
-    }
-
-    // MARK: - Private
-}
-
-extension Notation {
-    // What these tests read with. The procedures are the standard ones because the
-    // fixtures link against the standard modules, not because this notation
-    // knows anything about them.
-    static let testing = Notation(
-        spelling: TestConditions(),
-        interpolation: Interpolation(read: "std.text.text", joined: "std.text.joined")
-    )
-}
-
-// A spelling with one key of its own, `holds`, reaching a procedure no
-// standard bundle declares, so what it owes is told apart from what the
-// standard table owes.
-struct OwnVocabularyConditions: ExpressionSpelling {
-    // MARK: - Property
-    let vocabulary: Set<Name> = ["example.holds"]
-
-    func claims(_ names: Set<Name>, in notation: Notation) -> Bool {
-        names.contains("holds")
-    }
-
-    // MARK: - Initializer
-    // MARK: - Public
-    func expression(from decoder: Decoder) throws -> Warp.Expression {
-        .call(
-            Call(
-                selector: "example.holds",
-                arguments: [
-                    try decoder.container(keyedBy: AnyCodingKey.self)
-                        .decode(ExpressionReader.self, forKey: AnyCodingKey(stringValue: "holds"))
-                        .expression
                 ]
             )
         )

@@ -14,6 +14,7 @@ import Warp
 @Suite("A document's identity")
 struct IdentityTests {
     // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("the digest is the published one, so two implementations answer alike")
     func theDigestIsTheStandardOne() {

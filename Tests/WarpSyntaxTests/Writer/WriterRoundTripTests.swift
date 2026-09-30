@@ -21,6 +21,7 @@ struct WriterRoundTripTests {
     // MARK: - Property
     private let sut = Writer()
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a construct whose body is empty still writes the key its reader wants")
     func anEmptyBodyIsStillWritten() async throws {

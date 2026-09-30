@@ -94,4 +94,7 @@ struct DeclaredNameNotationTests {
             "\(error)".contains("writes 'type', which says what a name holds")
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }
