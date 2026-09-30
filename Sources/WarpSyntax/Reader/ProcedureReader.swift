@@ -43,17 +43,21 @@ public struct ProcedureReader: Decodable {
 
         // One of three words, and a fourth is a document no reader can hold to
         // a scope. Absent, the declaration is the link's.
-        let access = try container.decodeIfPresent(String.self, forKey: .access).map { spelling in
+        let access = try decoder.descendingIfPresent(to: CodingKeys.access).map { written in
+            let spelling = try written.read(String.self)
+
             guard let access = Access(rawValue: spelling) else {
                 throw ReadingError(
                     "access '\(spelling)' is none of "
                         + Access.allCases.map { access in "`\(access.rawValue)`" }.joined(separator: ", "),
-                    at: decoder.steps
+                    at: written.steps
                 )
             }
 
             return access
         }
+
+        let bounds = try decoder.descendingIfPresent(to: CodingKeys.bounds)
 
         // A procedure has no name of its own. It is named by the key its module
         // declares it under.
@@ -65,7 +69,7 @@ public struct ProcedureReader: Decodable {
             // signature. What a call may pass, what comes back, and what each
             // type parameter admits.
             signature: try BoundsReader().apply(
-                try container.decodeIfPresent([String: String].self, forKey: .bounds),
+                try bounds?.read([String: String].self),
                 qualifying: { name in (decoder.userInfo[.notation] as? Notation ?? .canonical).qualified(name, as: .type) },
                 to: Signature(
                     parameters: try container
@@ -75,7 +79,7 @@ public struct ProcedureReader: Decodable {
                         .decodeIfPresent(TypeReader.self, forKey: .returns)?
                         .type
                 ),
-                at: decoder.steps
+                at: bounds?.steps ?? decoder.steps
             ),
             // A procedure that only returns a value has nothing to do first, so
             // `body:` is what a procedure writes when it has statements rather

@@ -123,7 +123,7 @@ public struct ExpressionReader: Decodable {
             let inside = steps + [.key(tag.rawValue)]
 
             switch tag {
-            case .reference: return try reference(written)
+            case .reference: return try reference(written, at: inside)
             case .record: return try fields(under: written, at: inside, in: decoder)
             case .call: return try call(written, at: steps, in: decoder)
             case .closure: return try closure(written, at: steps, in: decoder)
@@ -216,17 +216,15 @@ public struct ExpressionReader: Decodable {
         )
     }
 
-    private static func reference(_ written: Value) throws -> Expression {
+    private static func reference(_ written: Value, at steps: [Place.Step]) throws -> Expression {
         guard case let .string(rendered) = written else {
-            throw ExpressionFormError(
-                "{ ref: } takes a path string like a.b[0]"
-            )
+            throw ReadingError("{ ref: } takes a path string like a.b[0]", at: steps)
         }
 
         do {
             return .reference(try PathParser().parse(rendered))
         } catch {
-            throw ExpressionFormError("{ ref: \(rendered) }: \(error)")
+            throw ReadingError("{ ref: \(rendered) }: \(error)", at: steps)
         }
     }
 

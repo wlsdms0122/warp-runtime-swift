@@ -25,7 +25,7 @@ struct BoundsReader {
     // The signature with its bounds applied, and the check that every bound
     // names a parameter some slot mentions. A bound on a name nobody wrote
     // binds nothing, which is a claim the author should hear about where they
-    // wrote it.
+    // wrote it. `steps` are where `bounds` stands.
     func apply(
         _ bounds: [String: String]?,
         qualifying: (Name) -> Name = { name in name },
@@ -47,7 +47,7 @@ struct BoundsReader {
             do {
                 parsed = try TypeReader.parse(bound, qualifying: qualifying)
             } catch let refused as TypeFormError {
-                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: steps)
+                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: steps + [.key(parameter)])
             }
 
             switch parsed {
@@ -63,11 +63,11 @@ struct BoundsReader {
                         + " '\(bound)', which is not a constraint's name."
                         + " A membership is declared, never written in a"
                         + " signature",
-                    at: steps
+                    at: steps + [.key(parameter)]
                 )
             }
 
-            named[try Name.read(parameter, at: steps)] = names
+            named[try Name.read(parameter, at: steps + [.key(parameter)])] = names
         }
 
         let bounded = signature.bounded(by: named)
