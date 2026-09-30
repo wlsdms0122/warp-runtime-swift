@@ -334,7 +334,7 @@ struct ProcedureSendsTests {
     }
 
     // Hands null to a procedure whose first parameter is declared string.
-    private struct NullingToAParameter: Effect {
+    private struct NullingEffect: Effect {
         typealias Parameters = NoParameters
 
         enum Imports: Int, ImportSet {
@@ -361,7 +361,7 @@ struct ProcedureSendsTests {
     }
 
     // Declares what it is handed, as a string.
-    private struct SaidReporter: Effect {
+    private struct ReportingEffect: Effect {
         enum Parameters: Int, ParameterSet {
             case said
 
@@ -555,8 +555,8 @@ struct ProcedureSendsTests {
     private static let reporting = try! Module(
         procedures: [
             "app.reporting": Procedure(
-                signature: Signature(of: SaidReporter.self, returns: .string),
-                implementation: .effect(SaidReporter())
+                signature: Signature(of: ReportingEffect.self, returns: .string),
+                implementation: .effect(ReportingEffect())
             )
         ]
     )
@@ -565,7 +565,7 @@ struct ProcedureSendsTests {
         procedures: [
             "app.nullingToAParameter": Procedure(
                 signature: Signature(returns: .string),
-                implementation: .effect(NullingToAParameter())
+                implementation: .effect(NullingEffect())
             )
         ]
     )
