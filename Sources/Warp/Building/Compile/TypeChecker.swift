@@ -2327,7 +2327,7 @@ struct TypeChecker {
             // predicate says so, and everything the fact decides reads it here:
             // judging refuses a name on the statement (a binding that cannot
             // happen) and anything written after it, which would never run.
-            // What the syntactic leaves get at reading, a call gets here, where
+            // What the syntactic leaves get at the load, a call gets here, where
             // the signature is known.
             if inner.flow.leaves || inner.reading == .never {
                 if statement.binding != nil {
@@ -2356,10 +2356,6 @@ struct TypeChecker {
                     flowed.leaving(),
                     locals
                 )
-            }
-
-            if statement.binding?.declared != nil, statement.expression.namesItsOwn {
-                try refuse(Expression.declarationOnABoundName, at: here, when: ask)
             }
 
             switch statement.binding {
@@ -2438,9 +2434,8 @@ struct TypeChecker {
 
     // What never finishes binds nothing, so a name on it promises a binding
     // that cannot happen. Asked exactly where the sequence rule finds a
-    // statement that ends the body, so the two facts cannot part. The reader
-    // catches the types it can see, and the build catches the procedures only it
-    // can see. One rule, two stages.
+    // statement that ends the body, so the two facts cannot part. The load
+    // refuses the leaves it can see, and the build the calls only it can see.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(
             "never finishes,"

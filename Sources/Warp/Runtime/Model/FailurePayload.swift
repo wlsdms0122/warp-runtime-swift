@@ -12,10 +12,10 @@ import Foundation
 // and `message` are what every failure holds, and `details` is the box the
 // failing procedure fills: a dictionary of `any`, so a rescue reaches what a
 // failure carried by naming it.
-enum FailurePayload {
-    static let type: Name = "type"
-    static let message: Name = "message"
-    static let details: Name = "details"
+package enum FailurePayload {
+    package static let type: Name = "type"
+    package static let message: Name = "message"
+    package static let details: Name = "details"
 
     static let declared = TypeExpression.record([
         type: .string,
