@@ -173,7 +173,7 @@ struct Compiler {
 
         // What the documents behind this one declare, read the way a body in
         // this one reads them.
-        let behind = context()
+        let behind = compiling.context(reading: reading)
 
         // What a selector this document may reach takes: its own declarations
         // first, the documents standing before it after. One rule, so the two

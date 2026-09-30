@@ -293,17 +293,26 @@ struct Compiling {
     // the declarations it may name: its own by its block, private ones
     // included, and every other document's by the spelling the link holds.
     func context(reading variables: Set<Name>, of origin: Int) -> TypingContext {
+        context(reading: variables, owning: lowering.own(origin))
+    }
+
+    // The same for a document whose rows are not held yet: what the documents
+    // behind it declare, and nothing of its own.
+    func context(reading variables: Set<Name>) -> TypingContext {
+        context(reading: variables, owning: [:])
+    }
+
+    // MARK: - Private
+    private func context(reading variables: Set<Name>, owning own: [Name: Int]) -> TypingContext {
         TypingContext(
             types: types,
             linked: lowering.table,
             rows: lowering.rows,
-            own: lowering.own(origin),
+            own: own,
             concealed: lowering.concealed,
             answers: answers,
             contractProcedures: contractProcedures,
             variables: variables
         )
     }
-
-    // MARK: - Private
 }

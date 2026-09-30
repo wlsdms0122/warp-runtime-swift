@@ -418,10 +418,9 @@ struct Lowering {
         table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame), sends: declared.sends)
     }
 
-    // A document's own declarations by row, as they were held. A document
-    // read before its rows are held owns none yet.
+    // A document's own declarations by row, as they were held.
     func own(_ origin: Int) -> [Name: Int] {
-        documents.indices.contains(origin) ? documents[origin].owned : [:]
+        documents[origin].owned
     }
 
     // Lowers one expression read against a frame of constants, as a constant's
