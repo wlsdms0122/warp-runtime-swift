@@ -489,13 +489,10 @@ struct ContractTests {
 
     // MARK: - Public
     // MARK: - Private
-    // Two types that describe themselves, a contract asking for it, and a
-    // generic procedure standing between the caller and both.
-    // A procedure bounded by the contract, and an entry that hands the type to it.
-    // A claim is held where a document leans on the pair: a list is assembled
-    // from what a host was willing to supply, so one of its documents claiming
-    // something the list cannot make good on refuses only the program that
-    // hands that type where that contract is asked.
+    // A procedure bounded by the contract, and an entry that hands the type to
+    // it. A claim is held where a document leans on the pair, so a claim the
+    // list cannot make good on refuses only the program that hands that type
+    // where that contract is asked.
     private func leaning(on type: Name, holding fields: [Name: Warp.Expression]) -> [Name: Procedure] {
         [
             "app.tell": Procedure(
@@ -522,6 +519,8 @@ struct ContractTests {
         ]
     }
 
+    // Two types that describe themselves, a contract asking for it, and a
+    // generic procedure standing between the caller and both.
     private func describing(
         types extra: [Name: TypeExpression] = [:],
         procedures added: [Name: Procedure] = [:],

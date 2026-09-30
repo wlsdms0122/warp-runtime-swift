@@ -479,10 +479,10 @@ struct NullableTests {
 
     @Test("a mark on the head is refused wherever a path is judged")
     func aMarkedHeadIsRefused() async throws {
-        // Given (the head is a name a scope holds, so there is nothing before
-        // it that could have been absent; a document never spells this, and a
-        // frontend that builds segments directly is told so When / Then) the
-        // check meets it first, so there is no such module to take to a link
+        // Given. The head is a name a scope holds, so there is nothing before
+        // it that could have been absent. A front end that builds segments
+        // directly is told so where the module is made
+        // When / Then
         #expect {
             try Module(
                 procedures: [

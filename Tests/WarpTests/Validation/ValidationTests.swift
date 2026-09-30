@@ -340,7 +340,7 @@ struct ValidationTests {
 
     @Test("an index reference is checked like any other name")
     func indexReferenceHeadIsChecked() {
-        // Given. `items[${cursor}]` reads `cursor`, so a typo in it is the same
+        // Given. `items[cursor]` reads `cursor`, so a typo in it is the same
         // mistake as a typo anywhere else
         let sut = Warp.Expression.reference(
             [.key("items"), .indexRef([.key("cursor")])]

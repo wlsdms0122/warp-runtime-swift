@@ -133,7 +133,7 @@ struct BuilderTests {
     @Test("a closure a constant holds may not introduce a sibling's name")
     func aClosureConstantMayNotShadowASibling() async throws {
         // Given. The rule a body is held to at load, met here from the caller's
-        // side. Neither type links, and both are the same mistake: a name the
+        // side. Neither module is made, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
         // place.
         func module(introducing statement: Statement?) async throws -> Module {

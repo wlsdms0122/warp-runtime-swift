@@ -459,8 +459,8 @@ struct ProcedureSendsTests {
         identity: Identity([0x01])
     )
 
-    // The same procedure under two claims: one says it touches nothing shared and
-    // is refused for sending the ticketing procedure, and one says it does.
+    // `app.counted` twice: here it says it touches nothing shared and is refused
+    // for sending the ticketing procedure, and in `counting` it says it does.
     private static let claims = try! Module(
         procedures: [
             "app.counted": Procedure(
@@ -479,8 +479,8 @@ struct ProcedureSendsTests {
         ]
     )
 
-    // The callee three of the tests above hand arguments to: it answers `z`, so an
-    // argument standing at the wrong place shows in the answer.
+    // The callee the handing tests below hand arguments to: it answers `z`, so
+    // an argument standing at the wrong place shows in the answer.
     private static let picked = try! Module(
         procedures: [
             "app.pick": Procedure(
@@ -654,7 +654,7 @@ struct ProcedureSendsTests {
 
     @Test("an isolated procedure sending one that keeps state is refused")
     func anIsolatedProcedureSendingSharedStateIsRefused() async {
-        // Given / When / Then. `app.counting` says it touches nothing shared
+        // Given / When / Then. `app.counted` says it touches nothing shared
         // and sends `app.ticket`, which answers from a box it keeps between
         // calls
         await #expect {

@@ -168,6 +168,3 @@ struct SwiftAuthoringTests {
     // MARK: - Public
     // MARK: - Private
 }
-
-// A procedure written in Swift and never taught to a document to spell. It conforms
-// to `Effect` and to nothing else. The proof that the run path asks for no

@@ -285,8 +285,7 @@ struct ObjectReadingTests {
     @Test("is refused where a call stands more arguments than its callee takes")
     func aCallStandingTooMany() async throws {
         // Given. A document whose body calls one of its own declarations, with
-        // one argument added to what the call stands. The row it reaches is the
-        // link's answer, so the link is where this is asked.
+        // one argument added to what the call stands.
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
