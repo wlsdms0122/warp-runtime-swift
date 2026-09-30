@@ -164,48 +164,14 @@ func walking(
     )
 }
 
-// Equality and the connectives are procedures, so a test writing one writes the call
-// the notation lowers to.
+// Equality is a procedure, so a test writing one writes the call the notation
+// lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
     .call(Call(selector: "std.logic.equal", arguments: [subject, operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
     .call(Call(selector: "std.logic.notEqual", arguments: [subject, operand]))
-}
-
-func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .call(Call(selector: "std.logic.not", arguments: [condition]))
-}
-
-// A connective leaves its later sides unasked, so each arrives as something that
-// has not been answered yet.
-func every(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("std.logic.and", conditions)
-}
-
-func some(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("std.logic.or", conditions)
-}
-
-private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
-    .call(
-        Call(
-            selector: selector,
-            arguments: [
-                .array(
-                    conditions.map { condition in
-                        .closure(
-                            Procedure(
-                                implementation: .body(Block(body: [], result: condition)),
-                                constness: .const
-                            )
-                        )
-                    }
-                )
-            ]
-        )
-    )
 }
 
 // MARK: - Interpolation
