@@ -112,7 +112,7 @@ public struct Builder: Sendable {
     public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
         guard !compiled.isEmpty else { return .none }
 
-        try once(compiled.map(\.document))
+        try refuseRepeated(compiled.map(\.document))
         try refuseMissingDependencies(compiled)
 
         // Laid end to end through the door a link lays documents through, so a
@@ -187,7 +187,7 @@ public struct Builder: Sendable {
     public func compile(_ modules: [Module], against laid: Laid) async throws -> [Compiled] {
         let compiled = laid.compiled
 
-        try once(modules.map(Place.Document.of), held: laid.identities)
+        try refuseRepeated(modules.map(Place.Document.of), held: laid.identities)
 
         try refuseDoubled(modules, after: compiled.count)
 
@@ -348,7 +348,7 @@ public struct Builder: Sendable {
         _ compiled: [Compiled],
         supplying natives: Supplying
     ) throws -> Image {
-        try once(compiled.map(\.document))
+        try refuseRepeated(compiled.map(\.document))
         try refuseMissingDependencies(compiled)
 
         // Every document's block laid down, which is where its rows first
@@ -486,7 +486,7 @@ public struct Builder: Sendable {
     // What the caller already compiled counts: those documents are in this
     // link too, and handing one over again is the same document twice however
     // it arrived.
-    private func once(_ documents: [Place.Document], held: Set<Identity> = []) throws {
+    private func refuseRepeated(_ documents: [Place.Document], held: Set<Identity> = []) throws {
         var held = held
 
         for document in documents {
