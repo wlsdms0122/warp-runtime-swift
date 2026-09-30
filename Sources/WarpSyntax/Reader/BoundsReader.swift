@@ -11,8 +11,8 @@ import Warp
 // The signature-level `bounds:` key, which constraint each type parameter is
 // bounded by, declared once where the parameter's name lives:
 //
-//   bounds: { N: Numeric }
-//   parameters: { of: some N, value: some N }
+//   bounds { N "std.Numeric" }
+//   parameters [ { name "of" type "some N" } { name "value" type "some N" } ]
 //
 // The slots name the parameter and the signature says what the name admits, so
 // one bound is one claim however many slots mention the name.

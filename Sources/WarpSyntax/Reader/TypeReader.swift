@@ -407,9 +407,8 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // One name with nothing structural in it. What a type parameter's spelling
-    // has to be, and what a `bounds` value has to be: the two halves of one
-    // notation, held to one predicate.
+    // One name with nothing structural in it: what a type parameter's
+    // spelling has to be.
     static func isName(_ text: String) -> Bool {
         !text.isEmpty && !text.contains("<") && !text.contains(">")
             && !text.contains(" ") && !text.contains(":")

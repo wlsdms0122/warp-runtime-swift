@@ -17,17 +17,13 @@ import Warp
 // spellings, and the canonical one brings none, which leaves a document writing
 // the types themselves.
 //
-// **Nothing built in offers a spelling, and nothing here names one.** This
-// package reads documents; a document has no spellings, so a reader carrying a
-// table of them would be a reader with a notation's opinions. Which keys are
-// spelled, which procedures they reach, and what the record around them looks like
-// are all answered by whoever hands one of these over.
-//
-// That is worth insisting on because the lower layer is what travels. A program
-// read somewhere else needs that reader to agree about what it says, and each
-// spelling is one more rule the far side has to implement identically. A
-// notation that offers none owes no procedures for spellings it never spends.
-//
+// **Nothing built in offers a spelling.** This package reads documents, and a
+// document has no spellings. Which keys are spelled, which procedures they
+// reach, and what the record around them looks like are all answered by whoever
+// hands one of these over. The one set of keys named here is the template's,
+// `format` and `with`, which stay reserved whether a notation offers a template
+// or not. A notation that offers none owes no procedures for spellings it never
+// spends.
 public struct Notation: Sendable {
     // Where a declared name stands: the types, constraints and contracts a
     // type spelling, a bound, a claim or a membership names, or the

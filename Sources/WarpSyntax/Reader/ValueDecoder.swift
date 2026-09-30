@@ -8,9 +8,8 @@
 import Foundation
 import Warp
 
-// Decodes Codable types directly from a Value tree. Serializing through JSON
-// text would collapse the scalar typing the loader fixed (`3.0` re-reads as
-// int) so the loader's Value is the decoding source itself, with no round trip.
+// Decodes Codable types directly from a Value tree, so the scalar kinds the
+// value already holds (`3.0` a double, `3` an int) are the ones read.
 struct ValueDecoder: Decoder {
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property

@@ -98,9 +98,8 @@ public struct ExpressionReader: Decodable {
             case let .record(record):
                 return try read(record: record.asDictionary, at: steps, in: decoder)
 
-            // A document is text. Nothing it parses to is ever a procedure, so
-            // this arm is unreachable rather than unwritten. A closure reaches
-            // the language by being spelled, and spelling it is a form.
+            // A closure reaches the language by being spelled, and spelling it
+            // is a form.
             case .procedure:
                 throw ExpressionFormError("a document cannot contain a procedure value")
             }

@@ -27,10 +27,6 @@ public enum Envelope {
     // a file that is not a document at all would get as far as having its keys
     // judged. Turned away for being a malformed module rather than for not
     // being one.
-    //
-    // Nothing has shipped, so there is nothing old to hold a number for. Every
-    // change before the first release folds into this one. The counter starts
-    // moving when a document exists somewhere this code does not control.
     public static let version = 1
 
     public static let versionKey: Name = Module.versionKey

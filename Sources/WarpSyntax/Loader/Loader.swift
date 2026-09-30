@@ -19,8 +19,7 @@ import Warp
 // data; turning that data into a procedure is this one path, and what every
 // notation shares is the `Expression` it arrives at rather than the spellings used
 // to get there. A front end with a syntax of its own builds those expressions
-// directly and never comes through here, the way a compiler builds its back
-// end's instructions rather than printing them and reading them back.
+// directly and never comes through here.
 public struct Loader: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
@@ -80,9 +79,7 @@ public struct Loader: Sendable {
         let document = Place.Document(identity: identity)
 
         // Reading first and checking second, and both before the envelope
-        // question below. A module is checked where it is made, so the stamp
-        // goes in with what is being made rather than onto what came back. A
-        // refusal is exactly the moment somebody wants the file it came from.
+        // question below.
         let module = try reading(by: .standard) { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
 
         // What a document imports is read before the program it belongs to, so
