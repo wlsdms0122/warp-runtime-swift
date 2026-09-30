@@ -19,11 +19,15 @@ extension Module {
     // carried in the library rather than read off a disk so that taking this
     // package is the whole of taking the vocabulary.
     //
-    // The force is the same one the bundles written in Swift take: there is no
-    // caller to hand a refusal to, and a document shipped with the language
-    // that will not read is a bug in the language.
-    static let library: [String: Module] = Library.documents.mapValues { text in
-        try! Loader().load(try! TextEncoding().value(from: text), identity: nil)
+    // Nothing from outside reaches these documents, so one that will not read
+    // is a mistake in `lib/std`, and the assertion is where it shows. Past it,
+    // the bundle stands without its written half.
+    static let library: [String: Module] = Library.documents.compactMapValues { text in
+        let module = try? Loader().load(TextEncoding().value(from: text), identity: nil)
+
+        assert(module != nil, "a document of lib/std reads")
+
+        return module
     }
 
     // A bundle and what `lib/std` writes for it. A bundle is taken whole, so

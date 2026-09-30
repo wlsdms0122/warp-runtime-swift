@@ -20,6 +20,19 @@ struct StandardTests {
 
     // MARK: - Initializer
     // MARK: - Test
+    @Test("every bundle written in Swift checks at the door a module from outside takes")
+    func everyBundleChecks() throws {
+        // Given. The bundles stand without the check
+        let bundles = Module.standard.filter(\.builtin)
+
+        // Then
+        #expect(bundles.count == 7)
+
+        for bundle in bundles {
+            _ = try Module(bundle.draft, builtin: true)
+        }
+    }
+
     @Test("every procedure that ships is builtin or written in Warp")
     func everyProcedureIsPlaced() throws {
         // Given. What the bundles declare, and how the one list cuts them

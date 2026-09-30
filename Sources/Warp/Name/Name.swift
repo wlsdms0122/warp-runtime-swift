@@ -121,7 +121,7 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     // segment of a name, or ASCII written in this source. The door above is the
     // one every spelling from outside comes through, and this one is not
     // reachable from outside the package.
-    public init(normal spelling: String) {
+    package init(normal spelling: String) {
         self.spelling = spelling
         self.digest = Name.digested(spelling)
     }

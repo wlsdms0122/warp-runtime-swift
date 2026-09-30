@@ -20,9 +20,7 @@ import Warp
 // about a `static let`, not about the language.
 public struct ConstructRegistry: Sendable {
     // MARK: - Property
-    // The built-in set is a compile-time constant with unique keys. A throw
-    // here would be a kernel bug, so the forced try is the honest reaction.
-    public static let standard = try! ConstructRegistry(forms: [
+    public static let standard = ConstructRegistry(unchecked: [
         ConditionalForm.self,
         LoopForm.self,
         BlockForm.self,
@@ -62,6 +60,15 @@ public struct ConstructRegistry: Sendable {
                 )
             }
         }
+    }
+
+    // The language's own forms, each under the key it proposes. Nothing from
+    // outside reaches this, so a key `insert` would refuse is a mistake in the
+    // list `standard` writes, and the assertion is where it shows.
+    private init(unchecked forms: [any ConstructForm.Type]) {
+        assert((try? ConstructRegistry(forms: forms)) != nil, "the language's own forms register")
+
+        self.forms = Dictionary(forms.map { form in (form.key, form) }) { first, _ in first }
     }
 
     // MARK: - Public
