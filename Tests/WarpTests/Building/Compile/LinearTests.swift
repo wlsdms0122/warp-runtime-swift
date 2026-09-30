@@ -201,7 +201,7 @@ struct LinearTests {
     }
 
     @Test("`linear` is written on a type and not on a slot")
-    func onceOutsideATypeRefuses() async throws {
+    func linearOutsideATypeRefuses() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -223,7 +223,7 @@ struct LinearTests {
     }
 
     @Test("a value handed on once is not carried inside another type")
-    func onceInsideAnotherTypeRefuses() async throws {
+    func linearInsideAnotherTypeRefuses() async throws {
         // Given. Nothing follows a value into a list, so nothing could say the
         // list handed each of them on
         let sut = try Module(
@@ -999,7 +999,7 @@ struct LinearTests {
     }
 
     @Test("a carried body one closure deeper is walked too")
-    func aCarriedBodyOneCloserDeeper() async throws {
+    func aCarriedBodyOneClosureDeeper() async throws {
         // Given. The closure answering one stands inside another closure
         let sut = try holding(
             body: [
