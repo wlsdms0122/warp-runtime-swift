@@ -22,7 +22,12 @@ struct AbortQuery: Query {
     enum Parameters: Int, ParameterSet {
         case message
 
+        // MARK: - Property
         var declared: Parameter { Parameter(name: "message", type: .any) }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

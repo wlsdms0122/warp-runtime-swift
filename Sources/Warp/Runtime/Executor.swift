@@ -12,6 +12,14 @@ import Foundation
 // const body and a procedure handed a procedure need; `evaluate` runs constructs,
 // effects and calls of values, and hands every data case to `read`.
 public struct Executor: Sendable {
+    // Where a walk over a path came down: on a value, or on a reading gone
+    // wrong. Every slot is there from the frame's making, so there is no
+    // third answer.
+    private enum Walk {
+        case found(Value)
+        case unfit(String)
+    }
+
     // MARK: - Property
     public let observer: (any ExecutionObserver)?
     public let environment: (any Environment)?
@@ -136,7 +144,6 @@ public struct Executor: Sendable {
         return try await executor.answer(body, of: entry, in: &activation, at: Trace())
     }
 
-    // MARK: - Internal
     // Calling a closure a procedure holds. The arguments are handed by
     // position, every position given, and settle against the closure's own
     // declaration the way a written application's do.
@@ -155,6 +162,78 @@ public struct Executor: Sendable {
         var activation = activation
 
         return try await evaluate(code, in: &activation, at: Trace())
+    }
+
+    // Running a closure here rather than in `evaluate`, which is what makes a
+    // procedure able to take one. What may be called is what the link proved
+    // answers, and a slot declaring `const procedure` is how a procedure says so.
+    func call(
+        _ closure: Closure,
+        with arguments: [Value],
+        at trace: Trace = Trace()
+    ) async throws -> Value {
+        try await answer(closure, given: arguments, at: trace)
+    }
+
+    // Sending a procedure a procedure declared it sends. The row the send reaches is
+    // numbered by the sender's document, the same as one written in a body, and
+    // the arguments stand at the callee's positions.
+    func send(
+        _ sending: Sent,
+        from origin: Int,
+        handing values: [Value],
+        at trace: Trace
+    ) async throws -> Value {
+        let callee = linked[try row(sending.row, from: origin)]
+        let settled = try settled(callee, sending: sending, handing: values)
+
+        switch callee.implementation {
+        case .native(.query):
+            return try await answer(callee, with: settled, at: trace)
+
+        case let .native(.effect(effect)):
+            return try await run(
+                effect,
+                of: callee,
+                settled: settled,
+                holds: [],
+                trace: trace.appending(callee.hop)
+            )
+
+        case let .body(body, frame):
+            return try await answer(
+                callee,
+                running: body,
+                in: frame,
+                settled: settled,
+                holding: [],
+                at: trace.appending(callee.hop)
+            )
+        }
+    }
+
+    // The same send, where the sender answers without running. The link
+    // refused a query sending anything that runs, so what reaches here answers
+    // as data.
+    func send(
+        _ sending: Sent,
+        from origin: Int,
+        handing values: [Value]
+    ) async throws -> Value {
+        let callee = linked[try row(sending.row, from: origin)]
+
+        guard callee.constness == .const else {
+            throw ExecutionError(
+                "'\(callee.rendered)' answers only by running, so it cannot be"
+                    + " read as data here"
+            )
+        }
+
+        return try await answer(
+            callee,
+            with: try settled(callee, sending: sending, handing: values),
+            at: Trace()
+        )
     }
 
     // MARK: - Private
@@ -181,7 +260,7 @@ public struct Executor: Sendable {
     // here: a run starting, a written procedure being called, and a closure
     // being invoked.
     private func answer(
-        _ body: Body,
+        _ body: LoweredBody,
         of callee: Linked,
         in activation: inout Activation,
         at trace: Trace
@@ -213,7 +292,7 @@ public struct Executor: Sendable {
 
     // A body answers what it says it answers, and a body that says nothing
     // answers nothing.
-    private func run(_ body: Body, in activation: inout Activation, at trace: Trace) async throws -> Value {
+    private func run(_ body: LoweredBody, in activation: inout Activation, at trace: Trace) async throws -> Value {
         try await perform(body.instructions, in: &activation, at: trace)
 
         guard let result = body.result else { return .null }
@@ -551,7 +630,7 @@ public struct Executor: Sendable {
     // box, and the body answered in that frame.
     private func answer(
         _ callee: Linked,
-        running body: Body,
+        running body: LoweredBody,
         in frame: Frame,
         settled arguments: Settled,
         holding holds: [(position: Int, handle: Handle)],
@@ -577,7 +656,7 @@ public struct Executor: Sendable {
 
     private func loop(
         while condition: Operation,
-        body: Body,
+        body: LoweredBody,
         round: Int?,
         keeps: Range<Int>?,
         in activation: inout Activation,
@@ -623,8 +702,8 @@ public struct Executor: Sendable {
     }
 
     private func attempt(
-        _ body: Body,
-        rescue: Body,
+        _ body: LoweredBody,
+        rescue: LoweredBody,
         failure: Int?,
         in activation: inout Activation,
         at trace: Trace
@@ -791,17 +870,6 @@ public struct Executor: Sendable {
         }
     }
 
-    // Running a closure here rather than in `evaluate`, which is what makes a
-    // procedure able to take one. What may be called is what the link proved
-    // answers, and a slot declaring `const procedure` is how a procedure says so.
-    func call(
-        _ closure: Closure,
-        with arguments: [Value],
-        at trace: Trace = Trace()
-    ) async throws -> Value {
-        try await answer(closure, given: arguments, at: trace)
-    }
-
     private func bool(_ value: Value) throws -> Bool {
         guard case let .bool(answer) = value else {
             throw ExecutionError("a condition must answer bool, got \(value.type)")
@@ -869,67 +937,6 @@ public struct Executor: Sendable {
         return row
     }
 
-    // Sending a procedure a procedure declared it sends. The row the send reaches is
-    // numbered by the sender's document, the same as one written in a body, and
-    // the arguments stand at the callee's positions.
-    func send(
-        _ sending: Sent,
-        from origin: Int,
-        handing values: [Value],
-        at trace: Trace
-    ) async throws -> Value {
-        let callee = linked[try row(sending.row, from: origin)]
-        let settled = try settled(callee, sending: sending, handing: values)
-
-        switch callee.implementation {
-        case .native(.query):
-            return try await answer(callee, with: settled, at: trace)
-
-        case let .native(.effect(effect)):
-            return try await run(
-                effect,
-                of: callee,
-                settled: settled,
-                holds: [],
-                trace: trace.appending(callee.hop)
-            )
-
-        case let .body(body, frame):
-            return try await answer(
-                callee,
-                running: body,
-                in: frame,
-                settled: settled,
-                holding: [],
-                at: trace.appending(callee.hop)
-            )
-        }
-    }
-
-    // The same send, where the sender answers without running. The link
-    // refused a query sending anything that runs, so what reaches here answers
-    // as data.
-    func send(
-        _ sending: Sent,
-        from origin: Int,
-        handing values: [Value]
-    ) async throws -> Value {
-        let callee = linked[try row(sending.row, from: origin)]
-
-        guard callee.constness == .const else {
-            throw ExecutionError(
-                "'\(callee.rendered)' answers only by running, so it cannot be"
-                    + " read as data here"
-            )
-        }
-
-        return try await answer(
-            callee,
-            with: try settled(callee, sending: sending, handing: values),
-            at: Trace()
-        )
-    }
-
     // A send's arguments over the callee's boundary, standing at its
     // positions.
     private func settled(
@@ -949,14 +956,6 @@ public struct Executor: Sendable {
         return Settled(values: try callee.settle(applied: values).map { value in Optional(value) })
     }
 
-    // Where a walk over a path came down: on a value, or on a reading gone
-    // wrong. Every slot is there from the frame's making, so there is no
-    // third answer.
-    private enum Walk {
-        case found(Value)
-        case unfit(String)
-    }
-
     // A dot reads a name and nothing else, and the link judged every one and
     // wrote the judgment into the step. What may genuinely be absent, a missing
     // entry or a null on the way, is read as null only where the author spelled
@@ -974,7 +973,7 @@ public struct Executor: Sendable {
         for (index, step) in steps.enumerated() {
             // The path as far as this step, spelled for a refusal. Only a
             // refusal reads it, so a read that lands spells nothing.
-            func walked() -> [PathSegment] {
+            func walked() -> Path {
                 spelled(Address(slot: slot, steps: Array(steps[...index])), in: activation)
             }
 
@@ -1093,7 +1092,7 @@ public struct Executor: Sendable {
     // elements: the projection owns the `array<byte>` equation, lazily, so
     // one element read does not unpack a compact spelling. Past the end is a
     // defect, not absence: the array is there and says how long it is.
-    private func indexed(_ current: Value, at index: Int, walked: () -> [PathSegment]) -> Walk {
+    private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {
         guard let elements = current.elements else {
             return .unfit("\(walked().rendered) indexes into \(current.type), expected array")
         }
@@ -1113,7 +1112,7 @@ public struct Executor: Sendable {
         _ current: Value,
         at key: String,
         optional: Bool,
-        walked: () -> [PathSegment],
+        walked: () -> Path,
         segment: () -> PathSegment
     ) -> Walk {
         guard current.holdsFields else {
@@ -1166,8 +1165,8 @@ public struct Executor: Sendable {
     }
 
     // The path as the author wrote it, for a sentence that reads it back.
-    private func spelled(_ address: Address, in activation: Activation) -> [PathSegment] {
-        [.key(activation.frame.names[address.slot])] + spelled(address.steps, in: activation)
+    private func spelled(_ address: Address, in activation: Activation) -> Path {
+        Path([.key(activation.frame.names[address.slot])] + spelled(address.steps, in: activation))
     }
 
     private func spelled(_ steps: [Step], in activation: Activation) -> [PathSegment] {

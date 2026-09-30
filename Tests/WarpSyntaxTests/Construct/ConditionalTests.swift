@@ -82,4 +82,7 @@ struct ConditionalTests {
         // Then
         #expect(outputs["result"] == .null)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

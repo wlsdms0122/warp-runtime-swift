@@ -89,4 +89,7 @@ struct BlockTests {
             try loader.loadProcedure(fixture)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

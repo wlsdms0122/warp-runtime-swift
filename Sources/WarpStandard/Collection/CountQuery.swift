@@ -13,11 +13,16 @@ struct CountQuery: Query {
     // What this takes: the thing counted, and nothing else.
     enum Parameters: Int, ParameterSet {
         case collection
+
+        // MARK: - Property
         var declared: Parameter { Parameter(name: "collection", type: .named("std.Collection")) }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property
-
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {

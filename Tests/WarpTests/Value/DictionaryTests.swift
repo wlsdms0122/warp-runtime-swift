@@ -11,6 +11,8 @@ import Testing
 
 @Suite("A dictionary holds names that are the value's own")
 struct DictionaryTests {
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("entries stand in the byte order of their names whichever way they were given")
     func entriesAreOrderedByBytes() throws {
@@ -83,4 +85,7 @@ struct DictionaryTests {
         #expect(composed.spelling == decomposed)
         #expect(throws: NameRefused.self) { try Name(decomposed) }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

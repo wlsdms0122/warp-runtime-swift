@@ -153,13 +153,13 @@ struct NamelessTests {
             return
         }
 
-        guard case let .loop(_, _, round) = block.body[0].expression,
-              case let .attempt(_, _, failure) = block.body[1].expression else {
+        guard case let .loop(_, _, round) = block.body.statements[0].expression,
+              case let .attempt(_, _, failure) = block.body.statements[1].expression else {
             Issue.record("expected a loop and an attempt")
             return
         }
 
-        #expect(block.body.allSatisfy { statement in statement.binding == nil })
+        #expect(block.body.statements.allSatisfy { statement in statement.binding == nil })
         #expect(round == nil)
         #expect(failure == nil)
     }

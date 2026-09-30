@@ -18,7 +18,7 @@ struct ClosureNotationTests {
     // MARK: - Property
     private let loader = Loader.testing
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("an author writes a construct that takes a body")
     func authorWrittenControlStructure() async throws {
@@ -249,4 +249,7 @@ struct ClosureNotationTests {
             [try loader.loadDocument(fixture)] + Module.standard
         )
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

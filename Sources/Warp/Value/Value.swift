@@ -43,6 +43,261 @@ public indirect enum Value: Sendable, Equatable {
 
     case procedure(Closure)
 
+    // Names and values where the names are data: what a document hands in and what
+    // a procedure that reads names answers. Which names are here is the value's to say,
+    // not a declaration's, so each entry carries its own name.
+    //
+    // The entries stand in ascending byte order of their names, the order the
+    // canonical writing uses, and a name is found by comparing bytes.
+    public struct Dictionary: Sendable, Equatable {
+        // MARK: - Property
+        // In ascending byte order of `name`, as `Name`'s `<` orders them.
+        public let entries: [(name: Name, value: Value)]
+
+        public var names: [Name] {
+            entries.map(\.name)
+        }
+
+        public var values: [Value] {
+            entries.map(\.value)
+        }
+
+        public var count: Int {
+            entries.count
+        }
+
+        public var isEmpty: Bool {
+            entries.isEmpty
+        }
+
+        // MARK: - Initializer
+        // Entries in any order under names none of which repeats.
+        public init(_ entries: [(name: Name, value: Value)]) throws {
+            let sorted = entries.sorted { one, other in one.name < other.name }
+
+            if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one.name == other.name }) {
+                throw ValueRefused("'\(repeated.0.name)' is written twice")
+            }
+
+            self.entries = sorted
+        }
+
+        public init(_ fields: [Name: Value]) {
+            self.entries = fields.map { field in (name: field.key, value: field.value) }
+                .sorted { one, other in one.name < other.name }
+        }
+
+        // The inner door: entries in the order a name puts them, under names
+        // none of which repeats. A layout carries both facts, so what stands
+        // on one comes through here rather than being sorted again. A value
+        // born outside a link has no layout behind it and comes through the
+        // door above.
+        init(ordered entries: [(name: Name, value: Value)]) {
+            self.entries = entries
+        }
+
+        private init(keeping entries: [(name: Name, value: Value)]) {
+            self.entries = entries
+        }
+
+        // MARK: - Public
+        public subscript(name: Name) -> Value? {
+            let (position, found) = place(of: name)
+
+            return found ? entries[position].value : nil
+        }
+
+        // This dictionary with one entry written: the value replaced where the
+        // name is held, and the entry put where it sorts where it is not.
+        public func writing(_ name: Name, with value: Value) -> Dictionary {
+            var written = entries
+            let (position, found) = place(of: name)
+
+            if found {
+                written[position].value = value
+            } else {
+                written.insert((name: name, value: value), at: position)
+            }
+
+            return Dictionary(keeping: written)
+        }
+
+        // This dictionary without the entry of this name, or as it is where none
+        // is held.
+        public func removing(_ name: Name) -> Dictionary {
+            let (position, found) = place(of: name)
+
+            guard found else { return self }
+
+            var written = entries
+            written.remove(at: position)
+
+            return Dictionary(keeping: written)
+        }
+
+        // This dictionary with every value put through `transform`, under the
+        // same names in the same order.
+        public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Dictionary {
+            Dictionary(
+                keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
+            )
+        }
+
+        public static func == (lhs: Dictionary, rhs: Dictionary) -> Bool {
+            lhs.entries.count == rhs.entries.count
+                && zip(lhs.entries, rhs.entries).allSatisfy { mine, theirs in
+                    mine.name == theirs.name && mine.value == theirs.value
+                }
+        }
+
+        // MARK: - Private
+        // Where a name is, or where it would go: the first position whose name
+        // does not precede it, and whether the name there is it.
+        private func place(of name: Name) -> (Int, Bool) {
+            var low = 0
+            var high = entries.count
+
+            while low < high {
+                let middle = (low + high) / 2
+
+                if entries[middle].name < name {
+                    low = middle + 1
+                } else {
+                    high = middle
+                }
+            }
+
+            return (low, low < entries.count && entries[low].name == name)
+        }
+    }
+
+    // MARK: - Property
+    // What is said wherever a value stands where a document can reach it. One
+    // sentence because it is one rule, and an author meeting it twice should
+    // not have to work out whether they are two.
+    public static let procedureIsNotData = "a procedure is not data, so it cannot stand"
+        + " where a document reaches; a body a program carries is written as a closure"
+
+    // Whether a procedure is anywhere in here, however deep.
+    //
+    // The types nest, so the question does: a procedure one array inside a
+    // record is still a procedure this value holds, and a check that looked
+    // only at the outside would pass a program that carries one and refuse the
+    // same program written without the wrapper.
+    public var holdsProcedure: Bool {
+        holdsClosure { _ in true }
+    }
+
+    public var type: ValueType {
+        switch self {
+        case .null:
+            return .null
+
+        case .bool:
+            return .bool
+
+        case .int:
+            return .int
+
+        case .double:
+            return .double
+
+        case .string:
+            return .string
+
+        case .bytes:
+            return .bytes
+
+        case .array:
+            return .array
+
+        case .record, .dictionary:
+            return .record
+
+        case .procedure:
+            return .procedure
+        }
+    }
+
+    // The elements a value is indexed by, and nil for what has none. This is
+    // where the `bytes = array<byte>` equation lives on the value side: an
+    // array answers its own elements and bytes answer theirs as the ints they
+    // are, lazily, so a compact spelling is not unpacked to read one element,
+    // and a procedure taking either through `any` reads this one projection
+    // instead of knowing the equation itself.
+    public var elements: AnyRandomAccessCollection<Value>? {
+        switch self {
+        case let .array(array):
+            return AnyRandomAccessCollection(array)
+
+        case let .bytes(bytes):
+            return AnyRandomAccessCollection(bytes.lazy.map { byte in Value.int(Int(byte)) })
+
+        default:
+            return nil
+        }
+    }
+
+    // The bytes a value is, in either spelling: the compact one as it is, and
+    // an array of whole numbers inside a byte's range read out one by one.
+    // Nil for anything else. The other half of the equation `elements`
+    // holds, for a procedure that wants the bytes rather than an element.
+    public var bytes: [UInt8]? {
+        switch self {
+        case let .bytes(bytes):
+            return bytes
+
+        case let .array(elements):
+            var bytes: [UInt8] = []
+            bytes.reserveCapacity(elements.count)
+
+            for element in elements {
+                guard case let .int(number) = element, let byte = UInt8(exactly: number) else { return nil }
+
+                bytes.append(byte)
+            }
+
+            return bytes
+
+        default:
+            return nil
+        }
+    }
+
+    // The name this value wears, where it wears one. A record settled under a
+    // declared type carries its label; nothing else names itself.
+    public var nominal: Name? {
+        guard case let .record(record) = self else { return nil }
+
+        return record.name
+    }
+
+    // Whether this holds fields under names: a record's layout's, or a
+    // dictionary's own.
+    public var holdsFields: Bool {
+        switch self {
+        case .record, .dictionary: true
+        default: false
+        }
+    }
+
+    // This value's fields as names beside values, and nil for what holds
+    // none. A record's names come from its layout.
+    public var asDictionary: Value.Dictionary? {
+        switch self {
+        case let .dictionary(dictionary):
+            return dictionary
+
+        case let .record(record):
+            return record.asDictionary
+
+        default:
+            return nil
+        }
+    }
+
+    // MARK: - Initializer
+    // MARK: - Public
     public static func dictionary(_ entries: [Name: Value]) -> Value {
         .dictionary(Dictionary(entries))
     }
@@ -87,23 +342,6 @@ public indirect enum Value: Sendable, Equatable {
         default:
             throw ValueRefused("\(type) holds no fields, so '\(name)' cannot be written into it")
         }
-    }
-
-    // MARK: - Property
-    // What is said wherever a value stands where a document can reach it. One
-    // sentence because it is one rule, and an author meeting it twice should
-    // not have to work out whether they are two.
-    public static let procedureIsNotData = "a procedure is not data, so it cannot stand"
-        + " where a document reaches; a body a program carries is written as a closure"
-
-    // Whether a procedure is anywhere in here, however deep.
-    //
-    // The types nest, so the question does: a procedure one array inside a
-    // record is still a procedure this value holds, and a check that looked
-    // only at the outside would pass a program that carries one and refuse the
-    // same program written without the wrapper.
-    public var holdsProcedure: Bool {
-        holdsClosure { _ in true }
     }
 
     // Whether a closure this value holds answers the predicate. Stops at the
@@ -162,67 +400,6 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // MARK: - Private
-    // The walk itself. The body answers whether to go on, and the walk
-    // answers whether it reached the end.
-    @discardableResult
-    private func walk(_ body: (Closure) -> Bool) -> Bool {
-        switch self {
-        case let .procedure(closure):
-            guard body(closure) else { return false }
-
-            for (_, cell) in closure.captured {
-                guard case let .value(captured) = cell else { continue }
-                guard captured.walk(body) else { return false }
-            }
-
-            return true
-
-        case let .array(items):
-            return items.allSatisfy { item in item.walk(body) }
-
-        case let .record(record):
-            return record.values.allSatisfy { value in value.walk(body) }
-
-        case let .dictionary(dictionary):
-            return dictionary.entries.allSatisfy { entry in entry.value.walk(body) }
-
-        case .null, .bool, .int, .double, .string, .bytes:
-            return true
-        }
-    }
-
-    public var type: ValueType {
-        switch self {
-        case .null:
-            return .null
-
-        case .bool:
-            return .bool
-
-        case .int:
-            return .int
-
-        case .double:
-            return .double
-
-        case .string:
-            return .string
-
-        case .bytes:
-            return .bytes
-
-        case .array:
-            return .array
-
-        case .record, .dictionary:
-            return .record
-
-        case .procedure:
-            return .procedure
-        }
-    }
-
     // A field of a record, and nil for anything else. Several answers travel as
     // one record because a procedure answers one value, so reading a field back
     // out is the ordinary thing a caller does with what a run gave it.
@@ -231,51 +408,6 @@ public indirect enum Value: Sendable, Equatable {
         case let .record(record): record[field]
         case let .dictionary(dictionary): dictionary[field]
         default: nil
-        }
-    }
-
-    // The elements a value is indexed by, and nil for what has none. This is
-    // where the `bytes = array<byte>` equation lives on the value side: an
-    // array answers its own elements and bytes answer theirs as the ints they
-    // are, lazily, so a compact spelling is not unpacked to read one element,
-    // and a procedure taking either through `any` reads this one projection
-    // instead of knowing the equation itself.
-    public var elements: AnyRandomAccessCollection<Value>? {
-        switch self {
-        case let .array(array):
-            return AnyRandomAccessCollection(array)
-
-        case let .bytes(bytes):
-            return AnyRandomAccessCollection(bytes.lazy.map { byte in Value.int(Int(byte)) })
-
-        default:
-            return nil
-        }
-    }
-
-    // The bytes a value is, in either spelling: the compact one as it is, and
-    // an array of whole numbers inside a byte's range read out one by one.
-    // Nil for anything else. The other half of the equation `elements`
-    // holds, for a procedure that wants the bytes rather than an element.
-    public var bytes: [UInt8]? {
-        switch self {
-        case let .bytes(bytes):
-            return bytes
-
-        case let .array(elements):
-            var bytes: [UInt8] = []
-            bytes.reserveCapacity(elements.count)
-
-            for element in elements {
-                guard case let .int(number) = element, let byte = UInt8(exactly: number) else { return nil }
-
-                bytes.append(byte)
-            }
-
-            return bytes
-
-        default:
-            return nil
         }
     }
 
@@ -297,12 +429,12 @@ public indirect enum Value: Sendable, Equatable {
     public func elements(at positions: some Sequence<Int>) -> Value? {
         switch self {
         case let .bytes(bytes):
-            guard let taken = bytes.taken(at: positions) else { return nil }
+            guard let taken = Self.taken(bytes, at: positions) else { return nil }
 
             return .bytes(taken)
 
         case let .array(array):
-            guard let taken = array.taken(at: positions) else { return nil }
+            guard let taken = Self.taken(array, at: positions) else { return nil }
 
             return .array(taken)
 
@@ -372,17 +504,6 @@ public indirect enum Value: Sendable, Equatable {
         return .bytes(bytes)
     }
 
-
-    // The name this value wears, where it wears one. A record settled under a
-    // declared type carries its label; nothing else names itself.
-    public var nominal: Name? {
-        guard case let .record(record) = self else { return nil }
-
-        return record.name
-    }
-
-    // MARK: - Initializer
-    // MARK: - Public
     public static func == (lhs: Value, rhs: Value) -> Bool {
         switch (lhs, rhs) {
         case (.null, .null):
@@ -473,32 +594,6 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // How a whole number stands against a fraction, exactly at every size.
-    // Converting the whole to binary64 rounds above 2^53, and worth must not
-    // depend on the rounding, so the fraction is taken apart instead: its whole
-    // part meets the int exactly, and only a tie reads what is left.
-    private static func order(whole integer: Int, fraction: Double) -> ComparisonResult? {
-        guard !fraction.isNaN else { return nil }
-
-        // Past either end of what an int can be (0x1p63 is the int's own edge,
-        // written exactly where `Double(Int.max)` would round past it) the
-        // answer needs no digits, and infinity, which only a host can hand in,
-        // is answered by the same two lines.
-        guard fraction < 0x1p63 else { return .orderedAscending }
-        guard fraction >= -0x1p63 else { return .orderedDescending }
-
-        let floored = fraction.rounded(.down)
-        let settled = Int(floored)
-
-        guard integer == settled else {
-            return integer < settled ? .orderedAscending : .orderedDescending
-        }
-
-        // Equal whole parts: whatever the flooring dropped is what the
-        // fraction has over the int.
-        return fraction == floored ? .orderedSame : .orderedAscending
-    }
-
     // The equality conditions test with. Strict except that worth unifies
     // across spellings: int and double across numeric width, and bytes beside
     // an array of what its elements are worth, applied recursively through
@@ -542,31 +637,172 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // Whether this holds fields under names: a record's layout's, or a
-    // dictionary's own.
-    public var holdsFields: Bool {
-        switch self {
-        case .record, .dictionary: true
-        default: false
+    // The part a path names, in a record by the place the link put the field
+    // at, in a dictionary by key and in an array by position. Every index was
+    // read to a position before this, and the link judged the path against
+    // the value's declared type, so a part not held is refused as what it
+    // is: an entry not written yet, or a type with no such part.
+    func reading(at path: [Projection], under rendered: String) throws -> Value {
+        guard let step = path.first else { return self }
+
+        let rest = Array(path.dropFirst())
+
+        switch (self, step) {
+        case let (.record(record), .field(position, name)):
+            guard record.values.indices.contains(position) else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+            }
+
+            return try record.values[position].reading(at: rest, under: rendered)
+
+        case let (.record(record), .key(name)):
+            guard let field = record[name] else {
+                throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
+            }
+
+            return try field.reading(at: rest, under: rendered)
+
+        case let (.array(elements), .index(index)):
+            guard elements.indices.contains(index) else {
+                throw ExecutionError(
+                    "'\(rendered)' reads element \(index) of an array holding \(elements.count)"
+                )
+            }
+
+            return try elements[index].reading(at: rest, under: rendered)
+
+        default:
+            throw ExecutionError(
+                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(type), which has no such part"
+            )
         }
     }
 
-    // This value's fields as names beside values, and nil for what holds
-    // none. A record's names come from its layout.
-    public var asDictionary: Value.Dictionary? {
-        switch self {
-        case let .dictionary(dictionary):
-            return dictionary
+    // This value with one part replaced: the part the path names, in a record
+    // by the place the link put the field at, in a dictionary by name and in
+    // an array by position. The rest is kept as it was. The link judged the
+    // path against the value's declared type, and every index was read to a
+    // position before this. A dictionary's names are its own, so one not
+    // held yet is made.
+    func writing(_ value: Value, at path: [Projection], under rendered: String) throws -> Value {
+        guard let step = path.first else { return value }
 
-        case let .record(record):
-            return record.asDictionary
+        let rest = Array(path.dropFirst())
+
+        switch (self, step) {
+        case let (.record(record), .field(position, name)):
+            guard record.values.indices.contains(position) else {
+                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
+            }
+
+            return .record(
+                record.writing(at: position, with: try record.values[position].writing(value, at: rest, under: rendered))
+            )
+
+        // A name written into what holds its names as data. The link judged
+        // the path, so a name that reaches here is one it allowed.
+        case let (_, .key(name)) where holdsFields:
+            do {
+                return try writing(name, with: try (self[name] ?? .null).writing(value, at: rest, under: rendered))
+            } catch let refused as ValueRefused {
+                throw ExecutionError("'\(rendered)' writes '\(name)', and \(refused.message)")
+            }
+
+        case let (.array(elements), .index(index)):
+            guard elements.indices.contains(index) else {
+                throw ExecutionError(
+                    "'\(rendered)' writes element \(index) of an array holding \(elements.count)"
+                )
+            }
+
+            var written = elements
+            written[index] = try elements[index].writing(value, at: rest, under: rendered)
+            return .array(written)
+
+        case (.null, _):
+            throw ExecutionError(
+                "'\(rendered)' writes through \(Path([step.spelled]).rendered), which holds nothing yet."
+                    + " Write the whole entry first"
+            )
 
         default:
-            return nil
+            throw ExecutionError(
+                "'\(rendered)' writes \(Path([step.spelled]).rendered) into \(type), which has no such part"
+            )
         }
     }
 
     // MARK: - Private
+    // The walk itself. The body answers whether to go on, and the walk
+    // answers whether it reached the end.
+    @discardableResult
+    private func walk(_ body: (Closure) -> Bool) -> Bool {
+        switch self {
+        case let .procedure(closure):
+            guard body(closure) else { return false }
+
+            for (_, cell) in closure.captured {
+                guard case let .value(captured) = cell else { continue }
+                guard captured.walk(body) else { return false }
+            }
+
+            return true
+
+        case let .array(items):
+            return items.allSatisfy { item in item.walk(body) }
+
+        case let .record(record):
+            return record.values.allSatisfy { value in value.walk(body) }
+
+        case let .dictionary(dictionary):
+            return dictionary.entries.allSatisfy { entry in entry.value.walk(body) }
+
+        case .null, .bool, .int, .double, .string, .bytes:
+            return true
+        }
+    }
+
+    // How a whole number stands against a fraction, exactly at every size.
+    // Converting the whole to binary64 rounds above 2^53, and worth must not
+    // depend on the rounding, so the fraction is taken apart instead: its whole
+    // part meets the int exactly, and only a tie reads what is left.
+    private static func order(whole integer: Int, fraction: Double) -> ComparisonResult? {
+        guard !fraction.isNaN else { return nil }
+
+        // Past either end of what an int can be (0x1p63 is the int's own edge,
+        // written exactly where `Double(Int.max)` would round past it) the
+        // answer needs no digits, and infinity, which only a host can hand in,
+        // is answered by the same two lines.
+        guard fraction < 0x1p63 else { return .orderedAscending }
+        guard fraction >= -0x1p63 else { return .orderedDescending }
+
+        let floored = fraction.rounded(.down)
+        let settled = Int(floored)
+
+        guard integer == settled else {
+            return integer < settled ? .orderedAscending : .orderedDescending
+        }
+
+        // Equal whole parts: whatever the flooring dropped is what the
+        // fraction has over the int.
+        return fraction == floored ? .orderedSame : .orderedAscending
+    }
+
+    // These positions taken in order, and nil where one of them is not a
+    // position the elements hold, so a caller that counted wrong is answered
+    // rather than trapped. Written once for both spellings' storage.
+    private static func taken<Element>(_ elements: [Element], at positions: some Sequence<Int>) -> [Element]? {
+        var taken = [Element]()
+
+        for position in positions {
+            guard elements.indices.contains(position) else { return nil }
+
+            taken.append(elements[position])
+        }
+
+        return taken
+    }
+
     // Whether a record and a dictionary hold the same fields. A record that
     // settled to a name is that name's, and no dictionary is.
     private static func same(
@@ -580,22 +816,5 @@ public indirect enum Value: Sendable, Equatable {
             record.names[place] == dictionary.entries[place].name
                 && held(record.values[place], dictionary.entries[place].value)
         }
-    }
-}
-
-private extension Array {
-    // These positions taken in order, and nil where one of them is not a
-    // position this holds, so a caller that counted wrong is answered rather
-    // than trapped. Written once for both spellings' storage.
-    func taken(at positions: some Sequence<Int>) -> [Element]? {
-        var taken = [Element]()
-
-        for position in positions {
-            guard indices.contains(position) else { return nil }
-
-            taken.append(self[position])
-        }
-
-        return taken
     }
 }

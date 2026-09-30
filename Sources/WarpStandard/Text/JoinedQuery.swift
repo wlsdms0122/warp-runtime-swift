@@ -15,6 +15,7 @@ struct JoinedQuery: Query {
         case strings
         case separator
 
+        // MARK: - Property
         var declared: Parameter {
             switch self {
             case .strings:
@@ -24,6 +25,10 @@ struct JoinedQuery: Query {
                 return Parameter(name: "separator", type: .string)
             }
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

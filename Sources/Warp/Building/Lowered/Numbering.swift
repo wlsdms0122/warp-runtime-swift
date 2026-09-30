@@ -38,6 +38,18 @@ struct Numbering: Sendable {
         case unnumbered
     }
 
+    // What a number is counted from. The document's list is the whole of the
+    // difference: the tables below answer a spelling either way.
+    //
+    // The closures are a count and not a list. A closure's reference is the
+    // position it stands at, so a row per closure would hold nothing the
+    // count does not already say, and a number read off an object would
+    // decide how many of them to stand up.
+    private enum Space: Sendable {
+        case document(spellings: [Name], closures: Int)
+        case table
+    }
+
     // MARK: - Property
     private let space: Space
     private let called: [Name: Int]
@@ -52,6 +64,37 @@ struct Numbering: Sendable {
     // which number a closure takes is the document's text and not the order
     // the link happened to lower in.
     private let runs: [(name: Name, count: Int)]
+
+    // Whether the numbers here are already rows. A table's own numbering
+    // answers every number with itself, so what it lowers stands where it was
+    // put rather than where a document said.
+    var numbersAreRows: Bool {
+        guard case .table = space else { return false }
+
+        return true
+    }
+
+    // How many closures this document numbers. A link answers them by the rows
+    // they took, and a list shorter than this is a document whose bodies are
+    // not all lowered yet.
+    var closureCount: Int {
+        guard case let .document(_, closures) = space else { return 0 }
+
+        return closures
+    }
+
+    // Every declaration that wrote a closure here.
+    var writers: [Name] {
+        runs.map(\.name)
+    }
+
+    // The first number the closures take. What a body carries is a number of
+    // this document; which of its closures that is, is the number less this.
+    private var opening: Int {
+        guard case let .document(spellings, _) = space else { return 0 }
+
+        return spellings.count
+    }
 
     // MARK: - Initializer
     // A document's own. What it sends, its own declarations, and the closures
@@ -80,29 +123,6 @@ struct Numbering: Sendable {
         called = rows
         sent = 0
         runs = []
-    }
-
-    // MARK: - Internal
-    // What this counts from, said as a value, so an object carries the
-    // numbering its bodies were lowered against.
-    //
-    // What is written is what a reading will use and cannot work out. The
-    // numbers a name stands at and what counts from what are one arithmetic
-    // over the spellings, so writing them down would make a numbering whose
-    // parts disagree something an object can hold.
-    //
-    // How many closures each declaration wrote is neither: folding runs a
-    // dependency's body against this, and lowering a closure literal there
-    // asks where that declaration's run begins.
-    // The spellings this document declares are written once, beside the
-    // table, so only what it sends and what it counted stand here.
-    func written(dropping declared: Int) -> Value? {
-        guard case let .document(spellings, _) = space else { return nil }
-
-        return .array([
-            .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
-            .array(runs.map { run in .array([.string(run.name.spelling), .int(run.count)]) })
-        ])
     }
 
     // Read back beside the spellings the document declares, because what a
@@ -148,22 +168,26 @@ struct Numbering: Sendable {
     }
 
     // MARK: - Public
-    // Whether the numbers here are already rows. A table's own numbering
-    // answers every number with itself, so what it lowers stands where it was
-    // put rather than where a document said.
-    var numbersAreRows: Bool {
-        guard case .table = space else { return false }
+    // What this counts from, said as a value, so an object carries the
+    // numbering its bodies were lowered against.
+    //
+    // What is written is what a reading will use and cannot work out. The
+    // numbers a name stands at and what counts from what are one arithmetic
+    // over the spellings, so writing them down would make a numbering whose
+    // parts disagree something an object can hold.
+    //
+    // How many closures each declaration wrote is neither: folding runs a
+    // dependency's body against this, and lowering a closure literal there
+    // asks where that declaration's run begins.
+    // The spellings this document declares are written once, beside the
+    // table, so only what it sends and what it counted stand here.
+    func written(dropping declared: Int) -> Value? {
+        guard case let .document(spellings, _) = space else { return nil }
 
-        return true
-    }
-
-    // How many closures this document numbers. A link answers them by the rows
-    // they took, and a list shorter than this is a document whose bodies are
-    // not all lowered yet.
-    var closureCount: Int {
-        guard case let .document(_, closures) = space else { return 0 }
-
-        return closures
+        return .array([
+            .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
+            .array(runs.map { run in .array([.string(run.name.spelling), .int(run.count)]) })
+        ])
     }
 
     // Whether this document gave a number at all. What it stands for is the
@@ -200,11 +224,6 @@ struct Numbering: Sendable {
         }
 
         return nil
-    }
-
-    // Every declaration that wrote a closure here.
-    var writers: [Name] {
-        runs.map(\.name)
     }
 
     // How many closures a declaration wrote here, or nil where the document
@@ -305,27 +324,6 @@ struct Numbering: Sendable {
 
         return nil
     }
-
-    // The first number the closures take. What a body carries is a number of
-    // this document; which of its closures that is, is the number less this.
-    private var opening: Int {
-        guard case let .document(spellings, _) = space else { return 0 }
-
-        return spellings.count
-    }
-
-    // What a number is counted from. The document's list is the whole of the
-    // difference: the tables below answer a spelling either way.
-    //
-    // The closures are a count and not a list. A closure's reference is the
-    // position it stands at, so a row per closure would hold nothing the
-    // count does not already say, and a number read off an object would
-    // decide how many of them to stand up.
-    private enum Space: Sendable {
-        case document(spellings: [Name], closures: Int)
-        case table
-    }
-
 
     private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
         guard case let .array(written) = value else {

@@ -37,7 +37,7 @@ struct ExpressionFormTests {
     func aNamedRecordStaysALiteral() throws {
         // Given. A record standing under a name is a value of that type, not a
         // mapping read by its tag
-        let written = try TextEncoding.value(from: "warpt 1\nbank.Money { amount 7 }\n")
+        let written = try TextEncoding().value(from: "warpt 1\nbank.Money { amount 7 }\n")
 
         // When
         let read = try loader.expression(from: written)
@@ -250,4 +250,6 @@ struct ExpressionFormTests {
         }
     }
 
+    // MARK: - Public
+    // MARK: - Private
 }

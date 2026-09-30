@@ -12,6 +12,9 @@ import Warp
 
 @Suite("The procedures a slot writes about itself")
 struct ModifierNotationTests {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Test
     @Test("a mark stands in front of the whole type", arguments: [
         ("inout int", TypeExpression.inout(.int)),
         ("inout int?", .inout(.nullable(.int))),
@@ -257,7 +260,7 @@ struct ModifierNotationTests {
         }
 
         #expect(body.first?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
-        #expect(read.procedures["entry"]?.body.first?.expression.constantValue == .dictionary(["loop": .int(1)]))
+        #expect(read.procedures["entry"]?.body.statements.first?.expression.constantValue == .dictionary(["loop": .int(1)]))
     }
 
     @Test("a module's var and a set path survive the round trip")
@@ -286,9 +289,12 @@ struct ModifierNotationTests {
         // Then
         #expect(module.variables["total"]?.start.constantValue == .int(0))
         #expect(
-            module.procedures["entry"]?.body[1].binding
+            module.procedures["entry"]?.body.statements[1].binding
                 == .assignment([.key("p"), .key("x")])
         )
         #expect(try Writer(registry: loader.registry).value(of: module) == written)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

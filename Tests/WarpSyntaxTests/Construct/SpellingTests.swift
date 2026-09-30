@@ -16,7 +16,7 @@ import Testing
 @Suite("A procedure belongs to the registry")
 struct SpellingTests {
     // MARK: - Property
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a form can be registered under another procedure")
     func formIsRegisteredUnderAnotherKey() async throws {
@@ -119,4 +119,7 @@ struct SpellingTests {
             ])
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

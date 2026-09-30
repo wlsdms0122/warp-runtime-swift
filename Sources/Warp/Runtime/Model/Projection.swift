@@ -16,6 +16,7 @@ enum Projection: Sendable {
     case key(Name)
     case index(Int)
 
+    // MARK: - Property
     // How the step reads back, as the author wrote it.
     var spelled: PathSegment {
         switch self {
@@ -23,4 +24,8 @@ enum Projection: Sendable {
         case let .index(index): .index(index)
         }
     }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

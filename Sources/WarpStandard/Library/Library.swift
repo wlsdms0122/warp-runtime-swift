@@ -9,6 +9,7 @@ import Foundation
 
 // The documents of `lib/std`, as they stand in the repository.
 enum Library {
+    // MARK: - Property
     static let documents: [String: String] = [
         "collection": """
             warpt 1
@@ -2685,4 +2686,8 @@ enum Library {
             }
             """,
     ]
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

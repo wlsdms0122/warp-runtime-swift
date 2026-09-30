@@ -27,7 +27,7 @@ struct DeclaredNameNotationTests {
         ])
 
         // When
-        let binding = sut.procedures[entryName]?.block?.body.first?.binding
+        let binding = sut.procedures[entryName]?.block?.body.statements.first?.binding
 
         // Then
         #expect(binding == .constant("held", declared: .double))
@@ -42,7 +42,7 @@ struct DeclaredNameNotationTests {
         ])
 
         // When
-        let binding = sut.procedures[entryName]?.block?.body.first?.binding
+        let binding = sut.procedures[entryName]?.block?.body.statements.first?.binding
 
         // Then
         #expect(binding == .variable("held", declared: .nullable(.int)))
@@ -61,8 +61,8 @@ struct DeclaredNameNotationTests {
 
         // Then
         #expect(
-            again.procedures[entryName]?.block?.body.first?.binding
-                == sut.procedures[entryName]?.block?.body.first?.binding
+            again.procedures[entryName]?.block?.body.statements.first?.binding
+                == sut.procedures[entryName]?.block?.body.statements.first?.binding
         )
     }
 
@@ -94,4 +94,7 @@ struct DeclaredNameNotationTests {
             "\(error)".contains("writes 'type', which says what a name holds")
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

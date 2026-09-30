@@ -23,16 +23,16 @@ public struct ConditionalForm: ConstructForm {
     public static let key: Name = "conditional"
 
     private let condition: Expression
-    private let then: [Statement]
-    private let otherwise: [Statement]?
+    private let then: Body
+    private let otherwise: Body?
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "conditional")
 
         self.condition = try decoder.descending(to: CodingKeys.when).read(ExpressionReader.self).expression
-        self.then = try decoder.descending(to: CodingKeys.then).read(BodyReader.self).statements
-        self.otherwise = try decoder.descendingIfPresent(to: CodingKeys.else)?.read(BodyReader.self).statements
+        self.then = try decoder.descending(to: CodingKeys.then).read(BodyReader.self).body
+        self.otherwise = try decoder.descendingIfPresent(to: CodingKeys.else)?.read(BodyReader.self).body
     }
 
     // MARK: - Public

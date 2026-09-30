@@ -70,7 +70,7 @@ public struct TemplateParser: Sendable {
         return segments
     }
 
-    public func parseRefPath(_ inner: String) throws -> [PathSegment] {
+    public func parseRefPath(_ inner: String) throws -> Path {
         var segments: [PathSegment] = []
         var buffer = ""
         var depth = 0
@@ -226,11 +226,13 @@ public struct TemplateParser: Sendable {
         // What a mark on the head would claim is the path's own fact, said by
         // the path, whichever spelling wrote it, and wherever a layer judges
         // the same path later.
-        if let refusal = segments.markedHead {
+        let path = Path(segments)
+
+        if let refusal = path.markedHead {
             throw TemplateSyntaxError(refusal)
         }
 
-        return segments
+        return path
     }
 
     public func render(_ segments: [TemplateSegment]) -> String {

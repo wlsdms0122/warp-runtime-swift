@@ -138,4 +138,7 @@ struct LoopTests {
             try loader.loadProcedure(fixture, importing: ["std.logic.equal"])
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

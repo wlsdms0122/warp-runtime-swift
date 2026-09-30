@@ -25,7 +25,7 @@ public struct BlockReader: Decodable {
         self.block = try .reading(
             body: try decoder.descendingIfPresent(to: CodingKeys.body)?
                 .read(BodyReader.self)
-                .statements ?? [],
+                .body ?? [],
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?
                 .read(ExpressionReader.self)
                 .expression,

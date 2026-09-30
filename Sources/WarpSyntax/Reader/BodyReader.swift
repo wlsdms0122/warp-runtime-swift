@@ -16,7 +16,7 @@ import Warp
 // not `StatementReader`'s.
 public struct BodyReader: Decodable {
     // MARK: - Property
-    public let statements: [Statement]
+    public let body: Body
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -37,33 +37,9 @@ public struct BodyReader: Decodable {
             )
         }
 
-        self.statements = statements
+        self.body = Body(statements)
     }
 
     // MARK: - Public
     // MARK: - Private
-}
-
-extension Block {
-    // The other adjacency the same rule names: a result runs after the body, so
-    // a body that always leaves would never reach it. Held where a document's
-    // body/result pair is joined (every reader that assembles the two comes
-    // through here, the way every statement sequence comes through
-    // `BodyReader`) so the pair rule cannot be forgotten one assembler at a
-    // time.
-    static func reading(
-        body: [Statement],
-        result: Expression?,
-        at steps: [Place.Step]
-    ) throws -> Block {
-        if body.alwaysLeaves, result != nil {
-            throw ReadingError(
-                "result: nothing runs after leaving,"
-                    + " and this result would never be reached",
-                at: steps
-            )
-        }
-
-        return Block(body: body, result: result)
-    }
 }

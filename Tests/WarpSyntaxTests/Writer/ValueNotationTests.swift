@@ -14,7 +14,8 @@ import Testing
 // what they promise is that they are the same one.
 @Suite("What a document spells data as")
 struct ValueNotationTests {
-    // MARK: - Lifecycle
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test(
         "what is written reads back as what it was",
@@ -137,4 +138,7 @@ struct ValueNotationTests {
             try JSONEncoder().encode(ValueWriter(sut))
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

@@ -14,6 +14,7 @@ import Warp
 @Suite("A document's identity")
 struct IdentityTests {
     // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("the digest is the published one, so two implementations answer alike")
     func theDigestIsTheStandardOne() {
@@ -33,7 +34,7 @@ struct IdentityTests {
 
         // Then
         for (written, expected) in cases {
-            #expect(Identity(SHA256.digest(of: Data(written.utf8))).rendered == expected)
+            #expect(Identity(SHA256().digest(of: Data(written.utf8))).rendered == expected)
         }
 
         // And a message longer than one block, where the schedule is what is
@@ -41,7 +42,7 @@ struct IdentityTests {
         let long = String(repeating: "a", count: 1000)
 
         #expect(
-            Identity(SHA256.digest(of: Data(long.utf8))).rendered
+            Identity(SHA256().digest(of: Data(long.utf8))).rendered
                 == "41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3"
         )
     }
@@ -56,8 +57,8 @@ struct IdentityTests {
             "procedures": .dictionary(["entry": .dictionary(["body": .array([])])])
         ])
 
-        let throughText = try TextEncoding.value(from: try TextEncoding.text(from: document))
-        let throughBytes = try BinaryEncoding.value(from: try BinaryEncoding.data(from: document))
+        let throughText = try TextEncoding().value(from: try TextEncoding().text(from: document))
+        let throughBytes = try BinaryEncoding().value(from: try BinaryEncoding().data(from: document))
 
         // Then
         #expect(try Identity.of(throughText) == Identity.of(document))
@@ -84,7 +85,7 @@ struct IdentityTests {
     @Test("an identity reads short where a person sees one, and whole where it is compared")
     func anIdentityReadsShort() {
         // Given
-        let sut = Identity(SHA256.digest(of: Data("abc".utf8)))
+        let sut = Identity(SHA256().digest(of: Data("abc".utf8)))
 
         // Then
         #expect(sut.short == "ba7816bf8f01")

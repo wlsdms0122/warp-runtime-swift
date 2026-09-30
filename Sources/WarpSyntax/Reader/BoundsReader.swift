@@ -16,12 +16,17 @@ import Warp
 //
 // The slots name the parameter and the signature says what the name admits, so
 // one bound is one claim however many slots mention the name.
-enum BoundsReader {
+struct BoundsReader {
+    // MARK: - Property
+    // MARK: - Initializer
+    init() { }
+
+    // MARK: - Public
     // The signature with its bounds applied, and the check that every bound
     // names a parameter some slot mentions. A bound on a name nobody wrote
     // binds nothing, which is a claim the author should hear about where they
     // wrote it.
-    static func apply(
+    func apply(
         _ bounds: [String: String]?,
         qualifying: (Name) -> Name = { name in name },
         to signature: Signature,
@@ -85,4 +90,6 @@ enum BoundsReader {
 
         return bounded
     }
+
+    // MARK: - Private
 }

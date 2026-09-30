@@ -33,7 +33,6 @@ public struct ExpressionReader: Decodable {
     // The keys a mapping is an expression by, one to a mapping.
     public static let tags = Set(ExpressionTag.allCases.map(\.key))
 
-
     // What a cast reads and the type it reads it as, inside the cast's own
     // mapping.
     static let subjectKey: Name = "of"
@@ -47,7 +46,6 @@ public struct ExpressionReader: Decodable {
     }
 
     // MARK: - Public
-    // MARK: - Internal
     // The decoder comes along because one form needs more than the value: a
     // closure carries statements, and which procedures a statement may write is the
     // registry's answer, which travels in the decoder rather than in the data.
@@ -454,7 +452,7 @@ public struct ExpressionReader: Decodable {
     // the one thing a closed template must never do, and which `validateClosed`
     // has already made the author declare a binding for.
     private static func substituted(
-        _ path: [PathSegment],
+        _ path: Path,
         over bindings: [Name: Expression]
     ) throws -> Expression {
         guard let head = path.head, let bound = bindings[head] else {
@@ -464,7 +462,7 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        let rest = try Array(path.dropFirst()).map { segment in
+        let rest = try path.segments.dropFirst().map { segment in
             try closing(segment, over: bindings)
         }
 
@@ -480,7 +478,7 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        return .reference(prefix + rest)
+        return .reference(prefix.appending(contentsOf: rest))
     }
 
     // A segment with any path inside it closed over the same bindings. Only an

@@ -24,7 +24,7 @@ public struct Validator: Sendable {
     // The door for a caller holding statements it assembled itself, without a
     // document: the same gate the load path passes, against the heads visible
     // where the body will run.
-    public func validate(body: [Statement], visible: Set<Name>) throws {
+    public func validate(body: Body, visible: Set<Name>) throws {
         try validate(body, visible: visible, at: .given("lowered"))
     }
 
@@ -234,7 +234,7 @@ public struct Validator: Sendable {
     // sees both.
     @discardableResult
     private func validate(
-        _ body: [Statement],
+        _ body: Body,
         visible startVisible: Set<Name>,
         variables startVariables: Set<Name> = [],
         declared startDeclared: Set<Name> = [],
@@ -245,7 +245,7 @@ public struct Validator: Sendable {
         var variables = startVariables
         var declared = startDeclared
 
-        for (position, statement) in body.enumerated() {
+        for (position, statement) in body.statements.enumerated() {
             // A statement is its name and the construct it writes under. Both,
             // because a document writes both and following one at a time is
             // what a place is for.
@@ -306,7 +306,7 @@ public struct Validator: Sendable {
                 }
             }
 
-            if statement.expression.alwaysLeaves, position != body.count - 1 {
+            if statement.expression.alwaysLeaves, position != body.statements.count - 1 {
                 throw ValidationError(
                     "every way through this"
                         + " statement leaves, and what follows it here"
@@ -539,7 +539,7 @@ public struct Validator: Sendable {
                 at: place
             )
 
-            guard !rescue.body.isEmpty || rescue.result != nil else {
+            guard !rescue.body.statements.isEmpty || rescue.result != nil else {
                 // An empty rescue would swallow a failure into null without a
                 // trace. If the alternate path produces nothing, the author's
                 // honest form is no rescue at all.
@@ -693,7 +693,7 @@ public struct Validator: Sendable {
     }
 
     private func validate(
-        paths: [[PathSegment]],
+        paths: [Path],
         visible: Set<Name>,
         at place: Place
     ) throws {
@@ -741,46 +741,4 @@ public struct Validator: Sendable {
             at: place
         )
     }
-}
-
-// Where a body is, as far as leaving it is concerned.
-//
-// One value rather than a parameter each: a body checked without its loops
-// reads as a body outside any loop, so carrying the whole is the default and
-// every place that breaks it has to say so.
-private struct Scope: Sendable {
-    // MARK: - Property
-    // The loops around here, nearest last, a nameless one as nil. A name
-    // reaches past the nearer ones, and nothing here means there is no loop
-    // to end.
-    let rounds: [Name?]
-
-    // The module's bound names, carried so every signature met on the way (a
-    // closure's included) refuses a parameter that would take one's place:
-    // linking folds a constant wherever its name is read, so a parameter under
-    // that name would never be the one that answers.
-    let constants: Set<Name>
-
-    // A procedure's own body: no loop yet.
-    static let procedure = Scope(rounds: [], constants: [])
-
-    static func procedure(constants: Set<Name>) -> Scope {
-        Scope(rounds: [], constants: constants)
-    }
-
-    // MARK: - Public
-    func inside(_ round: Name?) -> Scope {
-        Scope(rounds: rounds + [round], constants: constants)
-    }
-
-    // A procedure written inside another. It may be called anywhere and long
-    // after, so the loops around where it was *written* are not around where it
-    // runs, and its own answer is its own. What it captured it may write: a
-    // variable's box is one thing under one name everywhere the name is
-    // visible, and this body is one of those places.
-    var enclosed: Scope {
-        Scope(rounds: [], constants: constants)
-    }
-
-    // MARK: - Private
 }

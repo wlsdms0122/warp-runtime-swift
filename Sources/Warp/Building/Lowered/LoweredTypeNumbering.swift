@@ -93,6 +93,15 @@ struct LoweredTypeNumbering: Sendable {
     let types: [Name]
     let memberships: [Name]
 
+    // The two lists said as one value, so an object carries what its bodies
+    // number their types from.
+    var written: Value {
+        .array([
+            .array(types.map { name in .string(name.spelling) }),
+            .array(memberships.map { name in .string(name.spelling) })
+        ])
+    }
+
     // MARK: - Initializer
     // The lists as they were numbered, where they were read rather than
     // gathered. What a number means is a position in these, so a list that
@@ -119,15 +128,6 @@ struct LoweredTypeNumbering: Sendable {
         }
 
         try fields.end()
-    }
-
-    // The two lists said as one value, so an object carries what its bodies
-    // number their types from.
-    var written: Value {
-        .array([
-            .array(types.map { name in .string(name.spelling) }),
-            .array(memberships.map { name in .string(name.spelling) })
-        ])
     }
 
     // MARK: - Public

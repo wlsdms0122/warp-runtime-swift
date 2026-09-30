@@ -14,7 +14,8 @@ import Testing
 // rather than rediscovered at each caller.
 @Suite("Procedure readings and spellings")
 struct IntSpellingTests {
-    // MARK: - Lifecycle
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a fraction reads as the int it is, and misses by the fact it is")
     func readingNamesTheFact() {
@@ -96,4 +97,7 @@ struct IntSpellingTests {
         #expect(Double(spelling: "1.50") == nil)
         #expect(Double(spelling: "inf") == nil)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

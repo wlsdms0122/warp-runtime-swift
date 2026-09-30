@@ -19,7 +19,13 @@ struct SpellingQuery: Query {
     // What this takes: the value spelled, and nothing else.
     enum Parameters: Int, ParameterSet {
         case value
+
+        // MARK: - Property
         var declared: Parameter { Parameter(name: "value", type: .any) }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

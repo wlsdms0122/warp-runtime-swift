@@ -26,61 +26,7 @@ import Warp
 // key either way. What it does not take is a second
 // spelling of a value, `1.50` for `1.5` or `\u0041` for `A`, since those are
 // two texts for one value rather than two layouts of one text.
-public enum TextEncoding {
-    // MARK: - Property
-    // The first tokens of every document: which encoding, laid out how. The
-    // version moves when this file's grammar does, and for no other reason.
-    // What the *program* needs of its reader is said inside the document.
-    public static let name = "warpt"
-    public static let format = 1
-
-    // MARK: - Public
-    public static func text(from value: Value) throws -> String {
-        var written = "\(name) \(format)\n"
-
-        try write(value, at: 0, into: &written, within: Envelope.nesting)
-
-        written += "\n"
-
-        return written
-    }
-
-    // The same writing on one line and without the envelope, for a sentence
-    // that quotes a value.
-    static func line(from value: Value) throws -> String {
-        var written = ""
-
-        try write(value, at: 0, into: &written, within: Envelope.nesting)
-
-        return written
-            .split(separator: "\n")
-            .map { line in line.trimmingCharacters(in: .whitespaces) }
-            .joined(separator: " ")
-    }
-
-    public static func data(from value: Value) throws -> Data {
-        Data(try text(from: value).utf8)
-    }
-
-    public static func value(from data: Data) throws -> Value {
-        guard let text = String(bytes: data, encoding: .utf8) else {
-            throw refused("the text is not UTF-8")
-        }
-
-        return try value(from: text)
-    }
-
-    public static func value(from text: String) throws -> Value {
-        let scalars = Array(text.unicodeScalars)
-
-        do {
-            return try read(scalars)
-        } catch let unplaced as Unplaced {
-            throw refused(unplaced.said, at: unplaced.offset, in: scalars)
-        }
-    }
-
-    // MARK: - Private
+public struct TextEncoding {
     private enum Token: Equatable {
         case arrayOpen
         case arrayClose
@@ -94,25 +40,108 @@ public enum TextEncoding {
     // A token and where it began, counted in scalars from the start of the
     // text, which is what a refusal turns into a line and a column.
     private struct Placed {
+        // MARK: - Property
         let token: Token
         let offset: Int
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // A refusal that knows where it happened and not yet how to say it. The
     // line and column are worked out once, at the door, from the whole text.
     private struct Unplaced: Error {
+        // MARK: - Property
         let said: String
         let offset: Int
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
-    private static func read(_ scalars: [Unicode.Scalar]) throws -> Value {
+    // A container being put back together, exactly as in the binary reader. One
+    // reader per encoding would be two chances to differ. A sum rather
+    // than two optionals, so "neither" and "both" are not states the code has
+    // to promise never to reach; a record with no key is one waiting for its
+    // next field name.
+    private enum Opened {
+        case array([Value])
+        case record(held: [Name: Value], key: Name?, name: Name?)
+    }
+
+    // MARK: - Property
+    // The first tokens of every document: which encoding, laid out how. The
+    // version moves when this file's grammar does, and for no other reason.
+    // What the *program* needs of its reader is said inside the document.
+    public static let name = "warpt"
+    public static let format = 1
+
+    // What may stand between two tokens, besides the text ending.
+    private static let delimiters = Set(" \n\r\t[]{}".unicodeScalars)
+
+    // What ends a bare token: a delimiter, or a quote.
+    private static let enders = delimiters.union(["\""])
+
+    // MARK: - Initializer
+    public init() { }
+
+    // MARK: - Public
+    public func text(from value: Value) throws -> String {
+        var written = "\(Self.name) \(Self.format)\n"
+
+        try write(value, at: 0, into: &written, within: Envelope.nesting)
+
+        written += "\n"
+
+        return written
+    }
+
+    // The same writing on one line and without the envelope, for a sentence
+    // that quotes a value.
+    func line(from value: Value) throws -> String {
+        var written = ""
+
+        try write(value, at: 0, into: &written, within: Envelope.nesting)
+
+        return written
+            .split(separator: "\n")
+            .map { line in line.trimmingCharacters(in: .whitespaces) }
+            .joined(separator: " ")
+    }
+
+    public func data(from value: Value) throws -> Data {
+        Data(try text(from: value).utf8)
+    }
+
+    public func value(from data: Data) throws -> Value {
+        guard let text = String(bytes: data, encoding: .utf8) else {
+            throw refused("the text is not UTF-8")
+        }
+
+        return try value(from: text)
+    }
+
+    public func value(from text: String) throws -> Value {
+        let scalars = Array(text.unicodeScalars)
+
+        do {
+            return try read(scalars)
+        } catch let unplaced as Unplaced {
+            throw refused(unplaced.said, at: unplaced.offset, in: scalars)
+        }
+    }
+
+    // MARK: - Private
+    private func read(_ scalars: [Unicode.Scalar]) throws -> Value {
         // The first two tokens are read on their own and before the rest:
         // whether this is a document at all, and laid out how, is answered
         // before anything in it is, so a later format is refused as that and
         // not as whatever its body says that this reader has no name for.
         var reading = scalars[...]
 
-        guard bareToken(from: &reading) == name else {
+        guard bareToken(from: &reading) == Self.name else {
             throw refused("the text does not begin as a warp document begins", at: 0)
         }
 
@@ -138,10 +167,10 @@ public enum TextEncoding {
             throw refused("\(version) is a format past what an int holds", at: start)
         }
 
-        guard claimed == format else {
+        guard claimed == Self.format else {
             throw refused(
-                claimed > format
-                    ? "the document is laid out as format \(claimed), and this reader lays out \(format)"
+                claimed > Self.format
+                    ? "the document is laid out as format \(claimed), and this reader lays out \(Self.format)"
                     : "format \(claimed) never existed",
                 at: start
             )
@@ -155,26 +184,16 @@ public enum TextEncoding {
         throw refused("the document ended and the text did not", at: left.offset)
     }
 
-    // A container being put back together, exactly as in the binary reader. One
-    // reader per encoding would be two chances to differ. A sum rather
-    // than two optionals, so "neither" and "both" are not states the code has
-    // to promise never to reach; a record with no key is one waiting for its
-    // next field name.
-    private enum Opened {
-        case array([Value])
-        case record(held: [Name: Value], key: Name?, name: Name?)
-    }
-
     // A bare token past any whitespace, or nothing where the text has none
     // there. The header is read this way, since a header is two of them.
-    private static func bareToken(from reading: inout ArraySlice<Unicode.Scalar>) -> String {
+    private func bareToken(from reading: inout ArraySlice<Unicode.Scalar>) -> String {
         while let character = reading.first, " \n\r\t".unicodeScalars.contains(character) {
             reading.removeFirst()
         }
 
         var bare = ""
 
-        while let character = reading.first, !enders.contains(character) {
+        while let character = reading.first, !Self.enders.contains(character) {
             bare.unicodeScalars.append(character)
             reading.removeFirst()
         }
@@ -182,7 +201,7 @@ public enum TextEncoding {
         return bare
     }
 
-    private static func tokenized(_ reading: ArraySlice<Unicode.Scalar>) throws -> [Placed] {
+    private func tokenized(_ reading: ArraySlice<Unicode.Scalar>) throws -> [Placed] {
         var tokens: [Placed] = []
         var reading = reading
 
@@ -239,26 +258,20 @@ public enum TextEncoding {
         return tokens
     }
 
-    // What may stand between two tokens, besides the text ending.
-    private static let delimiters = Set(" \n\r\t[]{}".unicodeScalars)
-
-    // What ends a bare token: a delimiter, or a quote.
-    private static let enders = delimiters.union(["\""])
-
     // A character as a person reads it in a refusal: itself, or a control
     // character the way the writer spells one.
-    private static func shown(_ scalar: Unicode.Scalar) -> String {
+    private func shown(_ scalar: Unicode.Scalar) -> String {
         scalar.value < 0x20 ? String(format: "\\u%04x", scalar.value) : String(scalar)
     }
 
     // A delimiter follows a token, or nothing does.
-    private static func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
-        guard let next = reading.first, !delimiters.contains(next) else { return }
+    private func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
+        guard let next = reading.first, !Self.delimiters.contains(next) else { return }
 
         throw refused("a token runs straight into \(shown(next)), and whitespace or a bracket separates the two", at: reading.startIndex)
     }
 
-    private static func quoted(from reading: inout ArraySlice<Unicode.Scalar>) throws -> String {
+    private func quoted(from reading: inout ArraySlice<Unicode.Scalar>) throws -> String {
         var string = ""
 
         while let character = reading.first {
@@ -285,7 +298,7 @@ public enum TextEncoding {
         throw refused("the text ends inside text", at: reading.startIndex)
     }
 
-    private static func escaped(from reading: inout ArraySlice<Unicode.Scalar>) throws -> Unicode.Scalar {
+    private func escaped(from reading: inout ArraySlice<Unicode.Scalar>) throws -> Unicode.Scalar {
         guard let character = reading.first else {
             throw refused("the text ends inside an escape", at: reading.startIndex)
         }
@@ -326,7 +339,7 @@ public enum TextEncoding {
 
     // The body of `x"…"`: lowercase hex, two digits a byte, nothing else.
     // Uppercase or odd length would be a second spelling for the same bytes.
-    private static func hexed(from reading: inout ArraySlice<Unicode.Scalar>) throws -> [UInt8] {
+    private func hexed(from reading: inout ArraySlice<Unicode.Scalar>) throws -> [UInt8] {
         var digits: [UInt8] = []
 
         while let character = reading.first, character != "\"" {
@@ -360,7 +373,7 @@ public enum TextEncoding {
             .map { index in digits[index] << 4 | digits[index + 1] }
     }
 
-    private static func hexadecimal(from reading: inout ArraySlice<Unicode.Scalar>) throws -> UInt32 {
+    private func hexadecimal(from reading: inout ArraySlice<Unicode.Scalar>) throws -> UInt32 {
         var value: UInt32 = 0
 
         for _ in 0..<4 {
@@ -379,7 +392,7 @@ public enum TextEncoding {
         return value
     }
 
-    private static func read(from tokens: inout ArraySlice<Placed>, ending: Int) throws -> Value {
+    private func read(from tokens: inout ArraySlice<Placed>, ending: Int) throws -> Value {
         var opened: [Opened] = []
 
         while true {
@@ -394,7 +407,7 @@ public enum TextEncoding {
 
             // A record waits for a key where everything else waits for a value,
             // and a closing brace is only honest in that position
-            if case .record(let held, .none, let name) = opened.last {
+            if case let .record(held, .none, name) = opened.last {
                 switch token {
                 case .recordClose:
                     opened.removeLast()
@@ -479,12 +492,14 @@ public enum TextEncoding {
                 guard let open = opened.popLast() else { return value }
 
                 switch open {
-                case .array(var held):
+                case let .array(held):
+                    var held = held
                     held.append(value)
 
                     opened.append(.array(held))
 
-                case .record(var held, let key?, let name):
+                case let .record(held, key?, name):
+                    var held = held
                     // Unique: the key was refused where it was read if the
                     // record already held it.
                     held[key] = value
@@ -503,7 +518,7 @@ public enum TextEncoding {
     // What a bare token names. Everything unquoted is one of five things, and a
     // number is whole or a fraction by grammar. A point or an exponent, not a
     // reader's guess.
-    private static func scalar(from bare: String, at offset: Int) throws -> Value {
+    private func scalar(from bare: String, at offset: Int) throws -> Value {
         if let scalar = Name.scalarKeywords[bare] { return scalar }
 
         do {
@@ -538,7 +553,7 @@ public enum TextEncoding {
 
     // A key's spelling as the name it stands for, said in this reader's own
     // procedures.
-    private static func key(_ spelling: String, at offset: Int) throws -> Name {
+    private func key(_ spelling: String, at offset: Int) throws -> Name {
         do {
             return try Name(spelling)
         } catch let refusal as NameRefused {
@@ -549,7 +564,7 @@ public enum TextEncoding {
     // A field name is read in any position, since layout is the writer's, and
     // refused where the record already holds it: two values under one key are
     // two documents, not one document twice.
-    private static func expect(_ key: Name, in held: [Name: Value], at offset: Int) throws {
+    private func expect(_ key: Name, in held: [Name: Value], at offset: Int) throws {
         guard held[key] == nil else {
             throw refused("the record writes '\(key)' twice", at: offset)
         }
@@ -557,7 +572,7 @@ public enum TextEncoding {
 
     // Fields under names, with the name of the layout they stood on where
     // there was one.
-    private static func write(
+    private func write(
         _ held: Value.Dictionary,
         named name: Name?,
         at indent: Int,
@@ -603,7 +618,7 @@ public enum TextEncoding {
         text += String(repeating: "  ", count: indent) + "}"
     }
 
-    private static func write(
+    private func write(
         _ value: Value,
         at indent: Int,
         into text: inout String,
@@ -682,7 +697,7 @@ public enum TextEncoding {
         }
     }
 
-    private static func write(_ string: String, into text: inout String) {
+    private func write(_ string: String, into text: inout String) {
         text += "\""
 
         for character in string.unicodeScalars {
@@ -709,7 +724,7 @@ public enum TextEncoding {
 
     // The same count the writer keeps: containers open on the path, and the
     // one about to open is one more of them.
-    private static func opening(_ opened: [Opened], at offset: Int) throws {
+    private func opening(_ opened: [Opened], at offset: Int) throws {
         guard opened.count < Envelope.nesting else {
             throw refused("the document nests deeper than a reader must follow", at: offset)
         }
@@ -717,7 +732,7 @@ public enum TextEncoding {
 
     // A container opens within the bound or not at all, and what it holds is
     // written one container deeper.
-    private static func opening(_ value: Value, within depth: Int) throws {
+    private func opening(_ value: Value, within depth: Int) throws {
         guard depth > 0 else {
             throw EncodingError.invalidValue(
                 value,
@@ -729,17 +744,17 @@ public enum TextEncoding {
         }
     }
 
-    private static func refused(_ said: String) -> Error {
+    private func refused(_ said: String) -> Error {
         DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: said))
     }
 
-    private static func refused(_ said: String, at offset: Int) -> Error {
+    private func refused(_ said: String, at offset: Int) -> Error {
         Unplaced(said: said, offset: offset)
     }
 
     // Said with the line and column the offset stands at, both counted from
     // one, the column in scalars.
-    private static func refused(_ said: String, at offset: Int, in scalars: [Unicode.Scalar]) -> Error {
+    private func refused(_ said: String, at offset: Int, in scalars: [Unicode.Scalar]) -> Error {
         var line = 1
         var column = 1
 

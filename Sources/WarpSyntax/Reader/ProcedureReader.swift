@@ -37,7 +37,7 @@ public struct ProcedureReader: Decodable {
         let block = try Block.reading(
             body: try decoder.descendingIfPresent(to: CodingKeys.body)?
                 .read(BodyReader.self)
-                .statements ?? [],
+                .body ?? [],
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?
                 .read(ExpressionReader.self)
                 .expression,
@@ -67,7 +67,7 @@ public struct ProcedureReader: Decodable {
             // contract. `parameters:`, `returns:` and `bounds:` are one
             // signature. What a call may pass, what comes back, and what each
             // type parameter admits.
-            signature: try BoundsReader.apply(
+            signature: try BoundsReader().apply(
                 try container.decodeIfPresent([String: String].self, forKey: .bounds),
                 qualifying: { name in (decoder.userInfo[.notation] as? Notation ?? .canonical).qualified(name, as: .type) },
                 to: Signature(

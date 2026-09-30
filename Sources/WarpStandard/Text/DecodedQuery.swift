@@ -17,6 +17,7 @@ struct DecodedQuery: Query {
         case bytes
         case encoding
 
+        // MARK: - Property
         var declared: Parameter {
             switch self {
             case .bytes:
@@ -26,6 +27,10 @@ struct DecodedQuery: Query {
                 return Parameter(name: "encoding", type: .string, candidates: ["utf8"])
             }
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

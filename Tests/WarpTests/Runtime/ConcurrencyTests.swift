@@ -16,8 +16,44 @@ import WarpStandard
 // bundle out of the link has granted no concurrency at all.
 @Suite("Running at once")
 struct ConcurrencyTests {
+    private actor CancellationWatch {
+        // MARK: - Property
+        private(set) var wasCancelled = false
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func record() {
+            wasCancelled = true
+        }
+
+        // MARK: - Private
+    }
+
+    private struct WaitEffect: Effect {
+        typealias Parameters = NoParameters
+
+        // MARK: - Property
+        let watch: CancellationWatch
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func run(_ invocation: Invocation<Self>) async throws -> Value {
+            do {
+                try await Task.sleep(for: .seconds(30))
+            } catch {
+                await watch.record()
+
+                throw error
+            }
+
+            return .null
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("all answers a record's closures under the record's keys")
     func allAnswersARecord() async throws {
@@ -406,42 +442,6 @@ struct ConcurrencyTests {
         }
     }
 
-}
-
-// MARK: - A piece that outlives the answer
-
-private actor CancellationWatch {
-    // MARK: - Property
-    private(set) var wasCancelled = false
-
-    // MARK: - Initializer
     // MARK: - Public
-    func record() {
-        wasCancelled = true
-    }
-
-    // MARK: - Private
-}
-
-private struct WaitEffect: Effect {
-    typealias Parameters = NoParameters
-
-    // MARK: - Property
-    let watch: CancellationWatch
-
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
-        do {
-            try await Task.sleep(for: .seconds(30))
-        } catch {
-            await watch.record()
-
-            throw error
-        }
-
-        return .null
-    }
-
     // MARK: - Private
 }

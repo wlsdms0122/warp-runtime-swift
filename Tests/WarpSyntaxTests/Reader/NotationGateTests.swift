@@ -19,7 +19,7 @@ struct NotationGateTests {
     // MARK: - Property
     private let loader = Loader.testing
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a type that opens an argument it never closes is refused", arguments: [
         "array<string",
@@ -66,4 +66,7 @@ struct NotationGateTests {
             try StatementReader(from: decoder)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }
