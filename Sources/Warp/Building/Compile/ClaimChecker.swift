@@ -251,7 +251,7 @@ struct ClaimChecker {
         var answering: [Name: Name] = [:]
 
         for (procedure, wanted) in asked.held.sorted(by: { $0.key < $1.key }) {
-            let spelling = LoweredContractProcedure.spelling(of: type, procedure: procedure)
+            let spelling = ContractProcedure.spelling(of: type, procedure: procedure)
 
             // A private declaration is in no space another document resolves
             // in, and a contract is how a document that never names a

@@ -165,7 +165,7 @@ public struct Draft: Sendable {
             + contracts.flatMap { contract, procedures in
                 procedures.keys.map { procedure in
                     (
-                        Name(normal: "\(contract.spelling).\(procedure.spelling)"),
+                        ContractProcedure.spelling(of: contract, procedure: procedure),
                         Place.contract(contract.spelling, in: document)
                             .appending(.key(procedure.spelling))
                     )
