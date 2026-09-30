@@ -50,7 +50,7 @@ struct Bench {
         // MARK: - Private
     }
 
-    // What one world of fanned-out procedures costs, by the door that was asked.
+    // What one build of fanned-out procedures costs, by the door that was asked.
     private struct Cost {
         // MARK: - Property
         let build: Double
@@ -132,10 +132,8 @@ struct Bench {
 
     // One column of a table: what it is called, what it prints for a row, and
     // what a table compared against is asked for where the column moves at
-    // all.
-    //
-    // A column named once is a column that cannot be printed and not compared,
-    // which is what happened twice while the name lived in five places.
+    // all. The heading is named once, so a column is printed and compared
+    // under one spelling.
     private struct Column<Row> {
         // MARK: - Property
         let heading: String
@@ -238,7 +236,7 @@ struct Bench {
         }
 
         // Each table printed where it is finished rather than all three at the
-        // end, so that a world further down refusing does not take the tables
+        // end, so that a build further down refusing does not take the tables
         // already measured with it.
         print(Self.table(
             measured,
@@ -455,7 +453,9 @@ struct Bench {
         ]
 
         return table(
-            measured.sorted { one, other in one.key < other.key }.map { name, measurement in (label: name, row: measurement) },
+            measured
+                .sorted { one, other in one.key < other.key }
+                .map { name, measurement in (label: name, row: measurement) },
             labelled: "workload",
             columns: columns,
             against: read,
@@ -469,7 +469,7 @@ struct Bench {
     // document and once with all of them in a single document.
     //
     // Beside each total, what one more procedure adds: the standard vocabulary is in
-    // every one of these worlds, so a total carries a cost the count does not
+    // every one of these builds, so a total carries a cost the count does not
     // move, and subtracting the smallest chain is what leaves the count's own.
     //
     // The two series carry the same procedures, the same bodies and the same names,
@@ -554,7 +554,9 @@ struct Bench {
             .figure("alone us", decimals: 0, moves: true) { dealt in dealt.cost.alone / 1000 },
             .figure("link us", decimals: 0, moves: true) { dealt in dealt.cost.link / 1000 },
             .figure("spread us", decimals: 0, moves: false) { dealt in spread(dealt) / 1000 },
-            .figure("x", decimals: 2, moves: false) { dealt in spread(dealt) > 0 ? dealt.cost.build / spread(dealt) : 0 }
+            .figure("x", decimals: 2, moves: false) { dealt in
+                spread(dealt) > 0 ? dealt.cost.build / spread(dealt) : 0
+            }
         ]
         let rows: [(label: String, row: Dealt)] = costs.keys.sorted().compactMap { count in
             costs[count].map { cost in (label: "\(count)", row: (count: count, cost: cost)) }

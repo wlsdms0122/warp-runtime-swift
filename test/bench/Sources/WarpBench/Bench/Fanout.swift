@@ -26,9 +26,8 @@ import WarpStandard
 // and `link()` is what no spreading takes away. What `alone()` costs over
 // `compile()` is what a compile stops sharing once the documents are split.
 //
-// A chain answers none of this: its documents stand in a line, so a document
-// cannot be compiled until the one in front of it has been. `Chain` is the
-// world where that line is what is being measured.
+// `Chain` measures documents that stand in a line, where a document is
+// compiled only after the one in front of it.
 struct Fanout {
     // MARK: - Property
     private let modules: [Module]

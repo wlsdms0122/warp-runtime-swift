@@ -11,12 +11,11 @@ import Foundation
 // document holds.
 //
 // In runs rather than one at a time round the documents, so a document holding
-// several holds ones that stand next to each other. What a world makes of that
-// is the world's own business.
+// several holds ones that stand next to each other.
 struct Dealing {
     private enum Refusal: Error {
-        // A world of no procedures leaves every document declaring none, and a
-        // document declares at least one.
+        // No procedures leaves every document declaring none, and a document
+        // declares at least one.
         case procedureless
 
         // Fewer documents than one, or more documents than there are procedures to

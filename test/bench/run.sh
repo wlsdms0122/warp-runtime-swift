@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Builds the bench in release and runs it. Arguments pass through:
 # `run.sh [rounds] [repeats] [--against <table>]`. The table lands in
 # result/latest.md, which the repository does not keep: a figure is one
