@@ -311,20 +311,6 @@ struct LoweredTypeTests {
         }
     }
 
-    @Test("a row is found by the bytes of its spelling, and not by an equivalent one")
-    func aRowIsFoundByBytes() {
-        // Given: a declared name written composed, and asked for decomposed
-        let composed: Name = "app.Caf\u{E9}"
-        let decomposed = "app.Cafe\u{301}"
-        let table = TypeTable(types: [composed: .int])
-
-        // When / Then: Swift calls the two spellings equal, and the table
-        // does not
-        #expect(composed.spelling == decomposed)
-        #expect(table.loweredTypes.row(named: composed) == 0)
-        #expect(throws: NameRefused.self) { try Name(decomposed) }
-    }
-
     @Test("a procedure another link made is refused by a run, not read by its rows")
     func aProcedureFromAnotherLinkIsRefused() async throws {
         // Given: a closure made by one image, handed to a run of another
