@@ -537,38 +537,29 @@ public struct Builder: Sendable {
             asked[symbol.declared] = symbol.procedure.signature
         }
 
+        // What the documents behind this one declare, read the way a body in
+        // this one reads them.
+        let behind = context()
+
         // What a selector this document may reach takes: its own declarations
         // first, the documents standing before it after. One rule, so the two
         // judgements standing on it read the same declaration.
-        let taking: @Sendable (Name) -> Signature? = {
-            [rows = compiling.lowering.rows, table = compiling.lowering.table, asked = compiling.contractProcedures] selector in
-            own[selector] ?? rows[selector].map { row in table[row].signature } ?? asked[selector]?.signature
+        let taking: @Sendable (Name) -> Signature? = { selector in
+            own[selector] ?? behind.signature(of: selector)
         }
 
         // Derived over this document's declarations, and read off the rows
-        // the link holds for every other: what the build derives of a
-        // declaration stands on its row, so a document's own facts are its
-        // own until its rows stand, and a spelling another document declares
-        // privately is no row this one reaches.
+        // for every other: what the build derives of a declaration stands on
+        // its row, so a document's own facts are its own until its rows stand.
         var const: Set<Name> = []
         var isolated: Set<Name> = []
         var failing: [Name: Failing] = [:]
-        let beyond: @Sendable (Name) -> Linked? = { [compiling] selector in compiling.declared(selector, from: origin) }
-
-        // A call through a contract reaches whatever declaration the value
-        // turns out to be, so what it reads as is what the contract asked of
-        // every one of them.
-        let asked = compiling.contractProcedures
-        let answersWithoutRunning: @Sendable (Name) -> Bool = { selector in
-            beyond(selector)?.constness == .const || asked[selector]?.constness == .const
-        }
-        let touchesNothingShared: @Sendable (Name) -> Bool = { selector in
-            beyond(selector)?.isolation == .isolated || asked[selector]?.isolation == .isolated
-        }
+        let answersWithoutRunning: @Sendable (Name) -> Bool = { selector in behind.isConst(selector) }
+        let touchesNothingShared: @Sendable (Name) -> Bool = { selector in behind.isIsolated(selector) }
 
         Derivation().const(among: holding, settling: &const, reading: reading, taking: taking, beyond: answersWithoutRunning)
         Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared)
-        Derivation().failing(among: holding, settling: &failing) { selector in beyond(selector)?.failing }
+        Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))
         let constant: @Sendable (Name) -> Bool = { [const] selector in

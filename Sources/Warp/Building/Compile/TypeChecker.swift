@@ -1209,7 +1209,7 @@ struct TypeChecker {
         // asked of every declaration answering it.
         case let .call(call):
             guard
-                context.signature(of: call.selector) != nil || context.contractProcedures[call.selector] != nil,
+                context.signature(of: call.selector) != nil,
                 !context.isConst(call.selector)
             else {
                 return call.arguments.lazy
@@ -1908,9 +1908,6 @@ struct TypeChecker {
                 held.isConstProcedure || held.isIsolatedProcedure
             }
 
-            let taking: (Name) -> Signature? = { selector in
-                context.signature(of: selector) ?? context.contractProcedures[selector]?.signature
-            }
             let const = body.map { block in
                 Derivation().isConst(
                     block,
@@ -1919,7 +1916,7 @@ struct TypeChecker {
                     reading: reading,
                     applying: procedure.signature.constProcedures
                         .union(captured.filter { _, held in held.isConstProcedure }.keys),
-                    taking: taking
+                    taking: context.signature(of:)
                 )
             } ?? false
             let isolated = body.map { block in
@@ -1929,7 +1926,7 @@ struct TypeChecker {
                     given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures
                         .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
-                    taking: taking
+                    taking: context.signature(of:)
                 )
             } ?? false
 
@@ -2090,7 +2087,6 @@ struct TypeChecker {
         // the call stands in.
         case let .call(call):
             let signature = context.signature(of: call.selector)
-                ?? context.contractProcedures[call.selector]?.signature
 
             guard case .judging = ask else {
                 var readings: [LoweredType] = []
