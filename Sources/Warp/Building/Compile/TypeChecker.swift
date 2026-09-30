@@ -177,6 +177,13 @@ struct TypeChecker {
         case refused(String)
     }
 
+    // What makes an expression something the run runs rather than reads.
+    private enum Runs {
+        case calling(Name)
+        case applying
+        case construct
+    }
+
     // A declaration whose answer nobody wrote, with what it takes to read one
     // off the body: the body itself, the names in scope before its first
     // statement, and which other unwritten answers its own may come from.
