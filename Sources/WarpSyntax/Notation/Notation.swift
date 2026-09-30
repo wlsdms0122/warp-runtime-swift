@@ -49,7 +49,7 @@ public struct Notation: Sendable {
     // How an expression may be written here beyond the forms every document
     // has, and nothing where every expression is written as the expression it
     // is.
-    public private(set) var spelling: (any ExpressionSpelling)?
+    public let spelling: (any ExpressionSpelling)?
 
     // What `{ format:, with: }` lowers to, and nothing where this notation does
     // not offer a template.
@@ -62,12 +62,12 @@ public struct Notation: Sendable {
     // Whether a mapping with no tag of its own is a record: where a value is
     // wanted, a record of expressions, and where a type is, a record type. A
     // document writes a record under `record`.
-    public private(set) var readsBareRecords: Bool
+    public let readsBareRecords: Bool
 
     // Whether a parameter may be written as one pair, `count: int` for
     // `{ name: count, type: int }` and `count: { type: int, enum: [1, 2] }`
     // for the record with the name inside. A document writes the record.
-    public private(set) var pairedParameter: Bool
+    public let pairedParameter: Bool
 
     // What a declared name the text writes stands for, where the text writes
     // one short: a type's name in a slot, a cast, a field, a bound, a claim or
