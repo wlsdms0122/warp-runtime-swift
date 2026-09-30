@@ -11,8 +11,8 @@ import Warp
 // The signature-level `bounds:` key, which constraint each type parameter is
 // bounded by, declared once where the parameter's name lives:
 //
-//   bounds: { N: Numeric }
-//   parameters: { of: some N, value: some N }
+//   bounds { N "std.Numeric" }
+//   parameters [ { name "of" type "some N" } { name "value" type "some N" } ]
 //
 // The slots name the parameter and the signature says what the name admits, so
 // one bound is one claim however many slots mention the name.
@@ -25,9 +25,9 @@ struct BoundsReader {
     // The signature with its bounds applied, and the check that every bound
     // names a parameter some slot mentions. A bound on a name nobody wrote
     // binds nothing, which is a claim the author should hear about where they
-    // wrote it.
+    // wrote it. `steps` are where `bounds` stands.
     func apply(
-        _ bounds: [String: String]?,
+        _ bounds: [Name: String]?,
         qualifying: (Name) -> Name = { name in name },
         to signature: Signature,
         at steps: [Place.Step]
@@ -41,13 +41,14 @@ struct BoundsReader {
         var named: [Name: [Name]] = [:]
 
         for (parameter, bound) in bounds.sorted(by: { $0.key < $1.key }) {
+            let here = steps + [.key(parameter.spelling)]
             let names: [Name]
             let parsed: TypeExpression
 
             do {
                 parsed = try TypeReader.parse(bound, qualifying: qualifying)
             } catch let refused as TypeFormError {
-                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: steps)
+                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: here)
             }
 
             switch parsed {
@@ -63,11 +64,11 @@ struct BoundsReader {
                         + " '\(bound)', which is not a constraint's name."
                         + " A membership is declared, never written in a"
                         + " signature",
-                    at: steps
+                    at: here
                 )
             }
 
-            named[try Name.read(parameter, at: steps)] = names
+            named[parameter] = names
         }
 
         let bounded = signature.bounded(by: named)

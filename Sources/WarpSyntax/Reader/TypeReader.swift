@@ -141,7 +141,7 @@ public struct TypeReader: Decodable {
         }
 
         guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
-            throw TypeFormError("type '\(text)' writes a procedure twice. Once says it")
+            throw TypeFormError("type '\(text)' writes a modifier twice. Once says it")
         }
 
         if constness == .const || isolation == .isolated {
@@ -407,9 +407,8 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // One name with nothing structural in it. What a type parameter's spelling
-    // has to be, and what a `bounds` value has to be: the two halves of one
-    // notation, held to one predicate.
+    // One name with nothing structural in it: what a type parameter's
+    // spelling has to be.
     static func isName(_ text: String) -> Bool {
         !text.isEmpty && !text.contains("<") && !text.contains(">")
             && !text.contains(" ") && !text.contains(":")
@@ -444,7 +443,7 @@ public struct TypeReader: Decodable {
     }
 
     private static func read(from decoder: Decoder) throws -> TypeExpression {
-        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+        let notation = decoder.notation
         if let written = try? decoder.singleValueContainer().decode(String.self) {
             return try parse(written) { name in notation.qualified(name, as: .type) }
         }
@@ -467,22 +466,10 @@ public struct TypeReader: Decodable {
         case let .one(.linear, key):
             return .linear(try keyed.decode(TypeReader.self, forKey: key).type)
 
-        // An array or a dictionary of something with no spelling of its own.
-        // `array<string>` is written as the name it is; an array of procedures
-        // has no name, so it is written here. The writer answers whether the
-        // element has a name, so the two forms never overlap.
+        // An array or a dictionary of something with no spelling of its own:
+        // an array of procedures has no name, so it is written here.
         case let .one(.holding(holding), key):
-            let element = try keyed.decode(TypeReader.self, forKey: key).type
-
-            if case let .string(spelling) = try Writer().value(of: element) {
-                throw ReadingError(
-                    "element '\(spelling)' has a spelling of its own."
-                        + " Write `\(holding.rawValue)<\(spelling)>`",
-                    at: decoder.steps
-                )
-            }
-
-            return holding.holding(element)
+            return holding.holding(try keyed.decode(TypeReader.self, forKey: key).type)
 
         case let .one(.record, key):
             return try record(from: try keyed.superDecoder(forKey: key))
@@ -504,17 +491,13 @@ public struct TypeReader: Decodable {
 
     // A record type's fields, each a type.
     private static func record(from decoder: Decoder) throws -> TypeExpression {
-        guard let fields = try? decoder.container(keyedBy: AnyCodingKey.self) else {
+        guard (try? decoder.container(keyedBy: AnyCodingKey.self)) != nil else {
             throw ReadingError("a record type is a mapping of its fields to their types", at: decoder.steps)
         }
 
         // Each field read where it stands, so a refusal inside one keeps its
         // own place and its own sentence.
-        let read = try fields.allKeys.reduce(into: [String: TypeExpression]()) { read, key in
-            read[key.stringValue] = try fields.decode(TypeReader.self, forKey: key).type
-        }
-
-        return .record(try read.named(at: decoder.steps))
+        return .record(try decoder.read([Name: TypeReader].self).mapValues(\.type))
     }
 
     // One value, one spelling (a padded or signed-zero bound would be a second

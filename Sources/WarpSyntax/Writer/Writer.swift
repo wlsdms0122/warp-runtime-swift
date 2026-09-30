@@ -361,25 +361,10 @@ public struct Writer: Sendable {
     // can be written there; inside another expression there is no name to give, so
     // only the types that need none can.
     public func value(of statement: Statement) throws -> Value {
-        // The reader cannot produce a named conditional, so this guards the caller
-        // that builds statements directly, with the validator's own terms:
-        // writing one silently would make a document that reads back as
-        // something else.
-        if statement.binding != nil, statement.expression.answersNothing {
-            throw WritingError(
-                "a conditional answers nothing, so its name could never bind."
-                    + " It takes no name"
-            )
-        }
-
-        if statement.binding?.declared != nil, statement.expression.namesItsOwn {
-            throw WritingError(Expression.declarationOnABoundName)
-        }
-
         var written: [Name: Value] = [:]
 
         if let binding = statement.binding {
-            written[key(of: binding)] = .string(binding.spelled)
+            written[key(of: binding)] = .string(try spelling(of: binding))
 
             if let declared = binding.declared {
                 written[StatementReader.typeKey] = try value(of: declared)
@@ -411,7 +396,7 @@ public struct Writer: Sendable {
             return try literal(value)
 
         case let .reference(path):
-            return .dictionary([ExpressionTag.reference.key: .string(path.rendered)])
+            return .dictionary([ExpressionTag.reference.key: .string(try spelling(of: path))])
 
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
@@ -516,8 +501,6 @@ public struct Writer: Sendable {
         case let .block(block):
             return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
 
-        // A name on a conditional was already refused where the statement's envelope
-        // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
                 "when": try value(of: condition),
@@ -641,6 +624,33 @@ public struct Writer: Sendable {
         case .variable: "var"
         case .assignment: "set"
         }
+    }
+
+    // What a naming key holds: the name, or the path a `set` writes.
+    private func spelling(of binding: Statement.Binding) throws -> String {
+        switch binding {
+        case let .constant(name, _), let .variable(name, _):
+            return name.spelling
+
+        case let .assignment(path):
+            return try spelling(of: path)
+        }
+    }
+
+    // A path as the reading takes it back. A name holding what a path is
+    // spelled with (`.`, `[`) is one segment here and reads back as others.
+    private func spelling(of path: Path) throws -> String {
+        let spelled = path.rendered
+
+        guard (try? PathParser().parse(spelled)) == path else {
+            throw WritingError(
+                "'\(spelled)' reads back as another path. A name in it holds what"
+                    + " a path is spelled with, and a document has no way to tell"
+                    + " them apart"
+            )
+        }
+
+        return spelled
     }
 
     // Data as a document writes it: a record under `record` like every

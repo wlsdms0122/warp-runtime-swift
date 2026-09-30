@@ -13,7 +13,7 @@ import WarpTestSupport
 import WarpStandard
 
 func path(_ text: String) -> Path {
-    try! TemplateParser().parseRefPath(text)
+    try! PathParser().parse(text)
 }
 
 // What an expression reads is not a property it carries. The validator walks

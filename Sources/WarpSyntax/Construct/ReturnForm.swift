@@ -11,14 +11,14 @@ import Warp
 // `return:`, `break:` and `continue:`.
 //
 // Three forms rather than one under three keys, because the table maps a key
-// to a form and reads back the same way. One form answering to three procedures
-// could be written down but not written out. Asked which procedure means it, the
+// to a form and reads back the same way. One form answering to three keys
+// could be written down but not written out. Asked which key means it, the
 // table would have three answers and no way to say which. Three forms also make
-// each procedure droppable on its own, which one would not.
+// each key droppable on its own, which one would not.
 //
-//     { id: done,   return: { ref: answer } }
-//     { id: enough, break: }
-//     { id: skip,   continue: outer }
+//     { value { return { ref "answer" } } }
+//     { value { break null } }
+//     { value { continue "outer" } }
 public struct ReturnForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "return"
@@ -41,7 +41,7 @@ public struct ReturnForm: ConstructForm {
     // MARK: - Public
     // Nothing is bound: a statement names what its expression answered, and this
     // one does not answer.
-    public func expression(boundTo id: String?) -> Expression {
+    public func expression(boundTo name: String?) -> Expression {
         .leave(Leave(reach: .procedure, value: value))
     }
 

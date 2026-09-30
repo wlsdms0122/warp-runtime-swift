@@ -56,7 +56,7 @@ struct NotationGateTests {
     @Test("a statement decoded without a registry cannot be read at all")
     func statementNeedsARegistry() {
         // Given. The registry travels in the decoder rather than in the data,
-        // so a reader reached without one has no way to know what a procedure means
+        // so a reader reached without one has no way to know what a key means
         let decoder = ValueDecoder(value: ["id": "done", "value": "end"], codingPath: [], steps: [], userInfo: [:])
 
         // When / Then. A reading refuses as a reading wherever it is asked for,

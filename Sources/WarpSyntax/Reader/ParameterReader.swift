@@ -24,7 +24,7 @@ public struct ParameterReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+        let notation = decoder.notation
 
         // The pair form: one key that is the name, holding the type or the
         // rest of the record. One key is always the pair where a notation
@@ -66,7 +66,7 @@ public struct ParameterReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
-            context: "input param"
+            context: "parameter"
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)

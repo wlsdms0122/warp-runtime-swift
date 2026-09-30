@@ -98,8 +98,8 @@ struct CallTests {
         let elsewhere = try loader.loadDocument([
             "procedures": [
                 "some-other-file.greet": [
-                    "body": [["let": "procedure", "value": "hello"]],
-                    "result": ["record": ["said": ["ref": "procedure"]]],
+                    "body": [["let": "word", "value": "hello"]],
+                    "result": ["record": ["said": ["ref": "word"]]],
                     "returns": ["record": ["said": "string"]]
                 ]
             ]
@@ -121,11 +121,11 @@ struct CallTests {
             "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "procedure", "type": "string"]],
+                    "parameters": [["name": "word", "type": "string"]],
                     "body": [
                         [
                             "let": "said",
-                            "value": ["call": ["procedure": "shout", "arguments": [["ref": "procedure"]]]
+                            "value": ["call": ["procedure": "shout", "arguments": [["ref": "word"]]]
                         ]]
                     ],
                     "result": ["record": ["result": ["ref": "said"]]]
@@ -140,7 +140,7 @@ struct CallTests {
         ])
 
         // When
-        let outputs = try await run(sut, arguments: ["procedure": .string("hey")])
+        let outputs = try await run(sut, arguments: ["word": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("hey!"))
