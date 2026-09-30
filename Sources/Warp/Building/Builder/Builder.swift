@@ -113,7 +113,7 @@ public struct Builder: Sendable {
         guard !compiled.isEmpty else { return .none }
 
         try once(compiled.map(\.document))
-        try against(compiled)
+        try refuseMissingDependencies(compiled)
 
         // Laid end to end through the door a link lays documents through, so a
         // name two of them declare is refused here as it is there.
@@ -349,7 +349,7 @@ public struct Builder: Sendable {
         supplying natives: Supplying
     ) throws -> Image {
         try once(compiled.map(\.document))
-        try against(compiled)
+        try refuseMissingDependencies(compiled)
 
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
@@ -404,7 +404,7 @@ public struct Builder: Sendable {
     // fingerprint was worked out for says nothing here. One that did is
     // held to it, document by document: what it leaned on stands beside it
     // under the fingerprint it had then, or the document is not laid.
-    private func against(_ compiled: [Compiled]) throws {
+    private func refuseMissingDependencies(_ compiled: [Compiled]) throws {
         let present = Set(compiled.indices.compactMap { origin in compiled[origin].fingerprint })
 
         for origin in compiled.indices {
