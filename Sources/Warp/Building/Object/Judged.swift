@@ -146,7 +146,7 @@ struct Judged: Sendable {
     // answers wrongly.
     func judge(
         standingIn frames: (Int) -> Frame?,
-        reaching given: (Int) -> (taking: Int, standing: Bool)?,
+        reaching given: (Int) -> Int?,
         holding variables: Int
     ) throws {
         guard case let .body(body, frame) = implementation else { return }
@@ -154,7 +154,7 @@ struct Judged: Sendable {
         let standing = body.standing
 
         guard standing.slots.allSatisfy({ slot in slot < frame.size }),
-              standing.extents.allSatisfy({ run in run.upperBound <= frame.size })
+            standing.extents.allSatisfy({ run in run.upperBound <= frame.size })
         else {
             throw ObjectRefused(
                 "a body stands on a slot its frame of \(frame.size) does not hold"
@@ -172,12 +172,12 @@ struct Judged: Sendable {
         // document's own; a row another document holds is the link's answer
         // and is asked there, as is a number this document never gave.
         for call in standing.calls {
-            guard let reached = given(call.number), reached.standing else { continue }
+            guard let taking = given(call.number) else { continue }
 
-            guard reached.taking == call.arguments else {
+            guard taking == call.arguments else {
                 throw ObjectRefused(
                     "a call stands \(call.arguments) argument(s) where the"
-                        + " \(reached.taking) its callee declares stand"
+                        + " \(taking) its callee declares stand"
                 )
             }
         }

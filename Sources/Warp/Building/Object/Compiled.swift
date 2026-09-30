@@ -128,15 +128,12 @@ public struct Compiled: Sendable, Declaring {
         Closure.Document(identity: identity, token: token)
     }
 
-    // Every name this document declares, as a link asks for them. The exact
-    // dual of a module's `uses`, and held here for the reason that one is held
-    // there: a reader assembling it from the four tables is one more place to
-    // fix when a fifth kind of declaration arrives, and forgetting that place
-    // is a name that quietly declares nothing.
     // The spellings its private declarations wear: rows of this document,
     // and in no table of names another document reads.
     let hidden: Set<Name>
 
+    // Every name this document declares to the other documents of a link,
+    // read off its tables: the dual of a module's `uses`.
     var declares: Set<Reference> {
         Set(
             declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
@@ -156,9 +153,6 @@ public struct Compiled: Sendable, Declaring {
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.
     //
-    // Which document it belongs to and what it was compiled against are the
-    // first two things written, so an object says what it stands against
-    // before it says anything it stood on that.
     // Nothing on any of four counts, and none is something that went wrong.
     // A document numbered by a link's rows is no object. A build handed no
     // way to work a fingerprint out leaves every document that leaned on
@@ -231,8 +225,7 @@ public struct Compiled: Sendable, Declaring {
         typeNumbering: LoweredTypeNumbering,
         judging variables: [(name: Name, value: Value)],
         dependencies: [Fingerprint]?,
-        token: Token = Token(),
-        fingerprint: Fingerprint? = nil
+        token: Token = Token()
     ) throws {
         guard declared.count <= table.count else {
             throw ObjectRefused(
@@ -255,8 +248,7 @@ public struct Compiled: Sendable, Declaring {
             typeNumbering: typeNumbering,
             variables: variables,
             dependencies: dependencies,
-            token: token,
-            fingerprint: fingerprint
+            token: token
         )
 
         // The rows behind the declarations are the closures this document's
@@ -291,19 +283,21 @@ public struct Compiled: Sendable, Declaring {
     // object does write one down. So a caller hands over the one it keeps
     // the object under, and an object saying it belongs somewhere else is
     // one that belongs to no cache this caller holds.
+    //
     // `fingerprint` is what the caller kept it under, carried in the same way
     // and for the same reason: an object cannot work out what it is, because
     // that answer is about bytes and reading bytes is another package's.
     public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
-        self = try ObjectReader(of: identity, fingerprint: fingerprint).compiled(from: value)
+        let read = try ObjectReader(of: identity).compiled(from: value)
+
+        self = fingerprint.map(read.fingerprinted) ?? read
     }
 
     // MARK: - Public
     // Which closure the row at a position is, its writer and which of the
     // writer's, for a row a closure was lifted into, and nil for a
-    // declaration's own row. The
-    // numbering's arithmetic, asked here once for both the link and a compile
-    // laying this document down.
+    // declaration's own row. The numbering's arithmetic, asked here once for
+    // both the link and a compile laying this document down.
     func closure(ofRow index: Int) -> (by: Closure.Declaration, nth: Int)? {
         guard lifted.contains(index) else { return nil }
 
@@ -343,29 +337,25 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Private
-    // Whether a number a body carries is one this document gave, and where it
-    // stands for a row of this document, what that row takes. Which row that
-    // is, is the numbering's answer; a row another document holds is the
-    // link's.
-    private func reaches(_ number: Int) -> (taking: Int, standing: Bool)? {
-        guard numbering.gave(number) else { return nil }
-
-        guard let written = numbering.lifted(number) else {
-            guard let row = numbering.declaring(number) else { return (taking: 0, standing: false) }
-
-            return (taking: table[row].signature.names.count, standing: true)
+    // What the row a number a body carries stands for takes, where that row
+    // is this document's own. Which row that is, is the numbering's answer; a
+    // row another document holds, or a number this document never gave, is
+    // the link's.
+    private func reaches(_ number: Int) -> Int? {
+        if let written = numbering.lifted(number) {
+            return table[lifted.lowerBound + written].signature.names.count
         }
 
-        guard written < lifted.count else { return nil }
+        guard let row = numbering.declaring(number) else { return nil }
 
-        return (taking: table[lifted.lowerBound + written].signature.names.count, standing: true)
+        return table[row].signature.names.count
     }
 
     // The frame of the row a body's closure number stands, or nothing where
     // this document numbers no closure there.
     private func frame(ofClosure number: Int) -> Frame? {
-        guard let written = numbering.lifted(number), written < lifted.count,
-              case let .body(_, frame) = table[lifted.lowerBound + written].implementation
+        guard let written = numbering.lifted(number),
+            case let .body(_, frame) = table[lifted.lowerBound + written].implementation
         else {
             return nil
         }

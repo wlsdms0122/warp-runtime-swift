@@ -21,15 +21,9 @@ struct ObjectReader {
     // holds it to the one the object was kept under.
     private let identity: Identity?
 
-    // What the caller kept this object under. Carried in for the reason the
-    // identity is: what an object is, is worked out from its bytes, and
-    // reading bytes is another package's.
-    private let fingerprint: Fingerprint?
-
     // MARK: - Initializer
-    init(of identity: Identity?, fingerprint: Fingerprint?) {
+    init(of identity: Identity?) {
         self.identity = identity
-        self.fingerprint = fingerprint
     }
 
     // MARK: - Public
@@ -123,8 +117,7 @@ struct ObjectReader {
             numbering: numbering,
             typeNumbering: typeNumbering,
             judging: variables,
-            dependencies: dependencies,
-            fingerprint: fingerprint
+            dependencies: dependencies
         )
     }
 
