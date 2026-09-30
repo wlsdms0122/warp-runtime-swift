@@ -71,7 +71,7 @@ struct Folding {
         return try await read(
             code,
             in: frame,
-            of: answered.holding(lowering.table.map(\.folding), closures: lowering.closureRows),
+            of: answered.holding(lowering.table.map(\.folding), closures: lowering.documents.map(\.closureRows)),
             at: place
         )
     }
@@ -107,14 +107,10 @@ struct Folding {
     // closure written in one is numbered by nothing this document holds and is
     // refused where it is lowered.
     func read(_ expression: Expression, at place: Place) async throws -> Value {
-        guard let numbering = answered.numbering(of: origin) else {
-            throw BuildError.unjudged("an expression in a document that numbered nothing", at: place)
-        }
-
         var lowering = Lowering(
             table: answered.table,
             rows: answered.rows,
-            numbering: [origin: numbering],
+            numbering: answered.numbering,
             loweredTypes: loweredTypes
         )
         let (code, frame) = try lowering.lower(
@@ -130,7 +126,7 @@ struct Folding {
         return try await read(
             code,
             in: frame,
-            of: answered.holding(lowering.table, closures: lowering.closureRows),
+            of: answered.holding(lowering.table, closures: lowering.documents.map(\.closureRows)),
             at: place
         )
     }

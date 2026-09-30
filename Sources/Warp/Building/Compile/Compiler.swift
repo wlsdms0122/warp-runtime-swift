@@ -322,7 +322,7 @@ struct Compiler {
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
-            Array(block) + (compiling.lowering.closureRows[origin] ?? []),
+            Array(block) + compiling.lowering.documents[origin].closureRows,
             of: origin,
             answering: read
         )

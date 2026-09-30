@@ -62,12 +62,9 @@ struct Compiling {
         Carried(
             table: lowering.table,
             rows: lowering.rows,
-            owned: lowering.owned,
             concealed: lowering.concealed,
             named: named,
-            numbering: lowering.numbering,
-            closureRows: lowering.closureRows,
-            variables: lowering.variables,
+            documents: lowering.documents,
             answers: answers
         )
     }
@@ -181,7 +178,7 @@ struct Compiling {
     // reaches a name it declared or one behind it, so the answer never moves
     // after this.
     mutating func answering(_ origin: Int) {
-        named[origin] = lowering.numbering[origin]?.answers(rows: lowering.rows, own: lowering.own(origin)) ?? []
+        named[origin] = lowering.documents[origin].numbering.answers(rows: lowering.rows, own: lowering.own(origin))
     }
 
     // The same for every document laid down, said once they all stand. This
@@ -197,7 +194,7 @@ struct Compiling {
             answering(origin)
 
             for (number, row) in (named[origin] ?? []).enumerated() where row == nil {
-                guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
+                guard case let .unfound(.sent(declared)) = lowering.documents[origin].numbering.row(
                     number,
                     rows: lowering.rows,
                     own: lowering.own(origin),
@@ -257,9 +254,9 @@ struct Compiling {
             foldingRows,
             rows: lowering.rows,
             naming: naming,
-            numbering: lowering.numbering,
+            numbering: lowering.documents.map(\.numbering),
             named: named,
-            closures: lowering.closureRows
+            closures: lowering.documents.map(\.closureRows)
         )
     }
 
@@ -271,18 +268,11 @@ struct Compiling {
     // on, so every one is answered here before anything folds. The numbers
     // their code carries read against this table as they are.
     mutating func answerHeld() throws {
-        let numbering = try naming.indices.map { origin -> Numbering in
-            guard let held = lowering.numbering[origin] else {
-                throw BuildError.unjudged("a document laid down without its numbering", at: Place(in: documents[origin]))
-            }
-
-            return held
-        }
         let answering = ClosureAnswering(
             spelled: ClosureRows(
                 naming: naming,
-                numbering: numbering,
-                closures: naming.indices.map { origin in lowering.closureRows[origin] ?? [] },
+                numbering: lowering.documents.map(\.numbering),
+                closures: lowering.documents.map(\.closureRows),
                 documents: documents
             ),
             table: lowering.table,
