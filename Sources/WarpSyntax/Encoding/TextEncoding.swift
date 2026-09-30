@@ -607,11 +607,7 @@ public struct TextEncoding {
                 text += "\(int)"
 
             case let .double(double):
-                guard let spelling = double.spelling else {
-                    throw EncodingRefused("a document has no way to carry \(double)")
-                }
-
-                text += spelling
+                text += double.uncheckedSpelling
 
             case let .string(string):
                 write(string, into: &text)
