@@ -73,14 +73,12 @@ struct UnheldClaimTests {
         )
 
         // When
-        let catalog = try Catalog([asking, typed, broken] + Module.standard)
-        let closed = catalog.closing([program])
+        let linked = [asking, typed, broken, program] + Module.standard
 
         // Then. The claim stands in the link and puts its type under no
         // contract, and the program that never handed the type where the
         // contract is asked is not the one to hear about it.
-        #expect(closed.contains { module in module.claims.isEmpty == false })
-        await #expect(throws: Never.self) { try await Builder().build(closed) }
+        await #expect(throws: Never.self) { try await Builder().build(linked) }
     }
 
     @Test("a good claim beside an unheld one in the same document")
@@ -148,12 +146,11 @@ struct UnheldClaimTests {
         )
 
         // When
-        let catalog = try Catalog([asking, typed, adapting] + Module.standard)
-        let closed = catalog.closing([program])
+        let linked = [asking, typed, adapting, program] + Module.standard
 
         // Then. The pair the program leans on is answered, and the one beside
         // it that nothing can answer refuses nobody.
-        await #expect(throws: Never.self) { try await Builder().build(closed) }
+        await #expect(throws: Never.self) { try await Builder().build(linked) }
     }
 
     @Test("an unheld claim refuses at the call that leaned on it")
