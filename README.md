@@ -56,13 +56,11 @@ let value = try await Executor().run(
 
 | product | what | depends on |
 |---|---|---|
-| `Warp` | the language, checking, linking, running, and the standard vocabulary | nothing |
+| `Warp` | the language, checking, linking, running | nothing |
+| `WarpStandard` | the standard vocabulary, in bundles | `Warp`, `WarpSyntax` |
 | `WarpSyntax` | a document: the bytes and text one is carried in, read into a program and written back out | `Warp` |
 
-The arrow is the architecture, and it is the one line worth cutting on: what a
-caller can leave out. A caller that reads bytes needs all of this, and a caller
-assembling a program in Swift needs none of it, so `WarpSyntax` is optional in the
-honest sense, and a program that never travels never links it.
+The arrows are the architecture, and they are the lines worth cutting on: what a caller can leave out. A caller that reads bytes needs `WarpSyntax`. A caller assembling a program in Swift against a vocabulary of its own needs only `Warp`. `WarpStandard` reads the part of the vocabulary written in Warp, so it brings `WarpSyntax` along.
 
 Inside it the wire is still written and read without learning what the tree
 means, which is why an implementation in another language can speak the format
@@ -74,7 +72,7 @@ without also implementing what a procedure is.
 import Warp
 import WarpSyntax
 
-let document = try BinaryEncoding.value(from: bytes)   // bytes → tree, or refused
+let document = try BinaryEncoding().value(from: bytes) // bytes → tree, or refused
 let module = try Loader().load(                        // tree → module, or refused
     document,
     identity: try Identity.of(document)                // which document, for refusals
@@ -126,7 +124,7 @@ program before running it carries a `Place`, the path to it through the program,
 and each side reads that path for the reader it has. The language names its own
 slots, which is what a caller that built the program in Swift can follow.
 `Loader.reading { }` reads the same place in the keys the document writes, so
-`procedures.greet.body.total[2].call.arguments.amount` is a line every step of
+`procedures.greet.body.total[2].call.arguments[1]` is a line every step of
 which an author can follow in the text in front of them.
 
 It is steps rather than a sentence because a front end holding the file this was
