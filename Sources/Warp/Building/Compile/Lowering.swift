@@ -265,7 +265,7 @@ struct Lowering {
     // document that declared it. A closure's number is its declaration's start
     // plus this, so nesting counts with the rest: a closure inside a closure is
     // still one its declaration wrote.
-    private var written: [Int: [Name: Int]] = [:]
+    private var written: [Int: [Closure.Declaration: Int]] = [:]
 
     // MARK: - Initializer
     init(
@@ -397,7 +397,7 @@ struct Lowering {
             slots.hold(allocated, slot.type)
         }
 
-        let body = try lower(block, in: scope, on: slots, label: declared.label, at: place)
+        let body = try lower(block, in: scope, on: slots, writer: .procedure(declared.label), at: place)
 
         standing[declared.origin, default: Standing()].types.formUnion(slots.types)
         standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
@@ -418,7 +418,7 @@ struct Lowering {
         _ expression: Expression,
         reading names: [Name],
         origin: Int,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> (Operation, Frame) {
         let slots = Slots(origin: origin, variables: [:], constants: [:])
@@ -428,7 +428,7 @@ struct Lowering {
             scope.slots[name] = slots.allocate(name)
         }
 
-        let code = try lower(expression, in: scope, on: slots, label: label, at: place)
+        let code = try lower(expression, in: scope, on: slots, writer: writer, at: place)
 
         return (code, slots.frame)
     }
@@ -493,13 +493,13 @@ struct Lowering {
         _ block: Block,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> LoweredBody {
         var inner = scope
-        let instructions = try lower(block.body, in: &inner, on: slots, label: label, at: place)
+        let instructions = try lower(block.body, in: &inner, on: slots, writer: writer, at: place)
         let result = try block.result.map { result in
-            try lower(result, in: inner, on: slots, label: label, at: place)
+            try lower(result, in: inner, on: slots, writer: writer, at: place)
         }
 
         return LoweredBody(instructions: instructions, result: result)
@@ -512,13 +512,13 @@ struct Lowering {
         _ body: Body,
         in scope: inout Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> [Instruction] {
         var instructions: [Instruction] = []
 
         for (position, statement) in body.statements.enumerated() {
-            let code = try lower(statement.expression, in: scope, on: slots, label: label, at: place)
+            let code = try lower(statement.expression, in: scope, on: slots, writer: writer, at: place)
             let binding: Instruction.Binding?
 
             switch statement.binding {
@@ -616,7 +616,7 @@ struct Lowering {
         _ expression: Expression,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         switch expression {
@@ -630,45 +630,45 @@ struct Lowering {
 
         case let .array(array):
             return .array(try array.map { element in
-                try lower(element, in: scope, on: slots, label: label, at: place)
+                try lower(element, in: scope, on: slots, writer: writer, at: place)
             })
 
         case let .record(record):
-            return try lower(record: record, in: scope, on: slots, label: label, at: place)
+            return try lower(record: record, in: scope, on: slots, writer: writer, at: place)
 
         case let .closure(procedure):
-            return try lower(closure: procedure, in: scope, on: slots, label: label, at: place)
+            return try lower(closure: procedure, in: scope, on: slots, writer: writer, at: place)
 
         case let .apply(callee, arguments):
-            return try lower(apply: callee, arguments: arguments, in: scope, on: slots, label: label, at: place)
+            return try lower(apply: callee, arguments: arguments, in: scope, on: slots, writer: writer, at: place)
 
         case let .cast(value, type, optional):
-            return try lower(cast: value, as: type, optional: optional, in: scope, on: slots, label: label, at: place)
+            return try lower(cast: value, as: type, optional: optional, in: scope, on: slots, writer: writer, at: place)
 
         case let .block(block):
-            return .block(try lower(block, in: scope, on: slots, label: label, at: place))
+            return .block(try lower(block, in: scope, on: slots, writer: writer, at: place))
 
         case let .conditional(condition, then, otherwise):
-            return try lower(conditional: condition, then: then, else: otherwise, in: scope, on: slots, label: label, at: place)
+            return try lower(conditional: condition, then: then, else: otherwise, in: scope, on: slots, writer: writer, at: place)
 
         case let .loop(condition, body, round):
-            return try lower(loop: condition, body: body, round: round, in: scope, on: slots, label: label, at: place)
+            return try lower(loop: condition, body: body, round: round, in: scope, on: slots, writer: writer, at: place)
 
         case let .attempt(block, rescue, failure):
-            return try lower(attempt: block, rescue: rescue, failure: failure, in: scope, on: slots, label: label, at: place)
+            return try lower(attempt: block, rescue: rescue, failure: failure, in: scope, on: slots, writer: writer, at: place)
 
         case let .call(call):
             // A selector naming a contract's procedure names no row. Which row
             // answers is the first argument's, so every one the build found is
             // lowered here and the run picks by the name it reads.
             if let asked = contractProcedures[call.selector] {
-                return .dispatch(try lower(call, through: asked, in: scope, on: slots, label: label, at: place))
+                return .dispatch(try lower(call, through: asked, in: scope, on: slots, writer: writer, at: place))
             }
 
-            return .call(try lower(call, in: scope, on: slots, label: label, at: place))
+            return .call(try lower(call, in: scope, on: slots, writer: writer, at: place))
 
         case let .leave(leave):
-            return try lower(leave: leave, in: scope, on: slots, label: label, at: place)
+            return try lower(leave: leave, in: scope, on: slots, writer: writer, at: place)
         }
     }
 
@@ -680,7 +680,7 @@ struct Lowering {
         record: [Name: Expression],
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         let ordered = record.sorted { $0.key < $1.key }
@@ -689,7 +689,7 @@ struct Lowering {
             RecordOperation(
                 layout: Layout(name: nil, ordered: ordered.map(\.key)),
                 fields: try ordered.map { _, field in
-                    try lower(field, in: scope, on: slots, label: label, at: place)
+                    try lower(field, in: scope, on: slots, writer: writer, at: place)
                 }
             )
         )
@@ -699,7 +699,7 @@ struct Lowering {
         closure procedure: Procedure,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         guard let block = procedure.block else {
@@ -716,14 +716,14 @@ struct Lowering {
             innerScope.slots[name] = inner.allocateParameter(name)
         }
 
-        let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
+        let body = try lower(block, in: innerScope, on: inner, writer: writer, at: place)
 
         // Taken before the body is lowered would number a closure before
         // the ones it holds; taken after numbers the innermost first. The
         // count read off the document walks the same way, so this reads it
         // here.
-        let count = written[slots.origin, default: [:]][label, default: 0]
-        written[slots.origin, default: [:]][label] = count + 1
+        let count = written[slots.origin, default: [:]][writer, default: 0]
+        written[slots.origin, default: [:]][writer] = count + 1
 
         let held = numbered(slots.origin)
         let row = table.count
@@ -731,9 +731,9 @@ struct Lowering {
 
         if held.numbersAreRows {
             stands = nil
-        } else if let given = held.closure(count, of: label) {
+        } else if let given = held.closure(count, of: writer) {
             stands = given
-        } else if let counted = held.count(of: label) {
+        } else if let counted = held.count(of: writer) {
             throw BuildError.unjudged("closure \(count) of a declaration whose document numbered \(counted)", at: place)
         } else {
             throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
@@ -741,7 +741,7 @@ struct Lowering {
 
         table.append(
             Linked(
-                label: label,
+                label: writer.name,
                 origin: slots.origin,
                 signature: procedure.signature,
                 access: .private,
@@ -750,7 +750,7 @@ struct Lowering {
                 failing: procedure.failing,
                 implementation: .body(body, inner.frame),
                 foldable: true,
-                nth: count,
+                closure: (by: writer, nth: count),
                 in: loweredTypes
             )
         )
@@ -774,13 +774,13 @@ struct Lowering {
         arguments: [Expression],
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         return .apply(
-            try lower(callee, in: scope, on: slots, label: label, at: place),
+            try lower(callee, in: scope, on: slots, writer: writer, at: place),
             arguments: try arguments.map { argument in
-                try lower(argument, in: scope, on: slots, label: label, at: place)
+                try lower(argument, in: scope, on: slots, writer: writer, at: place)
             }
         )
     }
@@ -791,14 +791,14 @@ struct Lowering {
         optional: Bool,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         let lowered = type.lowered(in: loweredTypes)
         slots.note(lowered)
 
         return .cast(
-            try lower(value, in: scope, on: slots, label: label, at: place),
+            try lower(value, in: scope, on: slots, writer: writer, at: place),
             as: lowered,
             optional: optional
         )
@@ -810,17 +810,17 @@ struct Lowering {
         else otherwise: Body?,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         var thenScope = scope
         var elseScope = scope
 
         return .conditional(
-            try lower(condition, in: scope, on: slots, label: label, at: place),
-            then: try lower(then, in: &thenScope, on: slots, label: label, at: place),
+            try lower(condition, in: scope, on: slots, writer: writer, at: place),
+            then: try lower(then, in: &thenScope, on: slots, writer: writer, at: place),
             else: try otherwise.map { otherwise in
-                try lower(otherwise, in: &elseScope, on: slots, label: label, at: place)
+                try lower(otherwise, in: &elseScope, on: slots, writer: writer, at: place)
             }
         )
     }
@@ -831,7 +831,7 @@ struct Lowering {
         round: Name?,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         var inner = scope
@@ -842,12 +842,12 @@ struct Lowering {
             slots.hold(slot, .record(.round))
         }
 
-        let taking = try lower(condition, in: inner, on: slots, label: label, at: place)
+        let taking = try lower(condition, in: inner, on: slots, writer: writer, at: place)
         let start = slots.size
-        let instructions = try lower(body.body, in: &inner, on: slots, label: label, at: place)
+        let instructions = try lower(body.body, in: &inner, on: slots, writer: writer, at: place)
         let bound = start ..< slots.size
         let result = try body.result.map { result in
-            try lower(result, in: inner, on: slots, label: label, at: place)
+            try lower(result, in: inner, on: slots, writer: writer, at: place)
         }
 
         // A round that ends early has bound part of what a full round
@@ -870,10 +870,10 @@ struct Lowering {
         failure: Name?,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
-        let attempted = try lower(block, in: scope, on: slots, label: label, at: place)
+        let attempted = try lower(block, in: scope, on: slots, writer: writer, at: place)
         var inner = scope
         let slot = failure.map { failure in slots.allocate(failure) }
 
@@ -883,7 +883,7 @@ struct Lowering {
 
         return .attempt(
             attempted,
-            rescue: try lower(rescue, in: inner, on: slots, label: label, at: place),
+            rescue: try lower(rescue, in: inner, on: slots, writer: writer, at: place),
             failure: slot
         )
     }
@@ -892,14 +892,14 @@ struct Lowering {
         leave: Leave,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Operation {
         return .leave(
             leave.reach,
             target: leave.target,
             try leave.value.map { value in
-                try lower(value, in: scope, on: slots, label: label, at: place)
+                try lower(value, in: scope, on: slots, writer: writer, at: place)
             }
         )
     }
@@ -909,7 +909,7 @@ struct Lowering {
         through asked: LoweredContractProcedure,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> DispatchOperation {
         guard let written = call.arguments.first else {
@@ -925,9 +925,9 @@ struct Lowering {
         return DispatchOperation(
             contract: asked.contract,
             procedure: asked.procedure,
-            first: try lower(written, in: scope, on: slots, label: label, at: place),
+            first: try lower(written, in: scope, on: slots, writer: writer, at: place),
             arguments: try call.arguments.dropFirst().map { written in
-                try argument(written, in: scope, on: slots, label: label, at: place)
+                try argument(written, in: scope, on: slots, writer: writer, at: place)
             }
         )
     }
@@ -939,11 +939,11 @@ struct Lowering {
         _ expression: Expression,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> Argument {
         guard case let .reference(path) = expression else {
-            return .value(try lower(expression, in: scope, on: slots, label: label, at: place))
+            return .value(try lower(expression, in: scope, on: slots, writer: writer, at: place))
         }
 
         let (address, _) = try lower(path, in: scope, on: slots, at: place)
@@ -955,7 +955,7 @@ struct Lowering {
         _ call: Call,
         in scope: Names,
         on slots: Slots,
-        label: Name,
+        writer: Closure.Declaration,
         at place: Place
     ) throws -> CallOperation {
         guard let stands = numbered(slots.origin).call(call.selector) else {
@@ -977,7 +977,7 @@ struct Lowering {
 
         return try CallOperation(
             handing: try call.arguments.map { written in
-                try argument(written, in: scope, on: slots, label: label, at: place)
+                try argument(written, in: scope, on: slots, writer: writer, at: place)
             },
             to: callee,
             row: stands,

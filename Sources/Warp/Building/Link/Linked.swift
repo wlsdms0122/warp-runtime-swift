@@ -32,15 +32,15 @@ public final class Linked: Sendable {
     // Which document declared it, whose variables its body reads.
     public let origin: Int
 
-    // Which of its label's closures this row is, for a row a closure literal
-    // was lifted into: the declaration that wrote it and this count are what
-    // a closure value is spelled by. Nil for a declaration's own row.
-    let nth: Int?
+    // Which closure this row is, for a row a closure literal was lifted
+    // into: the declaration that wrote it and which of that declaration's it
+    // is, what a closure value is spelled by. Nil for a declaration's own row.
+    let closure: (by: Closure.Declaration, nth: Int)?
 
     // The hop a trace takes into this row: a declaration by its spelling, a
     // closure by which of its writer's it is.
     var hop: Trace.Hop {
-        nth.map { nth in .closure(of: label.spelling, nth: nth) } ?? .procedure(label.spelling)
+        closure.map { closure in .closure(of: label.spelling, nth: closure.nth) } ?? .procedure(label.spelling)
     }
 
     // What a refusal calls this row.
@@ -115,7 +115,7 @@ public final class Linked: Sendable {
         implementation: Implementation,
         foldable: Bool,
         sends: [Sent] = [],
-        nth: Int? = nil,
+        closure: (by: Closure.Declaration, nth: Int)? = nil,
         in table: LoweredTypeTable
     ) {
         let slots = signature.lowered(in: table)
@@ -123,7 +123,7 @@ public final class Linked: Sendable {
 
         self.label = label
         self.origin = origin
-        self.nth = nth
+        self.closure = closure
         self.signature = signature
         self.access = access
         self.constness = constness
@@ -147,7 +147,7 @@ public final class Linked: Sendable {
     init(_ row: Linked, in table: LoweredTypeTable) {
         self.label = row.label
         self.origin = row.origin
-        self.nth = row.nth
+        self.closure = row.closure
         self.signature = row.signature
         self.access = row.access
         self.constness = row.constness
@@ -168,7 +168,7 @@ public final class Linked: Sendable {
     init(_ row: Linked, implementation: Implementation, sends: [Sent]) {
         self.label = row.label
         self.origin = row.origin
-        self.nth = row.nth
+        self.closure = row.closure
         self.signature = row.signature
         self.access = row.access
         self.constness = row.constness

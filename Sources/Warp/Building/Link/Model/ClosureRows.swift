@@ -28,7 +28,7 @@ struct ClosureRows {
     private let documents: [Place.Document]
 
     // MARK: - Initializer
-    // The writers are read off the numberings: every name a document
+    // The writers are read off the numberings: every declaration a document
     // numbers closures for writes them, in that document.
     init(
         naming: [Closure.Document],
@@ -39,8 +39,8 @@ struct ClosureRows {
         var writing: [Closure.Writer: [Int]] = [:]
 
         for (origin, numbering) in numbering.enumerated() {
-            for name in numbering.writers {
-                writing[Closure.Writer(document: naming[origin], name: name), default: []].append(origin)
+            for declaration in numbering.writers {
+                writing[Closure.Writer(document: naming[origin], declaration: declaration), default: []].append(origin)
             }
         }
 
@@ -71,7 +71,7 @@ struct ClosureRows {
             )
         }
 
-        guard let nth = numbering[origin].closure(closure.nth, of: closure.writer.name)?.nth,
+        guard let nth = numbering[origin].closure(closure.nth, of: closure.writer.declaration)?.nth,
               closures[origin].indices.contains(nth)
         else {
             throw BuildError(

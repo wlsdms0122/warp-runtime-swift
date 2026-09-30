@@ -156,6 +156,23 @@ struct Fields {
         }
     }
 
+    // The declaration that wrote a closure: `[0, name]` for a procedure and
+    // `[1, name]` for a constant or a variable. What lays one down is
+    // `ObjectWriter.declaration`.
+    static func declaration(_ value: Value, of part: String) throws -> Closure.Declaration {
+        var fields = try Fields(value, of: part)
+        let tag = try fields.tag()
+        let written = try fields.name()
+
+        try fields.end()
+
+        switch tag {
+        case 0: return .procedure(written)
+        case 1: return .binding(written)
+        default: throw ObjectRefused("'\(part)' writes a declaration of kind \(tag), which this reads none of")
+        }
+    }
+
     static func flag(_ value: Value, of part: String) throws -> Bool {
         guard case let .bool(flag) = value else {
             throw ObjectRefused("'\(part)' writes something other than a yes or no where one stands")

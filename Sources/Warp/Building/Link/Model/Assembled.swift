@@ -21,7 +21,7 @@ struct Assembled: Sendable {
         // MARK: - Property
         let judged: Judged
         let origin: Int
-        let nth: Int?
+        let closure: (by: Closure.Declaration, nth: Int)?
 
         // MARK: - Initializer
         // MARK: - Public
@@ -129,7 +129,9 @@ struct Assembled: Sendable {
             closures[origin] = documents[origin].lifted.map { row in start + row }
 
             for index in documents[origin].table.indices {
-                table.append(Row(judged: documents[origin].table[index], origin: origin, nth: documents[origin].nth(ofRow: index)))
+                table.append(
+                    Row(judged: documents[origin].table[index], origin: origin, closure: documents[origin].closure(ofRow: index))
+                )
             }
 
             named.append(document)

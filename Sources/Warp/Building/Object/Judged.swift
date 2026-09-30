@@ -205,11 +205,11 @@ struct Judged: Sendable {
     func linked(
         in table: LoweredTypeTable,
         of origin: Int,
-        nth: Int?,
+        closure: (by: Closure.Declaration, nth: Int)?,
         supplied: Supplying,
         at document: Place.Document
     ) throws -> Linked {
-        try linked(in: table, of: origin, nth: nth, supplied: supplied, at: document, standing: false)
+        try linked(in: table, of: origin, closure: closure, supplied: supplied, at: document, standing: false)
     }
 
     // The same, where a row the supply brings no code for stands as the
@@ -220,11 +220,11 @@ struct Judged: Sendable {
     func folding(
         in table: LoweredTypeTable,
         of origin: Int,
-        nth: Int?,
+        closure: (by: Closure.Declaration, nth: Int)?,
         supplied: Supplying,
         at document: Place.Document
     ) throws -> Linked {
-        try linked(in: table, of: origin, nth: nth, supplied: supplied, at: document, standing: true)
+        try linked(in: table, of: origin, closure: closure, supplied: supplied, at: document, standing: true)
     }
 
     // MARK: - Private
@@ -266,14 +266,14 @@ struct Judged: Sendable {
     private func linked(
         in table: LoweredTypeTable,
         of origin: Int,
-        nth: Int?,
+        closure: (by: Closure.Declaration, nth: Int)?,
         supplied: Supplying,
         at document: Place.Document,
         standing: Bool
     ) throws -> Linked {
         switch implementation {
         case let .body(body, frame):
-            return row(.body(body, frame), of: origin, nth: nth, foldable: true, in: table)
+            return row(.body(body, frame), of: origin, closure: closure, foldable: true, in: table)
 
         case let .native(sending):
             guard let brought = supplied[label, at: document] else {
@@ -312,7 +312,7 @@ struct Judged: Sendable {
     private func row(
         _ implementation: Linked.Implementation,
         of origin: Int,
-        nth: Int? = nil,
+        closure: (by: Closure.Declaration, nth: Int)? = nil,
         foldable: Bool,
         in table: LoweredTypeTable
     ) -> Linked {
@@ -327,7 +327,7 @@ struct Judged: Sendable {
             implementation: implementation,
             foldable: foldable,
             sends: sends,
-            nth: nth,
+            closure: closure,
             in: table
         )
     }

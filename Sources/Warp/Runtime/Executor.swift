@@ -403,7 +403,7 @@ public struct Executor: Sendable {
         case let .closure(number, captures):
             let row = linked[try self.row(number, from: activation.origin)]
 
-            guard let nth = row.nth else {
+            guard let written = row.closure else {
                 throw ExecutionError("a closure stands on a row no declaration wrote")
             }
 
@@ -413,8 +413,8 @@ public struct Executor: Sendable {
 
             return .procedure(
                 Closure(
-                    writer: Closure.Writer(document: naming[row.origin], name: row.label),
-                    nth: nth,
+                    writer: Closure.Writer(document: naming[row.origin], declaration: written.by),
+                    nth: written.nth,
                     linked: row,
                     captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
                 )

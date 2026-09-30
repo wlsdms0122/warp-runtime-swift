@@ -34,6 +34,15 @@ struct ObjectWriter {
         return .array([try write(value)])
     }
 
+    // The declaration that wrote a closure, its kind before its name. The
+    // reading of it is `Fields.declaration`.
+    func declaration(_ declaration: Closure.Declaration) -> Value {
+        switch declaration {
+        case let .procedure(declared): .array([.int(0), name(declared)])
+        case let .binding(declared): .array([.int(1), name(declared)])
+        }
+    }
+
     func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
         // A numbering counting from a link's own rows belongs to no document,
         // so what holds one is not an object and there is none to write.
@@ -139,7 +148,7 @@ struct ObjectWriter {
             return tagged(
                 .closure,
                 .bytes(identity.bytes),
-                name(closure.writer.name),
+                declaration(closure.writer.declaration),
                 .int(closure.nth),
                 .array(try closure.captured.map { (slot, cell) throws(ObjectUnwritable) -> Value in
                     guard case let .value(held) = cell else {

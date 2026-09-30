@@ -301,14 +301,15 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Public
-    // Which of its writer's closures the row at a position is, for a row a
-    // closure was lifted into, and nil for a declaration's own row. The
+    // Which closure the row at a position is, its writer and which of the
+    // writer's, for a row a closure was lifted into, and nil for a
+    // declaration's own row. The
     // numbering's arithmetic, asked here once for both the link and a compile
     // laying this document down.
-    func nth(ofRow index: Int) -> Int? {
+    func closure(ofRow index: Int) -> (by: Closure.Declaration, nth: Int)? {
         guard lifted.contains(index) else { return nil }
 
-        return numbering.writer(of: index - lifted.lowerBound)?.nth
+        return numbering.writer(of: index - lifted.lowerBound)
     }
 
     // The same, saying why there is none where there is none.
