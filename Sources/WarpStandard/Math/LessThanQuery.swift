@@ -8,9 +8,7 @@
 import Foundation
 import Warp
 
-// Whether this orders before another. `not` is a language operator, so
-// "at least" is `not lessThan` and there are two comparisons rather than
-// four.
+// Whether one orders before the other.
 struct LessThanQuery: Query {
     // What this takes: two values of one member of `std.Comparable`.
     enum Parameters: Int, ParameterSet {

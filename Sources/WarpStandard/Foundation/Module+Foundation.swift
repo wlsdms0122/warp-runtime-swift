@@ -9,11 +9,9 @@ import Foundation
 import Warp
 
 public extension Module {
-    // The ground the other bundles stand on: the memberships their procedures are
-    // bounded by, declared once where every bundle can name them. It declares
-    // no procedures (what it gives a link is memberships) and a
-    // bundle whose signatures mention these needs this module in the link,
-    // which is the one dependency the standard modules have.
+    // The memberships and the byte type the other bundles' signatures mention,
+    // declared once where every bundle can name them. It declares no
+    // procedures.
     static let foundation: [Module] = [nativeFoundation]
 
     private static let nativeFoundation = Module(

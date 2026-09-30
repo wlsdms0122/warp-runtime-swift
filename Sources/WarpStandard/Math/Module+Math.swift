@@ -53,7 +53,7 @@ public extension Module {
                     implementation: .query(RemainderQuery())
                 ),
                 "std.math.floored": Procedure(
-                    description: "The whole number at or below this one.",
+                    description: "The whole number at or below a number.",
                     signature: Signature(of: FlooredQuery.self, returns: .int),
                     implementation: .query(FlooredQuery())
                 ),
@@ -63,7 +63,7 @@ public extension Module {
                     implementation: .query(RoundedQuery())
                 ),
                 "std.math.lessThan": Procedure(
-                    description: "Whether this orders before another.",
+                    description: "Whether one orders before the other.",
                     signature: Signature(of: LessThanQuery.self, returns: .bool),
                     implementation: .query(LessThanQuery())
                 )
