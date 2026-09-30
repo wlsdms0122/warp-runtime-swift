@@ -9,11 +9,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// The kernel's own acceptance test: a procedure written in Swift, run without a
-// front end. Nothing here spells a keyword (no `"loop"`, no `"steps"`, no path
-// string) because a caller that reaches for `import Warp` is writing the IR,
-// not a document about it. If a construct cannot be reached from here, it is
-// only reachable through a notation, and the notation has become the language.
+// Procedures written in Swift and run without a front end.
 @Suite("Authoring a procedure in Swift")
 struct SwiftAuthoringTests {
     // MARK: - Property

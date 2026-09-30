@@ -12,7 +12,7 @@ import WarpMutation
 
 // What a reading does with every field of an object replaced in turn.
 //
-// The cases beside this one each name a field and say what is refused there,
+// The tests beside this one each name a field and say what is refused there,
 // which asks about the fields someone thought of. This asks about all of them.
 // A refusal is an answer. A trap is not, because the reading runs inside a
 // host's process and a trap there ends the host.

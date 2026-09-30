@@ -9,9 +9,6 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A declaration says more about a list than that it is one. What composing types
-// buys is that the refusal happens at the boundary, naming the element that
-// disagreed, instead of somewhere inside the body.
 @Suite("A type is an expression")
 struct TypeTests {
     // MARK: - Property

@@ -408,8 +408,7 @@ struct BytesTests {
     @Test("text spells bytes the way a document writes them, at every depth")
     func renderingSpellsBytesAsTheDocumentDoes() {
         // `text` spells a value the way a document writes it, and a document
-        // writes bytes `x"6869"`. The bare digits this once showed are a form
-        // nothing reads back.
+        // writes bytes `x"6869"`.
         #expect(Rendering(.bytes([104, 105])).text() == "x\"6869\"")
 
         // The document writer is one recursive function and writes the same

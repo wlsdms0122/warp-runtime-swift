@@ -17,15 +17,9 @@ import Testing
 // either side of it to show for it.
 //
 // So the contract is one-directional. Wherever a value settles into both
-// types, the build must not call the pair impossible. The other way round is
-// deliberately free. `couldBothHold` refuses only what it can prove, and
-// everything it cannot read into is left to the run.
-//
-// This is the same kind of guard `holdsEveryByte` earned: two hand-written
-// answers to one question, held together by asking the judge. Every pair the
-// restatement got wrong (`dictionary` beside `record`, `int?` beside `string?`,
-// `bytes` beside `array<int>`, an int where a double is named, `int?` beside
-// `null`) is a witness this walk would have produced on its own.
+// types, the build does not call the pair impossible. `couldBothHold` refuses
+// only what it can prove, and everything it cannot read into is left to the
+// run.
 @Suite("The build calls impossible only what no value satisfies")
 struct CastAgreementTests {
     // MARK: - Property

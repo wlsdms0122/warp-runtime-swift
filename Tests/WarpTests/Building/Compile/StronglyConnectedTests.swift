@@ -12,9 +12,8 @@ import Testing
 // The order unwritten answers are read in, asked of the graph alone.
 //
 // The walk is a plain strongly-connected-components walk and knows nothing
-// about linking, so this is what it is tested on. It also carries its own
-// stack, because written as recursion a chain of calls descends once per link
-// and a chain is as long as a program. A fact only a graph this size states.
+// about building, so this is what it is tested on. It carries its own stack,
+// so a chain of calls as long as a program does not descend the host's.
 @Suite("The call graph is walked callee first, and a cycle is one component")
 struct StronglyConnectedTests {
     // MARK: - Property
@@ -65,9 +64,7 @@ struct StronglyConnectedTests {
 
     @Test("a chain as long as a program is walked without the host's stack")
     func aLongChainIsWalked() throws {
-        // Given. Three hundred declarations calling one another in a line,
-        // which is an ordinary program and was enough to end the process when
-        // this walk was written as recursion.
+        // Given. Three hundred declarations calling one another in a line.
         let names = try (0..<300).map { position in try Name("p\(position)") }
         let edges = Dictionary(
             uniqueKeysWithValues: names.enumerated().map { position, name in

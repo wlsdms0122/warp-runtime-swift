@@ -80,9 +80,7 @@ struct LoweringTests {
     @Test("a closure's own declaration shadows what it captured")
     func aClosureReadsTheNearestName() async throws {
         // Given. The closure declares `x` over the body's `x`; the nearest
-        // declaration is the one read, and the body's stays what it was. A
-        // module's name may not be declared over, so the order between a
-        // captured name and a module variable is never observed.
+        // declaration is the one read, and the body's stays what it was.
         let module = try Module(
             procedures: [
                 entryName: Procedure(

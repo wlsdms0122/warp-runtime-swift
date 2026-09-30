@@ -9,9 +9,6 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A declaration said what it took and nothing about what came back, so the
-// judgement this language makes before running stopped at the boundary it was
-// easiest to make it at.
 @Suite("What a procedure returns")
 struct ReturnTypeTests {
     // MARK: - Property

@@ -10,9 +10,8 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// A procedure is a value. What that buys is not the case list. It is that an
-// author can write the two things only Swift could write before: a construct
-// that takes a body, and a procedure that makes one.
+// A procedure is a value, so an author can write a construct that takes a
+// body, and a procedure that makes one.
 @Suite("A procedure is a value")
 struct ClosureTests {
     // MARK: - Property

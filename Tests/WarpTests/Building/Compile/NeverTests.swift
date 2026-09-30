@@ -12,7 +12,6 @@ import Testing
 // A statement typed `never` does not finish, so it binds nothing and nothing
 // after it runs. The syntactic leaves are refused where they are read; a call
 // is the build's to refuse, because only the build knows what the procedure declares.
-// One rule, two places, each catching what only it can see.
 @Suite("What never finishes binds nothing")
 struct NeverTests {
     // MARK: - Property

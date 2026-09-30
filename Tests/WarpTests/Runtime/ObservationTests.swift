@@ -10,12 +10,8 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// What a caller is told while a run happens.
-//
-// This is the language's only outward-facing account of a run in progress, and
-// the reason nothing here counts iterations or bounds recursion: runaway work is
-// meant to be seen from outside and cancelled, not guessed at from inside. An
-// account nobody checked would have made that answer hollow.
+// What a caller is told while a run happens: the language's only outward
+// account of a run in progress.
 @Suite("What a run reports while it runs")
 struct ObservationTests {
     private enum ObservedEvent: Equatable {

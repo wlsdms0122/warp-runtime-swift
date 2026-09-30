@@ -158,8 +158,7 @@ struct DeclaredSpellingTests {
 
     @Test("two modules declaring one name refuse")
     func oneNameDeclaredTwiceRefuses() async throws {
-        // Given. Two modules declare one spelling, which collide the way two
-        // `.c` files' symbols do
+        // Given. Two modules declare one spelling
         let one = try Module(
             types: ["Limit": .int],
             procedures: [

@@ -107,8 +107,7 @@ struct CallTests {
 
     @Test("a call to a native procedure is judged against its signature like any call")
     func hostProcedureIsCheckedAgainstItsSignature() async throws {
-        // Given. One argument more than the procedure declares. This was
-        // unreachable while an effect was an opaque Swift value.
+        // Given. One argument more than the procedure declares.
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(

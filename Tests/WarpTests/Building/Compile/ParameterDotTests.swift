@@ -90,11 +90,6 @@ struct ParameterDotTests {
         // it. They are two unknowns, not one (`of` is the type the call filled
         // in and `of.inner` is a field of that type) so the name holds neither
         // reading and a dot on it is refused.
-        //
-        // Read as the same parameter, this linked: a field stood where `some T`
-        // was proven, which is the impersonation. A bound would have ridden
-        // along with it. `some N: Comparable` proving `of.inner` comparable on
-        // nothing but where it was read from.
         let sut = try Module(
             procedures: [
                 "peek": Procedure(
@@ -150,11 +145,6 @@ struct ParameterDotTests {
         // once through a mark. What a mark says is expected of the value; where
         // the walk landed is the field either way, so the two readings are one
         // type and a dot on it stands.
-        //
-        // Held as the path and not as its spelling for exactly this: `of.inner`
-        // and `of?.inner` spell apart, and a name would have made one field
-        // into two unknowns that never meet. The dot after them refused, for no
-        // reason an author could see.
         func module(marking: Bool) throws -> Module {
             try Module(
                 procedures: [
@@ -213,11 +203,8 @@ struct ParameterDotTests {
         // Given. The same field of the same parameter, reached once in a single
         // walk and once through a name given to a step along the way. A body
         // may hold what it read, and holding it is not reading something else.
-        //
-        // Rooted at the local name, `held.count` and `of.inner.count` were two
-        // unknowns: the pair met at a join, held neither, and the dot after
-        // was refused. The root is the parameter, so a name in between changes
-        // nothing about where the walk landed.
+        // The root is the parameter, so a name in between changes nothing about
+        // where the walk landed.
         let sut = try Module(
             procedures: [
                 "peek": Procedure(
@@ -316,9 +303,6 @@ struct ParameterDotTests {
         // produces. No document spells one, and the build refuses it where it
         // was written rather than letting it stand: a declaration says what a
         // call fills, and nothing fills a path only one body can read.
-        //
-        // The two are apart in the type, so this is a refusal about what was
-        // written and not a name that happened to collide.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

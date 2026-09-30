@@ -9,13 +9,9 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What a range may say. It began as one kind (whole numbers, both bounds
-// inside) and the two things it could not say were both things programs are
-// written against: a position below a length, and a ratio.
-//
-// So the condition names the kind it refines and the far bound says whether it
-// is inside. The near bound always is, which is the convention every half-open
-// interval is already read by, and it is what keeps one spelling per range.
+// What a range may say. The condition names the kind it refines and the far
+// bound says whether it is inside. The near bound always is, which keeps one
+// spelling per range.
 @Suite("A range is a condition on a number, and it says which number")
 struct RefinementTests {
     // MARK: - Property
@@ -146,11 +142,6 @@ struct RefinementTests {
         // Given. `double(0.0...)` written the long way. An infinity compares
         // like any other bound, so the question a range asks (is this number
         // between them) has an answer, and half the fractions answer yes.
-        //
-        // Asking for *finiteness* here refused it, and refused it at the
-        // declaration, where an author has nothing to fix. What the range
-        // needs of a bound is that ordering it says something, which is a nan's
-        // failing and not an infinity's.
         let half = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
 
         #expect(!half.admitsNothing)
@@ -170,12 +161,6 @@ struct RefinementTests {
         // Given. A ceiling on the smallest value the kind has, with the bound
         // outside it. No number is below the smallest one, so nothing is
         // inside, and it is a slot no call could ever fill.
-        //
-        // What a missing floor means is the question: the judgment that admits
-        // values reads it as open downward and answers against every value the
-        // kind has, and the one that asks whether anything is inside read it as
-        // having nothing to say. One range, two answers, and this spelling is
-        // one a document can write.
         #expect(TypeExpression.Refinement.whole(to: .upTo(Int.min)).admitsNothing)
         #expect(TypeExpression.Refinement.fraction(to: .upTo(-.infinity)).admitsNothing)
 
@@ -193,12 +178,6 @@ struct RefinementTests {
         // Given. Two ranges sharing exactly one number, chosen where a fraction
         // cannot hold it: 9007199254740997 and 9007199254740996 are one
         // fraction, so widening loses the gap between them.
-        //
-        // Widening is what the question across kinds needs, and it was being
-        // paid for by every pair. Round-to-nearest-even picks the neighbour by
-        // the tie, so the edge moved inward here, and a range pair that shares
-        // a value came out apart. A slot refused for a reason no author could
-        // find. `int` is sixty-four bits and this band is where timestamps sit.
         let mine = TypeExpression.Refinement.whole(to: .upTo(9007199254740997))
         let theirs = TypeExpression.Refinement.whole(from: 9007199254740996)
 

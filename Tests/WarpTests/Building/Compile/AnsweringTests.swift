@@ -10,17 +10,9 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// What a declaration answers when nobody wrote it down.
-//
-// An unwritten `returns` used to read as `any`, which cost a call site nothing
-// while `any` was accepted everywhere. Making `any` opaque turned it into a
-// bill: a dot on what such a call answers was refused, and the author was
-// asked to write down a type the body already states.
-//
-// So the body is read, in the call graph's order. What the author wrote stays
-// what the image carries (this is the build's own reading, not a promise anybody
-// made) and where the reading would have to come from itself, it says `any`
-// rather than guessing.
+// What a declaration answers when nobody wrote it down. The body is read, in
+// the call graph's order, and where the reading would have to come from itself
+// it says `any`.
 @Suite("An answer nobody wrote is read off the body")
 struct AnsweringTests {
     // MARK: - Property

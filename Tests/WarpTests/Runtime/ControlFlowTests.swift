@@ -10,8 +10,6 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// Control flow is a closed set of expression cases the language owns, so each
-// one is asked here directly. What it answers with, and what its body can see.
 @Suite
 struct ControlFlowTests {
     // MARK: - Property

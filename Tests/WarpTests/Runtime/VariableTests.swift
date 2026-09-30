@@ -9,9 +9,6 @@ import Foundation
 import Testing
 @testable import Warp
 
-// Variables, asked of the language rather than of a notation. Nothing here
-// spells `var:` or `set:`. Those are how one front end writes a binding, and
-// what is being tested is what a binding *is*.
 @Suite
 struct VariableTests {
     // MARK: - Property

@@ -910,9 +910,9 @@ struct InferenceTests {
 
     @Test("repeating a cast is refused whichever way the type was spelled")
     func aRepeatedCastIsRefusedInlineToo() async throws {
-        // Given. `payload as? int` hands on `int?`, and asking the sameness
-        // question of the spelling rather than of what was handed on let this
-        // repeat through while the same repeat written with a name was caught
+        // Given. `payload as? int` hands on `int?`, and the sameness question is
+        // asked of what was handed on, so the repeat is refused however the
+        // type is spelled
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -983,10 +983,8 @@ struct InferenceTests {
 
     @Test("a name standing for a nullable is not wrapped again")
     func anAskingCastOntoANullableNameDoesNotDouble() async throws {
-        // Given. `Maybe` already holds null, so `as?: Maybe` reads `Maybe`.
-        // Wrapping the name again made the same type read two ways depending
-        // on whether the author wrote the name or what it stands for, and the
-        // second cast then escaped the sameness rule
+        // Given. `Maybe` already holds null, so `as?: Maybe` reads `Maybe`, the
+        // same type whether the author wrote the name or what it stands for
         let sut = try Module(
             types: ["Maybe": .nullable(.int)],
             procedures: [
@@ -1492,8 +1490,7 @@ struct InferenceTests {
         // Given. The arm writes and then breaks: no run comes back to the arm,
         // but the loop absorbs the break and the flow after the loop goes on
         // with the write in the box. The write may be a null, so the name reads
-        // back nullable and the plain slot refuses. A reading that dropped what
-        // left with the break would have said `string` and linked a lie.
+        // back nullable and the plain slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1663,9 +1660,7 @@ struct InferenceTests {
     func aRoundReadsItsEarlierRoundsWrites() async throws {
         // Given. The first round reads the seed, but the body also writes a
         // null, and every later round reads that: inside the loop the name
-        // reads `string?`, so the plain string slot refuses. A body judged once
-        // against the entry environment would have linked the first round and
-        // lied about the rest.
+        // reads `string?`, so the plain string slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1719,9 +1714,7 @@ struct InferenceTests {
     @Test("a chain of writes settles link by link, however long")
     func aChainOfWritesSettles() async throws {
         // Given. Each round moves the null one link up the chain, so the head
-        // only reads nullable after as many settles as the chain is long. A
-        // walk that stopped counting early would return the head still plain
-        // and link a lie.
+        // only reads nullable after as many settles as the chain is long.
         let names: [Name] = ["a", "b", "c", "d", "e", "f"]
         let chain = Body(zip(names, names.dropFirst()).map { name, next in
             Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))
@@ -1837,9 +1830,8 @@ struct InferenceTests {
     func aBodyWriteJoinsTheRescueWrite() async throws {
         // Given. The body wrote a string or got nowhere, the rescue wrote an
         // int or never ran: the name holds any of null, the string and the int.
-        // That is `any` (where readings disagree the slot holds neither) and
-        // `any` passes the string slot below, where a join that kept only the
-        // rescue's int would have refused it wrongly.
+        // That is `any` (where readings disagree the slot holds neither), and
+        // `any` passes the string slot below.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
