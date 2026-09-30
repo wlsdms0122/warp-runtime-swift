@@ -46,7 +46,7 @@ struct GatheringQuery: Query {
 
         guard let held = collection.elements else { return nil }
 
-        guard case let .array(given) = question[.positions] else {
+        guard let given = question[.positions].elements else {
             throw ExecutionError(
                 "gathering asks an array of positions, and"
                     + " \(question[.positions].type) arrived"
