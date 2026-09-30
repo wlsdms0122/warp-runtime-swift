@@ -24,6 +24,11 @@ enum SlotMark: String, CaseIterable, Sendable {
     case borrowing
 
     // MARK: - Property
+    // The mark as it stands in front of a spelling. The reading takes this off
+    // the front and the writing puts it there, so the shape of a marked
+    // spelling is said once.
+    var front: String { "\(rawValue) " }
+
     // MARK: - Initializer
     // MARK: - Public
     // The mark a type was written under, where it was written under one.
@@ -75,11 +80,6 @@ enum SlotMark: String, CaseIterable, Sendable {
 
         return nil
     }
-
-    // The mark as it stands in front of a spelling. The reading takes this off
-    // the front and the writing puts it there, so the shape of a marked
-    // spelling is said once.
-    var front: String { "\(rawValue) " }
 
     func marking(_ spelling: String) -> String {
         "\(front)\(spelling)"

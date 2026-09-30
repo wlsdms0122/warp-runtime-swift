@@ -38,15 +38,15 @@ struct ObjectWritingTests {
         let bytes = try compiled.map { one in
             guard let written = one.written else { throw ObjectNotWritten() }
 
-            return try BinaryEncoding.data(from: written)
+            return try BinaryEncoding().data(from: written)
         }
         let read = try zip(bytes, compiled).map { written, one in
-            try Compiled(written: try BinaryEncoding.value(from: written), of: one.identity, fingerprint: one.fingerprint)
+            try Compiled(written: try BinaryEncoding().value(from: written), of: one.identity, fingerprint: one.fingerprint)
         }
 
         // Then. One object is one writing, both ways.
         for (before, after) in zip(bytes, read) {
-            #expect(before == (try? BinaryEncoding.data(from: after.written ?? .null)), "\(sut.name)")
+            #expect(before == (try? BinaryEncoding().data(from: after.written ?? .null)), "\(sut.name)")
         }
 
         // And the program those objects build answers what the written ones

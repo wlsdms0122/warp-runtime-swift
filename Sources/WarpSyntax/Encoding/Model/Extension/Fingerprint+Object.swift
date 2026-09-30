@@ -25,6 +25,6 @@ public extension Fingerprint {
     // every time it is wanted, which is what makes it impossible for anybody to
     // record it wrongly.
     static func of(_ object: Value) throws -> Fingerprint {
-        Fingerprint(SHA256.digest(of: try BinaryEncoding.data(from: object)))
+        Fingerprint(SHA256().digest(of: try BinaryEncoding().data(from: object)))
     }
 }

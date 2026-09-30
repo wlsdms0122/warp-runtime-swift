@@ -86,14 +86,14 @@ struct NestingBoundTests {
         let document = shape.document(deep: shape.levels)
         let deeper = shape.document(deep: shape.levels + 1)
 
-        _ = try BinaryEncoding.data(from: document)
+        _ = try BinaryEncoding().data(from: document)
         #expect {
-            try BinaryEncoding.data(from: deeper)
+            try BinaryEncoding().data(from: deeper)
         } throws: { error in
             "\(error)".contains("nests deeper than a document may")
         }
         #expect {
-            try TextEncoding.text(from: deeper)
+            try TextEncoding().text(from: deeper)
         } throws: { error in
             "\(error)".contains("nests deeper than a document may")
         }

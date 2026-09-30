@@ -300,15 +300,15 @@ struct Case: Sendable, CustomStringConvertible {
 
         func read() throws -> Value {
             switch self {
-            case let .binary(data): try BinaryEncoding.value(from: data)
-            case let .text(data): try TextEncoding.value(from: data)
+            case let .binary(data): try BinaryEncoding().value(from: data)
+            case let .text(data): try TextEncoding().value(from: data)
             }
         }
 
         func written(_ value: Value) throws -> Data {
             switch self {
-            case .binary: try BinaryEncoding.data(from: value)
-            case .text: try TextEncoding.data(from: value)
+            case .binary: try BinaryEncoding().data(from: value)
+            case .text: try TextEncoding().data(from: value)
             }
         }
     }
@@ -591,7 +591,7 @@ struct Case: Sendable, CustomStringConvertible {
 
         return try files.map { file in
             try Case(
-                from: try TextEncoding.value(from: try Data(contentsOf: file)),
+                from: try TextEncoding().value(from: try Data(contentsOf: file)),
                 in: String(file.lastPathComponent.dropLast(".test.warpt".count))
             )
         }

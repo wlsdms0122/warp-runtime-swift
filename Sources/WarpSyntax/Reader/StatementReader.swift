@@ -35,6 +35,9 @@ public struct StatementReader: Decodable {
         case variable = "var"
         case assignment = "set"
 
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
         // The binding the key spells, given what it was written with: a name
         // under `let` and `var`, a path under `set`.
         func binding(_ written: String, declaring declared: TypeExpression?) throws -> Statement.Binding {
@@ -53,8 +56,11 @@ public struct StatementReader: Decodable {
                 }
             }
         }
+
+        // MARK: - Private
     }
 
+    // MARK: - Property
     // The one key a statement writes its expression under. A construct sits
     // inside it under the construct's own key.
     public static let valueKey: Name = "value"

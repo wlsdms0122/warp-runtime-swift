@@ -18,7 +18,7 @@ import Foundation
 //
 // Everything below is the published algorithm. The only judgment in it is the
 // choice of algorithm, which the specification names.
-enum SHA256 {
+struct SHA256 {
     // MARK: - Property
     private static let round: [UInt32] = [
         0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
@@ -44,9 +44,12 @@ enum SHA256 {
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
     ]
 
-    // MARK: - Internal
-    static func digest(of data: Data) -> [UInt8] {
-        var state = start
+    // MARK: - Initializer
+    init() { }
+
+    // MARK: - Public
+    func digest(of data: Data) -> [UInt8] {
+        var state = Self.start
         let padded = padded(data)
 
         for start in stride(from: 0, to: padded.count, by: 64) {
@@ -82,7 +85,7 @@ enum SHA256 {
             for index in 0..<64 {
                 let one = rotated(e, 6) ^ rotated(e, 11) ^ rotated(e, 25)
                 let choose = (e & f) ^ (~e & g)
-                let first = h &+ one &+ choose &+ round[index] &+ schedule[index]
+                let first = h &+ one &+ choose &+ Self.round[index] &+ schedule[index]
 
                 let two = rotated(a, 2) ^ rotated(a, 13) ^ rotated(a, 22)
                 let majority = (a & b) ^ (a & c) ^ (b & c)
@@ -119,11 +122,11 @@ enum SHA256 {
     }
 
     // MARK: - Private
-    private static func rotated(_ procedure: UInt32, _ places: UInt32) -> UInt32 {
+    private func rotated(_ procedure: UInt32, _ places: UInt32) -> UInt32 {
         (procedure >> places) | (procedure << (32 - places))
     }
 
-    private static func padded(_ data: Data) -> [UInt8] {
+    private func padded(_ data: Data) -> [UInt8] {
         var padded = [UInt8](data)
         let length = UInt64(data.count) * 8
 

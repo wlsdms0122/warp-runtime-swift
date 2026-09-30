@@ -50,7 +50,7 @@ struct UnwritableTests {
         // What a writing still turns away is one handed straight to it, which
         // is its own boundary rather than a program's
         #expect(throws: (any Error).self) {
-            try BinaryEncoding.data(from: held)
+            try BinaryEncoding().data(from: held)
         }
     }
 

@@ -21,6 +21,7 @@ enum Tagging<Tag, Payload> {
     // No tag at all.
     case none
 
+    // MARK: - Property
     // MARK: - Initializer
     init(_ entries: [(name: Name, value: Payload)], reading tag: (Name) -> Tag?) {
         let tags = entries.map(\.name).filter { name in tag(name) != nil }.sorted()

@@ -41,6 +41,7 @@ public enum Envelope {
     // value a caller built is held to it at the door a document is read at.
     public static let nesting = 128
 
+    // MARK: - Initializer
     // MARK: - Public
     // Whether a document declares what it imports.
     //

@@ -27,7 +27,7 @@ struct CaseLayoutTests {
 
         for file in try Self.files() {
             let written = try String(contentsOf: file, encoding: .utf8)
-            let laid = try TextEncoding.text(from: try TextEncoding.value(from: written)) + "\n"
+            let laid = try TextEncoding().text(from: try TextEncoding().value(from: written)) + "\n"
 
             if written != laid { adrift.append(file.lastPathComponent) }
         }

@@ -42,6 +42,6 @@ public extension Identity {
     // document every time it is wanted, which is what makes it impossible for
     // anybody to record it wrongly.
     static func of(_ document: Value) throws -> Identity {
-        Identity(SHA256.digest(of: try BinaryEncoding.data(from: document)))
+        Identity(SHA256().digest(of: try BinaryEncoding().data(from: document)))
     }
 }

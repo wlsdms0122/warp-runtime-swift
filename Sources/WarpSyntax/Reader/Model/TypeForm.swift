@@ -17,6 +17,7 @@ enum TypeForm {
     case holding(TypeReader.Holding)
     case record
 
+    // MARK: - Property
     // MARK: - Initializer
     init?(_ key: Name) {
         if let (mark, constness, isolation) = TypeReader.procedureKeywords(of: key.spelling) {

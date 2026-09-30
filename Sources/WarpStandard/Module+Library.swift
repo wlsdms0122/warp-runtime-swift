@@ -23,7 +23,7 @@ extension Module {
     // caller to hand a refusal to, and a document shipped with the language
     // that will not read is a bug in the language.
     static let library: [String: Module] = Library.documents.mapValues { text in
-        try! Loader().load(try! TextEncoding.value(from: text), identity: nil)
+        try! Loader().load(try! TextEncoding().value(from: text), identity: nil)
     }
 
     // A bundle and what `lib/std` writes for it. A bundle is taken whole, so

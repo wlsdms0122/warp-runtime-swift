@@ -30,6 +30,7 @@ public struct Loader: Sendable {
         self.registry = registry
     }
 
+    // MARK: - Public
     // Every procedure a notation reaches on its own through this table. From the
     // readers that spell one, and from the forms registered here. A document
     // written entirely in these spellings still needs them declared somewhere
@@ -43,7 +44,6 @@ public struct Loader: Sendable {
         registry.vocabulary(with: notation).union(notation.vocabulary)
     }
 
-    // MARK: - Public
     // Loading is not decoding: decoding produces a fragment, and only this says
     // the fragment is a module worth linking. It reads a document and nothing
     // else. A spelling a notation offers has been spent by the time a document
@@ -118,7 +118,7 @@ public struct Loader: Sendable {
         if let (steps, held) = value.divergence(from: spelling) {
             throw ReadingError(
                 "a document says each thing one way, and this says it another way here."
-                    + " The one way writes \(try held.map(TextEncoding.line(from:)) ?? "nothing")",
+                    + " The one way writes \(try held.map(TextEncoding().line(from:)) ?? "nothing")",
                 at: steps
             )
             .read(in: document)
@@ -346,9 +346,4 @@ public struct Loader: Sendable {
         // that still knows how deep it was. Catching it again here could only
         // add a document to an address already thrown away.
     }
-}
-
-public extension CodingUserInfoKey {
-    static let constructRegistry = CodingUserInfoKey(rawValue: "warp.constructRegistry")!
-    static let notation = CodingUserInfoKey(rawValue: "warp.notation")!
 }

@@ -32,10 +32,10 @@ struct BinaryEncodingTests {
         ])
 
         // When
-        let bytes = try BinaryEncoding.data(from: document)
+        let bytes = try BinaryEncoding().data(from: document)
 
         // Then
-        #expect(try BinaryEncoding.value(from: bytes) == document)
+        #expect(try BinaryEncoding().value(from: bytes) == document)
     }
 
     @Test("the same document is the same bytes, whatever order it was built in")
@@ -57,8 +57,8 @@ struct BinaryEncodingTests {
 
         // Then
         #expect(
-            try BinaryEncoding.data(from: .dictionary(forward))
-                == BinaryEncoding.data(from: .dictionary(backward))
+            try BinaryEncoding().data(from: .dictionary(forward))
+                == BinaryEncoding().data(from: .dictionary(backward))
         )
     }
 
@@ -88,20 +88,20 @@ struct BinaryEncodingTests {
         ]
 
         // Then
-        #expect(try BinaryEncoding.data(from: document) == Data(golden))
-        #expect(try BinaryEncoding.value(from: Data(golden)) == document)
+        #expect(try BinaryEncoding().data(from: document) == Data(golden))
+        #expect(try BinaryEncoding().value(from: Data(golden)) == document)
     }
 
     @Test("a whole number and a fraction are different bytes")
     func wholeAndFractionDiffer() throws {
         // Given. The failure JSON invites: `1` and `1.0` as the same token
-        let whole = try BinaryEncoding.data(from: .int(1))
-        let fraction = try BinaryEncoding.data(from: .double(1))
+        let whole = try BinaryEncoding().data(from: .int(1))
+        let fraction = try BinaryEncoding().data(from: .double(1))
 
         // Then
         #expect(whole != fraction)
-        #expect(try BinaryEncoding.value(from: whole) == .int(1))
-        #expect(try BinaryEncoding.value(from: fraction) == .double(1))
+        #expect(try BinaryEncoding().value(from: whole) == .int(1))
+        #expect(try BinaryEncoding().value(from: fraction) == .double(1))
     }
 
     @Test("bytes that do not begin as a document are refused")
@@ -110,7 +110,7 @@ struct BinaryEncodingTests {
         // reader by mistake
         for bytes in [Data("{}".utf8), Data(), Data([0x57, 0x41])] {
             #expect {
-                try BinaryEncoding.value(from: bytes)
+                try BinaryEncoding().value(from: bytes)
             } throws: { error in
                 "\(error)".contains("begin") || "\(error)".contains("end")
             }
@@ -123,14 +123,14 @@ struct BinaryEncodingTests {
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x02, 0x00])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("later") || "\(error)".contains("format 2")
         }
 
         // And a format that never existed is not an earlier one
         #expect(throws: (any Error).self) {
-            try BinaryEncoding.value(from: Data([0x57, 0x41, 0x52, 0x50, 0x00, 0x00]))
+            try BinaryEncoding().value(from: Data([0x57, 0x41, 0x52, 0x50, 0x00, 0x00]))
         }
     }
 
@@ -141,7 +141,7 @@ struct BinaryEncodingTests {
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x00, 0x00])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("the bytes did not")
         }
@@ -152,7 +152,7 @@ struct BinaryEncodingTests {
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x0a])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("begins with")
         }
@@ -165,7 +165,7 @@ struct BinaryEncodingTests {
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x05, 0xff, 0xff, 0xff, 0xff, 0x0f])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("claims more")
         }
@@ -186,7 +186,7 @@ struct BinaryEncodingTests {
         bytes.append(0x00)
 
         #expect {
-            try BinaryEncoding.value(from: Data(bytes))
+            try BinaryEncoding().value(from: Data(bytes))
         } throws: { error in
             "\(error)".contains("claims more")
         }
@@ -204,7 +204,7 @@ struct BinaryEncodingTests {
         ])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("order")
         }
@@ -222,7 +222,7 @@ struct BinaryEncodingTests {
         ])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("order")
         }
@@ -241,7 +241,7 @@ struct BinaryEncodingTests {
         ])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("normal form")
         }
@@ -253,7 +253,7 @@ struct BinaryEncodingTests {
             0x02, 0xc3, 0xa9, 0x00          // "é" (NFC): null
         ])
 
-        #expect(try BinaryEncoding.value(from: normal) == .dictionary(["é": .null]))
+        #expect(try BinaryEncoding().value(from: normal) == .dictionary(["é": .null]))
     }
 
     @Test("bytes that end inside bytes are refused")
@@ -262,7 +262,7 @@ struct BinaryEncodingTests {
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x08, 0x03, 0x6a])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("end inside")
         }
@@ -286,7 +286,7 @@ struct BinaryEncodingTests {
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x03, 0x80, 0x00])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("longer than it is")
         }
@@ -300,7 +300,7 @@ struct BinaryEncodingTests {
         )
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("64 bits")
         }
@@ -310,13 +310,13 @@ struct BinaryEncodingTests {
     func truncationIsRefused() throws {
         // Given. A healthy document cut at every possible place. Whatever byte
         // it loses, the answer is a refusal and never a smaller document.
-        let bytes = try BinaryEncoding.data(
+        let bytes = try BinaryEncoding().data(
             from: .dictionary(["a": .array([.int(300), .string("hi"), .double(1.5)])])
         )
 
         for end in 5..<bytes.count {
             #expect(throws: (any Error).self) {
-                try BinaryEncoding.value(from: bytes.prefix(end))
+                try BinaryEncoding().value(from: bytes.prefix(end))
             }
         }
     }
@@ -332,7 +332,7 @@ struct BinaryEncodingTests {
         )
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("deeper")
         }
@@ -344,7 +344,7 @@ struct BinaryEncodingTests {
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x05, 0x01, 0x80])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("UTF-8")
         }
@@ -356,13 +356,13 @@ struct BinaryEncodingTests {
         // could be written, and the refusal is that no encoding may
         for value in [Value.double(.infinity), .double(.nan)] {
             #expect(throws: (any Error).self) {
-                try BinaryEncoding.data(from: value)
+                try BinaryEncoding().data(from: value)
             }
         }
 
         // And code is not data in any encoding
         #expect(throws: (any Error).self) {
-            try BinaryEncoding.data(
+            try BinaryEncoding().data(
                 from: .procedure(Closure.assembled())
             )
         }
@@ -377,7 +377,7 @@ struct BinaryEncodingTests {
         ])
 
         #expect {
-            try BinaryEncoding.value(from: bytes)
+            try BinaryEncoding().value(from: bytes)
         } throws: { error in
             "\(error)".contains("no way to carry")
         }

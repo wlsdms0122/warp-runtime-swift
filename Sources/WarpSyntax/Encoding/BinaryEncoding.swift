@@ -26,13 +26,7 @@ import Warp
 // program needs of its reader is said inside the document (`warp`, `imports`),
 // because it is true in every encoding; this byte only says how the bytes
 // themselves are laid out.
-public enum BinaryEncoding {
-    // MARK: - Property
-    // "WARP", and then how the bytes are laid out. The version moves when this
-    // file's layout does, and for no other reason.
-    public static let magic: [UInt8] = [0x57, 0x41, 0x52, 0x50]
-    public static let format: UInt8 = 1
-
+public struct BinaryEncoding {
     private enum Tag: UInt8 {
         case null = 0x00
         case `false` = 0x01
@@ -46,21 +40,104 @@ public enum BinaryEncoding {
         case namedRecord = 0x09
     }
 
-    // MARK: - Public
-    public static func data(from value: Value) throws -> Data {
-        var bytes = Data(magic)
+    // A container part-written: what of it is still to go, and how deep its
+    // parts stand. The mirror of `Opened` on the reading side, and open for
+    // the same reason: what a container holds is written after it rather than
+    // inside it, so nothing here stands on a call frame.
+    private enum Writing {
+        case elements(ArraySlice<Value>, within: Int)
+        case fields(ArraySlice<(name: Name, value: Value)>, within: Int)
+    }
 
-        bytes.append(format)
+    // A container being put back together: what it still expects, what it holds
+    // so far, and (for a record) the key the next value belongs to and the last
+    // key seen, so order can be held without keeping the keys. A sum rather
+    // than two optionals, so "neither" and "both" are not states the code has
+    // to promise never to reach.
+    private enum Opened {
+        case array(expecting: Int, held: [Value])
+        case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
+    }
+
+    // A place in the bytes. `take` answers what it can and remembers whether
+    // that was everything asked for, so a caller checks the one fact it needs.
+    private struct Cursor {
+        // MARK: - Property
+        private let bytes: [UInt8]
+        private var index = 0
+
+        // What the document's claims may still spend, together. Every approved
+        // claim charges what it would minimally cost to write, so the total
+        // that can ever be set aside is bounded by the bytes that arrived.
+        private var budget: Int
+
+        var remaining: Int { bytes.count - index }
+        var isDone: Bool { remaining == 0 }
+        private(set) var lastTakeWasComplete = true
+
+        // MARK: - Initializer
+        init(_ data: Data) {
+            bytes = [UInt8](data)
+            budget = bytes.count
+        }
+
+        // MARK: - Public
+        mutating func claim(_ count: Int, costing cost: Int) -> Bool {
+            let charged = count.multipliedReportingOverflow(by: cost)
+
+            guard !charged.overflow, charged.partialValue <= budget else { return false }
+
+            budget -= charged.partialValue
+
+            return true
+        }
+
+        mutating func byte() -> UInt8? {
+            guard index < bytes.count else { return nil }
+
+            defer { index += 1 }
+
+            return bytes[index]
+        }
+
+        mutating func take(_ count: Int) -> ArraySlice<UInt8> {
+            let end = Swift.min(index + count, bytes.count)
+
+            defer {
+                lastTakeWasComplete = end - index == count
+                index = end
+            }
+
+            return bytes[index..<end]
+        }
+
+        // MARK: - Private
+    }
+
+    // MARK: - Property
+    // "WARP", and then how the bytes are laid out. The version moves when this
+    // file's layout does, and for no other reason.
+    public static let magic: [UInt8] = [0x57, 0x41, 0x52, 0x50]
+    public static let format: UInt8 = 1
+
+    // MARK: - Initializer
+    public init() { }
+
+    // MARK: - Public
+    public func data(from value: Value) throws -> Data {
+        var bytes = Data(Self.magic)
+
+        bytes.append(Self.format)
 
         try write(value, into: &bytes)
 
         return bytes
     }
 
-    public static func value(from data: Data) throws -> Value {
+    public func value(from data: Data) throws -> Value {
         var reading = Cursor(data)
 
-        guard reading.take(magic.count).elementsEqual(magic) else {
+        guard reading.take(Self.magic.count).elementsEqual(Self.magic) else {
             throw refused("the bytes do not begin as a warp document begins")
         }
 
@@ -68,10 +145,10 @@ public enum BinaryEncoding {
             throw refused("the bytes end before saying how they are laid out")
         }
 
-        guard version == format else {
+        guard version == Self.format else {
             throw refused(
-                version > format
-                    ? "the document is laid out as format \(version), and this reader lays out \(format)"
+                version > Self.format
+                    ? "the document is laid out as format \(version), and this reader lays out \(Self.format)"
                     : "format \(version) never existed"
             )
         }
@@ -86,15 +163,6 @@ public enum BinaryEncoding {
     }
 
     // MARK: - Private
-    // A container part-written: what of it is still to go, and how deep its
-    // parts stand. The mirror of `Opened` on the reading side, and open for
-    // the same reason: what a container holds is written after it rather than
-    // inside it, so nothing here stands on a call frame.
-    private enum Writing {
-        case elements(ArraySlice<Value>, within: Int)
-        case fields(ArraySlice<(name: Name, value: Value)>, within: Int)
-    }
-
     // One pass with an explicit stack, for the reason the reader has one: the
     // depth of a document must never be the depth of the host's call stack.
     // What a writer is handed is a value a caller built, and a caller that
@@ -102,7 +170,7 @@ public enum BinaryEncoding {
     //
     // `within` runs out where the reader's limit runs out, so the writer cannot
     // produce a document its own reader would refuse.
-    private static func write(_ value: Value, into bytes: inout Data) throws {
+    private func write(_ value: Value, into bytes: inout Data) throws {
         var open: [Writing] = []
 
         try write(value, into: &bytes, within: Envelope.nesting, opening: &open)
@@ -130,7 +198,7 @@ public enum BinaryEncoding {
 
     // One value's own bytes. What it holds is left open on the stack rather
     // than written here, so nothing on this path calls itself.
-    private static func write(
+    private func write(
         _ value: Value,
         into bytes: inout Data,
         within depth: Int,
@@ -214,7 +282,7 @@ public enum BinaryEncoding {
     // A container opens within the bound or not at all, and what it holds is
     // written one container deeper. Counted where a container opens, so an
     // empty one past the bound is refused the same as a full one.
-    private static func opening(_ value: Value, within depth: Int) throws {
+    private func opening(_ value: Value, within depth: Int) throws {
         guard depth > 0 else {
             throw EncodingError.invalidValue(
                 value,
@@ -228,7 +296,7 @@ public enum BinaryEncoding {
 
     // Fields under names, with the name of the layout they stood on where
     // there was one.
-    private static func write(
+    private func write(
         _ held: Value.Dictionary,
         named name: Name?,
         into bytes: inout Data,
@@ -257,7 +325,7 @@ public enum BinaryEncoding {
         }
     }
 
-    private static func write(_ utf8: [UInt8], into bytes: inout Data) {
+    private func write(_ utf8: [UInt8], into bytes: inout Data) {
         write(UInt64(utf8.count), into: &bytes)
 
         bytes.append(contentsOf: utf8)
@@ -266,7 +334,7 @@ public enum BinaryEncoding {
     // Unsigned LEB128: seven bits a byte, low bits first, high bit says another
     // byte follows. The writer never writes a leading zero group, which is what
     // lets the reader treat one as a lie rather than a style.
-    private static func write(_ unsigned: UInt64, into bytes: inout Data) {
+    private func write(_ unsigned: UInt64, into bytes: inout Data) {
         var rest = unsigned
 
         repeat {
@@ -278,21 +346,11 @@ public enum BinaryEncoding {
         } while rest != 0
     }
 
-    // A container being put back together: what it still expects, what it holds
-    // so far, and (for a record) the key the next value belongs to and the last
-    // key seen, so order can be held without keeping the keys. A sum rather
-    // than two optionals, so "neither" and "both" are not states the code has
-    // to promise never to reach.
-    private enum Opened {
-        case array(expecting: Int, held: [Value])
-        case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
-    }
-
     // One pass over the bytes with an explicit stack, because the depth of a
     // document must never be the depth of the host's call stack. The bytes are
     // the arriving side's, and the stack is ours. The limit that remains is the
     // format's own, and it bounds memory rather than saving the process.
-    private static func read(from reading: inout Cursor) throws -> Value {
+    private func read(from reading: inout Cursor) throws -> Value {
         var opened: [Opened] = []
 
         while true {
@@ -366,7 +424,7 @@ public enum BinaryEncoding {
             case .record, .namedRecord:
                 try opening(opened)
 
-                let name = try tag == .namedRecord ? Self.name(from: &reading) : nil
+                let name = try tag == .namedRecord ? name(from: &reading) : nil
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
@@ -424,7 +482,7 @@ public enum BinaryEncoding {
     // duplicate and a shuffle with the same sentence: these are bytes the
     // writer would not write. NFC, so that byte order is an order on names. A
     // name with a second byte spelling would sort to a second place.
-    private static func field(
+    private func field(
         from reading: inout Cursor,
         after previous: [UInt8]?
     ) throws -> (Name, [UInt8]) {
@@ -443,7 +501,7 @@ public enum BinaryEncoding {
     }
 
     // A record's own name, as the bytes wrote it.
-    private static func name(from reading: inout Cursor) throws -> Name {
+    private func name(from reading: inout Cursor) throws -> Name {
         let spelling = try text(from: &reading)
 
         let name: Name
@@ -461,8 +519,7 @@ public enum BinaryEncoding {
         return name
     }
 
-
-    private static func text(from reading: inout Cursor) throws -> String {
+    private func text(from reading: inout Cursor) throws -> String {
         let count = try length(from: &reading, of: "text", costing: 1)
 
         let bytes = reading.take(count)
@@ -484,7 +541,7 @@ public enum BinaryEncoding {
     // claims cannot sum past the document. A check against only the bytes
     // *remaining* was local to each claim, and five hundred nested containers
     // could each claim the whole document and have memory set aside for it.
-    private static func length(
+    private func length(
         from reading: inout Cursor,
         of what: String,
         costing cost: Int
@@ -498,7 +555,7 @@ public enum BinaryEncoding {
         return Int(claimed)
     }
 
-    private static func unsigned(from reading: inout Cursor) throws -> UInt64 {
+    private func unsigned(from reading: inout Cursor) throws -> UInt64 {
         var value: UInt64 = 0
         var shift: UInt64 = 0
         var last: UInt8 = 0
@@ -531,75 +588,25 @@ public enum BinaryEncoding {
 
     // ZigZag: small magnitudes of either sign become small unsigned numbers, so
     // the varint stays short for the numbers programs actually hold.
-    private static func zigzagged(_ int: Int) -> UInt64 {
+    private func zigzagged(_ int: Int) -> UInt64 {
         UInt64(bitPattern: Int64(int) << 1 ^ (Int64(int) >> 63))
     }
 
     // `unsigned(from:)` already held the 64-bit line, so the exact conversion
     // to the procedure cannot miss. A truncating one here would say otherwise.
-    private static func unzigzagged(_ unsigned: UInt64) -> Int {
+    private func unzigzagged(_ unsigned: UInt64) -> Int {
         Int(Int64(bitPattern: unsigned >> 1 ^ (0 &- (unsigned & 1))))
     }
 
     // The same count the writer keeps: containers open on the path, and the
     // one about to open is one more of them.
-    private static func opening(_ opened: [Opened]) throws {
+    private func opening(_ opened: [Opened]) throws {
         guard opened.count < Envelope.nesting else {
             throw refused("the document nests deeper than a reader must follow")
         }
     }
 
-    private static func refused(_ said: String) -> Error {
+    private func refused(_ said: String) -> Error {
         DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: said))
-    }
-
-    // A place in the bytes. `take` answers what it can and remembers whether
-    // that was everything asked for, so a caller checks the one fact it needs.
-    private struct Cursor {
-        private let bytes: [UInt8]
-        private var index = 0
-
-        // What the document's claims may still spend, together. Every approved
-        // claim charges what it would minimally cost to write, so the total
-        // that can ever be set aside is bounded by the bytes that arrived.
-        private var budget: Int
-
-        var remaining: Int { bytes.count - index }
-        var isDone: Bool { remaining == 0 }
-        private(set) var lastTakeWasComplete = true
-
-        init(_ data: Data) {
-            bytes = [UInt8](data)
-            budget = bytes.count
-        }
-
-        mutating func claim(_ count: Int, costing cost: Int) -> Bool {
-            let charged = count.multipliedReportingOverflow(by: cost)
-
-            guard !charged.overflow, charged.partialValue <= budget else { return false }
-
-            budget -= charged.partialValue
-
-            return true
-        }
-
-        mutating func byte() -> UInt8? {
-            guard index < bytes.count else { return nil }
-
-            defer { index += 1 }
-
-            return bytes[index]
-        }
-
-        mutating func take(_ count: Int) -> ArraySlice<UInt8> {
-            let end = Swift.min(index + count, bytes.count)
-
-            defer {
-                lastTakeWasComplete = end - index == count
-                index = end
-            }
-
-            return bytes[index..<end]
-        }
     }
 }

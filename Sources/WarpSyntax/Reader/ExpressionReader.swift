@@ -33,7 +33,6 @@ public struct ExpressionReader: Decodable {
     // The keys a mapping is an expression by, one to a mapping.
     public static let tags = Set(ExpressionTag.allCases.map(\.key))
 
-
     // What a cast reads and the type it reads it as, inside the cast's own
     // mapping.
     static let subjectKey: Name = "of"
@@ -47,7 +46,6 @@ public struct ExpressionReader: Decodable {
     }
 
     // MARK: - Public
-    // MARK: - Internal
     // The decoder comes along because one form needs more than the value: a
     // closure carries statements, and which procedures a statement may write is the
     // registry's answer, which travels in the decoder rather than in the data.

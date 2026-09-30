@@ -111,7 +111,6 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Public
-    // MARK: - Internal
     // MARK: - Private
     // What the document says it takes from its link, read and not judged. What
     // it is held against is what the module sends, which is a fact about the

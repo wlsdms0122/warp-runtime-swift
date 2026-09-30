@@ -34,15 +34,6 @@ public struct ConstructRegistry: Sendable {
 
     public var keys: [Name] { forms.keys.sorted() }
 
-
-    // What the registered forms send. Dropping a form drops what it required,
-    // which is the point of the table being a value.
-    public func vocabulary(with notation: Notation) -> Set<Name> {
-        forms.values.reduce(into: Set<Name>()) { procedures, form in
-            procedures.formUnion(form.vocabulary(with: notation))
-        }
-    }
-
     private var forms: [Name: any ConstructForm.Type]
 
     // MARK: - Initializer
@@ -74,6 +65,14 @@ public struct ConstructRegistry: Sendable {
     }
 
     // MARK: - Public
+    // What the registered forms send. Dropping a form drops what it required,
+    // which is the point of the table being a value.
+    public func vocabulary(with notation: Notation) -> Set<Name> {
+        forms.values.reduce(into: Set<Name>()) { procedures, form in
+            procedures.formUnion(form.vocabulary(with: notation))
+        }
+    }
+
     // Passing a key spells this form differently in this notation. Registering
     // one form twice is an alias rather than a mistake. The table maps keys to
     // forms, and nothing says two keys cannot mean the same thing.

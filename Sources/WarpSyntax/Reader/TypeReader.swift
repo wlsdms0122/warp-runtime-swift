@@ -24,8 +24,79 @@ import Warp
 // A mapping is one of these by its one key, so a record's field names are
 // never keys the grammar reads.
 public struct TypeReader: Decodable {
+    // The inside of a procedure type: the types a value is applied with, in
+    // position order, and what it answers. No names, since a value carries
+    // none.
+    private struct ProcedureTypeReader: Decodable {
+        // No `bounds` here on purpose: a nested procedure type's parameters are
+        // the declaring procedure's own slots, so the declaring signature owns
+        // every bound. Two `bounds` records binding one name would be two claims
+        // about one thing, written a document apart.
+        private enum CodingKeys: String, CodingKey, CaseIterable {
+            case parameters
+            case returns
+        }
+
+        // MARK: - Property
+        let type: ProcedureType
+
+        // MARK: - Initializer
+        init(from decoder: Decoder) throws {
+            try KeyGate().rejectUnknownKeys(
+                in: decoder,
+                known: CodingKeys.self,
+                context: "procedure type"
+            )
+
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+
+            self.type = ProcedureType(
+                parameters: try container
+                    .decodeIfPresent([TypeReader].self, forKey: .parameters)?
+                    .map(\.type) ?? [],
+                returns: try container
+                    .decodeIfPresent(TypeReader.self, forKey: .returns)?
+                    .type
+            )
+        }
+
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // A built-in taking another type, written under its own key where the
+    // inner type has no spelling of its own. `array<string>` is a name; an
+    // array of procedures is not, and this is the form that carries it.
+    enum Holding: String, CaseIterable {
+        case array
+        case dictionary
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func holding(_ inner: TypeExpression) -> TypeExpression {
+            switch self {
+            case .array: .array(inner)
+            case .dictionary: .dictionary(inner)
+            }
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     public let type: TypeExpression
+
+    // The one key a type handed on once is written under.
+    public static let linearKey: Name = "linear"
+
+    // The one key a record type is written under.
+    public static let recordKey: Name = "record"
+
+    // What a type that is neither a spelling nor a form is refused with.
+    private static let unread = "a type is a name like `string`, `array<string>` or"
+        + " `Task`, or a mapping under one of `record`, `procedure`, `linear`, `array`"
+        + " and `dictionary`. A record type is written { record: { id: string } }"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and
@@ -40,32 +111,6 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Public
-    // The one key a type handed on once is written under.
-    public static let linearKey: Name = "linear"
-
-    // The one key a record type is written under.
-    public static let recordKey: Name = "record"
-
-    // What a type that is neither a spelling nor a form is refused with.
-    private static let unread = "a type is a name like `string`, `array<string>` or"
-        + " `Task`, or a mapping under one of `record`, `procedure`, `linear`, `array`"
-        + " and `dictionary`. A record type is written { record: { id: string } }"
-
-    // A built-in taking another type, written under its own key where the
-    // inner type has no spelling of its own. `array<string>` is a name; an
-    // array of procedures is not, and this is the form that carries it.
-    enum Holding: String, CaseIterable {
-        case array
-        case dictionary
-
-        func holding(_ inner: TypeExpression) -> TypeExpression {
-            switch self {
-            case .array: .array(inner)
-            case .dictionary: .dictionary(inner)
-            }
-        }
-    }
-
     // A type from its spelling. `qualifying` is what a declared name written
     // short stands for, which is the notation's answer where a text may write
     // one short and the name itself where every name is written full.
@@ -190,7 +235,6 @@ public struct TypeReader: Decodable {
 
             return .parameter(name: try named(bare))
         }
-
 
         // A range is spelled into the name: `int(0...255)`,
         // `double(0.0..<1.0)`. Either bound optional but not both, and `..<`
@@ -339,11 +383,11 @@ public struct TypeReader: Decodable {
         var isolation = Isolation.unstated
 
         while true {
-            if let bare = rest.dropPrefixed("const ") {
+            if let bare = dropPrefixed("const ", from: rest) {
                 guard constness == .unstated else { return nil }
                 constness = .const
                 rest = String(bare)
-            } else if let bare = rest.dropPrefixed("isolated ") {
+            } else if let bare = dropPrefixed("isolated ", from: rest) {
                 guard isolation == .unstated else { return nil }
                 isolation = .isolated
                 rest = String(bare)
@@ -524,52 +568,9 @@ public struct TypeReader: Decodable {
         return excluding ? .upTo(bound) : .through(bound)
     }
 
-}
-
-private extension String {
     // The rest of the text where it begins with this, and nothing where it does
     // not.
-    func dropPrefixed(_ prefix: String) -> Substring? {
-        hasPrefix(prefix) ? dropFirst(prefix.count) : nil
+    private static func dropPrefixed(_ prefix: String, from text: String) -> Substring? {
+        text.hasPrefix(prefix) ? text.dropFirst(prefix.count) : nil
     }
-}
-
-// The inside of a procedure type: the types a value is applied with, in
-// position order, and what it answers. No names, since a value carries
-// none.
-private struct ProcedureTypeReader: Decodable {
-    // No `bounds` here on purpose: a nested procedure type's parameters are
-    // the declaring procedure's own slots, so the declaring signature owns
-    // every bound. Two `bounds` records binding one name would be two claims
-    // about one thing, written a document apart.
-    private enum CodingKeys: String, CodingKey, CaseIterable {
-        case parameters
-        case returns
-    }
-
-    // MARK: - Property
-    let type: ProcedureType
-
-    // MARK: - Initializer
-    init(from decoder: Decoder) throws {
-        try KeyGate().rejectUnknownKeys(
-            in: decoder,
-            known: CodingKeys.self,
-            context: "procedure type"
-        )
-
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        self.type = ProcedureType(
-            parameters: try container
-                .decodeIfPresent([TypeReader].self, forKey: .parameters)?
-                .map(\.type) ?? [],
-            returns: try container
-                .decodeIfPresent(TypeReader.self, forKey: .returns)?
-                .type
-        )
-    }
-
-    // MARK: - Public
-    // MARK: - Private
 }

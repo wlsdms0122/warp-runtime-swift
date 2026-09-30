@@ -24,9 +24,9 @@ struct NestingCountTests {
 
     @Test("the binary writer admits the bound and refuses one past it")
     func theBinaryWriterHoldsTheBound() throws {
-        _ = try BinaryEncoding.data(from: Self.nested(Envelope.nesting))
+        _ = try BinaryEncoding().data(from: Self.nested(Envelope.nesting))
         #expect {
-            try BinaryEncoding.data(from: Self.nested(Envelope.nesting + 1))
+            try BinaryEncoding().data(from: Self.nested(Envelope.nesting + 1))
         } throws: { error in
             "\(error)".contains("nests deeper than a document may")
         }
@@ -34,9 +34,9 @@ struct NestingCountTests {
 
     @Test("the binary reader admits the bound and refuses one past it")
     func theBinaryReaderHoldsTheBound() throws {
-        #expect(try BinaryEncoding.value(from: Self.bytes(Envelope.nesting)) == Self.nested(Envelope.nesting))
+        #expect(try BinaryEncoding().value(from: Self.bytes(Envelope.nesting)) == Self.nested(Envelope.nesting))
         #expect {
-            try BinaryEncoding.value(from: Self.bytes(Envelope.nesting + 1))
+            try BinaryEncoding().value(from: Self.bytes(Envelope.nesting + 1))
         } throws: { error in
             "\(error)".contains("nests deeper than a reader must follow")
         }
@@ -44,9 +44,9 @@ struct NestingCountTests {
 
     @Test("the text writer admits the bound and refuses one past it")
     func theTextWriterHoldsTheBound() throws {
-        _ = try TextEncoding.text(from: Self.nested(Envelope.nesting))
+        _ = try TextEncoding().text(from: Self.nested(Envelope.nesting))
         #expect {
-            try TextEncoding.text(from: Self.nested(Envelope.nesting + 1))
+            try TextEncoding().text(from: Self.nested(Envelope.nesting + 1))
         } throws: { error in
             "\(error)".contains("nests deeper than a document may")
         }
@@ -54,9 +54,9 @@ struct NestingCountTests {
 
     @Test("the text reader admits the bound and refuses one past it")
     func theTextReaderHoldsTheBound() throws {
-        #expect(try TextEncoding.value(from: Self.text(Envelope.nesting)) == Self.nested(Envelope.nesting))
+        #expect(try TextEncoding().value(from: Self.text(Envelope.nesting)) == Self.nested(Envelope.nesting))
         #expect {
-            try TextEncoding.value(from: Self.text(Envelope.nesting + 1))
+            try TextEncoding().value(from: Self.text(Envelope.nesting + 1))
         } throws: { error in
             "\(error)".contains("nests deeper than a reader must follow")
         }

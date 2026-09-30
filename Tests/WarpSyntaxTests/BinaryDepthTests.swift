@@ -29,8 +29,8 @@ struct BinaryDepthTests {
         let sut = Self.nested(deep)
 
         // When. Written, read back, and written a second time.
-        let written = try BinaryEncoding.data(from: sut)
-        let again = try BinaryEncoding.data(from: try BinaryEncoding.value(from: written))
+        let written = try BinaryEncoding().data(from: sut)
+        let again = try BinaryEncoding().data(from: try BinaryEncoding().value(from: written))
 
         // Then. The same bytes, which is the promise a canonical writer makes.
         #expect(again == written)
@@ -39,7 +39,7 @@ struct BinaryDepthTests {
     @Test("is refused past the bound rather than ending the process")
     func refusesPastTheBound() throws {
         #expect(throws: (any Error).self) {
-            try BinaryEncoding.data(from: Self.nested(129))
+            try BinaryEncoding().data(from: Self.nested(129))
         }
     }
 
