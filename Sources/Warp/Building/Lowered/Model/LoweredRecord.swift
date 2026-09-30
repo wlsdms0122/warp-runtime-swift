@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A record's fields as the link laid them out: the layout a value settling
+// A record's fields as the build laid them out: the layout a value settling
 // here is built on, and the type of the field at each of its places. One
 // type per field, checked where the pair is made, so every reading may take
 // the two together.
@@ -21,8 +21,8 @@ struct LoweredRecord: Sendable, Equatable {
         zip(layout.fields, fields)
     }
 
-    // What a loop binds each round. The link judges a round against it and
-    // the run builds each round on its layout, so the place the link lowers
+    // What a loop binds each round. The build judges a round against it and
+    // the run builds each round on its layout, so the place the build lowers
     // is the place the value puts the field at.
     static let round = LoweredRecord(layout: Layout(name: nil, ordered: ["index"]), fields: [.int])
 

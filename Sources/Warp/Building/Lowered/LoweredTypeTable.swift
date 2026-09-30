@@ -78,8 +78,8 @@ final class LoweredTypeTable: Sendable {
     let labels: [Name]
     let constraintLabels: [Name]
 
-    // What this table's rows are numbered against. A link owns one; a table
-    // a caller assembled is a place of its own.
+    // What this table's rows are numbered against. A compile or a link owns
+    // one; a table a caller assembled is a place of its own.
     let linkage: Linkage
 
     // The row of the record a row names: the last declared name on the way

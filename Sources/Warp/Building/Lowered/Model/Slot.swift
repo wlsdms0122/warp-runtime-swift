@@ -38,7 +38,7 @@ final class Slot: Sendable {
 
             switch settled {
             // A number meets the members by worth. Only the canonical
-            // spellings name one, because an alias is a dead member the link
+            // spellings name one, because an alias is a dead member the build
             // already refused.
             case .int, .double:
                 guard candidates.contains(where: { candidate in

@@ -71,10 +71,8 @@ extension TypeExpression {
         case let .nullable(inner):
             return .nullable(inner.lowered(in: table))
 
-        // The mark does not survive lowering. What it says is proven at the
-        // link and there is nothing left for a run to keep.
-        // Neither mark survives lowering either, and for the same reason: what
-        // they say is proven at the build.
+        // No mark survives lowering: what one says is proven at the build, and
+        // there is nothing left for a run to keep.
         case let .linear(inner), let .consuming(inner), let .borrowing(inner):
             return inner.lowered(in: table)
 

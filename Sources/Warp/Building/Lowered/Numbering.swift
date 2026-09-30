@@ -14,9 +14,10 @@ import Foundation
 // nothing else, so what the document lowers to says nothing about the graph it
 // was linked into, and the same text numbers the same way in every link.
 //
-// What runs while a link is still being made is numbered by that link's table
-// instead. Folding a constant lowers an expression and runs it there and then,
-// and code that never leaves has no link afterwards to resolve it.
+// What runs while a document is still being compiled is numbered by the
+// compile's table instead. Folding a constant lowers an expression and runs it
+// there and then, and code that never leaves has no link afterwards to resolve
+// it.
 struct Numbering: Sendable {
     // One name a document looks for, by the declared spelling it writes. A
     // document's own declaration is looked for the same way an imported one
@@ -62,7 +63,7 @@ struct Numbering: Sendable {
     // in the order `Closure.Declaration` sorts them. The order is the
     // document's own: a closure is the nth one its declaration wrote, so
     // which number a closure takes is the document's text and not the order
-    // the link happened to lower in.
+    // the build happened to lower in.
     private let runs: [(declaration: Closure.Declaration, count: Int)]
 
     // Whether the numbers here are already rows. A table's own numbering
@@ -102,11 +103,9 @@ struct Numbering: Sendable {
     // writers sort: the numbering is the document's fact and a set has no
     // order to lend it.
     //
-    // `closures` says how many each of the document's declarations wrote, which is
-    // read off the document rather than counted while lowering. Lowering runs the procedures
-    // before the rest, and which declarations are procedures is a fact of the graph,
-    // so a number counted in that order would move when an unrelated module
-    // joins the link.
+    // `closures` says how many each of the document's declarations wrote, which
+    // is read off the document rather than counted while lowering, so a number
+    // does not follow the order bodies happen to be lowered in.
     init(sends: Set<Name>, declared: [Name], closures: [Closure.Declaration: Int] = [:]) {
         let sent = sends.sorted()
         let counted = closures.filter { _, count in count > 0 }
@@ -305,7 +304,7 @@ struct Numbering: Sendable {
 
     // Where the nth closure a declaration wrote stands: the number its body
     // carries, and which of the document's closures that is. Nil where the
-    // document was never read for that declaration's closures, which is a link
+    // document was never read for that declaration's closures, which is a build
     // lowering a body it never scanned, and nil past the ones it wrote.
     func closure(_ nth: Int, of declared: Closure.Declaration) -> (number: Int, nth: Int)? {
         guard let run = run(of: declared), nth >= 0, nth < run.count else { return nil }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-// One member of a `enum`, read against the slot's type once at the link.
+// One member of an `enum`, read against the slot's type once at the build.
 //
 // Two readings, because an argument arrives as either. A settled value with a
 // scalar spelling is compared by that spelling, and a number is compared by
@@ -20,7 +20,7 @@ struct Candidate: Sendable {
     let spelling: String
 
     // The number this spelling names for the slot, or nil where it names
-    // none. A fraction slot reads only fraction spellings, so the link and
+    // none. A fraction slot reads only fraction spellings, so the build and
     // the boundary agree on which members exist.
     let numeral: Value?
 
