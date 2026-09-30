@@ -212,6 +212,18 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // What a reading that went past a possible absence holds. Wrapping what
+    // already admits null would say the one fact twice.
+    var admittingNull: LoweredType {
+        switch self {
+        case .any, .null, .nullable:
+            return self
+
+        default:
+            return .nullable(self)
+        }
+    }
+
     // What one element of bytes is: the range `std` names `byte`.
     static let byteElement = LoweredType.ranged(.whole(from: 0, to: .through(255)))
 
@@ -253,6 +265,62 @@ indirect enum LoweredType: Sendable, Equatable {
     ]
 
     // MARK: - Initializer
+    // What a settled value reads as.
+    init(of value: Value, in table: LoweredTypeTable) {
+        switch value {
+        case .null:
+            self = .null
+
+        case .bool:
+            self = .bool
+
+        case .int:
+            self = .int
+
+        case .double:
+            self = .double
+
+        case .string:
+            self = .string
+
+        case .bytes:
+            self = .array(.byteElement)
+
+        // A procedure that already exists as a value says nothing about itself
+        // that a walk can read.
+        case .procedure:
+            self = .procedure(parameters: nil, returns: nil, constness: .unstated, isolation: .unstated)
+
+        case let .array(elements):
+            self = .array(LoweredType(joining: elements.map { element in LoweredType(of: element, in: table) }))
+
+        // A record under a name reads as that name; the type is the
+        // declaration's, and the name is what the value fits. A document's
+        // type names its fields by Swift's equality, so two spellings the
+        // value keeps apart are one field here, the first by bytes.
+        case let .record(record):
+            self = record.name.flatMap { name in table.row(named: name).map(LoweredType.named) }
+                ?? .record(
+                    Dictionary(
+                        zip(record.names, record.values).map { name, value in (name, LoweredType(of: value, in: table)) }
+                    ) { first, _ in first }
+                )
+
+        // A dictionary's names are data, so what it reads as is what its
+        // entries hold, not which names it holds them under today.
+        case let .dictionary(dictionary):
+            self = .dictionary(
+                LoweredType(joining: dictionary.entries.map { entry in LoweredType(of: entry.value, in: table) })
+            )
+        }
+    }
+
+    // What every one of these readings joins to, and `any` where there are
+    // none.
+    private init(joining readings: [LoweredType]) {
+        self = readings.dropFirst().reduce(readings.first ?? .any) { joined, next in joined.joined(next) }
+    }
+
     // MARK: - Public
     // What a walk through this type reaches by taking those segments. Nil
     // where this is not a type a call decides, which is where a walk has a
@@ -324,6 +392,65 @@ indirect enum LoweredType: Sendable, Equatable {
         default:
             return nil
         }
+    }
+
+    // Two readings of one slot. Where they disagree the slot holds neither,
+    // which is what `any` says. A join that guessed would be a refusal an
+    // author cannot act on.
+    //
+    // A reading that leaves is not one of the two. It contributes no value, so
+    // it cannot disagree with the reading that stays, and the slot holds what
+    // the other one said.
+    func joined(_ other: LoweredType) -> LoweredType {
+        guard self != .never else { return other }
+        guard other != .never else { return self }
+
+        // Null beside a value is absence beside presence, and a slot that may
+        // hold either is what `T?` says. A nullable side joins by what it
+        // holds, so the one fact (null may be here) is said once.
+        if self == .null { return other.admittingNull }
+        if other == .null { return admittingNull }
+
+        if case let .nullable(mine) = self {
+            return mine.joined(other).admittingNull
+        }
+
+        if case let .nullable(theirs) = other {
+            return joined(theirs).admittingNull
+        }
+
+        // Two procedures join to a procedure rather than to `any`, keeping the
+        // constness both of them have. Collapsing here would let one body that
+        // runs, in a list of them, pass a slot that asked for none, because
+        // `any` is accepted everywhere.
+        if
+            case let .procedure(mine, myAnswer, wanted, wantedIsolation) = self,
+            case let .procedure(_, _, offered, offeredIsolation) = other
+        {
+            let agreed = sameProcedure(as: other)
+
+            return .procedure(
+                parameters: agreed ? mine : nil,
+                returns: agreed ? myAnswer : nil,
+                constness: wanted == .const && offered == .const ? .const : .unstated,
+                isolation: wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
+            )
+        }
+
+        guard self != other else { return self }
+
+        // Unequal spellings may still be one type: the equations (a range is an
+        // int with a condition, bytes are `array<byte>`) are read through their
+        // normal forms before the join gives up, and two arrays join by their
+        // elements so the equation holds inside one.
+        let mine = unrefined
+        let theirs = other.unrefined
+
+        if case let .array(myElement) = mine, case let .array(theirElement) = theirs {
+            return .array(myElement.joined(theirElement))
+        }
+
+        return mine == theirs ? mine : .any
     }
 
     // Whether two procedure types declare the same slots and the same answer.

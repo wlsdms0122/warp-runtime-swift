@@ -428,7 +428,7 @@ public struct Builder: Sendable {
         // as, through every write, because every body of the document reads
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
-            TypeChecker().environment(of: signature, in: loweredTypes)
+            signature.environment(in: loweredTypes)
                 .merging(typedConstants.mapValues { constant in .fixed(constant.type) }) { _, constant in
                     constant
                 }
@@ -436,7 +436,7 @@ public struct Builder: Sendable {
                     variables.reduce(into: [Name: Binding]()) { held, entry in
                         held[entry.key] = .declared(
                             module.variables[entry.key]?.declared?.lowered(in: loweredTypes)
-                                ?? TypeChecker().type(of: entry.value, in: loweredTypes)
+                                ?? LoweredType(of: entry.value, in: loweredTypes)
                         )
                     }
                 ) { _, variable in variable }
@@ -628,7 +628,7 @@ public struct Builder: Sendable {
             in: context()
         )
 
-        typedConstants = constants.mapValues { value in (value: value, type: TypeChecker().type(of: value, in: loweredTypes)) }
+        typedConstants = constants.mapValues { value in (value: value, type: LoweredType(of: value, in: loweredTypes)) }
 
         variables = try await self.variables(
             of: module,
@@ -971,7 +971,7 @@ public struct Builder: Sendable {
                 let (judged, calls) = try await TypeChecker().resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in .fixed(TypeChecker().type(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -1032,7 +1032,7 @@ public struct Builder: Sendable {
                 let (judged, calls) = try await TypeChecker().resolvedSites(
                     in: variable.start,
                     at: place,
-                    in: known.mapValues { value in .fixed(TypeChecker().type(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -1074,7 +1074,7 @@ public struct Builder: Sendable {
                     started[name] = try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes)
                 } catch {
                     throw BuildError(
-                        "starts as \(TypeChecker().type(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
+                        "starts as \(LoweredType(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
                             + " and declares \(declared): \(error)",
                         at: place
                     )
