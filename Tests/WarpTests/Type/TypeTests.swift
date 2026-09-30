@@ -179,7 +179,7 @@ struct TypeTests {
             result: .literal(.int(1))
         )
         let wants = Procedure(
-            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: []
         )
         let entry = Procedure(
@@ -207,7 +207,7 @@ struct TypeTests {
         // a declared answer earns is earned here.
         let counts = Procedure(body: [], result: .literal(.int(1)))
         let wants = Procedure(
-            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: []
         )
         let entry = Procedure(

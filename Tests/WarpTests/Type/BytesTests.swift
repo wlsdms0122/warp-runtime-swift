@@ -108,7 +108,7 @@ struct BytesTests {
             ]
         )
 
-        let loweredTypes: [TypeExpression] = [
+        let typeExpressions: [TypeExpression] = [
             .any, .int, .double, .string, .bool, .null, .never,
             .ranged(.whole(from: 0, to: .through(255))),
             .ranged(.whole()),
@@ -135,7 +135,7 @@ struct BytesTests {
             .record([:])
         ]
 
-        for type in loweredTypes {
+        for type in typeExpressions {
             let untouched = (0...255).allSatisfy { byte in
                 let value = Value.int(byte)
 

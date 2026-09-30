@@ -51,11 +51,11 @@ struct FirstParameterTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "shout", arguments: [.reference([.key("procedure")])]))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "shout", arguments: [.reference([.key("text")])]))
                         )
                     ],
                     result: .record([
@@ -82,7 +82,7 @@ struct FirstParameterTests {
         )
 
         // When
-        let outputs = try await run(sut, arguments: ["procedure": .string("hey")])
+        let outputs = try await run(sut, arguments: ["text": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("hey!"))

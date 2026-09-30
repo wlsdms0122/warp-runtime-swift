@@ -13,12 +13,12 @@ import Testing
 //
 // What these hold a place to is that it leads somewhere for the reader it is
 // shown to. These programs are assembled in Swift and were never written down,
-// so the reader is the caller that built them and the procedures are the language's
+// so the reader is the caller that built them and the keys are the language's
 // own. A document's would name keys that exist in no file. Reading a place in a
-// document's procedures is asked of `WarpSyntax`, which has the document.
+// document's keys is asked of `WarpSyntax`, which has the document.
 //
 // The steps are what makes both readings possible: a slot and a construct
-// travel as themselves, and only what an author named travels as a procedure.
+// travel as themselves, and only what an author named travels as a key.
 @Suite
 struct PlaceTests {
     // MARK: - Property
@@ -181,7 +181,7 @@ struct PlaceTests {
         // Given. The same slot of the same statement, reached once by the walk
         // that checks a document against itself and once by the walk that
         // resolves its names. Two spellings of one place is two documents as
-        // far as an author following the procedures is concerned.
+        // far as an author following the keys is concerned.
         let linked = try Module(
             procedures: [
                 entryName: Procedure(access: .public, body: [
@@ -429,10 +429,10 @@ struct PlaceTests {
             )
         )
 
-        // Then. The procedure is spelled for the person reading the line
+        // Then. The construct is spelled for the person reading the line
         #expect(sut.rendered?.contains(".sent[0].call.") == true)
 
-        // And carried as the type rather than as any procedure, so the side that
+        // And carried as the type rather than as any key, so the side that
         // spells it is the side that knows what its reader is looking at
         #expect(sut.steps.contains(.construct(.call)))
         #expect(sut.steps.contains(.part(.arguments)))

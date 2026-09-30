@@ -9,10 +9,10 @@ import Foundation
 import Testing
 @testable import Warp
 
-// The procedure-boundary judges in one place: every judge that meets a fraction or
+// The int-boundary judges in one place: every judge that meets a fraction or
 // a spelled candidate reads through these, so the edges are pinned here once
 // rather than rediscovered at each caller.
-@Suite("Procedure readings and spellings")
+@Suite("Int readings and spellings")
 struct IntSpellingTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -23,8 +23,8 @@ struct IntSpellingTests {
         #expect({ if case .int(Int.min) = IntNarrowing(-0x1p63) { true } else { false } }())
         #expect({ if case .int(0) = IntNarrowing(-0.0) { true } else { false } }())
 
-        // The procedure's upper edge: 2^63 itself is already past Int.max, and
-        // infinity is past every procedure, the same fact at its limit.
+        // The int's upper edge: 2^63 itself is already past Int.max, and
+        // infinity is past every int, the same fact at its limit.
         #expect({ if case .overflow = IntNarrowing(0x1p63) { true } else { false } }())
         #expect({ if case .overflow = IntNarrowing(1e30) { true } else { false } }())
         #expect({ if case .overflow = IntNarrowing(-1e30) { true } else { false } }())
@@ -83,7 +83,7 @@ struct IntSpellingTests {
 
         // The reading behind the door tells the two misses apart: an alias
         // is not the one spelling, and the one spelling of a number past the
-        // procedure is exactly that.
+        // int is exactly that.
         #expect({ if case .notOneSpelling = IntSpelling("-0") { true } else { false } }())
         #expect({ if case .notOneSpelling = IntSpelling("007") { true } else { false } }())
         #expect({ if case .overflow = IntSpelling("9223372036854775808") { true } else { false } }())

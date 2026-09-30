@@ -150,11 +150,11 @@ struct SwiftAuthoringTests {
         // which module declared it is the builder's business.
         let echo = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "procedure", type: .string)],
+                parameters: [Parameter(name: "text", type: .string)],
                 returns: .record(["said": .string])
             ),
             body: [],
-            result: .record(["said": .reference([.key("procedure")])])
+            result: .record(["said": .reference([.key("text")])])
         )
 
         // When

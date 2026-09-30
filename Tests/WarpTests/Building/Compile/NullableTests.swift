@@ -207,13 +207,13 @@ struct NullableTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "procedure", type: .string)],
+                        parameters: [Parameter(name: "text", type: .string)],
                         returns: .string
                     ),
                     body: [
                         Statement(binding: .constant("called"), expression: .call(Call(
                             selector: "labelled",
-                            arguments: [.reference([.key("procedure")])]
+                            arguments: [.reference([.key("text")])]
                         ))
                         )
                     ],

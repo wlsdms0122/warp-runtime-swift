@@ -27,7 +27,7 @@ struct InferenceTests {
         // Element`, so what it answers here is a string and the declaration
         // never said so
         let wants = Procedure(
-            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: []
         )
         let sut = try Module(
@@ -64,7 +64,7 @@ struct InferenceTests {
     func aFilledHoleRefusesWhatDisagrees() async throws {
         // Given. The same walk, over an array of ints
         let wants = Procedure(
-            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: []
         )
         let sut = try Module(
@@ -174,7 +174,7 @@ struct InferenceTests {
                     ]
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
                     body: []
                 )
             ]
@@ -292,7 +292,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -338,7 +338,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -380,7 +380,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -427,7 +427,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -479,7 +479,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -529,7 +529,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .int)
+                            Parameter(name: "number", type: .int)
                         ]
                     ),
                     body: [
@@ -582,7 +582,7 @@ struct InferenceTests {
                 ),
                 "wants": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "procedures", type: .array(.string))]
+                        parameters: [Parameter(name: "names", type: .array(.string))]
                     ),
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.string("ok")))
@@ -634,7 +634,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -1254,11 +1254,11 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("procedure")]), as: .int, optional: true)
+                    result: .cast(.reference([.key("text")]), as: .int, optional: true)
                 )
             ]
         )
@@ -1578,7 +1578,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -1630,7 +1630,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .int)
+                            Parameter(name: "number", type: .int)
                         ]
                     ),
                     body: [
@@ -1683,7 +1683,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -1737,7 +1737,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -1792,7 +1792,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -1854,7 +1854,7 @@ struct InferenceTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "of", type: .string),
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -1909,7 +1909,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -1960,7 +1960,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [
@@ -2001,7 +2001,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .int)
+                            Parameter(name: "number", type: .int)
                         ]
                     ),
                     body: [
@@ -2049,7 +2049,7 @@ struct InferenceTests {
                 "wants": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [

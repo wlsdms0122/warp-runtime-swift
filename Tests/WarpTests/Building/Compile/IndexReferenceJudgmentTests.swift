@@ -346,11 +346,11 @@ struct IndexReferenceJudgmentTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "i", type: .int),
-                            Parameter(name: "procedure", type: .string)
+                            Parameter(name: "text", type: .string)
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("procedure"), .indexRef([.key("i")])])
+                    result: .reference([.key("text"), .indexRef([.key("i")])])
                 )
             ]
         )

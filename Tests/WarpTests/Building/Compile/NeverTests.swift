@@ -166,7 +166,7 @@ struct NeverTests {
                     result: reference("y")
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
                     body: []
                 )
             ]
