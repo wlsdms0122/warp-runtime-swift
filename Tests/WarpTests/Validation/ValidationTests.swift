@@ -582,6 +582,134 @@ struct ValidationTests {
         }
     }
 
+    @Test("a name on a conditional both of whose arms leave is refused")
+    func aNamedBranchThatAlwaysLeavesIsRefused() {
+        // Given. The name could only ever bind what an arm answers, and both
+        // arms answer by leaving instead
+        let conditional = Warp.Expression.conditional(
+            .literal(.bool(true)),
+            then: [
+                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
+            ],
+            else: [
+                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(2)))))
+            ]
+        )
+
+        // When / Then
+        #expect(!validates(body: [Statement(binding: .constant("gone"), expression: conditional)]))
+    }
+
+    @Test("an arm that leaves inside a block is still a leaving arm")
+    func anArmLeavingInsideAGroupCounts() {
+        // Given. The rule reaches through structure because the fact does: a
+        // block whose body leaves never finishes, and an arm that ends in one
+        // ends every way through the arm
+        let conditional = Warp.Expression.conditional(
+            .literal(.bool(true)),
+            then: [
+                Statement(
+                    expression: .block(
+                        Block(body: [
+                            Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
+                        ])
+                    )
+                )
+            ],
+            else: [
+                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(2)))))
+            ]
+        )
+
+        // When / Then
+        #expect(!validates(body: [
+            Statement(expression: conditional),
+            Statement(binding: .constant("after"), expression: .literal(.int(3)))
+        ]))
+    }
+
+    @Test("a conditional that can decline still lets what follows run")
+    func aDecliningBranchIsNotALeave() {
+        // Given, with no else, the conditional finishes whenever the condition
+        // declines, so the statement after it is reachable
+        let conditional = Warp.Expression.conditional(
+            .literal(.bool(false)),
+            then: [
+                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
+            ],
+            else: nil
+        )
+
+        // When / Then
+        #expect(validates(body: [
+            Statement(expression: conditional),
+            Statement(binding: .constant("after"), expression: .literal(.int(3)))
+        ]))
+    }
+
+    @Test("a result after a leaving statement is refused at the check")
+    func aResultAfterLeavingIsRefused() {
+        // Given. The syntactic half of the same rule, held where leaves are
+        let sut = Procedure(
+            body: [
+                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
+            ],
+            result: .literal(.int(2))
+        )
+
+        // When / Then
+        #expect {
+            try Validator().validate(sut)
+        } throws: { error in
+            "\(error)".contains("never be reached")
+        }
+    }
+
+    @Test("a closure body is validated where it is written")
+    func closureBodyIsValidatedAtItsSite() {
+        // Given. The body may read what surrounds the literal and what the
+        // literal declares, and nothing else
+        let readsEnclosing = Warp.Expression.closure(
+            Procedure(body: [], result: reference("outer"))
+        )
+        let readsItsOwn = Warp.Expression.closure(
+            Procedure(
+                signature: Signature(parameters: [Parameter(name: "mine", type: .int)]),
+                body: [],
+                result: reference("mine")
+            )
+        )
+        let readsNothingReal = Warp.Expression.closure(
+            Procedure(body: [], result: reference("nowhere"))
+        )
+
+        // Then
+        #expect(validates(readsEnclosing, visible: ["outer"]))
+        #expect(!validates(readsEnclosing))
+        #expect(validates(readsItsOwn))
+        #expect(!validates(readsNothingReal))
+    }
+
+    @Test("a name on a conditional is refused")
+    func aNameOnABranchIsRefused() {
+        // Given. A conditional answers nothing, so its name could never bind
+        let sut = Warp.Expression.conditional(
+            .literal(.bool(true)),
+            then: [Statement(expression: .literal(.int(1)))],
+            else: nil
+        )
+
+        // When / Then. Under any of the three spellings
+        #expect(!validates(body: [Statement(binding: .constant("probe"), expression: sut)]))
+        #expect(!validates(body: [Statement(binding: .variable("probe"), expression: sut)]))
+        #expect(
+            !validates(body: [
+                Statement(binding: .variable("probe"), expression: .literal(.int(0))),
+                Statement(binding: .assignment([.key("probe")]), expression: sut)
+            ])
+        )
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

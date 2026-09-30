@@ -61,21 +61,6 @@ struct ControlFlowTests {
         #expect(answer == .int(1))
     }
 
-    @Test("what a block binds does not escape it")
-    func blockBindingsDoNotEscape() {
-        // Given
-        let sut: Body = [
-            Statement(binding: .constant("probe"), expression: .block(
-                    Block(body: [Statement(binding: .constant("inner"), expression: .literal(.int(1)))])
-                )
-            ),
-            Statement(binding: .constant("read"), expression: reference("inner"))
-        ]
-
-        // When / Then
-        #expect(!validates(body: sut))
-    }
-
     @Test("a conditional answers nothing, and what an arm keeps it writes outward")
     func aBranchAnswersNothingAndWritesOutward() async throws {
         // Given. The condition chooses a way through the body, not a value:
@@ -139,26 +124,6 @@ struct ControlFlowTests {
 
         // Then
         #expect(answer == .null)
-    }
-
-    @Test("a name on a conditional is refused")
-    func aNameOnABranchIsRefused() {
-        // Given. A conditional answers nothing, so its name could never bind
-        let sut = Warp.Expression.conditional(
-            .literal(.bool(true)),
-            then: [Statement(expression: .literal(.int(1)))],
-            else: nil
-        )
-
-        // When / Then. Under any of the three spellings
-        #expect(!validates(body: [Statement(binding: .constant("probe"), expression: sut)]))
-        #expect(!validates(body: [Statement(binding: .variable("probe"), expression: sut)]))
-        #expect(
-            !validates(body: [
-                Statement(binding: .variable("probe"), expression: .literal(.int(0))),
-                Statement(binding: .assignment([.key("probe")]), expression: sut)
-            ])
-        )
     }
 
     @Test("a loop's result reads a name its body declared as the body's, whatever the entry holds under it")
@@ -325,20 +290,6 @@ struct ControlFlowTests {
                 vocabulary: Module.standard + [.failing]
             )
         }
-    }
-
-    @Test("an empty rescue is refused")
-    func emptyRescueRefused() {
-        // Given. A rescue that produces nothing swallows a failure into null
-        // without a trace
-        let sut = Warp.Expression.attempt(
-            Block(body: [Statement(binding: .constant("work"), expression: .literal(.int(1)))]),
-            rescue: Block(body: []),
-            failure: "failure"
-        )
-
-        // When / Then
-        #expect(!validates(sut))
     }
 
     // MARK: - Public

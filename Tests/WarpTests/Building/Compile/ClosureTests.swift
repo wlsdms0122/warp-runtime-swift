@@ -417,31 +417,6 @@ struct ClosureTests {
         }
     }
 
-    @Test("a closure body is validated where it is written")
-    func closureBodyIsValidatedAtItsSite() {
-        // Given. The body may read what surrounds the literal and what the
-        // literal declares, and nothing else
-        let readsEnclosing = Warp.Expression.closure(
-            Procedure(body: [], result: reference("outer"))
-        )
-        let readsItsOwn = Warp.Expression.closure(
-            Procedure(
-                signature: Signature(parameters: [Parameter(name: "mine", type: .int)]),
-                body: [],
-                result: reference("mine")
-            )
-        )
-        let readsNothingReal = Warp.Expression.closure(
-            Procedure(body: [], result: reference("nowhere"))
-        )
-
-        // Then
-        #expect(validates(readsEnclosing, visible: ["outer"]))
-        #expect(!validates(readsEnclosing))
-        #expect(validates(readsItsOwn))
-        #expect(!validates(readsNothingReal))
-    }
-
     @Test("a procedure is never equal to a procedure")
     func proceduresHaveNoEquality() throws {
         // Given. There is no honest answer, so the language does not offer one
