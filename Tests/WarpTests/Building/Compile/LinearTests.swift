@@ -59,7 +59,7 @@ struct LinearTests {
     @Test("a body that opens and does not close refuses")
     func openedAndDropped() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
             ],
@@ -77,7 +77,7 @@ struct LinearTests {
     @Test("a body that closes twice refuses")
     func closedTwice() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))),
@@ -97,7 +97,7 @@ struct LinearTests {
     @Test("closing in one arm and not the other refuses")
     func closedInOneArm() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -126,7 +126,7 @@ struct LinearTests {
     @Test("closing inside a loop refuses, since a round runs no fixed number of times")
     func closedInsideALoop() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -157,7 +157,7 @@ struct LinearTests {
     @Test("handing it to a slot that says neither refuses")
     func handedToAPlainSlot() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -179,7 +179,7 @@ struct LinearTests {
     @Test("a body may hand it on by answering it, and its caller then owes it")
     func handedOnByAnswering() async throws {
         // Given. `app.borrow` answers the handle, so the entry owes it
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.borrow"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -267,7 +267,7 @@ struct LinearTests {
     @Test("a borrowing slot does not end the obligation")
     func borrowingIsNotClosing() async throws {
         // Given. Only `app.name` is called, so the handle is still held at the end
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(
@@ -289,7 +289,7 @@ struct LinearTests {
     @Test("a body cannot hand on what it only borrowed")
     func borrowedIsNotHandedOn() async throws {
         // Given. `app.give` borrows and then closes what it was lent
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.give", arguments: [reference("handle")]))),
@@ -320,7 +320,7 @@ struct LinearTests {
     @Test("a body cannot answer what it only borrowed")
     func borrowedIsNotAnswered() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -349,7 +349,7 @@ struct LinearTests {
     @Test("a body cannot keep what it only borrowed in a box")
     func borrowedIsNotKept() async throws {
         // Given
-        let sut = try await holding(
+        let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -1248,7 +1248,7 @@ struct LinearTests {
     func anAttemptEndsTheBodyWhereBothDo() async throws {
         // Given. One arm closes the handle and then ends the body inside an
         // attempt, and the arm beside it still holds the handle
-        func body(rescueEnds: Bool) async -> Body {
+        func body(rescueEnds: Bool) -> Body {
             let ending = Statement(
                 binding: .none,
                 expression: .leave(Leave(reach: .procedure, value: .literal(.null)))
