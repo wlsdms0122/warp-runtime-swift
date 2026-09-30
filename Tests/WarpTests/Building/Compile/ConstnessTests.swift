@@ -422,10 +422,6 @@ struct ConstnessTests {
     func aVariableStartingFromAConstructIsRefused() async throws {
         // Given. A module variable written from a construct. A construct runs
         // a body, and the build settles a starting value by reading it.
-        //
-        // Written as a module rather than as a document: the validator refuses
-        // this where a document is loaded, so what is asked here is the
-        // judgement an object carrying the same shape meets.
         let handed = try Module(
             variables: ["standing": .conditional(
                 .literal(.bool(true)),

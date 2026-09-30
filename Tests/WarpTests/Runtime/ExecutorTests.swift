@@ -121,7 +121,7 @@ struct ExecutorTests {
         // When
         let outputs = try await run(spec, vocabulary: Module.standard + [.failing])
 
-        // Then. The last rescue step's output becomes the step output
+        // Then. The rescue's result is what the attempt answers
         #expect(outputs["result"] == .string("recovered"))
     }
 
@@ -262,8 +262,8 @@ struct ExecutorTests {
 
     @Test("an entry the data does not carry reads as null where the author wrote ?.")
     func absentEntryReadsAsNullThroughOptional() async throws {
-        // Given. `?.` is the one spelling that expects absence: it answers
-        // null, nothing is thrown, and the rescue never runs
+        // Given. `?.` expects absence: it answers null, nothing is thrown,
+        // and the rescue never runs
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
@@ -326,8 +326,8 @@ struct ExecutorTests {
 
     @Test("interpolating a null spells null, and nothing is there for a rescue to absorb")
     func nullInsideTemplateSpellsNull() async throws {
-        // Given. A skipped step binds null; reading it is fine, writing it into
-        // text is not, and an author mistake passes through rescue
+        // Given. The arm this input skips leaves `maybe` null, and text spells
+        // a null as `null`
         let spec = try Module(
             procedures: [
                 "entry": Procedure(

@@ -32,7 +32,7 @@ struct PlaceTests {
     @Test("a place is spelled from the language's own names")
     func aPlaceIsSpelledFromTheLanguagesNames() async {
         // Given. A slot a document calls something else. A loop's condition is
-        // `where` in a document, and that procedure appears nowhere in what a caller
+        // `while` in a document, and that key appears nowhere in what a caller
         // assembling this wrote.
         let spin = place(
             refusing: Statement(binding: .constant("spin"), expression: .loop(
