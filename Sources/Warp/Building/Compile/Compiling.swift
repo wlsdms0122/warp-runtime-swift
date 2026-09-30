@@ -236,13 +236,6 @@ struct Compiling {
         lowering.stands(on: answer, of: origin)
     }
 
-    // The row a selector names from this document: its own declaration first,
-    // then what the link holds under the spelling. What the build derived of
-    // a declaration stands on the row, so this is where a fact is read.
-    func declared(_ selector: Name, from origin: Int) -> Linked? {
-        (lowering.own(origin)[selector] ?? lowering.rows[selector]).map { row in lowering.table[row] }
-    }
-
     // A body lowered into its row. Noted as well as written, because what
     // folding runs is a table of its own and this is what is copied into it.
     mutating func settle(
