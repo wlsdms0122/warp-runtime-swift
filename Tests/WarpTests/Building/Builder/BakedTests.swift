@@ -181,6 +181,30 @@ struct BakedTests {
         }
     }
 
+    @Test("two objects declaring one name are refused where a compile lays them down, in either order")
+    func twoObjectsDeclaringOneNameAreRefusedWhereLaid() async throws {
+        // Given. Two documents compiled apart that declare one name, each
+        // answering a different type.
+        let baked = try await builder.compile(Module.standard)
+        let one = try await builder.compile([try adding(1)], against: baked, supplying: Supplying(Module.standard))
+        let two = try await builder.compile([try adding(2)], against: baked, supplying: Supplying(Module.standard))
+
+        // When / Then. A compile against both is refused whichever the caller
+        // listed first: the table has no answer for the name either way.
+        for held in [baked + one + two, baked + two + one] {
+            await #expect {
+                try await builder.compile(
+                    [try reaching("app.add1")],
+                    against: held,
+                    supplying: Supplying(Module.standard)
+                )
+            } throws: { error in
+                "\(error)".contains("'app.add1' is declared by")
+                    && "\(error)".contains("Two declarations of a name have no way to be told apart")
+            }
+        }
+    }
+
     @Test("a refusal counts the list the caller handed over")
     func aRefusalCountsTheCallersList() async throws {
         // Given. A vocabulary already compiled, so what arrives stands after
@@ -381,6 +405,21 @@ struct BakedTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     implementation: .query(CountingQuery(isolated: isolated))
+                )
+            ]
+        )
+    }
+
+    // A document calling the one procedure named, handing it a number.
+    private func reaching(_ name: Name) throws -> Module {
+        try Module(
+            imports: [name],
+            procedures: [
+                "app.main": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: name, arguments: [.literal(.int(1))]))
                 )
             ]
         )

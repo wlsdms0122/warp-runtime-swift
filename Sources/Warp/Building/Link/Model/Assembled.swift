@@ -10,9 +10,8 @@ import Foundation
 // The documents of one link, laid end to end, and the tables that say what
 // its rows are. Where a document's rows first stand somewhere.
 //
-// Nothing is judged here and no body is read: the blocks are copied in, in the
-// order the caller handed them over, and the names are answered with where
-// their block began.
+// No body is read: the blocks are copied in, in the order the caller handed
+// them over, and the names are answered with where their block began.
 struct Assembled: Sendable {
     // One row of the link: the judged row, which document it came out of,
     // and which of its writer's closures it is where a closure was lifted

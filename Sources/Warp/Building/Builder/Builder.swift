@@ -120,6 +120,9 @@ public struct Builder: Sendable {
 
         try against(compiled)
 
+        // Laid end to end through the door a link lays documents through, so a
+        // name two of them declare is refused here as it is there.
+        let assembled = try Assembled(compiled)
         let linkage = Linkage()
         let declared = try declared(in: compiled)
         let declaring = try DeclarationChecker().types(
@@ -131,7 +134,7 @@ public struct Builder: Sendable {
             numbered: linkage
         )
 
-        let signatures = signatures(of: compiled)
+        let signatures = signatures(of: assembled)
 
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
@@ -772,19 +775,7 @@ public struct Builder: Sendable {
             standing: Array(compiled.indices),
             numbered: Linkage()
         )
-        let signatures = assembled.rows.reduce(into: [Name: Placed<Declared>]()) { table, entry in
-            let origin = assembled.table[entry.value].origin
-
-            table[entry.key] = Placed(
-                Declared(
-                    signature: assembled.table[entry.value].judged.signature,
-                    access: assembled.table[entry.value].judged.access,
-                    facts: (assembled.table[entry.value].judged.constness, assembled.table[entry.value].judged.isolation)
-                ),
-                at: .procedure(entry.key.spelling, in: compiled[origin].document),
-                of: origin
-            )
-        }
+        let signatures = signatures(of: assembled)
 
         let lowered = try ClaimChecker().lowered(
             declaring,
@@ -861,29 +852,24 @@ public struct Builder: Sendable {
         return object.fingerprinted(try fingerprinting(written))
     }
 
-    // Every declaration a compiled document made, under the spelling it was
-    // declared by and at the place it was written. What a document declares is
-    // its own; where it stands among the documents is the caller's order.
-    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Declared>] {
-        var signatures: [Name: Placed<Declared>] = [:]
+    // Every declaration the documents laid down made, under the spelling it
+    // was declared by and at the place it was written. What a document
+    // declares is its own; where it stands among the documents is the
+    // caller's order.
+    private func signatures(of assembled: Assembled) -> [Name: Placed<Declared>] {
+        assembled.rows.reduce(into: [Name: Placed<Declared>]()) { table, entry in
+            let row = assembled.table[entry.value]
 
-        for (position, document) in compiled.enumerated() {
-            let hidden = document.hidden
-
-            for (offset, name) in document.declared.enumerated() where !hidden.contains(name) {
-                signatures[name] = Placed(
-                    Declared(
-                        signature: document.table[offset].signature,
-                        access: document.table[offset].access,
-                        facts: (document.table[offset].constness, document.table[offset].isolation)
-                    ),
-                    at: .procedure(name.spelling, in: document.document),
-                    of: position
-                )
-            }
+            table[entry.key] = Placed(
+                Declared(
+                    signature: row.judged.signature,
+                    access: row.judged.access,
+                    facts: (row.judged.constness, row.judged.isolation)
+                ),
+                at: .procedure(entry.key.spelling, in: assembled.documents[row.origin]),
+                of: row.origin
+            )
         }
-
-        return signatures
     }
 
     // No document twice. An identity is derived from the text, so two copies of
