@@ -2204,17 +2204,8 @@ struct TypeChecker {
         // on nothing, so the write the staying arm makes is definite again: the
         // ways that finish all made it. Unreached arms are followed on purpose.
         case let .conditional(condition, then, otherwise):
-            if condition.holdsConstruct {
-                try refuse(
-                    Expression.constructInCondition,
-                    at: place.part(.condition(of: .conditional)),
-                    when: ask
-                )
-            }
-
-            // A condition is data and writes nothing (the construct rule above
-            // is what makes that a fact) so the arms stand in the environment
-            // the conditional stands in.
+            // A condition is data and writes nothing, so the arms stand in the
+            // environment the conditional stands in.
             let head = try await inspected(
                 condition,
                 at: place.part(.condition(of: .conditional)),
@@ -2269,13 +2260,6 @@ struct TypeChecker {
         // out loud, where a refusal can carry the reason; the reading ask stays
         // total and takes the widened answer.
         case let .loop(condition, body, round):
-            // A condition is data the run reads rather than runs, the fact every
-            // operand has, so a construct is refused there by the same predicate, at
-            // the check and here alike.
-            if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.part(.condition(of: .loop)), when: ask)
-            }
-
             // The fixpoint probes the statements alone. The rounds are what
             // leave things for one another, and the result never runs between
             // rounds. The probe reads, so a reading asker takes the settled
