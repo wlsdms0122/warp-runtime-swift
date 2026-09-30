@@ -521,19 +521,20 @@ struct TypeChecker {
         }
     }
 
-    // The one gate every gathered call passes, wherever its body sits. A
-    // native procedure, a written body, a constant's closure. The call carries the
-    // the walk found for it, and is judged against that.
+    // The one gate every gathered call passes, wherever its body sits, and
+    // whether its selector names a declaration or a contract's procedure. The
+    // call carries the spelling the walk found for it, and is judged against
+    // the signature that spelling names.
     func checked(_ calls: [CallSite], in context: TypingContext, writing fulfillment: Fulfillment) throws {
         for call in calls {
-            guard let callee = context.declared(call.callee) else {
+            guard let signature = context.signature(of: call.callee) else {
                 throw BuildError.unjudged(
-                    "a call to '\(call.callee)', which has no row",
+                    "a call to '\(call.callee)', which names no declaration",
                     at: call.place
                 )
             }
 
-            try check(call, against: callee, with: context, writing: fulfillment)
+            try check(call, against: signature, with: context, writing: fulfillment)
         }
     }
 
@@ -2113,34 +2114,19 @@ struct TypeChecker {
                 )
             }
 
-            // Every operand of this call, judged before the walk splits on what
-            // the selector names: what a slot takes has nothing to do with
-            // whether the operand written into it is read or run. Placed one by
-            // one, because a loop over the values alone reports the third
-            // operand from the place the first was.
+            // Every operand of this call: what a slot takes has nothing to do
+            // with whether the operand written into it is read or run. Placed
+            // one by one, because a loop over the values alone reports the
+            // third operand from the place the first was.
             for (position, argument) in call.arguments.enumerated() {
                 try held(argument, asOperand: place.argument(position), given: context, when: ask)
-            }
-
-            // A call through a contract names no declaration. What answers it
-            // is the first argument's own type, so it is judged here against what
-            // the contract said and nowhere against a callee.
-            if let asked = context.contractProcedures[call.selector] {
-                return try await inspected(
-                    contract: asked,
-                    call: call,
-                    at: place,
-                    in: environment,
-                    with: context,
-                    ask: ask
-                )
             }
 
             // A selector this document cannot name is refused where the walk
             // meets it. Its answer is unknown, and a dot on an unknown answer
             // would be refused first for what the dot reads, which is not what
             // the author got wrong.
-            guard let callee = context.declared(call.selector) else {
+            guard let signature else {
                 guard !context.concealed.contains(call.selector) else {
                     throw BuildError.concealed(call.selector, at: place)
                 }
@@ -2171,7 +2157,7 @@ struct TypeChecker {
 
             try handedInPlace(
                 by: call,
-                to: callee.signature,
+                to: signature,
                 in: environment,
                 with: context,
                 at: place,
@@ -2428,108 +2414,6 @@ struct TypeChecker {
                 )
             )
         }
-    }
-
-    // A call through a contract. Nothing here names a declaration: what the
-    // contract asked is the whole of the judgment, and which body runs is
-    // decided at the run by the name the first argument wears.
-    private func inspected(
-        contract asked: LoweredContractProcedure,
-        call: Call,
-        at place: Place,
-        in environment: [Name: Binding],
-        with context: TypingContext,
-        ask: Ask
-    ) async throws -> Inspection {
-        guard let written = call.arguments.first else {
-            throw BuildError(
-                "sends '\(call.selector)' with nothing at its first position."
-                    + " A contract's procedure is answered about the value it"
-                    + " takes first, so there is nothing here to answer it",
-                at: place
-            )
-        }
-
-        let parameters = asked.signature.parameters
-
-        if let refusal = asked.signature.refusal(handing: call.arguments.count) {
-            throw BuildError("sends '\(call.selector)' \(refusal)", at: place.part(.arguments))
-        }
-
-        let first = try await inspected(
-            written,
-            at: place.argument(0),
-            in: environment,
-            with: context,
-            ask: ask
-        )
-
-        switch context.loweredTypes.answering(contract: asked.contract, reading: first.reading) {
-        case let .leansOn(types):
-            for type in types {
-                ask.fulfillment?.require(
-                    Claim(type: type, contract: asked.contract),
-                    at: place.argument(0)
-                )
-            }
-
-        case .settled(true):
-            break
-
-        case .settled(false):
-            throw BuildError(
-                "sends '\(call.selector)' to \(first.reading.rendered(in: context.loweredTypes)),"
-                    + " which does not answer every procedure '\(asked.contract)' asks",
-                at: place.argument(0)
-            )
-        }
-
-        var arguments: [Expression] = [first.rewritten]
-        var calls = first.calls
-
-        for (position, argument) in call.arguments.enumerated().dropFirst() {
-            let parameter = parameters[position]
-            let here = place.argument(position)
-            let inner = try await inspected(
-                argument,
-                at: here,
-                in: environment,
-                with: context,
-                ask: ask
-            )
-
-            let declared = parameter.declared.lowered(in: context.loweredTypes)
-
-            guard declared.accepts(inner.reading, in: context.loweredTypes) else {
-                throw BuildError(
-                    "hands \(inner.reading.rendered(in: context.loweredTypes)) where '\(asked.contract)'"
-                        + " writes \(parameter.declared.rendered)",
-                    at: here
-                )
-            }
-
-            if let refusal = refusal(
-                holding: inner.reading,
-                to: declared,
-                as: "hands",
-                in: context.loweredTypes,
-                fulfillment: ask.fulfillment,
-                at: here
-            ) {
-                throw BuildError(refusal, at: here)
-            }
-
-            arguments.append(inner.rewritten)
-            calls += inner.calls
-        }
-
-        return Inspection(
-            rewritten: ask.rewrites
-                ? .call(Call(selector: call.selector, arguments: arguments))
-                : .call(call),
-            calls: calls,
-            reading: asked.signature.returns?.lowered(in: context.loweredTypes) ?? .any
-        )
     }
 
     // A block: its body, then the result in the environment the body left
@@ -3172,14 +3056,14 @@ struct TypeChecker {
 
     private func check(
         _ site: CallSite,
-        against callee: Linked,
+        against declared: Signature,
         with context: TypingContext,
         writing fulfillment: Fulfillment
     ) throws {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
-        if let refusal = callee.signature.refusal(handing: call.arguments.count) {
+        if let refusal = declared.refusal(handing: call.arguments.count) {
             throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
         }
 
@@ -3193,8 +3077,6 @@ struct TypeChecker {
         // sides and on the way out is a whole number and a whole number
         // answering a whole number, and a whole number and a fraction refused,
         // without a way to declare a name twice.
-        let declared = callee.signature
-
         let declaredSlots = context.slots(of: call.selector)
 
         let slots: [Slot]
@@ -3250,7 +3132,7 @@ struct TypeChecker {
             try query.validate(Question(arguments: constants))
         }
 
-        if case let .native(.query(query)) = callee.implementation {
+        if case let .native(.query(query))? = context.declared(call.selector)?.implementation {
             var constants: [Name: Value] = [:]
 
             for (slot, argument) in zip(slots, call.arguments) {
