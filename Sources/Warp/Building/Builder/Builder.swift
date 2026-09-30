@@ -33,18 +33,13 @@ import Foundation
 // value at load has nothing left to do at run time, so compiling folds it into
 // the literal it always was.
 //
-// What it can promise is narrower than "nothing unresolved remains": arguments
-// are mostly references that settle at run time, so this checks names, arity and
-// the types of *constant* arguments. Calling a value is outside the promise
-// entirely, because a closure's callee is a run-time fact.
-//
 // Two stages. Compiling settles everything a document says against the
 // interfaces it reaches: its declarations (`DeclarationChecker`), what it
 // claims (`ClaimChecker`), the facts nobody declared (`Derivation`), its
 // bodies (`TypeChecker`, `LinearityChecker`) and lowering (`Lowering`). It
 // runs the procedures a constant calls, which is what folding is. Linking
-// takes what that answered and one name to start from, judges what only the
-// whole list can answer, and runs nothing.
+// takes what that answered, judges what only the whole list can answer, and
+// runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a caller wants its
@@ -85,7 +80,6 @@ public struct Builder: Sendable {
     // The order is worked out here. What a document reaches is read off the
     // procedures it sends and the types its signatures name, neither of which a
     // caller wrote down, so a caller has nothing to sort by.
-    //
     public func compile(_ modules: [Module]) async throws -> [Compiled] {
         try await compile(modules, against: [], supplying: .none)
     }
@@ -276,8 +270,7 @@ public struct Builder: Sendable {
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
         // their rows, and what they wrote themselves. A name two of them
-        // declare is refused here, for the same reason two `.c` files cannot
-        // both define a symbol.
+        // declare is refused here.
         //
         // Refused rather than taken as the caller's statement, which the order
         // is: a doubled spelling is not a question of which document to read
@@ -530,9 +523,7 @@ public struct Builder: Sendable {
         // The facts nobody declared. All three are fixed points over what a
         // body reaches, so a document's answer is settled once the documents
         // it reaches have theirs, and the standing refused a ring where that
-        // is not so. Read over every declaration the document holds rather
-        // than the reached ones: a path names a procedure the call graph never
-        // mentions.
+        // is not so. Read over every declaration the document holds.
         //
         // What this document declares, by the spelling a call in it writes.
         // Its own rows do not stand yet, and this is what says what they take
@@ -632,9 +623,8 @@ public struct Builder: Sendable {
         compiling.foldable()
 
         // Settled after the procedures are known, because a constant may call
-        // one: interpolation is `joined` now, and a constant that spells a
-        // URL out of other constants is spelling it with procedures like any
-        // other expression.
+        // one: a constant that spells a URL out of other constants spells it
+        // with procedures like any other expression.
         //
         // The context is read before the lowering is handed over, since one of
         // the tables a context stands on is the lowering this writes into.
@@ -921,8 +911,7 @@ public struct Builder: Sendable {
     }
 
     // Every declaration under the spelling it was declared by. Two modules
-    // cannot both declare one spelling, for the same reason two `.c` files
-    // cannot both define a symbol.
+    // cannot both declare one spelling.
     private func symbols(of modules: [Module], after held: Int = 0) throws -> [Symbol] {
         var symbols: [Symbol] = []
 
