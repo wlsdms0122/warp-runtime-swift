@@ -552,7 +552,7 @@ public struct TextEncoding {
     }
 
     // A key's spelling as the name it stands for, said in this reader's own
-    // procedures.
+    // words.
     private func key(_ spelling: String, at offset: Int) throws -> Name {
         do {
             return try Name(spelling)

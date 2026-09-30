@@ -184,7 +184,7 @@ public struct Writer: Sendable {
         // The range rides in the name's spelling (`int(0...255)`) the way the
         // reader takes it in. A bound with no spelling has nothing to ride in:
         // the language admits an infinity, because it orders like any other
-        // bound, and a document that carried the procedures a message shows it in
+        // bound, and a document that carried the words a message shows it in
         // would read back as an error. Said rather than written as something
         // else, the way an unwritable type is.
         case let .ranged(refinement):

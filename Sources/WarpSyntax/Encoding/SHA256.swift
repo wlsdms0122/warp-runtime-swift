@@ -111,19 +111,19 @@ struct SHA256 {
             state[7] &+= h
         }
 
-        return state.flatMap { procedure in
+        return state.flatMap { word in
             [
-                UInt8(truncatingIfNeeded: procedure >> 24),
-                UInt8(truncatingIfNeeded: procedure >> 16),
-                UInt8(truncatingIfNeeded: procedure >> 8),
-                UInt8(truncatingIfNeeded: procedure)
+                UInt8(truncatingIfNeeded: word >> 24),
+                UInt8(truncatingIfNeeded: word >> 16),
+                UInt8(truncatingIfNeeded: word >> 8),
+                UInt8(truncatingIfNeeded: word)
             ]
         }
     }
 
     // MARK: - Private
-    private func rotated(_ procedure: UInt32, _ places: UInt32) -> UInt32 {
-        (procedure >> places) | (procedure << (32 - places))
+    private func rotated(_ word: UInt32, _ places: UInt32) -> UInt32 {
+        (word >> places) | (word << (32 - places))
     }
 
     private func padded(_ data: Data) -> [UInt8] {

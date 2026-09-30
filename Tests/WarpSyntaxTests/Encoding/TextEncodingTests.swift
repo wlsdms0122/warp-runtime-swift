@@ -140,7 +140,7 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a key that is not a procedure is written in quotes, and read back")
+    @Test("a key that is not an identifier is written in quotes, and read back")
     func aQuotedKeyComesBack() throws {
         // Given
         let document = Value.dictionary(["spaced key": .int(1), "가나다": .int(2)])

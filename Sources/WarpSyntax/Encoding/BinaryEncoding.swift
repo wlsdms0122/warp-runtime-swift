@@ -595,7 +595,7 @@ public struct BinaryEncoding {
     }
 
     // `unsigned(from:)` already held the 64-bit line, so the exact conversion
-    // to the procedure cannot miss. A truncating one here would say otherwise.
+    // to `Int` cannot miss. A truncating one here would say otherwise.
     private func unzigzagged(_ unsigned: UInt64) -> Int {
         Int(Int64(bitPattern: unsigned >> 1 ^ (0 &- (unsigned & 1))))
     }
