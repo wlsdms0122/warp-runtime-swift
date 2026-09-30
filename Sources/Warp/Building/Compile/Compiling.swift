@@ -181,11 +181,7 @@ struct Compiling {
     // reaches a name it declared or one behind it, so the answer never moves
     // after this.
     mutating func answering(_ origin: Int) {
-        named[origin] = Answered.answering(
-            lowering.numbering[origin] ?? Numbering(sends: [], declared: []),
-            rows: lowering.rows,
-            own: lowering.own(origin)
-        )
+        named[origin] = lowering.numbering[origin]?.answers(rows: lowering.rows, own: lowering.own(origin)) ?? []
     }
 
     // The same for every document laid down, said once they all stand. This

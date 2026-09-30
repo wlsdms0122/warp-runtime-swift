@@ -95,16 +95,6 @@ struct Answered: Sendable {
         )
     }
 
-    // Which row each of one document's numbers stands for, worked out once per
-    // number rather than once per body standing on one.
-    static func answering(_ numbering: Numbering, rows: [Name: Int], own: [Name: Int]) -> [Int?] {
-        numbering.answers(rows: rows, own: own).map { answer -> Int? in
-            guard case let .row(row) = answer else { return nil }
-
-            return row
-        }
-    }
-
     // A table every number of which `Relocating` made to stand here. The same
     // value as one nothing numbered, since every number is a row now.
     static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
