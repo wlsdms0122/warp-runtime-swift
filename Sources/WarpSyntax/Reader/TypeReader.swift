@@ -467,22 +467,10 @@ public struct TypeReader: Decodable {
         case let .one(.linear, key):
             return .linear(try keyed.decode(TypeReader.self, forKey: key).type)
 
-        // An array or a dictionary of something with no spelling of its own.
-        // `array<string>` is written as the name it is; an array of procedures
-        // has no name, so it is written here. The writer answers whether the
-        // element has a name, so the two forms never overlap.
+        // An array or a dictionary of something with no spelling of its own:
+        // an array of procedures has no name, so it is written here.
         case let .one(.holding(holding), key):
-            let element = try keyed.decode(TypeReader.self, forKey: key).type
-
-            if case let .string(spelling) = try Writer().value(of: element) {
-                throw ReadingError(
-                    "element '\(spelling)' has a spelling of its own."
-                        + " Write `\(holding.rawValue)<\(spelling)>`",
-                    at: decoder.steps
-                )
-            }
-
-            return holding.holding(element)
+            return holding.holding(try keyed.decode(TypeReader.self, forKey: key).type)
 
         case let .one(.record, key):
             return try record(from: try keyed.superDecoder(forKey: key))
