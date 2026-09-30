@@ -35,8 +35,7 @@ struct AnsweringTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "counts"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "counts")))
                     ],
                     result: .reference([.key("said"), .key("total")])
                 )
@@ -62,8 +61,7 @@ struct AnsweringTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "middle"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "middle")))
                     ],
                     result: .reference([.key("said"), .key("total")])
                 )
@@ -115,8 +113,7 @@ struct AnsweringTests {
                             Statement(binding: .constant("said"), expression: .call(Call(
                                 selector: "counts",
                                 arguments: [.literal(.bool(true))]
-                            ))
-                            )
+                            )))
                         ],
                         result: .reference([.key("said"), .key("total")])
                     )
@@ -148,8 +145,7 @@ struct AnsweringTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "ping")))
                     ],
                     result: .literal(.null)
                 )
@@ -175,8 +171,7 @@ struct AnsweringTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
-                            )
+                            Statement(binding: .constant("said"), expression: .call(Call(selector: "ping")))
                         ],
                         result: .reference([.key("said"), .key("total")])
                     )
@@ -217,8 +212,7 @@ struct AnsweringTests {
                             Statement(binding: .constant("said"), expression: .call(Call(
                                 selector: "peek",
                                 arguments: [.record(["inner": .literal(.int(1))])]
-                            ))
-                            )
+                            )))
                         ],
                         result: .reference(path)
                     )
@@ -291,20 +285,17 @@ struct AnsweringTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
                     ]
                 ),
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
-                        ),
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
                             arguments: [.reference([.key("held")])]
-                        ))
-                        )
+                        )))
                     ]
                 ),
                 "opaque": Procedure(
@@ -333,13 +324,11 @@ struct AnsweringTests {
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
-                        ),
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
                             arguments: [.reference([.key("held")])]
-                        ))
-                        )
+                        )))
                     ]
                 ),
                 "opaque": Procedure(

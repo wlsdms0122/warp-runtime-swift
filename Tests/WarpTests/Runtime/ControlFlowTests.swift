@@ -70,12 +70,10 @@ struct ControlFlowTests {
             Warp.Expression.conditional(
                 .literal(.bool(take)),
                 then: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then"))
-                    )
+                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then")))
                 ],
                 else: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("else"))
-                    )
+                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("else")))
                 ]
             )
         }

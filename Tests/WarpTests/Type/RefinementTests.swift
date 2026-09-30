@@ -246,8 +246,7 @@ struct RefinementTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "blob", type: .array(.ranged(.fraction(from: 0, to: .through(255))))
-                            )
+                            Parameter(name: "blob", type: .array(.ranged(.fraction(from: 0, to: .through(255)))))
                         ],
                         returns: .array(.double)
                     ),
@@ -269,8 +268,7 @@ struct RefinementTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "blob", type: .array(.ranged(.whole(from: 0, to: .upTo(256))))
-                            )
+                            Parameter(name: "blob", type: .array(.ranged(.whole(from: 0, to: .upTo(256)))))
                         ],
                         returns: .any
                     ),

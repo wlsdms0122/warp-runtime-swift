@@ -27,8 +27,7 @@ struct ReturnTypeTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3))
-                        )
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
                     result: .reference([.key("counted")])
                 )
@@ -54,8 +53,7 @@ struct ReturnTypeTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3))
-                        )
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
                     result: .reference([.key("counted")])
                 )
@@ -149,8 +147,7 @@ struct ReturnTypeTests {
                         returns: .named("Nowhere")
                     ),
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.int(1))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.int(1)))
                     ]
                 )
             ]

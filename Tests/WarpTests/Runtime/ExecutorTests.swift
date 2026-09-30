@@ -28,10 +28,8 @@ struct ExecutorTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))
-                        ),
-                        Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!"))
-                        )
+                        Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))),
+                        Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!")))
                     ],
                     result: .record([
                             "result": .reference([.key("loud")])
@@ -59,12 +57,10 @@ struct ExecutorTests {
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
                                             selector: "app.fail",
                                             arguments: [.literal(.bool(true))]
-                                        ))
-                                        )
+                                        )))
                                     ]), rescue: Block(
                                         body: [
-                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                            )
+                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
                                         result: .reference([.key("recovery")])
                                     ), failure: "fragile")
@@ -96,8 +92,7 @@ struct ExecutorTests {
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
                                             selector: "app.fail",
                                             arguments: [.literal(.bool(true))]
-                                        ))
-                                        )
+                                        )))
                                     ]), rescue: Block(
                                         body: [
                                             Statement(binding: .constant("reason"), expression: interpolated(
@@ -137,8 +132,7 @@ struct ExecutorTests {
                         Statement(binding: .constant("fragile"), expression: .call(Call(
                             selector: "app.fail",
                             arguments: [.literal(.bool(true))]
-                        ))
-                        )
+                        )))
                     ]
                 )
             ]
@@ -171,8 +165,7 @@ struct ExecutorTests {
                                             )
                                         )
                                     ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
+                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]), failure: "fragile")
                         )
                     ]
@@ -205,11 +198,9 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)])
-                                        )
+                                        Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)]))
                                     ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
+                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]), failure: "fragile")
                         )
                     ],
@@ -267,15 +258,13 @@ struct ExecutorTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .variable("maybe"), expression: .literal(.null)
-                        ),
+                        Statement(binding: .variable("maybe"), expression: .literal(.null)),
                         Statement(
                             expression: .conditional(equals(
                                         .reference([.key("kind")]),
                                         .literal(.string("a"))
                                         ), then: [
-                                        Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made"))
-                                        )
+                                        Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made")))
                                     ], else: nil)
                         ),
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
@@ -286,8 +275,7 @@ struct ExecutorTests {
                                             )
                                         )
                                     ], result: reference("spelled")), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
+                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]), failure: "fragile")
                         )
                     ],
@@ -354,8 +342,7 @@ struct ExecutorTests {
                                         )
                                     ]), rescue: Block(
                                         body: [
-                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                            )
+                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
                                         result: .reference([.key("recovery")])
                                     ), failure: "bail")

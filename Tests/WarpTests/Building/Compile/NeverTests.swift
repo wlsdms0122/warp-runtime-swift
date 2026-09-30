@@ -96,8 +96,7 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("kept")])]
-                        ))
-                        )
+                        )))
                     ],
                     result: reference("kept")
                 ),
@@ -125,8 +124,7 @@ struct NeverTests {
                 result: .block(
                     Block(
                         body: [
-                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s"))
-                            )
+                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s")))
                         ],
                         result: reference("y")
                     )
@@ -145,8 +143,7 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("y")])]
-                        ))
-                        )
+                        )))
                     ],
                     result: reference("y")
                 ),
@@ -172,8 +169,7 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("y")])]
-                        ))
-                        )
+                        )))
                     ]
                 ),
                 "wants": Procedure(
@@ -221,8 +217,7 @@ struct NeverTests {
         // body finishes or leaves
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])
-                ),
+                Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])),
                 Statement(
                     expression: .leave(
                         Leave(
@@ -288,8 +283,7 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("kept")])]
-                        ))
-                        )
+                        )))
                     ]
                 ),
                 "wants": Procedure(

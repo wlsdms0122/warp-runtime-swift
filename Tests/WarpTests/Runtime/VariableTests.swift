@@ -36,8 +36,7 @@ struct VariableTests {
         // what makes an accumulator work at all
         let sut: Body = [
             Statement(binding: .variable("text"), expression: .literal(.string("a"))),
-            Statement(binding: .assignment([.key("text")]), expression: interpolated(literal("<"), spelling(reference("text")), literal(">"))
-            )
+            Statement(binding: .assignment([.key("text")]), expression: interpolated(literal("<"), spelling(reference("text")), literal(">")))
         ]
 
         // When
@@ -59,10 +58,8 @@ struct VariableTests {
                                 "left": .closure(
                                     Procedure(
                                         body: [
-                                            Statement(binding: .variable("tally"), expression: .literal(.int(0))
-                                            ),
-                                            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1))
-                                            )
+                                            Statement(binding: .variable("tally"), expression: .literal(.int(0))),
+                                            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1)))
                                         ],
                                         result: reference("tally")
                                     )

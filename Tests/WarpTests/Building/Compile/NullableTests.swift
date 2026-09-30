@@ -34,13 +34,11 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int]))
-                            )
+                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)])
-                        )
+                        Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)]))
                     ],
                     result: .call(Call(selector: "half", arguments: [.reference([.key("read")])]))
                 )
@@ -65,8 +63,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int]))
-                            )
+                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
                         ],
                         returns: .nullable(.int)
                     ),
@@ -183,8 +180,7 @@ struct NullableTests {
                         Statement(binding: .constant("called"), expression: .call(Call(
                             selector: "labelled",
                             arguments: [.reference([.key("text")])]
-                        ))
-                        )
+                        )))
                     ],
                     result: .reference([.key("called")])
                 )

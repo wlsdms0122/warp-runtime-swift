@@ -239,8 +239,7 @@ struct BytesTests {
                         parameters: [Parameter(name: "data", type: .bytes)]
                     ),
                     body: [
-                        Statement(binding: .variable("sum"), expression: .literal(.int(0))
-                        ),
+                        Statement(binding: .variable("sum"), expression: .literal(.int(0))),
                         Statement(
                             binding: .constant("walk"),
                             expression: walking(
@@ -250,8 +249,7 @@ struct BytesTests {
                                     Statement(binding: .assignment([.key("sum")]), expression: .call(Call(
                                         selector: "std.math.plus",
                                         arguments: [reference("sum"), reference("element")]
-                                    ))
-                                    )
+                                    )))
                                 ]
                             )
                         )

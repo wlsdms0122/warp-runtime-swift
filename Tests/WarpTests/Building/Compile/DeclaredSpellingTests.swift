@@ -296,8 +296,7 @@ struct DeclaredSpellingTests {
                         Statement(binding: .constant("kept"), expression: .call(Call(
                             selector: "keep",
                             arguments: [.literal(.string("a"))]
-                        ))
-                        )
+                        )))
                     ],
                     result: reference("kept")
                 )

@@ -136,8 +136,7 @@ struct CallTests {
         // Given
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("shouted"), expression: .call(Call(selector: "app.shout"))
-                )
+                Statement(binding: .constant("shouted"), expression: .call(Call(selector: "app.shout")))
             ]
         )
 
@@ -216,8 +215,7 @@ struct CallTests {
                     expression: .conditional(
                         .literal(.bool(false)),
                         then: [
-                            Statement(binding: .constant("gone"), expression: .call(Call(selector: "nowhere"))
-                            )
+                            Statement(binding: .constant("gone"), expression: .call(Call(selector: "nowhere")))
                         ],
                         else: nil
                     )
@@ -286,8 +284,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -323,15 +320,13 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
                     ]
                 ),
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee"))
-                        )
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee")))
                     ]
                 )
             ]
@@ -358,8 +353,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -373,8 +367,7 @@ struct CallTests {
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
                             arguments: [.reference([.key("text")])]
-                        ))
-                        )
+                        )))
                     ]
                 )
             ]

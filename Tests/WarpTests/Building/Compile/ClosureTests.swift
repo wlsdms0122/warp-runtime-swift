@@ -30,8 +30,7 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int]))
-                    )
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
                 ]
             ),
             body: [
@@ -168,8 +167,7 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int]))
-                    )
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
                 ]
             ),
             body: [
@@ -225,8 +223,7 @@ struct ClosureTests {
                 parameters: [Parameter(name: "body", type: .procedure(nil, .const))]
             ),
             body: [
-                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [])
-                )
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
             ]
         )
         let sut = try Module(
@@ -241,8 +238,7 @@ struct ClosureTests {
                                         Statement(binding: .constant("said"), expression: .call(Call(
                                             selector: "app.shout",
                                             arguments: [.literal(.string("hi"))]
-                                        ))
-                                        )
+                                        )))
                                     ],
                                     result: reference("said")
                                 )
@@ -251,8 +247,7 @@ struct ClosureTests {
                         Statement(binding: .constant("ran"), expression: .call(Call(
                             selector: "twice",
                             arguments: [reference("loud")]
-                        ))
-                        )
+                        )))
                     ]
                 )
             ]
@@ -276,8 +271,7 @@ struct ClosureTests {
                 returns: .string
             ),
             body: [
-                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [])
-                )
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
             ],
             result: reference("once")
         )
@@ -312,10 +306,8 @@ struct ClosureTests {
         let twice = Procedure(
             signature: Signature(parameters: [Parameter(name: "body", type: .procedure(nil))]),
             body: [
-                Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])
-                ),
-                Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: [])
-                )
+                Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])),
+                Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: []))
             ],
             result: .array([reference("first"), reference("second")])
         )
@@ -389,8 +381,7 @@ struct ClosureTests {
                     "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
                 ])
             ),
-            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: [])
-            )
+            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: []))
         ]
 
         // When
@@ -405,8 +396,7 @@ struct ClosureTests {
         // Given
         let sut: Body = [
             Statement(binding: .constant("notCallable"), expression: .literal(.int(1))),
-            Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: [])
-            )
+            Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: []))
         ]
 
         // When / Then

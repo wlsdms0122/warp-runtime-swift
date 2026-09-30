@@ -79,8 +79,7 @@ struct SwiftAuthoringTests {
                         round: "counted"
                     )
                 ),
-                Statement(binding: .variable("verdict"), expression: .literal(.string("counted otherwise"))
-                ),
+                Statement(binding: .variable("verdict"), expression: .literal(.string("counted otherwise"))),
                 Statement(
                     expression: .conditional(
                         equals(
@@ -88,8 +87,7 @@ struct SwiftAuthoringTests {
                             .literal(.int(3))
                             ),
                         then: [
-                            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("counted to three"))
-                            )
+                            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("counted to three")))
                         ],
                         else: nil
                     )
@@ -222,8 +220,7 @@ struct SwiftAuthoringTests {
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
                     ]
                 ),
                 "shout": Procedure(
@@ -234,8 +231,7 @@ struct SwiftAuthoringTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(binding: .constant("loud"), expression: .reference([.key("of")])
-                        )
+                        Statement(binding: .constant("loud"), expression: .reference([.key("of")]))
                     ],
                     result: .reference([.key("loud")])
                 )

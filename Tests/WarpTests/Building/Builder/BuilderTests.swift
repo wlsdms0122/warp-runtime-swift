@@ -65,8 +65,7 @@ struct BuilderTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: [])
-                            )
+                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: []))
                         ],
                         result: reference("got")
                     )
@@ -129,8 +128,7 @@ struct BuilderTests {
                 "apply": .closure(Procedure(
                     signature: Signature(returns: .int),
                     body: [
-                        Statement(binding: .constant("got"), expression: .block(Block(body: [], result: reference("zebra")))
-                        )
+                        Statement(binding: .constant("got"), expression: .block(Block(body: [], result: reference("zebra"))))
                     ],
                     result: reference("got")
                 )),
@@ -140,8 +138,7 @@ struct BuilderTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: [])
-                        )
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: []))
                     ],
                     result: reference("got")
                 )
@@ -175,8 +172,7 @@ struct BuilderTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: [])
-                        )
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: []))
                     ],
                     result: reference("got")
                 )
@@ -234,11 +230,9 @@ struct BuilderTests {
                                         .literal(.string("yes")),
                                         .literal(.string("yes"))
                                         ), then: [
-                                        Statement(binding: .constant("safe"), expression: .literal(.string("fine"))
-                                        )
+                                        Statement(binding: .constant("safe"), expression: .literal(.string("fine")))
                                     ], else: [
-                                        Statement(binding: .constant("risky"), expression: .call(Call(selector: "missing"))
-                                        )
+                                        Statement(binding: .constant("risky"), expression: .call(Call(selector: "missing")))
                                     ])
                         )
                     ]
@@ -291,14 +285,12 @@ struct BuilderTests {
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
-                        )
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle")))
                     ]
                 ),
                 "middle": Procedure(
                     body: [
-                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf"))
-                        )
+                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf")))
                     ]
                 )
             ]
@@ -321,8 +313,7 @@ struct BuilderTests {
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "leaf"))
-                        )
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "leaf")))
                     ]
                 )
             ]
@@ -331,8 +322,7 @@ struct BuilderTests {
             procedures: [
                 "leaf": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
                     ]
                 )
             ]
@@ -357,8 +347,7 @@ struct BuilderTests {
             procedures: [
                 "shared": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("left"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("left")))
                     ]
                 )
             ]
@@ -367,8 +356,7 @@ struct BuilderTests {
             procedures: [
                 "shared": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("right"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("right")))
                     ]
                 )
             ]

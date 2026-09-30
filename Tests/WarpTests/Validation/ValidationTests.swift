@@ -36,8 +36,7 @@ struct ValidationTests {
                             Statement(binding: .constant("counted"), expression: .call(Call(
                                 selector: "std.collection.count",
                                 arguments: [.literal(.array([.int(1)]))]
-                            ))
-                            )
+                            )))
                         ]
                     )
                 ]
@@ -398,8 +397,7 @@ struct ValidationTests {
                             Statement(binding: .constant("counted"), expression: .call(Call(
                                 selector: "std.collection.count",
                                 arguments: [.literal(.array([.int(1)]))]
-                            ))
-                            )
+                            )))
                         ]
                     )
                 ]
@@ -427,8 +425,7 @@ struct ValidationTests {
                         Statement(binding: .constant("counted"), expression: .call(Call(
                             selector: "std.collection.count",
                             arguments: [.literal(.array([.int(1)]))]
-                        ))
-                        )
+                        )))
                     ]
                 )
             ]
@@ -449,8 +446,7 @@ struct ValidationTests {
                 "wallet.pay": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("charged"), expression: .call(Call(selector: "wallet.fee"))
-                        )
+                        Statement(binding: .constant("charged"), expression: .call(Call(selector: "wallet.fee")))
                     ]
                 ),
                 "wallet.fee": Procedure(body: [], result: .literal(.int(1)))
@@ -532,8 +528,7 @@ struct ValidationTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("held"), expression: .closure(Procedure(body: []))
-                            )
+                            Statement(binding: .constant("held"), expression: .closure(Procedure(body: [])))
                         ]
                     )
                 ]

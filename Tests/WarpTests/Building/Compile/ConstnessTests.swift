@@ -413,8 +413,7 @@ struct ConstnessTests {
             procedures: [
                 "clean": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.int(1))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.int(1)))
                     ]
                 ),
                 "dirty": Procedure(
@@ -422,17 +421,14 @@ struct ConstnessTests {
                         Statement(binding: .constant("done"), expression: .call(Call(
                             selector: "app.fail",
                             arguments: [.literal(.bool(true))]
-                        ))
-                        )
+                        )))
                     ]
                 ),
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("a"), expression: .call(Call(selector: "clean"))
-                        ),
-                        Statement(binding: .constant("b"), expression: .call(Call(selector: "dirty"))
-                        )
+                        Statement(binding: .constant("a"), expression: .call(Call(selector: "clean"))),
+                        Statement(binding: .constant("b"), expression: .call(Call(selector: "dirty")))
                     ]
                 )
             ]

@@ -179,8 +179,7 @@ struct ObservationTests {
                                                     ]
                                                 ),
                                                 body: [
-                                                    Statement(binding: .constant("step"), expression: reference("item")
-                                                    )
+                                                    Statement(binding: .constant("step"), expression: reference("item"))
                                                 ],
                                                 result: reference("step")
                                             )
@@ -216,8 +215,7 @@ struct ObservationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "helper"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "helper")))
                     ]
                 ),
                 "helper": Procedure(
@@ -327,8 +325,7 @@ struct ObservationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail", arguments: [.literal(.bool(false))]))
-                        )
+                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail", arguments: [.literal(.bool(false))])))
                     ]
                 )
             ]

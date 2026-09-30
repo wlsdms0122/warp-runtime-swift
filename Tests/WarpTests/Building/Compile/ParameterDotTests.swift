@@ -59,8 +59,7 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("inner")])
-                        )
+                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("inner")]))
                     ],
                     result: .reference([.key("held"), .key("count")])
                 ),
@@ -101,14 +100,12 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .variable("held"), expression: .reference([.key("of")])
-                        ),
+                        Statement(binding: .variable("held"), expression: .reference([.key("of")])),
                         Statement(
                             expression: .conditional(
                                 equals(.reference([.key("flag")]), .literal(.bool(true))),
                                 then: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .reference([.key("of"), .key("inner")])
-                                    )
+                                    Statement(binding: .assignment([.key("held")]), expression: .reference([.key("of"), .key("inner")]))
                                 ],
                                 else: nil
                             )
@@ -157,8 +154,7 @@ struct ParameterDotTests {
                             returns: .any
                         ),
                         body: [
-                            Statement(binding: .variable("held"), expression: .reference([.key("of"), .key("inner")])
-                            ),
+                            Statement(binding: .variable("held"), expression: .reference([.key("of"), .key("inner")])),
                             Statement(
                                 expression: .conditional(
                                     equals(.reference([.key("flag")]), .literal(.bool(true))),
@@ -217,8 +213,7 @@ struct ParameterDotTests {
                     ),
                     body: [
                         Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("inner")])),
-                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner"), .key("count")])
-                        ),
+                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner"), .key("count")])),
                         Statement(expression: .conditional(
                             equals(.reference([.key("flag")]), .literal(.bool(true))),
                             then: [Statement(binding: .assignment([.key("seen")]), expression: .reference([.key("held"), .key("count")])
@@ -266,8 +261,7 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner")])
-                        ),
+                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner")])),
                         Statement(expression: .conditional(
                             equals(.reference([.key("flag")]), .literal(.bool(true))),
                             then: [Statement(binding: .assignment([.key("seen")]), expression: .reference([.key("also"), .key("inner")])

@@ -241,8 +241,7 @@ struct ReachTests {
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
-                        )
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle")))
                     ]
                 )
             ]
@@ -251,8 +250,7 @@ struct ReachTests {
             procedures: [
                 "middle": Procedure(
                     body: [
-                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf"))
-                        )
+                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf")))
                     ]
                 )
             ]
@@ -261,8 +259,7 @@ struct ReachTests {
             procedures: [
                 "leaf": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
                     ]
                 )
             ]
@@ -283,8 +280,7 @@ struct ReachTests {
                 "loopy": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("again"), expression: .call(Call(selector: "loopy"))
-                        )
+                        Statement(binding: .constant("again"), expression: .call(Call(selector: "loopy")))
                     ]
                 )
             ]
@@ -305,8 +301,7 @@ struct ReachTests {
                 "alone": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
                     ]
                 )
             ]
