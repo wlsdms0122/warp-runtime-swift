@@ -7,17 +7,10 @@
 
 import Foundation
 
-// A value on its way into a template. JSON is the form a list or a mapping
-// shows as, and this is the one thing in the package that writes one. By hand,
-// so what a value shows as is this file's own decision rather than a
-// general-purpose encoder's.
-//
-// It is a wrapper rather than a conformance on `Value` because the two are not
-// the same job. `Value` is the language's data type and knows nothing about
-// being written down. What a document spells is `WarpSyntax`'s, and it
-// round-trips. This does not: a procedure has no data form, and what goes out
-// for one is a marker saying so, which is right for something a person reads
-// and wrong for anything that means to read it back.
+// A value in its own spelling, the type's and not a document's, for a person
+// to read: what `text` answers under the standard vocabulary. Written by hand,
+// so what a value shows as is this file's and not a general-purpose
+// encoder's. It is not read back: a procedure shows as a marker.
 public struct Rendering {
     private struct Unwritable: Error {
     }
@@ -32,11 +25,7 @@ public struct Rendering {
 
     // MARK: - Public
     // The value as text. One implementation, because `text` the procedure and an
-    // effect settling an argument are asking the same question. A scalar reads
-    // as its document spelling (a host's infinity, which has none, in this
-    // file's own vocabulary; only the container kinds go through `written`,
-    // where JSON's own rules apply, and what JSON cannot write stays a visible
-    // marker) an answer, not a failure.
+    // effect settling an argument are asking the same question.
     public func text() -> String {
         switch value {
         case .null:
@@ -48,19 +37,14 @@ public struct Rendering {
         case let .int(integer):
             return String(integer)
 
-        // The document's own spelling, so what a template shows is what a
-        // document would say, and what has no spelling shows in this file's own
-        // vocabulary, the way a procedure does, rather than in whatever the
-        // host's formatter says today.
+        // What has no spelling shows in the language's own markers, the way a
+        // procedure does, rather than in the host's formatter.
         case let .double(double):
             return double.shown
 
         case let .string(string):
             return string
 
-        // The document's spelling is `x` and the hex digits, and `text` spells
-        // a value the way a document writes it. The bare digits this used to
-        // show are a form nothing reads back.
         case let .bytes(bytes):
             return "x\"\(bytes.spelling)\""
 
@@ -77,20 +61,11 @@ public struct Rendering {
     }
 
     // MARK: - Private
-    // One value in JSON position. What JSON cannot say (bytes, a procedure)
-    // shows as the reading `text` gives it, quoted because it is text about the
-    // value; what JSON could say and this value breaks (a fraction that is not
-    // a number, or past every number) throws, and the whole rendering shows as
-    // unencodable rather than as almost-JSON.
-    //
-    // A value's spelling does not change with how deep it sits. The document
-    // writer is one recursive function and writes `x"6869"` at every depth, so
-    // this shows the same spelling at every depth and the quotes are the
-    // position's, exactly as they are for a string.
-    //
-    // What the Codable projection writes instead (the array the equation says
-    // bytes are) is not this answer and is not meant to be. That projection is
-    // read back; this one is read by a person.
+    // One value inside a container. Bytes and a procedure show as the reading
+    // `text` gives them, quoted, since a value's spelling does not change with
+    // how deep it sits and the quotes are the position's, as a string's are. A
+    // fraction with no spelling throws, and the whole rendering shows as
+    // unencodable.
     private static func written(_ value: Value) throws -> String {
         switch value {
         case .null:
@@ -102,8 +77,6 @@ public struct Rendering {
         case let .int(integer):
             return String(integer)
 
-        // "Has a spelling" and "JSON can say it" are one fact. The document's
-        // spelling is the judge, and JSON reads it back as the same number.
         case let .double(double):
             guard let spelling = double.spelling else { throw Unwritable() }
 

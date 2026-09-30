@@ -455,7 +455,8 @@ struct ProcedureSendsTests {
                 signature: Signature(of: ShoutingQuery.self, returns: .null),
                 implementation: .query(ShoutingQuery())
             )
-        ]
+        ],
+        identity: Identity([0x01])
     )
 
     // The same procedure under two claims: one says it touches nothing shared and
@@ -634,15 +635,18 @@ struct ProcedureSendsTests {
         #expect(refusal?.message.contains("is private to the document that declares it") == true)
     }
 
-    @Test("a query sending something that answers only by running is refused")
+    @Test("a query sending something that answers only by running is refused in its own document")
     func aQuerySendingAnEffectIsRefused() async {
         // Given. `app.shouting` claims it answers without running and sends
         // `app.shout`, which does not
-        await #expect(throws: BuildError.self) {
+        let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.contradicting, .shouting]
             )
         }
+
+        // Then
+        #expect(refusal?.place == Place.procedure("app.shouting", in: .of(Self.contradicting)).part(.imports))
     }
 
     @Test("an isolated procedure sending one that keeps state is refused")

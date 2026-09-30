@@ -27,12 +27,6 @@ struct Activation: Sendable {
         self.origin = origin
     }
 
-    init(cells: [Cell], frame: Frame, of origin: Int) {
-        self.cells = cells
-        self.frame = frame
-        self.origin = origin
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

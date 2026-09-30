@@ -125,13 +125,14 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         )
     }
 
-    // Calling a closure the procedure was handed as a value. The arguments
-    // are handed by position, the way every call hands them. The label names which piece of the procedure's work this call
-    // is, so a refusal from inside says where it happened rather than only
-    // which procedure was running.
+    // Calling a closure this procedure was handed as a value. The arguments
+    // are handed by position, the way every call hands them. The label names
+    // which piece of the procedure's work this call is, so a refusal from
+    // inside says where it happened rather than only which procedure was
+    // running.
     public func call(
         _ closure: Closure,
-        handing arguments: [Value],
+        handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
         try await executor.call(

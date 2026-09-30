@@ -101,7 +101,7 @@ struct ObjectReader {
                 throw ObjectRefused("a lifted row stands where the numbering counts no closure")
             }
 
-            return try judged(written, spelled: writer.by)
+            return try judged(written, spelled: writer.by.name)
         })
         // The types its bodies stand on and the memberships, which is what
         // they number their types from.
@@ -178,7 +178,10 @@ struct ObjectReader {
             read = try refusing { .dictionary(try Value.Dictionary(entries)) }
 
         case .closure:
-            let writer = Closure.Writer(document: try writing(fields.next()), name: try name(fields.next()))
+            let writer = Closure.Writer(
+                document: try writing(fields.next()),
+                declaration: try Fields.declaration(fields.next(), of: "value")
+            )
             let nth = try fields.count()
             let captured = try fields.list { cell -> (slot: Int, cell: Cell) in
                 var fields = try Fields(cell, of: "captured")

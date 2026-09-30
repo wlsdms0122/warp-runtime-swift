@@ -47,7 +47,7 @@ public struct Module: Sendable {
 
     // How many closure literals each declaration wrote. A closure's number is
     // the document's fact, so it is settled with the document.
-    let closures: [Name: Int]
+    let closures: [Closure.Declaration: Int]
 
     // What this declares, by the name a link resolves to it. Where each one
     // was written is not here: a refusal that names a place reads it off the

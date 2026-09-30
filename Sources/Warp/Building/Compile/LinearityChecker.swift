@@ -387,8 +387,7 @@ struct LinearityChecker {
         // not say so would let the obligation go. The walk hands them in
         // position order, the order the run evaluates them in.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
-            let parameters = (context.signature(of: call.selector)
-                ?? context.contractProcedures[call.selector]?.signature)?.parameters ?? []
+            let parameters = context.signature(of: call.selector)?.parameters ?? []
 
             var carried = held
 
@@ -554,7 +553,6 @@ struct LinearityChecker {
             // so a declaration whose body answers one is held to writing it.
             case let .call(call):
                 let signature = context.signature(of: call.selector)
-                    ?? context.contractProcedures[call.selector]?.signature
 
                 guard
                     let returns = signature?.returns,

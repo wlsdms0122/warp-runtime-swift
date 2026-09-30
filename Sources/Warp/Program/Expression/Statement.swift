@@ -8,9 +8,7 @@
 import Foundation
 
 // A binding and an expression. That is the only statement the language has,
-// because everything else is an expression. `when` is a conditional, `rescue`
-// is an attempt, and both are things you bind rather than modifiers you attach
-// to an envelope.
+// because everything else is an expression.
 //
 // What the binding *does* to its name is the second thing a statement says: a
 // name is fixed, or it is a variable, or this is a write into a variable

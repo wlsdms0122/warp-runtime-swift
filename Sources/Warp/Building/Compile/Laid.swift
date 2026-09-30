@@ -51,16 +51,19 @@ public struct Laid: Sendable {
     let declarers: DeclarerTable
 
     // Nothing laid down, for a build that was handed no documents to compile
-    // against.
-    static let none = Laid(
-        compiled: [],
-        carried: .none,
-        signatures: [:],
-        linkage: Linkage(),
-        naming: [],
-        identities: [],
-        declarers: DeclarerTable()
-    )
+    // against. Made at each ask, since the linkage is what tells one compile's
+    // rows from another's.
+    static var none: Laid {
+        Laid(
+            compiled: [],
+            carried: .none,
+            signatures: [:],
+            linkage: Linkage(),
+            naming: [],
+            identities: [],
+            declarers: DeclarerTable()
+        )
+    }
 
     // MARK: - Initializer
     // MARK: - Public

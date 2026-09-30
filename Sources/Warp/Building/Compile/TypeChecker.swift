@@ -10,7 +10,7 @@ import Foundation
 // What each name in a body holds, worked out by reading the body in order.
 //
 // An author binds a call to a name and passes the name, so a declared `returns`
-// only reaches the next call site if the link knows what that name holds. This
+// only reaches the next call site if the build knows what that name holds. This
 // is what knows: `said = call counts` followed by `wants(procedure: said)` is two
 // declarations disagreeing, and both are text.
 //
@@ -82,7 +82,8 @@ struct TypeChecker {
         var leaves = false
 
         // What every `return` inside here carried out of the procedure, each
-        // with where it was written. Nothing absorbs one (a loop ends its
+        // with the value it carried where that is a constant, and where it
+        // was written. Nothing absorbs one (a loop ends its
         // rounds and an attempt its body, and neither is what a `return`
         // reaches) so this only ever gathers on the way up, and what it
         // gathers is the other half of what the procedure answers: the result
@@ -93,14 +94,14 @@ struct TypeChecker {
         // Beside `escaped` rather than folded into it: an escaped write is
         // about a name the body around this one holds, and this is about the
         // value the procedure hands its caller.
-        var answered: [(reading: LoweredType, place: Place)] = []
+        var answered: [(reading: LoweredType, value: Value?, place: Place)] = []
 
         // MARK: - Initializer
         // MARK: - Public
         // MARK: - Private
     }
 
-    // The two asks the one walk answers. Judging is the link's own pass (every
+    // The two asks the one walk answers. Judging is the compile's own pass (every
     // dot rewritten, every call gathered, every refusal thrown) and it happens
     // once per site. Reading answers the type and flow questions alone and
     // refuses nothing (what cannot be read is `any`) because its askers read a
@@ -274,7 +275,7 @@ struct TypeChecker {
             reading: inner.reading,
             answered: inner.flow.answered,
             to: returns,
-            resulting: block.result != nil,
+            result: inner.block.result,
             at: place,
             in: context.loweredTypes,
             fulfillment: fulfillment
@@ -430,18 +431,10 @@ struct TypeChecker {
         }
     }
 
-    // What a declaration answers when nobody wrote it down.
-    //
-    // `returns` is optional because a declaration nobody wrote stays
-    // distinguishable from one somebody wrote, and for a long time the difference
-    // cost a call site nothing: an unwritten answer read as `any`, and `any` was
-    // accepted everywhere. It stopped being free when `any` became opaque. A dot on
-    // what such a call answers is refused, and the author is asked to write down a
-    // type the body already states.
-    //
-    // So the body is read. Not into the declaration: what the author wrote is
-    // what the image carries and what the boundary checks, and an answer worked
-    // out here is the link's own reading rather than anybody's promise. It reaches
+    // What a declaration answers when nobody wrote it down, read off its body.
+    // Not into the declaration: what the author wrote is what the image
+    // carries and what the boundary checks, and an answer worked out here is
+    // the build's own reading rather than anybody's promise. It reaches
     // exactly as far as the readings do.
     //
     // A body's answer may be another body's, so the order is the call graph's. Each
@@ -456,7 +449,7 @@ struct TypeChecker {
     // asked for again, so the next body is read against it.
     //
     // Handed back rather than returned in a heap: the tables a context is made
-    // of are the link's, one answer changes one entry in each, and rebuilding
+    // of are the build's, one answer changes one entry in each, and rebuilding
     // them per declaration is the whole graph copied once per node.
     func answers(
         of unsaid: [Unsaid],
@@ -520,19 +513,20 @@ struct TypeChecker {
         }
     }
 
-    // The one gate every gathered call passes, wherever its body sits. A
-    // native procedure, a written body, a constant's closure. The call carries the
-    // the walk found for it, and is judged against that.
+    // The one gate every gathered call passes, wherever its body sits, and
+    // whether its selector names a declaration or a contract's procedure. The
+    // call carries the spelling the walk found for it, and is judged against
+    // the signature that spelling names.
     func checked(_ calls: [CallSite], in context: TypingContext, writing fulfillment: Fulfillment) throws {
         for call in calls {
-            guard let callee = context.declared(call.callee) else {
+            guard let signature = context.signature(of: call.callee) else {
                 throw BuildError.unjudged(
-                    "a call to '\(call.callee)', which has no row",
+                    "a call to '\(call.callee)', which names no declaration",
                     at: call.place
                 )
             }
 
-            try check(call, against: callee, with: context, writing: fulfillment)
+            try check(call, against: signature, with: context, writing: fulfillment)
         }
     }
 
@@ -545,7 +539,7 @@ struct TypeChecker {
     //
     // Named for the reading and not for the answer, because the sibling below
     // (what a *signature* answers) is the other question, and the two are kept
-    // apart on purpose: one is what the author wrote and one is what the link
+    // apart on purpose: one is what the author wrote and one is what the build
     // worked out.
     private func reading(
         from block: Block,
@@ -570,6 +564,7 @@ struct TypeChecker {
     // carries.
     private func held(
         _ read: LoweredType,
+        valued constant: Value?,
         to returns: TypeExpression?,
         at place: Place,
         in table: LoweredTypeTable,
@@ -585,6 +580,21 @@ struct TypeChecker {
                     + " declaration promises \(returns)",
                 at: place
             )
+        }
+
+        // A constant answer is a value as well as a type, so it is held to
+        // what the promise admits, the way a constant argument is held to its
+        // slot.
+        if let constant {
+            do {
+                _ = try promised.settling(constant, at: "answer", in: table)
+            } catch {
+                throw BuildError(
+                    "answers \(read.rendered(in: table)), and its"
+                        + " declaration promises \(returns): \(error)",
+                    at: place
+                )
+            }
         }
 
         // A composition the declaration promises holds the answer to its
@@ -609,10 +619,9 @@ struct TypeChecker {
     // parameter admits its reading.
     //
     // That one parameter takes one bound, and that a named bound is declared,
-    // are the declaration's own facts. Held by
-    // the judgment every signature passes where it is declared, before anything
-    // gathers readings for this. Judging against every name in a mention set
-    // costs nothing when the set holds its one.
+    // are the declaration's own facts, held where it is declared, before
+    // anything gathers readings for this. Judging against every name in a
+    // mention set costs nothing when the set holds its one.
     private func constraintRefusal(
         mentions: [Name: [Name]],
         readings: [Name: LoweredType],
@@ -654,7 +663,7 @@ struct TypeChecker {
         at place: Place
     ) -> Judgment {
         // A declaration with nothing to fill and nothing to hold is read as
-        // the link lowered it. Lowering it again per call site is the same
+        // the build lowered it. Lowering it again per call site is the same
         // answer paid for again, and this is the site every call goes through.
         guard declared.isGeneric || !substitution.holding.isEmpty else {
             return .fits(slots: slots, returns: answering)
@@ -811,16 +820,12 @@ struct TypeChecker {
                 // declares a value that does not arrive at all.
 
                 // Nothing was declared here, so nothing about this value can
-                // ever be proven, and a dot the link cannot judge is the one
+                // ever be proven, and a dot the build cannot judge is the one
                 // thing a run would have to decide for itself. The author says
                 // what they expect and the reading goes on from there; the
                 // type is theirs to name, not the value's to supply. An index
                 // says as much as a dot does (that a type is there to be read
                 // into) so it refuses here too, and says so in its own terms.
-                // Before the three were told apart this arm let indexes through
-                // to the run; that exception was a fact about the branch being
-                // shared, not a decision about indexes, and keeping it would
-                // leave the one rule saying `[` may read what `.` may not.
                 if current == .any {
                     let reach = switch segment {
                     case .key: "reads a dot on"
@@ -834,37 +839,12 @@ struct TypeChecker {
                     )
                 }
 
-                // A parameter is filled by the call, so the type *is*
-                // declared. Elsewhere. That is why this is not `any`'s case and
-                // does not refuse: the segments stand as written and the call's
-                // type answers them, which is the decision
-                // `ParameterDotTests` holds.
-                //
-                // What would make this judgeable here is the bound: a
-                // constraint is a declared membership of concrete types, so a
-                // dot every member admits is a dot this site could prove.
-                // Reading it that way needs the walked signature's `bounds`,
-                // which this walk is not given, so the fact is named here
-                // rather than guessed at. The reading stays a type the call
-                // decides, not `any`. Saying `any` would hand the next
-                // statement a type the author never wrote. `x = item.a` then
-                // `x.b` would refuse on `any` where `item.a.b` in one statement
-                // stands, and naming a step is not supposed to change what a
-                // path means.
-                //
-                // And not the parameter itself. `item` is the type the call
-                // filled in; `item.a` is a field of that type, which is a
-                // different unknown. Handing the parameter back made a walk
-                // through one impersonate it: the field stood where `some T`
-                // was asked for, and carried T's bound onto a value that never
-                // earned it. `some N: Comparable` proving `item.a` comparable
-                // on nothing but where it was read from.
-                //
-                // Where the walk reached is asked of the type it walked
-                // through, not assembled from the segments written here: a
-                // body may name a step on the way (`held = of.inner`, then
-                // `held.count`), and the field it lands on is the same field
-                // either way.
+                // A type parameter is declared at the call, so the segments
+                // stand as written and the call's type answers them. The
+                // reading is what the parameter's type reaches through them,
+                // neither `any` nor the parameter itself, so a body naming a
+                // step on the way (`held = of.inner`, then `held.count`) reads
+                // the same field.
                 if let reached = current.reaching(rest()) {
                     switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
@@ -1192,7 +1172,7 @@ struct TypeChecker {
         // asked of every declaration answering it.
         case let .call(call):
             guard
-                context.signature(of: call.selector) != nil || context.contractProcedures[call.selector] != nil,
+                context.signature(of: call.selector) != nil,
                 !context.isConst(call.selector)
             else {
                 return call.arguments.lazy
@@ -1221,18 +1201,25 @@ struct TypeChecker {
     // arrives.
     private func held(
         reading read: LoweredType,
-        answered: [(reading: LoweredType, place: Place)],
+        answered: [(reading: LoweredType, value: Value?, place: Place)],
         to returns: TypeExpression?,
-        resulting: Bool,
+        result: Expression?,
         at place: Place,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment?
     ) throws {
         for one in answered {
-            try held(one.reading, to: returns, at: one.place, in: table, fulfillment: fulfillment)
+            try held(one.reading, valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
         }
 
-        try held(read, to: returns, at: place.part(resulting ? .result : .returns), in: table, fulfillment: fulfillment)
+        try held(
+            read,
+            valued: result?.constantValue,
+            to: returns,
+            at: place.part(result != nil ? .result : .returns),
+            in: table,
+            fulfillment: fulfillment
+        )
     }
 
     // What a call answers: the declaration's returns, filled from the operands
@@ -1534,11 +1521,13 @@ struct TypeChecker {
             // caller (a `break` ends its loop and a `continue` its round) and
             // one carrying nothing hands back the null a body with no result
             // hands back, which is the run's own answer for it.
-            func answering(_ flowed: Flow, carrying carried: LoweredType?) -> Flow {
+            func answering(_ flowed: Flow, carrying carried: Inspection?) -> Flow {
                 guard leave.reach == .procedure else { return flowed }
 
                 var answering = flowed
-                answering.answered = flowed.answered + [(carried ?? .null, place)]
+                answering.answered = flowed.answered + [
+                    (carried?.reading ?? .null, carried?.rewritten.constantValue, place)
+                ]
 
                 return answering
             }
@@ -1561,7 +1550,7 @@ struct TypeChecker {
                     : expression,
                 calls: carried.calls,
                 reading: .never,
-                flow: leaving(answering(carried.flow, carrying: carried.reading))
+                flow: leaving(answering(carried.flow, carrying: carried))
             )
 
         // A path names something that has to exist just as a selector does, so
@@ -1637,7 +1626,7 @@ struct TypeChecker {
 
         // A cast is where a reading the walk could not judge becomes one it
         // can. The type is the author's claim, so it is the reading from here
-        // on, and the run is left the one question the link cannot answer,
+        // on, and the run is left the one question the build cannot answer,
         // which is what actually arrived.
         //
         // A claim the types already prove is refused, for the reason a needless
@@ -1666,22 +1655,14 @@ struct TypeChecker {
 
             let read = inner.reading.resolved(in: context.loweredTypes)
 
-            // Both refusals ask the types themselves, with nothing gating them
-            // on whether the reading is fully proven. A gate like that turned
-            // the judgment off wherever `any` sat anywhere inside the reading
-            // (`array<any>` read as `string` passed the link and answered null
-            // on every run, the permanent silent null this spelling exists
-            // against) while the case it was meant to protect (`{ data: any }`
-            // read as `{ data: { name: string } }`) is one `couldBothHold`
-            // already answers on its own, at the field.
+            // Both refusals ask the types themselves, whether or not the
+            // reading is fully proven.
             //
             // Needless means the claim and the reading are the same type, not
-            // that one would accept the other. `accepts` is assignability, and
-            // assignability is where a boundary still has work to do: it holds
-            // between `int` and `int(0...10)`, and between anything and `any`,
-            // precisely because the value is checked when it arrives. Reading
-            // it as proof called every narrowing cast needless and left the
-            // author no way to say what they knew.
+            // that one would accept the other. `accepts` holds between `int`
+            // and `int(0...10)`, and between anything and `any`, because the
+            // value is checked when it arrives, so a narrowing cast still says
+            // something.
             //
             // The claim is judged first, and on itself: a cast onto a type
             // that proves nothing opens no door, whatever it was written over.
@@ -1851,7 +1832,7 @@ struct TypeChecker {
                     reading: inner.reading,
                     answered: inner.flow.answered,
                     to: procedure.signature.returns,
-                    resulting: written.result != nil,
+                    result: inner.block.result,
                     at: place.part(.closure),
                     in: context.loweredTypes,
                     fulfillment: ask.fulfillment
@@ -1882,9 +1863,6 @@ struct TypeChecker {
                 held.isConstProcedure || held.isIsolatedProcedure
             }
 
-            let taking: (Name) -> Signature? = { selector in
-                context.signature(of: selector) ?? context.contractProcedures[selector]?.signature
-            }
             let const = body.map { block in
                 Derivation().isConst(
                     block,
@@ -1893,7 +1871,7 @@ struct TypeChecker {
                     reading: reading,
                     applying: procedure.signature.constProcedures
                         .union(captured.filter { _, held in held.isConstProcedure }.keys),
-                    taking: taking
+                    taking: context.signature(of:)
                 )
             } ?? false
             let isolated = body.map { block in
@@ -1903,7 +1881,7 @@ struct TypeChecker {
                     given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures
                         .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
-                    taking: taking
+                    taking: context.signature(of:)
                 )
             } ?? false
 
@@ -1935,10 +1913,9 @@ struct TypeChecker {
 
         // Which value is called is settled at the run, and what it answers is
         // the slot's to say: a procedure type that wrote `returns` answers
-        // that, and one that wrote none opens to `any`. Its operands are data
-        // the const resolver reads (the check refuses a construct in one, and a
-        // program that came straight to the link meets the same predicate
-        // here) so nothing writes and there is no flow to carry.
+        // that, and one that wrote none opens to `any`. Its operands are data,
+        // held as operands below, so nothing writes and there is no flow to
+        // carry.
         case let .apply(callee, arguments):
             guard case .judging = ask else {
                 return Inspection(rewritten: expression, reading: .any)
@@ -2058,13 +2035,11 @@ struct TypeChecker {
         // from what was actually sent and the answer comes back with them
         // filled, and only a generic answer reads the operands at all, so under
         // the reading ask only a generic call pays for taking their readings.
-        // The operands are data the const half reads (the check holds a
-        // construct out of them, and the link asks the same predicate itself)
-        // so nothing here writes: every operand stands in the one environment
-        // the call stands in.
+        // The operands are data, held as operands below, so nothing here
+        // writes: every operand stands in the one environment the call stands
+        // in.
         case let .call(call):
             let signature = context.signature(of: call.selector)
-                ?? context.contractProcedures[call.selector]?.signature
 
             guard case .judging = ask else {
                 var readings: [LoweredType] = []
@@ -2091,34 +2066,23 @@ struct TypeChecker {
                 )
             }
 
-            // Every operand of this call, judged before the walk splits on what
-            // the selector names: what a slot takes has nothing to do with
-            // whether the operand written into it is read or run. Placed one by
-            // one, because a loop over the values alone reports the third
-            // operand from the place the first was.
+            // Every operand of this call: what a slot takes has nothing to do
+            // with whether the operand written into it is read or run. Placed
+            // one by one, because a loop over the values alone reports the
+            // third operand from the place the first was.
             for (position, argument) in call.arguments.enumerated() {
                 try held(argument, asOperand: place.argument(position), given: context, when: ask)
             }
 
-            // A call through a contract names no declaration. What answers it
-            // is the first argument's own type, so it is judged here against what
-            // the contract said and nowhere against a callee.
-            if let asked = context.contractProcedures[call.selector] {
-                return try await inspected(
-                    contract: asked,
-                    call: call,
-                    at: place,
-                    in: environment,
-                    with: context,
-                    ask: ask
-                )
-            }
+            // A selector this document cannot name is refused where the walk
+            // meets it. Its answer is unknown, and a dot on an unknown answer
+            // would be refused first for what the dot reads, which is not what
+            // the author got wrong.
+            guard let signature else {
+                guard !context.concealed.contains(call.selector) else {
+                    throw BuildError.concealed(call.selector, at: place)
+                }
 
-            // A selector no module declares is refused where the walk meets
-            // it. Its answer is unknown, and a dot on an unknown answer would
-            // be refused first for what the dot reads, which is not what the
-            // author got wrong.
-            guard let callee = context.declared(call.selector) else {
                 throw BuildError(
                     "sends '\(call.selector)', which no module in this link declares",
                     at: place
@@ -2145,7 +2109,7 @@ struct TypeChecker {
 
             try handedInPlace(
                 by: call,
-                to: callee.signature,
+                to: signature,
                 in: environment,
                 with: context,
                 at: place,
@@ -2192,17 +2156,8 @@ struct TypeChecker {
         // on nothing, so the write the staying arm makes is definite again: the
         // ways that finish all made it. Unreached arms are followed on purpose.
         case let .conditional(condition, then, otherwise):
-            if condition.holdsConstruct {
-                try refuse(
-                    Expression.constructInCondition,
-                    at: place.part(.condition(of: .conditional)),
-                    when: ask
-                )
-            }
-
-            // A condition is data and writes nothing (the construct rule above
-            // is what makes that a fact) so the arms stand in the environment
-            // the conditional stands in.
+            // A condition is data and writes nothing, so the arms stand in the
+            // environment the conditional stands in.
             let head = try await inspected(
                 condition,
                 at: place.part(.condition(of: .conditional)),
@@ -2257,13 +2212,6 @@ struct TypeChecker {
         // out loud, where a refusal can carry the reason; the reading ask stays
         // total and takes the widened answer.
         case let .loop(condition, body, round):
-            // A condition is data the run reads rather than runs, the fact every
-            // operand has, so a construct is refused there by the same predicate, at
-            // the check and here alike.
-            if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.part(.condition(of: .loop)), when: ask)
-            }
-
             // The fixpoint probes the statements alone. The rounds are what
             // leave things for one another, and the result never runs between
             // rounds. The probe reads, so a reading asker takes the settled
@@ -2363,7 +2311,7 @@ struct TypeChecker {
             // What the rescue is there for. A body nothing can fail out of
             // leaves it a body no run reaches, and the author wrote it
             // expecting otherwise: what they are told is which failures the
-            // link found, which is none.
+            // build found, which is none.
             if Derivation().failing(block, given: context.failing(of:)).failsNothing {
                 try refuse(
                     "attempts a body that cannot fail, so its rescue is a body"
@@ -2402,108 +2350,6 @@ struct TypeChecker {
                 )
             )
         }
-    }
-
-    // A call through a contract. Nothing here names a declaration: what the
-    // contract asked is the whole of the judgment, and which body runs is
-    // decided at the run by the name the first argument wears.
-    private func inspected(
-        contract asked: LoweredContractProcedure,
-        call: Call,
-        at place: Place,
-        in environment: [Name: Binding],
-        with context: TypingContext,
-        ask: Ask
-    ) async throws -> Inspection {
-        guard let written = call.arguments.first else {
-            throw BuildError(
-                "sends '\(call.selector)' with nothing at its first position."
-                    + " A contract's procedure is answered about the value it"
-                    + " takes first, so there is nothing here to answer it",
-                at: place
-            )
-        }
-
-        let parameters = asked.signature.parameters
-
-        if let refusal = asked.signature.refusal(handing: call.arguments.count) {
-            throw BuildError("sends '\(call.selector)' \(refusal)", at: place.part(.arguments))
-        }
-
-        let first = try await inspected(
-            written,
-            at: place.argument(0),
-            in: environment,
-            with: context,
-            ask: ask
-        )
-
-        switch context.loweredTypes.answering(contract: asked.contract, reading: first.reading) {
-        case let .leansOn(types):
-            for type in types {
-                ask.fulfillment?.require(
-                    Claim(type: type, contract: asked.contract),
-                    at: place.argument(0)
-                )
-            }
-
-        case .settled(true):
-            break
-
-        case .settled(false):
-            throw BuildError(
-                "sends '\(call.selector)' to \(first.reading.rendered(in: context.loweredTypes)),"
-                    + " which does not answer every procedure '\(asked.contract)' asks",
-                at: place.argument(0)
-            )
-        }
-
-        var arguments: [Expression] = [first.rewritten]
-        var calls = first.calls
-
-        for (position, argument) in call.arguments.enumerated().dropFirst() {
-            let parameter = parameters[position]
-            let here = place.argument(position)
-            let inner = try await inspected(
-                argument,
-                at: here,
-                in: environment,
-                with: context,
-                ask: ask
-            )
-
-            let declared = parameter.declared.lowered(in: context.loweredTypes)
-
-            guard declared.accepts(inner.reading, in: context.loweredTypes) else {
-                throw BuildError(
-                    "hands \(inner.reading.rendered(in: context.loweredTypes)) where '\(asked.contract)'"
-                        + " writes \(parameter.declared.rendered)",
-                    at: here
-                )
-            }
-
-            if let refusal = refusal(
-                holding: inner.reading,
-                to: declared,
-                as: "hands",
-                in: context.loweredTypes,
-                fulfillment: ask.fulfillment,
-                at: here
-            ) {
-                throw BuildError(refusal, at: here)
-            }
-
-            arguments.append(inner.rewritten)
-            calls += inner.calls
-        }
-
-        return Inspection(
-            rewritten: ask.rewrites
-                ? .call(Call(selector: call.selector, arguments: arguments))
-                : .call(call),
-            calls: calls,
-            reading: asked.signature.returns?.lowered(in: context.loweredTypes) ?? .any
-        )
     }
 
     // A block: its body, then the result in the environment the body left
@@ -2668,7 +2514,7 @@ struct TypeChecker {
 
             switch statement.binding {
             // A name that says what it holds holds that. One that says
-            // nothing holds what the link worked out from what it was given.
+            // nothing holds what the build worked out from what it was given.
             case let .constant(id, declared)?:
                 locals.insert(id)
                 environment[id] = .fixed(try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask))
@@ -2743,8 +2589,8 @@ struct TypeChecker {
     // What never finishes binds nothing, so a name on it promises a binding
     // that cannot happen. Asked exactly where the sequence rule finds a
     // statement that ends the body, so the two facts cannot part. The reader
-    // catches the types it can see, and the link catches the procedures only it can
-    // see. One rule, two stages.
+    // catches the types it can see, and the build catches the procedures only it
+    // can see. One rule, two stages.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(
             "never finishes,"
@@ -3060,7 +2906,7 @@ struct TypeChecker {
     }
 
     // What a name holds: what it declared, held against what it was given, or
-    // what the link worked out where it declared nothing.
+    // what the build worked out where it declared nothing.
     private func held(
         _ given: LoweredType,
         declaredAs written: TypeExpression?,
@@ -3146,14 +2992,14 @@ struct TypeChecker {
 
     private func check(
         _ site: CallSite,
-        against callee: Linked,
+        against declared: Signature,
         with context: TypingContext,
         writing fulfillment: Fulfillment
     ) throws {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
-        if let refusal = callee.signature.refusal(handing: call.arguments.count) {
+        if let refusal = declared.refusal(handing: call.arguments.count) {
             throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
         }
 
@@ -3167,8 +3013,6 @@ struct TypeChecker {
         // sides and on the way out is a whole number and a whole number
         // answering a whole number, and a whole number and a fraction refused,
         // without a way to declare a name twice.
-        let declared = callee.signature
-
         let declaredSlots = context.slots(of: call.selector)
 
         let slots: [Slot]
@@ -3224,7 +3068,7 @@ struct TypeChecker {
             try query.validate(Question(arguments: constants))
         }
 
-        if case let .native(.query(query)) = callee.implementation {
+        if case let .native(.query(query))? = context.declared(call.selector)?.implementation {
             var constants: [Name: Value] = [:]
 
             for (slot, argument) in zip(slots, call.arguments) {

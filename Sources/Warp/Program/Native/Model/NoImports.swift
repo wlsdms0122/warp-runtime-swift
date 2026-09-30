@@ -7,15 +7,16 @@
 
 import Foundation
 
-// A procedure that sends nothing. Its one case is never reached, which is what
-// sending nothing means.
-public enum NoImports: Int, ImportSet {
-    case none
-
+// A procedure that sends nothing: a set with no member.
+public enum NoImports: ImportSet {
     // MARK: - Property
-    public static var allCases: [NoImports] { [] }
+    public var selector: Name {
+        switch self {}
+    }
 
-    public var selector: Name { "" }
+    public var position: Int {
+        switch self {}
+    }
 
     // MARK: - Initializer
     // MARK: - Public

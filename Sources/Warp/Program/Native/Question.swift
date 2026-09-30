@@ -56,16 +56,9 @@ public struct Question<P: NativeProcedure>: Sendable {
         }
     }
 
-    // Sending a procedure this procedure declared it sends. The link resolved the row
-    // and the place each handed argument stands at, so what happens here is
-    // indexing twice and looking nothing up; a procedure this one never declared is
-    // a procedure that does not compile.
-    //
-    // The arguments stand at the callee's positions, as many as the key
-    // declared it hands.
-    //
-    // Synchronous, because a query answers without running and the link
-    // refused a query declaring it sends anything that runs.
+    // Sending a procedure this procedure declared it sends, the way
+    // `Invocation.send` does. The link refused a query declaring it sends
+    // anything that runs.
     public func send(
         _ key: P.Imports,
         handing arguments: [Value] = []
@@ -87,22 +80,16 @@ public struct Question<P: NativeProcedure>: Sendable {
         )
     }
 
-    // Running a procedure this procedure was handed. What may be handed is what the
-    // link proved answers without running, which a procedure states by declaring the
-    // parameter `const procedure`, so reaching here means the judgement was
-    // already made.
-    public func call(_ procedure: Value, with arguments: [Value] = []) async throws -> Value {
-        guard case let .procedure(closure) = procedure else {
-            throw ExecutionError(
-                "this call names \(procedure.type), and only a procedure can be called"
-            )
-        }
-
+    // Calling a closure this procedure was handed as a value. What may be
+    // handed is what the link proved answers without running, which a
+    // procedure states by declaring the parameter `const procedure`. The
+    // arguments are handed by position, the way every call hands them.
+    public func call(_ closure: Closure, handing arguments: [Value] = []) async throws -> Value {
         guard case let .settled(_, _, executor) = self.arguments else {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 
-        return try await executor.call(closure, with: arguments)
+        return try await executor.call(closure, handing: arguments, at: Trace())
     }
 
     // MARK: - Private

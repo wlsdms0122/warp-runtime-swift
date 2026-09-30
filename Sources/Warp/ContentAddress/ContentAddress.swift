@@ -30,7 +30,7 @@ public extension ContentAddress {
     }
 
     var rendered: String {
-        bytes.map { byte in String(format: "%02x", byte) }.joined()
+        bytes.spelling
     }
 
     var description: String {

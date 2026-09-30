@@ -14,7 +14,7 @@ extension Closure {
     // captures, claiming nothing.
     static func assembled() -> Closure {
         Closure(
-            writer: Closure.Writer(document: .compiled(Compiled.Token()), name: "assembled"),
+            writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("assembled")),
             nth: 0,
             linked: Linked(
                 label: "assembled",

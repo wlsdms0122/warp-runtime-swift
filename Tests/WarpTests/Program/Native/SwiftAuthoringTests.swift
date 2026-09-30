@@ -119,7 +119,7 @@ struct SwiftAuthoringTests {
         #expect(outputs["shout"] == .string("HEY"))
     }
 
-    @Test("a library procedure, a native procedure and a procedure are all one expression")
+    @Test("a library procedure, a native procedure and a written one are all one expression")
     func oneCallingType() async throws {
         // Given. Three selectors that are answered in three different places,
         // written identically. Where each is found is the runtime's business.

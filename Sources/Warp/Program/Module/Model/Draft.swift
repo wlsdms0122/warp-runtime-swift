@@ -50,13 +50,14 @@ public struct Draft: Sendable {
         //
         // A constant and a variable are expressions like a body, so a closure
         // written in one is the document's the way a closure written in a body
-        // is. The same three the document is read over everywhere else.
+        // is. A procedure and a constant may be spelled alike, so each is
+        // counted under its kind.
         //
         // Read off the document so a closure's number is the document's fact.
         // The link lowers the procedures before the rest, and which declarations
         // are procedures depends on the whole graph, so a count taken while
         // lowering would move when an unrelated module joins.
-        let closures: [Name: Int]
+        let closures: [Closure.Declaration: Int]
 
         // MARK: - Initializer
         // MARK: - Public
@@ -104,17 +105,6 @@ public struct Draft: Sendable {
     // Settable only from here, the way `imports` is, so `declaring(_:)`
     // changes this one field of a copy.
     public private(set) var procedures: [Name: Procedure]
-
-    // The same two, when only the names are wanted. Read off the lists above
-    // rather than gathered again, so what counts as a procedure and what counts as
-    // a type is said in one place.
-    var declaredProcedures: Set<Name> {
-        read().declaredProcedures
-    }
-
-    var declaredTypes: Set<Name> {
-        read().declaredTypes
-    }
 
     // Every name this uses and does not itself declare, which is what `imports`
     // says where a document wrote one.
@@ -227,9 +217,9 @@ public struct Draft: Sendable {
             }
         )
         var named: Set<Name> = []
-        var counts: [Name: Int] = [:]
+        var counts: [Closure.Declaration: Int] = [:]
 
-        func fold(_ name: Name, _ held: some Traversable) {
+        func fold(_ declaration: Closure.Declaration, _ held: some Traversable) {
             var written = 0
 
             for found in held.nodes {
@@ -257,7 +247,7 @@ public struct Draft: Sendable {
                 }
             }
 
-            counts[name] = written
+            counts[declaration] = written
         }
 
         for type in types.values {
@@ -290,15 +280,15 @@ public struct Draft: Sendable {
 
             guard let block = procedure.block else { continue }
 
-            fold(name, block)
+            fold(.procedure(name), block)
         }
 
         for (name, expression) in constants {
-            fold(name, expression)
+            fold(.binding(name), expression)
         }
 
         for (name, variable) in variables {
-            fold(name, variable.start)
+            fold(.binding(name), variable.start)
 
             if let declared = variable.declared {
                 named.formUnion(declared.mentions)

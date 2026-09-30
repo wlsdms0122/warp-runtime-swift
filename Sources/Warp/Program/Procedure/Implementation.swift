@@ -19,12 +19,12 @@ import Foundation
 public enum Implementation: Sendable {
     case body(Block)
 
-    // Answers without running anything. Const and synchronous, which is what
-    // lets it be asked inside a condition and while a constant settles.
+    // Answers without running anything. Const, which is what lets it be asked
+    // inside a condition and while a constant settles.
     case query(any Query)
 
-    // Answers by reaching outside the run. Asynchronous, so it cannot be asked
-    // where a value is merely read.
+    // Answers by reaching outside the run, so it is not const and cannot be
+    // asked where a value is merely read.
     case effect(any Effect)
 
     // MARK: - Property

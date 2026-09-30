@@ -302,7 +302,7 @@ struct RefinementTests {
         #expect(try await run(kept, arguments: ["blob": .bytes([1, 2])]) == .bytes([1, 2]))
     }
 
-    @Test("what only the run sees is judged at the boundary, in the range's procedures")
+    @Test("what only the run sees is judged at the boundary, in the range's words")
     func aFractionOutsideItsRangeRefusesAtTheBoundary() async throws {
         let sut = try Module(
             procedures: [
