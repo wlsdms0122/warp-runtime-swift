@@ -89,12 +89,8 @@ struct LinearityChecker {
         let place: Place
 
         // Whether some way out of this body hands the caller an obligation.
-        //
-        // Not one of `Held`'s fields, and the difference is the point: what a
-        // body still holds dies with a way through that dies, and what it has
-        // already handed out does not. A walk that drops a way (an `attempt`
-        // drops its body's) would drop this with it, so it is kept where only
-        // setting it is possible.
+        // Not one of `Held`'s fields: an `attempt` goes on with its rescue's
+        // `Held`, and what its body handed out stays handed out.
         private(set) var handsOut = false
 
         // MARK: - Initializer
@@ -352,11 +348,12 @@ struct LinearityChecker {
             // A failure lands between statements, so which of the body's moves
             // happened is not something the text shows. What finishes is the
             // body's own end or the rescue's, so an attempt leaves where both
-            // of them do.
+            // of them do, holding what either way took.
             case let .attempt(body, rescue, _):
                 let attempted = try through(body, held: held, guarded: "inside an attempt")
                 var rescued = try through(rescue, held: held, guarded: "inside an attempt")
 
+                rescued.live.formUnion(attempted.live)
                 rescued.endsTheBody = attempted.endsTheBody && rescued.endsTheBody
 
                 return rescued

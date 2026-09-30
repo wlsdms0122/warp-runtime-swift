@@ -874,9 +874,8 @@ struct LinearTests {
 
     @Test("an attempt does not drop what a body already handed out")
     func anAttemptKeepsWhatWasHandedOut() async throws {
-        // Given. What a body still holds dies with a way through that dies, and
-        // an attempt drops its body's way. What it has already handed out is
-        // not that kind of fact and does not die with it
+        // Given. `app.make` returns one from inside the attempt's body and
+        // writes no `returns`
         let sut = try holding(
             body: [
                 Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
