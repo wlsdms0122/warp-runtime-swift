@@ -37,7 +37,7 @@ public struct Validator: Sendable {
         // A constant sees no scope, so it may name another constant and nothing
         // else. Which is also why it is checked here rather than per procedure:
         // what it can see is a fact about the module.
-        for (name, expression) in module.constants.sorted(by: { $0.key < $1.key }) {
+        for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try validate(
                 expression,
                 visible: constants,
@@ -49,7 +49,7 @@ public struct Validator: Sendable {
         // A variable's start is written like a constant and sees what a
         // constant sees: the constants beside it, and no variable. A variable
         // holds nothing until the run starts.
-        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
+        for (name, variable) in module.variables.sorted(by: { one, other in one.key < other.key }) {
             guard !constants.contains(name) else {
                 throw ValidationError(
                     "'\(name)' is declared as a constant and as a variable, and"
@@ -85,9 +85,7 @@ public struct Validator: Sendable {
             )
         }
 
-        for name in module.procedures.keys.sorted() {
-            guard let procedure = module.procedures[name] else { continue }
-
+        for (name, procedure) in module.procedures.sorted(by: { one, other in one.key < other.key }) {
             try validate(
                 procedure,
                 constants: constants,
@@ -154,7 +152,7 @@ public struct Validator: Sendable {
     private func hosted(_ module: Module) throws {
         guard module.identity == nil else { return }
 
-        for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key })
+        for (name, procedure) in module.procedures.sorted(by: { one, other in one.key < other.key })
         where procedure.implementation.native != nil && !procedure.access.reachesOtherDocuments {
             throw ValidationError(
                 "this procedure is private and answered by the host in a module that is no document,"
@@ -282,7 +280,7 @@ public struct Validator: Sendable {
                     try introduced(name, beside: scope.bound, at: here)
 
                     guard !declared.contains(name) else {
-                        throw ValidationError("duplicate statement id '\(name)'", at: here)
+                        throw ValidationError("two statements here are named '\(name)'", at: here)
                     }
 
                     declared.insert(name)
@@ -332,13 +330,13 @@ public struct Validator: Sendable {
             )
 
             switch statement.binding {
-            case let .constant(id, _)?:
-                visible.insert(id)
-                variables.remove(id)
+            case let .constant(name, _)?:
+                visible.insert(name)
+                variables.remove(name)
 
-            case let .variable(id, _)?:
-                visible.insert(id)
-                variables.insert(id)
+            case let .variable(name, _)?:
+                visible.insert(name)
+                variables.insert(name)
 
             case .assignment?, nil:
                 break
@@ -378,7 +376,7 @@ public struct Validator: Sendable {
             }
 
         case let .record(record):
-            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
+            for (name, field) in record.sorted(by: { one, other in one.key < other.key }) {
                 let here = place.part(.fields).key(name.spelling)
 
                 try refuseAnswerless(field, at: here)
@@ -433,7 +431,7 @@ public struct Validator: Sendable {
 
             try reads(procedure, at: place)
 
-        guard let block = procedure.block else { return }
+            guard let block = procedure.block else { return }
 
             try validate(
                 block,
@@ -713,13 +711,13 @@ public struct Validator: Sendable {
         }
     }
 
-    // A name a body introduces: a parameter, a statement's id, or the one a
+    // A name a body introduces: a parameter, a statement's name, or the one a
     // construct hands its body. Every such name passes here, so the module's
-    // bound names are checked at whatever depth the name appears. A sub scope
-    // is where a reader is least able to see that the spelling was taken.
+    // bound names are checked at whatever depth the name appears.
     //
-    // Linking folds a constant wherever its name is read, so a name introduced
-    // under that spelling would never be the one that answers.
+    // A module's constant is folded wherever its name is read and its variable
+    // is read through the module's box, so a name introduced under either
+    // spelling would never be the one that answers.
     private func introduced(
         _ name: Name,
         beside bound: Set<Name>,

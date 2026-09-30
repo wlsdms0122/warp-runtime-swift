@@ -19,10 +19,9 @@ struct Scope: Sendable {
     // to end.
     let rounds: [Name?]
 
-    // The module's bound names, carried so every signature met on the way (a
-    // closure's included) refuses a parameter that would take one's place:
-    // linking folds a constant wherever its name is read, so a parameter under
-    // that name would never be the one that answers.
+    // The module's bound names, its constants and inside a procedure its
+    // variables too, carried so every name introduced on the way (a closure's
+    // parameters included) is refused where it would take one's place.
     let bound: Set<Name>
 
     // A procedure's own body: no loop yet.
