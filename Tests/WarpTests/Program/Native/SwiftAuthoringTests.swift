@@ -12,6 +12,29 @@ import WarpStandard
 // Procedures written in Swift and run without a front end.
 @Suite("Authoring a procedure in Swift")
 struct SwiftAuthoringTests {
+    // Answers what it was sent, read by the first parameter's own key.
+    private struct EchoQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            question[.of]
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -163,6 +186,73 @@ struct SwiftAuthoringTests {
         #expect(outputs["counted"] == .int(1))
         #expect(outputs["shouted"] == .string("HI"))
         #expect(outputs["called"] == .string("yo"))
+    }
+
+    @Test("a native procedure reads its first argument by the parameter's own key")
+    func firstArgumentIsReadByItsKey() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    body: [],
+                    result: .record([
+                        "result": .call(Call(selector: "app.echo", arguments: [.literal(.int(20))]))
+                    ])
+                ),
+                "app.echo": Procedure(
+                    signature: Signature(of: EchoQuery.self, returns: .int),
+                    implementation: .query(EchoQuery())
+                )
+            ]
+        )
+
+        // When
+        let outputs = try await run(sut)
+
+        // Then
+        #expect(outputs["result"] == .int(20))
+    }
+
+    @Test("a native procedure and a written one are declared the same way")
+    func nativeAndWrittenDeclareAlike() async throws {
+        // Given
+        let written = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
+                        )
+                    ]
+                ),
+                "shout": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "of", type: .string)
+                        ],
+                        returns: .string
+                    ),
+                    body: [
+                        Statement(binding: .constant("loud"), expression: .reference([.key("of")])
+                        )
+                    ],
+                    result: .reference([.key("loud")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([written] + Module.standard)
+
+        // Then. One table, and what separates them is only how each is written
+        let shout = try #require(image["shout"])
+        let count = try #require(image["std.collection.count"])
+
+        #expect(shout.signature.names.first == "of")
+        #expect(count.signature.names.first == "collection")
+        #expect(shout.isWritten)
+        #expect(!count.isWritten)
     }
 
     // MARK: - Public

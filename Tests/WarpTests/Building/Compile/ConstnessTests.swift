@@ -406,6 +406,83 @@ struct ConstnessTests {
         }
     }
 
+    @Test("what answers without running is worked out at the build, not declared")
+    func constnessIsABuildFact() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "clean": Procedure(
+                    body: [
+                        Statement(binding: .constant("done"), expression: .literal(.int(1))
+                        )
+                    ]
+                ),
+                "dirty": Procedure(
+                    body: [
+                        Statement(binding: .constant("done"), expression: .call(Call(
+                            selector: "app.fail",
+                            arguments: [.literal(.bool(true))]
+                        ))
+                        )
+                    ]
+                ),
+                "entry": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("a"), expression: .call(Call(selector: "clean"))
+                        ),
+                        Statement(binding: .constant("b"), expression: .call(Call(selector: "dirty"))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard + [.failing])
+
+        // Then. `clean` computes; `dirty` reaches an effect, and everything
+        // that reaches it goes with it
+        #expect(image["clean"]?.constness == .const)
+        #expect(image["dirty"]?.constness != .const)
+        #expect(image["entry"]?.constness != .const)
+        #expect(image["std.collection.count"]?.constness == .const)
+    }
+
+    @Test("a body that sends a const procedure is const")
+    func aBodyThatSendsIsStillConst() async throws {
+        // Given. Constness is judged over the name a body wrote, and what that
+        // name means depends on where it was written. `label` sends `joined`,
+        // which is const, so `label` is const
+        let label = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "of", type: .array(.string))],
+                returns: .string
+            ),
+            body: [],
+            result: .call(Call(selector: "std.text.joined", arguments: [reference("of"), .literal(.string(""))]))
+        )
+        let sut = try Module(
+            procedures: [
+                "label": label,
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "names", type: .array(.string))]
+                    ),
+                    body: [],
+                    result: .call(Call(selector: "label", arguments: [reference("names")]))
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["label"]?.constness == .const)
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The declaration above, handed the body under test.
