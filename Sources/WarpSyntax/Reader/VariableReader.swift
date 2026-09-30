@@ -2,6 +2,8 @@
 //  VariableReader.swift
 //  WarpSyntax
 //
+//  Created by JSilver on 9/22/26.
+//
 
 import Foundation
 import Warp

@@ -2,7 +2,7 @@
 //  Expression+Traversable.swift
 //  Warp
 //
-//  Created by JSilver
+//  Created by JSilver on 9/25/26.
 //
 
 import Foundation

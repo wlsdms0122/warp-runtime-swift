@@ -2,7 +2,7 @@
 //  EqualQuery.swift
 //  WarpStandard
 //
-//  Created by JSilver
+//  Created by JSilver on 9/7/26.
 //
 
 import Foundation
