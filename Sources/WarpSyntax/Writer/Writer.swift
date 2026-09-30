@@ -301,6 +301,7 @@ public struct Writer: Sendable {
         }
     }
 
+    // MARK: - Private
     // The keys a block writes, with whoever reads it asked whether an empty
     // `body` is written or dropped. Asked rather than remembered: a writer
     // carrying its own list of which forms demand the key is a list that goes
@@ -312,7 +313,7 @@ public struct Writer: Sendable {
     // take `body` as a key that may be absent. Said out loud because a way of
     // writing a block without saying who reads it is a way of skipping the
     // question, and skipping it is the failure this asks about.
-    internal func fields(
+    private func fields(
         of block: Block,
         in form: (any ConstructForm.Type)?
     ) throws -> [Name: Value] {
@@ -331,7 +332,7 @@ public struct Writer: Sendable {
 
     // A signature is written flat into whatever declares it. A procedure and a
     // procedure type both spell it as their own keys rather than nesting it.
-    func fields(of signature: Signature) throws -> [Name: Value] {
+    private func fields(of signature: Signature) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 
         if !signature.parameters.isEmpty {
@@ -345,7 +346,6 @@ public struct Writer: Sendable {
         return written
     }
 
-    // MARK: - Private
     // A construct key and what goes under it. The key comes from the registry
     // rather than from the form, because a notation may have respelled it or
     // given it up.
