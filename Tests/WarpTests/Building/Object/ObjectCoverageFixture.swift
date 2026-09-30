@@ -44,7 +44,7 @@ enum ObjectCoverageFixture {
                 declared: ["a.eleven", "a.ten"],
                 closures: ["a.eleven": 2]
             ),
-            typeNumbering: try! LoweredTypeNumbering(ordered: ["a.one", "a.two"], memberships: ["a.four"]),
+            typeNumbering: LoweredTypeNumbering(types: ["a.one", "a.two"], memberships: ["a.four"]),
             // One of every kind of value, and a closure standing by what it is
             // spelled by, holding one of everything.
             judging: [
