@@ -335,7 +335,7 @@ struct BytesTests {
         await #expect {
             try await run(procedure("std.text.decoded", on: .bytes([0xff])))
         } throws: { error in
-            "\(error)".contains("not utf8 text")
+            "\(error)".contains("std.text.decoded asks bytes that are text")
         }
     }
 

@@ -24,7 +24,7 @@ struct DecodedQuery: Query {
                 return Parameter(name: "bytes", type: .bytes)
 
             case .encoding:
-                return Parameter(name: "encoding", type: .string, candidates: ["utf8"])
+                return Parameter(name: "encoding", type: .string, candidates: Encoding.names)
             }
         }
 
@@ -44,7 +44,7 @@ struct DecodedQuery: Query {
         }
 
         guard let text = encoding.text(of: bytes) else {
-            throw ExecutionError("the bytes are not utf8 text")
+            throw ExecutionError("std.text.decoded asks bytes that are text in the encoding named")
         }
 
         return .string(text)
