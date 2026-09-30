@@ -15,12 +15,20 @@ struct LessThanQuery: Query {
     typealias Parameters = ComparablePair
 
     // MARK: - Property
-    private let ordering = Ordering("std.math.lessThan")
-
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        let (order, _) = try ordering.of(question[.lhs], and: question[.rhs])
+        let lhs = question[.lhs]
+        let rhs = question[.rhs]
+
+        // A pair with no order is refused rather than answered false: false
+        // claims the opposite comparison would say something, and it would not.
+        guard let order = Value.order(lhs, rhs) else {
+            throw ExecutionError(
+                "std.math.lessThan asks \(lhs.type) and \(rhs.type), which have no order."
+                    + " It takes two numbers or two strings"
+            )
+        }
 
         return .bool(order == .orderedAscending)
     }
