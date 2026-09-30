@@ -98,40 +98,29 @@ struct EnumTests {
         }
     }
 
-    @Test("a fraction candidate is judged by the fraction's one spelling")
-    func aFractionCandidateIsJudgedByItsSpelling() async throws {
+    @Test("a fraction candidate is judged by the fraction's one spelling", arguments: ["1", "1e0", "1.50", "1e-5"])
+    func aFractionCandidateIsJudgedByItsSpelling(dead: String) async throws {
         // Given. A fraction spells with its point, so `1` on a double slot is
         // the int's spelling and a member no fraction could ever match, and
         // `1e0`/`1.00` are second spellings of a fraction that has one
-        func module(candidates: [String]) async throws -> Module {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [
-                                Parameter(name: "level", type: .double, candidates: candidates)
-                            ]
-                        ),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        }
+        let sut = try doubleSlot(candidates: ["2.0", dead])
 
-        for dead in ["1", "1e0", "1.50", "1e-5"] {
-            await #expect("\(dead)") {
-                try await builder.build([module(candidates: ["2.0", dead])] + Module.standard)
-            } throws: { error in
-                error is BuildError && "\(error)".contains("'\(dead)'")
-            }
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'\(dead)'")
         }
+    }
 
-        // The spellings a document itself writes are alive. The exponent form
-        // included, sign and padding and all.
+    @Test("a fraction candidate in the spelling a document writes is alive")
+    func aFractionCandidateInItsSpellingIsAlive() async throws {
+        // Given. The exponent form included, sign and padding and all
+        let sut = try doubleSlot(candidates: ["1.0", "1.5", "1e-05"])
+
+        // When / Then
         await #expect(throws: Never.self) {
-            try await builder.build([module(candidates: ["1.0", "1.5", "1e-05"])] + Module.standard)
+            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -245,4 +234,20 @@ struct EnumTests {
 
     // MARK: - Public
     // MARK: - Private
+    private func doubleSlot(candidates: [String]) throws -> Module {
+        try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "level", type: .double, candidates: candidates)
+                        ]
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+    }
 }

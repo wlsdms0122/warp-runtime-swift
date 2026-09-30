@@ -415,17 +415,41 @@ struct ContractTests {
         }
     }
 
-    @Test("a contract's procedure stands as an operand where the contract asks const, and is refused where it asks nothing", arguments: [true, false])
-    func aContractCallStandsAsAnOperand(asked: Bool) async throws {
-        // Given. An operand answers without running, and the build refuses one
-        // that calls a declaration answering only by running. A call through
-        // a contract reads as the contract asked of every declaration
-        // answering it: `const`, and the operand stands; nothing, and it may
-        // run, so it is refused.
-        let sut = try Module(
+    @Test("a contract's procedure asking const stands as an operand")
+    func aConstContractCallStandsAsAnOperand() async throws {
+        // Given. An operand answers without running, and a call through a
+        // contract reads as the contract asked of every declaration answering
+        // it: `const`, and the operand stands
+        let sut = try operand(asking: .const)
+
+        // When / Then
+        #expect(try await run([sut]) == .string("AN ACCOUNT"))
+    }
+
+    @Test("a contract's procedure asking nothing is refused as an operand")
+    func anUnstatedContractCallIsRefusedAsAnOperand() async throws {
+        // Given. A contract's procedure asking nothing may run, and an operand
+        // is read rather than run
+        let sut = try operand(asking: .unstated)
+
+        // When / Then
+        await #expect {
+            try await run([sut])
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("reads 'app.Describable.describe', which answers only by running")
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // A contract whose procedure asks this constness, and an entry calling
+    // through it inside an operand.
+    private func operand(asking constness: Constness) throws -> Module {
+        try Module(
             imports: ["std.text.uppercased"],
             types: ["bank.Account": .record(["balance": .int])],
-            contracts: ["app.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string), constness: asked ? .const : .unstated)]],
+            contracts: ["app.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string), constness: constness)]],
             claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 "bank.Account.describe": Procedure(
@@ -472,22 +496,8 @@ struct ContractTests {
                 )
             ]
         )
-
-        // When / Then
-        if asked {
-            #expect(try await run([sut]) == .string("AN ACCOUNT"))
-        } else {
-            await #expect {
-                try await run([sut])
-            } throws: { error in
-                error is BuildError
-                    && "\(error)".contains("reads 'app.Describable.describe', which answers only by running")
-            }
-        }
     }
 
-    // MARK: - Public
-    // MARK: - Private
     // A procedure bounded by the contract, and an entry that hands the type to
     // it. A claim is held where a document leans on the pair, so a claim the
     // list cannot make good on refuses only the program that hands that type

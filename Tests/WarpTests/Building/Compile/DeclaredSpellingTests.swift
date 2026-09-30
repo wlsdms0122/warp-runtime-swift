@@ -245,8 +245,8 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("a name declared as a type and a constraint refuses in either order")
-    func aCrossSpaceCollisionRefusesInEitherOrder() async throws {
+    @Test("a name declared as a type and a constraint refuses in either order", arguments: [false, true])
+    func aCrossSpaceCollisionRefusesInEitherOrder(typeFirst: Bool) async throws {
         // Given. One module declares `Limit` as a constraint, another as a type
         let membership = try Module(
             constraints: ["Limit": [.int]],
@@ -263,12 +263,10 @@ struct DeclaredSpellingTests {
 
         // When / Then. The build sees its whole graph at once, so the order the
         // caller listed the modules cannot change the conclusion
-        for modules in [[membership, type], [type, membership]] {
-            await #expect {
-                try await builder.build(modules)
-            } throws: { error in
-                error is BuildError && "\(error)".contains("both a type and a constraint")
-            }
+        await #expect {
+            try await builder.build(typeFirst ? [type, membership] : [membership, type])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("both a type and a constraint")
         }
     }
 

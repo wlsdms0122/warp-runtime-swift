@@ -17,65 +17,31 @@ struct ClosureTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a body declares as many parameters as the slot hands, under any name", arguments: [
-        ([Parameter(name: "item", type: .int)] as [Parameter], true),
-        ([Parameter(name: "anything", type: .int)] as [Parameter], true),
-        ([] as [Parameter], false),
-        ([Parameter(name: "item", type: .int), Parameter(name: "index", type: .int)] as [Parameter], false)
-    ])
-    func aBodyDeclaresWhatTheSlotHandsIt(declared: [Parameter], fits: Bool) async throws {
-        // Given. The slot hands one value. A body declaring one parameter
-        // stands whatever it calls it, since a value is applied by position;
-        // one declaring none or two is a different procedure.
-        let walking = Procedure(
-            signature: Signature(
-                parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
-                ]
-            ),
-            body: [
-                Statement(
-                    binding: .constant("once"),
-                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
-                )
-            ]
-        )
-        let sut = try Module(
-            procedures: [
-                "walking": walking,
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(
-                            binding: .constant("body"),
-                            expression: .closure(
-                                Procedure(
-                                    signature: Signature(parameters: declared),
-                                    body: [],
-                                    result: .literal(.int(1))
-                                )
-                            )
-                        ),
-                        Statement(
-                            binding: .constant("ran"),
-                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
-                        )
-                    ]
-                )
-            ]
-        )
+    @Test("a body declaring the one parameter the slot hands fits it, under any name", arguments: ["item", "anything"] as [Name])
+    func aBodyDeclaringWhatTheSlotHandsFits(name: Name) async throws {
+        // Given. The slot hands one value, and a value is applied by position
+        let sut = try module(declaring: [Parameter(name: name, type: .int)])
 
         // When / Then
-        if fits {
-            await #expect(throws: Never.self) {
-                try await Builder().build([sut] + Module.standard)
-            }
-        } else {
-            await #expect {
-                try await Builder().build([sut] + Module.standard)
-            } throws: { error in
-                error is BuildError && "\(error)".contains("where procedure<(int) -> any> is declared")
-            }
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+    }
+
+    @Test("a body declaring another count than the slot hands does not fit", arguments: [
+        [] as [Parameter],
+        [Parameter(name: "item", type: .int), Parameter(name: "index", type: .int)]
+    ])
+    func aBodyDeclaringAnotherCountDoesNotFit(declared: [Parameter]) async throws {
+        // Given. The slot hands one value, and a body declaring none or two is
+        // a different procedure
+        let sut = try module(declaring: declared)
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("where procedure<(int) -> any> is declared")
         }
     }
 
@@ -409,4 +375,46 @@ struct ClosureTests {
 
     // MARK: - Public
     // MARK: - Private
+    // A procedure whose slot hands one int, and an entry handing it a closure
+    // that declares these parameters.
+    private func module(declaring declared: [Parameter]) throws -> Module {
+        let walking = Procedure(
+            signature: Signature(
+                parameters: [
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
+                ]
+            ),
+            body: [
+                Statement(
+                    binding: .constant("once"),
+                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
+                )
+            ]
+        )
+
+        return try Module(
+            procedures: [
+                "walking": walking,
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("body"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: declared),
+                                    body: [],
+                                    result: .literal(.int(1))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("ran"),
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
+                        )
+                    ]
+                )
+            ]
+        )
+    }
 }

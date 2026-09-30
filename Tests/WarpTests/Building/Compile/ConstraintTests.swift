@@ -625,33 +625,29 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a parameter names its bounds once each and in name order")
-    func aParameterNamesItsBoundsInOrder() async throws {
+    @Test("a parameter names its bounds once each and in name order", arguments: [["B", "A"], ["A", "A"]] as [[Name]])
+    func aParameterNamesItsBoundsInOrder(bounds: [Name]) async throws {
         // Given. A signature assembled with `B & A`, which no reader writes
-        func module(bounds: [Name]) throws -> Module {
-            try Module(
-                constraints: ["A": [.int, .string], "B": [.string]],
-                procedures: [
-                    "keep": Procedure(
-                        signature: Signature(
-                            parameters: [Parameter(name: "left", type: .parameter(name: "T", constraints: bounds))],
-                            returns: .int
-                        ),
-                        body: [],
-                        result: .literal(.int(1))
+        let sut = try Module(
+            constraints: ["A": [.int, .string], "B": [.string]],
+            procedures: [
+                "keep": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "left", type: .parameter(name: "T", constraints: bounds))],
+                        returns: .int
                     ),
-                    entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-                ]
-            )
-        }
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+            ]
+        )
 
         // When / Then
-        for bounds in [["B", "A"], ["A", "A"]] as [[Name]] {
-            await #expect {
-                try await builder.build([try module(bounds: bounds)] + Module.standard)
-            } throws: { error in
-                error is BuildError && "\(error)".contains("`some T` names its bounds once each and in name order")
-            }
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("`some T` names its bounds once each and in name order")
         }
     }
 
@@ -884,29 +880,29 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a constraint member is a concrete type")
-    func aConstraintMemberMustBeConcrete() async throws {
+    @Test("a constraint member is a concrete type", arguments: [
+        TypeExpression.parameter(name: "S", constraints: ["Loop"]), .any, .never
+    ])
+    func aConstraintMemberMustBeConcrete(member: TypeExpression) async throws {
         // Given. `some` in member position stands for a type and names none;
         // admitting it would also let a membership chase itself forever
-        for member in [TypeExpression.parameter(name: "S", constraints: ["Loop"]), .any, .never] {
-            let sut = try Module(
-                constraints: ["Loop": [member]],
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
-            )
+        let sut = try Module(
+            constraints: ["Loop": [member]],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
 
-            // When / Then
-            await #expect {
-                try await builder.build([sut] + Module.standard)
-            } throws: { error in
-                error is BuildError && "\(error)".contains("a member is a concrete type")
-            }
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a member is a concrete type")
         }
     }
 
