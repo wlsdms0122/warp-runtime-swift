@@ -283,7 +283,7 @@ struct Judged: Sendable {
                 // query is what a compile settled as const, and a stand-in on
                 // the other door would be read the wrong way by a run.
                 return row(
-                    .native(constness == .const ? .query(UnbroughtProcedure(label)) : .effect(UnbroughtEffect(label))),
+                    .native(constness == .const ? .query(UnbroughtQuery(label)) : .effect(UnbroughtEffect(label))),
                     of: origin,
                     foldable: true,
                     in: table
