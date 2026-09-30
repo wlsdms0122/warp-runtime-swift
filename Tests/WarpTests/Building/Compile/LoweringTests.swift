@@ -13,6 +13,29 @@ import Testing
 // closure takes, when a loop puts a round back, and where an argument stands.
 @Suite("The build lowers a body into slots and rows")
 struct LoweringTests {
+    // Answers what the variable it was handed holds.
+    private struct EchoEffect: Effect {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .inout(.int)) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func run(_ invocation: Invocation<Self>) throws -> Value {
+            try invocation.held(.of)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder()
 
@@ -477,23 +500,5 @@ struct LoweringTests {
     }
 
     // MARK: - Public
-    // MARK: - Private
-}
-
-// Answers what the variable it was handed holds.
-private struct EchoEffect: Effect {
-    enum Parameters: Int, ParameterSet {
-        case of
-
-        var declared: Parameter { Parameter(name: "of", type: .inout(.int)) }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) throws -> Value {
-        try invocation.held(.of)
-    }
-
     // MARK: - Private
 }

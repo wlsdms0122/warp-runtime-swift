@@ -354,6 +354,7 @@ struct ObjectClosureTests {
         }
     }
 
+    // MARK: - Public
     // MARK: - Private
     // The same objects, with the entry's body applying the closure handed in
     // as a literal it holds.

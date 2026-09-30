@@ -18,6 +18,8 @@ import WarpStandard
 // refuses something it was never handed.
 @Suite("An object whose writing is not one")
 struct ObjectReadingTests {
+    private struct ObjectMissing: Error { }
+
     // MARK: - Property
     // A stand-in for what a caller works out from the bytes, which this
     // package does not write. What these ask is what a reading refuses, so any
@@ -797,7 +799,6 @@ struct ObjectReadingTests {
         }
     }
 
-    // MARK: - Public
     @Test("is refused where a numbering counts a declaration for no closures")
     func aDeclarationCountedForNone() async throws {
         // Given. One declaration writing one closure, with a second name
@@ -840,6 +841,7 @@ struct ObjectReadingTests {
         }
     }
 
+    // MARK: - Public
     // MARK: - Private
     // The object as written, its parts under their keys, so a test bends
     // what it means to bend.
@@ -869,5 +871,3 @@ struct ObjectReadingTests {
         return written
     }
 }
-
-private struct ObjectMissing: Error { }

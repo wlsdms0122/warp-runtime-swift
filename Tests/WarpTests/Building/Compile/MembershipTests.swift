@@ -16,7 +16,7 @@ import Testing
 @Suite("A membership as a type")
 struct MembershipTests {
     // MARK: - Property
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a member stands where the membership is declared")
     func aMemberFitsTheMembership() async throws {

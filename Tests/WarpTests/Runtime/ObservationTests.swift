@@ -18,10 +18,42 @@ import WarpStandard
 // account nobody checked would have made that answer hollow.
 @Suite("What a run reports while it runs")
 struct ObservationTests {
+    private enum ObservedEvent: Equatable {
+        case started(String)
+        case completed(String, Value)
+        case failed(String)
+        case rescued(String)
+    }
+
+    private actor RecordingObserver: ExecutionObserver {
+        // MARK: - Property
+        private(set) var events: [ObservedEvent] = []
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func statementStarted(at trace: Trace) {
+            events.append(.started(trace.rendered))
+        }
+
+        func statementCompleted(at trace: Trace, result: Value) {
+            events.append(.completed(trace.rendered, result))
+        }
+
+        func statementFailed(at trace: Trace, error: any Error) {
+            events.append(.failed(trace.rendered))
+        }
+
+        func failureRescued(name: String?, error: any Error) {
+            events.append(.rescued(name ?? ""))
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("every statement is announced before it runs and again with its value")
     func statementsAreAnnounced() async throws {
@@ -380,38 +412,7 @@ struct ObservationTests {
         // Then
         #expect(answer == .int(1))
     }
-}
 
-// MARK: - What a test hears
-
-private enum ObservedEvent: Equatable {
-    case started(String)
-    case completed(String, Value)
-    case failed(String)
-    case rescued(String)
-}
-
-private actor RecordingObserver: ExecutionObserver {
-    // MARK: - Property
-    private(set) var events: [ObservedEvent] = []
-
-    // MARK: - Initializer
     // MARK: - Public
-    func statementStarted(at trace: Trace) {
-        events.append(.started(trace.rendered))
-    }
-
-    func statementCompleted(at trace: Trace, result: Value) {
-        events.append(.completed(trace.rendered, result))
-    }
-
-    func statementFailed(at trace: Trace, error: any Error) {
-        events.append(.failed(trace.rendered))
-    }
-
-    func failureRescued(name: String?, error: any Error) {
-        events.append(.rescued(name ?? ""))
-    }
-
     // MARK: - Private
 }

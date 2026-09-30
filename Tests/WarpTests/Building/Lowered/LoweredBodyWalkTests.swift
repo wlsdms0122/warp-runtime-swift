@@ -44,27 +44,6 @@ struct LoweredBodyWalkTests {
         }
     }
 
-    // Which case an operation is, spelled. Exhaustive, so a case added to
-    // `Operation` lands here as a compile error and asks for its holder.
-    private func kind(of operation: Operation) -> String {
-        switch operation {
-        case .literal: return "literal"
-        case .local: return "local"
-        case .array: return "array"
-        case .record: return "record"
-        case .closure: return "closure"
-        case .apply: return "apply"
-        case .cast: return "cast"
-        case .block: return "block"
-        case .conditional: return "conditional"
-        case .loop: return "loop"
-        case .attempt: return "attempt"
-        case .call: return "call"
-        case .dispatch: return "dispatch"
-        case .leave: return "leave"
-        }
-    }
-
     // MARK: - Initializer
     // MARK: - Test
     @Test("every case that holds an operation has a holder here")
@@ -248,5 +227,26 @@ struct LoweredBodyWalkTests {
         #expect(types.count == 2 && types.contains(.string) && types.contains(.int))
     }
 
+    // MARK: - Public
     // MARK: - Private
+    // Which case an operation is, spelled. Exhaustive, so a case added to
+    // `Operation` lands here as a compile error and asks for its holder.
+    private func kind(of operation: Operation) -> String {
+        switch operation {
+        case .literal: return "literal"
+        case .local: return "local"
+        case .array: return "array"
+        case .record: return "record"
+        case .closure: return "closure"
+        case .apply: return "apply"
+        case .cast: return "cast"
+        case .block: return "block"
+        case .conditional: return "conditional"
+        case .loop: return "loop"
+        case .attempt: return "attempt"
+        case .call: return "call"
+        case .dispatch: return "dispatch"
+        case .leave: return "leave"
+        }
+    }
 }

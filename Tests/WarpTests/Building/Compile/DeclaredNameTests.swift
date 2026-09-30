@@ -349,4 +349,7 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

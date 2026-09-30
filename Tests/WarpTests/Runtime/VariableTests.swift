@@ -279,4 +279,7 @@ struct VariableTests {
         #expect(answer == .int(2))
         #expect(!validates(body: Body(sut.statements + [Statement(binding: .constant("read"), expression: reference("transient"))])))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

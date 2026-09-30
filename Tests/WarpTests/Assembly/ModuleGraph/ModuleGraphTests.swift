@@ -150,5 +150,6 @@ struct ModuleGraphTests {
         #expect(graph.modules.count == Module.standard.count)
     }
 
+    // MARK: - Public
     // MARK: - Private
 }

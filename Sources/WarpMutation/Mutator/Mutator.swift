@@ -18,6 +18,12 @@ import Warp
 // One place at a time, because a mutant that differs in two places cannot say
 // which of them the answer was about.
 public struct Mutator: Sendable {
+    // One step down into a value: a position in a list, or a key in a record.
+    private enum Step {
+        case position(Int)
+        case key(Name)
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     public init() { }
@@ -57,12 +63,6 @@ public struct Mutator: Sendable {
     }
 
     // MARK: - Private
-    // One step down into a value: a position in a list, or a key in a record.
-    private enum Step {
-        case position(Int)
-        case key(Name)
-    }
-
     private static func spelled(_ steps: [Step]) -> String {
         steps.map { step in
             switch step {

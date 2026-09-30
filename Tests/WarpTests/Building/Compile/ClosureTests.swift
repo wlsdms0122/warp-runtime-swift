@@ -15,32 +15,9 @@ import WarpStandard
 // that takes a body, and a procedure that makes one.
 @Suite("A procedure is a value")
 struct ClosureTests {
-    // MARK: - Lifecycle
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
-    @Test("a closure captures the scope it was written in, not the one it runs in")
-    func closureCapturesLexically() async throws {
-        // Given. `made` is written where `outer` says "written"; the call site
-        // has an `outer` of its own saying something else
-        let sut: Body = [
-            Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
-            Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer")))
-            )
-        ]
-
-        // When
-        let answer = try await answer(
-            of: Body(sut.statements + [
-                Statement(binding: .constant("shadow"), expression: .literal(.string("called"))),
-                Statement(binding: .constant("said"), expression: .apply(reference("made"), arguments: [])
-                )
-            ]),
-            result: reference("said")
-        )
-
-        // Then
-        #expect(answer == .string("written"))
-    }
-
     @Test("a body declares as many parameters as the slot hands, under any name", arguments: [
         ([Parameter(name: "item", type: .int)] as [Parameter], true),
         ([Parameter(name: "anything", type: .int)] as [Parameter], true),
@@ -150,6 +127,30 @@ struct ClosureTests {
         } throws: { error in
             error is BuildError && "\(error)".contains(refusal)
         }
+    }
+
+    @Test("a closure captures the scope it was written in, not the one it runs in")
+    func closureCapturesLexically() async throws {
+        // Given. `made` is written where `outer` says "written"; the call site
+        // has an `outer` of its own saying something else
+        let sut: Body = [
+            Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
+            Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer")))
+            )
+        ]
+
+        // When
+        let answer = try await answer(
+            of: Body(sut.statements + [
+                Statement(binding: .constant("shadow"), expression: .literal(.string("called"))),
+                Statement(binding: .constant("said"), expression: .apply(reference("made"), arguments: [])
+                )
+            ]),
+            result: reference("said")
+        )
+
+        // Then
+        #expect(answer == .string("written"))
     }
 
     @Test("an extra parameter the slot never hands does not fit, even a nullable one")
@@ -439,4 +440,7 @@ struct ClosureTests {
         #expect(sut != sut)
         #expect(sut.type == .procedure)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

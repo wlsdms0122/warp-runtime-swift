@@ -17,6 +17,34 @@ struct ValidationTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
+    @Test("a module is held to the procedures it says it imports", arguments: [
+        [] as Set<Name>,
+        ["std.collection.count", "std.math.plus"]
+    ])
+    func aModuleIsHeldToItsImports(_ claimed: Set<Name>) {
+        // Given. A caller decides what to grant from this list and then links
+        // what it granted, so a list that says less than the program sends
+        // links a procedure nobody allowed, and one that says more takes a grant the
+        // program never uses
+        #expect(throws: ValidationError.self) {
+            try Module(
+                imports: claimed,
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        body: [
+                            Statement(binding: .constant("counted"), expression: .call(Call(
+                                selector: "std.collection.count",
+                                arguments: [.literal(.array([.int(1)]))]
+                            ))
+                            )
+                        ]
+                    )
+                ]
+            )
+        }
+    }
+
     @Test("a name the module bound is not introduced again at any depth")
     func aBoundNameIsNotIntroducedAgainAtAnyDepth() {
         // Given. Compiling folds a constant wherever its name is read, so a name
@@ -261,7 +289,6 @@ struct ValidationTests {
         #expect(!validates(body: sut))
     }
 
-
     @Test("a parameter is a name the body may read and may not introduce again")
     func parametersAreVisibleAndDeclared() throws {
         // Given. The signature and the body are one scope, so a name is
@@ -331,34 +358,6 @@ struct ValidationTests {
         }
 
         try Validator().validate(taken)
-    }
-
-    @Test("a module is held to the procedures it says it imports", arguments: [
-        [] as Set<Name>,
-        ["std.collection.count", "std.math.plus"]
-    ])
-    func aModuleIsHeldToItsImports(_ claimed: Set<Name>) {
-        // Given. A caller decides what to grant from this list and then links
-        // what it granted, so a list that says less than the program sends
-        // links a procedure nobody allowed, and one that says more takes a grant the
-        // program never uses
-        #expect(throws: ValidationError.self) {
-            try Module(
-                imports: claimed,
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [
-                            Statement(binding: .constant("counted"), expression: .call(Call(
-                                selector: "std.collection.count",
-                                arguments: [.literal(.array([.int(1)]))]
-                            ))
-                            )
-                        ]
-                    )
-                ]
-            )
-        }
     }
 
     @Test("a list wrong in both directions says which procedures moved, not which lists")
@@ -548,4 +547,7 @@ struct ValidationTests {
             try Validator().validate(sut)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

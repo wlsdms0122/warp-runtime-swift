@@ -11,6 +11,8 @@ import Testing
 
 @Suite("A record stands on the layout it was made with")
 struct RecordTests {
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a layout orders its fields by their names' bytes whichever way they were given")
     func aLayoutIsOrderedByBytes() throws {
@@ -151,4 +153,7 @@ struct RecordTests {
         #expect(record.matches(.dictionary(["a": .double(1), "b": .string("x")])))
         #expect(record["a"] == .int(1))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

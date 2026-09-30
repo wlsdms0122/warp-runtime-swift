@@ -256,81 +256,6 @@ struct CompiledTests {
         #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
     }
 
-    // A type, a contract, a claim about the two in a third document, and a
-    // program handing the type where the contract is asked. The program names
-    // the type and the procedure it sends and has no reason to name the third, so
-    // the standing puts the claim on either side of it depending on the order
-    // the caller wrote the list in.
-    private func leaning() throws -> (typed: Module, asking: Module, claims: Module, program: Module) {
-        (
-            typed: try Module(
-                types: ["bank.Account": .record(["balance": .int])],
-                procedures: [
-                    "bank.Account.describe": Procedure(
-                        signature: Signature(
-                            parameters: [Parameter(name: "of", type: .named("bank.Account"))],
-                            returns: .string
-                        ),
-                        body: [],
-                        result: .literal(.string("an account"))
-                    )
-                ]
-            ),
-            asking: try Module(
-                contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
-                procedures: [
-                    "app.tell": Procedure(
-                        signature: Signature(
-                            parameters: [
-                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
-                            ],
-                            returns: .string
-                        ),
-                        body: [],
-                        result: .call(
-                            Call(selector: "app.Describable.describe", arguments: [reference("it")])
-                        )
-                    )
-                ]
-            ),
-            claims: try Module(
-                claims: ["bank.Account": ["app.Describable"]],
-                procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
-            ),
-            program: try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(returns: .string),
-                        body: [
-                            Statement(
-                                binding: .constant("account"),
-                                expression: .cast(
-                                    .record(["balance": .literal(.int(7))]),
-                                    as: .named("bank.Account"),
-                                    optional: false
-                                )
-                            )
-                        ],
-                        result: .call(Call(selector: "app.tell", arguments: [reference("account")]))
-                    )
-                ]
-            )
-        )
-    }
-
-    // Each document compiled against the ones already compiled, in the order
-    // the graph says they stand.
-    private func incremental(_ modules: [Module]) async throws {
-        var compiled: [Compiled] = []
-
-        for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
-        }
-
-        _ = try builder.link(compiled, supplying: Supplying(Module.standard))
-    }
-
     @Test("a claim answers a document that never names the one making it")
     func aClaimAnswersADocumentThatDoesNotNameIt() async throws {
         // Given
@@ -832,7 +757,83 @@ struct CompiledTests {
         )
     }
 
+    // MARK: - Public
     // MARK: - Private
+    // A type, a contract, a claim about the two in a third document, and a
+    // program handing the type where the contract is asked. The program names
+    // the type and the procedure it sends and has no reason to name the third, so
+    // the standing puts the claim on either side of it depending on the order
+    // the caller wrote the list in.
+    private func leaning() throws -> (typed: Module, asking: Module, claims: Module, program: Module) {
+        (
+            typed: try Module(
+                types: ["bank.Account": .record(["balance": .int])],
+                procedures: [
+                    "bank.Account.describe": Procedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                            returns: .string
+                        ),
+                        body: [],
+                        result: .literal(.string("an account"))
+                    )
+                ]
+            ),
+            asking: try Module(
+                contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+                procedures: [
+                    "app.tell": Procedure(
+                        signature: Signature(
+                            parameters: [
+                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            ],
+                            returns: .string
+                        ),
+                        body: [],
+                        result: .call(
+                            Call(selector: "app.Describable.describe", arguments: [reference("it")])
+                        )
+                    )
+                ]
+            ),
+            claims: try Module(
+                claims: ["bank.Account": ["app.Describable"]],
+                procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+            ),
+            program: try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .string),
+                        body: [
+                            Statement(
+                                binding: .constant("account"),
+                                expression: .cast(
+                                    .record(["balance": .literal(.int(7))]),
+                                    as: .named("bank.Account"),
+                                    optional: false
+                                )
+                            )
+                        ],
+                        result: .call(Call(selector: "app.tell", arguments: [reference("account")]))
+                    )
+                ]
+            )
+        )
+    }
+
+    // Each document compiled against the ones already compiled, in the order
+    // the graph says they stand.
+    private func incremental(_ modules: [Module]) async throws {
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        }
+
+        _ = try builder.link(compiled, supplying: Supplying(Module.standard))
+    }
+
     // What a compile read off the body of a declaration that wrote no answer.
     private func answer(of declared: Name, in compiled: [Compiled]) throws -> LoweredType {
         guard let read = compiled.compactMap({ document in document.answers[declared] }).first else {

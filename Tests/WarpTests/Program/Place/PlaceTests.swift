@@ -22,6 +22,11 @@ import Testing
 @Suite
 struct PlaceTests {
     // MARK: - Property
+    // A document to stand in for one that was read. What derives an identity is
+    // the wire's, which is a target these tests do not import, and what a place
+    // does with one is the same whatever wrote it.
+    private let reading = Identity([0xd0, 0xcf, 0x00])
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
@@ -698,11 +703,6 @@ struct PlaceTests {
 
     // MARK: - Public
     // MARK: - Private
-    // A document to stand in for one that was read. What derives an identity is
-    // the wire's, which is a target these tests do not import, and what a place
-    // does with one is the same whatever wrote it.
-    private let reading = Identity([0xd0, 0xcf, 0x00])
-
     private func module(
         refusing statement: Statement,
         in identity: Identity? = nil

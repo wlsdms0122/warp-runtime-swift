@@ -15,8 +15,30 @@ import Testing
 // is closed exactly once" comes to.
 @Suite("A value handed on once")
 struct LinearTests {
+    struct CloseEffect: Effect {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .consuming(.named("app.Handle"))) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func run(_ invocation: Invocation<Self>) throws -> Value {
+            .null
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a body that opens and closes stands")
     func openedAndClosed() async throws {
@@ -1605,21 +1627,4 @@ struct LinearTests {
             ].merging(others) { _, added in added }
         )
     }
-}
-
-struct CloseEffect: Effect {
-    enum Parameters: Int, ParameterSet {
-        case of
-
-        var declared: Parameter { Parameter(name: "of", type: .consuming(.named("app.Handle"))) }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) throws -> Value {
-        .null
-    }
-
-    // MARK: - Private
 }

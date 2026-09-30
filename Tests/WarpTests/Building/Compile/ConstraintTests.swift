@@ -19,7 +19,7 @@ struct ConstraintTests {
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a reading outside the constraint refuses at the build")
     func aReadingOutsideTheConstraintRefusesAtTheLink() async throws {
@@ -1316,4 +1316,7 @@ struct ConstraintTests {
             try await builder.build([sut] + Module.standard)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

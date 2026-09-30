@@ -136,4 +136,6 @@ struct ReferenceLookupTests {
         }
     }
 
+    // MARK: - Public
+    // MARK: - Private
 }

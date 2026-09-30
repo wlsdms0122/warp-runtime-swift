@@ -240,9 +240,7 @@ struct CallTests {
         // Then
         #expect(outputs["done"] == .bool(true))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }
-
-// MARK: - Support
-
-
-

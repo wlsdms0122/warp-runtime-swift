@@ -443,4 +443,7 @@ struct ExecutorTests {
         // Then
         #expect(outputs["result"] == .string("recovered"))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

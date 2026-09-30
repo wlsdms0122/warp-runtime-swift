@@ -19,53 +19,6 @@ import WarpStandard
 // program has to call somewhere, and what those procedures answer is tested where
 // they live.
 
-struct TestRecoverableFailure: RecoverableFailure {
-    // MARK: - Property
-    let message = "the world did not cooperate"
-
-    var type: String { Self.type }
-
-    static let type = "test"
-
-    // MARK: - Initializer
-    // MARK: - Public
-    // MARK: - Private
-}
-
-struct TestFatalError: WarpError {
-    // MARK: - Property
-    let message = "author mistake"
-
-    // MARK: - Initializer
-    // MARK: - Public
-    // MARK: - Private
-}
-
-// Fails on demand, so a test can ask what the language does with a failure
-// without needing a world to fail in.
-struct FailEffect: Effect {
-    enum Parameters: Int, ParameterSet {
-        case recoverable
-
-        var declared: Parameter { Parameter(name: "recoverable", type: .nullable(.bool)) }
-    }
-
-    // MARK: - Property
-    let failing = Failing.these([TestRecoverableFailure.type])
-
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) throws -> Value {
-        guard invocation[.recoverable] == .bool(true) else {
-            throw TestFatalError()
-        }
-
-        throw TestRecoverableFailure()
-    }
-
-    // MARK: - Private
-}
-
 // A statement that may fail and does not: a plain cast onto a type the value
 // already fits. An `attempt` stands only over a body that can fail, so a test
 // showing what a rescue does *not* catch puts one of these in the body.
@@ -83,7 +36,6 @@ func reference(_ names: Name...) -> Warp.Expression {
 }
 
 // MARK: - Running
-
 
 // The entry name these tests link against. Any name would do, which procedure a
 // run starts from is an argument, so there is nothing special about this one.
@@ -178,86 +130,6 @@ func validates(body: Body, visible: Set<Name> = []) -> Bool {
         return false
     }
 }
-
-
-// MARK: - Procedures a test brings
-
-// Vocabulary is modules, so a test that needs a procedure declares one and puts it
-// in the link.
-extension Module {
-    static let shouting = try! Module(
-        procedures: [
-            "app.shout": Procedure(
-                signature: Signature(of: ShoutEffect.self, returns: .string),
-                implementation: .effect(ShoutEffect())
-            )
-        ]
-    )
-
-    // A procedure that answers from a box it keeps between calls, and says so. Two
-    // bodies calling it meet in that box.
-    static let ticketing = try! Module(
-        procedures: [
-            "app.ticket": Procedure(
-                signature: Signature(returns: .int),
-                implementation: .query(TicketQuery())
-            )
-        ]
-    )
-
-    static let failing = try! Module(
-        procedures: [
-            "app.fail": Procedure(
-                signature: Signature(of: FailEffect.self),
-                implementation: .effect(FailEffect())
-            )
-        ]
-    )
-}
-
-final class TicketQuery: Query, @unchecked Sendable {
-    typealias Parameters = NoParameters
-
-    // MARK: - Property
-    let isolated = false
-
-    private let lock = NSLock()
-    private var issued = 0
-
-    // MARK: - Initializer
-    // MARK: - Public
-    func evaluate(_ question: Question<TicketQuery>) async throws -> Value? {
-        .int(lock.withLock {
-            issued += 1
-
-            return issued
-        })
-    }
-
-    // MARK: - Private
-}
-
-struct ShoutEffect: Effect {
-    enum Parameters: Int, ParameterSet {
-        case text
-
-        var declared: Parameter { Parameter(name: "text", type: .string) }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func run(_ invocation: Invocation<Self>) throws -> Value {
-        .string(invocation.string(.text)?.uppercased() ?? "")
-    }
-
-    // MARK: - Private
-}
-
-
-
-// Every procedure a list of modules declares, as two tables for two questions:
-// what a selector names, and what a path segment reaches.
 
 // MARK: - Conditions
 
@@ -357,58 +229,4 @@ func spelling(_ value: Warp.Expression) -> Warp.Expression {
 
 func refusing(_ message: Warp.Expression) -> Warp.Expression {
     .call(Call(selector: "std.control.abort", arguments: [message]))
-}
-
-extension Closure {
-    // A closure a caller assembles in Swift: no body a document spelled, no
-    // captures, claiming nothing. What a slot that asks nothing takes.
-    static func assembled(answering result: Value? = nil, in table: LoweredTypeTable = .empty) -> Closure {
-        Closure(
-            writer: Closure.Writer(document: .compiled(Compiled.Token()), name: "assembled"),
-            nth: 0,
-            linked: Linked(
-                label: "assembled",
-                origin: 0,
-                signature: Signature(),
-                access: .internal,
-                constness: .unstated,
-                isolation: .unstated,
-                failing: .unstated,
-                implementation: .body(
-                    LoweredBody(instructions: [], result: result.map(Operation.literal)),
-                    Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
-                ),
-                foldable: true,
-                in: table
-            ),
-            captured: []
-        )
-    }
-}
-
-// The walk's answer as the tests ask it: what a path holds, or why the
-// reading went wrong.
-enum Lookup: Equatable {
-    case found(Value)
-    case unfit(reason: String)
-}
-
-extension Folding {
-    func lookup(_ path: Path) async -> Lookup {
-        do {
-            return .found(try await read(path, at: .given("test")))
-        } catch let unfit as ReferenceUnfit {
-            return .unfit(reason: unfit.reason)
-        } catch {
-            return .unfit(reason: "\(error)")
-        }
-    }
-}
-
-
-// A test's image runs from the test's entry unless the test names another.
-extension Executor {
-    func run(_ image: Image, arguments: [Name: Value] = [:]) async throws -> Value {
-        try await run(image, entry: entryName, arguments: arguments)
-    }
 }

@@ -8,8 +8,11 @@ import Testing
 
 @Suite("A catalog brings what a claim needs")
 struct CatalogClaimTests {
+    // MARK: - Property
     private let entryName: Name = "app.main"
 
+    // MARK: - Initializer
+    // MARK: - Test
     @Test("closing brings a claim about two types the list has")
     func closingBringsAClaimAboutTypesTheListHas() async throws {
         // Given. Two libraries that know nothing of each other, a third
@@ -74,4 +77,7 @@ struct CatalogClaimTests {
         #expect(closed.contains { module in module.claims.isEmpty == false })
         await #expect(throws: Never.self) { try await Builder().build(closed) }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

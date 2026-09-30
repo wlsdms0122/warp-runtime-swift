@@ -835,4 +835,7 @@ struct BuilderTests {
         // When / Then
         _ = try await builder.build([sut] + Module.standard)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

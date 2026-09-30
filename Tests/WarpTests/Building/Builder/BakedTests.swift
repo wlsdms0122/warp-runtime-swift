@@ -11,9 +11,74 @@ import Testing
 
 @Suite("A caller compiles documents once and links them many times")
 struct BakedTests {
+    // A procedure answering a number, which says whether it touches anything shared.
+    private struct CountingQuery: Query {
+        typealias Parameters = NoParameters
+
+        // MARK: - Property
+        let isolated: Bool
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            .int(1)
+        }
+
+        // MARK: - Private
+    }
+
+    // Two procedures answering the same way, each reading its one argument under its
+    // own name.
+    private struct OfQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            question[.of]
+        }
+
+        // MARK: - Private
+    }
+
+    private struct ValueQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case value
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "value", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            question[.value]
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder()
 
+    private var entry: Name { "app.add1" }
+
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a vocabulary compiled once answers a document that arrives after it")
     func aBakedVocabularyAnswersALaterDocument() async throws {
@@ -288,9 +353,8 @@ struct BakedTests {
         }
     }
 
+    // MARK: - Public
     // MARK: - Private
-    private var entry: Name { "app.add1" }
-
     // A document declaring one native procedure reading a single argument under
     // the name given.
     private func reading(under name: Name) throws -> Module {
@@ -341,56 +405,4 @@ struct BakedTests {
             ]
         )
     }
-}
-
-// A procedure answering a number, which says whether it touches anything shared.
-private struct CountingQuery: Query {
-    typealias Parameters = NoParameters
-
-    // MARK: - Property
-    let isolated: Bool
-
-    // MARK: - Initializer
-    // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .int(1)
-    }
-
-    // MARK: - Private
-}
-
-// Two procedures answering the same way, each reading its one argument under its
-// own name.
-private struct OfQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case of
-
-        var declared: Parameter { Parameter(name: "of", type: .int) }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        question[.of]
-    }
-
-    // MARK: - Private
-}
-
-private struct ValueQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case value
-
-        var declared: Parameter { Parameter(name: "value", type: .int) }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        question[.value]
-    }
-
-    // MARK: - Private
 }

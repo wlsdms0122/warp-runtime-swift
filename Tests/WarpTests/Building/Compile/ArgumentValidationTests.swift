@@ -11,6 +11,47 @@ import Testing
 
 @Suite("A procedure judges its constant arguments at the build")
 struct ArgumentValidationTests {
+    // A procedure that will not take an odd number, which is a fact about the
+    // value no type says.
+    private struct EvenQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case value
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "value", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func validate(_ question: Question<Self>) throws {
+            guard case let .int(given) = question[.value], given % 2 != 0 else { return }
+
+            throw ValidationError("even takes an even number, and \(given) is odd", at: nil)
+        }
+
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            .bool(true)
+        }
+
+        // MARK: - Private
+    }
+
+    // MARK: - Property
+    private static let host = try! Module(
+        procedures: [
+            "app.even": Procedure(
+                signature: Signature(of: EvenQuery.self, returns: .bool),
+                implementation: .query(EvenQuery())
+            )
+        ]
+    )
+
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a constant argument the procedure refuses is refused at the build")
     func aRefusedConstantIsRefusedAtTheBuild() async throws {
@@ -38,38 +79,9 @@ struct ArgumentValidationTests {
         _ = try await Builder().build([even, Self.host])
     }
 
+    // MARK: - Public
     // MARK: - Private
-    private static let host = try! Module(
-        procedures: [
-            "app.even": Procedure(
-                signature: Signature(of: EvenQuery.self, returns: .bool),
-                implementation: .query(EvenQuery())
-            )
-        ]
-    )
-
     private func even(_ value: Warp.Expression) -> Warp.Expression {
         .call(Call(selector: "app.even", arguments: [value]))
-    }
-}
-
-// A procedure that will not take an odd number, which is a fact about the
-// value no type says.
-private struct EvenQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case value
-
-        var declared: Parameter { Parameter(name: "value", type: .int) }
-    }
-
-    // MARK: - Public
-    func validate(_ question: Question<Self>) throws {
-        guard case let .int(given) = question[.value], given % 2 != 0 else { return }
-
-        throw ValidationError("even takes an even number, and \(given) is odd", at: nil)
-    }
-
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .bool(true)
     }
 }

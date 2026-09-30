@@ -17,7 +17,7 @@ import WarpStandard
 @Suite("What may run beside something else")
 struct IsolationTests {
     // MARK: - Property
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a procedure that says nothing about itself is isolated")
     func aSilentProcedureIsIsolated() async throws {

@@ -27,7 +27,7 @@ struct BoundaryTests {
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("what arithmetic takes is decided before it runs")
     func arithmeticIsCheckedBeforeRunning() async throws {

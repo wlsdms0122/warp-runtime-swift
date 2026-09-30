@@ -15,6 +15,7 @@ import Foundation
 // every field of it in turn. A fixture named by two suites is a fixture, not a
 // suite's private.
 enum ObjectCoverageFixture {
+    // MARK: - Property
     static let everything: Compiled = {
         // Through the door a reading goes through, so the fixture cannot stand
         // up an object the reading would refuse.
@@ -193,48 +194,6 @@ enum ObjectCoverageFixture {
         .conditional, .loop, .attempt, .call, .leave(.procedure), .leave(.construct), .leave(.round)
     ]
 
-    // A row a closure literal was lifted into, whose frame holds what the
-    // body that stood it up takes into it.
-    static func lifted(label: Name) throws -> Judged {
-        try Judged(
-            label: label,
-            signature: Signature(returns: .int),
-            access: .internal,
-            constness: .unstated,
-            isolation: .unstated,
-            failing: .unstated,
-            sends: [],
-            judging: .body(
-                LoweredBody(instructions: [], result: .literal(.int(0))),
-                Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
-            )
-        )
-    }
-
-    static func row(label: Name, body: Bool) throws -> Judged {
-        try Judged(
-            label: label,
-            signature: Signature(parameters: [parameter], returns: .int),
-            access: .internal,
-            constness: body ? .const : .unstated,
-            isolation: body ? .unstated : .isolated,
-            failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            sends: body ? [] : [Sent(row: 1, handing: 2)],
-            judging: body
-                ? .body(
-                    everyOperation,
-                    Frame(
-                        size: 12,
-                        parameters: [0],
-                        variables: [(variable: 1, slot: 2)],
-                        captures: [],
-                        names: (0 ..< 12).map { at in Name(normal: "s\(at)") }
-                    )
-                )
-                : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: 2)])
-        )
-    }
-
     // Every case of `Operation`, `Instruction.Binding`, `Step` and `Argument`.
     static let everyOperation = LoweredBody(
         instructions: [
@@ -328,4 +287,50 @@ enum ObjectCoverageFixture {
         ],
         calls: ["a.nineteen": callOperation]
     )
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // A row a closure literal was lifted into, whose frame holds what the
+    // body that stood it up takes into it.
+    static func lifted(label: Name) throws -> Judged {
+        try Judged(
+            label: label,
+            signature: Signature(returns: .int),
+            access: .internal,
+            constness: .unstated,
+            isolation: .unstated,
+            failing: .unstated,
+            sends: [],
+            judging: .body(
+                LoweredBody(instructions: [], result: .literal(.int(0))),
+                Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
+            )
+        )
+    }
+
+    static func row(label: Name, body: Bool) throws -> Judged {
+        try Judged(
+            label: label,
+            signature: Signature(parameters: [parameter], returns: .int),
+            access: .internal,
+            constness: body ? .const : .unstated,
+            isolation: body ? .unstated : .isolated,
+            failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
+            sends: body ? [] : [Sent(row: 1, handing: 2)],
+            judging: body
+                ? .body(
+                    everyOperation,
+                    Frame(
+                        size: 12,
+                        parameters: [0],
+                        variables: [(variable: 1, slot: 2)],
+                        captures: [],
+                        names: (0 ..< 12).map { at in Name(normal: "s\(at)") }
+                    )
+                )
+                : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: 2)])
+        )
+    }
+
+    // MARK: - Private
 }

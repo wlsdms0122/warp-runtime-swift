@@ -19,7 +19,7 @@ struct InferenceTests {
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a type parameter carries the element type through the call that filled it")
     func aHoleCarriesWhatFilledIt() async throws {
@@ -144,7 +144,6 @@ struct InferenceTests {
         }
     }
 
-    // MARK: - Test
     @Test("a loop's result carries the body name it reads, nullable")
     func aLoopResultCarriesTheBodyNameItReads() async throws {
         // Given. A finished round's exit hands the result the body's own
@@ -2068,4 +2067,7 @@ struct InferenceTests {
             "\(error)".contains("never finishes")
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

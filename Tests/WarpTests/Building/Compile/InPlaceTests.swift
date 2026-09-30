@@ -12,6 +12,9 @@ import WarpStandard
 
 @Suite("Writing in place")
 struct InPlaceTests {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Test
     @Test("a module variable starts every run at its settled value")
     func moduleVariableStartsFreshEachRun() async throws {
         // Given
@@ -495,4 +498,7 @@ struct InPlaceTests {
                 == (try held.writing(.int(2), at: path, under: "x.b"))
         )
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

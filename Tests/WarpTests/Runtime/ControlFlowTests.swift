@@ -367,4 +367,7 @@ struct ControlFlowTests {
         // When / Then
         #expect(!validates(sut))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

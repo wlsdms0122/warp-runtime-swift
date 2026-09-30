@@ -16,7 +16,8 @@ import WarpStandard
 // only reachable through a notation, and the notation has become the language.
 @Suite("Authoring a procedure in Swift")
 struct SwiftAuthoringTests {
-    // MARK: - Lifecycle
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("hello world needs no front end")
     func helloWorld() async throws {
@@ -167,6 +168,9 @@ struct SwiftAuthoringTests {
         #expect(outputs["shouted"] == .string("HI"))
         #expect(outputs["called"] == .string("yo"))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }
 
 // A procedure written in Swift and never taught to a document to spell. It conforms

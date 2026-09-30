@@ -14,8 +14,17 @@ import Testing
 // disagreed, instead of somewhere inside the body.
 @Suite("A type is an expression")
 struct TypeTests {
-    // MARK: - Lifecycle
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
+    @Test("a name is identifiers joined by dots, and never a scalar's procedure", arguments: [
+        ("Account", true), ("bank.Account", true), ("_x1", true),
+        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
+    ])
+    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
+        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
+    }
+
     @Test("an array declares what it holds")
     func arrayDeclaresItsElement() throws {
         // Given
@@ -67,14 +76,6 @@ struct TypeTests {
         #expect(throws: ArgumentError.self) {
             try sut.settling(.dictionary(["id": .string("a")]), at: "task")
         }
-    }
-
-    @Test("a name is identifiers joined by dots, and never a scalar's procedure", arguments: [
-        ("Account", true), ("bank.Account", true), ("_x1", true),
-        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
-    ])
-    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
     }
 
     @Test("an alias of a declared record names the record on either side")
@@ -257,4 +258,6 @@ struct TypeTests {
         #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
     }
 
+    // MARK: - Public
+    // MARK: - Private
 }

@@ -10,11 +10,46 @@ import Testing
 
 @Suite("What a run from the entry can reach")
 struct ReachTests {
+    // Doubles what it is sent, by sending `std.math.times`.
+    private struct TwiceQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        enum Imports: Int, ImportSet {
+            case times
+
+            // MARK: - Property
+            var selector: Name { "std.math.times" }
+
+            var handing: Int { 2 }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            try await question.send(.times, handing: [question[.of], .int(2)])
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder()
 
     // MARK: - Initializer
-    // MARK: - Lifecycle
     // MARK: - Test
     @Test("a procedure reached only through a contract is reached")
     func aDispatchReachesEveryRowAnsweringIt() async throws {
@@ -196,30 +231,7 @@ struct ReachTests {
         #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.twice", "std.math.times"]))
         #expect(try !image.reached(from: entryName).contains("std.math.plus"))
     }
-}
 
-// Doubles what it is sent, by sending `std.math.times`.
-private struct TwiceQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case of
-
-        var declared: Parameter { Parameter(name: "of", type: .int) }
-    }
-
-    enum Imports: Int, ImportSet {
-        case times
-
-        var selector: Name { "std.math.times" }
-
-        var handing: Int { 2 }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        try await question.send(.times, handing: [question[.of], .int(2)])
-    }
-
     // MARK: - Private
 }

@@ -16,6 +16,19 @@ import Testing
 // nothing at all where one of them cannot be named.
 @Suite("An object records what it was compiled against")
 struct ObjectDependencyTests {
+    private struct PeekQuery: Query {
+        typealias Parameters = NoParameters
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            .int(7)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // A stand-in for what a caller works out from the bytes, which this package
     // does not write. Two objects that differ answer differently here, which
@@ -187,13 +200,5 @@ struct ObjectDependencyTests {
         )
 
         return (behind: behind[0].written, calling: compiled[0].written)
-    }
-}
-
-private struct PeekQuery: Query {
-    typealias Parameters = NoParameters
-
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .int(7)
     }
 }

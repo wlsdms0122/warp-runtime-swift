@@ -450,4 +450,7 @@ struct NeverTests {
             "\(error)".contains("never be reached")
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

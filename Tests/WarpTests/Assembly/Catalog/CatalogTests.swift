@@ -374,4 +374,7 @@ struct CatalogTests {
             "\(error)".contains("the procedure 'a.procedure' is declared by")
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

@@ -11,9 +11,23 @@ import Testing
 
 @Suite("What a constant is allowed to settle from")
 struct FoldingReachTests {
+    private struct SeatQuery: Query {
+        typealias Parameters = NoParameters
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            .int(7)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder()
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a constant settles from the standard vocabulary")
     func aConstantSettlesFromTheStandardVocabulary() async throws {
@@ -207,18 +221,6 @@ struct FoldingReachTests {
         }
     }
 
-    // MARK: - Private
-}
-
-private struct SeatQuery: Query {
-    typealias Parameters = NoParameters
-
-    // MARK: - Property
-    // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        .int(7)
-    }
-
     // MARK: - Private
 }

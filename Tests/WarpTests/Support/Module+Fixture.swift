@@ -1,0 +1,42 @@
+//
+//  Module+Fixture.swift
+//  WarpTests
+//
+//  Created by JSilver on 8/17/26.
+//
+
+import Foundation
+@testable import Warp
+
+// Vocabulary is modules, so a test that needs a procedure declares one and puts it
+// in the link.
+extension Module {
+    static let shouting = try! Module(
+        procedures: [
+            "app.shout": Procedure(
+                signature: Signature(of: ShoutEffect.self, returns: .string),
+                implementation: .effect(ShoutEffect())
+            )
+        ]
+    )
+
+    // A procedure that answers from a box it keeps between calls, and says so. Two
+    // bodies calling it meet in that box.
+    static let ticketing = try! Module(
+        procedures: [
+            "app.ticket": Procedure(
+                signature: Signature(returns: .int),
+                implementation: .query(TicketQuery())
+            )
+        ]
+    )
+
+    static let failing = try! Module(
+        procedures: [
+            "app.fail": Procedure(
+                signature: Signature(of: FailEffect.self),
+                implementation: .effect(FailEffect())
+            )
+        ]
+    )
+}

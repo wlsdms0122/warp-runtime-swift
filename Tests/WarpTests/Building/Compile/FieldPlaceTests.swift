@@ -280,6 +280,7 @@ struct FieldPlaceTests {
         #expect(written == .record(Record(name: nil, ["x": .int(1), "y": .int(9)])))
     }
 
+    // MARK: - Public
     // MARK: - Private
     // The steps of the path a body answers with, which is where these tests
     // read what the build lowered.
@@ -302,26 +303,5 @@ struct FieldPlaceTests {
         }
 
         return address.steps
-    }
-}
-
-extension Step: Equatable {
-    public static func == (lhs: Step, rhs: Step) -> Bool {
-        switch (lhs, rhs) {
-        case let (.field(mine, myName, myMark), .field(theirs, theirName, theirMark)):
-            return mine == theirs && myName == theirName && myMark == theirMark
-
-        case let (.key(mine, myMark), .key(theirs, theirMark)):
-            return mine == theirs && myMark == theirMark
-
-        case let (.index(mine, myMark), .index(theirs, theirMark)):
-            return mine == theirs && myMark == theirMark
-
-        case let (.at(mine, myMark), .at(theirs, theirMark)):
-            return mine.slot == theirs.slot && mine.steps == theirs.steps && myMark == theirMark
-
-        default:
-            return false
-        }
     }
 }

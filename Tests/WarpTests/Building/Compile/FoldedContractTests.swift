@@ -8,45 +8,11 @@ import Testing
 
 @Suite("A folded constant is held to the contract it was handed to")
 struct FoldedContractTests {
+    // MARK: - Property
     private let entryName: Name = "app.main"
 
-    private func documents(returning type: TypeExpression, giving: Warp.Expression) throws -> [Module] {
-        let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
-            procedures: [
-                "app.count": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .literal(.int(1))
-                ),
-                "app.give": Procedure(
-                    signature: Signature(returns: type),
-                    body: [],
-                    result: giving
-                )
-            ]
-        )
-        let program = try Module(
-            constants: [
-                "app.counted": .call(
-                    Call(selector: "app.count", arguments: [.call(Call(selector: "app.give"))])
-                )
-            ],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .reference([.key("app.counted")])
-                )
-            ]
-        )
-        return [asking, program]
-    }
-
+    // MARK: - Initializer
+    // MARK: - Test
     // Given. A procedure answering `any` hands a string where a contract is asked,
     // and the reading says nothing about what arrives.
     @Test("a value wearing no name is refused however much of the list is in hand")
@@ -164,5 +130,44 @@ struct FoldedContractTests {
                     && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
             }
         }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    private func documents(returning type: TypeExpression, giving: Warp.Expression) throws -> [Module] {
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            procedures: [
+                "app.count": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                "app.give": Procedure(
+                    signature: Signature(returns: type),
+                    body: [],
+                    result: giving
+                )
+            ]
+        )
+        let program = try Module(
+            constants: [
+                "app.counted": .call(
+                    Call(selector: "app.count", arguments: [.call(Call(selector: "app.give"))])
+                )
+            ],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .reference([.key("app.counted")])
+                )
+            ]
+        )
+        return [asking, program]
     }
 }

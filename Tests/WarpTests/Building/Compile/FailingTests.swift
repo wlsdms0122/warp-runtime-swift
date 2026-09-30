@@ -17,7 +17,7 @@ import WarpStandard
 @Suite("What may come out of a body")
 struct FailingTests {
     // MARK: - Property
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a body that casts and calls nothing that fails, fails nothing")
     func aQuietBodyFailsNothing() async throws {

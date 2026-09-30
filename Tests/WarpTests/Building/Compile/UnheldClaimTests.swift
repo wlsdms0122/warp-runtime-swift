@@ -8,8 +8,11 @@ import Testing
 
 @Suite("A claim nobody leans on refuses nobody")
 struct UnheldClaimTests {
+    // MARK: - Property
     private let entryName: Name = "app.main"
 
+    // MARK: - Initializer
+    // MARK: - Test
     @Test("a claim with no procedure behind it refuses only what leans on it")
     func anUnheldClaimRefusesOnlyWhatLeansOnIt() async throws {
         // Given. A contract, a type, and a claim about the two with no procedure
@@ -287,4 +290,7 @@ struct UnheldClaimTests {
         #expect(throws: Never.self) { try Builder().link(compiled, supplying: Supplying(Module.standard)) }
         await #expect(throws: Never.self) { try await Builder().build(modules) }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

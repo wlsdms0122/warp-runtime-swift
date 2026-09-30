@@ -21,6 +21,7 @@ struct ClosureWalkTests {
         }
     }
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("every closure is named, what a closure captured by copy included")
     func everyClosureIsNamed() async throws {
@@ -72,4 +73,7 @@ struct ClosureWalkTests {
         #expect(!sut.holdsClosure(where: \.tookAHold))
         #expect(!Value.array([.int(1), .string("x")]).holdsProcedure)
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

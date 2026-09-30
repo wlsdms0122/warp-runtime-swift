@@ -22,6 +22,8 @@ import WarpMutation
 @Suite("An object with one place of it replaced")
 struct ObjectMutationTests {
     // MARK: - Property
+    private static let everything = ObjectCoverageFixture.everything
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("is refused wherever it is mutated, and never traps")
@@ -75,5 +77,4 @@ struct ObjectMutationTests {
 
     // MARK: - Public
     // MARK: - Private
-    private static let everything = ObjectCoverageFixture.everything
 }

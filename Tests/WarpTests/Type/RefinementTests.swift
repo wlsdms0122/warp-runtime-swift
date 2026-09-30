@@ -21,6 +21,7 @@ struct RefinementTests {
     // MARK: - Property
     private let builder = Builder()
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a fraction range judges fractions, and the whole numbers it widens")
     func aFractionRangeSettles() throws {

@@ -17,6 +17,8 @@ import Testing
 // and a chain is as long as a program. A fact only a graph this size states.
 @Suite("The call graph is walked callee first, and a cycle is one component")
 struct StronglyConnectedTests {
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("everything a name reaches is closed before the name is")
     func calleesComeFirst() {

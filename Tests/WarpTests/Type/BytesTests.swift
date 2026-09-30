@@ -20,6 +20,7 @@ struct BytesTests {
     private let builder = Builder()
     private let entryName: Name = "entry"
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("bytes and an array share their worth, not their spelling")
     func bytesAndArrayShareWorth() {
@@ -463,4 +464,7 @@ struct BytesTests {
         // When / Then
         #expect(try await run(sut) == .bytes([104, 105]))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

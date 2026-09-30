@@ -19,6 +19,7 @@ struct RangeTests {
     private let builder = Builder()
     private let entryName: Name = "entry"
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("the bounds speak where the value settles")
     func aRangeSettles() throws {
@@ -267,4 +268,7 @@ struct RangeTests {
         // When / Then
         #expect(try await run(sut, arguments: ["level": .int(7)]) == .int(7))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

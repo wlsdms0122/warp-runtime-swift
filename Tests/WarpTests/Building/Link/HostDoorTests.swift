@@ -11,6 +11,18 @@ import Testing
 
 @Suite("A host settles a value against a declaration the build holds")
 struct HostDoorTests {
+    // MARK: - Property
+    private var sut: Module {
+        get throws {
+            try Module(
+                imports: [],
+                types: ["bank.Account": .record(["balance": .int])],
+                procedures: ["entry": Procedure(access: .public, implementation: .body(Block(body: [], result: .literal(.null))))]
+            )
+        }
+    }
+
+    // MARK: - Initializer
     // MARK: - Test
     @Test("settling against a declared type builds the value on that type's layout")
     func settlingByDeclarationNamesTheValue() async throws {
@@ -97,14 +109,6 @@ struct HostDoorTests {
         #expect(Value.record(built) == .dictionary(["balance": .int(1)]))
     }
 
+    // MARK: - Public
     // MARK: - Private
-    private var sut: Module {
-        get throws {
-            try Module(
-                imports: [],
-                types: ["bank.Account": .record(["balance": .int])],
-                procedures: ["entry": Procedure(access: .public, implementation: .body(Block(body: [], result: .literal(.null))))]
-            )
-        }
-    }
 }

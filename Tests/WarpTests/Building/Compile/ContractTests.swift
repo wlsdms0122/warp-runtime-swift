@@ -17,7 +17,7 @@ import Testing
 @Suite("What a value is able to do")
 struct ContractTests {
     // MARK: - Property
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a body calls a procedure on a value whose type it does not know")
     func aContractCarriesAProcedureIntoAGenericBody() async throws {

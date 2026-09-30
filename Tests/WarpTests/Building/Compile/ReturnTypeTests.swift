@@ -17,7 +17,7 @@ struct ReturnTypeTests {
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a declared answer is settled before the caller sees it")
     func answerIsSettled() async throws {
@@ -180,4 +180,7 @@ struct ReturnTypeTests {
             _ = try await builder.build([sut])
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

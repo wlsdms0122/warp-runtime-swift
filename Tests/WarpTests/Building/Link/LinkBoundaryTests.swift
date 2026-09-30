@@ -60,6 +60,7 @@ struct LinkBoundaryTests {
         #expect(try !closure.answered().readable(in: theirs.types.loweredTypes))
     }
 
+    // MARK: - Public
     // MARK: - Private
     // A document that hands out a procedure taking one of its declared types.
     private func world(declaring types: [Name: TypeExpression]) throws -> [Module] {

@@ -14,10 +14,33 @@ import Testing
 // It is not reserved for native code.
 @Suite("What a declaration is about is its first parameter")
 struct FirstParameterTests {
+    // Answers what it was sent, read by the first parameter's own key.
+    private struct EchoQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value? {
+            question[.of]
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a first argument is read by the name the signature gave it")
     func firstArgumentIsANamedParameter() async throws {
@@ -282,22 +305,7 @@ struct FirstParameterTests {
             "\(error)".contains("reads a dot on any, which declares nothing")
         }
     }
-}
 
-// Answers what it was sent, read by the first parameter's own key.
-private struct EchoQuery: Query {
-    enum Parameters: Int, ParameterSet {
-        case of
-
-        var declared: Parameter { Parameter(name: "of", type: .int) }
-    }
-
-    // MARK: - Property
-    // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        question[.of]
-    }
-
     // MARK: - Private
 }

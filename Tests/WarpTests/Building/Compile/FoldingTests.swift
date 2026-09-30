@@ -135,4 +135,7 @@ struct FoldingTests {
             "note": .string("${count}")
         ]))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

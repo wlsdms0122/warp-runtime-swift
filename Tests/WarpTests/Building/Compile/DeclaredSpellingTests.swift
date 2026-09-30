@@ -19,7 +19,7 @@ struct DeclaredSpellingTests {
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("a type name is its declared spelling, in the declaring module too")
     func aTypeNameIsItsQualifiedSpelling() async throws {
@@ -441,4 +441,7 @@ struct DeclaredSpellingTests {
             try await builder.build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }
