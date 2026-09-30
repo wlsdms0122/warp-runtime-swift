@@ -18,16 +18,16 @@ struct Placed<Held> {
     // Where the caller put the document that wrote it. What tells two
     // documents apart when neither was read from anything, since a module a
     // caller built has no identity.
-    let origin: Int
+    let handed: Int
 
     // What a sentence calls this declaration when it names one among several.
-    var spelled: String { place.document.spelled(at: origin) }
+    var spelled: String { place.document.spelled(at: handed) }
 
     // MARK: - Initializer
-    init(_ held: Held, at place: Place, of origin: Int) {
+    init(_ held: Held, at place: Place, of handed: Int) {
         self.held = held
         self.place = place
-        self.origin = origin
+        self.handed = handed
     }
 
     // MARK: - Public

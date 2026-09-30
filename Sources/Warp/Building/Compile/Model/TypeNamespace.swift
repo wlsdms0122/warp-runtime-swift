@@ -33,9 +33,9 @@ struct TypeNamespace {
         var constraints: [Name: Placed<[TypeExpression]>] = [:]
         var contracts: [Name: Placed<[Name: ContractProcedure]>] = [:]
 
-        for (origin, held) in documents.enumerated() {
+        for (handed, held) in documents.enumerated() {
             for (name, type) in held.types.sorted(by: { $0.key < $1.key }) {
-                let declaration = Placed(type, at: .type(name.spelling, in: held.document), of: origin)
+                let declaration = Placed(type, at: .type(name.spelling, in: held.document), of: handed)
 
                 // Read before written. Written first, the entry that says what
                 // this collides with is the one this call overwrote.
@@ -51,12 +51,12 @@ struct TypeNamespace {
             }
         }
 
-        for (origin, held) in documents.enumerated() {
+        for (handed, held) in documents.enumerated() {
             for (name, members) in held.constraints.sorted(by: { $0.key < $1.key }) {
                 let declaration = Placed(
                     members,
                     at: .constraint(name.spelling, in: held.document),
-                    of: origin
+                    of: handed
                 )
 
                 if let declared = types[name] {
@@ -81,12 +81,12 @@ struct TypeNamespace {
             }
         }
 
-        for (origin, held) in documents.enumerated() {
+        for (handed, held) in documents.enumerated() {
             for (name, procedures) in held.contracts.sorted(by: { $0.key < $1.key }) {
                 let declaration = Placed(
                     procedures,
                     at: .contract(name.spelling, in: held.document),
-                    of: origin
+                    of: handed
                 )
 
                 if let declared = types[name]?.spelled ?? constraints[name]?.spelled {
@@ -114,7 +114,7 @@ struct TypeNamespace {
         var claimed: Set<Claim> = []
         var claims: [Placed<Claim>] = []
 
-        for (origin, held) in documents.enumerated() {
+        for (handed, held) in documents.enumerated() {
             for (type, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
                 for contract in contracts.sorted() {
                     let claim = Claim(type: type, contract: contract)
@@ -125,7 +125,7 @@ struct TypeNamespace {
                         Placed(
                             claim,
                             at: .satisfies(type.spelling, in: held.document),
-                            of: origin
+                            of: handed
                         )
                     )
                 }
