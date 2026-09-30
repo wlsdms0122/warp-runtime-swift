@@ -25,21 +25,31 @@ struct Fanout: Sendable {
     // What one piece answered. A struct rather than a tuple, which the task
     // group needs for its child results.
     private struct Outcome: Sendable {
+        // MARK: - Property
         let key: Name?
         let position: Int
         let value: Value?
         let failure: (any Error)?
 
         var label: Name { key ?? Name(normal: "[\(position)]") }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // One closure to run: its name if its author gave one, where it sat, and
     // what it is offered. How a piece is reported is `Outcome`'s to derive.
     private struct Piece: Sendable {
+        // MARK: - Property
         let key: Name?
         let position: Int
         let closure: Closure
         let arguments: [Value]
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

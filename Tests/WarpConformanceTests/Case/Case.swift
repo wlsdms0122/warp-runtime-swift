@@ -1,227 +1,14 @@
 //
-//  ConformanceTests.swift
+//  Case.swift
 //  WarpConformanceTests
 //
-//  Created by JSilver on 8/20/26.
+//  Created by JSilver on 9/27/26.
 //
 
 import Foundation
-import Testing
 import Warp
-import WarpStandard
 import WarpSyntax
-
-// The specification's cases, run against this implementation.
-//
-// Every other test here reaches inside (`@testable`, private types, internal
-// helpers) which is right for a test about how something is built. These are
-// about something else: whether this is the language `spec/` describes. So this
-// file imports what any caller imports and nothing more. A runner that could
-// see inside could pass by agreeing with the implementation rather than with
-// the specification, which is the one thing it must not be able to do.
-//
-// The cases are data, and the point of that is that this file is replaceable.
-// An implementation in another language writes its own runner (this much code)
-// and asks the same questions.
-@Suite("The specification's cases")
-struct ConformanceTests {
-    // MARK: - Property
-    // MARK: - Initializer
-    // MARK: - Test
-    @Test("every case in the specification", arguments: try Case.all())
-    func specificationCase(_ sut: Case) async throws {
-        switch sut.asked {
-        case let .program(program):
-            switch program.expectation {
-            case let .answers(expected):
-                let answered = try await run(program)
-
-                #expect(answered == expected, "\(sut.name): \(sut.note)")
-
-            case let .refuses(stage):
-                let reached = try await reached(program)
-
-                #expect(reached == stage, "\(sut.name): \(sut.note)")
-
-            case let .builds(expected):
-                let built = try await built(program)
-
-                #expect(built == expected, "\(sut.name): \(sut.note)")
-            }
-
-        case let .object(object):
-            switch object.expectation {
-            case let .answers(expected):
-                let answered = try await run(object)
-
-                #expect(answered == expected, "\(sut.name): \(sut.note)")
-
-            case let .refuses(stage):
-                let reached = try await reached(object)
-
-                #expect(reached == stage, "\(sut.name): \(sut.note)")
-            }
-
-        case let .encoded(encoded, reading):
-            switch reading {
-            case let .reads(expected):
-                #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
-
-            case let .spells(expected):
-                #expect(try encoded.read() == expected, "\(sut.name): \(sut.note)")
-                #expect(try encoded.written(expected) == encoded.data, "\(sut.name): \(sut.note)")
-
-            case .refuses:
-                #expect(throws: (any Error).self, "\(sut.name): \(sut.note)") { try encoded.read() }
-            }
-        }
-    }
-
-    @Test("the cases are the specification's, and it has some")
-    func thereAreCases() throws {
-        // Given. A suite that silently found nothing would pass, and passing by
-        // asking nothing is the failure mode a conformance suite has
-        let sut = try Case.all()
-
-        #expect(sut.count >= 10)
-        #expect(Set(sut.map(\.name)).count == sut.count)
-
-        // A case is found by its name: a diff names the file and a failure names
-        // the case, and a reader who has one goes looking for the other. Where
-        // the two drift apart the case is still asked and still nobody finds it.
-        let adrift = sut.filter { one in one.name != one.file }.map { one in "\(one.file) says '\(one.name)'" }
-
-        #expect(adrift.isEmpty, "a case is named what its file is: \(adrift.joined(separator: ", "))")
-    }
-
-    // MARK: - Public
-    // MARK: - Private
-    private func run(_ sut: Case.Program) async throws -> Value {
-        let builder = Builder()
-        let supplying = try await Supplying(sut.modules())
-        let laid = try await laid(sut, with: builder, supplying: supplying)
-        let own = try await builder.compile(
-            [try Loader().load(sut.document, identity: try Identity.of(sut.document))],
-            against: laid,
-            supplying: supplying
-        )
-        let image = try builder.link(laid + own, supplying: supplying)
-
-        return try await Executor().run(image, entry: "entry", arguments: sut.arguments)
-    }
-
-    // What stands before the case's own document: the vocabulary the case
-    // asked for and the standard one, then the documents beside the program
-    // laid one after another in the order written, each against what stands
-    // before it, the way a host lays documents as they arrive.
-    private func laid(_ sut: Case.Program, with builder: Builder, supplying: Supplying) async throws -> [Compiled] {
-        var laid = try await builder.compile(try await sut.brought + Module.standard, against: [], supplying: supplying)
-
-        for document in try sut.beside {
-            laid += try await builder.compile([document], against: laid, supplying: supplying)
-        }
-
-        return laid
-    }
-
-    // The object the program's own document compiles to, against what the
-    // case asked the runner to bring and the standard vocabulary. Every
-    // object is keyed under the digest of its bytes and every document under
-    // the digest of its own, under *what a runner does* in `spec/conformance.md`.
-    private func built(_ sut: Case.Program) async throws -> Value {
-        let builder = Builder(fingerprinting: Fingerprint.of)
-        let supplying = try await Supplying(sut.modules())
-        let behind = try await laid(sut, with: builder, supplying: supplying)
-        let own = try await builder.compile(
-            [try Loader().load(sut.document, identity: try Identity.of(sut.document))],
-            against: behind,
-            supplying: supplying
-        )
-
-        guard own.count == 1 else { throw ConformanceError("\(own.count) documents compiled where one stood") }
-
-        return try own[0].object()
-    }
-
-    // An object read under the identity it writes, laid beside the standard
-    // vocabulary compiled the way a `builds` case sees it, and run.
-    private func run(_ sut: Case.Object) async throws -> Value {
-        let builder = Builder(fingerprinting: Fingerprint.of)
-        let supplying = try Supplying(Module.standard)
-        let behind = try await builder.compile(Module.standard, against: [], supplying: supplying)
-        let read = try Compiled(written: sut.written, of: sut.identity)
-        let image = try builder.link(behind + [read], supplying: supplying)
-
-        return try await Executor().run(image, entry: "entry", arguments: sut.arguments)
-    }
-
-    private func reached(_ sut: Case.Object) async throws -> Case.Stage? {
-        let builder = Builder(fingerprinting: Fingerprint.of)
-        let supplying = try Supplying(Module.standard)
-        let behind = try await builder.compile(Module.standard, against: [], supplying: supplying)
-        let read: Compiled
-
-        do {
-            read = try Compiled(written: sut.written, of: sut.identity)
-        } catch {
-            return .load
-        }
-
-        let image: Image
-
-        do {
-            image = try builder.link(behind + [read], supplying: supplying)
-        } catch {
-            return .build
-        }
-
-        do {
-            _ = try await Executor().run(image, entry: "entry", arguments: sut.arguments)
-        } catch {
-            return .run
-        }
-
-        return nil
-    }
-
-    // How far a case got before it was refused. The stage is part of the answer:
-    // stopping at a run what another implementation stops at a build means
-    // something already happened, and what already happened cannot be taken back.
-    private func reached(_ sut: Case.Program) async throws -> Case.Stage? {
-        let builder = Builder()
-        let vocabulary = try await sut.brought
-        let module: Module
-
-        // The case's own document is read apart from the rest, because a
-        // document that does not read is the answer to this question and a
-        // vocabulary that does not read is a case nobody can ask.
-        do {
-            module = try Loader().load(sut.document, identity: try Identity.of(sut.document))
-        } catch {
-            return .load
-        }
-
-        let image: Image
-
-        do {
-            let supplying = try Supplying(vocabulary + sut.beside + [module] + Module.standard)
-            let laid = try await laid(sut, with: builder, supplying: supplying)
-            let own = try await builder.compile([module], against: laid, supplying: supplying)
-
-            image = try builder.link(laid + own, supplying: supplying)
-        } catch {
-            return .build
-        }
-
-        do {
-            _ = try await Executor().run(image, entry: "entry", arguments: sut.arguments)
-        } catch {
-            return .run
-        }
-
-        return nil
-    }
-}
+import WarpStandard
 
 // One question, read from the specification rather than written here.
 //
@@ -234,14 +21,6 @@ struct ConformanceTests {
 // a case declares `test`, a document declares `warp`, and each is refused by the
 // other's reader for what it is instead of for the keys it happens to carry.
 struct Case: Sendable, CustomStringConvertible {
-    // Which types a runner has to understand to ask these questions. It moves
-    // for the same reason `warp` does and on its own schedule. The day a case
-    // may say something new is not the day a document may. Every change
-    // before the first release folds into this one.
-    static let version = 1
-
-    static let versionKey: Name = "test"
-
     enum Stage: String, Sendable {
         case load
         case build
@@ -267,6 +46,7 @@ struct Case: Sendable, CustomStringConvertible {
             case refuses(Stage)
         }
 
+        // MARK: - Property
         let written: Value
         let arguments: [Name: Value]
         let expectation: Outcome
@@ -284,6 +64,10 @@ struct Case: Sendable, CustomStringConvertible {
 
             return Identity(bytes)
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // A document in one of its encodings, as the bytes that arrived, which
@@ -292,12 +76,15 @@ struct Case: Sendable, CustomStringConvertible {
         case binary(Data)
         case text(Data)
 
+        // MARK: - Property
         var data: Data {
             switch self {
             case let .binary(data), let .text(data): data
             }
         }
 
+        // MARK: - Initializer
+        // MARK: - Public
         func read() throws -> Value {
             switch self {
             case let .binary(data): try BinaryEncoding().value(from: data)
@@ -311,6 +98,8 @@ struct Case: Sendable, CustomStringConvertible {
             case .text: try TextEncoding().data(from: value)
             }
         }
+
+        // MARK: - Private
     }
 
     // What an encoding may expect: to read as a value; to read as a value
@@ -325,6 +114,7 @@ struct Case: Sendable, CustomStringConvertible {
     // A document the runner reads, builds and runs, with what it is given and
     // what the runner brings.
     struct Program: Sendable {
+        // MARK: - Property
         let document: Value
         let arguments: [Name: Value]
 
@@ -341,6 +131,126 @@ struct Case: Sendable, CustomStringConvertible {
         let documents: [Value]
 
         let expectation: Expectation
+
+        // The documents the case laid beside its program, read the way the
+        // program is. One that does not read is the case's own fault, since the
+        // question was about the program.
+        var beside: [Module] {
+            get throws {
+                try documents.map { document in
+                    do {
+                        return try Loader().load(document, identity: try Identity.of(document))
+                    } catch {
+                        throw ConformanceError("a document laid beside the program does not read: \(error)")
+                    }
+                }
+            }
+        }
+
+        // The vocabulary the case asked the runner for, as a module standing in
+        // front of the case's own document so that what the host brings is there
+        // to be named. Empty where the case asked for none.
+        var brought: [Module] {
+            get async throws {
+                guard let vocabulary else { return [] }
+
+                let loader = Loader()
+
+                // The declarations go through the reader every document goes through,
+                // because they are declarations. What arrives is read as a body, and
+                // the implementation is swapped for the one the case described: a body
+                // is what a document can write and a host procedure is what it cannot.
+                let identity = try Identity.of(vocabulary.module)
+                let declared = try loader.load(vocabulary.module, identity: identity)
+
+                let brought = try Module(
+                    types: declared.types,
+                    constraints: declared.constraints,
+                    contracts: declared.contracts,
+                    claims: declared.claims,
+                    procedures: Dictionary(
+                        uniqueKeysWithValues: try vocabulary.procedures.map { one in
+                            guard let read = declared.procedures[one.name] else {
+                                throw ConformanceError("'\(one.name)' was asked for and did not read")
+                            }
+
+                            return (one.name, try supplied(one, declaring: read))
+                        }
+                    ),
+                    identity: identity
+                )
+
+                return [brought]
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // Every module this case stands on: what the host was asked to bring, the
+        // case's own document, and the standard vocabulary. The case describes the
+        // vocabulary it asked for, so building it is the case's own answer and not
+        // a runner's.
+        func modules() async throws -> [Module] {
+            try await brought + beside + [try Loader().load(document, identity: try Identity.of(document))] + Module.standard
+        }
+
+        // MARK: - Private
+        // The host's side of one asked-for procedure. Which door it answers through
+        // is the claim it makes: the one that answers without running is handed no
+        // way to reach outside, and the other is.
+        private func supplied(_ one: Case.Supplied, declaring read: Procedure) throws -> Procedure {
+            Procedure(
+                access: read.access,
+                signature: read.signature,
+                implementation: door(one, reading: try places(read.signature.parameters.count))
+            )
+        }
+
+        // Which of the fixed place sets this declaration reads its arguments
+        // through. A case declares `first` and `second` and nothing else, so the
+        // arity picks one.
+        private func places(_ count: Int) throws -> any ParameterSet.Type {
+            switch count {
+            case 0:
+                return NoParameters.self
+
+            case 1:
+                return OneName.self
+
+            case 2:
+                return TwoNames.self
+
+            default:
+                throw ConformanceError(
+                    "a procedure a case asks for declares \(count) names, and the places"
+                        + " a case may name are `first` and `second`"
+                )
+            }
+        }
+
+        // Which door it answers through, which is the claim it makes about
+        // reaching outside the run.
+        private func door(_ one: Case.Supplied, reading places: any ParameterSet.Type) -> Implementation {
+            func made<Parameters: ParameterSet>(_: Parameters.Type) -> Implementation {
+                one.runs
+                    ? .effect(
+                        SuppliedEffect<Parameters>(
+                            answers: one.answers,
+                            isolated: one.isolated,
+                            failing: .these(Set(one.failing))
+                        )
+                    )
+                    : .query(
+                        SuppliedQuery<Parameters>(
+                            answers: one.answers,
+                            isolated: one.isolated,
+                            failing: .these(Set(one.failing))
+                        )
+                    )
+            }
+
+            return made(places)
+        }
     }
 
     // What a case asks: a program and what it should do, or an encoding and
@@ -355,6 +265,7 @@ struct Case: Sendable, CustomStringConvertible {
     // A module the runner brings. The declarations are held apart from the rest
     // of it because each carries keys a declaration does not.
     struct Vocabulary: Sendable {
+        // MARK: - Property
         // What a runner says for itself: the version this module is read at,
         // and that its declarations send nothing. A case writing either is
         // refused rather than quietly overruled.
@@ -364,6 +275,10 @@ struct Case: Sendable, CustomStringConvertible {
         let module: Value
 
         let procedures: [Supplied]
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // One procedure a case asks for. Its declaration is written the way any
@@ -374,6 +289,7 @@ struct Case: Sendable, CustomStringConvertible {
     // procedure the host answers reads its arguments at fixed places and a case
     // cannot invent a place in someone else's runner.
     struct Supplied: Sendable {
+        // MARK: - Property
         static let ownKeys: Set<Name> = ["answers", "runs", "isolated", "failing"]
 
         let name: Name
@@ -392,9 +308,21 @@ struct Case: Sendable, CustomStringConvertible {
 
         let isolated: Bool
         let failing: [String]
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property
+    // Which types a runner has to understand to ask these questions. It moves
+    // for the same reason `warp` does and on its own schedule. The day a case
+    // may say something new is not the day a document may. Every change
+    // before the first release folds into this one.
+    static let version = 1
+
+    static let versionKey: Name = "test"
+
     let name: String
 
     // The file this was read from, without the suffix every case wears.
@@ -565,6 +493,7 @@ struct Case: Sendable, CustomStringConvertible {
     // is a second implementation they move with `spec/` and this file stays.
     static func all() throws -> [Case] {
         let directory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // Case
             .deletingLastPathComponent()   // WarpConformanceTests
             .deletingLastPathComponent()   // Tests
             .deletingLastPathComponent()   // warp-runtime-swift
@@ -774,185 +703,5 @@ struct Case: Sendable, CustomStringConvertible {
 
             return type
         }
-    }
-
-}
-
-extension Case.Program {
-    // MARK: - Public
-    // Every module this case stands on: what the host was asked to bring, the
-    // case's own document, and the standard vocabulary. The case describes the
-    // vocabulary it asked for, so building it is the case's own answer and not
-    // a runner's.
-    func modules() async throws -> [Module] {
-        try await brought + beside + [try Loader().load(document, identity: try Identity.of(document))] + Module.standard
-    }
-
-    // The documents the case laid beside its program, read the way the
-    // program is. One that does not read is the case's own fault, since the
-    // question was about the program.
-    var beside: [Module] {
-        get throws {
-            try documents.map { document in
-                do {
-                    return try Loader().load(document, identity: try Identity.of(document))
-                } catch {
-                    throw ConformanceError("a document laid beside the program does not read: \(error)")
-                }
-            }
-        }
-    }
-
-    // The vocabulary the case asked the runner for, as a module standing in
-    // front of the case's own document so that what the host brings is there
-    // to be named. Empty where the case asked for none.
-    var brought: [Module] {
-        get async throws {
-            guard let vocabulary else { return [] }
-
-            let loader = Loader()
-
-            // The declarations go through the reader every document goes through,
-            // because they are declarations. What arrives is read as a body, and
-            // the implementation is swapped for the one the case described: a body
-            // is what a document can write and a host procedure is what it cannot.
-            let identity = try Identity.of(vocabulary.module)
-            let declared = try loader.load(vocabulary.module, identity: identity)
-
-            let brought = try Module(
-                types: declared.types,
-                constraints: declared.constraints,
-                contracts: declared.contracts,
-                claims: declared.claims,
-                procedures: Dictionary(
-                    uniqueKeysWithValues: try vocabulary.procedures.map { one in
-                        guard let read = declared.procedures[one.name] else {
-                            throw ConformanceError("'\(one.name)' was asked for and did not read")
-                        }
-
-                        return (one.name, try supplied(one, declaring: read))
-                    }
-                ),
-                identity: identity
-            )
-
-            return [brought]
-        }
-    }
-
-    // MARK: - Private
-    // The host's side of one asked-for procedure. Which door it answers through
-    // is the claim it makes: the one that answers without running is handed no
-    // way to reach outside, and the other is.
-    private func supplied(_ one: Case.Supplied, declaring read: Procedure) throws -> Procedure {
-        Procedure(
-            access: read.access,
-            signature: read.signature,
-            implementation: door(one, reading: try places(read.signature.parameters.count))
-        )
-    }
-
-    // Which of the fixed place sets this declaration reads its arguments
-    // through. A case declares `first` and `second` and nothing else, so the
-    // arity picks one.
-    private func places(_ count: Int) throws -> any ParameterSet.Type {
-        switch count {
-        case 0:
-            return NoParameters.self
-
-        case 1:
-            return OneName.self
-
-        case 2:
-            return TwoNames.self
-
-        default:
-            throw ConformanceError(
-                "a procedure a case asks for declares \(count) names, and the places"
-                    + " a case may name are `first` and `second`"
-            )
-        }
-    }
-
-    // Which door it answers through, which is the claim it makes about
-    // reaching outside the run.
-    private func door(_ one: Case.Supplied, reading places: any ParameterSet.Type) -> Implementation {
-        func made<Parameters: ParameterSet>(_: Parameters.Type) -> Implementation {
-            one.runs
-                ? .effect(
-                    SuppliedEffect<Parameters>(
-                        answers: one.answers,
-                        isolated: one.isolated,
-                        failing: .these(Set(one.failing))
-                    )
-                )
-                : .query(
-                    SuppliedQuery<Parameters>(
-                        answers: one.answers,
-                        isolated: one.isolated,
-                        failing: .these(Set(one.failing))
-                    )
-                )
-        }
-
-        return made(places)
-    }
-
-}
-
-struct ConformanceError: Error, CustomStringConvertible {
-    let description: String
-
-    init(_ description: String) {
-        self.description = description
-    }
-}
-
-
-// The names a procedure a case asks for may declare, in the order a
-// declaration's names stand in. A case cannot invent a place in someone else's
-// runner, so the places are fixed here and the spec says which they are.
-enum OneName: Int, ParameterSet {
-    case first
-
-    var declared: Parameter { Parameter(name: "first", type: .any) }
-}
-
-enum TwoNames: Int, ParameterSet {
-    case first
-    case second
-
-    var declared: Parameter {
-        switch self {
-        case .first:
-            return Parameter(name: "first", type: .any)
-
-        case .second:
-            return Parameter(name: "second", type: .any)
-        }
-    }
-}
-
-// A procedure a case asked for that answers without running. What it answers is
-// the case's, and it is the same every time: a case asks what a declaration
-// permits, not what arithmetic does.
-struct SuppliedQuery<Parameters: ParameterSet>: Query {
-    let answers: Value
-    let isolated: Bool
-    let failing: Failing
-
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        answers
-    }
-}
-
-// The same, through the door that reaches outside the run.
-struct SuppliedEffect<Parameters: ParameterSet>: Effect {
-    let answers: Value
-    let isolated: Bool
-    let failing: Failing
-
-    func run(_ invocation: Invocation<Self>) throws -> Value {
-        answers
     }
 }

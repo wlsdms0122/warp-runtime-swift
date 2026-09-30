@@ -20,6 +20,7 @@ struct GatheringQuery: Query {
         case array
         case positions
 
+        // MARK: - Property
         var declared: Parameter {
             switch self {
             case .array:
@@ -29,6 +30,10 @@ struct GatheringQuery: Query {
                 return Parameter(name: "positions", type: .array(.int))
             }
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

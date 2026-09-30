@@ -15,6 +15,8 @@ import Testing
 // answers when one arrives.
 @Suite("What the procedures answer for a dictionary")
 struct DictionaryProcedureTests {
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Test
     @Test("setting a field answers a dictionary, whatever it was sent")
     func settingAnswersADictionary() async throws {
@@ -56,4 +58,7 @@ struct DictionaryProcedureTests {
         #expect(try await CountQuery().evaluate(held) == .int(2))
         #expect(try await CountQuery().evaluate(laid) == .int(1))
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

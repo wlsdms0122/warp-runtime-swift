@@ -17,6 +17,25 @@ import WarpSyntax
 // and this asks. A container's shape is not a spelling.
 @Suite("Every scalar and every name a text case reads is pinned by bytes")
 struct TextPinTests {
+    // What a text spells and a reader could take wrongly: a scalar, or a
+    // name, whether a record's or a field's.
+    private enum Spelling: Equatable, CustomStringConvertible {
+        case scalar(Value)
+        case name(Name)
+
+        // MARK: - Property
+        var description: String {
+            switch self {
+            case let .scalar(value): "\(value)"
+            case let .name(name): "the name \(name)"
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -50,21 +69,8 @@ struct TextPinTests {
         #expect(unpinned.isEmpty, "no bytes case pins: \(unpinned.joined(separator: ", "))")
     }
 
+    // MARK: - Public
     // MARK: - Private
-    // What a text spells and a reader could take wrongly: a scalar, or a
-    // name, whether a record's or a field's.
-    private enum Spelling: Equatable, CustomStringConvertible {
-        case scalar(Value)
-        case name(Name)
-
-        var description: String {
-            switch self {
-            case let .scalar(value): "\(value)"
-            case let .name(name): "the name \(name)"
-            }
-        }
-    }
-
     private static func walk(_ value: Value, _ visit: (Spelling) -> Void) {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes, .procedure:

@@ -18,6 +18,7 @@ struct SettingQuery: Query {
         case key
         case value
 
+        // MARK: - Property
         var declared: Parameter {
             switch self {
             case .dictionary:
@@ -30,6 +31,10 @@ struct SettingQuery: Query {
                 return Parameter(name: "value", type: .any)
             }
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

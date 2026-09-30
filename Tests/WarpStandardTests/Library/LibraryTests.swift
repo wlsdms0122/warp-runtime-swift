@@ -22,6 +22,7 @@ struct LibraryTests {
     @Test("what ships is what lib/std holds")
     func whatShipsIsWhatTheRepositoryHolds() throws {
         let directory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // Library
             .deletingLastPathComponent()   // WarpStandardTests
             .deletingLastPathComponent()   // Tests
             .deletingLastPathComponent()   // warp-runtime-swift

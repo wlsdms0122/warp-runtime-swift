@@ -18,6 +18,15 @@ import Testing
 @Suite("The specification names its cases")
 struct CaseIndexTests {
     // MARK: - Property
+    private static let specification = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // Case
+        .deletingLastPathComponent()   // WarpConformanceTests
+        .deletingLastPathComponent()   // Tests
+        .deletingLastPathComponent()   // warp-runtime-swift
+        .deletingLastPathComponent()   // runtime
+        .deletingLastPathComponent()   // the repository
+        .appendingPathComponent("spec")
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("every name a page lists is a case")
@@ -63,15 +72,8 @@ struct CaseIndexTests {
         #expect(unordered.isEmpty, "not in name order: \(unordered.joined(separator: ", "))")
     }
 
+    // MARK: - Public
     // MARK: - Private
-    private static let specification = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent()   // WarpConformanceTests
-        .deletingLastPathComponent()   // Tests
-        .deletingLastPathComponent()   // warp-runtime-swift
-        .deletingLastPathComponent()   // runtime
-        .deletingLastPathComponent()   // the repository
-        .appendingPathComponent("spec")
-
     private static func cases() throws -> Set<String> {
         Set(
             try FileManager.default

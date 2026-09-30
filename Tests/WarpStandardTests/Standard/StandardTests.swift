@@ -18,7 +18,7 @@ struct StandardTests {
     // MARK: - Property
     private let builder = Builder()
 
-    // MARK: - Lifecycle
+    // MARK: - Initializer
     // MARK: - Test
     @Test("every procedure that ships is builtin or written in Warp")
     func everyProcedureIsPlaced() throws {
@@ -898,8 +898,6 @@ struct StandardTests {
         }
     }
 
-    // MARK: - Control
-
     @Test("abort refuses carrying its rendered message")
     func abortRefusesWithItsMessage() async throws {
         // Given
@@ -980,4 +978,7 @@ struct StandardTests {
             try await builder.build([sut] + Module.standard)
         }
     }
+
+    // MARK: - Public
+    // MARK: - Private
 }

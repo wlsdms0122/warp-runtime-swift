@@ -15,7 +15,6 @@ enum ArrayAndElement: Int, ParameterSet {
     case element
 
     // MARK: - Property
-
     var declared: Parameter {
         switch self {
         case .array:

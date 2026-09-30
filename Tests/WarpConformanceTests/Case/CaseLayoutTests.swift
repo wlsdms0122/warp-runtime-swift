@@ -38,9 +38,11 @@ struct CaseLayoutTests {
         )
     }
 
+    // MARK: - Public
     // MARK: - Private
     private static func files() throws -> [URL] {
         let directory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // Case
             .deletingLastPathComponent()   // WarpConformanceTests
             .deletingLastPathComponent()   // Tests
             .deletingLastPathComponent()   // warp-runtime-swift

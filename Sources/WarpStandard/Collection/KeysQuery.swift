@@ -15,7 +15,13 @@ struct KeysQuery: Query {
     // What this takes: the mapping, and nothing else.
     enum Parameters: Int, ParameterSet {
         case dictionary
+
+        // MARK: - Property
         var declared: Parameter { Parameter(name: "dictionary", type: .dictionary(.any)) }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

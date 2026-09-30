@@ -16,7 +16,6 @@ enum NumericPair: Int, ParameterSet {
     case rhs
 
     // MARK: - Property
-
     var declared: Parameter {
         switch self {
         case .lhs:

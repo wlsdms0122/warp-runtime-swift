@@ -16,6 +16,7 @@ struct EncodedQuery: Query {
         case text
         case encoding
 
+        // MARK: - Property
         var declared: Parameter {
             switch self {
             case .text:
@@ -25,6 +26,10 @@ struct EncodedQuery: Query {
                 return Parameter(name: "encoding", type: .string, candidates: ["utf8"])
             }
         }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     // MARK: - Property

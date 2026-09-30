@@ -32,6 +32,12 @@ struct Arithmetic: Sendable {
     // MARK: - Property
     private let operation: Operation
 
+    // Whether a zero on the right has no answer. Both read a divisor, and both
+    // are asked before the whole path so the check cannot be walked around.
+    private var divides: Bool {
+        operation == .dividedBy || operation == .remainder
+    }
+
     // MARK: - Initializer
     init(_ operation: Operation) {
         self.operation = operation
@@ -75,12 +81,6 @@ struct Arithmetic: Sendable {
     }
 
     // MARK: - Private
-    // Whether a zero on the right has no answer. Both read a divisor, and both
-    // are asked before the whole path so the check cannot be walked around.
-    private var divides: Bool {
-        operation == .dividedBy || operation == .remainder
-    }
-
     // The whole answer two wholes have, or nil where the operation has none:
     // a quotient is a fraction even between wholes.
     private func whole(_ left: Int, _ right: Int) throws -> Int? {
