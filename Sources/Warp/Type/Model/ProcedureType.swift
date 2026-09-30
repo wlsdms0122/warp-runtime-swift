@@ -29,9 +29,7 @@ public struct ProcedureType: Sendable, Equatable {
         }
     }
 
-    // The type parameters a procedure type mentions. Its parameters are the
-    // declaring signature's own slots, so they are collected and bounded the way
-    // the signature's are.
+    // Whether a type parameter stands anywhere in its parameters or answer.
     public var isGeneric: Bool {
         parameters.contains { parameter in parameter.isGeneric }
             || (returns?.isGeneric ?? false)

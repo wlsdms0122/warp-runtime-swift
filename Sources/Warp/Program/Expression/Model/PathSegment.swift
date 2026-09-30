@@ -64,7 +64,7 @@ public enum PathSegment: Sendable, Equatable {
         }
     }
 
-    // The name a dot segment reads or sends. Nil for an index, which reads a
+    // The name a dot segment reads. Nil for an index, which reads a
     // position, not a name.
     public var named: Name? {
         switch self {

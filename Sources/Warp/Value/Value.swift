@@ -7,14 +7,14 @@
 
 import Foundation
 
-// What a program computes over. Eight data types and one that is not data: a
+// What a program computes over: data, and one kind that is not data. A
 // procedure is a value here, so a body can be passed, kept and answered with.
 //
-// The ninth is made by running, never by reading: a closure comes out of the
-// expression that writes one, and a program carrying one as a literal is
-// refused where a module is made. So a text spells eight, and anything handed
-// data from outside a run is handed eight, which is why the writings say so
-// where a caller can reach them with the ninth directly.
+// A procedure is made by running, never by reading: a closure comes out of
+// the expression that writes one, and a program carrying one as a literal is
+// refused where a module is made. So a text spells data alone, and anything
+// handed data from outside a run is handed data alone, which is why the
+// writings say so where a caller can reach them with a procedure directly.
 //
 // Equality is written by hand because a procedure has no honest one: two
 // procedures are never equal, and identity is not a question this language lets
@@ -43,10 +43,6 @@ public indirect enum Value: Sendable, Equatable {
 
     case procedure(Closure)
 
-    // Names and values where the names are data: what a document hands in and what
-    // a procedure that reads names answers. Which names are here is the value's to say,
-    // not a declaration's, so each entry carries its own name.
-    //
     // The entries stand in ascending byte order of their names, the order the
     // canonical writing uses, and a name is found by comparing bytes.
     public struct Dictionary: Sendable, Equatable {

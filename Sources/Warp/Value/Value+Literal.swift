@@ -9,15 +9,16 @@ import Foundation
 
 // Writing a value in Swift.
 //
-// Swift's own literals already spell seven of the eight kinds, and each maps
-// to exactly one case, so this is a spelling and not a conversion. `"a"` is
+// Swift's own literals spell the kinds they name, each as exactly one case,
+// so this is a spelling and not a conversion. `"a"` is
 // `.string("a")` for the same reason `"a"` is a `String`. Nothing here reads
 // structure out of a string: a path is still a `Path` and a reference is
 // still an `Expression`, because the language does not re-parse text into
 // anything live and a convenience is not a reason to start.
 //
-// Two kinds have no literal. A procedure is made by capturing a scope, which
-// happens during a run, so nothing written down can name one.
+// Bytes, a named record and a procedure have no literal. A procedure is made
+// by capturing a scope, which happens during a run, so nothing written down
+// can name one.
 //
 // `null` is spelled `.null` and never `nil`. They are not the same fact (`nil`
 // is a slot with nothing in it and `.null` is a value a program computed).
