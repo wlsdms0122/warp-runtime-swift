@@ -28,15 +28,13 @@ struct CountQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        switch question[.collection] {
+        let collection = question[.collection]
+
+        if let elements = collection.elements { return .int(elements.count) }
+
+        switch collection {
         case let .string(text):
             return .int(text.count)
-
-        case let .array(elements):
-            return .int(elements.count)
-
-        case let .bytes(bytes):
-            return .int(bytes.count)
 
         case let .record(record):
             return .int(record.count)
