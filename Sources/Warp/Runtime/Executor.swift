@@ -7,10 +7,8 @@
 
 import Foundation
 
-// Runs an image. Two halves over one code: `read` answers what answers
-// without running, synchronously, which is what a condition, an argument, a
-// const body and a procedure handed a procedure need; `evaluate` runs constructs,
-// effects and calls of values, and hands every data case to `read`.
+// Runs an image: one evaluator over the lowered code, which a fold reaches
+// through `read` as well.
 public struct Executor: Sendable {
     // Where a walk over a path came down: on a value, or on a reading gone
     // wrong. Every slot is there from the frame's making, so there is no
@@ -376,8 +374,7 @@ public struct Executor: Sendable {
         return refused.tracing(trace)
     }
 
-    // The evaluator for what runs. The containers recurse here so an effect
-    // written inside one is run; every other data case is `read`'s.
+    // The evaluator: every operation a body carries.
     private func evaluate(
         _ code: Operation,
         in activation: inout Activation,
@@ -505,8 +502,6 @@ public struct Executor: Sendable {
         let callee = linked[try row(call.procedure, from: activation.origin)]
 
         switch callee.implementation {
-        // A query answers without running, so the const half is the whole
-        // implementation.
         case .native(.query):
             // A variable handed in place is read as what it holds now and
             // settled the way any argument is, since nothing here writes it.

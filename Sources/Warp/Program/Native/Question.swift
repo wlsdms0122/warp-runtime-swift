@@ -56,16 +56,9 @@ public struct Question<P: NativeProcedure>: Sendable {
         }
     }
 
-    // Sending a procedure this procedure declared it sends. The link resolved the row
-    // and the place each handed argument stands at, so what happens here is
-    // indexing twice and looking nothing up; a procedure this one never declared is
-    // a procedure that does not compile.
-    //
-    // The arguments stand at the callee's positions, as many as the key
-    // declared it hands.
-    //
-    // Synchronous, because a query answers without running and the link
-    // refused a query declaring it sends anything that runs.
+    // Sending a procedure this procedure declared it sends, the way
+    // `Invocation.send` does. The link refused a query declaring it sends
+    // anything that runs.
     public func send(
         _ key: P.Imports,
         handing arguments: [Value] = []
