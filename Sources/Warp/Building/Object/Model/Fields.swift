@@ -142,9 +142,9 @@ struct Fields {
         return text
     }
 
-    // Through the door every spelling from outside comes through. An object
-    // is this runtime's own writing, but the bytes it was kept in are not: a
-    // spelling that is not in normal form makes two names that read alike and
+    // Through the door every spelling from outside comes through. The bytes
+    // an object was kept in are not the build's own: a spelling that is not
+    // in normal form makes two names that read alike and
     // compare apart, and every order and lookup built on them goes quiet.
     static func name(_ value: Value, of part: String) throws -> Name {
         let spelling = try text(value, of: part)

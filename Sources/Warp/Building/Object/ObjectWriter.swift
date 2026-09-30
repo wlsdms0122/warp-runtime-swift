@@ -10,10 +10,9 @@ import Foundation
 // An object said as a value, so that the writing a document already travels
 // in carries what the document compiled to as well.
 //
-// A part is written as its fields in order and a kind as its case before
-// them. Nothing names its own fields: what reads this is the reading beside
-// it, compiled from the same declarations, and an object written by another
-// runtime is refused before it is read rather than understood halfway.
+// The record is keyed by `ObjectLayout.parts`; inside a part the fields stand
+// in order and a kind as its tag before them, so any reading of the same
+// format reads it back.
 //
 // Every list a name keys is written in name order, so one object is one
 // value and one value is one writing of bytes. The layout is the language's,
