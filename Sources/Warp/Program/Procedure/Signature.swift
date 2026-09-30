@@ -58,11 +58,11 @@ public struct Signature: Sendable, Equatable {
 
     // Every type parameter mentioned in this signature, occurrence by
     // occurrence. A nested procedure type's parameters are collected too:
-    // they are this signature's own slots, `map` takes `array<some Element>`
-    // beside a procedure taking the same `some Element`, and it is one
-    // parameter filled by one call. Only a parameter behind a `named`
-    // type is not collected, because the link refuses one anywhere but a
-    // procedure signature and never fills one through the name.
+    // they are this signature's own slots, so `array<some Element>` beside a
+    // procedure taking the same `some Element` is one parameter filled by one
+    // call. Only a parameter behind a `named` type is not collected, because
+    // the build refuses one anywhere but a procedure signature and never fills
+    // one through the name.
     public var parameterOccurrences: [ParameterOccurrence] { type.parameterOccurrences }
 
     // The bounds each type parameter this signature declares is held to: the
@@ -145,7 +145,7 @@ public struct Signature: Sendable, Equatable {
     //
     // An occurrence already carrying a bound keeps it: a nested procedure
     // type may have declared its own, and overwriting would silently pick
-    // between two claims the link refuses out loud.
+    // between two claims the build refuses out loud.
     public func bounded(by bounds: [Name: [Name]]) -> Signature {
         guard !bounds.isEmpty else { return self }
 

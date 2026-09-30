@@ -89,7 +89,7 @@ struct Evaluator: Sendable {
     }
 
     // Calling a closure a procedure holds. What may be called is what the
-    // link proved answers. The arguments are handed by position, every
+    // build proved answers. The arguments are handed by position, every
     // position given, and settle against the closure's own declaration the
     // way a written application's do.
     func call(
@@ -374,7 +374,7 @@ struct Evaluator: Sendable {
 
             return .record(Record(layout: held.layout, values: values))
 
-        // The run's whole share of a cast: the link already decided what every
+        // The run's whole share of a cast: the build already decided what every
         // dot after this means, and the one thing it could not know is what
         // actually arrived. A plain cast lets the refusal out as a failure like
         // any other; an optional one reads the mismatch as null, which is the
@@ -612,7 +612,7 @@ struct Evaluator: Sendable {
             }
 
             // What the last finished round bound is what the result reads. A
-            // round cut short is put back to that, where the link said the
+            // round cut short is put back to that, where the build said the
             // result could tell.
             let kept = keeps.map { range in activation.cells[range] }
 
@@ -775,7 +775,7 @@ struct Evaluator: Sendable {
     }
 
     // What a row answers where a caller reads it as data. A query answers
-    // through its own door and a body the link proved answers without running
+    // through its own door and a body the build proved answers without running
     // is run here, on a frame of its own.
     private func answer(
         _ callee: Linked,

@@ -33,7 +33,7 @@ struct Handle: Sendable {
     }
 
     // MARK: - Public
-    // What the path holds. The link judged the path against the box's
+    // What the path holds. The build judged the path against the box's
     // declared type, so a part not there now is a box whose scope
     // changed under the hold.
     func value() throws -> Value {

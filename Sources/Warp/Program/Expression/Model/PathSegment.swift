@@ -11,9 +11,9 @@ import Foundation
 // surface syntax (`a.b[0]`, whatever else) into these segments. The runtime never
 // re-parses text, so the surface grammar stays a frontend fact.
 //
-// A dot reads a name out of what the walk has reached, and only that. A procedure is
-// sent with a written call, which spells the declaration it means, so a path
-// never decides which declaration a bare name stands for.
+// A dot reads a name out of what the walk has reached, and only that. A
+// procedure is reached by a written call, which spells the declaration it
+// means, so a path never decides which declaration a bare name stands for.
 //
 // Optionality is one axis across every access, not a family of spellings: each
 // segment carries whether the author wrote it optional (`?.` on a name, `?[` on

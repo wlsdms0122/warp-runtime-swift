@@ -27,10 +27,11 @@ public struct Question<P: NativeProcedure>: Sendable {
     private let arguments: Arguments
 
     // MARK: - Initializer
-    // Asking a procedure with no declaration and no run behind it: the link judging
-    // a constant against the procedure that will settle it. Not a door out of the
-    // package, because what makes a procedure answerable is the link that took its
-    // declaration, and a question built beside that skips it.
+    // Asking a procedure with no declaration and no run behind it: the build
+    // judging a call's constant arguments against the procedure that answers
+    // it. Not a door out of the package, because what makes a procedure
+    // answerable is the build that took its declaration, and a question built
+    // beside that skips it.
     init(arguments: [Name: Value] = [:]) {
         self.arguments = .given(arguments)
     }
@@ -44,8 +45,9 @@ public struct Question<P: NativeProcedure>: Sendable {
     //
     // A settled question reads the place the key stands at, since the run
     // ordered the arguments by the declaration this key belongs to. A given
-    // one was asked with no declaration behind it, so there are only names,
-    // and a name it was not given reads as null.
+    // one holds a call's constant arguments by name, and an argument that is
+    // not a constant reads as null: whether null fits a slot is the
+    // signature's to judge, and the build has judged it before this is asked.
     public subscript(key: P.Parameters) -> Value {
         switch arguments {
         case let .settled(settled, _, _):
@@ -81,7 +83,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     }
 
     // Calling a closure this procedure was handed as a value. What may be
-    // handed is what the link proved answers without running, which a
+    // handed is what the build proved answers without running, which a
     // procedure states by declaring the parameter `const procedure`. The
     // arguments are handed by position, the way every call hands them.
     public func call(_ closure: Closure, handing arguments: [Value] = []) async throws -> Value {

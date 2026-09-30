@@ -82,7 +82,7 @@ struct Activation: Sendable {
     }
 
     // MARK: - Private
-    // A dot reads a name and nothing else, and the link judged every one and
+    // A dot reads a name and nothing else, and the build judged every one and
     // wrote the judgment into the step. What may genuinely be absent, a missing
     // entry or a null on the way, is read as null only where the author spelled
     // `?.`, and refused everywhere else.
@@ -109,7 +109,7 @@ struct Activation: Sendable {
             }
 
             // Null stops every reading the same way, and the rule lives with
-            // the segment: the link's walk over types asks the same judge, so
+            // the segment: the build's walk over types asks the same judge, so
             // the two layers cannot drift apart.
             if current == .null {
                 switch segment().meetingNull(at: walked()) {
@@ -171,7 +171,7 @@ struct Activation: Sendable {
                     return .unfit(reason)
                 }
 
-            // The place the link proved, which is where a write lands too.
+            // The place the build proved, which is where a write lands too.
             case let .field(position, _, _):
                 guard case let .record(record) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")

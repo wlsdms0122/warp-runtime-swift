@@ -29,7 +29,7 @@ public struct Block: Sendable {
 
     // MARK: - Initializer
     // A result of null is no result: a document reads `result null` as
-    // nothing written, so the model holds the one shape either way.
+    // nothing written, so the model holds the one form either way.
     public init(body: Body, result: Expression? = nil) {
         self.body = body
 

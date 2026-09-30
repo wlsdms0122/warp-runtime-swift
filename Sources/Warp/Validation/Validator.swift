@@ -383,7 +383,7 @@ public struct Validator: Sendable {
                 try validate(field, visible: visible, variables: variables, scope: scope, at: here)
             }
 
-        // A cast names a type and reads a value as it. The type is the link's
+        // A cast names a type and reads a value as it. The type is the build's
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
         case let .cast(value, _, optional):
