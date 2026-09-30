@@ -118,6 +118,7 @@ public struct Builder: Sendable {
     public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
         guard !compiled.isEmpty else { return .none }
 
+        try once(compiled.map(\.document))
         try against(compiled)
 
         // Laid end to end through the door a link lays documents through, so a
@@ -205,7 +206,7 @@ public struct Builder: Sendable {
     public func compile(_ modules: [Module], against laid: Laid) async throws -> [Compiled] {
         let compiled = laid.compiled
 
-        try once(modules, held: laid.identities)
+        try once(modules.map(Place.Document.of), held: laid.identities)
 
         // Every name held to one declarer before the standing is read.
         // Standing reads a name as whichever document declared it, and where
@@ -756,6 +757,7 @@ public struct Builder: Sendable {
         _ compiled: [Compiled],
         supplying natives: Supplying
     ) throws -> Image {
+        try once(compiled.map(\.document))
         try against(compiled)
 
         // Every document's block laid down, which is where its rows first
@@ -882,17 +884,17 @@ public struct Builder: Sendable {
     // What the caller already compiled counts: those documents are in this
     // link too, and handing one over again is the same document twice however
     // it arrived.
-    private func once(_ modules: [Module], held: Set<Identity> = []) throws {
+    private func once(_ documents: [Place.Document], held: Set<Identity> = []) throws {
         var held = held
 
-        for module in modules {
-            guard let identity = module.identity else { continue }
+        for document in documents {
+            guard let identity = document.identity else { continue }
             guard held.insert(identity).inserted else {
                 throw BuildError(
                     "this document was handed to the build twice. A build states"
                         + " its whole graph once, so a document already in it is"
                         + " not something to add",
-                    at: Place(in: .of(module))
+                    at: Place(in: document)
                 )
             }
         }

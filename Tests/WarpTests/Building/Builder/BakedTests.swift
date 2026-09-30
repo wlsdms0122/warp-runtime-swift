@@ -254,6 +254,25 @@ struct BakedTests {
         }
     }
 
+    @Test("a document already compiled is not handed to a link twice")
+    func aCompiledDocumentIsNotLinkedTwice() async throws {
+        // Given. A document with an identity, compiled once.
+        let arriving = try Module(
+            try Module(procedures: [:]).draft,
+            identity: Identity([0x01, 0x02, 0x03])
+        )
+        let baked = try await builder.compile(Module.standard)
+        let compiled = try await builder.compile([arriving], against: baked, supplying: Supplying(Module.standard))
+
+        // When / Then. Handed twice, it is the same document twice, and it
+        // declares nothing a collision could be said about.
+        #expect {
+            try builder.link(baked + compiled + compiled, supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("this document was handed to the build twice")
+        }
+    }
+
     @Test("a compiled document names its native procedures and holds none of their code")
     func anObjectHoldsNoNativeCode() async throws {
         // Given. The standard vocabulary: its builtin procedures are the
