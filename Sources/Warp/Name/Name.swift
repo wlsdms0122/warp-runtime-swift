@@ -18,7 +18,7 @@ import Foundation
 // have to mean the same thing by "normal". A `Name` in hand has been through
 // it, and so has been through the other half of the rule: a name is written,
 // and nothing written is no name.
-public struct Name: Sendable, Hashable, Comparable {
+public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     // MARK: - Property
     public let spelling: String
 
@@ -142,6 +142,8 @@ public struct Name: Sendable, Hashable, Comparable {
         hasher.combine(digest)
     }
 
+    public var description: String { spelling }
+
     // MARK: - Private
     private static let dot = UInt8(ascii: ".")
 
@@ -249,23 +251,4 @@ public struct Name: Sendable, Hashable, Comparable {
 
         return bytes.allSatisfy { byte in letter(byte) || digit(byte) }
     }
-}
-
-// A name written in Swift. The spelling is source an author typed, so a
-// spelling that is not a name is a mistake being made where it can be read, and
-// there is nothing to answer with. The same reaction a duplicate key in a value
-// literal gets. A spelling that arrived from anywhere else goes through the
-// throwing door.
-extension Name: ExpressibleByStringLiteral {
-    public init(stringLiteral spelling: String) {
-        do {
-            try self.init(spelling)
-        } catch {
-            preconditionFailure("'\(spelling)' cannot be a name: \(error)")
-        }
-    }
-}
-
-extension Name: CustomStringConvertible {
-    public var description: String { spelling }
 }

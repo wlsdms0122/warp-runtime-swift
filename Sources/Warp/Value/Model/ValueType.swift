@@ -14,7 +14,7 @@ import Foundation
 // while a declaration could say no more than a value could be; they parted when
 // `array<string>` became sayable, and the `any` that never belonged in a value's
 // type went with the declarations.
-public enum ValueType: String, Sendable, CaseIterable {
+public enum ValueType: String, Sendable, CaseIterable, CustomStringConvertible {
     case null
     case bool
     case int
@@ -30,9 +30,7 @@ public enum ValueType: String, Sendable, CaseIterable {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // MARK: - Private
-}
-
-extension ValueType: CustomStringConvertible {
     public var description: String { rawValue }
+
+    // MARK: - Private
 }

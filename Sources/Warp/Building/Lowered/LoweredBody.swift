@@ -8,72 +8,6 @@
 import Foundation
 
 struct LoweredBody: Sendable {
-    // MARK: - Property
-    let instructions: [Instruction]
-    let result: Operation?
-
-    // MARK: - Initializer
-    init(instructions: [Instruction], result: Operation?) {
-        self.instructions = instructions
-        self.result = result
-    }
-
-    // MARK: - Public
-    func reads(_ slots: Range<Int>) -> Bool {
-        contains { node in node.reads(slots) }
-    }
-
-    // Every operation and instruction a body holds, outermost first. What a
-    // reading of the code asks is answered node by node; how the code nests is
-    // answered by each kind of node walking what it holds.
-    //
-    // A reading walks and a relocation rewrites (`rewritten`), and the two
-    // stay apart: a reading stops where it has its answer and builds nothing.
-    //
-    // Whether the walk went the whole way. A visit answering false stops it.
-    @discardableResult
-    func walk(_ visit: (Node) -> Bool) -> Bool {
-        instructions.allSatisfy { instruction in instruction.walk(visit) }
-            && (result?.walk(visit) ?? true)
-    }
-
-    // Whether any node answers, stopping at the first that does.
-    func contains(where predicate: (Node) -> Bool) -> Bool {
-        !walk { node in !predicate(node) }
-    }
-
-    // The same code with every operation and every type in it replaced, innermost
-    // first: an operation is handed over with what nests in it already rewritten.
-    // Which numbers a relocation answers is its own to say, node by node; how the
-    // code nests is said by each kind of node rewriting what it holds.
-    func rewritten(
-        operation: (Operation) throws -> Operation,
-        type: (LoweredType) throws -> LoweredType
-    ) rethrows -> LoweredBody {
-        LoweredBody(
-            instructions: try instructions.map { instruction in
-                try instruction.rewritten(operation: operation, type: type)
-            },
-            result: try result.map { result in try result.rewritten(operation: operation, type: type) }
-        )
-    }
-
-    var standing: Standing {
-        var standing = Standing()
-
-        walk { node in
-            node.stand(in: &standing)
-
-            return true
-        }
-
-        return standing
-    }
-
-    // MARK: - Private
-}
-
-extension LoweredBody {
     enum Node {
         case operation(Operation)
         case instruction(Instruction)
@@ -168,15 +102,13 @@ extension LoweredBody {
             }
         }
     }
-}
 
-// What a body stands on: the frame slots it names, and the closures it stands
-// up beside what each of those takes with it.
-//
-// One walk answers all of them, because they are read off the same places, and
-// one door asks it: the row the body belongs to, handed what only the list
-// beside it knows.
-extension LoweredBody {
+    // What a body stands on: the frame slots it names, and the closures it stands
+    // up beside what each of those takes with it.
+    //
+    // One walk answers all of them, because they are read off the same places, and
+    // one door asks it: the row the body belongs to, handed what only the list
+    // beside it knows.
     struct Standing {
         // MARK: - Property
         // Every slot of this frame the body names, whether it reads it or
@@ -206,7 +138,7 @@ extension LoweredBody {
         private(set) var memberships: [Int] = []
 
         // MARK: - Initializer
-        // MARK: - Internal
+        // MARK: - Public
         mutating func stand(on slot: Int) {
             slots.append(slot)
         }
@@ -251,5 +183,68 @@ extension LoweredBody {
             closures.append((number: number, inner: inner))
         }
     }
-}
 
+    // MARK: - Property
+    let instructions: [Instruction]
+    let result: Operation?
+
+    // MARK: - Initializer
+    init(instructions: [Instruction], result: Operation?) {
+        self.instructions = instructions
+        self.result = result
+    }
+
+    // MARK: - Public
+    func reads(_ slots: Range<Int>) -> Bool {
+        contains { node in node.reads(slots) }
+    }
+
+    // Every operation and instruction a body holds, outermost first. What a
+    // reading of the code asks is answered node by node; how the code nests is
+    // answered by each kind of node walking what it holds.
+    //
+    // A reading walks and a relocation rewrites (`rewritten`), and the two
+    // stay apart: a reading stops where it has its answer and builds nothing.
+    //
+    // Whether the walk went the whole way. A visit answering false stops it.
+    @discardableResult
+    func walk(_ visit: (Node) -> Bool) -> Bool {
+        instructions.allSatisfy { instruction in instruction.walk(visit) }
+            && (result?.walk(visit) ?? true)
+    }
+
+    // Whether any node answers, stopping at the first that does.
+    func contains(where predicate: (Node) -> Bool) -> Bool {
+        !walk { node in !predicate(node) }
+    }
+
+    // The same code with every operation and every type in it replaced, innermost
+    // first: an operation is handed over with what nests in it already rewritten.
+    // Which numbers a relocation answers is its own to say, node by node; how the
+    // code nests is said by each kind of node rewriting what it holds.
+    func rewritten(
+        operation: (Operation) throws -> Operation,
+        type: (LoweredType) throws -> LoweredType
+    ) rethrows -> LoweredBody {
+        LoweredBody(
+            instructions: try instructions.map { instruction in
+                try instruction.rewritten(operation: operation, type: type)
+            },
+            result: try result.map { result in try result.rewritten(operation: operation, type: type) }
+        )
+    }
+
+    var standing: Standing {
+        var standing = Standing()
+
+        walk { node in
+            node.stand(in: &standing)
+
+            return true
+        }
+
+        return standing
+    }
+
+    // MARK: - Private
+}

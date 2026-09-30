@@ -34,7 +34,7 @@ struct Keyed {
         self.written = written
     }
 
-    // MARK: - Internal
+    // MARK: - Public
     // What stands under a key, asked before the record is held to a layout:
     // what the record says it is decides which layout that is, and which
     // format, so both are read raw.

@@ -32,7 +32,7 @@ struct ObjectReader {
         self.fingerprint = fingerprint
     }
 
-    // MARK: - Internal
+    // MARK: - Public
     func compiled(from value: Value) throws -> Compiled {
         guard case .dictionary = value else {
             throw ObjectRefused("'object' is not written as a record")
@@ -133,6 +133,72 @@ struct ObjectReader {
         )
     }
 
+    // A value as the writing laid it down: data as it is, and a closure by
+    // what it is spelled by, standing without a row until a link answers one.
+    func value(_ value: Value) throws -> Value {
+        var fields = try Fields(value, of: "value")
+        let read: Value
+
+        switch ValueTag(rawValue: try fields.tag()) {
+        case .null: read = .null
+        case .bool:
+            guard case let .bool(held) = try fields.next() else {
+                throw ObjectRefused("'value' writes something other than a bool where one stands")
+            }
+
+            read = .bool(held)
+
+        case .int: read = .int(try fields.integer())
+        case .double: read = .double(try fields.double())
+        case .string: read = .string(try fields.text())
+        case .bytes: read = .bytes(try Fields.bytes(fields.next(), of: "value"))
+        case .array: read = .array(try fields.list(self.value))
+
+        // A value the model refuses is one the writing could not have laid
+        // down, and so one this reading refuses as an object.
+        case .record:
+            let named = try fields.maybe(name)
+            let names = try fields.list(name)
+            let values = try fields.list(self.value)
+
+            read = try refusing {
+                .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
+            }
+
+        case .dictionary:
+            let entries = try fields.list { entry -> (name: Name, value: Value) in
+                var fields = try Fields(entry, of: "entry")
+                let read = (name: try name(fields.next()), value: try self.value(fields.next()))
+
+                try fields.end()
+
+                return read
+            }
+
+            read = try refusing { .dictionary(try Value.Dictionary(entries)) }
+
+        case .closure:
+            let writer = Closure.Writer(document: try writing(fields.next()), name: try name(fields.next()))
+            let nth = try fields.count()
+            let captured = try fields.list { cell -> (slot: Int, cell: Cell) in
+                var fields = try Fields(cell, of: "captured")
+                let read = (slot: try fields.count(), cell: Cell.value(try self.value(fields.next())))
+
+                try fields.end()
+
+                return read
+            }
+
+            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
+
+        case nil: throw ObjectRefused("'value' answers in a way this reads none of")
+        }
+
+        try fields.end()
+
+        return read
+    }
+
     // MARK: - Private
     private func keyed<T>(
         _ value: Value,
@@ -216,78 +282,8 @@ struct ObjectReader {
 
         return read
     }
-}
 
-extension ObjectReader {
-    // A value as the writing laid it down: data as it is, and a closure by
-    // what it is spelled by, standing without a row until a link answers one.
-    func value(_ value: Value) throws -> Value {
-        var fields = try Fields(value, of: "value")
-        let read: Value
-
-        switch ValueTag(rawValue: try fields.tag()) {
-        case .null: read = .null
-        case .bool:
-            guard case let .bool(held) = try fields.next() else {
-                throw ObjectRefused("'value' writes something other than a bool where one stands")
-            }
-
-            read = .bool(held)
-
-        case .int: read = .int(try fields.integer())
-        case .double: read = .double(try fields.double())
-        case .string: read = .string(try fields.text())
-        case .bytes: read = .bytes(try Fields.bytes(fields.next(), of: "value"))
-        case .array: read = .array(try fields.list(self.value))
-
-        // A value the model refuses is one the writing could not have laid
-        // down, and so one this reading refuses as an object.
-        case .record:
-            let named = try fields.maybe(name)
-            let names = try fields.list(name)
-            let values = try fields.list(self.value)
-
-            read = try refusing {
-                .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
-            }
-
-        case .dictionary:
-            let entries = try fields.list { entry -> (name: Name, value: Value) in
-                var fields = try Fields(entry, of: "entry")
-                let read = (name: try name(fields.next()), value: try self.value(fields.next()))
-
-                try fields.end()
-
-                return read
-            }
-
-            read = try refusing { .dictionary(try Value.Dictionary(entries)) }
-
-        case .closure:
-            let writer = Closure.Writer(document: try writing(fields.next()), name: try name(fields.next()))
-            let nth = try fields.count()
-            let captured = try fields.list { cell -> (slot: Int, cell: Cell) in
-                var fields = try Fields(cell, of: "captured")
-                let read = (slot: try fields.count(), cell: Cell.value(try self.value(fields.next())))
-
-                try fields.end()
-
-                return read
-            }
-
-            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
-
-        case nil: throw ObjectRefused("'value' answers in a way this reads none of")
-        }
-
-        try fields.end()
-
-        return read
-    }
-}
-
-private extension ObjectReader {
-    func expression(_ value: Value) throws -> TypeExpression {
+    private func expression(_ value: Value) throws -> TypeExpression {
         var fields = try Fields(value, of: "type")
         let read: TypeExpression
 
@@ -347,7 +343,7 @@ private extension ObjectReader {
         return read
     }
 
-    func ranged(_ value: Value) throws -> TypeExpression.Refinement {
+    private func ranged(_ value: Value) throws -> TypeExpression.Refinement {
         var fields = try Fields(value, of: "range")
         let read: TypeExpression.Refinement
 
@@ -373,7 +369,7 @@ private extension ObjectReader {
         return read
     }
 
-    func edge<Bound>(
+    private func edge<Bound>(
         _ value: Value,
         _ read: (Value) throws -> Bound
     ) throws -> TypeExpression.Refinement.Edge<Bound> {
@@ -391,27 +387,27 @@ private extension ObjectReader {
         return held
     }
 
-    func counted(_ value: Value) throws -> Int {
+    private func counted(_ value: Value) throws -> Int {
         try Fields.count(value, of: "a count")
     }
 
-    func integer(_ value: Value) throws -> Int {
+    private func integer(_ value: Value) throws -> Int {
         try Fields.integer(value, of: "a number")
     }
 
-    func fraction(_ value: Value) throws -> Double {
+    private func fraction(_ value: Value) throws -> Double {
         try Fields.double(value, of: "a fraction")
     }
 
-    func text(_ value: Value) throws -> String {
+    private func text(_ value: Value) throws -> String {
         try Fields.text(value, of: "a text")
     }
 
-    func path(_ value: Value) throws -> Path {
+    private func path(_ value: Value) throws -> Path {
         Path(try Fields.list(value, of: "path", segment))
     }
 
-    func segment(_ value: Value) throws -> PathSegment {
+    private func segment(_ value: Value) throws -> PathSegment {
         var fields = try Fields(value, of: "path segment")
         let read: PathSegment
 
@@ -433,7 +429,7 @@ private extension ObjectReader {
         return read
     }
 
-    func contractProcedure(_ value: Value) throws -> ContractProcedure {
+    private func contractProcedure(_ value: Value) throws -> ContractProcedure {
         var fields = try Fields(value, of: "contract procedure")
         let read = ContractProcedure(
             signature: try signature(fields.next()),
@@ -446,7 +442,7 @@ private extension ObjectReader {
         return read
     }
 
-    func procedureType(_ value: Value) throws -> ProcedureType {
+    private func procedureType(_ value: Value) throws -> ProcedureType {
         var fields = try Fields(value, of: "procedure type")
         let read = ProcedureType(
             parameters: try Fields.list(fields.next(), of: "parameters", expression),
@@ -458,7 +454,7 @@ private extension ObjectReader {
         return read
     }
 
-    func signature(_ value: Value) throws -> Signature {
+    private func signature(_ value: Value) throws -> Signature {
         var fields = try Fields(value, of: "signature")
         let read = Signature(
             parameters: try Fields.list(fields.next(), of: "parameters", parameter),
@@ -470,7 +466,7 @@ private extension ObjectReader {
         return read
     }
 
-    func parameter(_ value: Value) throws -> Parameter {
+    private func parameter(_ value: Value) throws -> Parameter {
         var fields = try Fields(value, of: "parameter")
         let read = Parameter(
             name: try name(fields.next()),
@@ -484,7 +480,7 @@ private extension ObjectReader {
         return read
     }
 
-    func access(_ value: Value) throws -> Access {
+    private func access(_ value: Value) throws -> Access {
         switch try integer(value) {
         case 0: return .private
         case 1: return .internal
@@ -493,7 +489,7 @@ private extension ObjectReader {
         }
     }
 
-    func constness(_ value: Value) throws -> Constness {
+    private func constness(_ value: Value) throws -> Constness {
         switch try integer(value) {
         case 0: return .unstated
         case 1: return .const
@@ -501,7 +497,7 @@ private extension ObjectReader {
         }
     }
 
-    func isolation(_ value: Value) throws -> Isolation {
+    private func isolation(_ value: Value) throws -> Isolation {
         switch try integer(value) {
         case 0: return .unstated
         case 1: return .isolated
@@ -509,7 +505,7 @@ private extension ObjectReader {
         }
     }
 
-    func failing(_ value: Value) throws -> Failing {
+    private func failing(_ value: Value) throws -> Failing {
         var fields = try Fields(value, of: "failing")
         let read: Failing
 
@@ -524,10 +520,8 @@ private extension ObjectReader {
 
         return read
     }
-}
 
-private extension ObjectReader {
-    func place(_ value: Value) throws -> Place {
+    private func place(_ value: Value) throws -> Place {
         var fields = try Fields(value, of: "place")
         let stands = try held(fields.next())
         let read = Place(try Fields.list(fields.next(), of: "place", step), in: stands)
@@ -537,7 +531,7 @@ private extension ObjectReader {
         return read
     }
 
-    func step(_ value: Value) throws -> Place.Step {
+    private func step(_ value: Value) throws -> Place.Step {
         var fields = try Fields(value, of: "place step")
         let read: Place.Step
 
@@ -556,7 +550,7 @@ private extension ObjectReader {
         return read
     }
 
-    func part(_ value: Value) throws -> Place.Part {
+    private func part(_ value: Value) throws -> Place.Part {
         var fields = try Fields(value, of: "part")
         let read: Place.Part
 
@@ -595,7 +589,7 @@ private extension ObjectReader {
         return read
     }
 
-    func holder(_ value: Value) throws -> Place.ConditionHolder {
+    private func holder(_ value: Value) throws -> Place.ConditionHolder {
         var fields = try Fields(value, of: "condition holder")
         let read: Place.ConditionHolder
 
@@ -610,7 +604,7 @@ private extension ObjectReader {
         return read
     }
 
-    func construct(_ value: Value) throws -> Construct {
+    private func construct(_ value: Value) throws -> Construct {
         var fields = try Fields(value, of: "construct")
         let read: Construct
 
@@ -635,7 +629,7 @@ private extension ObjectReader {
         return read
     }
 
-    func reach(_ value: Value) throws -> Leave.Reach {
+    private func reach(_ value: Value) throws -> Leave.Reach {
         switch try integer(value) {
         case 0: return .procedure
         case 1: return .construct
@@ -644,7 +638,7 @@ private extension ObjectReader {
         }
     }
 
-    func layout(_ value: Value) throws -> Layout {
+    private func layout(_ value: Value) throws -> Layout {
         var fields = try Fields(value, of: "layout")
         let named = try fields.maybe(name)
         let written = try Fields.list(fields.next(), of: "layout", name)
@@ -657,10 +651,8 @@ private extension ObjectReader {
         // that never moved.
         return try refusing { try Layout(name: named, judging: written) }
     }
-}
 
-private extension ObjectReader {
-    func lowered(_ value: Value) throws -> LoweredType {
+    private func lowered(_ value: Value) throws -> LoweredType {
         var fields = try Fields(value, of: "lowered type")
         let read: LoweredType
 
@@ -717,7 +709,7 @@ private extension ObjectReader {
         return read
     }
 
-    func undeclared(_ value: Value) throws -> LoweredType.Undeclared {
+    private func undeclared(_ value: Value) throws -> LoweredType.Undeclared {
         var fields = try Fields(value, of: "undeclared")
         let read: LoweredType.Undeclared
 
@@ -733,7 +725,7 @@ private extension ObjectReader {
         return read
     }
 
-    func bound(_ value: Value) throws -> LoweredType.Bound {
+    private func bound(_ value: Value) throws -> LoweredType.Bound {
         var fields = try Fields(value, of: "bound")
         let read: LoweredType.Bound
 
@@ -748,7 +740,7 @@ private extension ObjectReader {
         return read
     }
 
-    func loweredRecord(_ value: Value) throws -> LoweredRecord {
+    private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var fields = try Fields(value, of: "record")
         let held = try layout(fields.next())
         let read = try LoweredRecord(
@@ -760,12 +752,10 @@ private extension ObjectReader {
 
         return read
     }
-}
 
-private extension ObjectReader {
     // A declared row carries its spelling; a lifted row is handed the one
     // its numbering answers.
-    func judged(_ value: Value, spelled: Name?) throws -> Judged {
+    private func judged(_ value: Value, spelled: Name?) throws -> Judged {
         var fields = try Fields(value, of: "row")
         let label = try spelled ?? name(fields.next())
         let signature = try signature(fields.next())
@@ -785,7 +775,7 @@ private extension ObjectReader {
         return read
     }
 
-    func implementation(_ value: Value) throws -> Judged.Implementation {
+    private func implementation(_ value: Value) throws -> Judged.Implementation {
         var fields = try Fields(value, of: "implementation")
         let read: Judged.Implementation
 
@@ -801,7 +791,7 @@ private extension ObjectReader {
         return read
     }
 
-    func sent(_ value: Value) throws -> Sent {
+    private func sent(_ value: Value) throws -> Sent {
         var fields = try Fields(value, of: "send")
         let read = Sent(
             row: try fields.count(),
@@ -813,7 +803,7 @@ private extension ObjectReader {
         return read
     }
 
-    func send(_ value: Value) throws -> Native.Send {
+    private func send(_ value: Value) throws -> Native.Send {
         var fields = try Fields(value, of: "native send")
         let read = Native.Send(
             position: try fields.count(),
@@ -826,7 +816,7 @@ private extension ObjectReader {
         return read
     }
 
-    func frame(_ value: Value) throws -> Frame {
+    private func frame(_ value: Value) throws -> Frame {
         var fields = try Fields(value, of: "frame")
         let size = try fields.count()
         let read = Frame(
@@ -849,7 +839,7 @@ private extension ObjectReader {
         return read
     }
 
-    func body(_ value: Value) throws -> LoweredBody {
+    private func body(_ value: Value) throws -> LoweredBody {
         var fields = try Fields(value, of: "body")
         let read = LoweredBody(
             instructions: try Fields.list(fields.next(), of: "body", instruction),
@@ -861,7 +851,7 @@ private extension ObjectReader {
         return read
     }
 
-    func instruction(_ value: Value) throws -> Instruction {
+    private func instruction(_ value: Value) throws -> Instruction {
         var fields = try Fields(value, of: "instruction")
         let read = Instruction(
             binding: try fields.maybe(binding),
@@ -874,7 +864,7 @@ private extension ObjectReader {
         return read
     }
 
-    func binding(_ value: Value) throws -> Instruction.Binding {
+    private func binding(_ value: Value) throws -> Instruction.Binding {
         var fields = try Fields(value, of: "binding")
         let read: Instruction.Binding
 
@@ -890,7 +880,7 @@ private extension ObjectReader {
         return read
     }
 
-    func address(_ value: Value) throws -> Address {
+    private func address(_ value: Value) throws -> Address {
         var fields = try Fields(value, of: "address")
         let read = Address(
             slot: try fields.count(),
@@ -902,7 +892,7 @@ private extension ObjectReader {
         return read
     }
 
-    func walk(_ value: Value) throws -> Step {
+    private func walk(_ value: Value) throws -> Step {
         var fields = try Fields(value, of: "walk")
         let read: Step
 
@@ -920,10 +910,8 @@ private extension ObjectReader {
 
         return read
     }
-}
 
-private extension ObjectReader {
-    func operation(_ value: Value) throws -> Operation {
+    private func operation(_ value: Value) throws -> Operation {
         var fields = try Fields(value, of: "operation")
         let read: Operation
 
@@ -1013,7 +1001,7 @@ private extension ObjectReader {
         return read
     }
 
-    func recordOperation(_ value: Value) throws -> RecordOperation {
+    private func recordOperation(_ value: Value) throws -> RecordOperation {
         var fields = try Fields(value, of: "record")
         let held = try layout(fields.next())
         let read = try RecordOperation(
@@ -1026,7 +1014,7 @@ private extension ObjectReader {
         return read
     }
 
-    func callOperation(_ value: Value) throws -> CallOperation {
+    private func callOperation(_ value: Value) throws -> CallOperation {
         var fields = try Fields(value, of: "call")
         let read = try CallOperation(
             procedure: try fields.count(),
@@ -1051,7 +1039,7 @@ private extension ObjectReader {
         return read
     }
 
-    func dispatchOperation(_ value: Value) throws -> DispatchOperation {
+    private func dispatchOperation(_ value: Value) throws -> DispatchOperation {
         var fields = try Fields(value, of: "dispatch")
         let read = DispatchOperation(
             contract: try name(fields.next()),
@@ -1065,7 +1053,7 @@ private extension ObjectReader {
         return read
     }
 
-    func argument(_ value: Value) throws -> Argument {
+    private func argument(_ value: Value) throws -> Argument {
         var fields = try Fields(value, of: "argument")
         let read: Argument
 

@@ -35,7 +35,7 @@ final class Fulfillment: @unchecked Sendable {
     // MARK: - Initializer
     init() { }
 
-    // MARK: - Internal
+    // MARK: - Public
     // The document laid down from here on, and where its refusals stand.
     func laying(_ origin: Int, at place: Place) {
         lock.withLock {

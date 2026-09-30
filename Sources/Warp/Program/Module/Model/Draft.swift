@@ -101,7 +101,7 @@ public struct Draft: Sendable {
         return held
     }
 
-    // MARK: - Internal
+    // MARK: - Public
     // What this declares in the procedure namespace, each under the place it was
     // written at. A contract's procedure is one of them, by the spelling a call
     // writes to reach it, and its place is the two steps the document nests it

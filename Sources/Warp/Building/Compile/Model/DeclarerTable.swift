@@ -28,7 +28,7 @@ struct DeclarerTable {
     private var declares: [Reference: Fingerprint?] = [:]
 
     // MARK: - Initializer
-    // MARK: - Internal
+    // MARK: - Public
     // One document laid down, under what it turned out to be.
     mutating func lay(_ document: Compiled) {
         hold(document.declares, as: document.fingerprint)

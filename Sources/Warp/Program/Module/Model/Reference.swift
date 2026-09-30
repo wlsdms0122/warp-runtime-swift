@@ -19,7 +19,7 @@ enum Reference: Hashable, Sendable, Comparable {
     case procedure(Name)
     case type(Name)
 
-    // MARK: - Internal
+    // MARK: - Public
     // Procedures before types, and each in name order. A catalog reports the
     // first collision it walks into, so this is the order an author meets
     // them in.

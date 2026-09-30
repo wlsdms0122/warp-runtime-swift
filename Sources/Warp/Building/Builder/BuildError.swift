@@ -41,10 +41,6 @@ public struct BuildError: WarpError {
         BuildError(message, at: place)
     }
 
-    // MARK: - Private
-}
-
-extension BuildError {
     // A body the build lowered without judging it first: what the lowering
     // cannot place is the build's own mistake rather than the author's, and
     // reads that way.
@@ -61,4 +57,6 @@ extension BuildError {
             at: place
         )
     }
+
+    // MARK: - Private
 }

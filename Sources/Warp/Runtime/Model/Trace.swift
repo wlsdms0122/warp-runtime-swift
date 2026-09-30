@@ -11,7 +11,36 @@ import Foundation
 // trace links one more frame onto the one before it, so a trace a run carries
 // through every statement costs one link per frame and shares the frames
 // above it with every trace under them.
-public struct Trace: Sendable, Equatable {
+public struct Trace: Sendable, Equatable, CustomStringConvertible {
+    // One hop of how a run reached where it is.
+    //
+    // Five kinds, because there are five ways a run goes somewhere it can come
+    // back from. Two of them exist only at run time (which round a loop is on,
+    // and which piece of the work a concurrent procedure gave this closure call is)
+    // neither readable from the text, and they are the difference between
+    // naming a statement and naming an occurrence of one.
+    //
+    // A closure has no spelling of its own: it is the nth one the named
+    // declaration wrote, and that pair is what the hop carries.
+    public enum Hop: Sendable, Equatable {
+        case procedure(String)
+        case closure(of: String, nth: Int)
+        case statement(String)
+        case round(Int)
+        case piece(String)
+
+        // How the hop reads on its own, which is also what a refusal calls
+        // the body it enters.
+        var rendered: String {
+            switch self {
+            case let .procedure(name), let .statement(name): name
+            case let .closure(writer, nth): "\(writer).closure[\(nth)]"
+            case let .round(index): "[\(index)]"
+            case let .piece(name): "[\(name)]"
+            }
+        }
+    }
+
     // MARK: - Property
     // The frames from the outermost in.
     public var hops: [Hop] {
@@ -67,6 +96,8 @@ public struct Trace: Sendable, Equatable {
         lhs.hops == rhs.hops
     }
 
+    public var description: String { rendered }
+
     // MARK: - Private
     private final class Link: Sendable {
         let hop: Hop
@@ -75,41 +106,6 @@ public struct Trace: Sendable, Equatable {
         init(_ hop: Hop, under parent: Link?) {
             self.hop = hop
             self.parent = parent
-        }
-    }
-}
-
-extension Trace: CustomStringConvertible {
-    public var description: String { rendered }
-}
-
-public extension Trace {
-    // One hop of how a run reached where it is.
-    //
-    // Five kinds, because there are five ways a run goes somewhere it can come
-    // back from. Two of them exist only at run time (which round a loop is on,
-    // and which piece of the work a concurrent procedure gave this closure call is)
-    // neither readable from the text, and they are the difference between
-    // naming a statement and naming an occurrence of one.
-    //
-    // A closure has no spelling of its own: it is the nth one the named
-    // declaration wrote, and that pair is what the hop carries.
-    enum Hop: Sendable, Equatable {
-        case procedure(String)
-        case closure(of: String, nth: Int)
-        case statement(String)
-        case round(Int)
-        case piece(String)
-
-        // How the hop reads on its own, which is also what a refusal calls
-        // the body it enters.
-        var rendered: String {
-            switch self {
-            case let .procedure(name), let .statement(name): name
-            case let .closure(writer, nth): "\(writer).closure[\(nth)]"
-            case let .round(index): "[\(index)]"
-            case let .piece(name): "[\(name)]"
-            }
         }
     }
 }

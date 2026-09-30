@@ -134,7 +134,7 @@ struct Judged: Sendable {
         self.implementation = implementation
     }
 
-    // MARK: - Internal
+    // MARK: - Public
     // What the body stands on, judged against the frame it stands in and
     // against the rows beside it. One walk answers all of them, so the walk is
     // here rather than split between this row and the list that holds it, and
@@ -195,7 +195,6 @@ struct Judged: Sendable {
         }
     }
 
-    // MARK: - Public
     // This declaration as a row of the table given, standing at the position
     // its block landed at. Compiling and linking both call this, each against
     // its own table, which is what makes the two readings one.

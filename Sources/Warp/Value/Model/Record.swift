@@ -10,7 +10,7 @@ import Foundation
 // Fields at the places a `Layout` puts them. The names live in the layout, so
 // two records of one layout share one copy of them, and a field is read by
 // finding its place once rather than by carrying its name alongside its value.
-public struct Record: Sendable {
+public struct Record: Sendable, Equatable {
     // MARK: - Property
     public let layout: Layout
 
@@ -106,12 +106,10 @@ public struct Record: Sendable {
         Record(layout: Layout(name: name, ordered: layout.fields), values: values)
     }
 
-    // MARK: - Private
-}
-
-extension Record: Equatable {
     public static func == (lhs: Record, rhs: Record) -> Bool {
         lhs.layout == rhs.layout
             && zip(lhs.values, rhs.values).allSatisfy { mine, theirs in mine == theirs }
     }
+
+    // MARK: - Private
 }

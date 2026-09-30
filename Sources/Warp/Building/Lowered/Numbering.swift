@@ -82,7 +82,7 @@ struct Numbering: Sendable {
         runs = []
     }
 
-    // MARK: - Internal
+    // MARK: - Public
     // What this counts from, said as a value, so an object carries the
     // numbering its bodies were lowered against.
     //
@@ -147,7 +147,6 @@ struct Numbering: Sendable {
         self.init(sends: Set(sent), declared: declared, closures: counts)
     }
 
-    // MARK: - Public
     // Whether the numbers here are already rows. A table's own numbering
     // answers every number with itself, so what it lowers stands where it was
     // put rather than where a document said.

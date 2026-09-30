@@ -240,7 +240,6 @@ struct Lowering {
         return (code, slots.frame)
     }
 
-    // MARK: - Internal
     // What one document's lowered bodies stand on, by the rows of the table
     // they were lowered against.
     struct Standing {

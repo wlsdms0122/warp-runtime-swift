@@ -136,7 +136,6 @@ public struct Executor: Sendable {
         return try await executor.answer(body, of: entry, in: &activation, at: Trace())
     }
 
-    // MARK: - Internal
     // Calling a closure a procedure holds. The arguments are handed by
     // position, every position given, and settle against the closure's own
     // declaration the way a written application's do.

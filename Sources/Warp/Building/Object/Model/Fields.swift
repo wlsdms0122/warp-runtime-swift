@@ -34,7 +34,7 @@ struct Fields {
         self.written = written
     }
 
-    // MARK: - Internal
+    // MARK: - Public
     mutating func next() throws -> Value {
         guard at < written.count else {
             throw ObjectRefused(
@@ -99,9 +99,7 @@ struct Fields {
             throw ObjectRefused("'\(of)' writes \(written.count) fields and \(at) were read")
         }
     }
-}
 
-extension Fields {
     // What one written value is, said once. The cursor reads the next field
     // and a list reads each of its elements, and both ask these: one judgement
     // to a kind, so one damaged writing is answered the same way whichever way
@@ -254,4 +252,5 @@ extension Fields {
             throw ObjectRefused("'\(part)' writes \(written.count) values where at most one stands")
         }
     }
+
 }

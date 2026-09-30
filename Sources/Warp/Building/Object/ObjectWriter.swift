@@ -22,7 +22,7 @@ struct ObjectWriter {
     // MARK: - Initializer
     init() { }
 
-    // MARK: - Internal
+    // MARK: - Public
     // What a field that may hold nothing is laid down as: a list of none or
     // one, so a value that is itself null is told from no value at all. The
     // reading of it is `Fields.maybe`, and the two are one rule said from
@@ -369,14 +369,12 @@ struct ObjectWriter {
             return .array([.int(1), .array(types.sorted().map(Value.string))])
         }
     }
-}
 
-private extension ObjectWriter {
-    func place(_ place: Place) -> Value {
+    private func place(_ place: Place) -> Value {
         .array([document(place.document), .array(place.steps.map(step))])
     }
 
-    func step(_ step: Place.Step) -> Value {
+    private func step(_ step: Place.Step) -> Value {
         switch step {
         case let .key(spelling):
             return .array([.int(0), .string(spelling)])
@@ -398,7 +396,7 @@ private extension ObjectWriter {
         }
     }
 
-    func part(_ part: Place.Part) -> Value {
+    private func part(_ part: Place.Part) -> Value {
         switch part {
         case .procedures: return .array([.int(0)])
         case .constants: return .array([.int(1)])
@@ -424,14 +422,14 @@ private extension ObjectWriter {
         }
     }
 
-    func holder(_ holder: Place.ConditionHolder) -> Value {
+    private func holder(_ holder: Place.ConditionHolder) -> Value {
         switch holder {
         case .conditional: return .array([.int(0)])
         case .loop: return .array([.int(1)])
         }
     }
 
-    func construct(_ construct: Construct) -> Value {
+    private func construct(_ construct: Construct) -> Value {
         switch construct {
         case .literal: return .array([.int(0)])
         case .reference: return .array([.int(1)])
@@ -448,7 +446,7 @@ private extension ObjectWriter {
         }
     }
 
-    func reach(_ reach: Leave.Reach) -> Value {
+    private func reach(_ reach: Leave.Reach) -> Value {
         switch reach {
         case .procedure: return .int(0)
         case .construct: return .int(1)
@@ -456,13 +454,11 @@ private extension ObjectWriter {
         }
     }
 
-    func layout(_ layout: Layout) -> Value {
+    private func layout(_ layout: Layout) -> Value {
         .array([ObjectWriter.maybe(layout.name, name), .array(layout.fields.map(name))])
     }
-}
 
-private extension ObjectWriter {
-    func lowered(_ type: LoweredType) -> Value {
+    private func lowered(_ type: LoweredType) -> Value {
         switch type {
         case .any:
             return .array([.int(0)])
@@ -532,7 +528,7 @@ private extension ObjectWriter {
         }
     }
 
-    func undeclared(_ because: LoweredType.Undeclared) -> Value {
+    private func undeclared(_ because: LoweredType.Undeclared) -> Value {
         switch because {
         case let .noTypeNamed(name): return .array([.int(0), self.name(name)])
         case let .noBoundNamed(name): return .array([.int(1), self.name(name)])
@@ -540,7 +536,7 @@ private extension ObjectWriter {
         }
     }
 
-    func bound(_ bound: LoweredType.Bound) -> Value {
+    private func bound(_ bound: LoweredType.Bound) -> Value {
         switch bound {
         case let .membership(row):
             return .array([.int(0), .int(row)])
@@ -550,14 +546,11 @@ private extension ObjectWriter {
         }
     }
 
-    func loweredRecord(_ record: LoweredRecord) -> Value {
+    private func loweredRecord(_ record: LoweredRecord) -> Value {
         .array([layout(record.layout), .array(record.fields.map(lowered))])
     }
 
-}
-
-private extension ObjectWriter {
-    func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
+    private func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
         .array((spelled ? [name(row.label)] : []) + [
             try signature(row.signature),
             access(row.access),
@@ -569,7 +562,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func implementation(_ implementation: Judged.Implementation) throws(ObjectUnwritable) -> Value {
+    private func implementation(_ implementation: Judged.Implementation) throws(ObjectUnwritable) -> Value {
         switch implementation {
         case let .body(body, frame):
             return .array([.int(0), try self.body(body), self.frame(frame)])
@@ -579,15 +572,15 @@ private extension ObjectWriter {
         }
     }
 
-    func sent(_ sent: Sent) -> Value {
+    private func sent(_ sent: Sent) -> Value {
         .array([.int(sent.row), .int(sent.handing)])
     }
 
-    func send(_ send: Native.Send) -> Value {
+    private func send(_ send: Native.Send) -> Value {
         .array([.int(send.position), name(send.selector), .int(send.handing)])
     }
 
-    func frame(_ frame: Frame) -> Value {
+    private func frame(_ frame: Frame) -> Value {
         .array([
             .int(frame.size),
             .array(frame.parameters.map(Value.int)),
@@ -597,14 +590,14 @@ private extension ObjectWriter {
         ])
     }
 
-    func body(_ body: LoweredBody) throws(ObjectUnwritable) -> Value {
+    private func body(_ body: LoweredBody) throws(ObjectUnwritable) -> Value {
         .array([
             .array(try body.instructions.map(instruction)),
             try ObjectWriter.maybe(body.result, operation)
         ])
     }
 
-    func instruction(_ instruction: Instruction) throws(ObjectUnwritable) -> Value {
+    private func instruction(_ instruction: Instruction) throws(ObjectUnwritable) -> Value {
         .array([
             ObjectWriter.maybe(instruction.binding, binding),
             try operation(instruction.code),
@@ -612,7 +605,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func binding(_ binding: Instruction.Binding) -> Value {
+    private func binding(_ binding: Instruction.Binding) -> Value {
         switch binding {
         case let .bind(slot, settling):
             return .array([.int(0), .int(slot), ObjectWriter.maybe(settling, lowered)])
@@ -625,11 +618,11 @@ private extension ObjectWriter {
         }
     }
 
-    func address(_ address: Address) -> Value {
+    private func address(_ address: Address) -> Value {
         .array([.int(address.slot), .array(address.steps.map(walk))])
     }
 
-    func walk(_ step: Step) -> Value {
+    private func walk(_ step: Step) -> Value {
         switch step {
         case let .field(position, spelling, optional):
             return .array([.int(0), .int(position), name(spelling), .bool(optional)])
@@ -644,10 +637,8 @@ private extension ObjectWriter {
             return .array([.int(3), self.address(address), .bool(optional)])
         }
     }
-}
 
-private extension ObjectWriter {
-    func operation(_ operation: Operation) throws(ObjectUnwritable) -> Value {
+    private func operation(_ operation: Operation) throws(ObjectUnwritable) -> Value {
         switch operation {
         case let .literal(value):
             return .array([.int(0), try self.value(value)])
@@ -724,11 +715,11 @@ private extension ObjectWriter {
         }
     }
 
-    func recordOperation(_ record: RecordOperation) throws(ObjectUnwritable) -> Value {
+    private func recordOperation(_ record: RecordOperation) throws(ObjectUnwritable) -> Value {
         .array([layout(record.layout), .array(try record.fields.map(operation))])
     }
 
-    func callOperation(_ call: CallOperation) throws(ObjectUnwritable) -> Value {
+    private func callOperation(_ call: CallOperation) throws(ObjectUnwritable) -> Value {
         .array([
             .int(call.procedure),
             .array(try call.arguments.map { (argument) throws(ObjectUnwritable) -> Value in try ObjectWriter.maybe(argument, self.operation) }),
@@ -741,7 +732,7 @@ private extension ObjectWriter {
     // Without the calls beside it. Which row answers a contract is the link's
     // answer and an object stands before one, so writing them down would be
     // writing a fact this document does not hold.
-    func dispatchOperation(_ dispatch: DispatchOperation) throws(ObjectUnwritable) -> Value {
+    private func dispatchOperation(_ dispatch: DispatchOperation) throws(ObjectUnwritable) -> Value {
         .array([
             name(dispatch.contract),
             name(dispatch.procedure),
@@ -750,7 +741,7 @@ private extension ObjectWriter {
         ])
     }
 
-    func argument(_ argument: Argument) throws(ObjectUnwritable) -> Value {
+    private func argument(_ argument: Argument) throws(ObjectUnwritable) -> Value {
         switch argument {
         case let .value(operation):
             return .array([.int(0), try self.operation(operation)])

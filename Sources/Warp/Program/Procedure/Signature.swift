@@ -156,7 +156,6 @@ public struct Signature: Sendable, Equatable {
         )
     }
 
-    // MARK: - Internal
     // Why handing `count` arguments by position does not fit this
     // declaration, or nil where it fits. A call hands exactly as many as the
     // declaration takes.

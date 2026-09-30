@@ -12,7 +12,7 @@ import Foundation
 // spells stays `TypeExpression`; this is the link's product, the way `Operation`
 // is the product of an `Expression`. Every judgment over a value or a
 // reading lives here, and the document's type reaches it by lowering.
-indirect enum LoweredType: Sendable {
+indirect enum LoweredType: Sendable, Equatable {
     case any
     case never
     case null
@@ -1340,6 +1340,49 @@ indirect enum LoweredType: Sendable {
         }
     }
 
+    static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
+        switch (lhs, rhs) {
+        case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
+            (.double, .double), (.string, .string):
+            return true
+
+        case let (.ranged(mine), .ranged(theirs)):
+            return mine == theirs
+
+        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)),
+            let (.variable(mine), .variable(theirs)), let (.inout(mine), .inout(theirs)),
+            let (.nullable(mine), .nullable(theirs)):
+            return mine == theirs
+
+        case let (.record(mine), .record(theirs)):
+            return mine == theirs
+
+        case let (.procedure(_, _, myConstness, myIsolation),
+                  .procedure(_, _, theirConstness, theirIsolation)):
+            return myConstness == theirConstness
+                && myIsolation == theirIsolation
+                && lhs.sameProcedure(as: rhs)
+
+        case let (.named(mine), .named(theirs)):
+            return mine == theirs
+
+        case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
+            return myLabel == theirLabel && mine == theirs
+
+        case let (.composition(mine), .composition(theirs)):
+            return mine == theirs
+
+        case let (.reading(myRoot, myPath), .reading(theirRoot, theirPath)):
+            return myRoot == theirRoot && myPath == theirPath
+
+        case let (.undeclared(mine, _), .undeclared(theirs, _)):
+            return mine == theirs
+
+        default:
+            return false
+        }
+    }
+
     // MARK: - Private
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
@@ -1912,50 +1955,4 @@ indirect enum LoweredType: Sendable {
     private func mismatch(_ value: Value, at path: String, in table: LoweredTypeTable) -> ArgumentError {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.type)")
     }
-}
-
-extension LoweredType: Equatable {
-    static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
-        switch (lhs, rhs) {
-        case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
-            (.double, .double), (.string, .string):
-            return true
-
-        case let (.ranged(mine), .ranged(theirs)):
-            return mine == theirs
-
-        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)),
-            let (.variable(mine), .variable(theirs)), let (.inout(mine), .inout(theirs)),
-            let (.nullable(mine), .nullable(theirs)):
-            return mine == theirs
-
-        case let (.record(mine), .record(theirs)):
-            return mine == theirs
-
-        case let (.procedure(_, _, myConstness, myIsolation),
-                  .procedure(_, _, theirConstness, theirIsolation)):
-            return myConstness == theirConstness
-                && myIsolation == theirIsolation
-                && lhs.sameProcedure(as: rhs)
-
-        case let (.named(mine), .named(theirs)):
-            return mine == theirs
-
-        case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
-            return myLabel == theirLabel && mine == theirs
-
-        case let (.composition(mine), .composition(theirs)):
-            return mine == theirs
-
-        case let (.reading(myRoot, myPath), .reading(theirRoot, theirPath)):
-            return myRoot == theirRoot && myPath == theirPath
-
-        case let (.undeclared(mine, _), .undeclared(theirs, _)):
-            return mine == theirs
-
-        default:
-            return false
-        }
-    }
-
 }

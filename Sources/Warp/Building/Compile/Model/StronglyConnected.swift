@@ -22,7 +22,7 @@ import Foundation
 // the process on the host's stack. Nesting depth is a document's own fact and
 // the walks over expressions may lean on it; call depth is not.
 enum StronglyConnected {
-    // MARK: - Internal
+    // MARK: - Public
     static func components(among edges: [Name: [Name]]) -> [[Name]] {
         // Where each was met, and the earliest any way on from it can reach
         // back to. A component closes where the two agree.
