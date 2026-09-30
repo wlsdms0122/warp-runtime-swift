@@ -187,7 +187,7 @@ public final class Linked: Sendable {
     // is, and a written body stands as the refusal it earns until then, so
     // nothing folds through a body half-made. Until it is lowered such a row
     // is not written, since what it holds is the refusal.
-    static func standing(
+    static func unlowered(
         label: Name,
         origin: Int,
         procedure: Procedure,

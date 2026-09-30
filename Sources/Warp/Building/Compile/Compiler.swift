@@ -232,7 +232,7 @@ struct Compiler {
         let block = compiling.hold(
             origin,
             standing: try holding.map { symbol in
-                Linked.standing(
+                Linked.unlowered(
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
