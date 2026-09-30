@@ -50,8 +50,7 @@ public struct BinaryEncoding {
         case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
     }
 
-    // A place in the bytes. `take` answers what it can and remembers whether
-    // that was everything asked for, so a caller checks the one fact it needs.
+    // A place in the bytes.
     private struct Cursor {
         // MARK: - Property
         private let bytes: [UInt8]
@@ -64,7 +63,6 @@ public struct BinaryEncoding {
 
         var remaining: Int { bytes.count - index }
         var isDone: Bool { remaining == 0 }
-        private(set) var lastTakeWasComplete = true
 
         // MARK: - Initializer
         init(_ data: Data) {
@@ -91,15 +89,13 @@ public struct BinaryEncoding {
             return bytes[index]
         }
 
-        mutating func take(_ count: Int) -> ArraySlice<UInt8> {
-            let end = Swift.min(index + count, bytes.count)
+        // The next `count` bytes, or nil where fewer remain.
+        mutating func take(_ count: Int) -> ArraySlice<UInt8>? {
+            guard count <= remaining else { return nil }
 
-            defer {
-                lastTakeWasComplete = end - index == count
-                index = end
-            }
+            defer { index += count }
 
-            return bytes[index..<end]
+            return bytes[index..<index + count]
         }
 
         // MARK: - Private
@@ -128,7 +124,7 @@ public struct BinaryEncoding {
     public func value(from data: Data) throws -> Value {
         var reading = Cursor(data)
 
-        guard reading.take(Self.magic.count).elementsEqual(Self.magic) else {
+        guard let head = reading.take(Self.magic.count), head.elementsEqual(Self.magic) else {
             throw EncodingRefused("the bytes do not begin as a warp document begins")
         }
 
@@ -266,9 +262,7 @@ public struct BinaryEncoding {
                 settled = .int(unzigzagged(try unsigned(from: &reading)))
 
             case .double:
-                let raw = reading.take(8)
-
-                guard reading.lastTakeWasComplete else {
+                guard let raw = reading.take(8) else {
                     throw EncodingRefused("the bytes end inside a fraction")
                 }
 
@@ -286,9 +280,7 @@ public struct BinaryEncoding {
 
             case .bytes:
                 let count = try length(from: &reading, of: "bytes", costing: 1)
-                let raw = reading.take(count)
-
-                guard reading.lastTakeWasComplete else {
+                guard let raw = reading.take(count) else {
                     throw EncodingRefused("the bytes end inside bytes")
                 }
 
@@ -412,9 +404,7 @@ public struct BinaryEncoding {
     private func text(from reading: inout Cursor) throws -> String {
         let count = try length(from: &reading, of: "text", costing: 1)
 
-        let bytes = reading.take(count)
-
-        guard reading.lastTakeWasComplete else {
+        guard let bytes = reading.take(count) else {
             throw EncodingRefused("the bytes end inside text")
         }
 
