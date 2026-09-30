@@ -147,15 +147,6 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     }
 
     // MARK: - Private
-    // The segment of a dotted spelling ending where the caller says, beside
-    // where the one before it ends. Nothing where that segment is the first,
-    // so a caller steps from the end until it stops.
-    //
-    // Every reading of a name reads its bytes, and where a name breaks into
-    // segments is one of those readings: a dot is a dot wherever it stands,
-    // including where the scalar after it combines with it into one character.
-    // A dot at either end stands for an empty segment, which is no identifier
-    // and no name.
     // The last segment a dot does not end, or nothing where the spelling holds
     // no such segment. A spelling of dots alone is every reader's `self`.
     private static func lastSegment(of bytes: String.UTF8View) -> Range<String.UTF8View.Index>? {
@@ -172,6 +163,15 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         }
     }
 
+    // The segment of a dotted spelling ending where the caller says, and
+    // where the one before it ends, which is nothing where this one is the
+    // first, so a caller steps from the end until it stops.
+    //
+    // Every reading of a name reads its bytes, and where a name breaks into
+    // segments is one of those readings: a dot is a dot wherever it stands,
+    // including where the scalar after it combines with it into one character.
+    // A dot at either end stands for an empty segment, which is no
+    // identifier.
     private static func segment(
         of bytes: String.UTF8View,
         endingAt end: String.UTF8View.Index

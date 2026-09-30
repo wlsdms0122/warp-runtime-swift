@@ -142,9 +142,9 @@ struct Fields {
         return text
     }
 
-    // Through the door every spelling from outside comes through. An object
-    // is this runtime's own writing, but the bytes it was kept in are not: a
-    // spelling that is not in normal form makes two names that read alike and
+    // Through the door every spelling from outside comes through. The bytes
+    // an object was kept in are not the build's own: a spelling that is not
+    // in normal form makes two names that read alike and
     // compare apart, and every order and lookup built on them goes quiet.
     static func name(_ value: Value, of part: String) throws -> Name {
         let spelling = try text(value, of: part)
@@ -153,6 +153,23 @@ struct Fields {
             return try Name(spelling)
         } catch let refused as NameRefused {
             throw ObjectRefused(refused.message)
+        }
+    }
+
+    // The declaration that wrote a closure: `[0, name]` for a procedure and
+    // `[1, name]` for a constant or a variable. What lays one down is
+    // `ObjectWriter.declaration`.
+    static func declaration(_ value: Value, of part: String) throws -> Closure.Declaration {
+        var fields = try Fields(value, of: part)
+        let tag = try fields.tag()
+        let written = try fields.name()
+
+        try fields.end()
+
+        switch tag {
+        case 0: return .procedure(written)
+        case 1: return .binding(written)
+        default: throw ObjectRefused("'\(part)' writes a declaration of kind \(tag), which this reads none of")
         }
     }
 

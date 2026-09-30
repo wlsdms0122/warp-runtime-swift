@@ -279,6 +279,7 @@ struct ClaimChecker {
             if let reason = answers(
                 wanted.signature,
                 as: witness.held.signature,
+                reading: witness.held.facts?.answer,
                 answering: type,
                 of: contract,
                 procedure: procedure,
@@ -318,9 +319,14 @@ struct ClaimChecker {
     // The claim says the declaration was meant to answer, so a signature that
     // misses is a reason the claim does not hold rather than the type quietly
     // standing outside. What has to change is this signature.
+    //
+    // A declaration that wrote no `returns` answers what the build read off
+    // its body, which is `read`. A declaration being compiled now has no
+    // reading yet, and the link holds it when every row has one.
     private func answers(
         _ asked: Signature,
         as given: Signature,
+        reading read: LoweredType?,
         answering type: Name,
         of contract: Name,
         procedure: Name,
@@ -365,11 +371,13 @@ struct ClaimChecker {
         guard let answer = asked.returns else { return nil }
 
         let promised = answer.lowered(in: table.loweredTypes)
-        let answered = (given.returns ?? .any).lowered(in: table.loweredTypes)
+        let answered = given.returns?.lowered(in: table.loweredTypes)
+            ?? read
+            ?? TypeExpression.any.lowered(in: table.loweredTypes)
 
         guard promised.accepts(answered, in: table.loweredTypes) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and answers \((given.returns ?? .any).rendered)"
+                    + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: table.loweredTypes))"
                     + " where the contract writes \(answer.rendered)"
         }
 

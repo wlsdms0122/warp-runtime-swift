@@ -355,6 +355,45 @@ struct ObservationTests {
         })
     }
 
+    @Test("a statement a leave passes through is announced as started and never as ended")
+    func aLeaveIsNoFailure() async throws {
+        // Given. The break never finishes, so neither does the statement it
+        // is written in; the loop it ends answers
+        let observer = RecordingObserver()
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("walk"), expression: .loop(
+                                while: .literal(.bool(true)),
+                                body: Block(body: [
+                                    Statement(expression: .leave(Leave(reach: .construct)))
+                                ]),
+                                round: "walk"
+                            )
+                        )
+                    ],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut] + Module.standard)
+        let answer = try await Executor(observer: observer).run(image)
+
+        // Then
+        let events = await observer.events
+
+        #expect(answer == .int(1))
+        #expect(events == [
+            .started("walk"),
+            .started("walk[0].[0]"),
+            .completed("walk", .null)
+        ])
+    }
+
     @Test("a rescued failure is announced under the name it was bound as")
     func rescueIsAnnounced() async throws {
         // Given

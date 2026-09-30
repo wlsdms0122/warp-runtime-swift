@@ -103,8 +103,8 @@ struct ValidationTests {
     @Test("nor by the name a construct hands its body")
     func aBoundNameIsNotWhatAConstructHandsItsBody() {
         // Given. The same rule where the name is the language's to introduce
-        // rather than a statement's: a walk's element, a loop's round, and the
-        // failure an attempt rescues.
+        // rather than a statement's: a loop's round and the failure an
+        // attempt rescues.
         func module(running expression: Warp.Expression) throws -> Module {
             try Module(
                 constants: ["limit": .literal(.int(3))],
@@ -545,6 +545,30 @@ struct ValidationTests {
         // When / Then
         #expect(throws: ValidationError.self) {
             try Validator().validate(sut)
+        }
+    }
+
+    @Test("a private procedure the host answers is refused in a module that is no document")
+    func aPrivateNativeNeedsADocument() throws {
+        // Given. A private procedure answered by the host, which a link joins
+        // to its code by the document that declares it.
+        let procedures: [Name: Procedure] = [
+            "app.ticket": Procedure(
+                access: .private,
+                signature: Signature(returns: .int),
+                implementation: .query(TicketQuery())
+            )
+        ]
+
+        // When / Then. Refused where the module is made, so a compile and a
+        // build of it agree. Under a document it stands.
+        #expect {
+            try Module(procedures: procedures)
+        } throws: { error in
+            "\(error)".contains("answered by the host in a module that is no document")
+        }
+        #expect(throws: Never.self) {
+            try Module(procedures: procedures, identity: Identity([0x01]))
         }
     }
 

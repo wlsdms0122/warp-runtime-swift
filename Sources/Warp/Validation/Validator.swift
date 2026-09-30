@@ -35,10 +35,11 @@ public struct Validator: Sendable {
     }
 
     // Every declaration a module makes, in name order so the first refusal is
-    // stable across runs. Nothing about the module as a whole is checked here.
-    // Whether its names collide with another module's is a link question, and
-    // there is no other module in sight from inside one.
+    // stable across runs. Whether its names collide with another module's is a
+    // link question, and there is no other module in sight from inside one.
     public func validate(_ module: Module) throws {
+        try hosted(module)
+
         let constants = Set(module.constants.keys)
         let variables = Set(module.variables.keys)
 
@@ -154,6 +155,22 @@ public struct Validator: Sendable {
             said.compactMap { said in said }.joined(separator: ", and "),
             at: Place([.part(.imports)], in: .of(module))
         )
+    }
+
+    // A private procedure is named by its document, and the code a host
+    // brings for one is joined to it by that document. A module that is no
+    // document has nothing to join it by.
+    private func hosted(_ module: Module) throws {
+        guard module.identity == nil else { return }
+
+        for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key })
+        where procedure.implementation.native != nil && !procedure.access.reachesOtherDocuments {
+            throw ValidationError(
+                "this procedure is private and answered by the host in a module that is no document,"
+                    + " and a private procedure is named by its document",
+                at: .procedure(name.spelling, in: .of(module))
+            )
+        }
     }
 
     private func validate(
@@ -395,18 +412,6 @@ public struct Validator: Sendable {
                 at: place.part(.subject(optional: optional))
             )
 
-        // A closure sees where it was written plus what it declares, which is
-        // the capture read statically. Its parameters are declared here for the
-        // same reason a procedure's are: the signature and the body are one
-        // scope.
-        //
-        // Variables are not carried in. A closure may outlive the block that
-        // made it, so writing an enclosing box through one would be a write
-        // with no bounded lifetime. A name it captured is a value it captured.
-        // Where a leave may go. A closure is a procedure of its own, so the
-        // loops around where it was *written* are not around where it runs.
-        // `rounds` starts empty inside one, and reaching for an outer loop from
-        // there is refused here rather than discovered at a run.
         case let .leave(leave):
             try validate(leave, in: scope, at: place)
 
@@ -426,6 +431,10 @@ public struct Validator: Sendable {
                 at: place
             )
 
+        // A closure sees where it was written plus what it declares, which is
+        // the capture read statically. Its parameters are declared here for the
+        // same reason a procedure's are: the signature and the body are one
+        // scope.
         case let .closure(procedure):
             let inside = place.part(.closure)
             let parameters = Set(procedure.signature.names)

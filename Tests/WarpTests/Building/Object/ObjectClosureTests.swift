@@ -85,7 +85,7 @@ struct ObjectClosureTests {
         // Given. A compiled document whose variable starts as a closure some
         // other spelling claims to have written.
         let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
-        let forged = try holding(Closure(writer: Closure.Writer(document: .compiled(Compiled.Token()), name: "app.nobody"), nth: 0, linked: nil, captured: []), in: compiled)
+        let forged = try holding(Closure(writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("app.nobody")), nth: 0, linked: nil, captured: []), in: compiled)
 
         // When / Then
         await #expect(throws: BuildError.self) {
@@ -97,7 +97,7 @@ struct ObjectClosureTests {
     func aClosurePastItsWriterIsRefused() async throws {
         // Given. The writer wrote one closure, and the value asks for its sixth
         let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
-        let forged = try holding(Closure(writer: Closure.Writer(document: try #require(compiled.last?.naming), name: "app.later"), nth: 5, linked: nil, captured: []), in: compiled)
+        let forged = try holding(Closure(writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("app.later")), nth: 5, linked: nil, captured: []), in: compiled)
 
         // When / Then
         await #expect(throws: BuildError.self) {
@@ -280,7 +280,7 @@ struct ObjectClosureTests {
         // value claims none
         let compiled = try await builder.compile(Module.standard + [capturingMaker(identity: Identity([1])), holdingUser(identity: Identity([2]))])
         let forged = try holding(
-            Closure(writer: Closure.Writer(document: .written(Identity([1])), name: "app.make"), nth: 0, linked: nil, captured: []),
+            Closure(writer: Closure.Writer(document: .written(Identity([1])), declaration: .procedure("app.make")), nth: 0, linked: nil, captured: []),
             in: compiled
         )
 
@@ -325,7 +325,7 @@ struct ObjectClosureTests {
         let compiled = try await builder.compile(Module.standard + [answeringLater(7)])
         let forged = try holding(
             Closure(
-                writer: Closure.Writer(document: try #require(compiled.last?.naming), name: "app.later"),
+                writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("app.later")),
                 nth: 0,
                 linked: nil,
                 captured: [(slot: 99, cell: .value(.int(1)))]
@@ -341,7 +341,7 @@ struct ObjectClosureTests {
 
         let inBody = try holdingInBody(
             Closure(
-                writer: Closure.Writer(document: try #require(compiled.last?.naming), name: "app.later"),
+                writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("app.later")),
                 nth: 0,
                 linked: nil,
                 captured: [(slot: 99, cell: .value(.int(1)))]

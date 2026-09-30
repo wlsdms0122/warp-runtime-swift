@@ -54,7 +54,7 @@ struct Folding {
         self.init(
             constants: bindings,
             origin: 0,
-            in: .unanswerable(image.linked, rows: image.rows, naming: image.naming),
+            in: .relocated(image.linked, rows: image.rows, naming: image.naming),
             loweredTypes: image.loweredTypes
         )
     }
@@ -100,7 +100,7 @@ struct Folding {
         self.init(
             constants: bindings,
             origin: 0,
-            in: .unanswerable(
+            in: .relocated(
                 table,
                 rows: rows,
                 naming: modules.map { module in Closure.Document(identity: module.identity, token: Compiled.Token()) }
@@ -116,7 +116,7 @@ struct Folding {
     // its numbering, the same as one written in a body.
     func read(
         _ expression: Expression,
-        as label: Name,
+        as writer: Closure.Declaration,
         writing lowering: inout Lowering,
         at place: Place
     ) async throws -> Value {
@@ -124,7 +124,7 @@ struct Folding {
             expression,
             reading: names,
             origin: origin,
-            label: label,
+            writer: writer,
             at: place
         )
 
@@ -184,7 +184,7 @@ struct Folding {
             expression,
             reading: names,
             origin: origin,
-            label: Folding.assembled,
+            writer: .binding(Folding.assembled),
             at: place
         )
 

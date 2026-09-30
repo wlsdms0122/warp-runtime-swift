@@ -7,18 +7,17 @@
 
 import Foundation
 
-// What a run does, as the language sees it: statements bind, and failures are
-// either absorbed by an attempt or not. There is no "skipped" event. A
-// condition that declines is an expression answering null, and the statement
-// that bound it completed like any other.
+// What a run does, as the language sees it: a statement starts, then completes
+// with its value or fails, and a failure is either absorbed by an attempt or
+// not. A statement a `break`, `continue` or `return` leaves never finishes, so
+// it has no end event.
 public protocol ExecutionObserver: Sendable {
     func statementStarted(at trace: Trace) async
     func statementCompleted(at trace: Trace, result: Value) async
     func statementFailed(at trace: Trace, error: any Error) async
 
     // The name is the one the failure was bound under while the rescue ran,
-    // which is the statement's id wherever a notation writes rescue as an
-    // envelope, and nothing for an attempt written nameless.
+    // and nothing for an attempt written nameless.
     func failureRescued(name: String?, error: any Error) async
 }
 

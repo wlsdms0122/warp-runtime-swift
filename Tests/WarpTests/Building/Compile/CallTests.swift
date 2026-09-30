@@ -191,7 +191,7 @@ struct CallTests {
         }
 
         // Then
-        #expect(refusal?.message == BuildError.concealed("lib.hidden", at: nil).message)
+        #expect(refusal?.message == BuildError.concealed("lib.hidden", at: Place(in: Place.Document(identity: nil))).message)
         #expect(refusal?.place?.rendered == "procedures.entry.result")
     }
 

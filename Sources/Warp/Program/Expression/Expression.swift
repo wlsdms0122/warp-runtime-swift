@@ -8,19 +8,17 @@
 import Foundation
 
 // Everything that computes. Control flow is here rather than beside it: a
-// construct that runs a body still answers with a value, and `id: <construct>`
-// is how that value gets a name.
+// construct stands where a statement's value does, and the statement's name
+// is how what it answers gets a name.
 //
 // The data types:
 //
 //   literal   . A `Value`, verbatim. The type system already says what data
 //                is, so an expression does not restate it
-//   reference . A name to resolve in the consuming scope. A name the scope
-//                does not hold reads as null
+//   reference . A name to resolve in the consuming scope
 //   array     . Elements are expressions
 //   record    . Fields are expressions
-//   call      . A selector and its arguments by position. The one
-//                calling type, and the only open one
+//   call      . A selector and its arguments by position
 //
 // The control constructs carry a `Block` and, where a name has to exist inside that
 // block, the name itself, so an expression means the same thing wherever it
@@ -179,17 +177,15 @@ public indirect enum Expression: Sendable {
         "a construct runs a body, and a call's operand is data."
             + " A body a procedure is to run travels as a closure"
     public static let declarationOnABoundName =
-        "this construct binds the name. A loop's round, a walk's element,"
+        "this construct binds the name. A loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
     public static let constructInCondition =
         "a construct runs a body, and a condition is data."
             + " What a body decides reaches a condition through a procedure"
 
     // Whether a construct (a type that runs a body, or leaves) sits anywhere
-    // in this expression read as data. A call's operand is data the const half
-    // reads, so the check and the link both refuse one by asking this; a
-    // closure is data (the body it carries is its own), so the walk does not
-    // enter it.
+    // in this expression read as data. A closure is data (the body it carries
+    // is its own), so the walk does not enter it.
     public var holdsConstruct: Bool {
         switch self {
         case .literal, .reference, .closure:

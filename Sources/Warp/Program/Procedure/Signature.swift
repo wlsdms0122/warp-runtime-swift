@@ -53,9 +53,7 @@ public struct Signature: Sendable, Equatable {
         Set(parameters.compactMap { parameter in parameter.declared.isInout ? nil : parameter.name })
     }
 
-    // The type parameters a declaration writes: which names it mentions, what
-    // each is bounded by, and whether it has any at all. What a call puts in them
-    // is read off the lowered declaration, where the readings are.
+    // Whether the declaration writes a type parameter anywhere.
     public var isGeneric: Bool { type.isGeneric }
 
     // Every type parameter mentioned in this signature, occurrence by
