@@ -847,10 +847,10 @@ struct StandardTests {
         }
     }
 
-    @Test("abort refuses carrying its rendered message")
-    func abortRefusesWithItsMessage() async throws {
+    @Test("abort fails carrying its rendered message")
+    func abortFailsWithItsMessage() async throws {
         // Given
-        let sut = refusing(interpolated(literal("no: "), spelling(reference("reason"))))
+        let sut = aborting(interpolated(literal("no: "), spelling(reference("reason"))))
 
         // When / Then. Nameless and last, with no result: nothing may be
         // written after what never finishes, so the procedure ends with it
@@ -867,12 +867,12 @@ struct StandardTests {
         }
     }
 
-    @Test("a refusal is caught by an attempt around it")
+    @Test("an abort is caught by an attempt around it")
     func abortIsRecoverable() async throws {
-        // Given. `RecoverableFailure` is what separates the world refusing from
-        // the author being wrong, and a refusal is the first kind
+        // Given. `RecoverableFailure` is what separates a failure from the
+        // author being wrong, and an abort is the first kind
         let sut = Warp.Expression.attempt(
-            Block(body: [Statement(expression: refusing(literal("stopped")))]),
+            Block(body: [Statement(expression: aborting(literal("stopped")))]),
             rescue: Block(body: [], result: .literal(.string("caught"))),
             failure: "failure"
         )
@@ -887,8 +887,8 @@ struct StandardTests {
         #expect(answered == .string("caught"))
     }
 
-    @Test("an arm that refuses does not decide what the arm that stays holds")
-    func refusalDoesNotWidenTheOtherArm() async throws {
+    @Test("an arm that aborts does not decide what the arm that stays holds")
+    func abortDoesNotWidenTheOtherArm() async throws {
         // Given. `returns: never` is what keeps the conditional a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
         let sut = try Module(
@@ -906,7 +906,7 @@ struct StandardTests {
                                     Statement(binding: .assignment([.key("either")]), expression: .literal(.string("here"))
                                     )
                                 ],
-                                else: [Statement(expression: refusing(literal("gone")))]
+                                else: [Statement(expression: aborting(literal("gone")))]
                             )
                         ),
                         Statement(binding: .constant("used"), expression: .call(

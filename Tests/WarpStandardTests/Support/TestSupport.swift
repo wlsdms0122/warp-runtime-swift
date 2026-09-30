@@ -39,7 +39,7 @@ func spelling(_ value: Warp.Expression) -> Warp.Expression {
     .call(Call(selector: "std.text.text", arguments: [value]))
 }
 
-func refusing(_ message: Warp.Expression) -> Warp.Expression {
+func aborting(_ message: Warp.Expression) -> Warp.Expression {
     .call(Call(selector: "std.control.abort", arguments: [message]))
 }
 

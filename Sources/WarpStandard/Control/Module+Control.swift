@@ -16,10 +16,10 @@ public extension Module {
 
     private static let nativeControl = Module(
         unchecked: Draft(
-            description: "Leaving instead of answering.",
+            description: "Failing on purpose instead of answering.",
             procedures: [
                 "std.control.abort": Procedure(
-                    description: "Refuses with a message, which an attempt around it catches.",
+                    description: "Fails on purpose with a message, which an attempt around it catches.",
                     signature: Signature(of: AbortQuery.self, returns: .never),
                     implementation: .query(AbortQuery())
                 )
