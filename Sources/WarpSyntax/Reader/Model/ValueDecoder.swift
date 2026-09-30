@@ -12,26 +12,6 @@ import Warp
 // text would collapse the scalar typing the loader fixed (`3.0` re-reads as
 // int) so the loader's Value is the decoding source itself, with no round trip.
 struct ValueDecoder: Decoder {
-    private struct AnyKey: CodingKey {
-        // MARK: - Property
-        let stringValue: String
-        let intValue: Int?
-
-        // MARK: - Initializer
-        init(stringValue: String) {
-            self.stringValue = stringValue
-            self.intValue = nil
-        }
-
-        init(intValue: Int) {
-            self.stringValue = String(intValue)
-            self.intValue = intValue
-        }
-
-        // MARK: - Public
-        // MARK: - Private
-    }
-
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
         let record: Value.Dictionary
@@ -131,7 +111,7 @@ struct ValueDecoder: Decoder {
         mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
             let decoded = try ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).decode(type)
@@ -146,7 +126,7 @@ struct ValueDecoder: Decoder {
         ) throws -> KeyedDecodingContainer<NestedKey> {
             let container = try ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).container(keyedBy: type)
@@ -159,7 +139,7 @@ struct ValueDecoder: Decoder {
         mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
             let container = try ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).unkeyedContainer()
@@ -172,7 +152,7 @@ struct ValueDecoder: Decoder {
         mutating func superDecoder() throws -> Decoder {
             let decoder = ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             )
@@ -399,7 +379,7 @@ struct ValueDecoder: Decoder {
         return try elements.enumerated().map { index, element in
             try ValueDecoder(
                 value: element,
-                codingPath: codingPath + [AnyKey(intValue: index)],
+                codingPath: codingPath + [AnyCodingKey(intValue: index)],
                 steps: steps + [.index(index)],
                 userInfo: userInfo
             )
@@ -471,7 +451,7 @@ struct ValueDecoder: Decoder {
     private func descending(to key: String, holding held: Value) -> ValueDecoder {
         ValueDecoder(
             value: held,
-            codingPath: codingPath + [AnyKey(stringValue: key)],
+            codingPath: codingPath + [AnyCodingKey(stringValue: key)],
             steps: steps + [.key(key)],
             userInfo: userInfo
         )
