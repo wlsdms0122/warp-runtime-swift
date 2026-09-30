@@ -92,10 +92,8 @@ struct Compiler {
         // to the value it is. The image holds only this form, so a run never
         // asks a value what a name does.
         //
-        // Every call the body writes is checked here too: whatever table put
-        // this body in the image, the body runs, so the frontier's promise
-        // (callee declared, arguments taken) is kept per body rather than per
-        // reachability.
+        // Every call the body writes is checked here too, reached or not:
+        // callee declared, arguments taken.
         func resolved(_ symbol: Symbol) async throws -> Procedure {
             if let done = resolvedBodies[symbol.declared] { return done }
 

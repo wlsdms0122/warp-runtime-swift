@@ -31,8 +31,6 @@ struct Carried: Sendable {
     // Each document as it was held, by origin.
     let documents: [Lowering.Document]
 
-    // What the documents proved about their own bodies, and what the build
-    // read off one whose declaration wrote no `returns`.
     // What the build read off a body whose declaration wrote no `returns`,
     // by row. Everything else the build derived of a declaration stands on
     // its row.

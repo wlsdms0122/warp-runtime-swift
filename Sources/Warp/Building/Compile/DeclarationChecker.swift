@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What the link refuses about a declaration on its own: a type mention that
+// What the compile refuses about a declaration on its own: a type mention that
 // resolves to nothing, a parameter no call could fit, and a constraint no value
 // satisfies.
 struct DeclarationChecker {
@@ -192,14 +192,8 @@ struct DeclarationChecker {
     // MARK: - Private
     // Every type a body mentions, held where it is written: the signatures its
     // closures carry, the types its casts name, and what its names say they
-    // hold. Three name spaces bury a body (a procedure's, a constant's and a
-    // variable's) and one of them was once missing a judgment the other two
-    // made, so the three ask this rather than each holding a copy.
-    //
-    // Asking it where types are inferred instead would ask only of what that
-    // walk reaches: a procedure that both runs and is unreachable is walked by
-    // neither the frontier nor the const set, and its mentions would name
-    // whatever they liked.
+    // hold. A procedure's, a constant's and a variable's body each ask this,
+    // reached or not.
     private func judge(subexpressions held: some Traversable, at place: Place, in table: TypeTable) throws {
         let subexpressions = held.subexpressions(at: place)
 
@@ -264,10 +258,8 @@ struct DeclarationChecker {
 
     // Everything a cast's type is held to on its spelling alone: the names it
     // mentions resolve, and it names a type there is something to read. Both
-    // are answered without knowing what the value reads as, so both belong to
-    // the pass that sees every cast rather than to the walk that sees the
-    // reached ones. A procedure that both runs and is unreachable is walked by
-    // neither the frontier nor the const set.
+    // are answered without knowing what the value reads as, so every cast is
+    // held to both, reached or not.
     private func judge(
         cast named: TypeExpression,
         at place: Place,
@@ -281,7 +273,7 @@ struct DeclarationChecker {
     }
 
     // Whether a parameter's own declaration can be satisfied at all. Facts it
-    // states about itself, judged wherever a parameter is written: a `enum`
+    // states about itself, judged wherever a parameter is written: an `enum`
     // none of whose candidates the declared type admits is a parameter no call
     // could ever fit.
     private func judge(
@@ -289,7 +281,7 @@ struct DeclarationChecker {
         at place: Place,
         in table: TypeTable
     ) throws {
-        // The declaration as the boundary reads it, so what the link calls
+        // The declaration as the boundary reads it, so what the build calls
         // dead is exactly what the boundary would never match.
         let type = parameter.declared.lowered(in: table.loweredTypes)
 
@@ -342,7 +334,7 @@ struct DeclarationChecker {
         // A value handed on once is followed by the name that holds it, so
         // it stands where a name can hold it and nowhere else. Inside another
         // type there is no name to follow, and what the type does with what
-        // it carries is not something the link can read.
+        // it carries is not something the build can read.
         guard !nested || !type.handedOnce(in: table) else {
             throw BuildError(
                 "carries '\(type.rendered)' inside another type, and a value written"
@@ -357,7 +349,7 @@ struct DeclarationChecker {
         case .any, .never, .null, .bool, .int, .double, .string:
             return
 
-        // The link's own note to itself, written where a declaration goes. A
+        // The build's own note to itself, written where a declaration goes. A
         // declaration is a promise, and this is a type worked out from a body.
         // Nobody promised it, and no document could have spelled it. It is
         // refused here rather than left to the reader, because a reader is one
@@ -657,9 +649,6 @@ struct DeclarationChecker {
     // whichever declares it. Each occurrence carries its bounds separately,
     // so occurrences carrying different sets for one name are two claims
     // about one thing.
-    // The type parameters a signature or a nested procedure type mentions,
-    // each occurrence held to the one spelling and every bound to a name the
-    // link declares.
     private func judgeConstraints(
         _ occurrences: [ParameterOccurrence],
         at place: Place,

@@ -10,7 +10,7 @@ import Foundation
 // What an expression folds against before any run: named values as a frame,
 // and the table as it stands. A constant's expression, and a body's path
 // headed by a constant, are lowered against that frame and read the way a
-// run reads them, so what the link folds and what a run computes are one
+// run reads them, so what the build folds and what a run computes are one
 // reading.
 struct Folding {
     // MARK: - Property
@@ -151,7 +151,7 @@ struct Folding {
         let value = try await executor.read(code, in: activation)
 
         // What leaves a fold is a value. A closure that took a hold took a
-        // box of the run that folded it, and a link holds no run's boxes.
+        // box of the run that folded it, and a build holds no run's boxes.
         guard !value.holdsClosure(where: \.tookAHold) else {
             throw BuildError(
                 "settles to a closure holding a variable of the run that folded it,"

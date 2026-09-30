@@ -11,7 +11,7 @@ import Foundation
 //
 // An author binds a call to a name and passes the name, so a declared `returns`
 // only reaches the next call site if the build knows what that name holds. This
-// is what knows: `said = call counts` followed by `wants(procedure: said)` is two
+// is what knows: `said = call counts` followed by `wants(said)` is two
 // declarations disagreeing, and both are text.
 //
 // Nothing here is required to say anything: what cannot be read is `any`, and
@@ -32,7 +32,6 @@ struct TypeChecker {
     // put in the declaration's type parameters is read once: a parameter read
     // two ways is refused rather than folded, a bounded one is judged against
     // its membership, and the declaration comes back with the readings filled.
-    // One machine, so a surface added later cannot lose a step in the copying.
     private enum Judgment {
         case fits(slots: [Slot], returns: LoweredType?)
         case refusal(String)
@@ -148,7 +147,7 @@ struct TypeChecker {
     struct Unsaid {
         // MARK: - Property
         // The declaration itself, rather than the two things this walk asks of
-        // it. What it is called across the link and where its procedures are in the
+        // it. What it is called across the link and where it is written in the
         // document are both the symbol's to say, and copying either out here
         // would be a second place the rule for it lives.
         let symbol: Symbol
@@ -379,9 +378,8 @@ struct TypeChecker {
             }
 
             // A refusal is the judging pass's to state, in its own terms and
-            // at its own place. Raising one here would put the first refusal
-            // an author sees somewhere the frontier never decided, so what
-            // this pass cannot read it treats as unread.
+            // at its own place, so what this pass cannot read it treats as
+            // unread.
             let read = try? await reading(
                 from: only.block,
                 at: only.symbol.place,

@@ -25,7 +25,7 @@ struct Symbol: Sendable {
 
     // Where the caller put that module in the list it handed over. What a
     // sentence names, since a caller reading a refusal counts its own list
-    // rather than the order the link worked out.
+    // rather than the order the build worked out.
     let handed: Int
 
     let procedure: Procedure

@@ -222,9 +222,9 @@ struct Compiling {
     }
 
     // A type the build read off a body rather than out of a signature, held to
-    // the document that wrote the body: the rows it stands on are numbered
-    // beside the ones that document's bodies stand on.
-    // A body's answer stands by its row, which this document holds by now.
+    // the document that wrote the body: it stands by the body's row, and the
+    // rows it stands on are numbered beside the ones that document's bodies
+    // stand on.
     mutating func read(_ answer: LoweredType, as declared: Name, of origin: Int) {
         if let row = lowering.own(origin)[declared] {
             answers[row] = answer

@@ -29,17 +29,16 @@ import Foundation
 // A name is its declared spelling and nothing else. A call site says
 // `std.math.plus`, and that is the one declaration it can mean, wherever it was
 // written; the image the executor runs is spelled the way the documents were,
-// so a run never has to ask again. Constants do change here: a name bound to a
-// value at load has nothing left to do at run time, so compiling folds it into
-// the literal it always was.
+// so a run never has to ask again. Constants settle here: compiling folds a
+// read of one into its value wherever the run has nothing left to settle.
 //
-// Two stages. Compiling settles everything a document says against the
-// interfaces it reaches: its declarations (`DeclarationChecker`), what it
-// claims (`ClaimChecker`), the facts nobody declared (`Derivation`), its
-// bodies (`TypeChecker`, `LinearityChecker`) and lowering (`Lowering`). It
-// runs the procedures a constant calls, which is what folding is. Linking
-// takes what that answered, judges what only the whole list can answer, and
-// runs nothing.
+// Two stages. Compiling (`Compiler`, one document at a time) settles
+// everything a document says against the interfaces it reaches: its
+// declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), the
+// facts nobody declared (`Derivation`), its bodies (`TypeChecker`,
+// `LinearityChecker`) and lowering (`Lowering`). It runs the procedures a
+// constant calls, which is what folding is. Linking takes what that
+// answered, judges what only the whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a caller wants its
