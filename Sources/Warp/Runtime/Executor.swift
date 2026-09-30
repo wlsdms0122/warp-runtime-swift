@@ -144,9 +144,10 @@ public struct Executor: Sendable {
         return try await executor.answer(body, of: entry, in: &activation, at: Trace())
     }
 
-    // Calling a closure a procedure holds. The arguments are handed by
-    // position, every position given, and settle against the closure's own
-    // declaration the way a written application's do.
+    // Calling a closure a procedure holds. What may be called is what the
+    // link proved answers. The arguments are handed by position, every
+    // position given, and settle against the closure's own declaration the
+    // way a written application's do.
     func call(
         _ closure: Closure,
         handing arguments: [Value],
@@ -162,17 +163,6 @@ public struct Executor: Sendable {
         var activation = activation
 
         return try await evaluate(code, in: &activation, at: Trace())
-    }
-
-    // Running a closure here rather than in `evaluate`, which is what makes a
-    // procedure able to take one. What may be called is what the link proved
-    // answers, and a slot declaring `const procedure` is how a procedure says so.
-    func call(
-        _ closure: Closure,
-        with arguments: [Value],
-        at trace: Trace = Trace()
-    ) async throws -> Value {
-        try await answer(closure, given: arguments, at: trace)
     }
 
     // Sending a procedure a procedure declared it sends. The row the send reaches is
