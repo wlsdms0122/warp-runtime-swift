@@ -135,5 +135,3 @@ func answer(
         vocabulary: vocabulary
     )
 }
-
-// MARK: - Vocabulary
