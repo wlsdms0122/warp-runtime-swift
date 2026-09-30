@@ -106,17 +106,6 @@ public struct Draft: Sendable {
     // changes this one field of a copy.
     public private(set) var procedures: [Name: Procedure]
 
-    // The same two, when only the names are wanted. Read off the lists above
-    // rather than gathered again, so what counts as a procedure and what counts as
-    // a type is said in one place.
-    var declaredProcedures: Set<Name> {
-        read().declaredProcedures
-    }
-
-    var declaredTypes: Set<Name> {
-        read().declaredTypes
-    }
-
     // Every name this uses and does not itself declare, which is what `imports`
     // says where a document wrote one.
     public var uses: Set<Name> {
