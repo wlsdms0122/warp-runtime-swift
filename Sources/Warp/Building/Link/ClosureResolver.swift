@@ -1,5 +1,5 @@
 //
-//  ClosureAnswering.swift
+//  ClosureResolver.swift
 //  Warp
 //
 //  Created by JSilver on 9/18/26.
@@ -7,21 +7,21 @@
 
 import Foundation
 
-// A closure a value holds, answered with the row it stands at: found by its
+// A closure a value holds, resolved to the row it stands at: found by its
 // spelling, held to that row's frame, and standing as the row is once the
-// row itself is answered. Answering a row is the closures its body's literal
-// values hold answered the same way, which is every asker's rule, and the
+// row itself is resolved. Resolving a row is the closures its body's literal
+// values hold resolved the same way, which is every asker's rule, and the
 // numbers its code carries read as the asker reads them, which is the
 // asker's: a compile reads them against its own table as they are, and a
 // link reads them into rows of its own. One door for both, so a third asker
-// answers closures alike without hearing of it.
+// resolves closures alike without hearing of it.
 //
-// Rows are answered once each, whichever asks first, and a row asked for
-// again while its own answering is underway is a ring of rows holding
+// Rows are resolved once each, whichever asks first, and a row asked for
+// again while its own resolving is underway is a ring of rows holding
 // closures of one another through the values in their bodies, which no
-// build lowers. A class, since the rows answered are remembered across the
+// build lowers. A class, since the rows resolved are remembered across the
 // askings that share one.
-final class ClosureAnswering {
+final class ClosureResolver {
     // MARK: - Property
     private let spelled: ClosureRows
     private let table: [Linked]
@@ -29,10 +29,10 @@ final class ClosureAnswering {
 
     // What the asker makes of a row beyond its closures, where its numbers
     // read differently from how the table has them. One rule per door, since
-    // a row is answered once and remembered.
+    // a row is resolved once and remembered.
     private let rewriting: ((Linked) throws -> Linked)?
 
-    private var answered: [Linked?]
+    private var resolved: [Linked?]
     private var underway: [Bool]
 
     // MARK: - Initializer
@@ -46,14 +46,14 @@ final class ClosureAnswering {
         self.table = table
         self.documents = documents
         self.rewriting = rewriting
-        self.answered = Array(repeating: nil, count: table.count)
+        self.resolved = Array(repeating: nil, count: table.count)
         self.underway = Array(repeating: false, count: table.count)
     }
 
     // MARK: - Public
-    // The row at a position, answered once.
+    // The row at a position, resolved once.
     func row(at row: Int) throws -> Linked {
-        if let done = answered[row] { return done }
+        if let done = resolved[row] { return done }
 
         guard !underway[row] else {
             throw BuildError.unjudged(
@@ -67,13 +67,13 @@ final class ClosureAnswering {
 
         let done = try rewriting.map { rewriting in try rewriting(table[row]) } ?? standing(table[row])
 
-        answered[row] = done
+        resolved[row] = done
 
         return done
     }
 
-    // A closure a value holds, standing as the row answered for it.
-    func answered(_ closure: Closure, at place: Place) throws -> Closure {
+    // A closure a value holds, standing as the row resolved for it.
+    func resolved(_ closure: Closure, at place: Place) throws -> Closure {
         let row = try spelled.row(of: closure, at: place)
 
         try held(closure, to: table[row], at: place)
@@ -81,11 +81,11 @@ final class ClosureAnswering {
         return closure.standing(as: try self.row(at: row))
     }
 
-    // A body with the closures its literal values hold answered, and every
+    // A body with the closures its literal values hold resolved, and every
     // other operation and every type read as the asker reads them, the
-    // answered literal included. One pass, since a body is rebuilt by the
+    // resolved literal included. One pass, since a body is rebuilt by the
     // rewriting and the asker's reading rides on the same one.
-    func answered(
+    func resolved(
         _ body: LoweredBody,
         at place: Place,
         operation reading: (Operation) throws -> Operation = { operation in operation },
@@ -95,14 +95,14 @@ final class ClosureAnswering {
             operation: { operation in
                 guard case let .literal(value) = operation, value.holdsProcedure else { return try reading(operation) }
 
-                return try reading(.literal(try value.rewritten { closure in try answered(closure, at: place) }))
+                return try reading(.literal(try value.rewritten { closure in try resolved(closure, at: place) }))
             },
             type: type
         )
     }
 
     // MARK: - Private
-    // A row whose numbers stand as they are: its literal values answered and
+    // A row whose numbers stand as they are: its literal values resolved and
     // nothing else touched. A body holding no procedure in a literal is the
     // row as it is, and is not rebuilt to find that out.
     private func standing(_ row: Linked) throws -> Linked {
@@ -119,7 +119,7 @@ final class ClosureAnswering {
         return Linked(
             row,
             implementation: .body(
-                try answered(body, at: .procedure(row.label.spelling, in: documents[row.origin])),
+                try resolved(body, at: .procedure(row.label.spelling, in: documents[row.origin])),
                 frame
             ),
             sends: row.sends

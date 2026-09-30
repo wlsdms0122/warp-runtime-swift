@@ -73,7 +73,7 @@ final class Relocating {
     // value holding a closure whose row it is. One object per row, so a
     // closure a value holds holds the row of the table it stands in. Made
     // with this link's reading of a row, which is why it waits for self.
-    private lazy var answering = ClosureAnswering(
+    private lazy var resolver = ClosureResolver(
         spelled: spelled,
         table: table,
         documents: documents,
@@ -184,13 +184,13 @@ final class Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            try answering.answered(closure, at: standing.place)
+            try resolver.resolved(closure, at: standing.place)
         }
     }
 
     // A row relocated once.
     private func relocated(at row: Int) throws -> Linked {
-        try answering.row(at: row)
+        try resolver.row(at: row)
     }
 
     private func relocated(_ row: Linked) throws -> Linked {
@@ -255,7 +255,7 @@ final class Relocating {
     // The closures its literal values hold are the door's to answer; the
     // numbers are this link's.
     private func filled(_ body: LoweredBody, in standing: Standing) throws -> LoweredBody {
-        try answering.answered(
+        try resolver.resolved(
             body,
             at: standing.place,
             operation: { operation in try relocated(operation, in: standing) },

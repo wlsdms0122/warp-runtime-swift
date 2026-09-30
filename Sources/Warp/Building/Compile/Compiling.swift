@@ -263,7 +263,7 @@ struct Compiling {
     // on, so every one is answered here before anything folds. The numbers
     // their code carries read against this table as they are.
     mutating func answerHeld() throws {
-        let answering = ClosureAnswering(
+        let resolver = ClosureResolver(
             spelled: ClosureRows(
                 naming: naming,
                 numbering: lowering.documents.map(\.numbering),
@@ -274,7 +274,7 @@ struct Compiling {
             documents: documents
         )
 
-        lowering.replace(table: try lowering.table.indices.map { row in try answering.row(at: row) })
+        lowering.replace(table: try lowering.table.indices.map { row in try resolver.row(at: row) })
     }
 
     // What has been lowered since the last phase, written in.
