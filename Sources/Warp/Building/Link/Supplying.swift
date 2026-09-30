@@ -50,8 +50,9 @@ public struct Supplying: Sendable {
 
     // What a module brings under a private spelling, by the document that
     // declares it: named by that document alone, so two modules may each bring
-    // one. A module that is no document brings none.
-    private let hidden: [Identity?: [Name: Brought]]
+    // one. A module that is no document brings none; the validator refuses one
+    // that tries.
+    private let hidden: [Identity: [Name: Brought]]
 
     // MARK: - Initializer
     private init() {
@@ -65,7 +66,7 @@ public struct Supplying: Sendable {
     // the caller happened to write.
     public init(_ modules: [Module]) throws {
         var procedures: [Name: Brought] = [:]
-        var hidden: [Identity?: [Name: Brought]] = [:]
+        var hidden: [Identity: [Name: Brought]] = [:]
 
         for module in modules {
             for (name, procedure) in module.procedures {
@@ -80,7 +81,12 @@ public struct Supplying: Sendable {
 
                 // Named by its document alone, so it is kept by its document.
                 guard procedure.access.reachesOtherDocuments else {
-                    guard hidden[module.identity]?[name] == nil else {
+                    guard let identity = module.identity else {
+                        assertionFailure("a module that is no document brings '\(name)' privately")
+                        continue
+                    }
+
+                    guard hidden[identity]?[name] == nil else {
                         throw BuildError(
                             "'\(name)' is brought by two of the modules handed over under one document."
                                 + " Two procedures under one spelling have no way to be told apart",
@@ -88,7 +94,7 @@ public struct Supplying: Sendable {
                         )
                     }
 
-                    hidden[module.identity, default: [:]][name] = brought
+                    hidden[identity, default: [:]][name] = brought
 
                     continue
                 }
@@ -114,7 +120,7 @@ public struct Supplying: Sendable {
     // private procedure first, then what any document may name. Nil where the
     // host brought none, and what a row does about that is the row's.
     subscript(_ name: Name, at document: Place.Document) -> Brought? {
-        hidden[document.identity]?[name] ?? procedures[name]
+        document.identity.flatMap { identity in hidden[identity]?[name] } ?? procedures[name]
     }
 
     // MARK: - Private
