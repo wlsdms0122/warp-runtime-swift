@@ -34,7 +34,7 @@ public enum Envelope {
     public static let version = 1
 
     public static let versionKey: Name = Module.versionKey
-    public static let importsKey: Name = "imports"
+    public static let importsKey: Name = ModuleReader.CodingKeys.imports.name
 
     // How deep a document may nest. The bound is exact: every reader takes
     // a document within it and refuses the first container past it, and a

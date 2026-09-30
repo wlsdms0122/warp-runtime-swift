@@ -17,7 +17,6 @@ import Warp
 // document that declares three of them is ordinary rather than a special case.
 public struct ModuleReader: Decodable {
     public enum CodingKeys: String, CodingKey, CaseIterable {
-        case warp
         case imports
         case description
         case types
@@ -43,6 +42,7 @@ public struct ModuleReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
+            extra: [Envelope.versionKey.spelling],
             context: "module"
         )
 

@@ -346,7 +346,7 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        guard record.names.contains("format") else {
+        guard record.names.contains(Interpolation.formatKey) else {
             // Only `with` remains, with is format's companion, meaningless
             // alone.
             throw ExpressionFormError(
@@ -354,20 +354,20 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        guard Set(record.names).subtracting(["format", "with"]).isEmpty else {
+        guard Set(record.names).subtracting(Interpolation.keys).isEmpty else {
             throw ExpressionFormError(
                 "a record with `format` must be exactly { format: <template>,"
                     + " with: <bindings> } (found keys: \(record.names))"
             )
         }
 
-        guard case let .string(template)? = record["format"] else {
+        guard case let .string(template)? = record[Interpolation.formatKey] else {
             throw ExpressionFormError("{ format: } takes a template string")
         }
 
         let bindings: [Name: Expression]
 
-        switch record["with"] {
+        switch record[Interpolation.withKey] {
         case nil:
             bindings = [:]
 
@@ -375,7 +375,7 @@ public struct ExpressionReader: Decodable {
             bindings = try withRecord.entries.reduce(into: [Name: Expression]()) { bound, entry in
                 bound[entry.name] = try read(
                     entry.value,
-                    at: steps + [.key("with"), .key(entry.name.spelling)],
+                    at: steps + [.key(Interpolation.withKey.spelling), .key(entry.name.spelling)],
                     in: decoder
                 )
             }
