@@ -1,5 +1,5 @@
 //
-//  CompiledTests.swift
+//  SeparateCompilationTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/8/26.
@@ -15,7 +15,7 @@ import WarpStandard
 // Compiling settles what the documents say on their own. Linking takes that
 // and one name to start from. What each stage may do is what these ask.
 @Suite("What compiling settles and what linking decides")
-struct CompiledTests {
+struct SeparateCompilationTests {
     // A fixture that does not hold what a test reads out of it.
     private struct Unheld: Error, CustomStringConvertible {
         // MARK: - Property

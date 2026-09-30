@@ -1,5 +1,5 @@
 //
-//  BuriedTests.swift
+//  TraversableTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/30/26.
@@ -15,7 +15,7 @@ import Testing
 // answering `[]` compiles. So a marker stands in every position a child can
 // sit in, and the walk has to come back with all of them.
 @Suite("One walk finds everything an expression holds")
-struct BuriedTests {
+struct TraversableTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
