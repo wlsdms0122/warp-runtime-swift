@@ -424,7 +424,7 @@ enum Library {
                   returns "array<some Element>"
                 }
                 "std.collection.first" {
-                  description "The first element, or nothing."
+                  description "The first element."
                   parameters [
                     {
                       name "array"
@@ -460,7 +460,7 @@ enum Library {
                       }
                     }
                   ]
-                  description "The last element, or nothing."
+                  description "The last element."
                   parameters [
                     {
                       name "array"
@@ -1694,7 +1694,7 @@ enum Library {
         "math": """
             warpt 1
             {
-              description "Ordering the other way round, choosing between two, and dropping a sign. Written from lessThan."
+              description "Ordering the other way round, choosing between two and dropping a sign, written from lessThan and minus."
               imports [
                 "std.Comparable"
                 "std.Numeric"
@@ -1758,7 +1758,7 @@ enum Library {
                   bounds {
                     T "std.Comparable"
                   }
-                  description "Whether this one is larger, by the one order."
+                  description "Whether the first is larger, by the one order."
                   parameters [
                     {
                       name "lhs"
