@@ -39,6 +39,8 @@ public struct Validator: Sendable {
     // Whether its names collide with another module's is a link question, and
     // there is no other module in sight from inside one.
     public func validate(_ module: Module) throws {
+        try hosted(module)
+
         let constants = Set(module.constants.keys)
         let variables = Set(module.variables.keys)
 
@@ -154,6 +156,22 @@ public struct Validator: Sendable {
             said.compactMap { said in said }.joined(separator: ", and "),
             at: Place([.part(.imports)], in: .of(module))
         )
+    }
+
+    // A private procedure is named by its document, and the code a host
+    // brings for one is joined to it by that document. A module that is no
+    // document has nothing to join it by.
+    private func hosted(_ module: Module) throws {
+        guard module.identity == nil else { return }
+
+        for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key })
+        where procedure.implementation.native != nil && !procedure.access.reachesOtherDocuments {
+            throw ValidationError(
+                "this procedure is private and answered by the host in a module that is no document,"
+                    + " and a private procedure is named by its document",
+                at: .procedure(name.spelling, in: .of(module))
+            )
+        }
     }
 
     private func validate(

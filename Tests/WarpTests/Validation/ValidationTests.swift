@@ -548,6 +548,30 @@ struct ValidationTests {
         }
     }
 
+    @Test("a private procedure the host answers is refused in a module that is no document")
+    func aPrivateNativeNeedsADocument() throws {
+        // Given. A private procedure answered by the host, which a link joins
+        // to its code by the document that declares it.
+        let procedures: [Name: Procedure] = [
+            "app.ticket": Procedure(
+                access: .private,
+                signature: Signature(returns: .int),
+                implementation: .query(TicketQuery())
+            )
+        ]
+
+        // When / Then. Refused where the module is made, so a compile and a
+        // build of it agree. Under a document it stands.
+        #expect {
+            try Module(procedures: procedures)
+        } throws: { error in
+            "\(error)".contains("answered by the host in a module that is no document")
+        }
+        #expect(throws: Never.self) {
+            try Module(procedures: procedures, identity: Identity([0x01]))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
