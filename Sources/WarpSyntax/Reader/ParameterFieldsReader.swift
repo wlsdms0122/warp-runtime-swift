@@ -30,7 +30,7 @@ struct ParameterFieldsReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
-            context: "input param"
+            context: "parameter"
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
