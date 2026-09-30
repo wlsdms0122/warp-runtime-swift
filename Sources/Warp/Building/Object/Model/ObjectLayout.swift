@@ -265,6 +265,6 @@ enum ObjectLayout {
     static let format = 1
 
     // Every key an object carries, which a reading holds a record to before it
-    // takes any.
+    // reads any.
     static let keys = Set(Key.allCases.map(\.name))
 }

@@ -9,10 +9,11 @@ import Foundation
 
 // The parts of an object, each under its key. The record is held to the
 // layout's keys as it is opened, none missing and none the layout does not
-// name, so a part asked for afterwards is there.
+// name, so every key hands over its part.
 struct Keyed {
     // MARK: - Property
-    private let written: Value.Dictionary
+    // In the order the layout declares its keys.
+    let parts: [(key: ObjectLayout.Key, value: Value)]
 
     // MARK: - Initializer
     init(_ value: Value) throws {
@@ -24,11 +25,13 @@ struct Keyed {
             throw ObjectRefused("'object' writes '\(stray)', which this reads none of")
         }
 
-        if let missing = ObjectLayout.keys.sorted().first(where: { name in written[name] == nil }) {
-            throw ObjectRefused("'object' writes no '\(missing)'")
-        }
+        self.parts = try ObjectLayout.Key.allCases.map { key in
+            guard let part = written[key.name] else {
+                throw ObjectRefused("'object' writes no '\(key.name)'")
+            }
 
-        self.written = written
+            return (key, part)
+        }
     }
 
     // MARK: - Public
@@ -39,14 +42,6 @@ struct Keyed {
         guard case let .dictionary(written) = value else { return nil }
 
         return written[key]
-    }
-
-    func take(_ key: ObjectLayout.Key) throws -> Value {
-        guard let held = written[key.name] else {
-            throw ObjectRefused("'object' writes no '\(key.name)'")
-        }
-
-        return held
     }
 
     // MARK: - Private

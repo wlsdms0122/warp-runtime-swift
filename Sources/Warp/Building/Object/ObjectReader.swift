@@ -53,32 +53,90 @@ struct ObjectReader {
             )
         }
 
-        let fields = try Keyed(value)
+        // Every part read by the one case that names its key, so a key the
+        // layout gains is a case this has to read. The rows the document
+        // declares are what the numbering counts from, and the numbering spells
+        // the rows its bodies lifted, so those two are kept as written until
+        // every part is in.
+        var dependencies: [Fingerprint] = []
+        var types: [Name: TypeExpression] = [:]
+        var constraints: [Name: [TypeExpression]] = [:]
+        var contracts: [Name: [Name: ContractProcedure]] = [:]
+        var claims: [Name: Set<Name>] = [:]
+        var leaned: [Claim: Place] = [:]
+        var declaredRows: [Judged] = []
+        var liftedRows: [Value] = []
+        var answers: [Name: LoweredType] = [:]
+        var numbered: Value = .null
+        var typeNumbering = LoweredTypeNumbering(types: [], memberships: [])
+        var variables: [(name: Name, value: Value)] = []
+        var constants: [Name] = []
 
-        let document = try document(fields.take(.document))
-        let dependencies = try Field(fields.take(.dependencies), of: "dependencies").ordered { written in
-            Fingerprint(try Field(written, of: "dependencies").bytes())
-        }
-        let types = try keyed(fields.take(.types), of: "types", expression)
-        let constraints = try keyed(fields.take(.constraints), of: "constraints") { written in
-            try Field(written, of: "constraints").list(expression)
-        }
-        let contracts = try keyed(fields.take(.contracts), of: "contracts") { written in
-            try keyed(written, of: "contract", contractProcedure)
-        }
-        let claims = try keyed(fields.take(.claims), of: "claims") { written in
-            Set(try Field(written, of: "claims").ordered(name))
-        }
-        let leaned = try leaned(fields.take(.leaned))
+        for (key, part) in try Keyed(value).parts {
+            switch key {
+            // Read above, before the record is held to the layout.
+            case .object:
+                continue
 
-        // The rows the document declares stand under their spellings, and
-        // those spellings are what the numbering counts from. The rows its
-        // bodies lifted are spelled by the numbering, so they are read once
-        // it is.
-        let declaredRows = try Field(fields.take(.rows), of: "rows").list { written in
-            try judged(written, spelled: nil)
+            case .document:
+                try refuseAnotherDocument(part)
+
+            case .dependencies:
+                dependencies = try Field(part, of: "dependencies").ordered { written in
+                    Fingerprint(try Field(written, of: "dependencies").bytes())
+                }
+
+            case .types:
+                types = try keyed(part, of: "types", expression)
+
+            case .constraints:
+                constraints = try keyed(part, of: "constraints") { written in
+                    try Field(written, of: "constraints").list(expression)
+                }
+
+            case .contracts:
+                contracts = try keyed(part, of: "contracts") { written in
+                    try keyed(written, of: "contract", contractProcedure)
+                }
+
+            case .claims:
+                claims = try keyed(part, of: "claims") { written in
+                    Set(try Field(written, of: "claims").ordered(name))
+                }
+
+            case .leaned:
+                leaned = try self.leaned(part)
+
+            // The rows the document declares stand under their spellings.
+            case .rows:
+                declaredRows = try Field(part, of: "rows").list { written in
+                    try judged(written, spelled: nil)
+                }
+
+            case .lifted:
+                liftedRows = try Field(part, of: "lifted").list { written in written }
+
+            case .answers:
+                answers = try keyed(part, of: "answers", lowered)
+
+            // What the document sends and how many closures each declaration
+            // wrote, which is what its bodies number their calls from.
+            case .numbering:
+                numbered = part
+
+            // The types its bodies stand on and the memberships, which is what
+            // they number their types from.
+            case .typeNumbering:
+                typeNumbering = try LoweredTypeNumbering(written: part)
+
+            case .variables:
+                variables = try Field(part, of: "variables").led(variable)
+
+            case .constants:
+                constants = try Field(part, of: "constants").ordered(name)
+            }
         }
-        let liftedRows = try Field(fields.take(.lifted), of: "lifted").list { written in written }
+
         let declared = declaredRows.map(\.label)
 
         // One row per spelling, in name order: what the numbering counts
@@ -86,11 +144,8 @@ struct ObjectReader {
         guard declared.ordered else {
             throw ObjectRefused("the declared rows stand out of name order, or one spelling stands twice")
         }
-        let answers = try keyed(fields.take(.answers), of: "answers", lowered)
 
-        // What the document sends and how many closures each declaration
-        // wrote, which is what its bodies number their calls from.
-        let numbering = try Numbering(written: fields.take(.numbering), declaring: declared)
+        let numbering = try Numbering(written: numbered, declaring: declared)
         let table = declaredRows + (try liftedRows.enumerated().map { index, written in
             guard let writer = numbering.writer(of: index) else {
                 throw ObjectRefused("a lifted row stands where the numbering counts no closure")
@@ -98,15 +153,9 @@ struct ObjectReader {
 
             return try judged(written, spelled: writer.by.name)
         })
-        // The types its bodies stand on and the memberships, which is what
-        // they number their types from.
-        let typeNumbering = try LoweredTypeNumbering(written: fields.take(.typeNumbering))
-
-        let variables = try Field(fields.take(.variables), of: "variables").led(variable)
-        let constants = try Field(fields.take(.constants), of: "constants").ordered(name)
 
         return try Compiled(
-            document: document,
+            document: Place.Document(identity: identity),
             types: types,
             constraints: constraints,
             contracts: contracts,
@@ -224,7 +273,9 @@ struct ObjectReader {
         try Field(value, of: "a name").name()
     }
 
-    private func document(_ value: Value) throws -> Place.Document {
+    // The document an object says it is of, held to the one it was kept
+    // under.
+    private func refuseAnotherDocument(_ value: Value) throws {
         let read = try Field(value, of: "document").maybe { written in
             Identity(try Field(written, of: "document").bytes())
         }
@@ -234,8 +285,6 @@ struct ObjectReader {
                 "this object stands against a document other than the one it was kept under"
             )
         }
-
-        return Place.Document(identity: read)
     }
 
     // The document a closure's writer stands in, which may be another
