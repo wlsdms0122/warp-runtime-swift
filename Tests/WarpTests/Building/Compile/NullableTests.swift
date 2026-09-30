@@ -502,7 +502,7 @@ struct NullableTests {
         // And the run says the same rather than reading past it. The layers
         // share one sentence, so neither answers what the other refuses
         let marked: Path = [.key("items", optional: true), .index(0)]
-        let resolver = Folding(bindings: ["items": .array([.string("one")])], natives: [])
+        let resolver = try await builder.build([]).folding(["items": .array([.string("one")])])
 
         await #expect {
             try await resolver.read(marked, at: .given("test"))

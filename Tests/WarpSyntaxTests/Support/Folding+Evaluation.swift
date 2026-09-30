@@ -12,7 +12,7 @@ import Foundation
 extension Folding {
     // A condition read here, as the bool it answers.
     func evaluate(_ condition: Warp.Expression) async throws -> Bool {
-        guard case let .bool(answer) = try await read(condition) else {
+        guard case let .bool(answer) = try await read(condition, at: .given("test")) else {
             throw ReadingError("a condition must answer bool")
         }
 

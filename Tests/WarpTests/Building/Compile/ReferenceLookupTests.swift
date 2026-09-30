@@ -13,15 +13,21 @@ import WarpStandard
 @Suite
 struct ReferenceLookupTests {
     // MARK: - Property
-    private let sut = Folding(bindings: [
-                "name": .string("spec"),
-                "run": .dictionary(["id": .string("r-1")]),
-                "items": .array([.int(1), .int(2), .int(3)]),
-                "step": .dictionary(["out": .string("done"), "list": .array([.string("a")])]),
-                "index": .int(1)
-            ], natives: Module.standard)
+    private let standard: Image
+    private let sut: Folding
 
     // MARK: - Initializer
+    init() async throws {
+        standard = try await Builder().build(Module.standard)
+        sut = standard.folding([
+            "name": .string("spec"),
+            "run": .dictionary(["id": .string("r-1")]),
+            "items": .array([.int(1), .int(2), .int(3)]),
+            "step": .dictionary(["out": .string("done"), "list": .array([.string("a")])]),
+            "index": .int(1)
+        ])
+    }
+
     // MARK: - Test
     @Test("an existing path returns its value")
     func existingPathReturnsValue() async {
@@ -98,11 +104,11 @@ struct ReferenceLookupTests {
     func indexReferenceFractionNamesItsMiss() async throws {
         // Given. A fraction with digits after the point, and a whole one no
         // an int holds: two different facts, each named as itself
-        let resolver = Folding(bindings: [
-                    "items": .array([.int(1), .int(2)]),
-                    "half": .double(1.5),
-                    "far": .double(1e30)
-                ], natives: Module.standard)
+        let resolver = standard.folding([
+            "items": .array([.int(1), .int(2)]),
+            "half": .double(1.5),
+            "far": .double(1e30)
+        ])
 
         guard case let .unfit(halfway) = await resolver.lookup(
             [.key("items"), .indexRef([.key("half")])]

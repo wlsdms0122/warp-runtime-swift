@@ -46,69 +46,6 @@ struct Folding {
         self.answered = answered
     }
 
-    // Against a link already made: every declaration it holds answers here the
-    // way it answers a body, whether the host wrote it or a document did. The
-    // numbers a body carries are rows after a link, which is the same reading
-    // a run makes of them.
-    init(bindings: [Name: Value], in image: Image) {
-        self.init(
-            constants: bindings,
-            origin: 0,
-            in: .relocated(image.linked, rows: image.rows, naming: image.naming),
-            loweredTypes: image.loweredTypes
-        )
-    }
-
-    // Against native procedures alone: every declaration of the modules by its
-    // spelling, a written body standing as the refusal it earns before it is
-    // lowered. A native's constness is its own; a written body is never run
-    // here, so its constness is not asked. A procedure a caller brought stands
-    // as its own refusal, since a constant settles from the standard vocabulary
-    // and from bodies in the link.
-    init(bindings: [Name: Value], natives modules: [Module]) {
-        // The natives declare the types their own signatures name, so the
-        // table is theirs.
-        let loweredTypes = TypeTable(
-            types: modules.reduce(into: [:]) { table, module in table.merge(module.types) { first, _ in first } },
-            constraints: modules.reduce(into: [:]) { table, module in table.merge(module.constraints) { first, _ in first } }
-        ).loweredTypes
-        var table: [Linked] = []
-        var rows: [Name: Int] = [:]
-
-        for (origin, module) in modules.enumerated() {
-            for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
-                rows[name] = table.count
-                table.append(
-                    Linked.standing(
-                        label: name,
-                        origin: origin,
-                        procedure: procedure,
-                        const: procedure.implementation.isNativelyConst == true,
-                        isolated: false,
-                        failing: procedure.implementation.nativelyFailing ?? .these([]),
-                        builtin: module.builtin,
-                        // A constant settles before the link's table exists, so
-                        // a procedure that sends has no row to send to. It refuses
-                        // when it tries, the way one with a written body does.
-                        sends: [],
-                        in: loweredTypes
-                    ).folding
-                )
-            }
-        }
-
-        self.init(
-            constants: bindings,
-            origin: 0,
-            in: .relocated(
-                table,
-                rows: rows,
-                naming: modules.map { module in Closure.Document(identity: module.identity, token: Compiled.Token()) }
-            ),
-            loweredTypes: loweredTypes
-        )
-    }
-
     // MARK: - Public
     // What an expression a document's declaration wrote reads here, lowered
     // into the document's own rows. A closure it holds is a closure literal of
@@ -166,10 +103,10 @@ struct Folding {
     }
 
     // What an expression reads here, lowered into a table of its own. For what
-    // is folded where no declaration is being read: a path a body writes, and a
-    // condition a caller hands over. A closure written in one is numbered by
-    // nothing this document holds and is refused where it is lowered.
-    func read(_ expression: Expression, at place: Place = .given(Folding.assembled.spelling)) async throws -> Value {
+    // is folded where no declaration is being read, a path a body writes. A
+    // closure written in one is numbered by nothing this document holds and is
+    // refused where it is lowered.
+    func read(_ expression: Expression, at place: Place) async throws -> Value {
         guard let numbering = answered.numbering(of: origin) else {
             throw BuildError.unjudged("an expression in a document that numbered nothing", at: place)
         }
