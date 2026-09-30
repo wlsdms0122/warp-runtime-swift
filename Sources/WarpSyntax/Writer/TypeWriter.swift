@@ -108,15 +108,9 @@ struct TypeWriter {
         case let .named(name):
             return .string(name.spelling)
 
-        // Bare, because an occurrence names the parameter and its constraint is
-        // written once, in the `bounds` of the signature that declares the
-        // name. A signature entry strips the bound before writing and emits it
-        // there, so a bound still on the type here means no signature owns it,
-        // and no surface of the document could carry it: writing the name alone
-        // would be a document that reads back meaning something else. No
-        // document spells this. It is a type the link worked out from a body,
-        // and the link refuses one written into a declaration. Reaching here
-        // means a type got past that, so it is said rather than silently
+        // No document spells this. It is a type the link worked out from a
+        // body, and the link refuses one written into a declaration. Reaching
+        // here means a type got past that, so it is said rather than silently
         // written as something else.
         case let .reading(of, path):
             throw WritingError(
@@ -126,6 +120,12 @@ struct TypeWriter {
                     + " fills"
             )
 
+        // Bare, because an occurrence names the parameter and its constraint is
+        // written once, in the `bounds` of the signature that declares the
+        // name. A signature entry strips the bound before writing and emits it
+        // there, so a bound still on the type here means no signature owns it,
+        // and no surface of the document could carry it: writing the name alone
+        // would be a document that reads back meaning something else.
         case let .parameter(name, constraints):
             guard constraints.isEmpty else {
                 throw WritingError(

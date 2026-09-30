@@ -331,7 +331,8 @@ public struct Writer: Sendable {
     }
 
     // A signature is written flat into whatever declares it. A procedure and a
-    // procedure type both spell it as their own keys rather than nesting it.
+    // contract's procedure both spell it as their own keys rather than nesting
+    // it.
     private func fields(of signature: Signature) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 

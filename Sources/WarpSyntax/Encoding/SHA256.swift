@@ -9,13 +9,6 @@ import Foundation
 
 // FIPS 180-4, written out here.
 //
-// Not borrowed from a package, because the one thing this target promises is
-// that another implementation can speak the wire without taking on anything of
-// ours, and a dependency in the way of that would be an odd thing to add to the
-// target that says so. Not taken from the platform either: the one that ships
-// it is one platform, and what this computes has to be the same number
-// everywhere or it is not an identity.
-//
 // Everything below is the published algorithm. The only judgment in it is the
 // choice of algorithm, which the specification names.
 struct SHA256 {

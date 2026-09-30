@@ -8,16 +8,15 @@
 import Foundation
 import Warp
 
-// The encoding a document travels in. This is Warp's own, and it exists because
-// the things a wire format must promise are things a borrowed format cannot:
+// The encoding a document travels in, and what it promises:
 //
 // - **A whole number and a fraction are different bytes.** They are different
-//   tags, so no general-purpose encoder can collapse them into one kind of
-//   number the way a borrowed text format would.
-// - **The same document is the same bytes, both ways.** The writer sorts record
-//   keys and writes every number minimally, and the reader refuses bytes the
-//   writer would not have written, so byte equality and document equality are
-//   the same question, which is what makes a document signable and cacheable.
+//   tags.
+// - **The same document is the same bytes, both ways.** The writer writes
+//   record keys in byte order and every number minimally, and the reader
+//   refuses bytes the writer would not have written, so byte equality and
+//   document equality are the same question, which is what makes a document
+//   signable and cacheable.
 // - **What cannot arrive is refused before it arrives.** Truncation, trailing
 //   bytes, an unknown tag, a key out of order. Each is a refusal with a name,
 //   not a value somebody guessed.
@@ -418,9 +417,7 @@ public struct BinaryEncoding {
     // A claimed length, charged against the one budget all claims share: the
     // bytes of the document itself. Each claimed thing costs at least `cost`
     // bytes to actually write, so however deeply the claimants nest, their
-    // claims cannot sum past the document. A check against only the bytes
-    // *remaining* was local to each claim, and five hundred nested containers
-    // could each claim the whole document and have memory set aside for it.
+    // claims cannot sum past the document.
     private func length(
         from reading: inout Cursor,
         of what: String,

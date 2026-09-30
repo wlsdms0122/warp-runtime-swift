@@ -8,10 +8,7 @@
 import Foundation
 import Warp
 
-// Data written the way a document spells it. `ValueReader` the other way round,
-// and the reason both live here: `Value` is the language's data type and knows
-// nothing about being written down, so the mapping belongs in one place and
-// this is it.
+// Data written the way a document spells it. `ValueReader` the other way round.
 //
 // The pair round-trips as far as the carrier can carry: a Codable carrier's
 // number grammar is its own, so a whole-worth fraction may come back as the int

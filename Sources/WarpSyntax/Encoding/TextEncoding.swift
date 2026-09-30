@@ -61,11 +61,9 @@ public struct TextEncoding {
         // MARK: - Private
     }
 
-    // A container being put back together, exactly as in the binary reader. One
-    // reader per encoding would be two chances to differ. A sum rather
-    // than two optionals, so "neither" and "both" are not states the code has
-    // to promise never to reach; a record with no key is one waiting for its
-    // next field name.
+    // A container being put back together. A sum rather than two optionals,
+    // so "neither" and "both" are not states the code has to promise never to
+    // reach; a record with no key is one waiting for its next field name.
     private enum Opened {
         case array([Value])
         case record(held: [Name: Value], key: Name?, name: Name?)
