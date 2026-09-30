@@ -295,6 +295,15 @@ struct DeclarationChecker {
             // Each is answered about the value it takes first, so that value
             // is written as the contract itself.
             for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
+                guard !procedures.isEmpty else {
+                    throw BuildError(
+                        "asks nothing, so every type satisfies it. A contract is"
+                            + " the procedures a value answers, and one with no procedures"
+                            + " says nothing a slot could lean on",
+                        at: .contract(contract.spelling, in: .of(module))
+                    )
+                }
+
                 for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
                     let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
 

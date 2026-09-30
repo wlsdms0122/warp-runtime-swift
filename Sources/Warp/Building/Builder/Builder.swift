@@ -1301,15 +1301,6 @@ public struct Builder: Sendable {
                     )
                 }
 
-                guard !procedures.isEmpty else {
-                    throw BuildError(
-                        "asks nothing, so every type satisfies it. A contract is"
-                            + " the procedures a value answers, and one with no procedures"
-                            + " says nothing a slot could lean on",
-                        at: declaration.place
-                    )
-                }
-
                 declaredContracts[name] = declaration
             }
         }
