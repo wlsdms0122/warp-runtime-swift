@@ -366,6 +366,8 @@ public struct Executor: Sendable {
             await observer?.statementCompleted(at: inside, result: result)
 
             return result
+        } catch let leaving as Leaving {
+            throw leaving
         } catch {
             let refused = refusal(error, at: inside)
 
