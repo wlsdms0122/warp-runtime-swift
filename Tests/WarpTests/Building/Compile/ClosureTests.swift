@@ -133,22 +133,28 @@ struct ClosureTests {
 
     @Test("a closure captures the scope it was written in, not the one it runs in")
     func closureCapturesLexically() async throws {
-        // Given. `made` is written where `outer` says "written"; the call site
-        // has an `outer` of its own saying something else
-        let sut: Body = [
-            Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
-            Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer")))
-            )
-        ]
+        // Given. `made` is written where `outer` says "written", and `running`
+        // applies it beside an `outer` of its own saying "called"
+        let running = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string)))],
+                returns: .string
+            ),
+            body: [
+                Statement(binding: .constant("outer"), expression: .literal(.string("called"))),
+                Statement(binding: .constant("said"), expression: .apply(reference("by"), arguments: []))
+            ],
+            result: reference("said")
+        )
 
         // When
         let answer = try await answer(
-            of: Body(sut.statements + [
-                Statement(binding: .constant("shadow"), expression: .literal(.string("called"))),
-                Statement(binding: .constant("said"), expression: .apply(reference("made"), arguments: [])
-                )
-            ]),
-            result: reference("said")
+            of: [
+                Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
+                Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer"))))
+            ],
+            result: .call(Call(selector: "running", arguments: [reference("made")])),
+            beside: ["running": running]
         )
 
         // Then

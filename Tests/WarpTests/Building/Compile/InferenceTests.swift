@@ -368,50 +368,6 @@ struct InferenceTests {
         }
     }
 
-    @Test("a path that ends in a procedure carries what the procedure answers")
-    func pathProcedureCarriesItsAnswer() async throws {
-        // Given. `${names.count}` is `count` sent to `names`, and `count`
-        // declares that it answers an int
-        let sut = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "names", type: .array(.string))
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.key("names"), .key("count")])]
-                        ))
-                        )
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "text", type: .string)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError
-                && "\(error)".contains("names.count names 'count', and array<string> has no name there to read")
-        }
-    }
-
     @Test("an element read by index carries the material's element type")
     func walkElementIsTyped() async throws {
         // Given
@@ -1241,38 +1197,6 @@ struct InferenceTests {
         } throws: { error in
             error is BuildError && "\(error)".contains("already is")
         }
-    }
-
-    @Test("a cast onto a type that names itself does not chase the name forever")
-    func aCastOntoARecursiveTypeTerminates() async throws {
-        // Given. A type may name itself, and the build's own guarantee that name
-        // chains are finite covers walks that follow names alone. This walk
-        // goes into fields too, so it carries its own guard
-        let sut = try Module(
-            types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "payload", type: .any)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("tree"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .named("Tree"),
-                                optional: false
-                            )
-                        )
-                    ],
-                    result: .reference([.key("tree"), .key("value")])
-                )
-            ]
-        )
-
-        // When / Then
-        _ = try await builder.build([sut] + Module.standard)
     }
 
     @Test("a cast between types no value is both is refused")

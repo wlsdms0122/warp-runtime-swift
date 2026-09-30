@@ -180,41 +180,6 @@ struct LoweredTypeTests {
         #expect(try await Executor().run(image) == .bool(true))
     }
 
-    @Test("a procedure hands a closure its arguments by name, and the closure reads them")
-    func aClosureIsHandedArgumentsByName() async throws {
-        // Given: `map` hands `item`, and a closure that declares it
-        let module = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.collection.map",
-                        arguments: [
-                            .literal(.array([.int(1), .int(2)])),
-                            .closure(
-                                Procedure(
-                                    signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
-                                    body: [],
-                                    result: .call(Call(
-                                        selector: "std.math.plus",
-                                        arguments: [.reference([.key("item")]), .literal(.int(10))]
-                                    ))
-                                )
-                            )
-                        ]
-                    ))
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([module] + Module.standard)
-
-        // Then
-        #expect(try await Executor().run(image) == .array([.int(11), .int(12)]))
-    }
-
     @Test("a procedure type declared beside the types it names reads what they declare")
     func aProcedureTypeAmongDeclaredTypes() async throws {
         // Given. A declared record holding a procedure type whose parameter

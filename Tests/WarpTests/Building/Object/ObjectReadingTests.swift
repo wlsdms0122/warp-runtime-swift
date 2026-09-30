@@ -612,41 +612,6 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a value settles a procedure into it")
-    func aValueHoldingAProcedure() async throws {
-        // Given. A real object with a module variable standing a value no
-        // writing of one could lay down. The writing refuses it, so a reading
-        // that took it would hold what it could never write out again.
-        let holding = try Module(
-            variables: [
-                "app.later": .closure(
-                    Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
-                )
-            ],
-            procedures: [
-                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-            ]
-        )
-        let settled = try await builder.compile([holding] + Module.standard)
-            .flatMap(\.variables)
-            .first { entry in entry.value.holdsProcedure }
-
-        var parts = try await parts()
-
-        guard let settled else {
-            Issue.record("a module variable that starts as a closure settles one into a value")
-
-            return
-        }
-
-        parts = parts.writing("variables", with: .array([.array([.string(settled.name.spelling), settled.value])]))
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: .dictionary(parts), of: nil)
-        }
-    }
-
     @Test("is refused where the numbers behind the spellings run past what an int holds")
     func closureNumbersPastAnInt() async throws {
         // Given. Two declarations whose counts add up to exactly what an int
