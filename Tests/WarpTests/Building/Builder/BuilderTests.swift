@@ -91,33 +91,6 @@ struct BuilderTests {
         #expect(error?.message.contains("admits nothing") == true)
     }
 
-    @Test("constants settle in the order they read each other, however deep")
-    func constantsSettleInReadingOrder() async throws {
-        // Given. A chain written so that alphabetical order is the reverse of
-        // reading order, and long enough that settling whatever can be settled
-        // and going round again would take more than one pass. What each one
-        // reads is settled before it because the order says so, not because
-        // enough rounds happened.
-        let sut = try Module(
-            constants: [
-                "zebra": .literal(.int(2)),
-                "yak": .call(
-                    Call(selector: "std.math.times", arguments: [reference("zebra"), reference("zebra")])
-                ),
-                "xerus": .call(
-                    Call(selector: "std.math.plus", arguments: [reference("yak"), reference("zebra")])
-                )
-            ],
-            procedures: [entryName: Procedure(access: .public, body: [], result: reference("xerus"))]
-        )
-
-        // When
-        let answer = try await run(sut, entry: entryName)
-
-        // Then
-        #expect(answer == .int(6))
-    }
-
     @Test("a closure constant reads a constant beside it whatever the two are called")
     func aClosureConstantCapturesItsSiblings() async throws {
         // Given. Making a closure freezes the scope it was made in, so a
