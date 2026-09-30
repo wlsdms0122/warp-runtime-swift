@@ -209,7 +209,6 @@ public struct StatementReader: Decodable {
             keyed.allKeys.count == 1,
             let written = keyed.allKeys.first?.stringValue,
             let key = try? Name(written),
-            key != Self.valueKey,
             let form = registry.form(for: key)
         {
             let inside = try decoder.descending(to: AnyCodingKey(stringValue: written))

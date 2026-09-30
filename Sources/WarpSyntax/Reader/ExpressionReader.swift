@@ -395,11 +395,6 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError("{ format: } template: \(error)")
         }
 
-        // The format surface is closed: every placeholder must name a declared
-        // binding. An undeclared name is an author mistake caught at load, never
-        // an ambient lookup at run time.
-        try validateClosed(segments, over: Set(bindings.keys))
-
         return try lowered(segments, over: bindings, spending: interpolation)
     }
 
@@ -446,9 +441,8 @@ public struct ExpressionReader: Decodable {
     //
     // Every name in the path is substituted, not only the head. An index
     // reference is a path of its own inside this one, and leaving it as written
-    // would have it read from whatever scope the statement runs in, which is
-    // the one thing a closed template must never do, and which `validateClosed`
-    // has already made the author declare a binding for.
+    // would have it read from whatever scope the statement runs in. A template
+    // sees only its own bindings, so a name `with` does not bind is refused.
     private static func substituted(
         _ path: Path,
         over bindings: [Name: Expression]
@@ -495,25 +489,5 @@ public struct ExpressionReader: Decodable {
         }
 
         return .indexRef(closed, optional: optionally)
-    }
-
-    private static func validateClosed(
-        _ segments: [TemplateSegment],
-        over declared: Set<Name>
-    ) throws {
-        for segment in segments {
-            guard case let .ref(path) = segment else { continue }
-
-            for referenced in path.expandingIndexReferences {
-                guard let head = referenced.head, declared.contains(head) else {
-                    throw ExpressionFormError(
-                        "{ format: } placeholder ${\(referenced.rendered)} names"
-                            + " '\(referenced.head?.spelling ?? referenced.rendered)', which is"
-                            + " not declared in `with`. A format template sees only"
-                            + " its own bindings"
-                    )
-                }
-            }
-        }
     }
 }

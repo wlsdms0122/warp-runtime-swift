@@ -77,8 +77,7 @@ public struct ModuleReader: Decodable {
                 forKey: .contracts
             )
                 .mapValues { procedures in try procedures.mapValues(\.procedure).named(at: []) },
-            // In key order, so that two claims that read as one refuse the same
-            // one every run.
+            // In key order, so that the same refusal comes first every run.
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
                 .sorted { one, other in one.key < other.key }
                 .reduce(into: [Name: Set<Name>]()) { claims, entry in
@@ -87,13 +86,8 @@ public struct ModuleReader: Decodable {
                     let type = entry.key
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
 
-                    // Two keys that read as one type are one type claimed
-                    // twice, however the text spelled them, and so are two
-                    // contracts that read as one.
-                    guard claims[type] == nil else {
-                        throw ReadingError("'\(type)' claims twice under satisfies", at: steps)
-                    }
-
+                    // Two contracts that read as one are one contract claimed
+                    // twice, however the text spelled them.
                     let contracts = try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
 
                     guard Set(contracts).count == contracts.count else {
