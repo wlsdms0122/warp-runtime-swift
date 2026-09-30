@@ -622,10 +622,10 @@ struct ProcedureSendsTests {
     }
 
     @Test("a procedure sending another document's private declaration is refused at the build")
-    func aSendReachingAPrivateDeclarationIsRefused() async {
+    func aSendReachingAPrivateDeclarationIsRefused() async throws {
         // Given. A document declares `app.hidden` privately, and a procedure the
         // caller brings declares it sends that spelling.
-        let document = try! Module(procedures: [
+        let document = try Module(procedures: [
             "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
             "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
         ])

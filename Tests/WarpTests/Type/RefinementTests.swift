@@ -166,7 +166,7 @@ struct RefinementTests {
     }
 
     @Test("a range with no floor stands on the kind's own")
-    func aMissingFloorIsTheKindsFloor() {
+    func aMissingFloorIsTheKindsFloor() throws {
         // Given. A ceiling on the smallest value the kind has, with the bound
         // outside it. No number is below the smallest one, so nothing is
         // inside, and it is a slot no call could ever fill.
@@ -184,7 +184,7 @@ struct RefinementTests {
         let smallest = TypeExpression.Refinement.whole(to: .through(Int.min))
 
         #expect(!smallest.admitsNothing)
-        #expect(try! TypeExpression.ranged(smallest)
+        #expect(try TypeExpression.ranged(smallest)
             .settling(.int(Int.min), at: "value") == .int(Int.min))
     }
 

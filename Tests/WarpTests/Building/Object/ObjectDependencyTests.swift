@@ -35,25 +35,39 @@ struct ObjectDependencyTests {
     // is all these ask of it.
     private let builder = Builder { value in Fingerprint(Array("\(value)".utf8)) }
 
-    private let used = try! Module(
-        procedures: [
-            "a.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-        ]
-    )
-    private let unrelated = try! Module(
-        procedures: [
-            "b.bar": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
-        ]
-    )
-    private let program = try! Module(
-        procedures: [
-            "app.main": Procedure(
-                signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "a.foo"))
+    private var used: Module {
+        get throws {
+            try Module(
+                procedures: [
+                    "a.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                ]
             )
-        ]
-    )
+        }
+    }
+
+    private var unrelated: Module {
+        get throws {
+            try Module(
+                procedures: [
+                    "b.bar": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                ]
+            )
+        }
+    }
+
+    private var program: Module {
+        get throws {
+            try Module(
+                procedures: [
+                    "app.main": Procedure(
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(selector: "a.foo"))
+                    )
+                ]
+            )
+        }
+    }
 
     // MARK: - Initializer
     // MARK: - Test
