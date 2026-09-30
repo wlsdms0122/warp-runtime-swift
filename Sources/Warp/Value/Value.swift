@@ -526,8 +526,10 @@ public indirect enum Value: Sendable, Equatable {
         case let (.bytes(left), .bytes(right)):
             return left == right
 
+        // Element by element: an array's own `==` answers a shared buffer
+        // without asking its elements, and a procedure is equal to nothing.
         case let (.array(left), .array(right)):
-            return left == right
+            return left.count == right.count && zip(left, right).allSatisfy { mine, theirs in mine == theirs }
 
         case let (.record(left), .record(right)):
             return left == right
@@ -538,13 +540,6 @@ public indirect enum Value: Sendable, Equatable {
         case let (.record(record), .dictionary(dictionary)),
             let (.dictionary(dictionary), .record(record)):
             return same(record, dictionary) { mine, theirs in mine == theirs }
-
-        // Two procedures are never equal. Structural equality would compare
-        // bodies, which says nothing an author asked about, and reference
-        // equality would make a value's identity observable, and neither is a
-        // question this language has.
-        case (.procedure, .procedure):
-            return false
 
         default:
             return false
