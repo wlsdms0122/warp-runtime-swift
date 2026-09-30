@@ -42,7 +42,7 @@ public struct Statement: Sendable {
         }
 
         // What the name says it holds, where it says. Nil is not `any`: a name
-        // that declares nothing holds what the link worked out for it, and one
+        // that declares nothing holds what the build worked out for it, and one
         // that declares `any` holds `any`.
         public var declared: TypeExpression? {
             switch self {

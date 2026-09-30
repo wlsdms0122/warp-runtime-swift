@@ -112,11 +112,11 @@ struct LoweredTypeNumbering: Sendable {
     init(written value: Value) throws {
         var fields = try Fields(value, of: "type numbering")
 
-        self.types = try Fields.ordered(fields.next(), of: "type numbering types") { written in
-            try Fields.name(written, of: "type numbering types")
+        self.types = try Field(fields.next(), of: "type numbering types").ordered { written in
+            try Field(written, of: "type numbering types").name()
         }
-        self.memberships = try Fields.ordered(fields.next(), of: "type numbering memberships") { written in
-            try Fields.name(written, of: "type numbering memberships")
+        self.memberships = try Field(fields.next(), of: "type numbering memberships").ordered { written in
+            try Field(written, of: "type numbering memberships").name()
         }
 
         try fields.end()

@@ -17,8 +17,8 @@ struct ExecutorTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("bindings flow through a step sequence")
-    func bindingsFlowThroughSequence() async throws {
+    @Test("statements read the names before them")
+    func statementsReadTheNamesBeforeThem() async throws {
         // Given
         let spec = try Module(
             procedures: [
@@ -49,8 +49,8 @@ struct ExecutorTests {
         #expect(outputs["result"] == .string("hello, spec!"))
     }
 
-    @Test("a declining condition skips the step and binds null")
-    func decliningConditionSkipsStep() async throws {
+    @Test("a conditional that declines leaves the variable as it was")
+    func aDecliningConditionalLeavesTheVariable() async throws {
         // Given
         let spec = try Module(
             procedures: [
@@ -84,7 +84,7 @@ struct ExecutorTests {
         // When
         let outputs = try await run(spec, arguments: ["kind": .string("b")])
 
-        // Then. A skipped step binds null, not absence
+        // Then
         #expect(outputs["result"] == .null)
     }
 

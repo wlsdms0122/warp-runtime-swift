@@ -23,13 +23,13 @@ final class Variable: @unchecked Sendable {
         set { lock.withLock { stored = newValue } }
     }
 
+    // Not for concurrent procedures, whose closures cannot write a variable
+    // they did not declare. It is for the reads that still cross task
+    // boundaries there, so a shared box is not a data race by construction.
     private let lock = NSLock()
     private var stored: Value
 
     // MARK: - Initializer
-    // The lock is not for concurrent procedures, whose closures cannot write a
-    // variable they did not declare. It is for the reads that still cross task
-    // boundaries there, so a shared box is not a data race by construction.
     init(_ value: Value) {
         self.stored = value
     }

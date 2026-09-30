@@ -8,9 +8,8 @@
 import Foundation
 
 // What a declaration says it takes. Distinct from `ValueType`, which is what a
-// value *is*: `any` is only ever something a declaration says, and `array`
-// alone was the most a declaration could say about a list. No element, no
-// fields, no name for a type two declarations share.
+// value *is*: `any` is only ever something a declaration says, and a type
+// names an element, fields, or a declared name where a value has none.
 //
 // A type is an expression for the same reason an expression is: it composes.
 // `array<string>` is `array` applied to `string`, and a name is a name for one
@@ -23,8 +22,7 @@ import Foundation
 // should not be a declaration that it needs nothing else to exist.
 public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertible {
     // Nothing ever *is* `any`. It is what a declaration says when it accepts
-    // whatever it is handed. `contains` compares elements of any type, and
-    // declaring `string` there would be a lie the builder would then enforce.
+    // whatever it is handed.
     case any
 
     // The other end of `any`. No value is ever of this type, which is how a
@@ -90,7 +88,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Unlike `var` and `inout` this says nothing about the slot: what it marks
     // is the value, and what it costs is that every body holding one has to
     // give it away on every way through. It is gone by the time anything is
-    // lowered, because the whole of it is proven at the link.
+    // lowered, because the whole of it is proven at the build.
     case linear(TypeExpression)
 
     // A parameter that takes the obligation a `linear` value carries. The
@@ -166,7 +164,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // through: `of: some T` and `also: some T` are one unknown, so their
     // `.inner` is one field, and a step given a name along the way (`held =
     // of.inner` and then `held.count`) has to arrive where the unbroken walk
-    // arrives. A root that was the local name made every naming a new unknown.
+    // arrives.
     //
     // The path is segments and not their spelling for the same reason: `.a`
     // and `?.a` land on one field, and a spelling would make them two unknowns
@@ -177,7 +175,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     //
     // Not a kind of its own. The value is a whole number or a fraction, and
     // this is the slot saying which part of that kind it takes. Judged where
-    // any other admission is, at the link for a constant and at the boundary
+    // any other admission is, at the build for a constant and at the boundary
     // for what only a run can see. A module names one the way it names any type
     // (`byte = int(0...255)`), so the kinds never grow.
     //
@@ -668,9 +666,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Whether what this stands for is settled at the call. The shallow
     // question, beside `isGeneric`'s deep one. A parameter and a walk through
     // one answer alike, and that is the whole of what is asked: neither is
-    // knowable at the link, so a reading that would judge by type has nothing
-    // to judge on. Named for the question and not for one of the two types
-    // that answer it.
+    // knowable at the build, so a reading that would judge by type has nothing
+    // to judge on.
     var decidedAtCall: Bool {
         switch self {
         case .parameter, .reading:
@@ -1009,7 +1006,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     private func resolved(in types: TypeTable, assuming: Set<Name>) -> TypeExpression {
         switch self {
         case let .named(name):
-            guard !assuming.contains(name), let declared = types.resolve(name) else {
+            guard !assuming.contains(name), let declared = types.types[name] else {
                 return self
             }
 
@@ -1053,7 +1050,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return true
 
         case let .named(name):
-            if let declared = table.resolve(name) {
+            if let declared = table.types[name] {
                 return reaches(declared, in: table, assuming: assuming)
             }
 
@@ -1097,7 +1094,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     ) -> Bool? {
         guard !assuming.contains(name) else { return nil }
 
-        guard let members = table.constraint(name), !members.isEmpty else { return false }
+        guard let members = table.constraints[name], !members.isEmpty else { return false }
 
         let answers = members.compactMap { member in
             reaches(member, in: table, assuming: assuming.union([name]))

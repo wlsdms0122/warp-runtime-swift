@@ -452,7 +452,7 @@ struct DeclarationChecker {
                 )
             }
 
-            for name in names where table.constraint(name) == nil && table.contracts[name] == nil {
+            for name in names where table.constraints[name] == nil && table.contracts[name] == nil {
                 throw BuildError(
                     "joins '\(name)' with `&`, and `&` joins the names of memberships"
                         + " and contracts, which no module in this link declares '\(name)' as",
@@ -465,7 +465,7 @@ struct DeclarationChecker {
         // standing here is a value of one of its members, and a contract
         // standing here is a value of whatever type answers it.
         case let .named(name):
-            guard table.resolve(name) != nil || table.constraint(name) != nil || table.contracts[name] != nil else {
+            guard table.types[name] != nil || table.constraints[name] != nil || table.contracts[name] != nil else {
                 throw BuildError(
                     "names type '\(name)', which no module in this"
                         + " link declares",
@@ -484,7 +484,7 @@ struct DeclarationChecker {
         case let .nullable(inner):
             var resolved = inner
 
-            while case let .named(next) = resolved, let underneath = table.resolve(next) {
+            while case let .named(next) = resolved, let underneath = table.types[next] {
                 resolved = underneath
             }
 
@@ -697,7 +697,7 @@ struct DeclarationChecker {
         }
 
         for (parameter, names) in bounds.table.sorted(by: { $0.key < $1.key }) {
-            for bound in names where table.constraint(bound) == nil && table.contracts[bound] == nil {
+            for bound in names where table.constraints[bound] == nil && table.contracts[bound] == nil {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
                         + " link declares as a membership or a contract",

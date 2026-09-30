@@ -83,7 +83,9 @@ public struct TypeTable: Sendable {
         self.loweredTypes = LoweredTypeTable.lowering(
             types,
             constraints: constraints,
-            satisfying: satisfying.merging(contracts.keys.map { contract in (contract, Set<Name>()) }) { held, _ in held },
+            satisfying: satisfying.merging(
+                contracts.keys.map { contract in (contract, Set<Name>()) }
+            ) { held, _ in held },
             settled: settled,
             unsettled: unsettled,
             standing: standing,
@@ -115,14 +117,6 @@ public struct TypeTable: Sendable {
             constraintStanding: constraintStanding,
             of: linkage
         )
-    }
-
-    public func resolve(_ name: Name) -> TypeExpression? {
-        types[name]
-    }
-
-    public func constraint(_ name: Name) -> [TypeExpression]? {
-        constraints[name]
     }
 
     // Whether a reading could be a member of a constraint, or nil when nothing

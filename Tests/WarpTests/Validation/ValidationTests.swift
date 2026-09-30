@@ -332,9 +332,9 @@ struct ValidationTests {
         #expect(validates(sut, visible: ["items", "cursor"]))
     }
 
-    @Test("a template's placeholders resolve against its bindings, not the scope")
-    func templatePlaceholdersAreClosed() {
-        // Given. Only the binding expressions reach outward
+    @Test("a reference inside a call's operand is checked like any other")
+    func aReferenceInsideAnOperandIsChecked() {
+        // Given
         let sut = interpolated(spelling(reference("name")))
 
         // When / Then

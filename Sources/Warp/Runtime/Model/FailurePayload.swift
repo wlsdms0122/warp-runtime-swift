@@ -7,23 +7,19 @@
 
 import Foundation
 
-// The type the sentence above promises, said once as a type so the link can
-// hold the rescue's name to it.
-//
-// The envelope is the whole declaration: `type` and `message` are what every
-// failure holds, and `details` is the box the failing procedure fills. Declaring
-// the box as a dictionary of `any` is what lets a rescue reach what a failure
-// carried by naming it, without the type of the box being part of what a
-// runtime must implement.
-public enum FailurePayload {
-    // MARK: - Property
-    public static let declared = TypeExpression.record([
-        "type": .string,
-        "message": .string,
-        "details": .dictionary(.any)
-    ])
+// The envelope a rescue binds a failure as, said once for the type the build
+// holds the rescue's name to and for the value the run binds there. `type`
+// and `message` are what every failure holds, and `details` is the box the
+// failing procedure fills: a dictionary of `any`, so a rescue reaches what a
+// failure carried by naming it.
+enum FailurePayload {
+    static let type: Name = "type"
+    static let message: Name = "message"
+    static let details: Name = "details"
 
-    // MARK: - Initializer
-    // MARK: - Public
-    // MARK: - Private
+    static let declared = TypeExpression.record([
+        type: .string,
+        message: .string,
+        details: .dictionary(.any)
+    ])
 }

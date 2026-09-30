@@ -168,9 +168,7 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // MARK: - Property
-    // What is said wherever a value stands where a document can reach it. One
-    // sentence because it is one rule, and an author meeting it twice should
-    // not have to work out whether they are two.
+    // What is said wherever a value stands where a document can reach it.
     public static let procedureIsNotData = "a procedure is not data, so it cannot stand"
         + " where a document reaches; a body a program carries is written as a closure"
 
@@ -387,7 +385,9 @@ public indirect enum Value: Sendable, Equatable {
         case let .dictionary(dictionary):
             return .dictionary(
                 Value.Dictionary(
-                    ordered: try dictionary.entries.map { entry in (entry.name, try entry.value.rewritten(closures: body)) }
+                    ordered: try dictionary.entries.map { entry in
+                        (entry.name, try entry.value.rewritten(closures: body))
+                    }
                 )
             )
 
@@ -417,11 +417,8 @@ public indirect enum Value: Sendable, Equatable {
     // twice over, which is the cost being compact exists to avoid.
     //
     // A position this value does not have is answered the way a value with no
-    // elements at all is: with nil. The three procedures in this library count
-    // their positions from `elements` and so can never ask for one. This
-    // is reachable from outside, where a caller's own arithmetic decides, and
-    // a library that brings its caller's process down over that is not one
-    // this can be.
+    // elements at all is: with nil. A caller's own arithmetic decides the
+    // positions, so one out of range is refused here and not trapped on.
     public func elements(at positions: some Sequence<Int>) -> Value? {
         switch self {
         case let .bytes(bytes):
@@ -444,10 +441,7 @@ public indirect enum Value: Sendable, Equatable {
     //
     // Only the arriving element is looked at, because it is the only one that
     // can make a compact spelling stop holding: the ones already there are
-    // bytes by construction. Reading them out to put one more beside them
-    // would spend the whole collection's boxing on a single addition, which is
-    // the same waste the two above exist against. It is the arriving
-    // element, not the collection's size, that decides the answer's spelling.
+    // bytes by construction.
     public func adding(_ element: Value, atFront: Bool) -> Value? {
         guard let held = elements else { return nil }
 
@@ -477,9 +471,8 @@ public indirect enum Value: Sendable, Equatable {
     // not one, the answer is a plain array, because the spelling is a fact
     // about the value and saying otherwise would be a claim no value backs.
     //
-    // A procedure that builds *new* elements does not come through here. `map`
-    // answers what its procedure answered, and that is its own value however it
-    // was reached; the declaration says so by naming a second parameter for it.
+    // A procedure that builds new elements does not come through here: what it
+    // answers is its own value however it was reached.
     public func respelled(_ elements: some Collection<Value>) -> Value {
         guard case .bytes = self else { return .array(Array(elements)) }
 
@@ -628,9 +621,9 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The part a path names, in a record by the place the link put the field
+    // The part a path names, in a record by the place the build put the field
     // at, in a dictionary by key and in an array by position. Every index was
-    // read to a position before this, and the link judged the path against
+    // read to a position before this, and the build judged the path against
     // the value's declared type, so a part not held is refused as what it
     // is: an entry not written yet, or a type with no such part.
     func reading(at path: [Projection], under rendered: String) throws -> Value {
@@ -670,8 +663,8 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // This value with one part replaced: the part the path names, in a record
-    // by the place the link put the field at, in a dictionary by name and in
-    // an array by position. The rest is kept as it was. The link judged the
+    // by the place the build put the field at, in a dictionary by name and in
+    // an array by position. The rest is kept as it was. The build judged the
     // path against the value's declared type, and every index was read to a
     // position before this. A dictionary's names are its own, so one not
     // held yet is made.
@@ -686,11 +679,11 @@ public indirect enum Value: Sendable, Equatable {
                 throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
             }
 
-            return .record(
-                record.writing(at: position, with: try record.values[position].writing(value, at: rest, under: rendered))
-            )
+            let written = try record.values[position].writing(value, at: rest, under: rendered)
 
-        // A name written into what holds its names as data. The link judged
+            return .record(record.writing(at: position, with: written))
+
+        // A name written into what holds its names as data. The build judged
         // the path, so a name that reaches here is one it allowed.
         case let (_, .key(name)) where holdsFields:
             do {

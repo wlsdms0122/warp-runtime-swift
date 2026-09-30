@@ -35,7 +35,7 @@ public struct CastRefused: RecoverableFailure {
 
     public var type: String { Self.type }
 
-    // What this failure names itself, said once so the link can read it where
+    // What this failure names itself, said once so the build can read it where
     // it derives what a cast may fail with.
     public static let type = "cast_refused"
 
