@@ -12,7 +12,32 @@ import Warp
 // "at least" is `not lessThan` and there are two comparisons rather than
 // four.
 struct LessThanQuery: Query {
-    typealias Parameters = ComparablePair
+    // What this takes: two values of one member of `std.Comparable`.
+    enum Parameters: Int, ParameterSet {
+        case lhs
+        case rhs
+
+        // MARK: - Property
+        var declared: Parameter {
+            switch self {
+            case .lhs:
+                return Parameter(
+                    name: "lhs",
+                    type: .parameter(name: "T", constraints: ["std.Comparable"])
+                )
+
+            case .rhs:
+                return Parameter(
+                    name: "rhs",
+                    type: .parameter(name: "T", constraints: ["std.Comparable"])
+                )
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
 
     // MARK: - Property
     // MARK: - Initializer
