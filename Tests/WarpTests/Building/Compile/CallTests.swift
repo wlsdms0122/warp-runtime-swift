@@ -274,6 +274,148 @@ struct CallTests {
         #expect(outputs["done"] == .bool(true))
     }
 
+    @Test("an argument past the callee's parameters is refused")
+    func argumentPastTheParametersIsRefused() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
+                        )
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
+                                        .literal(.int(1)),
+                                        .literal(.int(2))
+                                    ]))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'callee' 2 arguments, and it takes 1")
+        }
+    }
+
+    @Test("a required argument nobody passes is refused")
+    func missingRequiredArgumentIsRefused() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
+                        )
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee"))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'callee' 0 arguments, and it takes 1")
+        }
+    }
+
+    @Test("an argument named rather than written is judged by what the name holds")
+    func referenceArgumentIsJudged() async throws {
+        // Given. The type is wrong, and both sides said so in their own text:
+        // `text` was declared a string and `base` is declared an int
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
+                        )
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "text", type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("text")])]
+                        ))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'callee' with base, which holds string where int is declared")
+        }
+    }
+
+    @Test("more arguments than a procedure takes are refused")
+    func moreArgumentsThanParametersAreRefused() async throws {
+        // Given. `absolute` takes one parameter and the call writes two. The
+        // second would stand at no position, neither read nor run, so the build
+        // refuses the call
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.math.absolute",
+                        arguments: [.literal(.int(1)), .literal(.string("x"))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'std.math.absolute' 2 arguments, and it takes 1")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

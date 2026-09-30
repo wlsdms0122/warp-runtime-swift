@@ -424,6 +424,47 @@ struct ConcurrencyTests {
         }
     }
 
+    @Test("an effect reads the first argument it was handed")
+    func anEffectReadsItsFirstArgument() async throws {
+        // Given. A native procedure reads its first argument through its
+        // invocation.
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "items", type: .array(.int))],
+                        returns: .array(.int)
+                    ),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.concurrent.map",
+                        arguments: [
+                            .call(Call(selector: "std.collection.reversed", arguments: [reference("items")])),
+                            .closure(Procedure(
+                                signature: Signature(
+                                    parameters: [
+                                        Parameter(name: "item", type: .int),
+                                        Parameter(name: "index", type: .int)
+                                    ],
+                                    returns: .int
+                                ),
+                                body: [],
+                                result: reference("item")
+                            ))
+                        ]
+                    ))
+                )
+            ]
+        )
+
+        // When
+        let answered = try await run(sut, arguments: ["items": .array([.int(1), .int(2)])])
+
+        // Then
+        #expect(answered == .array([.int(2), .int(1)]))
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

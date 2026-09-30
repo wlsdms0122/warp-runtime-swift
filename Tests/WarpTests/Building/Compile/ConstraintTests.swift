@@ -910,137 +910,6 @@ struct ConstraintTests {
         }
     }
 
-    @Test("an enum no member of the bound can spell refuses at the build")
-    func anEnumOutsideTheBoundRefusesAtTheBuild() async throws {
-        // Given. Procedures on a Numeric slot: no member of the constraint can spell
-        // them, so no call could ever fit this parameter
-        let sut = try Module(
-            procedures: [
-                "pick": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "speed", type: .parameter(name: "N", constraints: ["std.Numeric"]),
-                                candidates: ["fast", "slow"]
-                            )
-                        ]
-                    ),
-                    body: [],
-                    result: .literal(.null)
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("enum admits nothing")
-        }
-    }
-
-    @Test("a fraction candidate is judged by the fraction's one spelling")
-    func aFractionCandidateIsJudgedByItsSpelling() async throws {
-        // Given. A fraction spells with its point, so `1` on a double slot is
-        // the int's spelling and a member no fraction could ever match, and
-        // `1e0`/`1.00` are second spellings of a fraction that has one
-        func module(candidates candidates: [String]) async throws -> Module {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [
-                                Parameter(name: "level", type: .double, candidates: candidates)
-                            ]
-                        ),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        }
-
-        for dead in ["1", "1e0", "1.50", "1e-5"] {
-            await #expect("\(dead)") {
-                try await builder.build([module(candidates: ["2.0", dead])] + Module.standard)
-            } throws: { error in
-                error is BuildError && "\(error)".contains("'\(dead)'")
-            }
-        }
-
-        // The spellings a document itself writes are alive. The exponent form
-        // included, sign and padding and all.
-        await #expect(throws: Never.self) {
-            try await builder.build([module(candidates: ["1.0", "1.5", "1e-05"])] + Module.standard)
-        }
-    }
-
-    @Test("enum membership is the number's worth, not its bit pattern")
-    func anEnumMeetsANumberByWorth() async throws {
-        // Given. The two zeros are one worth in the language's own order, so a
-        // list that writes one admits the other
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "level", type: .double, candidates: ["0.0", "1.5"])
-                        ]
-                    ),
-                    body: [],
-                    result: reference("level")
-                )
-            ]
-        )
-
-        // When / Then
-        #expect(try await run(sut, arguments: ["level": .double(-0.0)]) == .double(-0.0))
-
-        await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["level": .double(2.5)])
-        }
-    }
-
-    @Test("a slot that names no one kind reads a candidate as either")
-    func aBoundedSlotMeetsEitherKindByWorth() async throws {
-        // Given. A constraint-bounded parameter admits wholes and fractions
-        // alike, so `"1"` is a live member and worth carries across kinds: the
-        // same rule `number` takes, pinned so the build's candidate judge and
-        // this boundary cannot drift apart
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "level", type: .parameter(name: "N", constraints: ["std.Numeric"]),
-                                candidates: ["1", "2.5"]
-                            )
-                        ]
-                    ),
-                    body: [],
-                    result: reference("level")
-                )
-            ]
-        )
-
-        // When / Then
-        #expect(try await run(sut, arguments: ["level": .int(1)]) == .int(1))
-        #expect(try await run(sut, arguments: ["level": .double(1.0)]) == .double(1.0))
-        #expect(try await run(sut, arguments: ["level": .double(2.5)]) == .double(2.5))
-
-        await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["level": .int(3)])
-        }
-    }
-
     @Test("a member hiding a refused type behind a name still refuses")
     func aMemberBehindANameIsJudgedResolved() async throws {
         // Given. An alias is a name for a type, so what the type may not be
@@ -1063,90 +932,6 @@ struct ConstraintTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("a member is a concrete type")
-        }
-    }
-
-    @Test("a dot on a record is a read, and a procedure there is written as a call")
-    func aDotOnARecordDoesNotReachAProcedure() async throws {
-        // Given. The record does not declare the name, and a type with fields
-        // reads fields alone: the procedure by that name is not consulted, and the
-        // refusal says to write the call
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [
-                        Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))])
-                        )
-                    ],
-                    result: .reference([.key("task"), .key("absolute")])
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError
-                && "\(error)".contains("does not declare")
-                && "\(error)".contains("A procedure is sent with a written call")
-        }
-    }
-
-    @Test("a dot on a type with no fields says to write the call")
-    func aDotOnAFieldlessTypeSaysToWriteTheCall() async throws {
-        // Given. Text has no name to read, so the refusal names the one
-        // spelling that reaches the procedure: the written call
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [
-                        Statement(binding: .constant("task"), expression: .literal(.string("a"))
-                        )
-                    ],
-                    result: .reference([.key("task"), .key("count")])
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError
-                && "\(error)".contains("string has no name there to read")
-                && "\(error)".contains("sent with a written call")
-        }
-    }
-
-    @Test("more arguments than a procedure takes are refused")
-    func moreArgumentsThanParametersAreRefused() async throws {
-        // Given. `absolute` takes one parameter and the call writes two. The
-        // second would stand at no position, neither read nor run, so the build
-        // refuses the call
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.math.absolute",
-                        arguments: [.literal(.int(1)), .literal(.string("x"))]
-                    ))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'std.math.absolute' 2 arguments, and it takes 1")
         }
     }
 
@@ -1184,68 +969,6 @@ struct ConstraintTests {
         }
     }
 
-    @Test("an effect reads the first argument it was handed")
-    func anEffectReadsItsFirstArgument() async throws {
-        // Given. A native procedure reads its first argument through its
-        // invocation.
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [Parameter(name: "items", type: .array(.int))],
-                        returns: .array(.int)
-                    ),
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.concurrent.map",
-                        arguments: [
-                            .call(Call(selector: "std.collection.reversed", arguments: [reference("items")])),
-                            .closure(Procedure(
-                                signature: Signature(
-                                    parameters: [
-                                        Parameter(name: "item", type: .int),
-                                        Parameter(name: "index", type: .int)
-                                    ],
-                                    returns: .int
-                                ),
-                                body: [],
-                                result: reference("item")
-                            ))
-                        ]
-                    ))
-                )
-            ]
-        )
-
-        // When
-        let answered = try await run(sut, arguments: ["items": .array([.int(1), .int(2)])])
-
-        // Then
-        #expect(answered == .array([.int(2), .int(1)]))
-    }
-
-    @Test("a hand-built table ends its own membership recursion")
-    func aHandBuiltTableTerminates() throws {
-        // Given. A table nothing linked, holding the declaration the build would
-        // have refused; the table answers rather than chasing it
-        let sut = TypeTable(
-            constraints: ["Loop": [.parameter(name: "S", constraints: ["Loop"])]]
-        )
-
-        // When / Then
-        #expect(
-            sut.admits(
-                constraint: "Loop",
-                reading: .parameter(name: "T", constraints: ["Loop"])
-            ) == true
-        )
-        let table = sut.loweredTypes
-        let loop = try #require(table.constraintRow(named: "Loop"))
-
-        #expect(table.admits(constraint: loop, value: .int(1), assuming: []) == true)
-    }
-
     @Test("a constrained reading fed to a looser bound passes")
     func aConstrainedReadingFitsALooserBound() async throws {
         // Given. Inside a generic body the argument reads as the enclosing
@@ -1279,6 +1002,58 @@ struct ConstraintTests {
         // When / Then
         await #expect(throws: Never.self) {
             try await builder.build([sut] + Module.standard)
+        }
+    }
+
+    @Test("sorting what Comparable does not admit refuses at the build")
+    func sortingTheUnorderableRefuses() async throws {
+        // Given. `sorted` is bounded by `std.Comparable`, and
+        // booleans are a reading the build can see
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.collection.sorted",
+                        arguments: [.literal(.array([.bool(true), .bool(false)]))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
+        }
+    }
+
+    @Test("min handed null first is held to the parameter it declares first")
+    func minHandedNullIsHeldToItsFirstParameter() async throws {
+        // Given. The first argument is a reference that reads null. Null is a
+        // value, and `some T: Comparable` does not admit one, so the boundary
+        // refuses before the ordering procedure is asked anything
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "absent", type: .any)]
+                    ),
+                    body: [],
+                    result: .call(Call(selector: "std.math.min", arguments: [reference("absent"), .literal(.int(1))]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await run(sut, arguments: ["absent": .null])
+        } throws: { error in
+            "\(error)".contains("input 'lhs': expected some T: std.Comparable, got null")
         }
     }
 

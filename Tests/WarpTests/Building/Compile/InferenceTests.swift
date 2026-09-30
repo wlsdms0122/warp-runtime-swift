@@ -2028,6 +2028,63 @@ struct InferenceTests {
         }
     }
 
+    @Test("a dot on a record is a read, and a procedure there is written as a call")
+    func aDotOnARecordDoesNotReachAProcedure() async throws {
+        // Given. The record does not declare the name, and a type with fields
+        // reads fields alone: the procedure by that name is not consulted, and the
+        // refusal says to write the call
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [
+                        Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))])
+                        )
+                    ],
+                    result: .reference([.key("task"), .key("absolute")])
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("does not declare")
+                && "\(error)".contains("A procedure is sent with a written call")
+        }
+    }
+
+    @Test("a dot on a type with no fields says to write the call")
+    func aDotOnAFieldlessTypeSaysToWriteTheCall() async throws {
+        // Given. Text has no name to read, so the refusal names the one
+        // spelling that reaches the procedure: the written call
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [
+                        Statement(binding: .constant("task"), expression: .literal(.string("a"))
+                        )
+                    ],
+                    result: .reference([.key("task"), .key("count")])
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("string has no name there to read")
+                && "\(error)".contains("sent with a written call")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

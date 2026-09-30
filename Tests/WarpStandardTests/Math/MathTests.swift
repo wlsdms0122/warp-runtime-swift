@@ -272,6 +272,30 @@ struct MathTests {
         #expect(picked == above)
     }
 
+    @Test("min and max order the way the comparison procedures do")
+    func minAndMaxOrderLikeTheComparisons() async throws {
+        // Given. Strings order lexicographically under Comparable, which bounds
+        // `min` the way it bounds `lessThan`
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .string),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.math.min",
+                        arguments: [.literal(.string("b")), .literal(.string("a"))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        let answer = try await run(sut)
+
+        #expect(answer == .string("a"))
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

@@ -146,54 +146,6 @@ struct RangeTests {
         }
     }
 
-    @Test("an enum entirely past the bounds admits nothing")
-    func anEnumOutsideTheRangeRefuses() async throws {
-        // Given. No candidate is a value the range could hold, so the parameter
-        // fits no call: the same judgment an empty enum gets
-        func module(candidates candidates: [String]) async throws -> Module {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [
-                                Parameter(name: "level", type: .ranged(.whole(from: 0, to: .through(255))),
-                                    candidates: candidates
-                                )
-                            ]
-                        ),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        }
-
-        // When / Then
-        await #expect {
-            try await builder.build([module(candidates: ["300", "999"])] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("admits nothing")
-        }
-
-        // A live candidate does not excuse a dead one: `300` is a member no
-        // call could ever match, and the refusal names it.
-        await #expect {
-            try await builder.build([module(candidates: ["0", "300"])] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("'300'")
-        }
-
-        // One value, one spelling: `+1` and `007` are second spellings of
-        // numbers that already have one, so neither is a candidate an int slot
-        // can spell. The enum admits nothing and refuses.
-        await #expect {
-            try await builder.build([module(candidates: ["+1", "007"])] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("admits nothing")
-        }
-    }
-
     @Test("std declares byte, and a name resolves to its range")
     func byteIsANamedRange() async throws {
         // Given. `byte = int(0...255)`, declared where every bundle can name it

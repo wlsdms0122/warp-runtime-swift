@@ -275,6 +275,87 @@ struct AnsweringTests {
         #expect(image[entryName]!.signature.returns == nil)
     }
 
+    @Test("what no body settles is not something the build can be wrong about")
+    func anAnswerNothingSettlesIsNotJudged() async throws {
+        // Given. `held` comes back from a call that declares no answer, and
+        // whose body answers what that same call answers. An answer worked out
+        // from its own is not one the text states, so nothing is known about it
+        // and nothing is refused. That is the bound on the promise: inference
+        // answers where the text settles and `any` everywhere else.
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
+                        )
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
+                        ),
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("held")])]
+                        ))
+                        )
+                    ]
+                ),
+                "opaque": Procedure(
+                    body: [],
+                    result: .call(Call(selector: "opaque"))
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try await builder.build([sut])
+    }
+
+    @Test("a body that settles an answer is held to it, declared or not")
+    func anAnswerReadOffABodyIsJudged() async throws {
+        // Given. The same type, with a body whose answer the text does settle:
+        // a body with no result hands back null, and null is not a whole
+        // number. What the declaration says stays what it says; what the build
+        // reads a call as is what the body hands back.
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "base", type: .int)]),
+                    body: [Statement(binding: .constant("echo"), expression: .reference([.key("base")]))]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
+                        ),
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("held")])]
+                        ))
+                        )
+                    ]
+                ),
+                "opaque": Procedure(
+                    body: [Statement(binding: .constant("made"), expression: .literal(.string("whatever")))]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("holds null where int is declared")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

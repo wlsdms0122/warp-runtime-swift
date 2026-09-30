@@ -66,6 +66,27 @@ struct TypeTableTests {
         #expect(types.admits(constraint: "app.Ordered", reading: reading) == true)
     }
 
+    @Test("a hand-built table ends its own membership recursion")
+    func aHandBuiltTableTerminates() throws {
+        // Given. A table nothing linked, holding the declaration the build would
+        // have refused; the table answers rather than chasing it
+        let sut = TypeTable(
+            constraints: ["Loop": [.parameter(name: "S", constraints: ["Loop"])]]
+        )
+
+        // When / Then
+        #expect(
+            sut.admits(
+                constraint: "Loop",
+                reading: .parameter(name: "T", constraints: ["Loop"])
+            ) == true
+        )
+        let table = sut.loweredTypes
+        let loop = try #require(table.constraintRow(named: "Loop"))
+
+        #expect(table.admits(constraint: loop, value: .int(1), assuming: []) == true)
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
