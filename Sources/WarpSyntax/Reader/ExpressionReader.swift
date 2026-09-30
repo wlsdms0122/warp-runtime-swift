@@ -30,9 +30,6 @@ import Warp
 // A string is never re-parsed into anything live.
 public struct ExpressionReader: Decodable {
     // MARK: - Property
-    // The keys a mapping is an expression by, one to a mapping.
-    public static let tags = Set(ExpressionTag.allCases.map(\.key))
-
     // What a cast reads and the type it reads it as, inside the cast's own
     // mapping.
     static let subjectKey: Name = "of"
@@ -149,7 +146,7 @@ public struct ExpressionReader: Decodable {
         guard decoder.notation.readsBareRecords else {
             throw ExpressionFormError(
                 "a mapping where a value is wanted is one of"
-                    + " \(Self.tags.map { tag in "`\(tag)`" }.sorted().joined(separator: ", ")),"
+                    + " \(ExpressionTag.allCases.map { tag in "`\(tag.key)`" }.sorted().joined(separator: ", ")),"
                     + " under its one key. A record is written { record: { … } }"
                     + " (found keys: \(record.names))"
             )
