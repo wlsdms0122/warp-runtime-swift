@@ -685,23 +685,7 @@ public struct Builder: Sendable {
         // judged is not a question any run answers.
         for symbol in holding {
             try await fulfillment.folding(symbol.place) {
-                let procedure = try await resolved(symbol)
-
-                // A constant answer is a value and not only a type, so it is
-                // held to what the declaration admits as well as to what it
-                // reads as, the way a constant argument is.
-                if let returns = procedure.signature.returns,
-                   let answer = procedure.block?.result?.constantValue {
-                    do {
-                        _ = try returns.lowered(in: loweredTypes).settling(answer, at: "answer", in: loweredTypes)
-                    } catch {
-                        throw BuildError(
-                            "answers \(answer.type), and its"
-                                + " declaration promises \(returns): \(error)",
-                            at: symbol.place.part(.result)
-                        )
-                    }
-                }
+                _ = try await resolved(symbol)
             }
         }
 

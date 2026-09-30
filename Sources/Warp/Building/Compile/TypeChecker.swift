@@ -82,7 +82,8 @@ struct TypeChecker {
         var leaves = false
 
         // What every `return` inside here carried out of the procedure, each
-        // with where it was written. Nothing absorbs one (a loop ends its
+        // with the value it carried where that is a constant, and where it
+        // was written. Nothing absorbs one (a loop ends its
         // rounds and an attempt its body, and neither is what a `return`
         // reaches) so this only ever gathers on the way up, and what it
         // gathers is the other half of what the procedure answers: the result
@@ -93,7 +94,7 @@ struct TypeChecker {
         // Beside `escaped` rather than folded into it: an escaped write is
         // about a name the body around this one holds, and this is about the
         // value the procedure hands its caller.
-        var answered: [(reading: LoweredType, place: Place)] = []
+        var answered: [(reading: LoweredType, value: Value?, place: Place)] = []
 
         // MARK: - Initializer
         // MARK: - Public
@@ -274,7 +275,7 @@ struct TypeChecker {
             reading: inner.reading,
             answered: inner.flow.answered,
             to: returns,
-            resulting: block.result != nil,
+            result: inner.block.result,
             at: place,
             in: context.loweredTypes,
             fulfillment: fulfillment
@@ -570,6 +571,7 @@ struct TypeChecker {
     // carries.
     private func held(
         _ read: LoweredType,
+        valued constant: Value?,
         to returns: TypeExpression?,
         at place: Place,
         in table: LoweredTypeTable,
@@ -585,6 +587,21 @@ struct TypeChecker {
                     + " declaration promises \(returns)",
                 at: place
             )
+        }
+
+        // A constant answer is a value as well as a type, so it is held to
+        // what the promise admits, the way a constant argument is held to its
+        // slot.
+        if let constant {
+            do {
+                _ = try promised.settling(constant, at: "answer", in: table)
+            } catch {
+                throw BuildError(
+                    "answers \(read.rendered(in: table)), and its"
+                        + " declaration promises \(returns): \(error)",
+                    at: place
+                )
+            }
         }
 
         // A composition the declaration promises holds the answer to its
@@ -1221,18 +1238,25 @@ struct TypeChecker {
     // arrives.
     private func held(
         reading read: LoweredType,
-        answered: [(reading: LoweredType, place: Place)],
+        answered: [(reading: LoweredType, value: Value?, place: Place)],
         to returns: TypeExpression?,
-        resulting: Bool,
+        result: Expression?,
         at place: Place,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment?
     ) throws {
         for one in answered {
-            try held(one.reading, to: returns, at: one.place, in: table, fulfillment: fulfillment)
+            try held(one.reading, valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
         }
 
-        try held(read, to: returns, at: place.part(resulting ? .result : .returns), in: table, fulfillment: fulfillment)
+        try held(
+            read,
+            valued: result?.constantValue,
+            to: returns,
+            at: place.part(result != nil ? .result : .returns),
+            in: table,
+            fulfillment: fulfillment
+        )
     }
 
     // What a call answers: the declaration's returns, filled from the operands
@@ -1534,11 +1558,13 @@ struct TypeChecker {
             // caller (a `break` ends its loop and a `continue` its round) and
             // one carrying nothing hands back the null a body with no result
             // hands back, which is the run's own answer for it.
-            func answering(_ flowed: Flow, carrying carried: LoweredType?) -> Flow {
+            func answering(_ flowed: Flow, carrying carried: Inspection?) -> Flow {
                 guard leave.reach == .procedure else { return flowed }
 
                 var answering = flowed
-                answering.answered = flowed.answered + [(carried ?? .null, place)]
+                answering.answered = flowed.answered + [
+                    (carried?.reading ?? .null, carried?.rewritten.constantValue, place)
+                ]
 
                 return answering
             }
@@ -1561,7 +1587,7 @@ struct TypeChecker {
                     : expression,
                 calls: carried.calls,
                 reading: .never,
-                flow: leaving(answering(carried.flow, carrying: carried.reading))
+                flow: leaving(answering(carried.flow, carrying: carried))
             )
 
         // A path names something that has to exist just as a selector does, so
@@ -1851,7 +1877,7 @@ struct TypeChecker {
                     reading: inner.reading,
                     answered: inner.flow.answered,
                     to: procedure.signature.returns,
-                    resulting: written.result != nil,
+                    result: inner.block.result,
                     at: place.part(.closure),
                     in: context.loweredTypes,
                     fulfillment: ask.fulfillment
