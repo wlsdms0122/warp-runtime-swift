@@ -499,66 +499,6 @@ struct BuilderTests {
         }
     }
 
-    @Test("an entry nothing declares is refused")
-    func missingEntryIsRefused() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                "present": Procedure(
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then. The build judged every declaration; the run is what
-        // names one, and a name nothing declares is refused there.
-        let image = try await builder.build([sut])
-
-        await #expect {
-            try await Executor().run(image, entry: "absent")
-        } throws: { error in
-            error is ExecutionError && "\(error)".contains("entry 'absent' is not declared by any module in this link")
-        }
-    }
-
-    @Test("any declaration can be the entry")
-    func anyProcedureCanBeTheEntry() async throws {
-        // Given. Nothing marks one of them, so which runs is this argument
-        let sut = try Module(
-            procedures: [
-                "first": Procedure(
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("from-first"))
-                        )
-                    ],
-                    result: .record([
-                            "result": .reference([.key("done")])
-                        ])
-                ),
-                "second": Procedure(
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("from-second"))
-                        )
-                    ],
-                    result: .record([
-                            "result": .reference([.key("done")])
-                        ])
-                )
-            ]
-        )
-
-        // When
-        let first = try await run(sut, entry: "first")
-        let second = try await run(sut, entry: "second")
-
-        // Then
-        #expect(first["result"] == .string("from-first"))
-        #expect(second["result"] == .string("from-second"))
-    }
-
     @Test("a self-recursive procedure links once instead of forever")
     func recursiveProcedureLinksOnce() async throws {
         // Given

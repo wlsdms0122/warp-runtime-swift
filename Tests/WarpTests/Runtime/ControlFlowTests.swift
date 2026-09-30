@@ -304,31 +304,6 @@ struct ControlFlowTests {
         #expect(answer == .int(6))
     }
 
-    @Test("a rescue runs on a recoverable failure and can read it")
-    func rescueRunsAndReadsTheFailure() async throws {
-        // Given
-        let sut = Warp.Expression.attempt(
-            Block(body: [
-                Statement(binding: .constant("boom"), expression: .call(
-                        Call(selector: "app.fail", arguments: [.literal(.bool(true))])
-                    )
-                )
-            ]),
-            rescue: Block(body: [], result: reference("failure", "message")),
-            failure: "failure"
-        )
-
-        // When
-        let answer = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe"),
-            vocabulary: Module.standard + [.failing]
-        )
-
-        // Then
-        #expect(answer == .string("the world did not cooperate"))
-    }
-
     @Test("an author mistake passes through a rescue")
     func authorMistakeIsNotRescued() async throws {
         // Given. Recovery is for a world that did not cooperate, not for a

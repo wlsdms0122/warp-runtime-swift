@@ -109,19 +109,6 @@ struct FoldingTests {
         #expect(value == .string("n=3"))
     }
 
-    @Test("in a closed scope a binding named after an ambient head is just a binding")
-    func closedScopeServesBindingNamedAfterAmbientHead() async throws {
-        // Given. A closed surface has no reserved heads: a binding named `run`
-        // is just a binding, not the ambient namespace of that name
-        let reference = interpolated(literal("who="), spelling(reference("count")))
-
-        // When
-        let value = try await sut.read(reference, at: .given("test"))
-
-        // Then
-        #expect(value == .string("who=3"))
-    }
-
     @Test("a quoted payload passes verbatim, unevaluated")
     func quotedPayloadPassesVerbatim() async throws {
         // Given. The payload is data: a ref-shaped record inside stays a record

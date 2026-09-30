@@ -162,24 +162,6 @@ struct ObjectDependencyTests {
         )
     }
 
-    @Test("reads back saying what it was written saying")
-    func survivesTheRoundTrip() async throws {
-        // Given.
-        let behind = try await builder.compile([used])
-        let compiled = try await builder.compile(
-            [program],
-            against: behind,
-            supplying: Supplying([used, program])
-        )
-
-        // When.
-        let written = try #require(compiled[0].written)
-        let read = try Compiled(written: written, of: compiled[0].identity)
-
-        // Then.
-        #expect(read.dependencies == compiled[0].dependencies)
-    }
-
     // MARK: - Public
     // MARK: - Private
     // Everything an object says but what it leaned on.

@@ -17,14 +17,6 @@ struct TypeTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a name is identifiers joined by dots, and never a scalar's keyword", arguments: [
-        ("Account", true), ("bank.Account", true), ("_x1", true),
-        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
-    ])
-    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
-    }
-
     @Test("an array declares what it holds")
     func arrayDeclaresItsElement() throws {
         // Given

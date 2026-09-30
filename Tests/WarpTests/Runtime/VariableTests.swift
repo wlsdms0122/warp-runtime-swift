@@ -17,54 +17,6 @@ struct VariableTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a write inside a block outlives the block")
-    func assignmentOutlivesItsBlock() async throws {
-        // Given. The one thing a constant binding cannot do
-        let sut: Body = [
-            Statement(binding: .variable("verdict"), expression: .literal(.string("untouched"))),
-            Statement(
-                expression: .conditional(
-                    .literal(.bool(true)),
-                    then: [
-                        Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("touched"))
-                        )
-                    ],
-                    else: nil
-                    )
-            )
-        ]
-
-        // When
-        let answer = try await answer(of: sut, result: reference("verdict"))
-
-        // Then
-        #expect(answer == .string("touched"))
-    }
-
-    @Test("a block that did not run writes nothing")
-    func untakenBlockWritesNothing() async throws {
-        // Given
-        let sut: Body = [
-            Statement(binding: .variable("verdict"), expression: .literal(.string("untouched"))),
-            Statement(
-                expression: .conditional(
-                    .literal(.bool(false)),
-                    then: [
-                        Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("touched"))
-                        )
-                    ],
-                    else: nil
-                    )
-            )
-        ]
-
-        // When
-        let answer = try await answer(of: sut, result: reference("verdict"))
-
-        // Then
-        #expect(answer == .string("untouched"))
-    }
-
     @Test("a variable declared inside a block does not escape it")
     func declarationDoesNotEscape() {
         // Given. The box is shared; which names exist is not

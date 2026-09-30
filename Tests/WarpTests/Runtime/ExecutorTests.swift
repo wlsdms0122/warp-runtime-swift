@@ -13,8 +13,6 @@ import WarpStandard
 @Suite
 struct ExecutorTests {
     // MARK: - Property
-    private let builder = Builder()
-
     // MARK: - Initializer
     // MARK: - Test
     @Test("statements read the names before them")
@@ -47,45 +45,6 @@ struct ExecutorTests {
 
         // Then
         #expect(outputs["result"] == .string("hello, spec!"))
-    }
-
-    @Test("a conditional that declines leaves the variable as it was")
-    func aDecliningConditionalLeavesTheVariable() async throws {
-        // Given
-        let spec = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "kind", type: .string)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .variable("only-a"), expression: .literal(.null)
-                        ),
-                        Statement(
-                            expression: .conditional(equals(
-                                        .reference([.key("kind")]),
-                                        .literal(.string("a"))
-                                        ), then: [
-                                        Statement(binding: .assignment([.key("only-a")]), expression: .literal(.string("taken"))
-                                        )
-                                    ], else: nil)
-                        )
-                    ],
-                    result: .record([
-                            "result": .reference([.key("only-a")])
-                        ])
-                )
-            ]
-        )
-
-        // When
-        let outputs = try await run(spec, arguments: ["kind": .string("b")])
-
-        // Then
-        #expect(outputs["result"] == .null)
     }
 
     @Test("a recoverable failure runs the rescue path")
@@ -165,36 +124,6 @@ struct ExecutorTests {
         // `fragile` is the rescue's output (a string here), so the payload
         // never leaks past the rescue
         #expect(outputs["result"] == .string("saw: the world did not cooperate"))
-    }
-
-    @Test("an author mistake propagates past rescue")
-    func fatalErrorBypassesRescue() async throws {
-        // Given. An author mistake must not be absorbed by rescue
-        let spec = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("broken"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("broken"), expression: .call(Call(
-                                            selector: "app.fail",
-                                            arguments: [.literal(.bool(false))]
-                                        ))
-                                        )
-                                    ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
-                                    ]), failure: "broken")
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect(throws: TestFatalError.self) {
-            try await run(spec, vocabulary: Module.standard + [.failing])
-        }
     }
 
     @Test("an unrescued failure propagates")

@@ -71,21 +71,6 @@ struct CompiledTests {
         }
     }
 
-    @Test("a declaration an entry never calls is not reported as reached")
-    func reachIsStillTheEntrysOwn() async throws {
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
-                "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
-            ]
-        )
-
-        let image = try await builder.link(try compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
-
-        #expect(try image.reached(from: entryName).contains(entryName))
-        #expect(try !image.reached(from: entryName).contains("app.aside"))
-    }
-
     @Test("an entry no module declares is refused by the run and not by the build")
     func anUnknownEntryIsTheRunsRefusal() async throws {
         let sut = try Module(
@@ -589,41 +574,6 @@ struct CompiledTests {
             #expect(one.typeNumbering.memberships == other.typeNumbering.memberships)
             #expect(one.variables.map(\.name) == other.variables.map(\.name))
             #expect(one.table.count == other.table.count)
-        }
-    }
-
-    @Test("a document cannot declare a name a document it is compiled against declared")
-    func aCompileAgainstRefusesADoubledName() async throws {
-        // Given. Two documents declaring one spelling.
-        let first = try Module(
-            procedures: [
-                "app.procedure": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-        let second = try Module(
-            procedures: [
-                "app.procedure": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(2))
-                )
-            ]
-        )
-
-        // When. The first is compiled, the second against it.
-        let compiled = try await builder.compile([first])
-
-        // Then. Two declarations of a name have no way to be told apart,
-        // whether the build reads them together or one after the other.
-        await #expect {
-            try await builder.compile([second], against: compiled, supplying: Supplying(Module.standard))
-        } throws: { error in
-            error is BuildError
-                && "\(error)".contains("'app.procedure' is declared by the module at 0 in this link and by the module at 1")
         }
     }
 

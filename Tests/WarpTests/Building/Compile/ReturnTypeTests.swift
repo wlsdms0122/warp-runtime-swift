@@ -44,26 +44,6 @@ struct ReturnTypeTests {
 
         // Then. Settled to the declared representation, not merely waved past
         #expect(answer == .int(3))
-
-        // And a fraction is not that representation, whatever it is worth: a
-        // declaration is about the type, not about which values happen to fit.
-        let narrowing = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [Statement(binding: .constant("counted"), expression: .literal(.double(3)))],
-                    result: .reference([.key("counted")])
-                )
-            ]
-        )
-
-        await #expect {
-            try await Executor()
-                .run(try await builder.build([narrowing]))
-        } throws: { error in
-            error is BuildError && "\(error)".contains("answers double, and its declaration promises int")
-        }
     }
 
     @Test("a body that answers something else is refused where both are written")

@@ -62,12 +62,12 @@ struct NormalFormTests {
         await #expect(try !(Name("b") < Name("ab")))
     }
 
-    @Test("a type's name is identifiers joined by dots, and never a scalar's keyword")
-    func aTypesNameIsDeclarable() async throws {
-        await #expect(try Name("std.logic.Answer").isDeclarable)
-        await #expect(try !Name("std..Answer").isDeclarable)
-        await #expect(try !Name("a name").isDeclarable)
-        await #expect(try !Name("true").isDeclarable)
+    @Test("a type's name is identifiers joined by dots, and never a scalar's keyword", arguments: [
+        ("Account", true), ("bank.Account", true), ("_x1", true),
+        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
+    ])
+    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
+        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
     }
 
     @Test("a name a program writes as a value carries the rule with it")

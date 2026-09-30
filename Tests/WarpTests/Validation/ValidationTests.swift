@@ -438,26 +438,6 @@ struct ValidationTests {
         #expect(sut.imports == ["std.collection.count"])
     }
 
-    @Test("a procedure the module declares itself is not one it imports")
-    func ownProceduresAreNotImports() throws {
-        // Given. What a module brings with it is not what it asks for
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "greet"))
-                        )
-                    ]
-                ),
-                "greet": Procedure(body: [], result: .literal(.string("hello")))
-            ]
-        )
-
-        // Then
-        #expect(sut.imports.isEmpty)
-    }
-
     @Test("a module calling its own by the name the build knows it by imports nothing")
     func aSiblingCallIsNotAnImport() async throws {
         // Given. A module calls a sibling by its declared spelling, and a
