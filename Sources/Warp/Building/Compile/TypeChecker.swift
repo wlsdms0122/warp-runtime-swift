@@ -10,7 +10,7 @@ import Foundation
 // What each name in a body holds, worked out by reading the body in order.
 //
 // An author binds a call to a name and passes the name, so a declared `returns`
-// only reaches the next call site if the link knows what that name holds. This
+// only reaches the next call site if the build knows what that name holds. This
 // is what knows: `said = call counts` followed by `wants(procedure: said)` is two
 // declarations disagreeing, and both are text.
 //
@@ -101,7 +101,7 @@ struct TypeChecker {
         // MARK: - Private
     }
 
-    // The two asks the one walk answers. Judging is the link's own pass (every
+    // The two asks the one walk answers. Judging is the compile's own pass (every
     // dot rewritten, every call gathered, every refusal thrown) and it happens
     // once per site. Reading answers the type and flow questions alone and
     // refuses nothing (what cannot be read is `any`) because its askers read a
@@ -431,18 +431,10 @@ struct TypeChecker {
         }
     }
 
-    // What a declaration answers when nobody wrote it down.
-    //
-    // `returns` is optional because a declaration nobody wrote stays
-    // distinguishable from one somebody wrote, and for a long time the difference
-    // cost a call site nothing: an unwritten answer read as `any`, and `any` was
-    // accepted everywhere. It stopped being free when `any` became opaque. A dot on
-    // what such a call answers is refused, and the author is asked to write down a
-    // type the body already states.
-    //
-    // So the body is read. Not into the declaration: what the author wrote is
-    // what the image carries and what the boundary checks, and an answer worked
-    // out here is the link's own reading rather than anybody's promise. It reaches
+    // What a declaration answers when nobody wrote it down, read off its body.
+    // Not into the declaration: what the author wrote is what the image
+    // carries and what the boundary checks, and an answer worked out here is
+    // the build's own reading rather than anybody's promise. It reaches
     // exactly as far as the readings do.
     //
     // A body's answer may be another body's, so the order is the call graph's. Each
@@ -457,7 +449,7 @@ struct TypeChecker {
     // asked for again, so the next body is read against it.
     //
     // Handed back rather than returned in a heap: the tables a context is made
-    // of are the link's, one answer changes one entry in each, and rebuilding
+    // of are the build's, one answer changes one entry in each, and rebuilding
     // them per declaration is the whole graph copied once per node.
     func answers(
         of unsaid: [Unsaid],
@@ -547,7 +539,7 @@ struct TypeChecker {
     //
     // Named for the reading and not for the answer, because the sibling below
     // (what a *signature* answers) is the other question, and the two are kept
-    // apart on purpose: one is what the author wrote and one is what the link
+    // apart on purpose: one is what the author wrote and one is what the build
     // worked out.
     private func reading(
         from block: Block,
@@ -627,10 +619,9 @@ struct TypeChecker {
     // parameter admits its reading.
     //
     // That one parameter takes one bound, and that a named bound is declared,
-    // are the declaration's own facts. Held by
-    // the judgment every signature passes where it is declared, before anything
-    // gathers readings for this. Judging against every name in a mention set
-    // costs nothing when the set holds its one.
+    // are the declaration's own facts, held where it is declared, before
+    // anything gathers readings for this. Judging against every name in a
+    // mention set costs nothing when the set holds its one.
     private func constraintRefusal(
         mentions: [Name: [Name]],
         readings: [Name: LoweredType],
@@ -672,7 +663,7 @@ struct TypeChecker {
         at place: Place
     ) -> Judgment {
         // A declaration with nothing to fill and nothing to hold is read as
-        // the link lowered it. Lowering it again per call site is the same
+        // the build lowered it. Lowering it again per call site is the same
         // answer paid for again, and this is the site every call goes through.
         guard declared.isGeneric || !substitution.holding.isEmpty else {
             return .fits(slots: slots, returns: answering)
@@ -829,16 +820,12 @@ struct TypeChecker {
                 // declares a value that does not arrive at all.
 
                 // Nothing was declared here, so nothing about this value can
-                // ever be proven, and a dot the link cannot judge is the one
+                // ever be proven, and a dot the build cannot judge is the one
                 // thing a run would have to decide for itself. The author says
                 // what they expect and the reading goes on from there; the
                 // type is theirs to name, not the value's to supply. An index
                 // says as much as a dot does (that a type is there to be read
                 // into) so it refuses here too, and says so in its own terms.
-                // Before the three were told apart this arm let indexes through
-                // to the run; that exception was a fact about the branch being
-                // shared, not a decision about indexes, and keeping it would
-                // leave the one rule saying `[` may read what `.` may not.
                 if current == .any {
                     let reach = switch segment {
                     case .key: "reads a dot on"
@@ -852,37 +839,12 @@ struct TypeChecker {
                     )
                 }
 
-                // A parameter is filled by the call, so the type *is*
-                // declared. Elsewhere. That is why this is not `any`'s case and
-                // does not refuse: the segments stand as written and the call's
-                // type answers them, which is the decision
-                // `ParameterDotTests` holds.
-                //
-                // What would make this judgeable here is the bound: a
-                // constraint is a declared membership of concrete types, so a
-                // dot every member admits is a dot this site could prove.
-                // Reading it that way needs the walked signature's `bounds`,
-                // which this walk is not given, so the fact is named here
-                // rather than guessed at. The reading stays a type the call
-                // decides, not `any`. Saying `any` would hand the next
-                // statement a type the author never wrote. `x = item.a` then
-                // `x.b` would refuse on `any` where `item.a.b` in one statement
-                // stands, and naming a step is not supposed to change what a
-                // path means.
-                //
-                // And not the parameter itself. `item` is the type the call
-                // filled in; `item.a` is a field of that type, which is a
-                // different unknown. Handing the parameter back made a walk
-                // through one impersonate it: the field stood where `some T`
-                // was asked for, and carried T's bound onto a value that never
-                // earned it. `some N: Comparable` proving `item.a` comparable
-                // on nothing but where it was read from.
-                //
-                // Where the walk reached is asked of the type it walked
-                // through, not assembled from the segments written here: a
-                // body may name a step on the way (`held = of.inner`, then
-                // `held.count`), and the field it lands on is the same field
-                // either way.
+                // A type parameter is declared at the call, so the segments
+                // stand as written and the call's type answers them. The
+                // reading is what the parameter's type reaches through them,
+                // neither `any` nor the parameter itself, so a body naming a
+                // step on the way (`held = of.inner`, then `held.count`) reads
+                // the same field.
                 if let reached = current.reaching(rest()) {
                     switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
@@ -1664,7 +1626,7 @@ struct TypeChecker {
 
         // A cast is where a reading the walk could not judge becomes one it
         // can. The type is the author's claim, so it is the reading from here
-        // on, and the run is left the one question the link cannot answer,
+        // on, and the run is left the one question the build cannot answer,
         // which is what actually arrived.
         //
         // A claim the types already prove is refused, for the reason a needless
@@ -1693,22 +1655,14 @@ struct TypeChecker {
 
             let read = inner.reading.resolved(in: context.loweredTypes)
 
-            // Both refusals ask the types themselves, with nothing gating them
-            // on whether the reading is fully proven. A gate like that turned
-            // the judgment off wherever `any` sat anywhere inside the reading
-            // (`array<any>` read as `string` passed the link and answered null
-            // on every run, the permanent silent null this spelling exists
-            // against) while the case it was meant to protect (`{ data: any }`
-            // read as `{ data: { name: string } }`) is one `couldBothHold`
-            // already answers on its own, at the field.
+            // Both refusals ask the types themselves, whether or not the
+            // reading is fully proven.
             //
             // Needless means the claim and the reading are the same type, not
-            // that one would accept the other. `accepts` is assignability, and
-            // assignability is where a boundary still has work to do: it holds
-            // between `int` and `int(0...10)`, and between anything and `any`,
-            // precisely because the value is checked when it arrives. Reading
-            // it as proof called every narrowing cast needless and left the
-            // author no way to say what they knew.
+            // that one would accept the other. `accepts` holds between `int`
+            // and `int(0...10)`, and between anything and `any`, because the
+            // value is checked when it arrives, so a narrowing cast still says
+            // something.
             //
             // The claim is judged first, and on itself: a cast onto a type
             // that proves nothing opens no door, whatever it was written over.
@@ -1959,10 +1913,9 @@ struct TypeChecker {
 
         // Which value is called is settled at the run, and what it answers is
         // the slot's to say: a procedure type that wrote `returns` answers
-        // that, and one that wrote none opens to `any`. Its operands are data
-        // the const resolver reads (the check refuses a construct in one, and a
-        // program that came straight to the link meets the same predicate
-        // here) so nothing writes and there is no flow to carry.
+        // that, and one that wrote none opens to `any`. Its operands are data,
+        // held as operands below, so nothing writes and there is no flow to
+        // carry.
         case let .apply(callee, arguments):
             guard case .judging = ask else {
                 return Inspection(rewritten: expression, reading: .any)
@@ -2082,10 +2035,9 @@ struct TypeChecker {
         // from what was actually sent and the answer comes back with them
         // filled, and only a generic answer reads the operands at all, so under
         // the reading ask only a generic call pays for taking their readings.
-        // The operands are data the const half reads (the check holds a
-        // construct out of them, and the link asks the same predicate itself)
-        // so nothing here writes: every operand stands in the one environment
-        // the call stands in.
+        // The operands are data, held as operands below, so nothing here
+        // writes: every operand stands in the one environment the call stands
+        // in.
         case let .call(call):
             let signature = context.signature(of: call.selector)
 
@@ -2359,7 +2311,7 @@ struct TypeChecker {
             // What the rescue is there for. A body nothing can fail out of
             // leaves it a body no run reaches, and the author wrote it
             // expecting otherwise: what they are told is which failures the
-            // link found, which is none.
+            // build found, which is none.
             if Derivation().failing(block, given: context.failing(of:)).failsNothing {
                 try refuse(
                     "attempts a body that cannot fail, so its rescue is a body"
@@ -2562,7 +2514,7 @@ struct TypeChecker {
 
             switch statement.binding {
             // A name that says what it holds holds that. One that says
-            // nothing holds what the link worked out from what it was given.
+            // nothing holds what the build worked out from what it was given.
             case let .constant(id, declared)?:
                 locals.insert(id)
                 environment[id] = .fixed(try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask))
@@ -2637,8 +2589,8 @@ struct TypeChecker {
     // What never finishes binds nothing, so a name on it promises a binding
     // that cannot happen. Asked exactly where the sequence rule finds a
     // statement that ends the body, so the two facts cannot part. The reader
-    // catches the types it can see, and the link catches the procedures only it can
-    // see. One rule, two stages.
+    // catches the types it can see, and the build catches the procedures only it
+    // can see. One rule, two stages.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(
             "never finishes,"
@@ -2954,7 +2906,7 @@ struct TypeChecker {
     }
 
     // What a name holds: what it declared, held against what it was given, or
-    // what the link worked out where it declared nothing.
+    // what the build worked out where it declared nothing.
     private func held(
         _ given: LoweredType,
         declaredAs written: TypeExpression?,

@@ -19,7 +19,7 @@ struct TypingContext: Sendable {
     // document's own spelling is owed to.
     let types: TypeTable
 
-    // The rows the link built, and which row each declared spelling stands
+    // The rows the build laid, and which row each declared spelling stands
     // on. What a declaration takes and answers is read off its row: the row
     // is the declaration lowered, and a second table of the same facts would
     // hash every declared name to say what the row already says.
@@ -33,7 +33,7 @@ struct TypingContext: Sendable {
     // The spellings only another document's private declarations wear.
     let concealed: Set<Name>
 
-    // What the link read off a body whose declaration wrote no `returns`.
+    // What the build read off a body whose declaration wrote no `returns`.
     // Only those, for the same reason: what a declaration wrote is on its row.
     let answers: [Int: LoweredType]
 
