@@ -53,9 +53,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // reads differently from one that has not been written yet.
     case array(TypeExpression)
 
-    // A map of string keys to one type. A record whose field names are data
-    // rather than declaration. Keys are always strings because that is what
-    // `Value.record` holds.
+    // Names to one type: a record whose field names are data rather than
+    // declaration, which a `Value.dictionary` holds.
     case dictionary(TypeExpression)
 
     // Named fields with types. The value may carry more.
@@ -801,11 +800,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // The type parameters a type mentions: each occurrence with the bound it
-    // carries, whether there is one at all, and the type with every occurrence
-    // carrying the bound its signature declared.
-    //
-    // Every type parameter mentioned in here, occurrence by occurrence.
+    // Every type parameter mentioned in here, occurrence by occurrence, each
+    // with the bounds it carries.
     var parameterOccurrences: [ParameterOccurrence] {
         switch self {
         case let .parameter(name, constraints):

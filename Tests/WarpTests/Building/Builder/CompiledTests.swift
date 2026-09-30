@@ -16,6 +16,16 @@ import WarpStandard
 // and one name to start from. What each stage may do is what these ask.
 @Suite("What compiling settles and what linking decides")
 struct CompiledTests {
+    // A fixture that does not hold what a test reads out of it.
+    private struct Unheld: Error, CustomStringConvertible {
+        // MARK: - Property
+        let description: String
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let builder = Builder()
 
@@ -837,7 +847,7 @@ struct CompiledTests {
     // What a compile read off the body of a declaration that wrote no answer.
     private func answer(of declared: Name, in compiled: [Compiled]) throws -> LoweredType {
         guard let read = compiled.compactMap({ document in document.answers[declared] }).first else {
-            throw BuildError("nothing read an answer for '\(declared)'", at: nil)
+            throw Unheld(description: "nothing read an answer for '\(declared)'")
         }
 
         return read
@@ -867,7 +877,7 @@ struct CompiledTests {
         guard
             case let .body(body, _) = try assembled.table[#require(assembled.rows[declared])].judged.implementation
         else {
-            throw BuildError("'\(declared)' holds no written body", at: nil)
+            throw Unheld(description: "'\(declared)' holds no written body")
         }
 
         return body
@@ -875,7 +885,7 @@ struct CompiledTests {
 
     private func code(of declared: Name, in image: Image) throws -> LoweredBody {
         guard case let .body(body, _) = try image.linked[#require(image.rows[declared])].implementation else {
-            throw BuildError("'\(declared)' holds no written body", at: nil)
+            throw Unheld(description: "'\(declared)' holds no written body")
         }
 
         return body
@@ -884,7 +894,7 @@ struct CompiledTests {
     // The type the cast in a row's result stands on.
     private func cast(in body: LoweredBody) throws -> LoweredType {
         guard case let .cast(_, type, _)? = body.result else {
-            throw BuildError("the entry holds no cast", at: nil)
+            throw Unheld(description: "the entry holds no cast")
         }
 
         return type
@@ -913,7 +923,7 @@ struct CompiledTests {
     // The call through a contract a row's result holds.
     private func dispatch(in body: LoweredBody) throws -> DispatchOperation {
         guard case let .dispatch(dispatch)? = body.result else {
-            throw BuildError("'app.tell' holds no call through a contract", at: nil)
+            throw Unheld(description: "'app.tell' holds no call through a contract")
         }
 
         return dispatch
@@ -1006,7 +1016,7 @@ struct CompiledTests {
     // The number the call in a row's result carries.
     private func called(in body: LoweredBody) throws -> Int {
         guard case let .call(call)? = body.result else {
-            throw BuildError("'b.asks' holds no call", at: nil)
+            throw Unheld(description: "'b.asks' holds no call")
         }
 
         return call.procedure

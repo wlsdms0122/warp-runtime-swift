@@ -7,14 +7,14 @@
 
 import Foundation
 
-// What a program computes over. Eight data types and one that is not data: a
+// What a program computes over: data, and one kind that is not data. A
 // procedure is a value here, so a body can be passed, kept and answered with.
 //
-// The ninth is made by running, never by reading: a closure comes out of the
-// expression that writes one, and a program carrying one as a literal is
-// refused where a module is made. So a text spells eight, and anything handed
-// data from outside a run is handed eight, which is why the writings say so
-// where a caller can reach them with the ninth directly.
+// A procedure is made by running, never by reading: a closure comes out of
+// the expression that writes one, and a program carrying one as a literal is
+// refused where a module is made. So a text spells data alone, and anything
+// handed data from outside a run is handed data alone, which is why the
+// writings say so where a caller can reach them with a procedure directly.
 //
 // Equality is written by hand because a procedure has no honest one: two
 // procedures are never equal, and identity is not a question this language lets
@@ -43,10 +43,6 @@ public indirect enum Value: Sendable, Equatable {
 
     case procedure(Closure)
 
-    // Names and values where the names are data: what a document hands in and what
-    // a procedure that reads names answers. Which names are here is the value's to say,
-    // not a declaration's, so each entry carries its own name.
-    //
     // The entries stand in ascending byte order of their names, the order the
     // canonical writing uses, and a name is found by comparing bytes.
     public struct Dictionary: Sendable, Equatable {
@@ -526,8 +522,10 @@ public indirect enum Value: Sendable, Equatable {
         case let (.bytes(left), .bytes(right)):
             return left == right
 
+        // Element by element: an array's own `==` answers a shared buffer
+        // without asking its elements, and a procedure is equal to nothing.
         case let (.array(left), .array(right)):
-            return left == right
+            return left.count == right.count && zip(left, right).allSatisfy { mine, theirs in mine == theirs }
 
         case let (.record(left), .record(right)):
             return left == right
@@ -538,13 +536,6 @@ public indirect enum Value: Sendable, Equatable {
         case let (.record(record), .dictionary(dictionary)),
             let (.dictionary(dictionary), .record(record)):
             return same(record, dictionary) { mine, theirs in mine == theirs }
-
-        // Two procedures are never equal. Structural equality would compare
-        // bodies, which says nothing an author asked about, and reference
-        // equality would make a value's identity observable, and neither is a
-        // question this language has.
-        case (.procedure, .procedure):
-            return false
 
         default:
             return false
@@ -655,8 +646,8 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].reading(at: rest, under: rendered)
 
-        case let (.record(record), .key(name)):
-            guard let field = record[name] else {
+        case let (_, .key(name)) where holdsFields:
+            guard let field = self[name] else {
                 throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
             }
 

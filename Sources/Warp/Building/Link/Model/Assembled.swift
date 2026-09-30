@@ -10,9 +10,8 @@ import Foundation
 // The documents of one link, laid end to end, and the tables that say what
 // its rows are. Where a document's rows first stand somewhere.
 //
-// Nothing is judged here and no body is read: the blocks are copied in, in the
-// order the caller handed them over, and the names are answered with where
-// their block began.
+// No body is read: the blocks are copied in, in the order the caller handed
+// them over, and the names are answered with where their block began.
 struct Assembled: Sendable {
     // One row of the link: the judged row, which document it came out of,
     // and which of its writer's closures it is where a closure was lifted
@@ -21,7 +20,7 @@ struct Assembled: Sendable {
         // MARK: - Property
         let judged: Judged
         let origin: Int
-        let nth: Int?
+        let closure: (by: Closure.Declaration, nth: Int)?
 
         // MARK: - Initializer
         // MARK: - Public
@@ -58,6 +57,10 @@ struct Assembled: Sendable {
     let typeNumbering: [LoweredTypeNumbering]
     let variables: [[(name: Name, value: Value)]]
 
+    // What the build read off a body whose declaration wrote no `returns`, by
+    // row, in the type numbers of the document that wrote it.
+    let answers: [Int: LoweredType]
+
     // Which row a closure a value holds stands at, by its spelling.
     let spelled: ClosureRows
 
@@ -78,6 +81,7 @@ struct Assembled: Sendable {
         var numbering: [Numbering] = []
         var typeNumbering: [LoweredTypeNumbering] = []
         var variables: [[(name: Name, value: Value)]] = []
+        var answers: [Int: LoweredType] = [:]
 
         table.reserveCapacity(held)
         rows.reserveCapacity(held)
@@ -125,11 +129,19 @@ struct Assembled: Sendable {
                 rows[name] = start + offset
             }
 
+            for (name, answer) in documents[origin].answers {
+                guard let row = own[name] else { continue }
+
+                answers[row] = answer
+            }
+
             owned.append(own)
             closures[origin] = documents[origin].lifted.map { row in start + row }
 
             for index in documents[origin].table.indices {
-                table.append(Row(judged: documents[origin].table[index], origin: origin, nth: documents[origin].nth(ofRow: index)))
+                table.append(
+                    Row(judged: documents[origin].table[index], origin: origin, closure: documents[origin].closure(ofRow: index))
+                )
             }
 
             named.append(document)
@@ -150,6 +162,7 @@ struct Assembled: Sendable {
         self.numbering = numbering
         self.typeNumbering = typeNumbering
         self.variables = variables
+        self.answers = answers
     }
 
     // MARK: - Public

@@ -1,5 +1,5 @@
 //
-//  UnbroughtProcedure.swift
+//  UnbroughtQuery.swift
 //  Warp
 //
 //  Created by JSilver on 9/10/26.
@@ -17,7 +17,7 @@ import Foundation
 // What the run reads off a row is which door it answers through, and a row
 // standing in for an effect that claimed to be a query is a row the executor
 // would read the wrong way.
-struct UnbroughtProcedure: Query {
+struct UnbroughtQuery: Query {
     typealias Parameters = NoParameters
 
     // MARK: - Property
@@ -30,7 +30,7 @@ struct UnbroughtProcedure: Query {
 
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        throw UnbroughtProcedure.refusal(label)
+        throw UnbroughtQuery.refusal(label)
     }
 
     static func refusal(_ label: Name) -> ExecutionError {

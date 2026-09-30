@@ -11,7 +11,7 @@ import Foundation
 //
 // A type written `linear` says the values of it are handed on: given to a procedure,
 // or answered. A body holding one has to do that on every way through, and may
-// not do it twice, and the link says so before anything runs. That is the whole
+// not do it twice, and the build says so before anything runs. That is the whole
 // of what "this resource is closed exactly once" means here.
 //
 // The walk refuses wherever it cannot see: a value handed to a value call, a
@@ -63,8 +63,7 @@ struct LinearityChecker {
             // Two ways through, joined. Being handed on and being borrowed are
             // facts either way may have made, so both accumulate; what is
             // still held has to be the same on both, which the arms say where
-            // they are judged. The rule lives here so that a field added later
-            // is joined by whoever owns it rather than by every caller.
+            // they are judged.
             func merged(with other: Held) -> Held {
                 Held(
                     live: live,
@@ -89,12 +88,8 @@ struct LinearityChecker {
         let place: Place
 
         // Whether some way out of this body hands the caller an obligation.
-        //
-        // Not one of `Held`'s fields, and the difference is the point: what a
-        // body still holds dies with a way through that dies, and what it has
-        // already handed out does not. A walk that drops a way (an `attempt`
-        // drops its body's) would drop this with it, so it is kept where only
-        // setting it is possible.
+        // Not one of `Held`'s fields: an `attempt` goes on with its rescue's
+        // `Held`, and what its body handed out stays handed out.
         private(set) var handsOut = false
 
         // MARK: - Initializer
@@ -128,24 +123,20 @@ struct LinearityChecker {
                     continue
                 }
 
-                held = try moving(statement.expression, held: held, guarded: guarded)
-
                 switch statement.binding {
                 case let .constant(name, _)?, let .variable(name, _)?:
+                    held = try moving(statement.expression, held: held, guarded: guarded)
+
                     guard carriesObligation(statement.expression, held: held) else { continue }
 
                     held.live.insert(name)
                     held.moved.remove(name)
 
-                // A write puts something else in the box, so what was there is
-                // gone without having been handed on.
                 case let .assignment(path)?:
-                    guard let head = path.head, held.live.contains(head), path.segments.count == 1 else { continue }
-
-                    throw refusal("writes over '\(head)', which it is still holding")
+                    held = try written(statement.expression, into: path, held: held, guarded: guarded)
 
                 case nil:
-                    break
+                    held = try moving(statement.expression, held: held, guarded: guarded)
                 }
             }
 
@@ -274,10 +265,6 @@ struct LinearityChecker {
                     )
                 }
 
-                // The same fact from the other side: this walk never enters a
-                // closure, so what a borrowed name does in there is not
-                // something the text shows, and the one thing a borrow is
-                // proven by is being read where it is written.
                 for name in held.borrowed.sorted() where reads(block, name: name) {
                     throw refusal(
                         "captures '\(name)' in a closure, and it borrowed"
@@ -356,11 +343,12 @@ struct LinearityChecker {
             // A failure lands between statements, so which of the body's moves
             // happened is not something the text shows. What finishes is the
             // body's own end or the rescue's, so an attempt leaves where both
-            // of them do.
+            // of them do, holding what either way took.
             case let .attempt(body, rescue, _):
                 let attempted = try through(body, held: held, guarded: "inside an attempt")
                 var rescued = try through(rescue, held: held, guarded: "inside an attempt")
 
+                rescued.live.formUnion(attempted.live)
                 rescued.endsTheBody = attempted.endsTheBody && rescued.endsTheBody
 
                 return rescued
@@ -399,8 +387,7 @@ struct LinearityChecker {
         // not say so would let the obligation go. The walk hands them in
         // position order, the order the run evaluates them in.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
-            let parameters = (context.signature(of: call.selector)
-                ?? context.contractProcedures[call.selector]?.signature)?.parameters ?? []
+            let parameters = context.signature(of: call.selector)?.parameters ?? []
 
             var carried = held
 
@@ -415,6 +402,33 @@ struct LinearityChecker {
             }
 
             return carried
+        }
+
+        // A write into a box. Written whole, the box takes what the value
+        // carries the way a binding does, and what was there is gone without
+        // having been handed on. Written below the name, the value goes inside
+        // the list or record the box holds.
+        private func written(_ expression: Expression, into path: Path, held: Held, guarded: String?) throws -> Held {
+            guard let head = path.head, path.segments.count == 1 else {
+                return try carrying(expression, held: held, guarded: guarded)
+            }
+
+            var written = try moving(expression, held: held, guarded: guarded)
+
+            guard !written.live.contains(head) else {
+                throw refusal("writes over '\(head)', which it is still holding")
+            }
+
+            guard carriesObligation(expression, held: written) else { return written }
+
+            if let guarded {
+                throw refusal("writes one into '\(head)' \(guarded), which happens no fixed number of times")
+            }
+
+            written.live.insert(head)
+            written.moved.remove(head)
+
+            return written
         }
 
         // One element of a list or one field of a record. What a value written
@@ -506,16 +520,11 @@ struct LinearityChecker {
         }
 
         // What this expression hands out, where that is an obligation at all.
-        // A different question from whether a *type* is one of these.
-        //
-        // Said once, because the three questions this walk asks of a value are
-        // the same question about the same tree: may it stand in a list, whom
-        // does a refusal name, and does binding it take the obligation. Three
-        // walks over the shapes had to stay in step and nothing made them.
-        //
-        // No `default`: a shape nobody thought about must be a compile error
-        // here rather than an answer of no. Every hole this walk has had was a
-        // shape that fell through to false and took an obligation with it.
+        // A different question from whether a *type* is one of these. It
+        // answers all three questions the walk asks of a value: may it stand
+        // in a list, whom does a refusal name, and does binding it take the
+        // obligation. No `default`, so a new kind of expression is a compile
+        // error here rather than an answer of no.
         private func handedOut(_ expression: Expression, held: Held) -> HandedOut {
             switch expression {
             // A literal is data, a closure is a procedure, and a list or a
@@ -544,7 +553,6 @@ struct LinearityChecker {
             // so a declaration whose body answers one is held to writing it.
             case let .call(call):
                 let signature = context.signature(of: call.selector)
-                    ?? context.contractProcedures[call.selector]?.signature
 
                 guard
                     let returns = signature?.returns,
@@ -685,7 +693,7 @@ struct LinearityChecker {
     // MARK: - Public
     // Every value a body must hand on, handed on once. The declaration's own
     // slots are where such a value enters a body: `linear` is a document's
-    // spelling and a value the link folded is a value, never a promise.
+    // spelling and a folded value is a value, never a promise.
     func consumed(
         _ block: Block,
         at place: Place,

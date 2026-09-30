@@ -28,14 +28,12 @@ struct Sending {
     // MARK: - Property
     private let numbering: Numbering
 
-    // Which declarations answer without running, where the build has worked it
-    // out. Nil where nothing has: a folding table stands before the constness
-    // pass, and a claim it cannot check it does not make.
-    private let const: (@Sendable (Name) -> Bool)?
+    // Which declarations answer without running.
+    private let const: @Sendable (Name) -> Bool
 
     // Which declarations touch nothing another body could touch at the same
-    // time, where the build has worked it out.
-    private let isolated: (@Sendable (Name) -> Bool)?
+    // time.
+    private let isolated: @Sendable (Name) -> Bool
 
     // What a selector this document may send takes, where the build has the
     // declaration in hand. Nil for a spelling nothing standing so far declares,
@@ -48,8 +46,8 @@ struct Sending {
     // MARK: - Initializer
     init(
         numbering: Numbering,
-        const: (@Sendable (Name) -> Bool)? = nil,
-        isolated: (@Sendable (Name) -> Bool)? = nil,
+        const: @escaping @Sendable (Name) -> Bool,
+        isolated: @escaping @Sendable (Name) -> Bool,
         taking: @escaping @Sendable (Name) -> Signature?,
         in loweredTypes: LoweredTypeTable
     ) {
@@ -61,13 +59,17 @@ struct Sending {
     }
 
     // MARK: - Public
-    func rows(of procedure: Procedure, called label: Name) throws -> [Sent] {
-        guard let sends = procedure.implementation.nativeImports else { return [] }
+    func rows(of symbol: Symbol) throws -> [Sent] {
+        let implementation = symbol.procedure.implementation
+        let label = symbol.declared
+        let place = symbol.place.part(.imports)
+
+        guard let sends = implementation.nativeImports else { return [] }
 
         // Only a query claims to answer without running. An effect runs, so
         // what it sends may run too.
-        let answersWithoutRunning = procedure.implementation.isNativelyConst == true
-        let touchesNothingShared = procedure.implementation.isNativelyIsolated == true
+        let answersWithoutRunning = implementation.isNativelyConst == true
+        let touchesNothingShared = implementation.isNativelyIsolated == true
 
         let ordered = sends.sorted { left, right in left.position < right.position }
 
@@ -75,7 +77,7 @@ struct Sending {
             throw BuildError(
                 "'\(label)' sends procedures standing at \(ordered.map(\.position)), which is"
                     + " not one procedure to a place from the first",
-                at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                at: place
             )
         }
 
@@ -83,7 +85,7 @@ struct Sending {
             guard let stands = numbering.call(send.selector) else {
                 throw BuildError(
                     "'\(label)' sends '\(send.selector)', and its document never asked for it",
-                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                    at: place
                 )
             }
 
@@ -93,23 +95,23 @@ struct Sending {
             // hand.
             let declared = taking(send.selector) != nil
 
-            guard !declared || !answersWithoutRunning || !answersOnlyByRunning(send.selector) else {
+            guard !declared || !answersWithoutRunning || const(send.selector) else {
                 throw BuildError(
                     "'\(label)' answers without running and sends '\(send.selector)',"
                         + " which answers only by running",
-                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                    at: place
                 )
             }
 
-            guard !declared || !touchesNothingShared || !touchesSomethingShared(send.selector) else {
+            guard !declared || !touchesNothingShared || isolated(send.selector) else {
                 throw BuildError(
                     "'\(label)' says it touches no name another body could touch at"
                         + " the same time, and sends '\(send.selector)', which does",
-                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                    at: place
                 )
             }
 
-            return Sent(row: stands, handing: try handing(of: send, called: label))
+            return Sent(row: stands, handing: try handing(of: send, called: label, at: place))
         }
     }
 
@@ -118,13 +120,13 @@ struct Sending {
     // reaches by the same rule a call written in a body is held to. A
     // spelling nothing standing here declares is the link's to refuse, and
     // only a send handing nothing may reach one.
-    private func handing(of send: Native.Send, called label: Name) throws -> Int {
+    private func handing(of send: Native.Send, called label: Name, at place: Place) throws -> Int {
         guard let signature = taking(send.selector) else {
             guard send.handing == 0 else {
                 throw BuildError(
                     "'\(label)' hands \(send.handing) to '\(send.selector)', and nothing"
                         + " standing here declares what it takes",
-                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                    at: place
                 )
             }
 
@@ -134,22 +136,10 @@ struct Sending {
         if let refusal = signature.refusal(handing: send.handing) {
             throw BuildError(
                 "'\(label)' sends '\(send.selector)' \(refusal)",
-                at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                at: place
             )
         }
 
         return send.handing
-    }
-
-    private func answersOnlyByRunning(_ selector: Name) -> Bool {
-        guard let const else { return false }
-
-        return !const(selector)
-    }
-
-    private func touchesSomethingShared(_ selector: Name) -> Bool {
-        guard let isolated else { return false }
-
-        return !isolated(selector)
     }
 }

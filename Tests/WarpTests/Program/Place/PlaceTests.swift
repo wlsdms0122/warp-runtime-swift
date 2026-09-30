@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 
-// Where a refusal says the procedures are.
+// Where a refusal says the words are.
 //
 // What these hold a place to is that it leads somewhere for the reader it is
 // shown to. These programs are assembled in Swift and were never written down,
