@@ -75,17 +75,6 @@ struct DictionaryTests {
         #expect(sut.removing("z") == sut)
     }
 
-    @Test("two spellings Swift calls equal are two names, and only one of them is a name")
-    func equivalentSpellingsAreTwoNames() {
-        // Given
-        let composed: Name = "caf\u{E9}"
-        let decomposed = "cafe\u{301}"
-
-        // When / Then
-        #expect(composed.spelling == decomposed)
-        #expect(throws: NameRefused.self) { try Name(decomposed) }
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

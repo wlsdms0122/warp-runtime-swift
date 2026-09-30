@@ -44,6 +44,13 @@ struct LoweredBodyWalkTests {
         }
     }
 
+    // Every case `kind(of:)` spells, so a case added there is held to being a
+    // leaf or having a holder.
+    private let kinds: Set<String> = [
+        "literal", "local", "array", "record", "closure", "apply", "cast", "block",
+        "conditional", "loop", "attempt", "call", "dispatch", "leave"
+    ]
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("every case that holds an operation has a holder here")
@@ -54,7 +61,7 @@ struct LoweredBodyWalkTests {
         let holding = Set(try holders.map { _, operation in kind(of: operation) })
 
         #expect(holding.isDisjoint(with: leaves))
-        #expect(holding.count == 11)
+        #expect(holding.union(leaves) == kinds)
     }
 
     @Test("every case that holds an operation walks into it")
@@ -230,7 +237,7 @@ struct LoweredBodyWalkTests {
     // MARK: - Public
     // MARK: - Private
     // Which case an operation is, spelled. Exhaustive, so a case added to
-    // `Operation` lands here as a compile error and asks for its holder.
+    // `Operation` lands here as a compile error.
     private func kind(of operation: Operation) -> String {
         switch operation {
         case .literal: return "literal"

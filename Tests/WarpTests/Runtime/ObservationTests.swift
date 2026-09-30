@@ -203,9 +203,12 @@ struct ObservationTests {
 
         _ = try await Executor(observer: observer).run(image)
 
-        // Then
-        #expect(await observer.events.contains(.completed("both.std.concurrent.map[0].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(1))))
-        #expect(await observer.events.contains(.completed("both.std.concurrent.map[1].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(2))))
+        // Then. What stands between the piece's number and the closure is the
+        // library's own
+        let events = await observer.events
+
+        #expect(completed(piece: 0, with: .int(1), in: events))
+        #expect(completed(piece: 1, with: .int(2), in: events))
     }
 
     @Test("a call into a body keeps the statement that called it")
@@ -270,16 +273,12 @@ struct ObservationTests {
         let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        await #expect(throws: Aborted.self) {
+        let error = await #expect(throws: Aborted.self) {
             try await Executor().run(image)
         }
 
-        do {
-            _ = try await Executor().run(image)
-        } catch let error as Aborted {
-            #expect(error.trace?.rendered == "[0].helper.[0]")
-            #expect("\(error)" == "[0].helper.[0]: no")
-        }
+        #expect(error?.trace?.rendered == "[0].helper.[0]")
+        #expect(error.map { error in "\(error)" } == "[0].helper.[0]: no")
     }
 
     @Test("a refusal inside a closure says which of its writer's closures it was in")
@@ -431,27 +430,15 @@ struct ObservationTests {
         #expect(await observer.events.contains(.rescued("fragile")))
     }
 
-    @Test("a run with no observer is the same run")
-    func observationIsOptional() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [Statement(binding: .constant("only"), expression: .literal(.int(1)))],
-                    result: reference("only")
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([sut] + Module.standard)
-        let answer = try await Executor().run(image)
-
-        // Then
-        #expect(answer == .int(1))
-    }
-
     // MARK: - Public
     // MARK: - Private
+    private func completed(piece: Int, with value: Value, in events: [ObservedEvent]) -> Bool {
+        events.contains { event in
+            guard case let .completed(place, answered) = event else { return false }
+
+            return place.hasPrefix("both.std.concurrent.map[\(piece)].")
+                && place.hasSuffix(".entry.closure[0].step")
+                && answered == value
+        }
+    }
 }

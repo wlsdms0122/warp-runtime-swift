@@ -329,13 +329,15 @@ struct BakedTests {
         // host's, and the rest are written in Warp and carry their bodies.
         let baked = try await builder.compile(Module.standard)
 
-        // Then. Every builtin row it settled says the code is the host's.
-        for document in baked {
-            for row in document.table where Module.builtin.contains(row.label) {
-                guard case .native = row.implementation else {
-                    Issue.record("\(row.label) carries code")
-                    continue
-                }
+        // Then. Every builtin has a row, and each says the code is the host's.
+        let builtin = baked.flatMap(\.table).filter { row in Module.builtin.contains(row.label) }
+
+        #expect(Set(builtin.map(\.label)) == Module.builtin)
+
+        for row in builtin {
+            guard case .native = row.implementation else {
+                Issue.record("\(row.label) carries code")
+                continue
             }
         }
     }

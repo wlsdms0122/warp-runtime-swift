@@ -871,9 +871,13 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. It terminates; whether it refuses as needless is the
-        // sameness rule's business, not this one's
-        _ = try? await builder.build([sut] + Module.standard)
+        // When / Then. The walk ends, and what it answers is that the reading
+        // already is the type
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which it already is")
+        }
     }
 
     @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")

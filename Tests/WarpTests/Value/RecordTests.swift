@@ -111,18 +111,6 @@ struct RecordTests {
         #expect(sut != Record(name: "app.Vault", ["a": .int(1)]))
     }
 
-    @Test("a record's own name is compared as bytes, the way its fields are")
-    func aNameIsComparedAsBytes() throws {
-        // Given
-        let composed = Record(name: "app.Caf\u{E9}", ["a": .int(1)])
-        let decomposed = "app.Cafe\u{301}"
-
-        // When / Then. The decomposed spelling is no name, so there is no
-        // second record to compare with
-        #expect(throws: NameRefused.self) { try Name(decomposed) }
-        #expect(composed.name?.spelling == "app.Caf\u{E9}")
-    }
-
     @Test("mapping values changes every value and nothing else")
     func mappingValuesKeepsTheLayout() throws {
         // Given

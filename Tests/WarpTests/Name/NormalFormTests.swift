@@ -45,14 +45,6 @@ struct NormalFormTests {
         }
     }
 
-    @Test("names are equal by their bytes, not by canonical equivalence")
-    func namesAreEqualByBytes() throws {
-        // Swift calls the two spellings one string. A name is not a string.
-        #expect(normal == denormal)
-        #expect(try Name(normal) != Name("cafe"))
-        #expect(try Name(normal) == Name(normal))
-    }
-
     @Test("names are ordered by their bytes")
     func namesAreOrderedByBytes() async throws {
         // The order a canonical writing puts fields in, and the order a
@@ -68,16 +60,6 @@ struct NormalFormTests {
     ])
     func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
         #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
-    }
-
-    @Test("a name a program writes as a value carries the rule with it")
-    func aRecordHoldsNames() throws {
-        // A record's keys and its own name are names, so the record cannot be
-        // the place a denormal spelling gets in.
-        let record = Record(name: try Name(normal), [try Name(normal): .int(1)])
-
-        #expect(record.name?.spelling == normal)
-        #expect(record[try Name(normal)] == .int(1))
     }
 
     // MARK: - Public

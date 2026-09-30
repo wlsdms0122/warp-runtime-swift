@@ -400,8 +400,10 @@ struct ConstraintTests {
             ]
         )
 
-        // When / Then. Refused or built, and the asking ends
-        _ = try? await builder.build([sut] + Module.standard)
+        // When / Then. It builds, and the asking ends
+        await #expect(throws: Never.self) {
+            try await builder.build([sut] + Module.standard)
+        }
     }
 
     @Test("null is not a value of a contract standing as a type")
@@ -1074,7 +1076,7 @@ struct ConstraintTests {
         #expect(TypeExpression.named("Node").accepts(.named("Node"), in: types))
 
         let sut = try Module(
-            types: ["Node": .record(["value": .int, "next": .any])],
+            types: ["Node": .record(["value": .int, "next": .nullable(.named("Node"))])],
             procedures: [
                 "read": Procedure(
                     signature: Signature(
