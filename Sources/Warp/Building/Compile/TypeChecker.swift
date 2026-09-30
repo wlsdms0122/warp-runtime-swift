@@ -1369,7 +1369,7 @@ struct TypeChecker {
             return .index(index, optional: optionally)
 
         case let .double(fraction):
-            switch Int.reading(fraction) {
+            switch IntNarrowing(fraction) {
             case let .int(whole):
                 return .index(whole, optional: optionally)
 
