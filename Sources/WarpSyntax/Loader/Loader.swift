@@ -77,7 +77,7 @@ public struct Loader: Sendable {
         // anything is read: what fails is the reading, and a reader that got
         // far enough to fail may not have got far enough to say what it was
         // reading.
-        let document = document(of: value, identity: identity)
+        let document = Place.Document(identity: identity)
 
         // Reading first and checking second, and both before the envelope
         // question below. A module is checked where it is made, so the stamp
@@ -161,9 +161,6 @@ public struct Loader: Sendable {
     // alone: a document claiming a language this reader is not is refused, and
     // that refusal is the version's whole job.
     public func canonical(_ value: Value, from notation: Notation) throws -> Value {
-        // The value that is read and the value a refusal about it is named
-        // after are one value, held once. Two calls to `stamped` would be two
-        // values that happen to agree today about the one field this reads.
         let stamped = try stamped(value)
 
         // Written for the reader every document has: the standard table and
@@ -171,7 +168,7 @@ public struct Loader: Sendable {
         // spent here, and what reads the document back reads it by the
         // standard table.
         return try Writer(registry: .standard, readBy: .canonical)
-            .value(of: try spelled(stamped, in: document(of: stamped), from: notation))
+            .value(of: try spelled(stamped, in: Place.Document(identity: nil), from: notation))
     }
 
     // One procedure, for a caller holding a procedure's worth of data rather than a
@@ -268,14 +265,6 @@ public struct Loader: Sendable {
         by table: ConstructRegistry? = nil
     ) throws -> Draft {
         try read(ModuleReader.self, from: value, in: document, from: notation, by: table).draft
-    }
-
-    // The document a refusal about reading this value is in. The identity is
-    // handed in where there is one and left out where there is not: what a
-    // document *is* is worked out from its canonical writing, so a value on its
-    // way to being written has none yet.
-    private func document(of value: Value, identity: Identity? = nil) -> Place.Document {
-        Place.Document(identity: identity)
     }
 
     // The value with this reader's version on it, where it does not say. What a
