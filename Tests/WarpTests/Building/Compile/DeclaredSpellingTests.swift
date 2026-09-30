@@ -214,7 +214,7 @@ struct DeclaredSpellingTests {
 
     @Test("sorting what Comparable does not admit refuses at the build")
     func sortingTheUnorderableRefuses() async throws {
-        // Given. `sorted` is bounded by the shared ground's `Comparable`, and
+        // Given. `sorted` is bounded by `std.Comparable`, and
         // booleans are a reading the build can see
         let sut = try Module(
             procedures: [
@@ -412,7 +412,7 @@ struct DeclaredSpellingTests {
     }
 
     @Test("a bundle mentioning the shared constraints needs std in the link")
-    func aBundleNeedsTheSharedGround() async throws {
+    func aBundleNeedsStdInTheLink() async throws {
         // Given. Collection's procedures mention `Collection` and
         // `Comparable`, which only the foundation module declares
         let sut = try Module(

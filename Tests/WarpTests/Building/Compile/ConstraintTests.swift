@@ -910,8 +910,8 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a enum no member of the bound can spell refuses at the build")
-    func aOneOfOutsideTheBoundRefusesAtTheBuild() async throws {
+    @Test("an enum no member of the bound can spell refuses at the build")
+    func anEnumOutsideTheBoundRefusesAtTheBuild() async throws {
         // Given. Procedures on a Numeric slot: no member of the constraint can spell
         // them, so no call could ever fit this parameter
         let sut = try Module(
@@ -982,7 +982,7 @@ struct ConstraintTests {
     }
 
     @Test("enum membership is the number's worth, not its bit pattern")
-    func aOneOfMeetsANumberByWorth() async throws {
+    func anEnumMeetsANumberByWorth() async throws {
         // Given. The two zeros are one worth in the language's own order, so a
         // list that writes one admits the other
         let sut = try Module(
@@ -1221,11 +1221,10 @@ struct ConstraintTests {
         }
     }
 
-    @Test("an effect's own resolver reads the first argument it was handed")
-    func anEffectResolverReadsItsFirstArgument() async throws {
-        // Given. A native procedure resolves its first argument through its
-        // invocation, which is the one door outside the executor's own
-        // resolvers.
+    @Test("an effect reads the first argument it was handed")
+    func anEffectReadsItsFirstArgument() async throws {
+        // Given. A native procedure reads its first argument through its
+        // invocation.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

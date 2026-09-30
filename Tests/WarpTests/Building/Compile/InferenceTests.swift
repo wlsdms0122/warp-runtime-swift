@@ -22,7 +22,7 @@ struct InferenceTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a type parameter carries the element type through the call that filled it")
-    func aHoleCarriesWhatFilledIt() async throws {
+    func aTypeParameterCarriesWhatFilledIt() async throws {
         // Given. `first` takes `array<some Element>` and answers `some
         // Element`, so what it answers here is a string and the declaration
         // never said so
@@ -61,7 +61,7 @@ struct InferenceTests {
     }
 
     @Test("a type parameter filled with one type refuses a call wanting another")
-    func aFilledHoleRefusesWhatDisagrees() async throws {
+    func aFilledTypeParameterRefusesWhatDisagrees() async throws {
         // Given. The same walk, over an array of ints
         let wants = Procedure(
             signature: Signature(parameters: [Parameter(name: "text", type: .string)]),

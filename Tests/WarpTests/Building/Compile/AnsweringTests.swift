@@ -56,7 +56,7 @@ struct AnsweringTests {
     }
 
     @Test("an answer read off one body reaches the next")
-    func ananswerTravelsTheCallGraph() async throws {
+    func anAnswerTravelsTheCallGraph() async throws {
         // Given. Three declarations, none of which says what it answers. The
         // order is the call graph's, so each is read after the one its answer
         // comes from.

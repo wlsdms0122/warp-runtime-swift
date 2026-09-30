@@ -68,7 +68,7 @@ struct ReferenceLookupTests {
     }
 
     @Test("type misuse is unfit, not absent")
-    func shapeMisuseReturnsUnfit() async {
+    func typeMisuseReturnsUnfit() async {
         // Then. Drilling a field into a string is an author error, not missing
         // data
         guard case .unfit = await lookup([.key("name"), .key("foo")], in: sut) else {
@@ -110,7 +110,7 @@ struct ReferenceLookupTests {
     func indexReferenceFractionNamesItsMiss() async throws {
         // Given. A fraction with digits after the point, and a whole one no
         // an int holds: two different facts, each named as itself
-        let resolver = standard.folding([
+        let folding = standard.folding([
             "items": .array([.int(1), .int(2)]),
             "half": .double(1.5),
             "far": .double(1e30)
@@ -118,7 +118,7 @@ struct ReferenceLookupTests {
 
         guard case let .unfit(halfway) = await lookup(
             [.key("items"), .indexRef([.key("half")])],
-            in: resolver
+            in: folding
         ) else {
             Issue.record("expected unfit for a fractional index reference")
 
@@ -129,7 +129,7 @@ struct ReferenceLookupTests {
 
         guard case let .unfit(distant) = await lookup(
             [.key("items"), .indexRef([.key("far")])],
-            in: resolver
+            in: folding
         ) else {
             Issue.record("expected unfit for an index reference past the int")
 

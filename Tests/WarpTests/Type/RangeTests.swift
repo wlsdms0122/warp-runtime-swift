@@ -146,8 +146,8 @@ struct RangeTests {
         }
     }
 
-    @Test("a enum entirely past the bounds admits nothing")
-    func aOneOfOutsideTheRangeRefuses() async throws {
+    @Test("an enum entirely past the bounds admits nothing")
+    func anEnumOutsideTheRangeRefuses() async throws {
         // Given. No candidate is a value the range could hold, so the parameter
         // fits no call: the same judgment an empty enum gets
         func module(candidates candidates: [String]) async throws -> Module {

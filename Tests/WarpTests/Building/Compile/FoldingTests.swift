@@ -49,8 +49,8 @@ struct FoldingTests {
         #expect(value == .null)
     }
 
-    @Test("a null binding inside format spells null")
-    func nullBindingInFormatSpellsNull() async throws {
+    @Test("a null binding inside a template spells null")
+    func nullBindingInATemplateSpellsNull() async throws {
         // Given. Null has a spelling of its own, the one it has inside a container
         let reference = interpolated(literal("amount="), spelling(reference("maybe")))
 
@@ -72,7 +72,7 @@ struct FoldingTests {
     }
 
     @Test("a type-misusing path throws ReferenceUnfit")
-    func shapeMisuseThrowsUnfit() async {
+    func typeMisuseThrowsUnfit() async {
         // Given
         let reference = Expression.reference([.key("count"), .key("field")])
 
@@ -97,8 +97,8 @@ struct FoldingTests {
         #expect(value == .dictionary(["n": .int(3), "list": .array([.string("x")])]))
     }
 
-    @Test("format renders over its declared with bindings")
-    func declaredBindingsRenderFormat() async throws {
+    @Test("a template renders over the names it reads")
+    func aTemplateRendersOverItsNames() async throws {
         // Given
         let reference = interpolated(literal("n="), spelling(reference("count")))
 

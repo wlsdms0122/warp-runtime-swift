@@ -44,8 +44,8 @@ struct BuilderTests {
         )
     }
 
-    @Test("a enum no candidate of which fits the type is refused at the build")
-    func anUnsatisfiableOneOfIsRefused() async throws {
+    @Test("an enum no candidate of which fits the type is refused at the build")
+    func anUnsatisfiableEnumIsRefused() async throws {
         // Given. Admitting nothing is a fact about the type and the set
         // together, not about the set being empty
         let sut = try Module(
@@ -68,8 +68,8 @@ struct BuilderTests {
         #expect(error?.message.contains("admits nothing") == true)
     }
 
-    @Test("a enum that admits nothing is refused at the build")
-    func anEmptyOneOfIsRefused() async throws {
+    @Test("an enum that admits nothing is refused at the build")
+    func anEmptyEnumIsRefused() async throws {
         // Given. No call could ever fit it, so the declaration is the defect
         let sut = try Module(
             procedures: [
