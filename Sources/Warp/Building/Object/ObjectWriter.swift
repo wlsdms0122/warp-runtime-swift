@@ -80,10 +80,10 @@ struct ObjectWriter {
             // The rows the document declares stand under their spellings; the
             // rows its bodies lifted stand apart, and what wrote each is the
             // numbering's answer, so they carry no spelling.
-            .rows: .array(try compiled.table.prefix(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
+            .rows: .array(try compiled.table[compiled.standing].map { (row) throws(ObjectUnwritable) -> Value in
                 try judged(row, spelled: true)
             }),
-            .lifted: .array(try compiled.table.dropFirst(compiled.declared.count).map { (row) throws(ObjectUnwritable) -> Value in
+            .lifted: .array(try compiled.table[compiled.lifted].map { (row) throws(ObjectUnwritable) -> Value in
                 try judged(row, spelled: false)
             }),
             .answers: keyed(compiled.answers, lowered),

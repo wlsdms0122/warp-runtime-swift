@@ -67,8 +67,7 @@ public struct Compiled: Sendable, Declaring {
 
     // Where this document's declarations stand among its rows, and where the
     // closures its bodies lifted stand behind them. Every list of this
-    // document's rows is cut by these, so nothing cuts them apart, and a list
-    // of some other length traps where it is read.
+    // document's rows is cut by these, so nothing cuts them apart.
     var standing: Range<Int> { 0 ..< declared.count }
     var lifted: Range<Int> { declared.count ..< table.count }
 
@@ -241,17 +240,6 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
-        // The rows behind the declarations are the closures this document's
-        // bodies lifted, and a numbering stands one number for each of them.
-        // Two counts of the same run, so a numbering counting some other
-        // number of them is numbering a table that is not this one.
-        guard numbering.closureCount == table.count - declared.count else {
-            throw ObjectRefused(
-                "an object numbers \(numbering.closureCount) closure(s) behind"
-                    + " \(table.count - declared.count) row(s)"
-            )
-        }
-
         self.init(
             document: document,
             types: types,
@@ -270,6 +258,16 @@ public struct Compiled: Sendable, Declaring {
             token: token,
             fingerprint: fingerprint
         )
+
+        // The rows behind the declarations are the closures this document's
+        // bodies lifted, and a numbering stands one number for each of them.
+        // Two counts of the same run, so a numbering counting some other
+        // number of them is numbering a table that is not this one.
+        guard numbering.closureCount == lifted.count else {
+            throw ObjectRefused(
+                "an object numbers \(numbering.closureCount) closure(s) behind \(lifted.count) row(s)"
+            )
+        }
 
         // What each row stands on, judged against the rows beside it. Asked
         // after the value stands, so the range its closures are cut by is the
