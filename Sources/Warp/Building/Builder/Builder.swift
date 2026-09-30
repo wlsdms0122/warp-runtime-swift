@@ -135,7 +135,7 @@ public struct Builder: Sendable {
             numbered: linkage
         )
 
-        let signatures = signatures(of: assembled)
+        let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
@@ -777,7 +777,7 @@ public struct Builder: Sendable {
             standing: Array(compiled.indices),
             numbered: Linkage()
         )
-        let signatures = signatures(of: assembled)
+        let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         let lowered = try ClaimChecker().lowered(
             declaring,
@@ -858,20 +858,40 @@ public struct Builder: Sendable {
     // was declared by and at the place it was written. What a document
     // declares is its own; where it stands among the documents is the
     // caller's order.
-    private func signatures(of assembled: Assembled) -> [Name: Placed<Declared>] {
-        assembled.rows.reduce(into: [Name: Placed<Declared>]()) { table, entry in
-            let row = assembled.table[entry.value]
+    //
+    // What the build read off a body is written in its document's type
+    // numbers, so it is read as the rows of `loweredTypes`.
+    private func signatures(
+        of assembled: Assembled,
+        in loweredTypes: LoweredTypeTable
+    ) throws -> [Name: Placed<Declared>] {
+        var signatures: [Name: Placed<Declared>] = [:]
+        var numbered: [Int: LoweredTypeNumbering.Rows] = [:]
 
-            table[entry.key] = Placed(
+        for (name, number) in assembled.rows {
+            let row = assembled.table[number]
+            let place = Place.procedure(name.spelling, in: assembled.documents[row.origin])
+            var answer: LoweredType?
+
+            if let read = assembled.answers[number] {
+                let rows = numbered[row.origin] ?? assembled.typeNumbering[row.origin].rows(in: loweredTypes)
+
+                numbered[row.origin] = rows
+                answer = try rows.read(read, at: place)
+            }
+
+            signatures[name] = Placed(
                 Declared(
                     signature: row.judged.signature,
                     access: row.judged.access,
-                    facts: (row.judged.constness, row.judged.isolation)
+                    facts: (row.judged.constness, row.judged.isolation, answer)
                 ),
-                at: .procedure(entry.key.spelling, in: assembled.documents[row.origin]),
+                at: place,
                 of: row.origin
             )
         }
+
+        return signatures
     }
 
     // No document twice. An identity is derived from the text, so two copies of
