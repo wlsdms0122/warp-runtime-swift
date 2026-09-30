@@ -149,7 +149,7 @@ struct Activation: Sendable {
                     )
 
                 case let .found(.double(double)):
-                    switch Int.reading(double) {
+                    switch IntNarrowing(double) {
                     case let .int(index):
                         read = indexed(current, at: index, walked: walked)
 

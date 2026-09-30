@@ -18,8 +18,8 @@ public struct ConcurrentFailed: RecoverableFailure {
 
     public var type: String { Self.type }
 
-    // The procedure this failure names itself by, said once so a declaration can
-    // read it where it says what it may fail with.
+    // What this failure names itself, said once so a declaration can read it
+    // where it says what it may fail with.
     public static let type = "concurrent_failed"
 
     public var details: [Name: Value] {

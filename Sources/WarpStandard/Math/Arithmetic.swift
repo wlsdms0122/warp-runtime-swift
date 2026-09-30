@@ -13,8 +13,7 @@ import Warp
 // ends and the fraction path begins, and which answers fall off the edge.
 //
 // Ints stay ints, so `2 plus 2` answers 4 rather than 4.0. Division is the
-// exception, because a quotient is not generally whole. `remainder` is where a
-// whole division's other half is read.
+// exception, because a quotient is not generally whole.
 //
 // `int` is 64 bits, so a whole answer can fall off its edge. That is a
 // fault of the program, not a condition of its data: an overflow and a divisor
@@ -32,6 +31,9 @@ struct Arithmetic: Sendable {
     // MARK: - Property
     private let operation: Operation
 
+    // The declared spelling, which a refusal names.
+    private var procedure: String { "std.math.\(operation)" }
+
     // Whether a zero on the right has no answer. Both read a divisor, and both
     // are asked before the whole path so the check cannot be walked around.
     private var divides: Bool {
@@ -46,16 +48,14 @@ struct Arithmetic: Sendable {
     // MARK: - Public
     func answer(_ first: Value, _ operand: Value) throws -> Value {
         guard let left = number(first), let right = number(operand) else {
-            throw ExecutionError(
-                "arithmetic asks \(first.type) and \(operand.type), expected two numbers"
-            )
+            throw ExecutionError("\(procedure) asks two numbers")
         }
 
         // Zero by worth, whichever spelling carries it. The divisor is judged
         // before any conversion, so the check does not lean on what a fraction
         // can hold.
         guard !divides || !operand.matches(.int(0)) else {
-            throw ExecutionError("\(operation) asks zero")
+            throw ExecutionError("\(procedure) has no answer for a zero divisor")
         }
 
         if
@@ -73,7 +73,7 @@ struct Arithmetic: Sendable {
         // would mint a value that exists only until someone writes it down.
         guard answered.isFinite else {
             throw ExecutionError(
-                "\(operation) of \(left) and \(right) has no finite answer"
+                "\(procedure) of \(left) and \(right) has no finite answer"
             )
         }
 
@@ -99,7 +99,7 @@ struct Arithmetic: Sendable {
         case .dividedBy:
             return nil
 
-        // A remainder is smaller than its divisor, so it always fits the int.
+        // A remainder is smaller in size than its divisor, so it always fits the int.
         // The overflow guard below is not its judge. The one divisor that trips
         // the hardware's division (`Int.min % -1`) still has the answer 0, so
         // it is answered directly.
@@ -109,7 +109,7 @@ struct Arithmetic: Sendable {
 
         guard !answered.overflow else {
             throw ExecutionError(
-                "\(operation) of \(left) and \(right) overflows int"
+                "\(procedure) of \(left) and \(right) overflows int"
             )
         }
 
@@ -130,8 +130,8 @@ struct Arithmetic: Sendable {
         case .dividedBy:
             return left / right
 
-        // Truncating toward zero, the same as the whole answer. A wrap written
-        // over doubles reads the way the same wrap written over ints does.
+        // Truncating toward zero, the same as the whole answer, so both take
+        // the dividend's sign.
         case .remainder:
             return left.truncatingRemainder(dividingBy: right)
         }

@@ -34,7 +34,7 @@ struct ArgumentValidationTests {
             throw ValidationError("even takes an even number, and \(given) is odd", at: nil)
         }
 
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             .bool(true)
         }
 

@@ -40,11 +40,12 @@ struct SettingQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let held = question[.dictionary].asDictionary else { return nil }
-
-        guard case let .string(key) = question[.key] else {
-            throw ExecutionError("setting asks a string key")
+    func evaluate(_ question: Question<Self>) async throws -> Value {
+        guard
+            let held = question[.dictionary].asDictionary,
+            case let .string(key) = question[.key]
+        else {
+            throw ExecutionError("std.collection.setting asks a dictionary and a string")
         }
 
         let field: Name
@@ -52,7 +53,9 @@ struct SettingQuery: Query {
         do {
             field = try Name(key)
         } catch let refusal as NameRefused {
-            throw ExecutionError("setting asks a key that is a name, and \(refusal.message)")
+            throw ExecutionError(
+                "std.collection.setting asks a key that is a name, and \(refusal.message)"
+            )
         }
 
         // The names are data from here on: what was written was held to no

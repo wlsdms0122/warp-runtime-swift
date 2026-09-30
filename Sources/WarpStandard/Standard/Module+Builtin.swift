@@ -16,8 +16,9 @@ public extension Module {
     // `appending` is the only way an array grows and `gathering` the only way
     // an answer keeps the spelling its collection arrived in.
     //
-    // `trimmed` stands here for a smaller reason: nothing names the characters
-    // it removes, so a body written in Warp would have to invent the list.
+    // `trimmed` names the set it removes and still stands here: whether a
+    // character is whitespace is a question about the code points inside it,
+    // and `characters` answers characters.
     static let builtin: Set<Name> = [
         "std.logic.equal",
 

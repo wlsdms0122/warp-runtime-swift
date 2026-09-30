@@ -1,19 +1,18 @@
 //
 //  ConcurrencyTests.swift
-//  WarpTests
+//  WarpStandardTests
 //
 //  Created by JSilver on 8/18/26.
 //
 
 import Foundation
 import Testing
-@testable import Warp
+import Warp
 import WarpStandard
 
-// Running at once is vocabulary, not grammar. A closure is the one body that is
-// safe to run beside another (it captured values and writes no name it did not
-// declare) so `std.concurrent` takes closures, and a caller that leaves the
-// bundle out of the link has granted no concurrency at all.
+// Running at once is vocabulary, not grammar. `std.concurrent` takes isolated
+// closures, and a caller that leaves the bundle out of the link has granted no
+// concurrency at all.
 @Suite("Running at once")
 struct ConcurrencyTests {
     private actor CancellationWatch {
@@ -104,7 +103,7 @@ struct ConcurrencyTests {
 
     @Test("map walks a collection and answers in the collection's order")
     func mapAnswersInOrder() async throws {
-        // Given. The concurrent reading of what `each` walks
+        // Given
         let sut = Statement(binding: .constant("kept"), expression: .call(
                 Call(
                     selector: "std.concurrent.map",
@@ -241,13 +240,7 @@ struct ConcurrencyTests {
                         .array([
                             .closure(
                                 Procedure(
-                                    body: [
-                                        Statement(binding: .constant("doomed"), expression: .call(
-                                                Call(selector: "app.fail", arguments: [.literal(.bool(true))])
-                                            )
-                                        )
-                                    ],
-                                    result: reference("doomed")
+                                    body: [Statement(expression: aborting(literal("doomed")))]
                                 )
                             ),
                             .closure(Procedure(body: [], result: .literal(.string("answered"))))
@@ -260,8 +253,7 @@ struct ConcurrencyTests {
         // When
         let answer = try await answer(
             of: [sut],
-            result: reference("either"),
-            vocabulary: Module.standard + [.failing]
+            result: reference("either")
         )
 
         // Then
@@ -323,13 +315,7 @@ struct ConcurrencyTests {
                         .array([
                             .closure(
                                 Procedure(
-                                    body: [
-                                        Statement(binding: .constant("doomed"), expression: .call(
-                                                Call(selector: "app.fail", arguments: [.literal(.bool(true))])
-                                            )
-                                        )
-                                    ],
-                                    result: reference("doomed")
+                                    body: [Statement(expression: aborting(literal("doomed")))]
                                 )
                             )
                         ])
@@ -340,11 +326,7 @@ struct ConcurrencyTests {
 
         // When / Then
         await #expect(throws: ConcurrentFailed.self) {
-            try await answer(
-                of: [sut],
-                result: reference("either"),
-                vocabulary: Module.standard + [.failing]
-            )
+            try await answer(of: [sut], result: reference("either"))
         }
     }
 
@@ -353,15 +335,7 @@ struct ConcurrencyTests {
         // Given. Two pieces fail. Which failures a rescue reads must be every
         // one of them, whichever finished first.
         let doomed = Warp.Expression.closure(
-            Procedure(
-                body: [
-                    Statement(binding: .constant("doomed"), expression: .call(
-                            Call(selector: "app.fail", arguments: [.literal(.bool(true))])
-                        )
-                    )
-                ],
-                result: reference("doomed")
-            )
+            Procedure(body: [Statement(expression: aborting(literal("doomed")))])
         )
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(selector: "std.concurrent.all", arguments: [.record(["first": doomed, "second": doomed])])
@@ -370,11 +344,7 @@ struct ConcurrencyTests {
 
         // When / Then
         await #expect {
-            try await answer(
-                of: [sut],
-                result: reference("both"),
-                vocabulary: Module.standard + [.failing]
-            )
+            try await answer(of: [sut], result: reference("both"))
         } throws: { error in
             guard let failed = error as? ConcurrentFailed else { return false }
 

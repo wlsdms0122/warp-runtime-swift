@@ -13,7 +13,7 @@ public extension Module {
 
     private static let nativeCollection = Module(
         unchecked: Draft(
-            description: "Procedures about arrays and records. A string counts and contains too.",
+            description: "Counting, appending, gathering and the names of a record.",
             procedures: [
                 "std.collection.count": Procedure(
                     description: "How many, of what std.Collection admits.",

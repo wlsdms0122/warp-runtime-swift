@@ -8,18 +8,18 @@
 import Foundation
 import Warp
 
-// The whole number at or below this one. Answers an int whatever it was sent,
+// The whole number at or below a number. Answers an int whatever it was sent,
 // which is how a quotient becomes a whole number again: `dividedBy` always
-// answers a double, and this is the other half of writing a whole division.
+// answers a double.
 struct FlooredQuery: Query {
     typealias Parameters = NumberOperand
 
     // MARK: - Property
-    private let integer = IntegerConversion("floored")
+    private let integer = IntegerConversion("std.math.floored")
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         switch question[.number] {
         case let .int(number):
             return .int(number)
@@ -28,7 +28,7 @@ struct FlooredQuery: Query {
             return .int(try integer.of(real, rounded: .down))
 
         default:
-            return nil
+            throw ExecutionError("std.math.floored asks a number")
         }
     }
 

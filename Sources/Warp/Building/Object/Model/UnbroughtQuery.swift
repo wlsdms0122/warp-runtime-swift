@@ -29,7 +29,7 @@ struct UnbroughtQuery: Query {
     }
 
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         throw UnbroughtQuery.refusal(label)
     }
 

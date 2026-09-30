@@ -12,11 +12,11 @@ import Warp
 // beside another (it writes no name it captured, touches no module variable and
 // cannot leave past its own edge) so "run these concurrently" is a thing a procedure
 // can be handed, and the grammar does not need a construct to say it. Which
-// closures are isolated the link derived, and each piece is asked as it is
-// started.
+// closures are isolated the link derived, and the slot holds every piece to it
+// before this runs.
 //
-// One machine under three procedures, because what a piece is, how it is started and
-// how a failure is reported are the same for all three, and only what "done"
+// One machine under two procedures, because what a piece is, how it is started
+// and how a failure is reported are the same for both, and only what "done"
 // means differs.
 //
 // The rest a sibling ignores: asking is what cancellation is. A piece that
@@ -38,14 +38,13 @@ struct Fanout: Sendable {
         // MARK: - Private
     }
 
-    // One closure to run: its name if its author gave one, where it sat, and
-    // what it is offered. How a piece is reported is `Outcome`'s to derive.
+    // One closure to run: its name if its author gave one, and where it sat.
+    // How a piece is reported is `Outcome`'s to derive.
     private struct Piece: Sendable {
         // MARK: - Property
         let key: Name?
         let position: Int
         let closure: Closure
-        let arguments: [Value]
 
         // MARK: - Initializer
         // MARK: - Public
@@ -53,9 +52,9 @@ struct Fanout: Sendable {
     }
 
     // MARK: - Property
-    // The declared spelling, because `first` and `map` are also collection
-    // procedures. A refusal that says which module's procedure refused is the one a
-    // caller can act on.
+    // The declared spelling, because `first` is also a collection procedure. A
+    // refusal that says which module's procedure refused is the one a caller
+    // can act on.
     private let name: String
 
     // MARK: - Initializer
@@ -67,7 +66,9 @@ struct Fanout: Sendable {
     // Every piece, waited for. A failure fails the whole procedure, and every
     // piece's failure is reported, keyed by the piece's label: which failures
     // there are is not allowed to depend on timing.
-    func all<P: NativeProcedure>(_ invocation: Invocation<P>) async throws -> Value where P.Parameters == FanoutOperand {
+    func all<P: NativeProcedure>(
+        _ invocation: Invocation<P>
+    ) async throws -> Value where P.Parameters == FanoutOperand {
         let (pieces, keyed) = try closures(of: invocation)
         let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
 
@@ -80,7 +81,9 @@ struct Fanout: Sendable {
 
     // The first success, with the rest asked to stop. Which piece wins is the
     // one fact here that timing decides, and the procedure's name says so.
-    func first<P: NativeProcedure>(_ invocation: Invocation<P>) async throws -> Value where P.Parameters == FanoutOperand {
+    func first<P: NativeProcedure>(
+        _ invocation: Invocation<P>
+    ) async throws -> Value where P.Parameters == FanoutOperand {
         // The keys of a record are not wasted on a `first`. The winner's is
         // not reported, but a failure's is: when nothing wins, every piece's
         // failure comes back keyed by the name its author gave it.
@@ -88,8 +91,8 @@ struct Fanout: Sendable {
 
         // A `first` with nothing in it has nothing to win it, and waiting for
         // no one answers nothing. Refused as the author mistake it is. `all`
-        // and `map` answer collections, and a collection may be empty; a
-        // `first` answers exactly one thing, so it cannot be.
+        // answers a collection, and a collection may be empty; a `first`
+        // answers exactly one thing, so it cannot be.
         guard !pieces.isEmpty else {
             throw ExecutionError("\(name) asks at least one closure, and none arrived")
         }
@@ -110,8 +113,7 @@ struct Fanout: Sendable {
             Piece(
                 key: entry.name,
                 position: position,
-                closure: try closure(entry.value, called: entry.name.spelling),
-                arguments: []
+                closure: try closure(entry.value)
             )
         }
     }
@@ -135,35 +137,20 @@ struct Fanout: Sendable {
                     Piece(
                         key: nil,
                         position: position,
-                        closure: try closure(element, called: "[\(position)]"),
-                        arguments: []
+                        closure: try closure(element)
                     )
                 },
                 keyed: false
             )
 
-        case let value:
-            throw ExecutionError(
-                "\(name) asks a record or an array of closures, and was sent \(value.type)"
-            )
+        default:
+            throw ExecutionError("\(name) asks a record or an array of closures")
         }
     }
 
-    private func closure(_ value: Value, called label: String) throws -> Closure {
+    private func closure(_ value: Value) throws -> Closure {
         guard case let .procedure(closure) = value else {
-            throw ExecutionError(
-                "\(name) runs closures, and piece \(label) is \(value.type)"
-            )
-        }
-
-        // The slot asks for isolated closures, so a piece that reached here
-        // has already been settled against that. Asked again at the procedure's own
-        // door, where a host that assembled the invocation itself arrives.
-        guard try closure.runsBeside() else {
-            throw ExecutionError(
-                "\(name) runs isolated closures, and piece \(label) writes"
-                    + " what another body could touch"
-            )
+            throw ExecutionError("\(name) asks every piece to be a closure")
         }
 
         return closure
@@ -228,7 +215,7 @@ struct Fanout: Sendable {
         guard let environment = invocation.environment else {
             return try await invocation.call(
                 piece.closure,
-                handing: piece.arguments,
+                handing: [],
                 piece: frame
             )
         }
@@ -236,7 +223,7 @@ struct Fanout: Sendable {
         return try await environment.isolateConcurrentWork {
             try await invocation.call(
                 piece.closure,
-                handing: piece.arguments,
+                handing: [],
                 piece: frame
             )
         }
@@ -261,7 +248,9 @@ struct Fanout: Sendable {
             return authorMistake.value
         }
 
-        return ConcurrentFailed(failures: failures.compactMapValues { error in (error as? any RecoverableFailure)?.payload })
+        return ConcurrentFailed(
+            failures: failures.compactMapValues { error in (error as? any RecoverableFailure)?.payload }
+        )
     }
 
     private func answered(_ outcomes: [Outcome], keyed: Bool) throws -> Value {

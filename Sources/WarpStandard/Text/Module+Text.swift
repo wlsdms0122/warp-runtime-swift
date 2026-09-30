@@ -27,8 +27,8 @@ public extension Module {
                 ),
                 "std.text.text": Procedure(
                     description: "How a value reads as text.",
-                    signature: Signature(of: SpellingQuery.self, returns: .string),
-                    implementation: .query(SpellingQuery())
+                    signature: Signature(of: TextQuery.self, returns: .string),
+                    implementation: .query(TextQuery())
                 ),
                 "std.text.characters": Procedure(
                     description: "The text as an array of its characters.",

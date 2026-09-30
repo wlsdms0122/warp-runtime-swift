@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // Text written out as bytes in a named encoding. This cannot refuse the text
-// itself: a string is Unicode text, and UTF-8 spells all of it.
+// itself.
 struct EncodedQuery: Query {
     // What this takes: the text, and the encoding to write it in.
     enum Parameters: Int, ParameterSet {
@@ -23,7 +23,11 @@ struct EncodedQuery: Query {
                 return Parameter(name: "text", type: .string)
 
             case .encoding:
-                return Parameter(name: "encoding", type: .string, candidates: ["utf8"])
+                return Parameter(
+                    name: "encoding",
+                    type: .string,
+                    candidates: CharacterEncoding.names
+                )
             }
         }
 
@@ -33,16 +37,21 @@ struct EncodedQuery: Query {
     }
 
     // MARK: - Property
-    private let encoding = Encoding("encoded")
-
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        try encoding.named(question[.encoding])
+    func evaluate(_ question: Question<Self>) async throws -> Value {
+        guard case let .string(text) = question[.text] else {
+            throw ExecutionError("std.text.encoded asks a string")
+        }
 
-        guard case let .string(text) = question[.text] else { return nil }
+        guard
+            case let .string(name) = question[.encoding],
+            let encoding = CharacterEncoding(rawValue: name)
+        else {
+            throw ExecutionError("std.text.encoded asks the name of an encoding it has")
+        }
 
-        return .bytes(Array(text.utf8))
+        return .bytes(encoding.bytes(of: text))
     }
 
     // MARK: - Private

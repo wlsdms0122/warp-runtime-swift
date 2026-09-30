@@ -129,8 +129,10 @@ struct ShoutQuery: Query {
         var declared: Parameter { Parameter(name: "text", type: .string) }
     }
 
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard case let .string(text) = question[.text] else { return nil }
+    func evaluate(_ question: Question<Self>) async throws -> Value {
+        guard case let .string(text) = question[.text] else {
+            throw ExecutionError("app.shout asks a string")
+        }
 
         return .string(text.uppercased())
     }
