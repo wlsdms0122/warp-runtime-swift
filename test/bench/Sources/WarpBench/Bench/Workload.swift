@@ -40,7 +40,7 @@ struct Workload {
 
         self.name = url.deletingPathExtension().lastPathComponent
         self.text = text
-        self.module = try Loader().load(try TextEncoding.value(from: text), identity: nil)
+        self.module = try Loader().load(try TextEncoding().value(from: text), identity: nil)
         self.image = try await Self.built(module)
     }
 
@@ -48,33 +48,35 @@ struct Workload {
     // How long one run of `rounds` rounds takes. The program answers something it
     // computed so that no round can be skipped.
     func time(rounds: Int) async throws -> Duration {
-        try await elapsed { _ = try await Executor().run(image, entry: Self.entry, arguments: ["rounds": .int(rounds)]) }
+        try await Stopwatch().elapsed {
+            _ = try await Executor().run(image, entry: Self.entry, arguments: ["rounds": .int(rounds)])
+        }
     }
 
     // How long this document costs to arrive: its text read as a value, and
     // that value read as a module. Nothing can be linked until this is paid,
     // and a caller that is handed documents often pays it every time.
     func load() throws -> Duration {
-        try elapsed { _ = try Loader().load(try TextEncoding.value(from: text), identity: nil) }
+        try Stopwatch().elapsed { _ = try Loader().load(try TextEncoding().value(from: text), identity: nil) }
     }
 
     // How long one build of this module takes.
     func build() async throws -> Duration {
-        try await elapsed { _ = try await Self.built(module) }
+        try await Stopwatch().elapsed { _ = try await Self.built(module) }
     }
 
     // The same build where the vocabulary was compiled and laid down already,
     // which is what a caller building many documents against one vocabulary
     // pays.
     func baked() async throws -> Duration {
-        let laid = try await Vocabulary.laid.value
+        let vocabulary = try await Vocabulary.standard.value
 
-        return try await elapsed {
+        return try await Stopwatch().elapsed {
             let builder = Builder()
 
             _ = try builder.link(
-                laid.compiled + (try await builder.compile([module], against: laid)),
-                supplying: Vocabulary.brought
+                vocabulary.laid.compiled + (try await builder.compile([module], against: vocabulary.laid)),
+                supplying: vocabulary.brought
             )
         }
     }
@@ -83,7 +85,7 @@ struct Workload {
     // two halves of the same measurement, timed together rather than added, so
     // nothing between them is left out. What arriving costs is `load()`.
     func once() async throws -> Duration {
-        try await elapsed {
+        try await Stopwatch().elapsed {
             _ = try await Executor().run(
                 try await Self.built(module),
                 entry: Self.entry,

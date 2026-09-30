@@ -26,9 +26,8 @@ import WarpStandard
 // and `link()` is what no spreading takes away. What `alone()` costs over
 // `compile()` is what a compile stops sharing once the documents are split.
 //
-// A chain answers none of this: its documents stand in a line, so a document
-// cannot be compiled until the one in front of it has been. `Chain` is the
-// world where that line is what is being measured.
+// `Chain` measures documents that stand in a line, where a document is
+// compiled only after the one in front of it.
 struct Fanout {
     // MARK: - Property
     private let modules: [Module]
@@ -40,18 +39,19 @@ struct Fanout {
 
     // The vocabulary these were compiled against, held so that every door
     // times the same build rather than settling it again.
-    private let laid: Laid
+    private let vocabulary: Vocabulary
 
     // MARK: - Initializer
     init(_ dealing: Dealing) async throws {
         let modules = try (0 ..< dealing.documents).map { document in
             try Self.document(dealing.held(by: document))
         }
-        let laid = try await Vocabulary.laid.value
+        let vocabulary = try await Vocabulary.standard.value
 
         self.modules = modules
-        self.laid = laid
-        self.compiled = laid.compiled + (try await Builder().compile(modules, against: laid))
+        self.vocabulary = vocabulary
+        self.compiled = vocabulary.laid.compiled
+            + (try await Builder().compile(modules, against: vocabulary.laid))
     }
 
     // MARK: - Public
@@ -59,10 +59,10 @@ struct Fanout {
     func build() async throws -> Duration {
         let builder = Builder()
 
-        return try await elapsed {
+        return try await Stopwatch().elapsed {
             _ = try builder.link(
-                laid.compiled + (try await builder.compile(modules, against: laid)),
-                supplying: Vocabulary.brought
+                vocabulary.laid.compiled + (try await builder.compile(modules, against: vocabulary.laid)),
+                supplying: vocabulary.brought
             )
         }
     }
@@ -71,8 +71,8 @@ struct Fanout {
     func compile() async throws -> Duration {
         let builder = Builder()
 
-        return try await elapsed {
-            _ = try await builder.compile(modules, against: laid)
+        return try await Stopwatch().elapsed {
+            _ = try await builder.compile(modules, against: vocabulary.laid)
         }
     }
 
@@ -80,17 +80,17 @@ struct Fanout {
     func alone() async throws -> Duration {
         let builder = Builder()
 
-        return try await elapsed {
+        return try await Stopwatch().elapsed {
             for module in modules {
-                _ = try await builder.compile([module], against: laid)
+                _ = try await builder.compile([module], against: vocabulary.laid)
             }
         }
     }
 
     // How long laying the compiled documents down together takes.
     func link() throws -> Duration {
-        try elapsed {
-            _ = try Builder().link(compiled, supplying: Vocabulary.brought)
+        try Stopwatch().elapsed {
+            _ = try Builder().link(compiled, supplying: vocabulary.brought)
         }
     }
 

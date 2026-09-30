@@ -4,8 +4,8 @@
 # have.
 #
 # The documents are the source; this is a copy of them. `LibraryTests` holds
-# the two to being the same bytes, so a document edited without running this
-# is a red test rather than a runtime that quietly ships the old one.
+# the two to being the same text, so a document edited without running this
+# is a red test.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
