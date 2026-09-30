@@ -53,7 +53,7 @@ final class Relocating {
 
     // What each document's type numbers turned out to be in this link.
     //
-    // Answered once per number rather than at every type met: a name is read
+    // ResolvedTable once per number rather than at every type met: a name is read
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no type
     // and has no entry here.
@@ -146,8 +146,8 @@ final class Relocating {
     // MARK: - Public
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
-    func linked() throws -> Answered {
-        Answered.relocated(try table.indices.map(relocated(at:)), rows: rows, naming: naming)
+    func linked() throws -> ResolvedTable {
+        ResolvedTable.relocated(try table.indices.map(relocated(at:)), rows: rows, naming: naming)
     }
 
     // What each document's variables start a run holding, read as this link's

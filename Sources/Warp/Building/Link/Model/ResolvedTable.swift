@@ -1,5 +1,5 @@
 //
-//  Answered.swift
+//  ResolvedTable.swift
 //  Warp
 //
 //  Created by JSilver on 9/25/26.
@@ -15,7 +15,7 @@ import Foundation
 // are. `Relocating` says it by writing every body over. Compiling says it
 // beside the bodies instead, since it runs a few of them once and writing all
 // of them over would cost more than the running.
-struct Answered: Sendable {
+struct ResolvedTable: Sendable {
     private enum Numbers: Sendable {
         // This link's own rows.
         case rows
@@ -71,8 +71,8 @@ struct Answered: Sendable {
     // MARK: - Public
     // A table every number of which is a row of it: what `Relocating` made,
     // or rows that carry no lowered body.
-    static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
-        Answered(table: table, rows: rows, naming: naming, numbers: .rows)
+    static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> ResolvedTable {
+        ResolvedTable(table: table, rows: rows, naming: naming, numbers: .rows)
     }
 
     // A table as compiling left it, and where each document numbers from. The
@@ -86,8 +86,8 @@ struct Answered: Sendable {
         numbering: [Numbering],
         named: [Int: [Int?]],
         closures: [[Int]]
-    ) -> Answered {
-        Answered(
+    ) -> ResolvedTable {
+        ResolvedTable(
             table: table,
             rows: rows,
             naming: naming,
@@ -95,17 +95,17 @@ struct Answered: Sendable {
         )
     }
 
-    // The same answer over a table lowered since, with the closure rows that
+    // The same resolution over a table lowered since, with the closure rows that
     // lowering took. What a name stands for is the documents' and this link's,
     // and neither moved while the bodies were lowered; the closures are the
     // rows those bodies just made, so only they are handed again.
-    func holding(_ table: [Linked], closures: [[Int]]) -> Answered {
+    func holding(_ table: [Linked], closures: [[Int]]) -> ResolvedTable {
         switch numbers {
         case .rows:
-            return Answered(table: table, rows: rows, naming: naming, numbers: numbers)
+            return ResolvedTable(table: table, rows: rows, naming: naming, numbers: numbers)
 
         case let .documents(numbering, named, _):
-            return Answered(
+            return ResolvedTable(
                 table: table,
                 rows: rows,
                 naming: naming,

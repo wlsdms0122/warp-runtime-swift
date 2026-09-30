@@ -22,7 +22,7 @@ struct Folding {
     // The table this folds against, and how the numbers its bodies carry are
     // read. An expression folded beside them is lowered in the same numbering,
     // so one run stands in one numbering.
-    private let answered: Answered
+    private let resolved: ResolvedTable
 
     // What a fold with no document behind it writes under. Its table numbers
     // its own rows, so nothing looks the name up.
@@ -34,7 +34,7 @@ struct Folding {
     init(
         constants: [Name: Value],
         origin: Int,
-        in answered: Answered,
+        in resolved: ResolvedTable,
         loweredTypes: LoweredTypeTable
     ) {
         let names = constants.keys.sorted()
@@ -43,7 +43,7 @@ struct Folding {
         self.cells = names.map { name in .value(constants[name] ?? .null) }
         self.origin = origin
         self.loweredTypes = loweredTypes
-        self.answered = answered
+        self.resolved = resolved
     }
 
     // MARK: - Public
@@ -71,7 +71,7 @@ struct Folding {
         return try await read(
             code,
             in: frame,
-            of: answered.holding(lowering.table.map(\.folding), closures: lowering.documents.map(\.closureRows)),
+            of: resolved.holding(lowering.table.map(\.folding), closures: lowering.documents.map(\.closureRows)),
             at: place
         )
     }
@@ -108,9 +108,9 @@ struct Folding {
     // refused where it is lowered.
     func read(_ expression: Expression, at place: Place) async throws -> Value {
         var lowering = Lowering(
-            table: answered.table,
-            rows: answered.rows,
-            numbering: answered.numbering,
+            table: resolved.table,
+            rows: resolved.rows,
+            numbering: resolved.numbering,
             loweredTypes: loweredTypes
         )
         let (code, frame) = try lowering.lower(
@@ -126,13 +126,13 @@ struct Folding {
         return try await read(
             code,
             in: frame,
-            of: answered.holding(lowering.table, closures: lowering.documents.map(\.closureRows)),
+            of: resolved.holding(lowering.table, closures: lowering.documents.map(\.closureRows)),
             at: place
         )
     }
 
     // MARK: - Private
-    private func read(_ code: Operation, in frame: Frame, of answered: Answered, at place: Place) async throws -> Value {
+    private func read(_ code: Operation, in frame: Frame, of resolved: ResolvedTable, at place: Place) async throws -> Value {
         var activation = Activation(frame, of: origin)
 
         for (slot, cell) in cells.enumerated() {
@@ -142,9 +142,9 @@ struct Folding {
         let executor = Executor(
             observer: nil,
             environment: nil,
-            linked: answered.table,
-            resolving: answered.resolving,
-            naming: answered.naming,
+            linked: resolved.table,
+            resolving: resolved.resolving,
+            naming: resolved.naming,
             loweredTypes: loweredTypes
         )
         let value = try await executor.read(code, in: activation)

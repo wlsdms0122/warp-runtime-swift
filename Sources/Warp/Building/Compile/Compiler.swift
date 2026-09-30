@@ -361,7 +361,7 @@ struct Compiler {
     private func constants(
         of module: Module,
         at origin: Int,
-        folding answered: Answered,
+        folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
         in context: TypingContext
@@ -413,7 +413,7 @@ struct Compiler {
                     known[name] = try await Folding(
                         constants: known,
                         origin: origin,
-                        in: answered,
+                        in: resolved,
                         loweredTypes: context.loweredTypes
                     ).read(judged, as: .binding(name), writing: &lowering, at: place)
                 } catch let refused as BuildError {
@@ -437,7 +437,7 @@ struct Compiler {
         of module: Module,
         at origin: Int,
         beside known: [Name: Value],
-        folding answered: Answered,
+        folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
         in context: TypingContext
@@ -471,7 +471,7 @@ struct Compiler {
                     settled = try await Folding(
                         constants: known,
                         origin: origin,
-                        in: answered,
+                        in: resolved,
                         loweredTypes: context.loweredTypes
                     ).read(judged, as: .binding(name), writing: &lowering, at: place)
                 } catch let refused as BuildError {
