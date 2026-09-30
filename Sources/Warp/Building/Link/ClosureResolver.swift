@@ -65,7 +65,7 @@ final class ClosureResolver {
         underway[row] = true
         defer { underway[row] = false }
 
-        let done = try rewriting.map { rewriting in try rewriting(table[row]) } ?? standing(table[row])
+        let done = try rewriting.map { rewriting in try rewriting(table[row]) } ?? literalsResolved(in: table[row])
 
         resolved[row] = done
 
@@ -105,7 +105,7 @@ final class ClosureResolver {
     // A row whose numbers stand as they are: its literal values resolved and
     // nothing else touched. A body holding no procedure in a literal is the
     // row as it is, and is not rebuilt to find that out.
-    private func standing(_ row: Linked) throws -> Linked {
+    private func literalsResolved(in row: Linked) throws -> Linked {
         guard case let .body(body, frame) = row.implementation,
               body.contains(where: { node in
                   if case let .operation(.literal(value)) = node { return value.holdsProcedure }
