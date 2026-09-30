@@ -26,12 +26,17 @@ written="$root/Sources/WarpStandard/Library/Library.swift"
     echo "enum Library {"
     echo "    static let documents: [String: String] = ["
 
-    for file in "$library"/*.warpt; do
+    files=("$library"/*.warpt)
+    last="${files[${#files[@]} - 1]}"
+
+    for file in "${files[@]}"; do
         name="$(basename "$file" .warpt)"
+        separator=","
+        [ "$file" = "$last" ] && separator=""
 
         echo "        \"$name\": \"\"\""
         /usr/bin/sed -e 's/\\/\\\\/g' -e 's/"""/\\"\\"\\"/g' -e 's/^/            /' "$file"
-        echo "            \"\"\","
+        echo "            \"\"\"$separator"
     done
 
     echo "    ]"

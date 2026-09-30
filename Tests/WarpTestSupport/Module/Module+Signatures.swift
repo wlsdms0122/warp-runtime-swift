@@ -2,6 +2,8 @@
 //  Module+Signatures.swift
 //  WarpTestSupport
 //
+//  Created by JSilver on 9/21/26.
+//
 
 import Foundation
 import Warp

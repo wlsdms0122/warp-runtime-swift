@@ -1,6 +1,6 @@
 //
 //  DeclaredNameNotationTests.swift
-//  WarpSyntax
+//  WarpSyntaxTests
 //
 //  Created by JSilver on 9/6/26.
 //

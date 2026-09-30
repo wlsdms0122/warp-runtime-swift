@@ -2,6 +2,8 @@
 //  ModuleVariable.swift
 //  Warp
 //
+//  Created by JSilver on 9/22/26.
+//
 
 import Foundation
 

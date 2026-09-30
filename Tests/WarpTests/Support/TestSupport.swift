@@ -81,7 +81,7 @@ func run(
     _ procedure: Procedure,
     beside others: [Name: Procedure] = [:],
     arguments: [Name: Value] = [:],
-    vocabulary: [Module] = Module.standard,
+    vocabulary: [Module] = Module.standard
 ) async throws -> Value {
     try await run(
         [
@@ -90,7 +90,7 @@ func run(
             )
         ],
         arguments: arguments,
-        vocabulary: vocabulary,
+        vocabulary: vocabulary
     )
 }
 
@@ -102,13 +102,13 @@ func answer(
     beside others: [Name: Procedure] = [:],
     arguments: [Name: Value] = [:],
     signature: Signature = Signature(),
-    vocabulary: [Module] = Module.standard,
+    vocabulary: [Module] = Module.standard
 ) async throws -> Value? {
     try await run(
         Procedure(signature: signature, body: body, result: result),
         beside: others,
         arguments: arguments,
-        vocabulary: vocabulary,
+        vocabulary: vocabulary
     )
 }
 

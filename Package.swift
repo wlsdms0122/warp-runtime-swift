@@ -10,7 +10,7 @@ let package = Package(
     products: [
         .library(name: "Warp", targets: ["Warp"]),
         .library(name: "WarpSyntax", targets: ["WarpSyntax"]),
-        .library(name: "WarpStandard", targets: ["WarpStandard"]),
+        .library(name: "WarpStandard", targets: ["WarpStandard"])
     ],
     targets: [
         // The language as Swift holds it: the constructs a program is made of, and
@@ -131,7 +131,7 @@ let package = Package(
                 "WarpSyntax",
                 "WarpStandard"
             ]
-        ),
+        )
     ],
     swiftLanguageModes: [.v6]
 )

@@ -429,8 +429,8 @@ public struct Writer: Sendable {
             return .dictionary([
                 (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key: .dictionary([
                     ExpressionReader.subjectKey: try value(of: read),
-                    ExpressionReader.typeKey: try value(of: type),
-                ]),
+                    ExpressionReader.typeKey: try value(of: type)
+                ])
             ])
 
         case let .call(call):

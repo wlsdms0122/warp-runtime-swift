@@ -47,7 +47,7 @@ public extension RecoverableFailure {
         .dictionary([
             "type": .string(type),
             "message": .string(message),
-            "details": .dictionary(details),
+            "details": .dictionary(details)
         ])
     }
 }

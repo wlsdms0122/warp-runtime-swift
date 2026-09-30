@@ -2,7 +2,7 @@
 //  PlaceTests.swift
 //  WarpTests
 //
-//  Created by JSilver
+//  Created by JSilver on 8/30/26.
 //
 
 import Foundation
@@ -308,7 +308,7 @@ struct PlaceTests {
                     Statement(binding: .constant("sent"), expression: .call(Call(selector: "nowhere")))
                 ])
             ],
-            identity: reading,
+            identity: reading
         )
 
         // When
@@ -357,7 +357,7 @@ struct PlaceTests {
                         Statement(binding: .constant("held"), expression: reference("missing"))
                     ])
                 ],
-                identity: identity,
+                identity: identity
             )
         }
 
@@ -382,7 +382,7 @@ struct PlaceTests {
         let sut = try Module(
             types: ["wallet.Coin": .record(["amount": .named("Missing")])],
             procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading,
+            identity: reading
         )
 
         // When
@@ -402,7 +402,7 @@ struct PlaceTests {
         let sut = try Module(
             constraints: ["wallet.Spendable": []],
             procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading,
+            identity: reading
         )
 
         // When
@@ -516,7 +516,7 @@ struct PlaceTests {
         func declaring(_ procedure: Name, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [procedure: Procedure(body: [], result: .literal(.int(1)))],
-                identity: identity,
+                identity: identity
             )
         }
 
@@ -545,7 +545,7 @@ struct PlaceTests {
         // document on both sides and tells the caller nothing it can act on.
         let module = try Module(
             procedures: ["pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
-            identity: Identity([0x01]),
+            identity: Identity([0x01])
         )
 
         let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
@@ -613,7 +613,7 @@ struct PlaceTests {
         let sut = try Module(
             constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
             procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading,
+            identity: reading
         )
 
         // When
@@ -639,7 +639,7 @@ struct PlaceTests {
                 "yak": reference("zebra")
             ],
             procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading,
+            identity: reading
         )
 
         // When
@@ -666,7 +666,7 @@ struct PlaceTests {
                 "epsilon": .literal(.int(1))
             ],
             procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading,
+            identity: reading
         )
 
         // When
