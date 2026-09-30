@@ -19,8 +19,6 @@ struct TypeWriter {
     // MARK: - Initializer
     // MARK: - Public
     // A spelling is kept only where the reading takes it back as this type.
-    // Asked of the reading by reading it, at the one place a type becomes
-    // text, so whatever the reading makes of a spelling is what is asked.
     func value(of type: TypeExpression) throws -> Value {
         let written = try form(of: type)
 
