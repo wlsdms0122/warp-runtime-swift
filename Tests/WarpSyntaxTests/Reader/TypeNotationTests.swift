@@ -334,17 +334,24 @@ struct TypeNotationTests {
                 == .array(.record(["id": .string]))
         )
 
-        // An element with a spelling is written `array<string>`, and the
-        // record form around it is refused rather than read as the same type.
-        #expect(throws: ReadingError.self) {
-            try loader.loadDocument([
-                "procedures": [
-                    "entry": [
-                        "parameters": [["name": "rows", "type": ["array": "string"]]],
-                        "body": [["let": "seen", "value": ["ref": "rows"]]]
+        // An element with a spelling is written `array<string>`. A document
+        // says it that one way, and the form around it is a second spelling
+        #expect {
+            try loader.load(
+                [
+                    "warp": .int(Envelope.version),
+                    "imports": [],
+                    "procedures": [
+                        "entry": [
+                            "parameters": [["name": "rows", "type": ["array": "string"]]],
+                            "body": [["let": "seen", "value": ["ref": "rows"]]]
+                        ]
                     ]
-                ]
-            ])
+                ],
+                identity: nil
+            )
+        } throws: { error in
+            "\(error)".contains("The one way writes \"array<string>\"")
         }
     }
 

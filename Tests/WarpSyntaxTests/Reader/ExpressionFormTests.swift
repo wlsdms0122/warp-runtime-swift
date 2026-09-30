@@ -186,8 +186,8 @@ struct ExpressionFormTests {
 
     @Test("an index reference inside a placeholder stays inside the template")
     func indexReferenceStaysClosed() throws {
-        // Given. `${xs[i]}` names two bindings, and `validateClosed` makes the
-        // author declare both. What is built must read both from the template
+        // Given. `${xs[i]}` names two bindings, and a template refuses a name
+        // `with` does not bind. What is built must read both from the template
         let reference = try loader.expression(from: [
             "format": "at ${xs[i]}",
             "with": ["xs": ["ref": "items"], "i": ["ref": "cursor"]]

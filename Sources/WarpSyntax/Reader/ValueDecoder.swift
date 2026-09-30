@@ -8,30 +8,9 @@
 import Foundation
 import Warp
 
-// Decodes Codable types directly from a Value tree. Serializing through JSON
-// text would collapse the scalar typing the loader fixed (`3.0` re-reads as
-// int) so the loader's Value is the decoding source itself, with no round trip.
+// Decodes Codable types directly from a Value tree, so the scalar kinds the
+// value already holds (`3.0` a double, `3` an int) are the ones read.
 struct ValueDecoder: Decoder {
-    private struct AnyKey: CodingKey {
-        // MARK: - Property
-        let stringValue: String
-        let intValue: Int?
-
-        // MARK: - Initializer
-        init(stringValue: String) {
-            self.stringValue = stringValue
-            self.intValue = nil
-        }
-
-        init(intValue: Int) {
-            self.stringValue = String(intValue)
-            self.intValue = intValue
-        }
-
-        // MARK: - Public
-        // MARK: - Private
-    }
-
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
         let record: Value.Dictionary
@@ -131,7 +110,7 @@ struct ValueDecoder: Decoder {
         mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
             let decoded = try ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).decode(type)
@@ -146,7 +125,7 @@ struct ValueDecoder: Decoder {
         ) throws -> KeyedDecodingContainer<NestedKey> {
             let container = try ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).container(keyedBy: type)
@@ -159,7 +138,7 @@ struct ValueDecoder: Decoder {
         mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
             let container = try ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).unkeyedContainer()
@@ -172,7 +151,7 @@ struct ValueDecoder: Decoder {
         mutating func superDecoder() throws -> Decoder {
             let decoder = ValueDecoder(
                 value: try current(),
-                codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                codingPath: codingPath + [AnyCodingKey(intValue: currentIndex)],
                 steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             )
@@ -399,7 +378,7 @@ struct ValueDecoder: Decoder {
         return try elements.enumerated().map { index, element in
             try ValueDecoder(
                 value: element,
-                codingPath: codingPath + [AnyKey(intValue: index)],
+                codingPath: codingPath + [AnyCodingKey(intValue: index)],
                 steps: steps + [.index(index)],
                 userInfo: userInfo
             )
@@ -415,15 +394,15 @@ struct ValueDecoder: Decoder {
     // be the same line twice, which is the whole of what an address is for.
     // Sorted rather than as-written because a document is a value by then and a
     // value's record has no order to have kept.
-    func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
+    func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
         guard let record = value.asDictionary else {
             throw ReadingError("expected a record, found \(value.type)", at: steps)
         }
 
         return try record.entries
             .sorted { left, right in left.name.spelling < right.name.spelling }
-            .reduce(into: [String: T]()) { read, entry in
-                read[entry.name.spelling] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
+            .reduce(into: [Name: T]()) { read, entry in
+                read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
             }
     }
 
@@ -471,7 +450,7 @@ struct ValueDecoder: Decoder {
     private func descending(to key: String, holding held: Value) -> ValueDecoder {
         ValueDecoder(
             value: held,
-            codingPath: codingPath + [AnyKey(stringValue: key)],
+            codingPath: codingPath + [AnyCodingKey(stringValue: key)],
             steps: steps + [.key(key)],
             userInfo: userInfo
         )

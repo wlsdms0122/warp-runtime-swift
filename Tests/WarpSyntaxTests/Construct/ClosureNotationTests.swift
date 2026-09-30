@@ -12,7 +12,7 @@ import Testing
 import WarpStandard
 
 // A capability the language has and the notation cannot spell is a capability
-// only Swift has. These are the two procedures that close that gap.
+// only Swift has. These are the two keys that close that gap.
 @Suite("Writing a closure in a document")
 struct ClosureNotationTests {
     // MARK: - Property

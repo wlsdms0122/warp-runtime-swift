@@ -27,14 +27,10 @@ public enum Envelope {
     // a file that is not a document at all would get as far as having its keys
     // judged. Turned away for being a malformed module rather than for not
     // being one.
-    //
-    // Nothing has shipped, so there is nothing old to hold a number for. Every
-    // change before the first release folds into this one. The counter starts
-    // moving when a document exists somewhere this code does not control.
     public static let version = 1
 
     public static let versionKey: Name = Module.versionKey
-    public static let importsKey: Name = "imports"
+    public static let importsKey: Name = ModuleReader.CodingKeys.imports.name
 
     // How deep a document may nest. The bound is exact: every reader takes
     // a document within it and refuses the first container past it, and a
@@ -48,12 +44,12 @@ public enum Envelope {
     // Written and not null. A key holding nothing is not a claim, and the two
     // who ask have to agree about that: the door turns away a document that
     // declares nothing, and the reader takes a key holding nothing as a list
-    // of no procedures. Answering differently is how `imports: null` passes the
+    // of no names. Answering differently is how `imports: null` passes the
     // door as a claim while the module behind it says it takes nothing.
     //
     // Asked twice because the two are in different places. The door holds the
     // document and reads the value; the reader is inside it and has a
-    // container. One rule, said here in both of their procedures.
+    // container. One rule, said here for both.
     public static func declaresImports(_ written: Value?) -> Bool {
         guard let written else { return false }
 

@@ -140,7 +140,7 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a key that is not a procedure is written in quotes, and read back")
+    @Test("a key that is not an identifier is written in quotes, and read back")
     func aQuotedKeyComesBack() throws {
         // Given
         let document = Value.dictionary(["spaced key": .int(1), "가나다": .int(2)])
@@ -377,30 +377,47 @@ struct TextEncodingTests {
         }
     }
 
+    @Test("a text led by a byte order mark does not begin as a document")
+    func aLeadingByteOrderMarkIsRefused() {
+        // Given
+        let bytes = Data([0xEF, 0xBB, 0xBF] + Array("warpt 1\n1\n".utf8))
+
+        #expect {
+            try TextEncoding().value(from: bytes)
+        } throws: { error in
+            "\(error)".contains("does not begin as a warp document begins")
+        }
+    }
+
     @Test("a refusal says the line and column the reader stood at")
     func aRefusalIsPlaced() {
         // A value where a field name is due: the reader stands on the `2`.
         #expect {
             try TextEncoding().value(from: "warpt 1\n{\n  a 1\n  2\n}\n")
         } throws: { error in
-            "\(error)".hasSuffix("a record writes a field name here, at line 4 column 3")
+            Self.refused(error, "a record writes a field name here", at: 4, 3)
         }
 
         // Text that ends inside a record: the reader stands past the last line.
         #expect {
             try TextEncoding().value(from: "warpt 1\n{\n  a\n")
         } throws: { error in
-            "\(error)".hasSuffix("the text ends where a value should begin, at line 4 column 1")
+            Self.refused(error, "the text ends where a value should begin", at: 4, 1)
         }
 
         // A token the tokenizer refuses, before any value is read.
         #expect {
             try TextEncoding().value(from: "warpt 1\n[\n  \"a\"b\n]\n")
         } throws: { error in
-            "\(error)".contains("at line 3 column 6")
+            (error as? EncodingRefused)?.position == EncodingRefused.Position(line: 3, column: 6)
         }
     }
 
     // MARK: - Public
     // MARK: - Private
+    private static func refused(_ error: any Error, _ message: String, at line: Int, _ column: Int) -> Bool {
+        guard let refused = error as? EncodingRefused else { return false }
+
+        return refused.message == message && refused.position == EncodingRefused.Position(line: line, column: column)
+    }
 }

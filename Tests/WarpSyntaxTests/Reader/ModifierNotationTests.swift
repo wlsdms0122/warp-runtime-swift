@@ -10,7 +10,7 @@ import Testing
 import Warp
 @testable import WarpSyntax
 
-@Suite("The procedures a slot writes about itself")
+@Suite("The keywords a slot writes about itself")
 struct ModifierNotationTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -223,7 +223,7 @@ struct ModifierNotationTests {
         #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
-    @Test("a procedure written twice is refused", arguments: [
+    @Test("a keyword written twice is refused", arguments: [
         "inout inout int", "var var int", "const const procedure", "isolated isolated procedure",
         "consuming consuming Handle", "consuming borrowing Handle", "borrowing inout Handle"
     ])

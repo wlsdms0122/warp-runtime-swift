@@ -541,7 +541,7 @@ struct WriterTests {
 
         // Then. The writer leaves it as it is and the reader reads it as itself
         #expect(try Writer().value(of: Expression.literal(point)) == point)
-        guard case let .literal(read) = try ExpressionReader.read(point), read == point else {
+        guard case let .literal(read) = try Loader().expression(from: point), read == point else {
             Issue.record("the named record was not read as itself")
 
             return

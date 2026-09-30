@@ -61,7 +61,7 @@ struct ReadingErrorTests {
     @Test("the steps of a reading's refusal are the document's own keys")
     func aReadingWalksTheDocumentsKeys() throws {
         // Given. The address decoding reached, spelled the way every other
-        // stage spells one, so an author follows the same procedures either way: a
+        // stage spells one, so an author follows the same keys either way: a
         // statement wears the name it wrote, which is what validation and the
         // link call it
         let fixture: Value = [
@@ -126,7 +126,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["value": ["return": ["ref": [1]]]]]]]
+            "procedures": ["entry": ["body": [["value": ["return": ["record": [1]]]]]]]
         ]
 
         // When
@@ -178,7 +178,7 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "procedures")
     }
 
-    @Test("a document written for another warp is refused at the procedure that says so")
+    @Test("a document written for another warp is refused at the key that says so")
     func aVersionRefusalIsAtTheVersionKey() throws {
         // Given. The key is written, so there is something to point at. What
         // says no version at all is refused about the document, since nothing
@@ -286,7 +286,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.second")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.second.ref")
     }
 
     @Test("a record with two things wrong refuses the same one every time")
@@ -310,7 +310,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.alpha")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.alpha.ref")
     }
 
     @Test("a document that writes its imports as nothing has not written them")
@@ -345,6 +345,26 @@ struct ReadingErrorTests {
         // Then
         #expect(error?.place?.document == .assembled)
         #expect(error?.description.hasPrefix(":") == false)
+    }
+
+    @Test("a refusal about one key stands on that key", arguments: [
+        (["access": "open"], "procedures.entry.access"),
+        (["bounds": ["T": "array<int>"], "parameters": [["name": "x", "type": "some T"]]], "procedures.entry.bounds.T"),
+        (["bounds": ["U": "std.Numeric"]], "procedures.entry.bounds"),
+        (["result": ["ref": 5]], "procedures.entry.result.ref"),
+        (["result": ["ref": "a[0"]], "procedures.entry.result.ref")
+    ] as [(Value, String)])
+    func aRefusalStandsOnItsKey(procedure: Value, place: String) {
+        // Given
+        let fixture: Value = ["warp": 1, "imports": [], "procedures": ["entry": procedure]]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == place)
     }
 
     // MARK: - Public

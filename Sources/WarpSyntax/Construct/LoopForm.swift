@@ -33,20 +33,19 @@ public struct LoopForm: ConstructForm {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "loop")
 
         self.condition = try decoder.descending(to: CodingKeys.while).read(ExpressionReader.self).expression
-        self.body = try .reading(
+        self.body = Block(
             body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body,
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?
                 .read(ExpressionReader.self)
-                .expression,
-            at: decoder.steps
+                .expression
         )
     }
 
     // MARK: - Public
-    // The round state is bound under the statement's own id, which is how a
-    // document writes `${<id>.index}`. A nameless loop binds none.
-    public func expression(boundTo id: String?) throws -> Expression {
-        .loop(while: condition, body: body, round: try named(id))
+    // The round is bound under the statement's name, which a document reads
+    // as `{ ref "<name>.index" }`. A nameless loop binds none.
+    public func expression(boundTo name: String?) throws -> Expression {
+        .loop(while: condition, body: body, round: try named(name))
     }
 
     // MARK: - Private

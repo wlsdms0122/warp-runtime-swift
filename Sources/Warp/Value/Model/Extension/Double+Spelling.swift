@@ -24,33 +24,40 @@ extension Double {
             return self > 0 ? "<infinity>" : "<-infinity>"
         }
 
-        return spelling ?? "<unspellable>"
+        return uncheckedSpelling
     }
 
     // The one spelling a document writes a fraction in, and every judge of a
     // fraction's spelling (the writer, the boundary's enum, the link's
     // candidate check) reads this one answer. Nil for what no document carries.
+    public var spelling: String? {
+        guard isFinite else { return nil }
+
+        return uncheckedSpelling
+    }
+
+    // `spelling` for a fraction whose caller already refused what is not
+    // finite.
     //
     // The digits are the host's shortest round-trip rendering; the *form* is
     // the document's own rule, assembled here so a host's presentation taste
     // cannot leak into the grammar: writing d.ddd…×10^k, the point form when -5
     // < k < 16, otherwise the exponent form with an explicit sign and at least
     // two digits. `1e-05`, `1e+16`.
-    public var spelling: String? {
-        guard isFinite else { return nil }
+    package var uncheckedSpelling: String {
+        assert(isFinite, "only a finite fraction has a spelling")
 
         let signed = sign == .minus ? "-" : ""
 
         guard self != 0 else { return signed + "0.0" }
 
-        // Take the shortest digits apart: mantissa text and exponent, then
-        // the significant digits and where the first of them stands.
+        // Take the shortest digits apart: mantissa text and signed exponent,
+        // then the significant digits and where the first of them stands.
         let plain = "\(magnitude)"
         let halves = plain.split(separator: "e", maxSplits: 1)
-
-        // The exponent behind `e` is the host's own rendering, so no finite
-        // fraction takes this way out.
-        guard let shift = halves.count == 2 ? Int(halves[1]) : 0 else { return nil }
+        let written = halves.count == 2 ? halves[1] : "0"
+        let size = written.compactMap(\.wholeNumberValue).reduce(0) { total, digit in total * 10 + digit }
+        let shift = written.hasPrefix("-") ? -size : size
         let pieces = halves[0].split(separator: ".", maxSplits: 1)
         let whole = pieces[0]
         let fractional = pieces.count == 2 ? pieces[1] : ""

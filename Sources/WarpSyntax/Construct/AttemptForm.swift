@@ -35,28 +35,18 @@ public struct AttemptForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "attempt")
 
-        self.attempted = try .reading(
+        self.attempted = Block(
             body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body,
             result: try decoder.descendingIfPresent(to: CodingKeys.result)?
                 .read(ExpressionReader.self)
-                .expression,
-            at: decoder.steps
+                .expression
         )
         self.rescue = try decoder.descending(to: CodingKeys.rescue).read(BlockReader.self).block
-
-        // An empty rescue would swallow a failure into null without a trace. If
-        // the alternate path produces nothing, the honest form is no attempt.
-        guard !rescue.body.statements.isEmpty || rescue.result != nil else {
-            throw ReadingError(
-                "attempt `rescue` must not be empty",
-                at: decoder.steps
-            )
-        }
     }
 
     // MARK: - Public
-    public func expression(boundTo id: String?) throws -> Expression {
-        .attempt(attempted, rescue: rescue, failure: try named(id))
+    public func expression(boundTo name: String?) throws -> Expression {
+        .attempt(attempted, rescue: rescue, failure: try named(name))
     }
 
     // MARK: - Private

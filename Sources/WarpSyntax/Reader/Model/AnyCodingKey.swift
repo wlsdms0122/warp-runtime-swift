@@ -17,16 +17,18 @@ import Warp
 public struct AnyCodingKey: CodingKey {
     // MARK: - Property
     public let stringValue: String
-
-    public var intValue: Int? { nil }
+    public let intValue: Int?
 
     // MARK: - Initializer
     public init(stringValue: String) {
         self.stringValue = stringValue
+        self.intValue = nil
     }
 
-    public init?(intValue: Int) {
-        nil
+    // A position in a list, for a coding path that descended by one.
+    public init(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
     }
 
     // MARK: - Public

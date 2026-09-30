@@ -14,6 +14,10 @@ extension Decoder {
     // decoder whose descent nobody here watched.
     var steps: [Place.Step] { (self as? ValueDecoder)?.steps ?? [] }
 
+    // The notation this reading is in. A reading handed none reads a
+    // document, which has no spellings.
+    var notation: Notation { userInfo[.notation] as? Notation ?? .canonical }
+
     // Read what is written here, standing on it.
     //
     // For a reader that has to judge a value after reading it: what is judged
@@ -33,15 +37,17 @@ extension Decoder {
         return try decoder.decode(type)
     }
 
-    func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
+    // A record keyed by names. A value's keys are names already, and a key
+    // from a decoder that is not this package's is read as one here.
+    func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
         guard let decoder = self as? ValueDecoder else {
             let container = try container(keyedBy: AnyCodingKey.self)
 
             return try container.allKeys
                 .map(\.stringValue)
                 .sorted()
-                .reduce(into: [String: T]()) { read, key in
-                    read[key] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
+                .reduce(into: [Name: T]()) { read, key in
+                    read[try Name.read(key, at: steps)] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
                 }
         }
 
