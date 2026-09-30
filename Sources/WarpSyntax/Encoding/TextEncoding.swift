@@ -91,7 +91,7 @@ public struct TextEncoding {
     public func text(from value: Value) throws -> String {
         var written = "\(Self.name) \(Self.format)\n"
 
-        try write(value, at: 0, into: &written, within: Envelope.nesting)
+        try write(value, into: &written)
 
         written += "\n"
 
@@ -103,7 +103,7 @@ public struct TextEncoding {
     func line(from value: Value) throws -> String {
         var written = ""
 
-        try write(value, at: 0, into: &written, within: Envelope.nesting)
+        try write(value, into: &written)
 
         return written
             .split(separator: "\n")
@@ -570,115 +570,112 @@ public struct TextEncoding {
         }
     }
 
-    // Fields under names, with the name of the layout they stood on where
-    // there was one.
-    private func write(
-        _ held: Value.Dictionary,
-        named name: Name?,
-        at indent: Int,
-        into text: inout String,
-        within depth: Int
-    ) throws {
-        if let name {
-            guard name.isDeclarable else {
-                throw EncodingRefused("the record's name is not a type's name")
-            }
+    // The one layout: a container that holds something ends its line, holds
+    // one element or field a line two spaces deeper, and closes on a line of
+    // its own.
+    private func write(_ value: Value, into text: inout String) throws {
+        var walk = ValueWalk(value)
 
-            text += name.spelling + " "
-        }
+        // How many containers are open around the next step, which is how
+        // deep its line is indented.
+        var depth = 0
 
-        guard !held.isEmpty else {
-            text += "{}"
+        // Whether the next value follows its key on the key's line.
+        var keyed = false
 
-            return
-        }
-
-        text += "{\n"
-
-        // Both spellings hold their fields in byte order, the order written.
-        for (key, value) in held.entries {
-            text += String(repeating: "  ", count: indent + 1)
-
-            if key.isIdentifier {
-                text += key.spelling
-            } else {
-                write(key.spelling, into: &text)
-            }
-
-            text += " "
-
-            try write(value, at: indent + 1, into: &text, within: depth - 1)
-
-            text += "\n"
-        }
-
-        text += String(repeating: "  ", count: indent) + "}"
-    }
-
-    private func write(
-        _ value: Value,
-        at indent: Int,
-        into text: inout String,
-        within depth: Int
-    ) throws {
-        switch value {
-        case .null:
-            text += "null"
-
-        case let .bool(bool):
-            text += bool ? "true" : "false"
-
-        case let .int(int):
-            text += "\(int)"
-
-        // "Has a spelling" and "a document carries it" are one fact, asked
-        // once. The spelling itself is the judge.
-        case let .double(double):
-            guard let spelling = double.spelling else {
-                throw EncodingRefused("a document has no way to carry \(double)")
-            }
-
-            text += spelling
-
-        case let .string(string):
-            write(string, into: &text)
-
-        case let .bytes(bytes):
-            text += "x\""
-            text += bytes.spelling
-            text += "\""
-
-        case let .array(array):
-            try opening(value, within: depth)
-
-            guard !array.isEmpty else {
-                text += "[]"
-
+        while let step = try walk.next() {
+            switch step {
+            case .key, .arrayClose, .recordClose:
                 break
+
+            default:
+                if depth > 0, !keyed {
+                    text += String(repeating: "  ", count: depth)
+                }
+
+                keyed = false
             }
 
-            text += "[\n"
+            switch step {
+            case .null:
+                text += "null"
 
-            for element in array {
-                text += String(repeating: "  ", count: indent + 1)
+            case let .bool(bool):
+                text += bool ? "true" : "false"
 
-                try write(element, at: indent + 1, into: &text, within: depth - 1)
+            case let .int(int):
+                text += "\(int)"
 
+            case let .double(double):
+                guard let spelling = double.spelling else {
+                    throw EncodingRefused("a document has no way to carry \(double)")
+                }
+
+                text += spelling
+
+            case let .string(string):
+                write(string, into: &text)
+
+            case let .bytes(bytes):
+                text += "x\""
+                text += bytes.spelling
+                text += "\""
+
+            case let .array(count):
+                guard count > 0 else {
+                    text += "[]"
+
+                    break
+                }
+
+                text += "[\n"
+                depth += 1
+
+                continue
+
+            case let .record(name, count):
+                if let name {
+                    text += name.spelling + " "
+                }
+
+                guard count > 0 else {
+                    text += "{}"
+
+                    break
+                }
+
+                text += "{\n"
+                depth += 1
+
+                continue
+
+            case let .key(name):
+                text += String(repeating: "  ", count: depth)
+
+                if name.isIdentifier {
+                    text += name.spelling
+                } else {
+                    write(name.spelling, into: &text)
+                }
+
+                text += " "
+                keyed = true
+
+                continue
+
+            case .arrayClose:
+                depth -= 1
+                text += String(repeating: "  ", count: depth) + "]"
+
+            case .recordClose:
+                depth -= 1
+                text += String(repeating: "  ", count: depth) + "}"
+            }
+
+            // A value ended, and inside a container its line does too.
+            if depth > 0 {
                 text += "\n"
             }
-
-            text += String(repeating: "  ", count: indent) + "]"
-
-        case let .record(record):
-            try opening(value, within: depth)
-            try write(record.asDictionary, named: record.name, at: indent, into: &text, within: depth)
-
-        case let .dictionary(held):
-            try opening(value, within: depth)
-            try write(held, named: nil, at: indent, into: &text, within: depth)
-
-        case .procedure:
-            throw EncodingRefused("a procedure is code, and data is what a document spells")
         }
     }
 
@@ -712,14 +709,6 @@ public struct TextEncoding {
     private func opening(_ opened: [Opened], at offset: Int) throws {
         guard opened.count < Envelope.nesting else {
             throw refused("the document nests deeper than a reader must follow", at: offset)
-        }
-    }
-
-    // A container opens within the bound or not at all, and what it holds is
-    // written one container deeper.
-    private func opening(_ value: Value, within depth: Int) throws {
-        guard depth > 0 else {
-            throw EncodingRefused("the value nests deeper than a document may")
         }
     }
 

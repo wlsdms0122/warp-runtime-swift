@@ -40,15 +40,6 @@ public struct BinaryEncoding {
         case namedRecord = 0x09
     }
 
-    // A container part-written: what of it is still to go, and how deep its
-    // parts stand. The mirror of `Opened` on the reading side, and open for
-    // the same reason: what a container holds is written after it rather than
-    // inside it, so nothing here stands on a call frame.
-    private enum Writing {
-        case elements(ArraySlice<Value>, within: Int)
-        case fields(ArraySlice<(name: Name, value: Value)>, within: Int)
-    }
-
     // A container being put back together: what it still expects, what it holds
     // so far, and (for a record) the key the next value belongs to and the last
     // key seen, so order can be held without keeping the keys. A sum rather
@@ -163,144 +154,62 @@ public struct BinaryEncoding {
     }
 
     // MARK: - Private
-    // One pass with an explicit stack, for the reason the reader has one: the
-    // depth of a document must never be the depth of the host's call stack.
-    // What a writer is handed is a value a caller built, and a caller that
-    // built a deep one is owed the refusal rather than the process.
-    //
-    // `within` runs out where the reader's limit runs out, so the writer cannot
-    // produce a document its own reader would refuse.
     private func write(_ value: Value, into bytes: inout Data) throws {
-        var open: [Writing] = []
+        var walk = ValueWalk(value)
 
-        try write(value, into: &bytes, within: Envelope.nesting, opening: &open)
+        while let step = try walk.next() {
+            switch step {
+            case .null:
+                bytes.append(Tag.null.rawValue)
 
-        while let container = open.popLast() {
-            switch container {
-            case var .elements(rest, within):
-                guard let next = rest.popFirst() else { continue }
+            case let .bool(bool):
+                bytes.append((bool ? Tag.true : Tag.false).rawValue)
 
-                open.append(.elements(rest, within: within))
+            case let .int(int):
+                bytes.append(Tag.int.rawValue)
 
-                try write(next, into: &bytes, within: within, opening: &open)
+                write(zigzagged(int), into: &bytes)
 
-            case var .fields(rest, within):
-                guard let next = rest.popFirst() else { continue }
+            case let .double(double):
+                bytes.append(Tag.double.rawValue)
 
-                open.append(.fields(rest, within: within))
+                withUnsafeBytes(of: double.bitPattern.bigEndian) { bytes.append(contentsOf: $0) }
 
-                write(Array(next.name.spelling.utf8), into: &bytes)
+            case let .string(string):
+                bytes.append(Tag.string.rawValue)
 
-                try write(next.value, into: &bytes, within: within, opening: &open)
+                write(Array(string.utf8), into: &bytes)
+
+            case let .bytes(raw):
+                bytes.append(Tag.bytes.rawValue)
+
+                write(raw, into: &bytes)
+
+            case let .array(count):
+                bytes.append(Tag.array.rawValue)
+
+                write(UInt64(count), into: &bytes)
+
+            // A record under a name is written under its own tag with the name
+            // in front, so a reader that met the tag knows a name follows.
+            case let .record(name, count):
+                if let name {
+                    bytes.append(Tag.namedRecord.rawValue)
+
+                    write(Array(name.spelling.utf8), into: &bytes)
+                } else {
+                    bytes.append(Tag.record.rawValue)
+                }
+
+                write(UInt64(count), into: &bytes)
+
+            case let .key(name):
+                write(Array(name.spelling.utf8), into: &bytes)
+
+            // A count said how much was held, so nothing marks the end.
+            case .arrayClose, .recordClose:
+                break
             }
-        }
-    }
-
-    // One value's own bytes. What it holds is left open on the stack rather
-    // than written here, so nothing on this path calls itself.
-    private func write(
-        _ value: Value,
-        into bytes: inout Data,
-        within depth: Int,
-        opening open: inout [Writing]
-    ) throws {
-        switch value {
-        case .null:
-            bytes.append(Tag.null.rawValue)
-
-        case let .bool(bool):
-            bytes.append((bool ? Tag.true : Tag.false).rawValue)
-
-        case let .int(int):
-            bytes.append(Tag.int.rawValue)
-
-            write(zigzagged(int), into: &bytes)
-
-        case let .double(double):
-            // The bytes could carry these; the document's value model cannot,
-            // in any encoding, so they are refused rather than becoming a
-            // document only this encoding reads.
-            guard double.isFinite else {
-                throw EncodingRefused("a document has no way to carry \(double)")
-            }
-
-            bytes.append(Tag.double.rawValue)
-
-            withUnsafeBytes(of: double.bitPattern.bigEndian) { bytes.append(contentsOf: $0) }
-
-        case let .string(string):
-            bytes.append(Tag.string.rawValue)
-
-            write(Array(string.utf8), into: &bytes)
-
-        case let .bytes(raw):
-            bytes.append(Tag.bytes.rawValue)
-
-            write(raw, into: &bytes)
-
-        case let .array(array):
-            try opening(value, within: depth)
-
-            bytes.append(Tag.array.rawValue)
-
-            write(UInt64(array.count), into: &bytes)
-
-            if !array.isEmpty {
-                open.append(.elements(array[...], within: depth - 1))
-            }
-
-        // Sorted by their UTF-8 bytes, so that the same document is the same
-        // bytes in every implementation. A language's own string ordering is
-        // whatever that language decided, and the wire cannot depend on it.
-        // A record under a name is written under its own tag with the name in
-        // front, so a reader that met the tag knows a name follows.
-        case let .record(record):
-            try opening(value, within: depth)
-            try write(record.asDictionary, named: record.name, into: &bytes, within: depth, opening: &open)
-
-        case let .dictionary(held):
-            try opening(value, within: depth)
-            try write(held, named: nil, into: &bytes, within: depth, opening: &open)
-
-        case .procedure:
-            throw EncodingRefused("a procedure is code, and data is what a document spells")
-        }
-    }
-
-    // A container opens within the bound or not at all, and what it holds is
-    // written one container deeper. Counted where a container opens, so an
-    // empty one past the bound is refused the same as a full one.
-    private func opening(_ value: Value, within depth: Int) throws {
-        guard depth > 0 else {
-            throw EncodingRefused("the value nests deeper than a document may")
-        }
-    }
-
-    // Fields under names, with the name of the layout they stood on where
-    // there was one.
-    private func write(
-        _ held: Value.Dictionary,
-        named name: Name?,
-        into bytes: inout Data,
-        within depth: Int,
-        opening open: inout [Writing]
-    ) throws {
-        if let name {
-            guard name.isDeclarable else {
-                throw EncodingRefused("the record's name is not a type's name")
-            }
-
-            bytes.append(Tag.namedRecord.rawValue)
-            write(Array(name.spelling.utf8), into: &bytes)
-        } else {
-            bytes.append(Tag.record.rawValue)
-        }
-
-        write(UInt64(held.count), into: &bytes)
-
-        // Both spellings hold their fields in byte order, the order written.
-        if !held.isEmpty {
-            open.append(.fields(held.entries[...], within: depth - 1))
         }
     }
 
