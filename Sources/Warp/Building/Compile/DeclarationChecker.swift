@@ -14,139 +14,6 @@ struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // Every type a body mentions, held where it is written: the signatures its
-    // closures carry, the types its casts name, and what its names say they
-    // hold. Three name spaces bury a body (a procedure's, a constant's and a
-    // variable's) and one of them was once missing a judgment the other two
-    // made, so the three ask this rather than each holding a copy.
-    //
-    // Asking it where types are inferred instead would ask only of what that
-    // walk reaches: a procedure that both runs and is unreachable is walked by
-    // neither the frontier nor the const set, and its mentions would name
-    // whatever they liked.
-    func judge(subexpressions held: some Traversable, at place: Place, in table: TypeTable) throws {
-        let subexpressions = held.subexpressions(at: place)
-
-        for (place, inner) in closures(in: subexpressions) {
-            try judge(inner.signature, at: place, in: table)
-            try judge(carried: inner.signature.type, at: place, in: table)
-        }
-
-        for (place, named) in castTypes(in: subexpressions) {
-            try judge(cast: named, at: place, in: table)
-        }
-
-        // A name saying what it holds is a mention like the other two, and
-        // unparameterized: what fills a type parameter is a call filling the
-        // slot that names it, and a name inside a body is no such slot.
-        for (place, declared) in held.declaring(at: place) {
-            try mentioned(in: declared, at: place, parameterized: false, resolve: table)
-        }
-    }
-
-    // Everything a signature is held to where it is declared: every type it
-    // mentions resolves, every parameter could be filled, and every constraint
-    // it names is declared and single. The facts every consumer of the
-    // signature reads instead of re-deriving.
-    func judge(
-        _ signature: Signature,
-        at place: Place,
-        in table: TypeTable
-    ) throws {
-        for (position, parameter) in signature.parameters.enumerated() {
-            let here = place.part(.parameters).index(position)
-
-            try mentioned(
-                in: parameter.declared.slotUnwrapped,
-                at: here,
-                parameterized: true,
-                resolve: table
-            )
-            try saysWhatItDoes(with: parameter.declared, at: here, in: table)
-            try judge(parameter, at: here, in: table)
-        }
-
-        // Two parameters under one name would be one name the body reads
-        // two ways.
-        for (position, parameter) in signature.parameters.enumerated()
-        where signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) {
-            throw BuildError(
-                "declares '\(parameter.name)' twice",
-                at: place.part(.parameters).index(position)
-            )
-        }
-
-        try mentioned(
-            in: signature.returns ?? .any,
-            at: place.part(.returns),
-            parameterized: true,
-            resolve: table
-        )
-
-        try judgeConstraints(signature.parameterOccurrences, at: place, in: table)
-    }
-
-    // Everything a cast's type is held to on its spelling alone: the names it
-    // mentions resolve, and it names a type there is something to read. Both
-    // are answered without knowing what the value reads as, so both belong to
-    // the pass that sees every cast rather than to the walk that sees the
-    // reached ones. A procedure that both runs and is unreachable is walked by
-    // neither the frontier nor the const set.
-    func judge(
-        cast named: TypeExpression,
-        at place: Place,
-        in table: TypeTable
-    ) throws {
-        try mentioned(in: named, at: place, parameterized: true, resolve: table)
-
-        if let refusal = named.resolved(in: table).unreadableClaim {
-            throw BuildError(refusal, at: place)
-        }
-    }
-
-    // Whether a parameter's own declaration can be satisfied at all. Facts it
-    // states about itself, judged wherever a parameter is written: a `enum`
-    // none of whose candidates the declared type admits is a parameter no call
-    // could ever fit.
-    func judge(
-        _ parameter: Parameter,
-        at place: Place,
-        in table: TypeTable
-    ) throws {
-        // The declaration as the boundary reads it, so what the link calls
-        // dead is exactly what the boundary would never match.
-        let type = parameter.declared.lowered(in: table.loweredTypes)
-
-        if let allowed = parameter.candidates {
-            // Candidate by candidate: a spelling the declared type cannot spell
-            // is a member no call could ever match, and a dead member is the
-            // declaration's own defect whether live ones stand beside it or
-            // not. One pass reads both facts. A list that is empty or entirely
-            // dead refuses by the plainer name, a dead member among live ones
-            // is named.
-            let dead = allowed.filter { candidate in
-                !type.spells(candidate, in: table.loweredTypes)
-            }
-
-            if dead.count == allowed.count {
-                throw BuildError(
-                    "enum admits nothing, so no call could ever fit",
-                    at: place
-                )
-            }
-
-            if let first = dead.first {
-                throw BuildError(
-                    "enum lists '\(first)', which"
-                        + " \(parameter.declared.rendered) does not admit."
-                        + " No call could ever match it",
-                    at: place
-                )
-            }
-        }
-
-    }
-
     // Every type the modules declared, and the check that each name a
     // declaration mentions is one of them. A type name is resolved here for the
     // same reason a procedure name is: unreached code still has to compile, and
@@ -331,6 +198,138 @@ struct DeclarationChecker {
     }
 
     // MARK: - Private
+    // Every type a body mentions, held where it is written: the signatures its
+    // closures carry, the types its casts name, and what its names say they
+    // hold. Three name spaces bury a body (a procedure's, a constant's and a
+    // variable's) and one of them was once missing a judgment the other two
+    // made, so the three ask this rather than each holding a copy.
+    //
+    // Asking it where types are inferred instead would ask only of what that
+    // walk reaches: a procedure that both runs and is unreachable is walked by
+    // neither the frontier nor the const set, and its mentions would name
+    // whatever they liked.
+    private func judge(subexpressions held: some Traversable, at place: Place, in table: TypeTable) throws {
+        let subexpressions = held.subexpressions(at: place)
+
+        for (place, inner) in closures(in: subexpressions) {
+            try judge(inner.signature, at: place, in: table)
+            try judge(carried: inner.signature.type, at: place, in: table)
+        }
+
+        for (place, named) in castTypes(in: subexpressions) {
+            try judge(cast: named, at: place, in: table)
+        }
+
+        // A name saying what it holds is a mention like the other two, and
+        // unparameterized: what fills a type parameter is a call filling the
+        // slot that names it, and a name inside a body is no such slot.
+        for (place, declared) in held.declaring(at: place) {
+            try mentioned(in: declared, at: place, parameterized: false, resolve: table)
+        }
+    }
+
+    // Everything a signature is held to where it is declared: every type it
+    // mentions resolves, every parameter could be filled, and every constraint
+    // it names is declared and single. The facts every consumer of the
+    // signature reads instead of re-deriving.
+    private func judge(
+        _ signature: Signature,
+        at place: Place,
+        in table: TypeTable
+    ) throws {
+        for (position, parameter) in signature.parameters.enumerated() {
+            let here = place.part(.parameters).index(position)
+
+            try mentioned(
+                in: parameter.declared.slotUnwrapped,
+                at: here,
+                parameterized: true,
+                resolve: table
+            )
+            try saysWhatItDoes(with: parameter.declared, at: here, in: table)
+            try judge(parameter, at: here, in: table)
+        }
+
+        // Two parameters under one name would be one name the body reads
+        // two ways.
+        for (position, parameter) in signature.parameters.enumerated()
+        where signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) {
+            throw BuildError(
+                "declares '\(parameter.name)' twice",
+                at: place.part(.parameters).index(position)
+            )
+        }
+
+        try mentioned(
+            in: signature.returns ?? .any,
+            at: place.part(.returns),
+            parameterized: true,
+            resolve: table
+        )
+
+        try judgeConstraints(signature.parameterOccurrences, at: place, in: table)
+    }
+
+    // Everything a cast's type is held to on its spelling alone: the names it
+    // mentions resolve, and it names a type there is something to read. Both
+    // are answered without knowing what the value reads as, so both belong to
+    // the pass that sees every cast rather than to the walk that sees the
+    // reached ones. A procedure that both runs and is unreachable is walked by
+    // neither the frontier nor the const set.
+    private func judge(
+        cast named: TypeExpression,
+        at place: Place,
+        in table: TypeTable
+    ) throws {
+        try mentioned(in: named, at: place, parameterized: true, resolve: table)
+
+        if let refusal = named.resolved(in: table).unreadableClaim {
+            throw BuildError(refusal, at: place)
+        }
+    }
+
+    // Whether a parameter's own declaration can be satisfied at all. Facts it
+    // states about itself, judged wherever a parameter is written: a `enum`
+    // none of whose candidates the declared type admits is a parameter no call
+    // could ever fit.
+    private func judge(
+        _ parameter: Parameter,
+        at place: Place,
+        in table: TypeTable
+    ) throws {
+        // The declaration as the boundary reads it, so what the link calls
+        // dead is exactly what the boundary would never match.
+        let type = parameter.declared.lowered(in: table.loweredTypes)
+
+        if let allowed = parameter.candidates {
+            // Candidate by candidate: a spelling the declared type cannot spell
+            // is a member no call could ever match, and a dead member is the
+            // declaration's own defect whether live ones stand beside it or
+            // not. One pass reads both facts. A list that is empty or entirely
+            // dead refuses by the plainer name, a dead member among live ones
+            // is named.
+            let dead = allowed.filter { candidate in
+                !type.spells(candidate, in: table.loweredTypes)
+            }
+
+            if dead.count == allowed.count {
+                throw BuildError(
+                    "enum admits nothing, so no call could ever fit",
+                    at: place
+                )
+            }
+
+            if let first = dead.first {
+                throw BuildError(
+                    "enum lists '\(first)', which"
+                        + " \(parameter.declared.rendered) does not admit."
+                        + " No call could ever match it",
+                    at: place
+                )
+            }
+        }
+    }
+
     // A named type may name itself, so this checks that a name resolves rather
     // than walking into what it resolves to.
     //
