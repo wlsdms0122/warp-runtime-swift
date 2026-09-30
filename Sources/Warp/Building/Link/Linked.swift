@@ -97,7 +97,7 @@ public final class Linked: Sendable {
     }
 
     // Whether this row is a written body.
-    public var isWritten: Bool {
+    var isWritten: Bool {
         if case .body = implementation { return true }
 
         return false
