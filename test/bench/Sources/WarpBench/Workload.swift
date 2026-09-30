@@ -67,14 +67,14 @@ struct Workload {
     // which is what a caller building many documents against one vocabulary
     // pays.
     func baked() async throws -> Duration {
-        let laid = try await Vocabulary.laid.value
+        let vocabulary = try await Vocabulary.standard.value
 
         return try await elapsed {
             let builder = Builder()
 
             _ = try builder.link(
-                laid.compiled + (try await builder.compile([module], against: laid)),
-                supplying: Vocabulary.brought
+                vocabulary.laid.compiled + (try await builder.compile([module], against: vocabulary.laid)),
+                supplying: vocabulary.brought
             )
         }
     }

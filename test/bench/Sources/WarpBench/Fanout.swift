@@ -40,18 +40,19 @@ struct Fanout {
 
     // The vocabulary these were compiled against, held so that every door
     // times the same build rather than settling it again.
-    private let laid: Laid
+    private let vocabulary: Vocabulary
 
     // MARK: - Initializer
     init(_ dealing: Dealing) async throws {
         let modules = try (0 ..< dealing.documents).map { document in
             try Self.document(dealing.held(by: document))
         }
-        let laid = try await Vocabulary.laid.value
+        let vocabulary = try await Vocabulary.standard.value
 
         self.modules = modules
-        self.laid = laid
-        self.compiled = laid.compiled + (try await Builder().compile(modules, against: laid))
+        self.vocabulary = vocabulary
+        self.compiled = vocabulary.laid.compiled
+            + (try await Builder().compile(modules, against: vocabulary.laid))
     }
 
     // MARK: - Public
@@ -61,8 +62,8 @@ struct Fanout {
 
         return try await elapsed {
             _ = try builder.link(
-                laid.compiled + (try await builder.compile(modules, against: laid)),
-                supplying: Vocabulary.brought
+                vocabulary.laid.compiled + (try await builder.compile(modules, against: vocabulary.laid)),
+                supplying: vocabulary.brought
             )
         }
     }
@@ -72,7 +73,7 @@ struct Fanout {
         let builder = Builder()
 
         return try await elapsed {
-            _ = try await builder.compile(modules, against: laid)
+            _ = try await builder.compile(modules, against: vocabulary.laid)
         }
     }
 
@@ -82,7 +83,7 @@ struct Fanout {
 
         return try await elapsed {
             for module in modules {
-                _ = try await builder.compile([module], against: laid)
+                _ = try await builder.compile([module], against: vocabulary.laid)
             }
         }
     }
@@ -90,7 +91,7 @@ struct Fanout {
     // How long laying the compiled documents down together takes.
     func link() throws -> Duration {
         try elapsed {
-            _ = try Builder().link(compiled, supplying: Vocabulary.brought)
+            _ = try Builder().link(compiled, supplying: vocabulary.brought)
         }
     }
 
