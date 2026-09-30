@@ -104,8 +104,10 @@ struct InPlaceTests {
         )
 
         // When / Then. The write is held to the declared type.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("writes 'seen' as string, and it holds dictionary<int>")
         }
     }
 
@@ -120,27 +122,37 @@ struct InPlaceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("starts as string, and declares int")
         }
     }
 
     @Test("a module variable is not visible to another document")
     func moduleVariableIsPrivateToItsDocument() throws {
-        // Given. The other document writes a name only the first declares
+        // Given. One document declares `app.total`
+        _ = try Module(
+            variables: ["app.total": .literal(.int(0))],
+            procedures: [
+                "app.read": Procedure(signature: Signature(returns: .int), body: [], result: reference("app.total"))
+            ]
+        )
+
+        // When / Then. Another document writing the name is refused where it
+        // is made
         #expect {
             try Module(
-                imports: [],
                 procedures: [
                     "other.poke": Procedure(
                         body: [
-                            Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
+                            Statement(binding: .assignment([.key("app.total")]), expression: .literal(.int(1)))
                         ]
                     )
                 ]
             )
         } throws: { error in
-            "\(error)".contains("not visible")
+            error is ValidationError && "\(error)".contains("assigns 'app.total', which is not visible here")
         }
     }
 

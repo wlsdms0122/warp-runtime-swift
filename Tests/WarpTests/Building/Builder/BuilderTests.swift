@@ -184,8 +184,10 @@ struct BuilderTests {
 
         // When / Then. The two ways a closure introduces a name of its own
         for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
-            await #expect(throws: ValidationError.self) {
+            await #expect {
                 try await run(module(introducing: introduced))
+            } throws: { error in
+                error is ValidationError && "\(error)".contains("'zebra' collides with a name the module bound")
             }
         }
     }
@@ -319,8 +321,10 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut])
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'missing', which no module in this link declares")
         }
     }
 
@@ -332,16 +336,13 @@ struct BuilderTests {
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("attempt"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("attempt"), expression: .call(Call(
-                                            selector: "app.fail",
-                                            arguments: [.literal(.bool(true))]
-                                        ))
-                                        )
-                                    ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing"))
-                                        )
-                                    ]), failure: "attempt")
+                        Statement(binding: .constant("attempt"), expression: .attempt(
+                                Block(body: [mayFail()]),
+                                rescue: Block(body: [
+                                    Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing")))
+                                ]),
+                                failure: "why"
+                            )
                         )
                     ]
                 )
@@ -349,8 +350,10 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut])
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'missing', which no module in this link declares")
         }
     }
 
@@ -376,8 +379,10 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'leaf', which no module in this link declares")
         }
     }
 
@@ -451,8 +456,10 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([caller])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'leaf', which no module in this link declares")
         }
         await #expect(throws: Never.self) {
             try await builder.build([caller, leaf])
@@ -485,8 +492,10 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([left, right])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'shared' is declared more than once in this link")
         }
     }
 
@@ -508,8 +517,10 @@ struct BuilderTests {
         // names one, and a name nothing declares is refused there.
         let image = try await builder.build([sut])
 
-        await #expect(throws: ExecutionError.self) {
+        await #expect {
             try await Executor().run(image, entry: "absent")
+        } throws: { error in
+            error is ExecutionError && "\(error)".contains("entry 'absent' is not declared by any module in this link")
         }
     }
 
@@ -600,8 +611,10 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'callee' 2 arguments, and it takes 1")
         }
     }
 
@@ -632,8 +645,10 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'callee' 0 arguments, and it takes 1")
         }
     }
 
@@ -673,8 +688,11 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut])
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'callee' with base, which holds string where int is declared")
         }
     }
 

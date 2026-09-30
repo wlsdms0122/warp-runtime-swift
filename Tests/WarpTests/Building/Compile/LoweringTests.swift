@@ -433,8 +433,11 @@ struct LoweringTests {
 
         // When / Then. The unnamed record is refused, and the same record held
         // as a `Tag` stands
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'app.tag' with of, which holds { a: int } where inout Tag is declared")
         }
 
         let image = try await builder.build(

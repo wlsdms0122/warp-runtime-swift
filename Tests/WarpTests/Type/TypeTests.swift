@@ -155,8 +155,10 @@ struct TypeTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("names type 'Nowhere', which no module in this link declares")
         }
     }
 
@@ -192,10 +194,13 @@ struct TypeTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])]
             )
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
         }
     }
 

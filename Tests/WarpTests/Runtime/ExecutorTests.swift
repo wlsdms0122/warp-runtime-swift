@@ -253,8 +253,10 @@ struct ExecutorTests {
 
         // When / Then. A rescue cannot disguise what the build already refused,
         // because there is no run for it to be part of
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(spec, arguments: ["n": .int(1)])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("n.field names 'field', and int has no name there to read")
         }
     }
 

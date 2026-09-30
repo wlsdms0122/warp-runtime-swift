@@ -478,8 +478,11 @@ struct ContractTests {
         if asked {
             #expect(try await run([sut]) == .string("AN ACCOUNT"))
         } else {
-            await #expect(throws: BuildError.self) {
+            await #expect {
                 try await run([sut])
+            } throws: { error in
+                error is BuildError
+                    && "\(error)".contains("reads 'app.Describable.describe', which answers only by running")
             }
         }
     }

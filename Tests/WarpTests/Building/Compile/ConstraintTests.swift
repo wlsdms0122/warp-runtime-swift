@@ -353,7 +353,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError
+            error is BuildError && "\(error)".contains("with on, which holds A where bool is declared")
         }
     }
 
@@ -428,7 +428,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError
+            error is BuildError && "\(error)".contains("'it' holds null, which does not answer every procedure")
         }
     }
 
@@ -508,6 +508,7 @@ struct ConstraintTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
+                && "\(error)".contains("no document says 'bank.Card' answers every procedure 'app.Describable' asks")
         }
     }
 

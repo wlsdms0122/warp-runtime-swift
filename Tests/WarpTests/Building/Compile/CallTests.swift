@@ -72,11 +72,13 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await answer(
                 of: [Statement(binding: .constant("probe"), expression: sut)],
                 result: reference("probe")
             )
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'collection' holds int, which 'std.Collection' does not admit")
         }
     }
 
@@ -94,10 +96,12 @@ struct CallTests {
             ]
         )
 
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard
             )
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'std.collection.count' is declared more than once in this link")
         }
     }
 
@@ -121,8 +125,10 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'app.shout' 2 arguments, and it takes 1")
         }
     }
 
@@ -137,8 +143,10 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'app.shout' 0 arguments, and it takes 1")
         }
     }
 
@@ -156,8 +164,10 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'app.shout': input 'text': expected string, got int")
         }
     }
 
@@ -170,8 +180,10 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'nowhere', which no module in this link declares")
         }
     }
 
@@ -215,8 +227,10 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'nowhere', which no module in this link declares")
         }
     }
 

@@ -82,8 +82,11 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("names type 'app.Missing', which no module in this link declares")
         }
     }
 
@@ -233,8 +236,10 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("writes `some T`, and nothing here is filled by a call")
         }
     }
 
@@ -339,8 +344,11 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds const isolated procedure<(int) -> int> where inout procedure<(int) -> int> is declared")
         }
     }
 

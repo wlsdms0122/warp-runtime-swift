@@ -611,10 +611,13 @@ struct ProcedureSendsTests {
     @Test("a procedure sending a spelling nothing declares is refused at the build")
     func anUndeclaredSendIsRefused() async {
         // Given / When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.strayed]
             )
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.nowhere' is called here, and no module in this link declares it")
         }
     }
 
@@ -654,10 +657,13 @@ struct ProcedureSendsTests {
         // Given / When / Then. `app.counting` says it touches nothing shared
         // and sends `app.ticket`, which answers from a box it keeps between
         // calls
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.claims, .ticketing]
             )
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("says it touches no name another body could touch at the same time, and sends 'app.ticket'")
         }
     }
 
@@ -689,7 +695,7 @@ struct ProcedureSendsTests {
     @Test("a module claiming a list its procedures contradict is refused")
     func aDriftedDisclosureIsRefused() {
         // Given / When / Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Module(
                 imports: [],
                 procedures: [
@@ -699,6 +705,8 @@ struct ProcedureSendsTests {
                     )
                 ]
             )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("uses [\"std.math.times\"], which it does not import")
         }
     }
 
@@ -706,7 +714,7 @@ struct ProcedureSendsTests {
     func aProcedureSendingFromScatteredPlacesIsRefused() {
         // Given / When / Then. A run reaches a sent procedure by the place the procedure
         // names it at, so a place nothing stands at reaches nothing.
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Module(
                 procedures: [
                     "app.scattered": Procedure(
@@ -715,6 +723,8 @@ struct ProcedureSendsTests {
                     )
                 ]
             )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("this procedure sends procedures standing at [0, 5]")
         }
     }
 
@@ -776,8 +786,11 @@ struct ProcedureSendsTests {
         )
 
         // When / Then
-        await #expect(throws: ExecutionError.self) {
+        await #expect {
             try await Executor().run(image)
+        } throws: { error in
+            error is ExecutionError
+                && "\(error)".contains("'app.pick' is handed 3 here, and the procedure sending it declares it hands 2")
         }
     }
 

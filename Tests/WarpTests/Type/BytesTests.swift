@@ -357,8 +357,10 @@ struct BytesTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'utf16' not in enum")
         }
     }
 

@@ -155,8 +155,10 @@ struct RefinementTests {
 
         #expect(!half.admitsNothing)
         #expect(try TypeExpression.ranged(half).settling(.double(5), at: "value") == .double(5))
-        #expect(throws: (any Error).self) {
+        #expect {
             try TypeExpression.ranged(half).settling(.double(-1), at: "value")
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("-1.0 is outside double(0.0...<infinity>)")
         }
 
         // And the one that says nothing still says nothing.

@@ -64,8 +64,10 @@ struct CompiledTests {
         )
 
         // When / Then. Compiling refuses, and no entry was named to refuse it.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await compiled([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'nobody.declares', which no module in this link declares")
         }
     }
 
@@ -92,8 +94,11 @@ struct CompiledTests {
 
         let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
 
-        await #expect(throws: ExecutionError.self) {
+        await #expect {
             try await Executor().run(image, entry: "app.nowhere")
+        } throws: { error in
+            error is ExecutionError
+                && "\(error)".contains("entry 'app.nowhere' is not declared by any module in this link")
         }
     }
 
@@ -614,8 +619,11 @@ struct CompiledTests {
 
         // Then. Two declarations of a name have no way to be told apart,
         // whether the build reads them together or one after the other.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.compile([second], against: compiled, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.procedure' is declared by the module at 0 in this link and by the module at 1")
         }
     }
 

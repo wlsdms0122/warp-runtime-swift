@@ -150,8 +150,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
         }
     }
 
@@ -178,8 +181,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds procedure<() -> any> where const procedure is declared")
         }
     }
 
@@ -212,8 +218,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
         }
     }
 
@@ -345,8 +354,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds procedure<() -> string> where const procedure is declared")
         }
     }
 
@@ -398,8 +410,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds procedure<() -> string> where const procedure is declared")
         }
     }
 
@@ -421,8 +436,10 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a construct runs a body, and a call's operand is data")
         }
     }
 

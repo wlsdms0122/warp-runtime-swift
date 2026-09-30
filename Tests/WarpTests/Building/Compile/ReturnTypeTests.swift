@@ -58,9 +58,11 @@ struct ReturnTypeTests {
             ]
         )
 
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await Executor()
                 .run(try await builder.build([narrowing]))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("answers double, and its declaration promises int")
         }
     }
 
@@ -85,8 +87,10 @@ struct ReturnTypeTests {
 
         // When / Then. The body and the declaration beside it are one
         // document's text, so nothing has to run to find them disagreeing
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("answers int, and its declaration promises string")
         }
     }
 
@@ -176,8 +180,10 @@ struct ReturnTypeTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             _ = try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("names type 'Nowhere', which no module in this link declares")
         }
     }
 

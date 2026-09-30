@@ -192,8 +192,10 @@ struct AnsweringTests {
             )
         }
 
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([reading(cycling: true)] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("said.total reads a dot on any, which declares nothing")
         }
 
         _ = try await builder.build([reading(cycling: false)] + Module.standard)

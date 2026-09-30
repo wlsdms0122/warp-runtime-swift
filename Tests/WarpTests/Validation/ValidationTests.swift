@@ -18,15 +18,15 @@ struct ValidationTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a module is held to the procedures it says it imports", arguments: [
-        [] as Set<Name>,
-        ["std.collection.count", "std.math.plus"]
+        (claimed: [] as Set<Name>, refusal: "uses [\"std.collection.count\"], which it does not import"),
+        (claimed: ["std.collection.count", "std.math.plus"] as Set<Name>, refusal: "imports [\"std.math.plus\"], which it does not use")
     ])
-    func aModuleIsHeldToItsImports(_ claimed: Set<Name>) {
+    func aModuleIsHeldToItsImports(_ claimed: Set<Name>, refusal: String) {
         // Given. A caller decides what to grant from this list and then links
         // what it granted, so a list that says less than the program sends
         // links a procedure nobody allowed, and one that says more takes a grant the
         // program never uses
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Module(
                 imports: claimed,
                 procedures: [
@@ -42,6 +42,8 @@ struct ValidationTests {
                     )
                 ]
             )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains(refusal)
         }
     }
 
@@ -71,10 +73,13 @@ struct ValidationTests {
         }
 
         // When / Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Validator().validate(
                 module(introducing: Statement(binding: .constant("limit"), expression: .literal(.int(9))))
             )
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
         }
     }
 
@@ -121,11 +126,17 @@ struct ValidationTests {
         let body = Block(body: [Statement(expression: .literal(.null))])
 
         // When / Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body, round: "limit")))
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
         }
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Validator().validate(module(running: .attempt(body, rescue: body, failure: "limit")))
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
         }
     }
 
@@ -146,19 +157,25 @@ struct ValidationTests {
         }
 
         // When / Then. The two ways a closure introduces a name of its own
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Validator().validate(module(Procedure(
                 signature: Signature(parameters: [Parameter(name: "limit", type: .int)], returns: .int),
                 body: [],
                 result: reference("limit")
             )))
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
         }
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Validator().validate(module(Procedure(
                 signature: Signature(returns: .int),
                 body: [Statement(binding: .constant("limit"), expression: .literal(.int(9)))],
                 result: reference("limit")
             )))
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
         }
     }
 
@@ -305,8 +322,10 @@ struct ValidationTests {
         // When / Then
         try Validator().validate(readsIt)
 
-        #expect(throws: (any Error).self) {
+        #expect {
             try Validator().validate(redeclaresIt)
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("two statements here are named 'name'")
         }
     }
 
@@ -353,8 +372,11 @@ struct ValidationTests {
         )
 
         // When / Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Validator().validate(read)
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("reference { ref: run.id } names 'run', which is not visible here")
         }
 
         try Validator().validate(taken)
@@ -485,13 +507,16 @@ struct ValidationTests {
         }
 
         // Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             do {
                 _ = try sut()
             } catch {
                 #expect("\(error)".contains("a claim is about a declared type"), "\(error)")
                 throw error
             }
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'int' is a type the language names, and a claim is about a declared type")
         }
     }
 
@@ -507,7 +532,7 @@ struct ValidationTests {
         )
 
         // When / Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -516,6 +541,8 @@ struct ValidationTests {
                     )
                 ]
             )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("a procedure is not data")
         }
 
         // And a body a program carries is written the way one is written
@@ -543,8 +570,11 @@ struct ValidationTests {
         )
 
         // When / Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Validator().validate(sut)
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("reference { ref: never } names 'never', which is not visible here")
         }
     }
 

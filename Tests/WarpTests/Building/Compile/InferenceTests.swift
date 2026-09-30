@@ -92,8 +92,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
         }
     }
 
@@ -139,8 +142,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with ns, which holds array<int> where array<string> is declared")
         }
     }
 
@@ -304,8 +310,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
         }
     }
 
@@ -351,8 +360,11 @@ struct InferenceTests {
 
         // When / Then. `task.done` is a bool, and the walk read that from the
         // type rather than from the value
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds bool where string is declared")
         }
     }
 
@@ -392,8 +404,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("names.count names 'count', and array<string> has no name there to read")
         }
     }
 
@@ -439,8 +454,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
         }
     }
 
@@ -563,7 +581,10 @@ struct InferenceTests {
                                         .closure(
                                             Procedure(
                                                 signature: Signature(
-                                                    parameters: [Parameter(name: "item", type: .int)],
+                                                    parameters: [
+                                                        Parameter(name: "item", type: .int),
+                                                        Parameter(name: "index", type: .int)
+                                                    ],
                                                     returns: .int
                                                 ),
                                                 body: [],
@@ -592,8 +613,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("with names, which holds array<int> where array<string> is declared")
         }
     }
 
@@ -646,8 +670,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
         }
     }
 
@@ -672,8 +699,10 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("count.nope names 'nope', and int has no name there to read")
         }
     }
 
@@ -698,8 +727,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("name[0] indexes into string, and only an array or a dictionary is indexed")
         }
     }
 
@@ -1589,8 +1621,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
         }
     }
 
@@ -1646,10 +1681,9 @@ struct InferenceTests {
 
     @Test("a rescue reads what the body may have written before it failed")
     func aRescueReadsTheBodysPartialWrites() async throws {
-        // Given. The body writes a null and then risks a failing call: the
+        // Given. The body writes a null and then risks a failing cast: the
         // rescue runs with that write in the box, so inside the rescue the name
-        // reads `string?` and the plain string slot refuses. A rescue judged in
-        // the entry environment would have linked a lie.
+        // reads `string?` and the plain string slot refuses.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1662,11 +1696,7 @@ struct InferenceTests {
                                 Block(body: [
                                     Statement(binding: .assignment([.key("held")]), expression: .literal(.null)
                                     ),
-                                    Statement(binding: .constant("risky"), expression: .call(Call(
-                                        selector: "wants",
-                                        arguments: [.literal(.string("x"))]
-                                    ))
-                                    )
+                                    mayFail("risky")
                                 ]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("saidInside"), expression: .call(Call(
@@ -1694,8 +1724,10 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("with text, which holds string? where string is declared")
         }
     }
 
@@ -1748,8 +1780,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
         }
     }
 
@@ -1803,8 +1838,11 @@ struct InferenceTests {
         )
 
         // When / Then. `a` reads `string?` after enough rounds
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
         }
     }
 
@@ -1825,13 +1863,7 @@ struct InferenceTests {
                         Statement(
                             expression: .attempt(
                                 Block(body: [
-                                    Statement(binding: .constant("risky"), expression: .call(
-                                            Call(
-                                                selector: "wants",
-                                                arguments: [.literal(.string("hey")), .literal(.string("x"))]
-                                            )
-                                        )
-                                    ),
+                                    mayFail("risky"),
                                     Statement(
                                         expression: .leave(Leave(reach: .procedure, value: nil))
                                     )
@@ -1866,8 +1898,10 @@ struct InferenceTests {
 
         // When / Then. `held` reads `string?`, and the plain string slot says
         // so
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("with text, which holds string? where string is declared")
         }
     }
 
@@ -1972,8 +2006,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
         }
     }
 
@@ -2013,8 +2050,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with number, which holds string where int is declared")
         }
     }
 

@@ -24,8 +24,10 @@ struct NullableTests {
 
         #expect(try declared.settling(.int(3), at: "limit") == .int(3))
         #expect(try declared.settling(.null, at: "limit") == .null)
-        #expect(throws: (any Error).self) {
+        #expect {
             try declared.settling(.string("x"), at: "limit")
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("expected int, got string")
         }
     }
 
@@ -183,8 +185,10 @@ struct NullableTests {
             ]
         )
 
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await run(plain)
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("required, and nothing was given for limit")
         }
     }
 

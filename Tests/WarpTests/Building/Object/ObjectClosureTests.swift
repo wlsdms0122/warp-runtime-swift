@@ -88,8 +88,11 @@ struct ObjectClosureTests {
         let forged = try holding(Closure(writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("app.nobody")), nth: 0, linked: nil, captured: []), in: compiled)
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.nobody.closure[0]', written in a document no module in this link is")
         }
     }
 
@@ -100,8 +103,11 @@ struct ObjectClosureTests {
         let forged = try holding(Closure(writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("app.later")), nth: 5, linked: nil, captured: []), in: compiled)
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.later.closure[5]', and its writer wrote no closure at that count")
         }
     }
 
@@ -228,11 +234,15 @@ struct ObjectClosureTests {
         let changed = try await builder.compile(Module.standard + [madeOf(6, entry: "app.one", identity: Identity([1]))])
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(changed + second, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("that is not laid beside it as it was then")
         }
-        #expect(throws: BuildError.self) {
+        #expect {
             try builder.lay(changed + second, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("that is not laid beside it as it was then")
         }
     }
 
@@ -285,8 +295,11 @@ struct ObjectClosureTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.make.closure[0]' holds cells at [], and its frame is filled at [0]")
         }
     }
 
@@ -335,8 +348,11 @@ struct ObjectClosureTests {
 
         // When / Then. Refused where a link answers it, and where a compile
         // lays a body holding it down to fold through
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.later.closure[0]' holds cells at [99], and its frame is filled at []")
         }
 
         let inBody = try holdingInBody(
@@ -349,8 +365,11 @@ struct ObjectClosureTests {
             in: compiled
         )
 
-        #expect(throws: BuildError.self) {
+        #expect {
             try builder.lay(inBody, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.later.closure[0]' holds cells at [99], and its frame is filled at []")
         }
     }
 
@@ -397,7 +416,8 @@ struct ObjectClosureTests {
                 numbering: one.numbering,
                 typeNumbering: one.typeNumbering,
                 judging: one.variables,
-                dependencies: one.dependencies
+                dependencies: one.dependencies,
+                token: one.token
             )
         }
     }
@@ -476,7 +496,8 @@ struct ObjectClosureTests {
                 numbering: one.numbering,
                 typeNumbering: one.typeNumbering,
                 judging: [(name: held.name, value: .procedure(closure))],
-                dependencies: one.dependencies
+                dependencies: one.dependencies,
+                token: one.token
             )
         }
     }

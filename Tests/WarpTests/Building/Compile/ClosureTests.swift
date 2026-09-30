@@ -73,8 +73,10 @@ struct ClosureTests {
                 try await Builder().build([sut] + Module.standard)
             }
         } else {
-            await #expect(throws: BuildError.self) {
+            await #expect {
                 try await Builder().build([sut] + Module.standard)
+            } throws: { error in
+                error is BuildError && "\(error)".contains("where procedure<(int) -> any> is declared")
             }
         }
     }
@@ -201,8 +203,11 @@ struct ClosureTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds const isolated procedure<(int, int?) -> any> where procedure<(int) -> any> is declared")
         }
     }
 
@@ -249,8 +254,11 @@ struct ClosureTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut, .shouting] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
         }
     }
 

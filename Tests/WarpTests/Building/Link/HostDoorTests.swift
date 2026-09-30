@@ -60,8 +60,10 @@ struct HostDoorTests {
         let image = try await Builder().build([sut])
 
         // When / Then
-        #expect(throws: (any Error).self) {
+        #expect {
             try image.settling(.dictionary(["balance": .string("much")]), as: "bank.Account")
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("expected int, got string")
         }
     }
 

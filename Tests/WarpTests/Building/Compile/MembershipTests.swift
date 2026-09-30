@@ -64,8 +64,11 @@ struct MembershipTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'app.hold': 'it' holds int, which 'app.Text' does not admit")
         }
     }
 
@@ -91,8 +94,11 @@ struct MembershipTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'app.narrow' with it, which holds app.Text where string is declared")
         }
     }
 
@@ -121,8 +127,10 @@ struct MembershipTests {
         await #expect(throws: Never.self) {
             try await Builder().build([try module(reading: .string)] + Module.standard)
         }
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([try module(reading: .int)] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("reads app.Text as int, and no value is both")
         }
     }
 
@@ -145,8 +153,10 @@ struct MembershipTests {
         // When / Then
         #expect(try await run(sut, arguments: ["it": .string("a")]) == .string("a"))
 
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await run(sut, arguments: ["it": .int(1)])
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("expected app.Text, and nothing 'app.Text' admits takes int")
         }
     }
 
