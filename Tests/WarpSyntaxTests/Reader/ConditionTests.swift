@@ -179,12 +179,16 @@ struct ConditionTests {
     // A fold against the standard vocabulary as a caller gets it: built, so
     // the procedures written in Warp answer here the way the native ones do.
     private func folding(_ bindings: [Name: Value]) async throws -> Folding {
-        Folding(
-            bindings: bindings,
-            in: try await Builder().build(
-                [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
-                    + Module.standard
-            )
+        let image = try await Builder().build(
+            [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
+                + Module.standard
+        )
+
+        return Folding(
+            constants: bindings,
+            origin: 0,
+            in: .relocated(image.linked, rows: image.rows, naming: image.naming),
+            loweredTypes: image.loweredTypes
         )
     }
 }

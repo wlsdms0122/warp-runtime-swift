@@ -1,5 +1,5 @@
 //
-//  Answered.swift
+//  ResolvedTable.swift
 //  Warp
 //
 //  Created by JSilver on 9/25/26.
@@ -15,7 +15,7 @@ import Foundation
 // are. `Relocating` says it by writing every body over. Compiling says it
 // beside the bodies instead, since it runs a few of them once and writing all
 // of them over would cost more than the running.
-struct Answered: Sendable {
+struct ResolvedTable: Sendable {
     private enum Numbers: Sendable {
         // This link's own rows.
         case rows
@@ -24,7 +24,7 @@ struct Answered: Sendable {
         // each of them stands for. The names and the closures stand apart
         // because they settle at different times: a name's row is the link's
         // before anything is lowered, and a closure's row is made by lowering.
-        case documents([Int: Numbering], named: [Int: [Int?]], closures: [Int: [Int]])
+        case documents([Numbering], named: [Int: [Int?]], closures: [[Int]])
     }
 
     // MARK: - Property
@@ -49,8 +49,8 @@ struct Answered: Sendable {
                     // the same as a name it has no row for. Constants fold
                     // before any body is lowered, so at that point every one of
                     // them is nothing, and nothing there can reach one.
-                    let held = closures[entry.key] ?? []
-                    let counted = numbering[entry.key]?.closureCount ?? held.count
+                    let held = closures[entry.key]
+                    let counted = numbering[entry.key].closureCount
 
                     views[entry.key] = entry.value + (0..<counted).map { written in
                         held.indices.contains(written) ? held[written] : nil
@@ -71,8 +71,8 @@ struct Answered: Sendable {
     // MARK: - Public
     // A table every number of which is a row of it: what `Relocating` made,
     // or rows that carry no lowered body.
-    static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> Answered {
-        Answered(table: table, rows: rows, naming: naming, numbers: .rows)
+    static func relocated(_ table: [Linked], rows: [Name: Int], naming: [Closure.Document]) -> ResolvedTable {
+        ResolvedTable(table: table, rows: rows, naming: naming, numbers: .rows)
     }
 
     // A table as compiling left it, and where each document numbers from. The
@@ -83,11 +83,11 @@ struct Answered: Sendable {
         _ table: [Linked],
         rows: [Name: Int],
         naming: [Closure.Document],
-        numbering: [Int: Numbering],
+        numbering: [Numbering],
         named: [Int: [Int?]],
-        closures: [Int: [Int]]
-    ) -> Answered {
-        Answered(
+        closures: [[Int]]
+    ) -> ResolvedTable {
+        ResolvedTable(
             table: table,
             rows: rows,
             naming: naming,
@@ -95,17 +95,17 @@ struct Answered: Sendable {
         )
     }
 
-    // The same answer over a table lowered since, with the closure rows that
+    // The same resolution over a table lowered since, with the closure rows that
     // lowering took. What a name stands for is the documents' and this link's,
     // and neither moved while the bodies were lowered; the closures are the
     // rows those bodies just made, so only they are handed again.
-    func holding(_ table: [Linked], closures: [Int: [Int]]) -> Answered {
+    func holding(_ table: [Linked], closures: [[Int]]) -> ResolvedTable {
         switch numbers {
         case .rows:
-            return Answered(table: table, rows: rows, naming: naming, numbers: numbers)
+            return ResolvedTable(table: table, rows: rows, naming: naming, numbers: numbers)
 
         case let .documents(numbering, named, _):
-            return Answered(
+            return ResolvedTable(
                 table: table,
                 rows: rows,
                 naming: naming,
@@ -116,14 +116,15 @@ struct Answered: Sendable {
 
     // How an expression folded beside a document's bodies is numbered, so that
     // what is lowered now and what was lowered before stand in one numbering.
-    // Nothing where the document numbered nothing.
-    func numbering(of origin: Int) -> Numbering? {
+    // Every number of a table of rows is a row, whichever document it is read
+    // for.
+    var numbering: [Numbering] {
         switch numbers {
         case .rows:
-            return Numbering(rows: rows)
+            return naming.map { _ in Numbering(rows: rows) }
 
         case let .documents(numbering, _, _):
-            return numbering[origin]
+            return numbering
         }
     }
 

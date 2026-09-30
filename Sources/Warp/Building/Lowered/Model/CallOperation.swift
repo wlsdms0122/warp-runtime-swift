@@ -96,7 +96,7 @@ struct CallOperation: Sendable {
                 continue
             }
 
-            // A literal argument is a value the link knows, so the image
+            // A literal argument is a value the build knows, so the image
             // holds it as the slot takes it rather than as it was written.
             placed.append(try given.map { argument in
                 let code = argument.read

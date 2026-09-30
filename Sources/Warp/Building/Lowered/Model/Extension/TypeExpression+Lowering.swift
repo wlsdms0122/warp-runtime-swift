@@ -71,10 +71,8 @@ extension TypeExpression {
         case let .nullable(inner):
             return .nullable(inner.lowered(in: table))
 
-        // The mark does not survive lowering. What it says is proven at the
-        // link and there is nothing left for a run to keep.
-        // Neither mark survives lowering either, and for the same reason: what
-        // they say is proven at the build.
+        // No mark survives lowering: what one says is proven at the build, and
+        // there is nothing left for a run to keep.
         case let .linear(inner), let .consuming(inner), let .borrowing(inner):
             return inner.lowered(in: table)
 
@@ -96,16 +94,10 @@ extension TypeExpression {
         // A bound names a membership or a contract, and the two are separate
         // spaces, so each is looked for in both.
         case let .parameter(name, constraints):
-            switch bounds(constraints, in: table) {
-            case let .bounds(bounds): return .parameter(label: name, bounds: bounds)
-            case let .unfound(unfound): return .undeclared(label: rendered, because: .noBoundNamed(unfound))
-            }
+            return lowered(bounds: constraints, in: table) { bounds in .parameter(label: name, bounds: bounds) }
 
         case let .composition(names):
-            switch bounds(names, in: table) {
-            case let .bounds(bounds): return .composition(bounds)
-            case let .unfound(unfound): return .undeclared(label: rendered, because: .noBoundNamed(unfound))
-            }
+            return lowered(bounds: names, in: table, as: LoweredType.composition)
 
         case let .reading(of, path):
             return .reading(of: of, path: path)
@@ -115,22 +107,21 @@ extension TypeExpression {
     // What a list of names stands for: the bounds, in the one order a set of
     // bounds is written in, or the first name that is neither a membership
     // nor a contract.
-    private enum Bounded {
-        case bounds([LoweredType.Bound])
-        case unfound(Name)
-    }
-
-    private func bounds(_ names: [Name], in table: LoweredTypeTable) -> Bounded {
+    private func lowered(
+        bounds names: [Name],
+        in table: LoweredTypeTable,
+        as bounded: ([LoweredType.Bound]) -> LoweredType
+    ) -> LoweredType {
         var bounds: [LoweredType.Bound] = []
 
         for name in names {
-            guard let bound = table.bound(named: name) else { return .unfound(name) }
+            guard let bound = table.bound(named: name) else {
+                return .undeclared(label: rendered, because: .noBoundNamed(name))
+            }
 
             bounds.append(bound)
         }
 
-        bounds.sort()
-
-        return .bounds(bounds)
+        return bounded(bounds.sorted())
     }
 }

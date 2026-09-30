@@ -13,13 +13,17 @@ import WarpStandard
 @Suite
 struct FoldingTests {
     // MARK: - Property
-    private let sut = Folding(bindings: [
-                "count": .int(3),
-                "maybe": .null,
-                "record": .dictionary(["a": .int(1)])
-            ], natives: Module.standard)
+    private let sut: Folding
 
     // MARK: - Initializer
+    init() async throws {
+        sut = try await Builder().build(Module.standard).folding([
+            "count": .int(3),
+            "maybe": .null,
+            "record": .dictionary(["a": .int(1)])
+        ])
+    }
+
     // MARK: - Test
     @Test("ref resolution preserves the type")
     func refResolutionPreservesType() async throws {
@@ -27,7 +31,7 @@ struct FoldingTests {
         let reference = Expression.reference([.key("count")])
 
         // When
-        let value = try await sut.read(reference)
+        let value = try await sut.read(reference, at: .given("test"))
 
         // Then
         #expect(value == .int(3))
@@ -39,7 +43,7 @@ struct FoldingTests {
         let reference = Expression.reference([.key("maybe")])
 
         // When
-        let value = try await sut.read(reference)
+        let value = try await sut.read(reference, at: .given("test"))
 
         // Then
         #expect(value == .null)
@@ -51,7 +55,7 @@ struct FoldingTests {
         let reference = interpolated(literal("amount="), spelling(reference("maybe")))
 
         // When
-        let value = try await sut.read(reference)
+        let value = try await sut.read(reference, at: .given("test"))
 
         // Then
         #expect(value == .string("amount=null"))
@@ -64,7 +68,7 @@ struct FoldingTests {
         let reference = Expression.reference([.key("record"), .key("gone", optional: true)])
 
         // When / Then
-        #expect(try await sut.read(reference) == .null)
+        #expect(try await sut.read(reference, at: .given("test")) == .null)
     }
 
     @Test("a type-misusing path throws ReferenceUnfit")
@@ -74,7 +78,7 @@ struct FoldingTests {
 
         // When / Then
         await #expect(throws: ReferenceUnfit.self) {
-            try await sut.read(reference)
+            try await sut.read(reference, at: .given("test"))
         }
     }
 
@@ -87,7 +91,7 @@ struct FoldingTests {
         ])
 
         // When
-        let value = try await sut.read(reference)
+        let value = try await sut.read(reference, at: .given("test"))
 
         // Then
         #expect(value == .dictionary(["n": .int(3), "list": .array([.string("x")])]))
@@ -99,7 +103,7 @@ struct FoldingTests {
         let reference = interpolated(literal("n="), spelling(reference("count")))
 
         // When
-        let value = try await sut.read(reference)
+        let value = try await sut.read(reference, at: .given("test"))
 
         // Then
         #expect(value == .string("n=3"))
@@ -112,7 +116,7 @@ struct FoldingTests {
         let reference = interpolated(literal("who="), spelling(reference("count")))
 
         // When
-        let value = try await sut.read(reference)
+        let value = try await sut.read(reference, at: .given("test"))
 
         // Then
         #expect(value == .string("who=3"))
@@ -127,7 +131,7 @@ struct FoldingTests {
         ]))
 
         // When
-        let value = try await sut.read(reference)
+        let value = try await sut.read(reference, at: .given("test"))
 
         // Then. Nothing evaluated, nothing rendered
         #expect(value == .dictionary([

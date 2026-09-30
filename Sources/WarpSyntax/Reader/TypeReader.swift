@@ -523,7 +523,7 @@ public struct TypeReader: Decodable {
     private static func whole(_ written: Substring, of text: String) throws -> Int? {
         guard !written.isEmpty else { return nil }
 
-        switch Int.reading(spelling: String(written)) {
+        switch IntSpelling(String(written)) {
         case let .int(number):
             return number
 

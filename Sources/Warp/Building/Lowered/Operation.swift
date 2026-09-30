@@ -8,8 +8,8 @@
 import Foundation
 
 // A body as the run reads it: the document's expression with every fact the
-// link proved written in. A name is the frame slot the link gave it, a
-// selector is the row of the linked table it named, and an argument stands at
+// build proved written in. A name is the frame slot the build gave it, a
+// selector is the number of the row it named, and an argument stands at
 // the position of the parameter it fills. What only a run can know, the type
 // of a value or the signature of a closure value, is still asked at the run.
 indirect enum Operation: Sendable {
@@ -27,8 +27,8 @@ indirect enum Operation: Sendable {
     // (outer slot, inner slot).
     case closure(Int, captures: [(Int, Int)])
 
-    // Calling a value. Which signature it has is the value's, so the
-    // arguments travel by name and settle where the closure is known.
+    // Calling a value. The arguments are positional and settle against the
+    // closure's own row.
     case apply(Operation, arguments: [Operation])
 
     case cast(Operation, as: LoweredType, optional: Bool)
@@ -38,7 +38,7 @@ indirect enum Operation: Sendable {
     // `keeps` is the range of body slots the result reads: the result reads
     // what the last finished round bound, so a round cut short is put back
     // before the result reads. Nil where the result reads none of them.
-    // The round's slot, and the failure's, where the statement bound one.
+    // The round's slot, where the statement bound one.
     case loop(while: Operation, body: LoweredBody, round: Int?, keeps: Range<Int>?)
 
     case attempt(LoweredBody, rescue: LoweredBody, failure: Int?)
@@ -96,8 +96,7 @@ indirect enum Operation: Sendable {
             return call.arguments.allSatisfy { argument in argument?.walk(visit) ?? true }
 
         // What a call through a contract hands over is its first and its
-        // `arguments`. The
-        // calls beside it are the link's copy of the same, so walking those
+        // `arguments`. The calls beside it are the link's copy of the same, so walking those
         // too would read one fact twice. An argument handed in place is a
         // place and not an operation, and a place is the node's own to read.
         case let .dispatch(dispatch):

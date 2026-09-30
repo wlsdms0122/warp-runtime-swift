@@ -78,9 +78,7 @@ struct ClaimChecker {
     // type.
     func lowered(
         _ declaring: TypeTable,
-        claims: [Placed<Claim>],
-        contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over declaredTypes: [Name: Placed<TypeExpression>],
+        in namespace: TypeNamespace,
         among signatures: [Name: Placed<Declared>],
         concealed: Set<Name> = [],
         unsettled: Fulfillment? = nil
@@ -89,6 +87,10 @@ struct ClaimChecker {
         contractProcedures: [Name: LoweredContractProcedure],
         unheld: [Claim: String]
     ) {
+        let claims = namespace.claims
+        let contracts = namespace.contracts
+        let declaredTypes = namespace.types
+
         // The witnesses are judged against a table that says which types
         // answer which contracts, so a contract named in a contract's own
         // signature stands as one, and an answer that leans on a claim is
@@ -98,8 +100,6 @@ struct ClaimChecker {
         var held = claims.reduce(
             into: contracts.keys.reduce(into: [Name: Set<Name>]()) { table, contract in table[contract] = [] }
         ) { table, placed in
-            guard table[placed.held.contract] != nil else { return }
-
             table[placed.held.contract]?.insert(placed.held.type)
         }
         var table: TypeTable

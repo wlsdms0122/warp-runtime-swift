@@ -11,7 +11,7 @@ import Foundation
 // the link answers with, and what every name in it stands for.
 //
 // One value rather than two arguments threaded through every walk, because they
-// are one fact (the link's answer to "what does this name mean") read from two
+// are one fact (the build's answer to "what does this name mean") read from two
 // sides.
 struct TypingContext: Sendable {
     // MARK: - Property
