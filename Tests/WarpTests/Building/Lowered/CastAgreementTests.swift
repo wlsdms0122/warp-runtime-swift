@@ -87,6 +87,7 @@ struct CastAgreementTests {
     // MARK: - Test
     @Test("no pair some value satisfies is called impossible")
     func theBuildNeverRefusesWhatARunWouldTake() {
+        // When / Then
         for mine in typeExpressions {
             for theirs in typeExpressions {
                 // The witness: one value both judges take. Where there is none,
@@ -110,6 +111,8 @@ struct CastAgreementTests {
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
         // side has one, which is exactly where an asymmetry would hide.
+
+        // When / Then
         for mine in typeExpressions {
             for theirs in typeExpressions {
                 #expect(

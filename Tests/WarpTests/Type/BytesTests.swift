@@ -21,11 +21,13 @@ struct BytesTests {
     // MARK: - Test
     @Test("bytes and an array share their worth, not their spelling")
     func bytesAndArrayShareWorth() {
+        // Given
         let bytes = Value.bytes([104, 105])
         let ints = Value.array([.int(104), .int(105)])
         let fractions = Value.array([.double(104), .int(105)])
 
-        // Worth unifies across spellings the way int and double do…
+        // When / Then. Worth unifies across spellings the way int and double
+        // do…
         #expect(bytes.matches(ints))
         #expect(bytes.matches(fractions))
         #expect(!bytes.matches(.array([.int(104)])))
@@ -38,8 +40,9 @@ struct BytesTests {
 
     @Test("an array slot that asks nothing of a byte takes the compact spelling whole")
     func anArraySlotSettlesBytes() throws {
-        // The slot asked for an array and bytes are one, so there is nothing to
-        // do. Unpacking would spend an element per byte to answer nothing.
+        // When / Then. The slot asked for an array and bytes are one, so there
+        // is nothing to do. Unpacking would spend an element per byte to answer
+        // nothing.
         #expect(
             try TypeExpression.array(.int).settling(.bytes([104, 105]), at: "value")
                 == .bytes([104, 105])
@@ -82,9 +85,9 @@ struct BytesTests {
     // so a type added to one and forgotten by the other fails here.
     @Test("a byte settles as itself exactly where the type says it does")
     func aByteSettlesAsItselfExactlyWhereTheTypeSaysIt() throws {
-        // `Named` is bound twice on purpose. Once as a type and once as a
-        // constraint, which a table may do because they are two declarations. A
-        // walk that guarded both with one set would end the constraint's
+        // Given. `Named` is bound twice on purpose. Once as a type and once as
+        // a constraint, which a table may do because they are two declarations.
+        // A walk that guarded both with one set would end the constraint's
         // question by assuming the type's name and answer yes for `Textual`.
         let types = TypeTable(
             types: [
@@ -132,6 +135,7 @@ struct BytesTests {
             .record([:])
         ]
 
+        // When / Then
         for type in typeExpressions {
             let untouched = (0...255).allSatisfy { byte in
                 let value = Value.int(byte)
@@ -150,6 +154,7 @@ struct BytesTests {
 
     @Test("a value answers its bytes in either spelling")
     func bytesAreReadFromEitherSpelling() {
+        // When / Then
         #expect(Value.bytes([104, 105]).bytes == [104, 105])
         #expect(Value.array([.int(104), .int(105)]).bytes == [104, 105])
         #expect(Value.array([]).bytes == [])
@@ -160,6 +165,7 @@ struct BytesTests {
 
     @Test("the equation is read at the build, by the elements")
     func acceptanceReadsTheElements() {
+        // When / Then
         #expect(TypeExpression.array(.int).accepts(.array(.byteElement)))
         #expect(TypeExpression.array(.any).accepts(.array(.byteElement)))
         #expect(TypeExpression.array(.double).accepts(.array(.byteElement)))
@@ -307,8 +313,8 @@ struct BytesTests {
 
     @Test("text spells bytes the way a document writes them, at every depth")
     func renderingSpellsBytesAsTheDocumentDoes() {
-        // `text` spells a value the way a document writes it, and a document
-        // writes bytes `x"6869"`.
+        // When / Then. `text` spells a value the way a document writes it, and
+        // a document writes bytes `x"6869"`.
         #expect(Rendering(.bytes([104, 105])).text() == "x\"6869\"")
 
         // The document writer is one recursive function and writes the same
@@ -327,6 +333,8 @@ struct BytesTests {
     func renderingHoldsTheFiniteLine() {
         // Given. Infinity arrives only from a host's own procedure, and the
         // rendering must not leak it as invalid JSON
+
+        // When / Then
         #expect(Rendering(.array([.double(.infinity)])).text() == "<unencodable>")
         #expect(Rendering(.dictionary(["a": .double(.nan)])).text() == "<unencodable>")
         #expect(Rendering(.array([.double(1.5), .int(1)])).text() == "[1.5,1]")

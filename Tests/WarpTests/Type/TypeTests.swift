@@ -153,6 +153,7 @@ struct TypeTests {
 
     @Test("a type reads back in the spelling it was declared with")
     func typesRenderAsWritten() {
+        // When / Then
         #expect(TypeExpression.array(.string).rendered == "array<string>")
         #expect(TypeExpression.dictionary(.named("Task")).rendered == "dictionary<Task>")
         #expect(TypeExpression.array(.array(.int)).rendered == "array<array<int>>")
@@ -247,13 +248,17 @@ struct TypeTests {
     @Test("a record slot does not take a bare dictionary")
     func aRecordDoesNotTakeADictionary() {
         // Given. A record names fields it requires; a dictionary promises none
+
+        // When / Then
         #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
     }
 
     @Test("a nullable slot takes its value, null, and nothing else")
     func aNullableSlotSettles() throws {
+        // Given
         let declared = TypeExpression.nullable(.int)
 
+        // When / Then
         #expect(try declared.settling(.int(3), at: "limit") == .int(3))
         #expect(try declared.settling(.null, at: "limit") == .null)
         #expect {
@@ -265,8 +270,8 @@ struct TypeTests {
 
     @Test("what may be null does not stand where null was never declared")
     func aNullableReadingNeedsANullableSlot() throws {
-        // The declared half fits its own slot, and the nullable does not. In
-        // either wrapping.
+        // When / Then. The declared half fits its own slot, and the nullable
+        // does not. In either wrapping.
         #expect(TypeExpression.nullable(.int).accepts(.int))
         #expect(TypeExpression.nullable(.int).accepts(.null))
         #expect(TypeExpression.nullable(.int).accepts(.nullable(.int)))
@@ -277,6 +282,7 @@ struct TypeTests {
 
     @Test("a nullable type spells itself in refusals")
     func aNullableRenders() {
+        // When / Then
         #expect(TypeExpression.nullable(.int).rendered == "int?")
         #expect(TypeExpression.nullable(.array(.string)).rendered == "array<string>?")
     }

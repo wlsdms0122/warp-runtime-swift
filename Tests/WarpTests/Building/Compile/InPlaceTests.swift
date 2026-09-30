@@ -158,6 +158,7 @@ struct InPlaceTests {
 
     @Test("a name is a constant or a variable, and not both")
     func aNameIsBoundOnce() {
+        // When / Then
         #expect {
             try Module(
                 imports: [],

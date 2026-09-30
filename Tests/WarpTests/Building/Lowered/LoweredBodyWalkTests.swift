@@ -55,17 +55,19 @@ struct LoweredBodyWalkTests {
     // MARK: - Test
     @Test("every case that holds an operation has a holder here")
     func everyHoldingCaseIsAHolder() throws {
-        // The cases that hold no operation, and every other case is held to
-        // having a holder above
+        // Given. The cases that hold no operation, and every other case is held
+        // to having a holder above
         let leaves: Set<String> = ["literal", "local", "closure"]
         let holding = Set(try holders.map { _, operation in kind(of: operation) })
 
+        // When / Then
         #expect(holding.isDisjoint(with: leaves))
         #expect(holding.union(leaves) == kinds)
     }
 
     @Test("every case that holds an operation walks into it")
     func everyHolderIsWalkedInto() throws {
+        // When / Then
         for (name, operation) in try holders {
             var reached = false
 
@@ -81,6 +83,7 @@ struct LoweredBodyWalkTests {
 
     @Test("every case that holds an operation hands it to a rewrite first")
     func everyHolderIsRewrittenInsideFirst() throws {
+        // When / Then
         for (name, operation) in try holders {
             var seen: [String] = []
 
@@ -114,11 +117,14 @@ struct LoweredBodyWalkTests {
 
     @Test("a walk reaches a node before what nests in it, and stops where a visit says")
     func aWalkIsOutermostFirstAndStops() {
+        // Given
         let inner = Operation.array([leaf])
         let sut = Operation.array([inner])
         var order: [String] = []
 
         let whole = sut.walk { node in
+
+        // When / Then
             guard case let .operation(operation) = node else { return true }
 
             switch operation {
@@ -146,6 +152,7 @@ struct LoweredBodyWalkTests {
 
     @Test("an instruction is a node of its own, and its binding is what the node reads")
     func anInstructionIsANode() {
+        // Given
         let sut = LoweredBody(
             instructions: [Instruction(binding: .assign(address, settling: nil), code: leaf, label: "write")],
             result: nil
@@ -158,6 +165,7 @@ struct LoweredBodyWalkTests {
             return true
         }
 
+        // When / Then
         #expect(instructions == 1)
         #expect(sut.reads(4..<5))
         #expect(!sut.reads(9..<10))
@@ -165,6 +173,7 @@ struct LoweredBodyWalkTests {
 
     @Test("an argument handed in place is the dispatch's own to read")
     func aReferenceArgumentIsReadByItsNode() {
+        // Given
         let sut = Operation.dispatch(
             DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [.reference(address)])
         )
@@ -176,8 +185,8 @@ struct LoweredBodyWalkTests {
             return true
         }
 
-        // The place is not walked as an operation, and the reads and the
-        // standing both count it.
+        // When / Then. The place is not walked as an operation, and the reads
+        // and the standing both count it.
         #expect(locals == 0)
         #expect(sut.reads(3..<4))
         #expect(sut.reads(4..<5))
@@ -190,6 +199,7 @@ struct LoweredBodyWalkTests {
 
     @Test("the calls beside a dispatch are neither walked nor rewritten")
     func aDispatchsCallsAreTheLinks() {
+        // Given
         let beside = CallOperation(procedure: 5, arguments: [leaf], handed: [])
         let sut = Operation.dispatch(
             DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [], calls: ["t": beside])
@@ -208,6 +218,7 @@ struct LoweredBodyWalkTests {
             return operation
         }, type: { type in type })
 
+        // When / Then
         #expect(leaves == 0)
 
         guard case let .dispatch(dispatch) = rewritten, case .literal(.int(7))?? = dispatch.calls["t"]?.arguments.first else {
@@ -219,6 +230,7 @@ struct LoweredBodyWalkTests {
 
     @Test("a rewrite hands a cast's type and a binding's settling to the type door")
     func aRewriteHandsTypesOver() {
+        // Given
         let sut = LoweredBody(
             instructions: [Instruction(binding: .bind(0, settling: .int), code: .cast(leaf, as: .string, optional: false), label: "cast")],
             result: nil
@@ -231,6 +243,7 @@ struct LoweredBodyWalkTests {
             return type
         })
 
+        // When / Then
         #expect(types.count == 2 && types.contains(.string) && types.contains(.int))
     }
 

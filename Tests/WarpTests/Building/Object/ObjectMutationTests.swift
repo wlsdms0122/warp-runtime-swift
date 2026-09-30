@@ -28,6 +28,7 @@ struct ObjectMutationTests {
     // MARK: - Test
     @Test("is refused wherever it is mutated, and never traps")
     func everyMutationIsAnswered() throws {
+        // Given
         guard let written = Self.everything.written else {
             Issue.record("an object of one of everything is one an object can hold")
 
@@ -37,6 +38,7 @@ struct ObjectMutationTests {
         let mutator = Mutator()
         var mutations = 0
 
+        // When / Then
         for (path, mutated) in mutator.mutations(of: written) {
             mutations += 1
 

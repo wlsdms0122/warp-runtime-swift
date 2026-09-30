@@ -31,9 +31,9 @@ struct PlaceTests {
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
     func aPlaceIsSpelledFromTheLanguagesNames() async {
-        // Given. A slot a document calls something else. A loop's condition is
-        // `while` in a document, and that key appears nowhere in what a caller
-        // assembling this wrote.
+        // Given / When. A slot a document calls something else. A loop's
+        // condition is `while` in a document, and that key appears nowhere in
+        // what a caller assembling this wrote.
         let spin = place(
             refusing: Statement(binding: .constant("spin"), expression: .loop(
                     while: .block(Block(body: [], result: .literal(.bool(true)))),
@@ -49,8 +49,9 @@ struct PlaceTests {
 
     @Test("what a call is written with is named by the position holding it")
     func anArgumentIsNamedByItsPosition() async {
-        // Given. An argument reported from the statement's own place says a
-        // thing is wrong and does not say which of the several written there.
+        // Given / When. An argument reported from the statement's own place
+        // says a thing is wrong and does not say which of the several written
+        // there.
         let sut = place(
             refusing: Statement(binding: .constant("sent"), expression: .call(
                 Call(selector: "send", arguments: [reference("missing")])
@@ -66,6 +67,8 @@ struct PlaceTests {
         // Given. A statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
         let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
+
+        // When
         let bare = place(refusing: Statement(expression: reference("missing")))
 
         // Then
@@ -102,9 +105,10 @@ struct PlaceTests {
 
     @Test("the place is carried as data, and the sentence is only the reason")
     func aPlaceIsNotProse() async throws {
-        // Given. A place written into the message is a place nothing can read
-        // back. A front end holding the file this was authored in has to walk
-        // the steps to point at the line, and a sentence has no steps. When
+        // Given / When. A place written into the message is a place nothing can
+        // read back. A front end holding the file this was authored in has to
+        // walk the steps to point at the line, and a sentence has no steps.
+        // When
         let error = #expect(throws: ValidationError.self) {
             try module(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         }
@@ -412,10 +416,10 @@ struct PlaceTests {
 
     @Test("a statement's construct is the language's name, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() async throws {
-        // Given. One construct, two texts: `{ call: … }` and `{ value: { call: … }
-        // }` are both a call by the time anything here sees one, so the
-        // name for the construct is this implementation's rather than something
-        // a reader may go looking for in a file.
+        // Given / When. One construct, two texts: `{ call: … }` and `{ value: {
+        // call: … } }` are both a call by the time anything here sees one, so
+        // the name for the construct is this implementation's rather than
+        // something a reader may go looking for in a file.
         let sut = try #require(
             place(
                 refusing: Statement(binding: .constant("sent"), expression: .call(
@@ -439,9 +443,9 @@ struct PlaceTests {
 
     @Test("what a return carries is checked, and placed where the return is")
     func aReturnsValueIsWalked() async throws {
-        // Given. The door a caller assembling a program itself passes. What
-        // `return` carries is an operand like any other: a name it reads has to
-        // be visible where it was written. When
+        // Given / When. The door a caller assembling a program itself passes.
+        // What `return` carries is an operand like any other: a name it reads
+        // has to be visible where it was written
         let error = #expect(throws: ValidationError.self) {
             try module(
                 refusing: Statement(

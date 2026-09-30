@@ -101,7 +101,7 @@ struct ControlFlowTests {
 
     @Test("a declining conditional leaves the enclosing names as they were")
     func aDecliningBranchWritesNothing() async throws {
-        // Given, with no other arm, a condition that declines runs nothing: the
+        // Given. With no other arm, a condition that declines runs nothing: the
         // variable holds what it held, which is the null it started with
         let sut = Warp.Expression.conditional(
             .literal(.bool(false)),

@@ -81,9 +81,9 @@ struct CallTests {
 
     @Test("two declarations of one spelling are refused at the build")
     func oneNameIsDeclaredOnce() async throws {
-        // Given / When / Then, which one runs must never be a link-order
-        // accident, and an implementation is not a spelling: a body and a
-        // native answering one name collide the same way two bodies would
+        // Given. Which one runs must never be an accident of the link's order,
+        // and an implementation is not a spelling: a body and a native
+        // answering one name collide the same way two bodies would
         let rival = try Module(
             procedures: [
                 "std.collection.count": Procedure(
@@ -93,6 +93,7 @@ struct CallTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard

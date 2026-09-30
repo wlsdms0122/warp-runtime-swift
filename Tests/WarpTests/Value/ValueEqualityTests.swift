@@ -27,7 +27,8 @@ struct ValueEqualityTests {
 
     @Test("a procedure is never equal to a procedure")
     func proceduresHaveNoEquality() throws {
-        // Given. There is no honest answer, so the language does not offer one
+        // Given / When. There is no honest answer, so the language does not
+        // offer one
         let sut = Value.procedure(
             Closure.assembled()
         )

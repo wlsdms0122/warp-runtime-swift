@@ -26,6 +26,8 @@ struct ValidationTests {
         // what it granted, so a list that says less than the program sends
         // links a procedure nobody allowed, and one that says more takes a grant the
         // program never uses
+
+        // When / Then
         #expect {
             try Module(
                 imports: claimed,
@@ -86,7 +88,9 @@ struct ValidationTests {
     func writingABoundNameIsRefusedAsAWrite() throws {
         // Given. An assignment names a name rather than introducing one, and
         // the two mistakes have different fixes: one is to pick another
-        // spelling, the other is to declare a variable. When / Then
+        // spelling, the other is to declare a variable.
+
+        // When / Then
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 constants: ["limit": .literal(.int(3))],
@@ -180,9 +184,9 @@ struct ValidationTests {
 
     @Test("a constant sees the constants declared beside it and nothing else")
     func aConstantReadsOnlyItsSiblings() throws {
-        // Given. A chain and not a cycle. `aaa` reads `bbb`, declared right
-        // beside it, so nothing about `aaa` is wrong: `bbb` is the one reading
-        // a name nothing here settles, and the refusal stands on it.
+        // Given / When. A chain and not a cycle. `aaa` reads `bbb`, declared
+        // right beside it, so nothing about `aaa` is wrong: `bbb` is the one
+        // reading a name nothing here settles, and the refusal stands on it.
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
@@ -382,10 +386,10 @@ struct ValidationTests {
 
     @Test("a list wrong in both directions says which procedures moved, not which lists")
     func bothDifferencesAreSaidApart() {
-        // Given. A module sending thirty procedures would leave an author diffing
-        // two lists by eye, and the two differences are two mistakes with two
-        // fixes: one procedure is a grant nobody disclosed, the other is a grant
-        // nothing uses.
+        // Given / When. A module sending thirty procedures would leave an
+        // author diffing two lists by eye, and the two differences are two
+        // mistakes with two fixes: one procedure is a grant nobody disclosed,
+        // the other is a grant nothing uses.
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 imports: ["std.math.minus"],
@@ -413,9 +417,10 @@ struct ValidationTests {
 
     @Test("a module that claims nothing states what it sends")
     func anUnclaimedModuleStatesWhatItSends() throws {
-        // Given. A caller assembling types in Swift holds the module and has
-        // nobody to disclose it to, so there is no claim to be held to. What
-        // travels is written from this, and what is written has to be true.
+        // Given / When. A caller assembling types in Swift holds the module and
+        // has nobody to disclose it to, so there is no claim to be held to.
+        // What travels is written from this, and what is written has to be
+        // true.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -436,8 +441,8 @@ struct ValidationTests {
 
     @Test("a module calling its own by the name the build knows it by imports nothing")
     func aSiblingCallIsNotAnImport() async throws {
-        // Given. A module calls a sibling by its declared spelling, and a
-        // spelling this document declares is not an import. The honest empty
+        // Given / When. A module calls a sibling by its declared spelling, and
+        // a spelling this document declares is not an import. The honest empty
         // list is accepted.
         let sut = try Module(
             imports: [],
@@ -463,8 +468,9 @@ struct ValidationTests {
 
     @Test("a claim about a type the language names is refused where the document is read")
     func aClaimAboutABuiltinTypeIsRefused() throws {
-        // Given. A claim is about a declared type: a value of `int` wears no
-        // name a run could read, so no declaration could answer for it.
+        // Given / When. A claim is about a declared type: a value of `int`
+        // wears no name a run could read, so no declaration could answer for
+        // it.
         let sut = {
             try Module(
                 imports: [],
@@ -624,7 +630,7 @@ struct ValidationTests {
 
     @Test("a conditional that can decline still lets what follows run")
     func aDecliningBranchIsNotALeave() {
-        // Given, with no else, the conditional finishes whenever the condition
+        // Given. With no else, the conditional finishes whenever the condition
         // declines, so the statement after it is reachable
         let conditional = Warp.Expression.conditional(
             .literal(.bool(false)),
@@ -673,6 +679,8 @@ struct ValidationTests {
                 result: reference("mine")
             )
         )
+
+        // When
         let readsNothingReal = Warp.Expression.closure(
             Procedure(body: [], result: reference("nowhere"))
         )

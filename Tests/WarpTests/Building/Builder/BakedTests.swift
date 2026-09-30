@@ -325,7 +325,7 @@ struct BakedTests {
 
     @Test("a compiled document names its native procedures and holds none of their code")
     func anObjectHoldsNoNativeCode() async throws {
-        // Given. The standard vocabulary: its builtin procedures are the
+        // Given / When. The standard vocabulary: its builtin procedures are the
         // host's, and the rest are written in Warp and carry their bodies.
         let baked = try await builder.compile(Module.standard)
 

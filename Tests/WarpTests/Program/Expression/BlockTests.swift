@@ -21,6 +21,7 @@ struct BlockTests {
         // and wherever in the body the leave sits
         let leave = Expression.leave(Leave(reach: .procedure, value: .literal(.int(1))))
 
+        // When / Then
         #expect(Block(body: [Statement(expression: leave)], result: .literal(.int(2))).alwaysLeaves)
         #expect(Block(
             body: [Statement(expression: leave), Statement(binding: .constant("after"), expression: .literal(.int(3)))]

@@ -312,6 +312,7 @@ struct ParameterDotTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in

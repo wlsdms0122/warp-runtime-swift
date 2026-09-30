@@ -57,6 +57,7 @@ struct ModuleGraphTests {
 
     @Test("a module stands after the module that declares a type it names")
     func aMentionedTypeStandsFirst() throws {
+        // Given
         let declaring = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(
             procedures: [
@@ -71,6 +72,7 @@ struct ModuleGraphTests {
 
         let graph = try ModuleGraph([users, declaring])
 
+        // When / Then
         #expect(graph.modules[0].types["Age"] != nil)
         #expect(graph.modules[1].procedures[entryName] != nil)
     }
@@ -130,6 +132,7 @@ struct ModuleGraphTests {
 
     @Test("a name no module here declares is left to the build")
     func anUndeclaredNeedIsNotRefused() throws {
+        // Given
         let program = try Module(
             procedures: [
                 entryName: Procedure(
@@ -140,13 +143,16 @@ struct ModuleGraphTests {
             ]
         )
 
+        // When / Then
         #expect(try ModuleGraph([program]).modules.count == 1)
     }
 
     @Test("the standard vocabulary stands whole")
     func theStandardVocabularyStands() throws {
+        // Given
         let graph = try ModuleGraph(Module.standard)
 
+        // When / Then
         #expect(graph.modules.count == Module.standard.count)
     }
 

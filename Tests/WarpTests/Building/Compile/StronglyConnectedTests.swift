@@ -29,6 +29,7 @@ struct StronglyConnectedTests {
             "loner": []
         ]).components()
 
+        // When / Then
         #expect(found.map(\.count).allSatisfy { count in count == 1 })
 
         let order = found.flatMap { cycle in cycle }
@@ -40,8 +41,10 @@ struct StronglyConnectedTests {
 
     @Test("names that reach one another are one component, a self-call included")
     func cyclesAreOneComponent() {
+        // Given
         let mutual = StronglyConnected(among: ["ping": ["pong"], "pong": ["ping"]]).components()
 
+        // When / Then
         #expect(mutual.count == 1)
         #expect(Set(mutual[0]) == ["ping", "pong"])
 
@@ -55,10 +58,11 @@ struct StronglyConnectedTests {
 
     @Test("an edge to a name outside the graph is not an edge")
     func unknownNamesAreNotWalked() {
-        // Every selector a body sends is gathered, and most of them name
+        // Given. Every selector a body sends is gathered, and most of them name
         // declarations that said what they answer. Those are not in here.
         let found = StronglyConnected(among: ["a": ["declared", "b"], "b": []]).components()
 
+        // When / Then
         #expect(found.flatMap { cycle in cycle }.sorted() == ["a", "b"])
     }
 
@@ -74,6 +78,7 @@ struct StronglyConnectedTests {
 
         let found = StronglyConnected(among: edges).components()
 
+        // When / Then
         #expect(found.count == names.count)
         #expect(found.flatMap { cycle in cycle }.first == names.last)
     }

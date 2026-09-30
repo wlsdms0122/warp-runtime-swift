@@ -96,8 +96,10 @@ struct ObjectReadingTests {
 
     @Test("is refused where a part this reads none of is written")
     func aPartUnknown() async throws {
+        // Given
         let parts = try await parts()
 
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts.writing("extra", with: .null)), of: nil)
         } throws: { error in
@@ -255,8 +257,10 @@ struct ObjectReadingTests {
 
     @Test("is refused where a frame names fewer slots than it holds")
     func aFrameNamingTooFew() async throws {
+        // Given
         var parts = try await parts()
 
+        // When / Then
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
             case var .array(implementation) = row[7],

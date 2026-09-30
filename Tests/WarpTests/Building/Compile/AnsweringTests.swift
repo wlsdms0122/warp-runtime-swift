@@ -154,10 +154,12 @@ struct AnsweringTests {
 
         // When / Then. Nothing is claimed, so nothing is refused
         _ = try await builder.build([sut] + Module.standard)
+    }
 
-        // And a dot on it refuses, because `any` is what saying nothing looks
-        // like at a call site. Where the same type with the cycle broken
-        // reads the record `pong` answers.
+    @Test("a dot on an answer that would come from itself refuses, and stands once the cycle is broken")
+    func aDotOnACycleAnswerRefuses() async throws {
+        // Given. `any` is what saying nothing looks like at a call site. With
+        // the cycle broken, the same dot reads the record `pong` answers
         func reading(cycling: Bool) async throws -> Module {
             try Module(
                 procedures: [
@@ -179,6 +181,7 @@ struct AnsweringTests {
             )
         }
 
+        // When / Then
         await #expect {
             try await builder.build([reading(cycling: true)] + Module.standard)
         } throws: { error in

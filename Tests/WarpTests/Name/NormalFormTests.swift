@@ -28,6 +28,7 @@ struct NormalFormTests {
     // MARK: - Test
     @Test("a spelling outside normal form C is not a name")
     func aDenormalSpellingIsRefused() throws {
+        // When / Then
         #expect(throws: NameRefused.self) {
             try Name(denormal)
         }
@@ -36,10 +37,11 @@ struct NormalFormTests {
 
     @Test("nothing written is no name")
     func anEmptySpellingIsRefused() {
-        // A name is what a declaration is called and what a reference writes,
-        // and neither is written by writing nothing.
+        // Given. A name is what a declaration is called and what a reference
+        // writes, and neither is written by writing nothing.
         let nothing = ""
 
+        // When / Then
         #expect(throws: NameRefused.self) {
             try Name(nothing)
         }
@@ -47,8 +49,8 @@ struct NormalFormTests {
 
     @Test("names are ordered by their bytes")
     func namesAreOrderedByBytes() throws {
-        // The order a canonical writing puts fields in, and the order a
-        // reader holds a document's keys to.
+        // When / Then. The order a canonical writing puts fields in, and the
+        // order a reader holds a document's keys to.
         #expect(try Name("Z") < Name("a"))
         #expect(try Name("a") < Name("ab"))
         #expect(try !(Name("b") < Name("ab")))
@@ -59,6 +61,7 @@ struct NormalFormTests {
         ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
     ])
     func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
+        // When / Then
         #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
     }
 

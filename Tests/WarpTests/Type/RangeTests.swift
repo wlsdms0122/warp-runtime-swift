@@ -22,8 +22,10 @@ struct RangeTests {
     // MARK: - Test
     @Test("the bounds speak where the value settles")
     func aRangeSettles() throws {
+        // Given
         let declared = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
+        // When / Then
         #expect(try declared.settling(.int(0), at: "value") == .int(0))
         #expect(try declared.settling(.int(255), at: "value") == .int(255))
         #expect(throws: (any Error).self) { try declared.settling(.int(-1), at: "value") }
@@ -34,9 +36,11 @@ struct RangeTests {
 
     @Test("an open end is no condition at all on that side")
     func anOpenEndSettles() throws {
+        // Given
         let floor = TypeExpression.ranged(.whole(from: 0))
         let ceiling = TypeExpression.ranged(.whole(to: .through(255)))
 
+        // When / Then
         #expect(try floor.settling(.int(Int.max), at: "value") == .int(Int.max))
         #expect(throws: (any Error).self) { try floor.settling(.int(-1), at: "value") }
         #expect(try ceiling.settling(.int(Int.min), at: "value") == .int(Int.min))
@@ -45,10 +49,11 @@ struct RangeTests {
 
     @Test("acceptance reads a range as int, and the bounds wait for the value")
     func aRangeAcceptsAsInt() throws {
+        // Given
         let byte = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
-        // A reading declared int may hold a member. Only what is provably
-        // outside is refused before the run.
+        // When / Then. A reading declared int may hold a member. Only what is
+        // provably outside is refused before the run.
         #expect(byte.accepts(.int))
         #expect(byte.accepts(.ranged(.whole(from: 0, to: .through(1024)))))
         #expect(!byte.accepts(.double))

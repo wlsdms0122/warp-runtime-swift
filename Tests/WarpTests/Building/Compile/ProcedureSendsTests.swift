@@ -640,8 +640,8 @@ struct ProcedureSendsTests {
 
     @Test("a query sending something that answers only by running is refused in its own document")
     func aQuerySendingAnEffectIsRefused() async {
-        // Given. `app.shouting` claims it answers without running and sends
-        // `app.shout`, which does not
+        // Given / When. `app.shouting` claims it answers without running and
+        // sends `app.shout`, which does not
         let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.contradicting, .shouting]

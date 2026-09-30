@@ -211,6 +211,7 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
@@ -238,6 +239,7 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([hidingAny] + Module.standard)
         } throws: { error in
@@ -291,6 +293,7 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         #expect(
             try await run(sut, arguments: ["task": .dictionary(["name": .string("a")])])
                 == .string("a")
@@ -317,6 +320,7 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([onAField] + Module.standard)
         } throws: { error in

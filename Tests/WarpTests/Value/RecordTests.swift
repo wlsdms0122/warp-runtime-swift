@@ -27,6 +27,7 @@ struct RecordTests {
 
     @Test("a layout naming one field twice is refused rather than fatal")
     func aRepeatedFieldIsRefused() {
+        // When / Then
         #expect(throws: ValueRefused.self) { try Layout(fields: ["a", "b", "a"]) }
     }
 

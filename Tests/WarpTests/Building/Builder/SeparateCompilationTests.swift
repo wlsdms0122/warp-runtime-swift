@@ -73,12 +73,14 @@ struct SeparateCompilationTests {
 
     @Test("an entry no module declares is refused by the run and not by the build")
     func anUnknownEntryIsTheRunsRefusal() async throws {
+        // Given
         let sut = try Module(
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
         )
 
         let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
 
+        // When / Then
         await #expect {
             try await Executor().run(image, entry: "app.nowhere")
         } throws: { error in

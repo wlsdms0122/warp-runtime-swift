@@ -373,6 +373,7 @@ struct BuilderTests {
 
     @Test("an undeclared selector is refused before what it answers is read")
     func anUndeclaredSelectorIsRefusedWhereItIsMet() async throws {
+        // Given
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -388,6 +389,7 @@ struct BuilderTests {
             ]
         )
 
+        // When / Then
         let error = await #expect(throws: BuildError.self) {
             try await builder.build([sut] + Module.standard)
         }

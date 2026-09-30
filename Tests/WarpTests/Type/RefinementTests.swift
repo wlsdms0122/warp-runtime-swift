@@ -21,8 +21,10 @@ struct RefinementTests {
     // MARK: - Test
     @Test("a fraction range judges fractions, and the whole numbers it widens")
     func aFractionRangeSettles() throws {
+        // Given
         let ratio = TypeExpression.ranged(.fraction(from: 0, to: .through(1)))
 
+        // When / Then
         #expect(try ratio.settling(.double(0.5), at: "value") == .double(0.5))
         #expect(try ratio.settling(.double(0), at: "value") == .double(0))
         #expect(try ratio.settling(.double(1), at: "value") == .double(1))
@@ -40,9 +42,11 @@ struct RefinementTests {
 
     @Test("the far bound is outside where the text says it is")
     func anOpenEdgeExcludesItsBound() throws {
+        // Given
         let whole = TypeExpression.ranged(.whole(from: 0, to: .upTo(256)))
         let fraction = TypeExpression.ranged(.fraction(from: 0, to: .upTo(1)))
 
+        // When / Then
         #expect(try whole.settling(.int(255), at: "value") == .int(255))
         #expect(throws: (any Error).self) { try whole.settling(.int(256), at: "value") }
 
@@ -57,10 +61,11 @@ struct RefinementTests {
 
     @Test("the kind under a range decides which way a value may widen")
     func acceptanceReadsTheKindUnderTheRange() {
+        // Given
         let byte = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
         let ratio = TypeExpression.ranged(.fraction(from: 0, to: .through(1)))
 
-        // A fraction slot takes a whole reading, here as anywhere.
+        // When / Then. A fraction slot takes a whole reading, here as anywhere.
         #expect(ratio.accepts(.int))
         #expect(ratio.accepts(.ranged(.whole(from: 0, to: .through(1)))))
         #expect(ratio.accepts(.double))
@@ -102,6 +107,7 @@ struct RefinementTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
@@ -130,6 +136,7 @@ struct RefinementTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
@@ -144,6 +151,7 @@ struct RefinementTests {
         // between them) has an answer, and half the fractions answer yes.
         let half = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
 
+        // When / Then
         #expect(!half.admitsNothing)
         #expect(try TypeExpression.ranged(half).settling(.double(5), at: "value") == .double(5))
         #expect {
@@ -161,6 +169,8 @@ struct RefinementTests {
         // Given. A ceiling on the smallest value the kind has, with the bound
         // outside it. No number is below the smallest one, so nothing is
         // inside, and it is a slot no call could ever fill.
+
+        // When / Then
         #expect(TypeExpression.Refinement.whole(to: .upTo(Int.min)).admitsNothing)
         #expect(TypeExpression.Refinement.fraction(to: .upTo(-.infinity)).admitsNothing)
 
@@ -181,6 +191,7 @@ struct RefinementTests {
         let mine = TypeExpression.Refinement.whole(to: .upTo(9007199254740997))
         let theirs = TypeExpression.Refinement.whole(from: 9007199254740996)
 
+        // When / Then
         #expect(mine.overlaps(theirs))
         #expect(theirs.overlaps(mine))
 
@@ -204,8 +215,9 @@ struct RefinementTests {
         let unspellable = TypeExpression.ranged(.fraction(to: .through(.nan)))
         let unbounded = TypeExpression.ranged(.fraction())
 
-        // A range saying nothing is the kind, and one type reads one way.
-        // `double(...)` would be a second spelling for what `double` is.
+        // When / Then. A range saying nothing is the kind, and one type reads
+        // one way. `double(...)` would be a second spelling for what `double`
+        // is.
         #expect(unbounded.rendered == "double")
         #expect(unspellable.rendered != unbounded.rendered)
     }
@@ -218,6 +230,8 @@ struct RefinementTests {
         // spelling for it, and the words a message shows it in read back as an
         // error rather than as the range.
         let unbounded = TypeExpression.Refinement.fraction(from: 0)
+
+        // When
         let infinite = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
 
         // Then. Both are ranges the build takes, and only one is a document's
@@ -256,6 +270,7 @@ struct RefinementTests {
             ]
         )
 
+        // When / Then
         #expect(
             try await run(sut, arguments: ["blob": .bytes([1, 2])])
                 == .array([.double(1), .double(2)])
@@ -283,6 +298,7 @@ struct RefinementTests {
 
     @Test("what only the run sees is judged at the boundary, in the range's words")
     func aFractionOutsideItsRangeRefusesAtTheBoundary() async throws {
+        // Given
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -299,6 +315,7 @@ struct RefinementTests {
             ]
         )
 
+        // When / Then
         #expect(try await run(sut, arguments: ["ratio": .double(0.5)]) == .double(0.5))
 
         await #expect {

@@ -30,6 +30,7 @@ struct DictionaryTests {
 
     @Test("a name written twice is refused")
     func aRepeatedNameIsRefused() {
+        // When / Then
         #expect(throws: ValueRefused.self) {
             try Value.Dictionary([(name: "a", value: Value.int(1)), (name: "a", value: .int(3))])
         }

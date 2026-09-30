@@ -19,6 +19,7 @@ struct IntSpellingTests {
     // MARK: - Test
     @Test("a fraction reads as the int it is, and misses by the fact it is")
     func readingNamesTheFact() {
+        // When / Then
         #expect({ if case .int(42) = IntNarrowing(42.0) { true } else { false } }())
         #expect({ if case .int(Int.min) = IntNarrowing(-0x1p63) { true } else { false } }())
         #expect({ if case .int(0) = IntNarrowing(-0.0) { true } else { false } }())
@@ -39,8 +40,8 @@ struct IntSpellingTests {
 
     @Test("a fraction's spelling follows the document's form rule")
     func fractionSpellingFollowsTheFormRule() {
-        // The point form inside -5 < k < 16, the exponent form outside, and
-        // the exponent signed with two digits at least.
+        // When / Then. The point form inside -5 < k < 16, the exponent form
+        // outside, and the exponent signed with two digits at least.
         #expect(Double(1e15).spelling == "1000000000000000.0")
         #expect(Double(1e16).spelling == "1e+16")
         #expect(Double(1e-4).spelling == "0.0001")
@@ -66,6 +67,7 @@ struct IntSpellingTests {
 
     @Test("one value, one spelling")
     func spellingIsCanonical() {
+        // When / Then
         #expect(Int(spelling: "0") == 0)
         #expect(Int(spelling: "-1") == -1)
         #expect(Int(spelling: "9223372036854775807") == Int.max)
