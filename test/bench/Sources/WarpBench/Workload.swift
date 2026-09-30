@@ -40,7 +40,7 @@ struct Workload {
 
         self.name = url.deletingPathExtension().lastPathComponent
         self.text = text
-        self.module = try Loader().load(try TextEncoding.value(from: text), identity: nil)
+        self.module = try Loader().load(try TextEncoding().value(from: text), identity: nil)
         self.image = try await Self.built(module)
     }
 
@@ -55,7 +55,7 @@ struct Workload {
     // that value read as a module. Nothing can be linked until this is paid,
     // and a caller that is handed documents often pays it every time.
     func load() throws -> Duration {
-        try elapsed { _ = try Loader().load(try TextEncoding.value(from: text), identity: nil) }
+        try elapsed { _ = try Loader().load(try TextEncoding().value(from: text), identity: nil) }
     }
 
     // How long one build of this module takes.
