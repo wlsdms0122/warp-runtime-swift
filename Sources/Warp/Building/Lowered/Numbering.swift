@@ -132,8 +132,8 @@ struct Numbering: Sendable {
     // declarations stand at the end of this list, behind what it sends.
     init(written value: Value, declaring declared: [Name]) throws {
         var fields = try Fields(value, of: "numbering")
-        let sent = try Fields.ordered(fields.next(), of: "numbering sends") { written in
-            try Fields.name(written, of: "numbering sends")
+        let sent = try Field(fields.next(), of: "numbering sends").ordered { written in
+            try Field(written, of: "numbering sends").name()
         }
         let counts = try Self.read(try fields.next(), of: "numbering closures")
 
@@ -331,18 +331,18 @@ struct Numbering: Sendable {
     }
 
     private static func read(_ value: Value, of part: String) throws -> [Closure.Declaration: Int] {
-        guard case let .array(written) = value else {
+        guard case .array = value else {
             throw ObjectRefused("'\(part)' is not written as a list")
         }
 
-        return try Fields.gathered(try written.map { entry in
+        return try Field(value, of: part).gathered { entry in
             var place = try Fields(entry, of: part)
-            let held = (try Fields.declaration(place.next(), of: part), try place.count())
+            let held = (try Field(place.next(), of: part).declaration(), try place.count())
 
             try place.end()
 
             return held
-        }, of: part)
+        }
     }
 
     private static func placed(_ names: [Name], from start: Int) -> [Name: Int] {

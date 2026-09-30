@@ -25,7 +25,7 @@ struct ObjectWriter {
     // MARK: - Public
     // What a field that may hold nothing is laid down as: a list of none or
     // one, so a value that is itself null is told from no value at all. The
-    // reading of it is `Fields.maybe`, and the two are one rule said from
+    // reading of it is `Field.maybe`, and the two are one rule said from
     // each side.
     static func maybe<T, Failure: Error>(_ value: T?, _ write: (T) throws(Failure) -> Value) throws(Failure) -> Value {
         guard let value else { return .array([]) }
@@ -34,7 +34,7 @@ struct ObjectWriter {
     }
 
     // The declaration that wrote a closure, its kind before its name. The
-    // reading of it is `Fields.declaration`.
+    // reading of it is `Field.declaration`.
     func declaration(_ declaration: Closure.Declaration) -> Value {
         typealias Tag = ObjectLayout.DeclarationTag
 

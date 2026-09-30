@@ -45,7 +45,7 @@ struct ObjectReader {
             throw ObjectRefused("'object' writes no '\(ObjectLayout.Key.object.name)'")
         }
 
-        let format = try Fields.count(stamped, of: "object")
+        let format = try Field(stamped, of: "object").count()
 
         guard format == ObjectLayout.format else {
             throw ObjectRefused(
@@ -56,18 +56,18 @@ struct ObjectReader {
         let fields = try Keyed(value)
 
         let document = try document(fields.take(.document))
-        let dependencies = try Fields.ordered(fields.take(.dependencies), of: "dependencies") { written in
-            Fingerprint(try Fields.bytes(written, of: "dependencies"))
+        let dependencies = try Field(fields.take(.dependencies), of: "dependencies").ordered { written in
+            Fingerprint(try Field(written, of: "dependencies").bytes())
         }
         let types = try keyed(fields.take(.types), of: "types", expression)
         let constraints = try keyed(fields.take(.constraints), of: "constraints") { written in
-            try Fields.list(written, of: "constraints", expression)
+            try Field(written, of: "constraints").list(expression)
         }
         let contracts = try keyed(fields.take(.contracts), of: "contracts") { written in
             try keyed(written, of: "contract", contractProcedure)
         }
         let claims = try keyed(fields.take(.claims), of: "claims") { written in
-            Set(try Fields.ordered(written, of: "claims", name))
+            Set(try Field(written, of: "claims").ordered(name))
         }
         let leaned = try leaned(fields.take(.leaned))
 
@@ -75,8 +75,8 @@ struct ObjectReader {
         // those spellings are what the numbering counts from. The rows its
         // bodies lifted are spelled by the numbering, so they are read once
         // it is.
-        let declaredRows = try Fields.list(fields.take(.rows), of: "rows") { written in try judged(written, spelled: nil) }
-        let liftedRows = try Fields.list(fields.take(.lifted), of: "lifted") { written in written }
+        let declaredRows = try Field(fields.take(.rows), of: "rows").list { written in try judged(written, spelled: nil) }
+        let liftedRows = try Field(fields.take(.lifted), of: "lifted").list { written in written }
         let declared = declaredRows.map(\.label)
 
         // One row per spelling, in name order: what the numbering counts
@@ -100,8 +100,8 @@ struct ObjectReader {
         // they number their types from.
         let typeNumbering = try LoweredTypeNumbering(written: fields.take(.typeNumbering))
 
-        let variables = try Fields.led(fields.take(.variables), of: "variables", variable)
-        let constants = try Fields.ordered(fields.take(.constants), of: "constants", name)
+        let variables = try Field(fields.take(.variables), of: "variables").led(variable)
+        let constants = try Field(fields.take(.constants), of: "constants").ordered(name)
 
         return try Compiled(
             document: document,
@@ -139,7 +139,7 @@ struct ObjectReader {
         case .int: read = .int(try fields.integer())
         case .double: read = .double(try fields.double())
         case .string: read = .string(try fields.text())
-        case .bytes: read = .bytes(try Fields.bytes(fields.next(), of: "value"))
+        case .bytes: read = .bytes(try fields.bytes())
         case .array: read = .array(try fields.list(self.value))
 
         // A value the model refuses is one the writing could not have laid
@@ -168,7 +168,7 @@ struct ObjectReader {
         case .closure:
             let writer = Closure.Writer(
                 document: try writing(fields.next()),
-                declaration: try Fields.declaration(fields.next(), of: "value")
+                declaration: try Field(fields.next(), of: "value").declaration()
             )
             let nth = try fields.count()
             let captured = try fields.list { cell -> (slot: Int, cell: Cell) in
@@ -196,14 +196,14 @@ struct ObjectReader {
         of part: String,
         _ read: (Value) throws -> T
     ) throws -> [Name: T] {
-        try Fields.gathered(try Fields.list(value, of: part) { entry in
+        try Field(value, of: part).gathered { entry in
             var fields = try Fields(entry, of: part)
             let held = (try fields.name(), try read(fields.next()))
 
             try fields.end()
 
             return held
-        }, of: part)
+        }
     }
 
     // A reading that goes through a door the value layer judges. A type of
@@ -219,12 +219,12 @@ struct ObjectReader {
     }
 
     private func name(_ value: Value) throws -> Name {
-        try Fields.name(value, of: "a name")
+        try Field(value, of: "a name").name()
     }
 
     private func document(_ value: Value) throws -> Place.Document {
-        let read = try Fields.maybe(value, of: "document") { written in
-            Identity(try Fields.bytes(written, of: "document"))
+        let read = try Field(value, of: "document").maybe { written in
+            Identity(try Field(written, of: "document").bytes())
         }
 
         guard read == identity else {
@@ -241,20 +241,20 @@ struct ObjectReader {
     // The writing spells no document nobody wrote down, so a writer with
     // none is one the writing never laid down.
     private func writing(_ value: Value) throws -> Closure.Document {
-        .written(Identity(try Fields.bytes(value, of: "writer")))
+        .written(Identity(try Field(value, of: "writer").bytes()))
     }
 
     // The document a place inside this object is an address in.
     private func held(_ value: Value) throws -> Place.Document {
         Place.Document(
-            identity: try Fields.maybe(value, of: "place document") { written in
-                Identity(try Fields.bytes(written, of: "place document"))
+            identity: try Field(value, of: "place document").maybe { written in
+                Identity(try Field(written, of: "place document").bytes())
             }
         )
     }
 
     private func leaned(_ value: Value) throws -> [Claim: Place] {
-        try Fields.gathered(try Fields.list(value, of: "leaned") { entry in
+        try Field(value, of: "leaned").gathered { entry in
             var fields = try Fields(entry, of: "leaned")
             let claim = Claim(type: try name(fields.next()), contract: try name(fields.next()))
             let where_ = try place(fields.next())
@@ -262,7 +262,7 @@ struct ObjectReader {
             try fields.end()
 
             return (claim, where_)
-        }, of: "leaned")
+        }
     }
 
     private func variable(_ value: Value) throws -> (name: Name, value: Value) {
@@ -307,11 +307,11 @@ struct ObjectReader {
         case .parameter:
             read = .parameter(
                 name: try name(fields.next()),
-                constraints: try Fields.ordered(fields.next(), of: "bounds", name)
+                constraints: try Field(fields.next(), of: "bounds").ordered(name)
             )
 
         case .composition:
-            let names = try Fields.ordered(fields.next(), of: "composition", name)
+            let names = try Field(fields.next(), of: "composition").ordered(name)
 
             guard !names.isEmpty else {
                 throw ObjectRefused("'composition' joins nothing")
@@ -379,23 +379,23 @@ struct ObjectReader {
     }
 
     private func counted(_ value: Value) throws -> Int {
-        try Fields.count(value, of: "a count")
+        try Field(value, of: "a count").count()
     }
 
     private func integer(_ value: Value) throws -> Int {
-        try Fields.integer(value, of: "a number")
+        try Field(value, of: "a number").integer()
     }
 
     private func fraction(_ value: Value) throws -> Double {
-        try Fields.double(value, of: "a fraction")
+        try Field(value, of: "a fraction").double()
     }
 
     private func text(_ value: Value) throws -> String {
-        try Fields.text(value, of: "a text")
+        try Field(value, of: "a text").text()
     }
 
     private func path(_ value: Value) throws -> Path {
-        Path(try Fields.list(value, of: "path", segment))
+        Path(try Field(value, of: "path").list(segment))
     }
 
     private func segment(_ value: Value) throws -> PathSegment {
@@ -436,7 +436,7 @@ struct ObjectReader {
     private func procedureType(_ value: Value) throws -> ProcedureType {
         var fields = try Fields(value, of: "procedure type")
         let read = ProcedureType(
-            parameters: try Fields.list(fields.next(), of: "parameters", expression),
+            parameters: try Field(fields.next(), of: "parameters").list(expression),
             returns: try fields.maybe(expression)
         )
 
@@ -448,7 +448,7 @@ struct ObjectReader {
     private func signature(_ value: Value) throws -> Signature {
         var fields = try Fields(value, of: "signature")
         let read = Signature(
-            parameters: try Fields.list(fields.next(), of: "parameters", parameter),
+            parameters: try Field(fields.next(), of: "parameters").list(parameter),
             returns: try fields.maybe(expression)
         )
 
@@ -462,7 +462,7 @@ struct ObjectReader {
         let read = Parameter(
             name: try name(fields.next()),
             type: try fields.maybe(expression),
-            candidates: try fields.maybe { written in try Fields.list(written, of: "candidates", text) },
+            candidates: try fields.maybe { written in try Field(written, of: "candidates").list(text) },
             description: try fields.maybe(text)
         )
 
@@ -503,7 +503,7 @@ struct ObjectReader {
         switch ObjectLayout.FailingTag(rawValue: try fields.tag()) {
         case .unstated: read = .unstated
         case .these:
-            read = .these(Set(try Fields.ordered(fields.next(), of: "failing", text)))
+            read = .these(Set(try Field(fields.next(), of: "failing").ordered(text)))
         case nil: throw ObjectRefused("'failing' says neither nothing nor which failures")
         }
 
@@ -515,7 +515,7 @@ struct ObjectReader {
     private func place(_ value: Value) throws -> Place {
         var fields = try Fields(value, of: "place")
         let stands = try held(fields.next())
-        let read = Place(try Fields.list(fields.next(), of: "place", step), in: stands)
+        let read = Place(try Field(fields.next(), of: "place").list(step), in: stands)
 
         try fields.end()
 
@@ -632,7 +632,7 @@ struct ObjectReader {
     private func layout(_ value: Value) throws -> Layout {
         var fields = try Fields(value, of: "layout")
         let named = try fields.maybe(name)
-        let written = try Fields.list(fields.next(), of: "layout", name)
+        let written = try Field(fields.next(), of: "layout").list(name)
 
         try fields.end()
 
@@ -662,7 +662,7 @@ struct ObjectReader {
         case .procedure:
             read = .procedure(
                 parameters: try fields.maybe { written in
-                    try Fields.list(written, of: "parameters", lowered)
+                    try Field(written, of: "parameters").list(lowered)
                 },
                 returns: try fields.maybe(lowered),
                 constness: try constness(fields.next()),
@@ -674,10 +674,10 @@ struct ObjectReader {
         case .nullable: read = .nullable(try lowered(fields.next()))
         case .named: read = .named(try fields.count())
         case .parameter:
-            read = .parameter(label: try name(fields.next()), bounds: try Fields.ordered(fields.next(), of: "bounds", bound))
+            read = .parameter(label: try name(fields.next()), bounds: try Field(fields.next(), of: "bounds").ordered(bound))
 
         case .composition:
-            let bounds = try Fields.ordered(fields.next(), of: "composition", bound)
+            let bounds = try Field(fields.next(), of: "composition").ordered(bound)
 
             guard !bounds.isEmpty else {
                 throw ObjectRefused("'composition' holds a value to nothing")
@@ -736,7 +736,7 @@ struct ObjectReader {
         let held = try layout(fields.next())
         let read = try LoweredRecord(
             layout: held,
-            judging: try Fields.list(fields.next(), of: "record", lowered)
+            judging: try Field(fields.next(), of: "record").list(lowered)
         )
 
         try fields.end()
@@ -757,7 +757,7 @@ struct ObjectReader {
             constness: try constness(fields.next()),
             isolation: try isolation(fields.next()),
             failing: try failing(fields.next()),
-            sends: try Fields.list(fields.next(), of: "row", sent),
+            sends: try Field(fields.next(), of: "row").list(sent),
             judging: try implementation(fields.next())
         )
 
@@ -773,7 +773,7 @@ struct ObjectReader {
         switch ObjectLayout.ImplementationTag(rawValue: try fields.tag()) {
         case .body: read = .body(try body(fields.next()), try frame(fields.next()))
 
-        case .native: read = .native(sending: try Fields.list(fields.next(), of: "sending", send))
+        case .native: read = .native(sending: try Field(fields.next(), of: "sending").list(send))
         case nil: throw ObjectRefused("'implementation' answers in a way this reads none of")
         }
 
@@ -812,8 +812,8 @@ struct ObjectReader {
         let size = try fields.count()
         let read = Frame(
             size: size,
-            parameters: try Fields.list(fields.next(), of: "frame", counted),
-            variables: try Fields.list(fields.next(), of: "frame") { written in
+            parameters: try Field(fields.next(), of: "frame").list(counted),
+            variables: try Field(fields.next(), of: "frame").list { written in
                 var held = try Fields(written, of: "frame variable")
                 let taken = (variable: try held.count(), slot: try held.count())
 
@@ -821,8 +821,8 @@ struct ObjectReader {
 
                 return taken
             },
-            captures: try Fields.list(fields.next(), of: "frame", counted),
-            names: try Fields.list(fields.next(), of: "frame", name)
+            captures: try Field(fields.next(), of: "frame").list(counted),
+            names: try Field(fields.next(), of: "frame").list(name)
         )
 
         try fields.end()
@@ -833,7 +833,7 @@ struct ObjectReader {
     private func body(_ value: Value) throws -> LoweredBody {
         var fields = try Fields(value, of: "body")
         let read = LoweredBody(
-            instructions: try Fields.list(fields.next(), of: "body", instruction),
+            instructions: try Field(fields.next(), of: "body").list(instruction),
             result: try fields.maybe(operation)
         )
 
@@ -875,7 +875,7 @@ struct ObjectReader {
         var fields = try Fields(value, of: "address")
         let read = Address(
             slot: try fields.count(),
-            steps: try Fields.list(fields.next(), of: "address", walk)
+            steps: try Field(fields.next(), of: "address").list(walk)
         )
 
         try fields.end()
@@ -909,12 +909,12 @@ struct ObjectReader {
         switch ObjectLayout.OperationTag(rawValue: try fields.tag()) {
         case .literal: read = .literal(try self.value(fields.next()))
         case .local: read = .local(try address(fields.next()))
-        case .array: read = .array(try Fields.list(fields.next(), of: "array", operation))
+        case .array: read = .array(try Field(fields.next(), of: "array").list(operation))
         case .record: read = .record(try recordOperation(fields.next()))
         case .closure:
             read = .closure(
                 try fields.count(),
-                captures: try Fields.list(fields.next(), of: "captures") { written in
+                captures: try Field(fields.next(), of: "captures").list { written in
                     var held = try Fields(written, of: "capture")
                     let taken = (try held.count(), try held.count())
 
@@ -927,7 +927,7 @@ struct ObjectReader {
         case .apply:
             read = .apply(
                 try operation(fields.next()),
-                arguments: try Fields.list(fields.next(), of: "arguments", operation)
+                arguments: try Field(fields.next(), of: "arguments").list(operation)
             )
 
         case .cast:
@@ -941,9 +941,9 @@ struct ObjectReader {
         case .conditional:
             read = .conditional(
                 try operation(fields.next()),
-                then: try Fields.list(fields.next(), of: "then", instruction),
+                then: try Field(fields.next(), of: "then").list(instruction),
                 else: try fields.maybe { written in
-                    try Fields.list(written, of: "otherwise", instruction)
+                    try Field(written, of: "otherwise").list(instruction)
                 }
             )
 
@@ -997,7 +997,7 @@ struct ObjectReader {
         let held = try layout(fields.next())
         let read = try RecordOperation(
             layout: held,
-            judging: try Fields.list(fields.next(), of: "record", operation)
+            judging: try Field(fields.next(), of: "record").list(operation)
         )
 
         try fields.end()
@@ -1009,10 +1009,10 @@ struct ObjectReader {
         var fields = try Fields(value, of: "call")
         let read = try CallOperation(
             procedure: try fields.count(),
-            arguments: try Fields.list(fields.next(), of: "arguments") { written in
-                try Fields.maybe(written, of: "argument", operation)
+            arguments: try Field(fields.next(), of: "arguments").list { written in
+                try Field(written, of: "argument").maybe(operation)
             },
-            judging: try Fields.list(fields.next(), of: "handed") { written in
+            judging: try Field(fields.next(), of: "handed").list { written in
                 var held = try Fields(written, of: "handed")
                 let taken = CallOperation.Handed(
                     position: try held.count(),
@@ -1036,7 +1036,7 @@ struct ObjectReader {
             contract: try name(fields.next()),
             procedure: try name(fields.next()),
             first: try operation(fields.next()),
-            arguments: try Fields.list(fields.next(), of: "arguments", argument)
+            arguments: try Field(fields.next(), of: "arguments").list(argument)
         )
 
         try fields.end()
