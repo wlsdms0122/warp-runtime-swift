@@ -123,8 +123,8 @@ public struct Mutator: Sendable {
             }
 
         case let .record(record):
-            for entry in record.asDictionary.entries {
-                walk(entry.value, at: steps + [.key(entry.name)], visit)
+            for (name, field) in zip(record.names, record.values) {
+                walk(field, at: steps + [.key(name)], visit)
             }
 
         default:
@@ -149,11 +149,9 @@ public struct Mutator: Sendable {
             return .dictionary(dictionary.writing(key, with: replacing(steps.dropFirst(), in: held, with: mutated)))
 
         case let (.key(key), .record(record)):
-            guard let held = record[key] else { return value }
-
-            let replaced = replacing(steps.dropFirst(), in: held, with: mutated)
-
-            return .record(record.mapValues { name, field in name == key ? replaced : field })
+            return .record(record.mapValues { name, field in
+                name == key ? replacing(steps.dropFirst(), in: field, with: mutated) : field
+            })
 
         default:
             return value
