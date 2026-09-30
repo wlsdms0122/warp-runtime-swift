@@ -83,7 +83,9 @@ public struct TypeTable: Sendable {
         self.loweredTypes = LoweredTypeTable.lowering(
             types,
             constraints: constraints,
-            satisfying: satisfying.merging(contracts.keys.map { contract in (contract, Set<Name>()) }) { held, _ in held },
+            satisfying: satisfying.merging(
+                contracts.keys.map { contract in (contract, Set<Name>()) }
+            ) { held, _ in held },
             settled: settled,
             unsettled: unsettled,
             standing: standing,

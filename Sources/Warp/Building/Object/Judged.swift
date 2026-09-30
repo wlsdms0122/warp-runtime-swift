@@ -256,13 +256,14 @@ struct Judged: Sendable {
         }
 
         guard frame.parameters.allSatisfy({ slot in slot < frame.size }),
-              frame.variables.allSatisfy({ _, slot in slot < frame.size })
+            frame.variables.allSatisfy({ _, slot in slot < frame.size })
         else {
             throw ObjectRefused(
                 "a frame of \(frame.size) stands a parameter or a variable past its end"
             )
         }
     }
+
     private func linked(
         in table: LoweredTypeTable,
         of origin: Int,
@@ -282,8 +283,12 @@ struct Judged: Sendable {
                 // The door it answers through is the row's own: a native
                 // query is what a compile settled as const, and a stand-in on
                 // the other door would be read the wrong way by a run.
+                let standIn: Native = constness == .const
+                    ? .query(UnbroughtQuery(label))
+                    : .effect(UnbroughtEffect(label))
+
                 return row(
-                    .native(constness == .const ? .query(UnbroughtQuery(label)) : .effect(UnbroughtEffect(label))),
+                    .native(standIn),
                     of: origin,
                     foldable: true,
                     in: table

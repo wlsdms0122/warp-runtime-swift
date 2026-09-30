@@ -67,7 +67,9 @@ struct ObjectWriter {
             .document: document(compiled.document),
             .dependencies: .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
             .types: try keyed(compiled.types, type),
-            .constraints: try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in .array(try types.map(type)) },
+            .constraints: try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in
+                .array(try types.map(type))
+            },
             .contracts: try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
                 try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
                     .array([try signature(asked.signature), constness(asked.constness), isolation(asked.isolation)])
@@ -181,7 +183,10 @@ struct ObjectWriter {
     // A list a name keys, in name order. The order is the whole of what makes
     // two writings of one object the same bytes, since a dictionary has none
     // to lend.
-    private func keyed<T, Failure: Error>(_ entries: [Name: T], _ write: (T) throws(Failure) -> Value) throws(Failure) -> Value {
+    private func keyed<T, Failure: Error>(
+        _ entries: [Name: T],
+        _ write: (T) throws(Failure) -> Value
+    ) throws(Failure) -> Value {
         var written: [Value] = []
 
         for (key, entry) in entries.sorted(by: { one, other in one.key < other.key }) {
@@ -741,7 +746,9 @@ struct ObjectWriter {
                 Tag.conditional,
                 try self.operation(condition),
                 .array(try then.map(instruction)),
-                try ObjectWriter.maybe(otherwise) { (written) throws(ObjectUnwritable) -> Value in .array(try written.map(instruction)) }
+                try ObjectWriter.maybe(otherwise) { (written) throws(ObjectUnwritable) -> Value in
+                    .array(try written.map(instruction))
+                }
             )
 
         case let .loop(while: condition, body: body, round: round, keeps: keeps):
@@ -784,7 +791,9 @@ struct ObjectWriter {
     private func callOperation(_ call: CallOperation) throws(ObjectUnwritable) -> Value {
         .array([
             .int(call.procedure),
-            .array(try call.arguments.map { (argument) throws(ObjectUnwritable) -> Value in try ObjectWriter.maybe(argument, self.operation) }),
+            .array(try call.arguments.map { (argument) throws(ObjectUnwritable) -> Value in
+                try ObjectWriter.maybe(argument, self.operation)
+            }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
             })

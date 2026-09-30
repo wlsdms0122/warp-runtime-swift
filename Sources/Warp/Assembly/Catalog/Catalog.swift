@@ -171,7 +171,7 @@ public struct Catalog: Sendable {
 
                 guard
                     claims.contains(where: { type, contracts in
-                        named.contains(type) && contracts.contains(where: { named.contains($0) })
+                        named.contains(type) && contracts.contains(where: { contract in named.contains(contract) })
                     })
                 else {
                     continue
@@ -186,7 +186,7 @@ public struct Catalog: Sendable {
             // read above rather than off the draft, which cannot see another
             // document's contract.
             for module in closed {
-                for (type, contracts) in module.claims.sorted(by: { $0.key < $1.key }) {
+                for (type, contracts) in module.claims.sorted(by: { one, other in one.key < other.key }) {
                     for contract in contracts.sorted() {
                         for procedure in (asked[contract] ?? []).sorted() {
                             let spelling = ContractProcedure.spelling(of: type, procedure: procedure)

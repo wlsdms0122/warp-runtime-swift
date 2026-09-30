@@ -75,7 +75,9 @@ struct ObjectReader {
         // those spellings are what the numbering counts from. The rows its
         // bodies lifted are spelled by the numbering, so they are read once
         // it is.
-        let declaredRows = try Field(fields.take(.rows), of: "rows").list { written in try judged(written, spelled: nil) }
+        let declaredRows = try Field(fields.take(.rows), of: "rows").list { written in
+            try judged(written, spelled: nil)
+        }
         let liftedRows = try Field(fields.take(.lifted), of: "lifted").list { written in written }
         let declared = declaredRows.map(\.label)
 
@@ -257,11 +259,11 @@ struct ObjectReader {
         try Field(value, of: "leaned").gathered { entry in
             var fields = try Fields(entry, of: "leaned")
             let claim = Claim(type: try name(fields.next()), contract: try name(fields.next()))
-            let where_ = try place(fields.next())
+            let place = try place(fields.next())
 
             try fields.end()
 
-            return (claim, where_)
+            return (claim, place)
         }
     }
 
@@ -560,7 +562,9 @@ struct ObjectReader {
         case .result: read = .result
         case .subject:
             guard case let .bool(optional) = try fields.next() else {
-                throw ObjectRefused("'part' names a cast's subject without saying whether the cast reads a mismatch as null")
+                throw ObjectRefused(
+                    "'part' names a cast's subject without saying whether the cast reads a mismatch as null"
+                )
             }
 
             read = .subject(optional: optional)
@@ -674,7 +678,10 @@ struct ObjectReader {
         case .nullable: read = .nullable(try lowered(fields.next()))
         case .named: read = .named(try fields.count())
         case .parameter:
-            read = .parameter(label: try name(fields.next()), bounds: try Field(fields.next(), of: "bounds").ordered(bound))
+            read = .parameter(
+                label: try name(fields.next()),
+                bounds: try Field(fields.next(), of: "bounds").ordered(bound)
+            )
 
         case .composition:
             let bounds = try Field(fields.next(), of: "composition").ordered(bound)

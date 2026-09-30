@@ -23,7 +23,11 @@ public struct ContractProcedure: Sendable, Equatable {
     public let isolation: Isolation
 
     // MARK: - Initializer
-    public init(signature: Signature = Signature(), constness: Constness = .unstated, isolation: Isolation = .unstated) {
+    public init(
+        signature: Signature = Signature(),
+        constness: Constness = .unstated,
+        isolation: Isolation = .unstated
+    ) {
         self.signature = signature
         self.constness = constness
         self.isolation = isolation

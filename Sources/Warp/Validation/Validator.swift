@@ -673,9 +673,11 @@ public struct Validator: Sendable {
         guard let target = leave.target else { return }
 
         guard scope.rounds.contains(target) else {
+            let around = scope.rounds.reversed().map { round in round?.spelling ?? "a nameless one" }
+
             throw ValidationError(
                 "names '\(target)', which is not a loop around it."
-                    + " The ones here are \(scope.rounds.reversed().map { round in round?.spelling ?? "a nameless one" }.joined(separator: ", "));"
+                    + " The ones here are \(around.joined(separator: ", "));"
                     + " the nearest is \(nearest.map { nearest in "'\(nearest)'" } ?? "nameless")",
                 at: place
             )

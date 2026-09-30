@@ -385,7 +385,9 @@ public indirect enum Value: Sendable, Equatable {
         case let .dictionary(dictionary):
             return .dictionary(
                 Value.Dictionary(
-                    ordered: try dictionary.entries.map { entry in (entry.name, try entry.value.rewritten(closures: body)) }
+                    ordered: try dictionary.entries.map { entry in
+                        (entry.name, try entry.value.rewritten(closures: body))
+                    }
                 )
             )
 
@@ -677,9 +679,9 @@ public indirect enum Value: Sendable, Equatable {
                 throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
             }
 
-            return .record(
-                record.writing(at: position, with: try record.values[position].writing(value, at: rest, under: rendered))
-            )
+            let written = try record.values[position].writing(value, at: rest, under: rendered)
+
+            return .record(record.writing(at: position, with: written))
 
         // A name written into what holds its names as data. The build judged
         // the path, so a name that reaches here is one it allowed.

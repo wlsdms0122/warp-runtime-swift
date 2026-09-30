@@ -194,7 +194,11 @@ public struct Compiled: Sendable, Declaring {
         self.leaned = leaned
         self.declared = declared
         self.table = table
-        self.hidden = Set(declared.enumerated().filter { offset, _ in !table[offset].access.reachesOtherDocuments }.map(\.element))
+        self.hidden = Set(
+            declared.enumerated()
+                .filter { offset, _ in !table[offset].access.reachesOtherDocuments }
+                .map(\.element)
+        )
         self.answers = answers
         self.numbering = numbering
         self.typeNumbering = typeNumbering
