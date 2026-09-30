@@ -15,7 +15,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     private enum Arguments: Sendable {
         // The row being asked travels with the run: the sends it declared are
         // its document's numbers, and only a run can say which rows they are.
-        case settled(Settled, of: Linked, Executor)
+        case settled(Settled, of: Linked, Evaluator)
         case given([Name: Value])
     }
 
@@ -35,8 +35,8 @@ public struct Question<P: NativeProcedure>: Sendable {
         self.arguments = .given(arguments)
     }
 
-    init(settled: Settled, of callee: Linked, executor: Executor) {
-        self.arguments = .settled(settled, of: callee, executor)
+    init(settled: Settled, of callee: Linked, evaluator: Evaluator) {
+        self.arguments = .settled(settled, of: callee, evaluator)
     }
 
     // MARK: - Public
@@ -63,7 +63,7 @@ public struct Question<P: NativeProcedure>: Sendable {
         _ key: P.Imports,
         handing arguments: [Value] = []
     ) async throws -> Value {
-        guard case let .settled(_, callee, executor) = self.arguments,
+        guard case let .settled(_, callee, evaluator) = self.arguments,
             callee.sends.indices.contains(key.position)
         else {
             throw ExecutionError(
@@ -73,7 +73,7 @@ public struct Question<P: NativeProcedure>: Sendable {
             )
         }
 
-        return try await executor.send(
+        return try await evaluator.send(
             callee.sends[key.position],
             from: callee.origin,
             handing: arguments
@@ -85,11 +85,11 @@ public struct Question<P: NativeProcedure>: Sendable {
     // procedure states by declaring the parameter `const procedure`. The
     // arguments are handed by position, the way every call hands them.
     public func call(_ closure: Closure, handing arguments: [Value] = []) async throws -> Value {
-        guard case let .settled(_, _, executor) = self.arguments else {
+        guard case let .settled(_, _, evaluator) = self.arguments else {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 
-        return try await executor.call(closure, handing: arguments, at: Trace())
+        return try await evaluator.call(closure, handing: arguments, at: Trace())
     }
 
     // MARK: - Private

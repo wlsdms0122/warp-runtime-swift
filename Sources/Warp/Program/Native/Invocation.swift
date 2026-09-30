@@ -26,12 +26,12 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // are.
     public let trace: Trace
 
-    public var environment: (any Environment)? { executor.environment }
+    public var environment: (any Environment)? { evaluator.environment }
 
     // The variables handed in place, by parameter position.
     private let holds: [(position: Int, handle: Handle)]
 
-    private let executor: Executor
+    private let evaluator: Evaluator
 
     public var selector: Name { callee.label }
 
@@ -45,13 +45,13 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
         trace: Trace,
-        executor: Executor
+        evaluator: Evaluator
     ) {
         self.callee = callee
         self.settled = settled
         self.holds = holds
         self.trace = trace
-        self.executor = executor
+        self.evaluator = evaluator
     }
 
     // MARK: - Public
@@ -117,7 +117,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
             throw ExecutionError("'\(selector)' sends '\(key.selector)', and the link resolved no row for it")
         }
 
-        return try await executor.send(
+        return try await evaluator.send(
             callee.sends[key.position],
             from: callee.origin,
             handing: arguments,
@@ -135,7 +135,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
-        try await executor.call(
+        try await evaluator.call(
             closure,
             handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace

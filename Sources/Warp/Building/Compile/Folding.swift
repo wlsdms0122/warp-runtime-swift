@@ -206,15 +206,13 @@ struct Folding {
             activation.cells[slot] = cell
         }
 
-        let executor = Executor(
-            observer: nil,
-            environment: nil,
+        let evaluator = Evaluator(
             linked: answered.table,
             resolving: answered.resolving,
             naming: answered.naming,
             loweredTypes: loweredTypes
         )
-        let value = try await executor.read(code, in: activation)
+        let value = try await evaluator.read(code, in: activation)
 
         // What leaves a fold is a value. A closure that took a hold took a
         // box of the run that folded it, and a link holds no run's boxes.
