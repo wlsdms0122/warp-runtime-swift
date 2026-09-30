@@ -189,21 +189,11 @@ public struct Builder: Sendable {
 
         try once(modules.map(Place.Document.of), held: laid.identities)
 
-        // Every name held to one declarer before the standing is read.
-        // Standing reads a name as whichever document declared it, and where
-        // two declare one name that reading is arbitrary: it can put a
-        // document in its own reach and call the pair a ring. The doubled name
-        // is the defect, so it is the refusal an author gets.
-        let held = try symbols(of: modules, after: compiled.count)
+        try refuseDoubled(modules, after: compiled.count)
+
         let namespace = try TypeNamespace(compiled + modules)
         let standing = try ModuleGraph(modules, after: compiled.count).standing
-        let lowered = try await compile(
-            modules,
-            at: standing,
-            declaring: held,
-            over: namespace,
-            against: laid
-        )
+        let lowered = try await compile(modules, at: standing, over: namespace, against: laid)
 
         // Back in the order the documents were handed over. A document says
         // nothing about where it stands, so the order a link reads them in is
@@ -230,7 +220,6 @@ public struct Builder: Sendable {
     func compile(
         _ modules: [Module],
         at standing: [Int],
-        declaring symbols: [Symbol],
         over namespace: TypeNamespace,
         against laid: Laid
     ) async throws -> [Compiled] {
@@ -255,17 +244,16 @@ public struct Builder: Sendable {
         // The declarations of each document laid down, under the row it will
         // take here. What a document declares is its own; where the rows stand
         // is this compile's.
-        let written = symbols.reduce(into: [Int: [Symbol]]()) { held, symbol in
-            held[symbol.origin, default: []].append(symbol)
-        }
         let holding = standing.enumerated().map { offset, position in
-            (written[position] ?? []).map { symbol in
+            let module = modules[position]
+
+            return module.procedures.sorted { $0.key < $1.key }.map { name, procedure in
                 Symbol(
-                    declared: symbol.declared,
-                    document: symbol.document,
+                    declared: name,
+                    document: .of(module),
                     origin: compiled.count + offset,
-                    handed: symbol.handed,
-                    procedure: symbol.procedure
+                    handed: compiled.count + position,
+                    procedure: procedure
                 )
             }
         }
@@ -849,48 +837,34 @@ public struct Builder: Sendable {
         }
     }
 
-    // Every declaration under the spelling it was declared by. Two modules
-    // cannot both declare one spelling.
-    private func symbols(of modules: [Module], after held: Int = 0) throws -> [Symbol] {
-        var symbols: [Symbol] = []
+    // No spelling another document may name declared by two of these. Refused
+    // before the order is worked out: the order reads a name as whichever
+    // document declared it, and where two declare one name that reading can
+    // put a document in its own reach and call the pair a ring.
+    private func refuseDoubled(_ modules: [Module], after held: Int) throws {
+        var claimed: [Name: Placed<Procedure>] = [:]
 
-        // The declaration that took each name, rather than only that the name
-        // is taken. A refusal about a name declared twice is addressed to the
-        // declaration that cannot be added and names both in the sentence. A
-        // set answers neither half, and the place alone answers neither when
-        // the two documents were never written down.
-        var claimed: [Name: Symbol] = [:]
-
-        for (origin, module) in modules.enumerated() {
-            for name in module.procedures.keys.sorted() {
-                guard let procedure = module.procedures[name] else { continue }
-
-                let symbol = Symbol(
-                    declared: name,
-                    document: .of(module),
-                    origin: origin,
-                    handed: held + origin,
-                    procedure: procedure
+        for (position, module) in modules.enumerated() {
+            for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key })
+            where procedure.access.reachesOtherDocuments {
+                let declaration = Placed(
+                    procedure,
+                    at: .procedure(name.spelling, in: .of(module)),
+                    of: held + position
                 )
 
-                if let first = claimed[name], symbol.supplies {
+                if let first = claimed[name] {
                     throw BuildError(
                         "'\(name)' is declared more than once in this link, by"
-                            + " \(first.spelled) and \(symbol.spelled). Two declarations"
+                            + " \(first.spelled) and \(declaration.spelled). Two declarations"
                             + " of a name have no way to be told apart",
-                        at: symbol.place
+                        at: declaration.place
                     )
                 }
 
-                if symbol.supplies {
-                    claimed[name] = symbol
-                }
-
-                symbols.append(symbol)
+                claimed[name] = declaration
             }
         }
-
-        return symbols
     }
 
     // A document's constants, settled. They are evaluated here because there is
