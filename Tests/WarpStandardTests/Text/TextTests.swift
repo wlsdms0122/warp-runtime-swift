@@ -7,8 +7,8 @@
 
 import Foundation
 import Testing
-import Warp
-import WarpStandard
+@testable import Warp
+@testable import WarpStandard
 
 @Suite("What std.text answers")
 struct TextTests {
@@ -80,6 +80,37 @@ struct TextTests {
 
         // Then
         #expect(answer == .string("a / B / c"))
+    }
+
+    @Test("a codec converts in the encoding its argument names")
+    func aCodecReadsItsEncodingArgument() async throws {
+        // Given. The slot checks the name before a run; this asks the codec
+        // directly, so the name reaches it unchecked
+        let decoded = DecodedQuery()
+        let encoded = EncodedQuery()
+
+        // When / Then
+        #expect(
+            try await decoded.evaluate(Question(
+                arguments: ["bytes": .bytes([104]), "encoding": .string("utf8")]
+            )) == .string("h")
+        )
+        #expect(
+            try await encoded.evaluate(Question(
+                arguments: ["text": .string("h"), "encoding": .string("utf8")]
+            )) == .bytes([104])
+        )
+
+        await #expect(throws: ExecutionError.self) {
+            try await decoded.evaluate(Question(
+                arguments: ["bytes": .bytes([104]), "encoding": .string("utf16")]
+            ))
+        }
+        await #expect(throws: ExecutionError.self) {
+            try await encoded.evaluate(Question(
+                arguments: ["text": .string("h"), "encoding": .string("utf16")]
+            ))
+        }
     }
 
     // MARK: - Public
