@@ -11,62 +11,64 @@ import Warp
 public extension Module {
     static let math = bundled(nativeMath, with: "math")
 
-    private static let nativeMath = try! Module(
-        description: "Arithmetic, and the ordering of numbers and strings.",
-        procedures: [
-            "std.math.plus": Procedure(
-                description: "The sum, whole where both sides are.",
-                signature: Signature(
-                    of: PlusQuery.self,
-                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
+    private static let nativeMath = Module(
+        unchecked: Draft(
+            description: "Arithmetic, and the ordering of numbers and strings.",
+            procedures: [
+                "std.math.plus": Procedure(
+                    description: "The sum, whole where both sides are.",
+                    signature: Signature(
+                        of: PlusQuery.self,
+                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
+                    ),
+                    implementation: .query(PlusQuery())
                 ),
-                implementation: .query(PlusQuery())
-            ),
-            "std.math.minus": Procedure(
-                description: "The difference.",
-                signature: Signature(
-                    of: MinusQuery.self,
-                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
+                "std.math.minus": Procedure(
+                    description: "The difference.",
+                    signature: Signature(
+                        of: MinusQuery.self,
+                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
+                    ),
+                    implementation: .query(MinusQuery())
                 ),
-                implementation: .query(MinusQuery())
-            ),
-            "std.math.times": Procedure(
-                description: "The product.",
-                signature: Signature(
-                    of: TimesQuery.self,
-                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
+                "std.math.times": Procedure(
+                    description: "The product.",
+                    signature: Signature(
+                        of: TimesQuery.self,
+                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
+                    ),
+                    implementation: .query(TimesQuery())
                 ),
-                implementation: .query(TimesQuery())
-            ),
-            "std.math.dividedBy": Procedure(
-                description: "The quotient, which is not generally whole.",
-                signature: Signature(of: DividedByQuery.self, returns: .double),
-                implementation: .query(DividedByQuery())
-            ),
-            "std.math.remainder": Procedure(
-                description: "What is left of a whole division.",
-                signature: Signature(
-                    of: RemainderQuery.self,
-                    returns: .parameter(name: "N", constraints: ["std.Numeric"])
+                "std.math.dividedBy": Procedure(
+                    description: "The quotient, which is not generally whole.",
+                    signature: Signature(of: DividedByQuery.self, returns: .double),
+                    implementation: .query(DividedByQuery())
                 ),
-                implementation: .query(RemainderQuery())
-            ),
-            "std.math.floored": Procedure(
-                description: "The whole number at or below this one.",
-                signature: Signature(of: FlooredQuery.self, returns: .int),
-                implementation: .query(FlooredQuery())
-            ),
-            "std.math.rounded": Procedure(
-                description: "The nearest whole number.",
-                signature: Signature(of: RoundedQuery.self, returns: .int),
-                implementation: .query(RoundedQuery())
-            ),
-            "std.math.lessThan": Procedure(
-                description: "Whether this orders before another.",
-                signature: Signature(of: LessThanQuery.self, returns: .bool),
-                implementation: .query(LessThanQuery())
-            )
-        ],
+                "std.math.remainder": Procedure(
+                    description: "What is left of a whole division.",
+                    signature: Signature(
+                        of: RemainderQuery.self,
+                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
+                    ),
+                    implementation: .query(RemainderQuery())
+                ),
+                "std.math.floored": Procedure(
+                    description: "The whole number at or below this one.",
+                    signature: Signature(of: FlooredQuery.self, returns: .int),
+                    implementation: .query(FlooredQuery())
+                ),
+                "std.math.rounded": Procedure(
+                    description: "The nearest whole number.",
+                    signature: Signature(of: RoundedQuery.self, returns: .int),
+                    implementation: .query(RoundedQuery())
+                ),
+                "std.math.lessThan": Procedure(
+                    description: "Whether this orders before another.",
+                    signature: Signature(of: LessThanQuery.self, returns: .bool),
+                    implementation: .query(LessThanQuery())
+                )
+            ]
+        ),
         builtin: true
     )
 }

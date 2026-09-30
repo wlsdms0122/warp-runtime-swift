@@ -136,8 +136,8 @@ public struct Module: Sendable {
     public static let versionKey: Name = "warp"
 
     // MARK: - Initializer
-    // Making one is checking one, so a module that exists has been checked
-    // against itself.
+    // Making one is checking one, so a module that came from outside this
+    // package has been checked against itself.
     //
     // A document arrives through a reader, a serialization or a caller
     // assembling types in Swift, and each of those is a way in. A check that
@@ -217,6 +217,21 @@ public struct Module: Sendable {
     // it: a draft is what a document declares, and which document that was is
     // the reader's to say.
     public init(_ draft: Draft, identity: Identity? = nil, builtin: Bool = false) throws {
+        self.init(reading: draft, identity: identity, builtin: builtin)
+
+        try Validator().validate(self)
+    }
+
+    // A draft this package wrote in Swift, standing without the check. Nothing
+    // from outside reaches this, so what the check would refuse is a mistake
+    // in this source, and the assertion is where it shows.
+    package init(unchecked draft: Draft, builtin: Bool = false) {
+        self.init(reading: draft, identity: nil, builtin: builtin)
+
+        assert((try? Validator().validate(self)) != nil, "a module this package wrote checks against itself")
+    }
+
+    private init(reading draft: Draft, identity: Identity?, builtin: Bool) {
         self.source = draft
         self.identity = identity
         self.builtin = builtin
@@ -232,8 +247,6 @@ public struct Module: Sendable {
         let hidden = Set(draft.procedures.filter { _, procedure in !procedure.access.reachesOtherDocuments }.keys)
         self.supplies = Set(reading.declaredProcedures.subtracting(hidden).map(Reference.procedure))
             .union(reading.declaredTypes.map(Reference.type))
-
-        try Validator().validate(self)
     }
 
     // MARK: - Public

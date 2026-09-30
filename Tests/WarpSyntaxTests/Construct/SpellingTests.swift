@@ -18,6 +18,18 @@ struct SpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
+    @Test("the language's own table registers at the door a composed one takes")
+    func standardTableRegisters() throws {
+        // Given. `standard` stands without the check
+        let forms = ConstructRegistry.standard.keys.compactMap(ConstructRegistry.standard.form(for:))
+
+        // When
+        let sut = try ConstructRegistry(forms: forms)
+
+        // Then
+        #expect(sut.keys == ConstructRegistry.standard.keys)
+    }
+
     @Test("a form can be registered under another procedure")
     func formIsRegisteredUnderAnotherKey() async throws {
         // Given. `unless` is `conditional` spelled differently, and the IR it builds

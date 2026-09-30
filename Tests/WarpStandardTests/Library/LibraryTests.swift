@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpStandard
+import WarpSyntax
 
 // The documents of `lib/std` are the source and what ships is a copy of them,
 // so the two being the same bytes is what the copy is worth. A document edited
@@ -46,6 +47,17 @@ struct LibraryTests {
                 "\(name).warpt differs from what ships. Run script/embed-library.sh"
             )
         }
+    }
+
+    @Test("every document of lib/std reads")
+    func everyDocumentReads() throws {
+        // When
+        for text in Library.documents.values {
+            _ = try Loader().load(TextEncoding().value(from: text), identity: nil)
+        }
+
+        // Then. None was left out on the way in
+        #expect(Module.library.count == Library.documents.count)
     }
 
     @Test("every procedure it declares is one this package does not")

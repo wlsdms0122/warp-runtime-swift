@@ -14,15 +14,17 @@ public extension Module {
     // containers) and this one reads nothing.
     static let control: [Module] = [nativeControl]
 
-    private static let nativeControl = try! Module(
-        description: "Leaving instead of answering.",
-        procedures: [
-            "std.control.abort": Procedure(
-                description: "Refuses with a message, which an attempt around it catches.",
-                signature: Signature(of: AbortQuery.self, returns: .never),
-                implementation: .query(AbortQuery())
-            )
-        ],
+    private static let nativeControl = Module(
+        unchecked: Draft(
+            description: "Leaving instead of answering.",
+            procedures: [
+                "std.control.abort": Procedure(
+                    description: "Refuses with a message, which an attempt around it catches.",
+                    signature: Signature(of: AbortQuery.self, returns: .never),
+                    implementation: .query(AbortQuery())
+                )
+            ]
+        ),
         builtin: true
     )
 }
