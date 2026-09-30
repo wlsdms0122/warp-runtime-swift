@@ -438,7 +438,7 @@ struct BuilderTests {
     }
 
     @Test("whether a body builds is its own text's fact, whoever calls it")
-    func linkabilityDoesNotDependOnCallers() async throws {
+    func buildingDoesNotDependOnCallers() async throws {
         // Given. `helper` folds a constant-headed call through a written procedure; a procedure
         // (`loud`) that happens to call `helper` must not change what `helper`
         // means, because nothing about `helper`'s text changed
