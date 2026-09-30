@@ -30,6 +30,13 @@ import Foundation
 // was running, and two builds compare on the same footing.
 @main
 struct Bench {
+    private enum Refusal: Error, CustomStringConvertible {
+        // `--against` names the table it reads next.
+        case tableless
+
+        var description: String { "--against takes the path of a table this bench printed" }
+    }
+
     // MARK: - Property
     private static let defaultRounds = 1_000_000
     private static let defaultRepeats = 3
@@ -59,7 +66,11 @@ struct Bench {
         let numbers = arguments.prefix { argument in Int(argument) != nil }
         let rounds = numbers.first.flatMap(Int.init) ?? defaultRounds
         let repeats = numbers.dropFirst().first.flatMap(Int.init) ?? defaultRepeats
-        let against = arguments.firstIndex(of: "--against").map { at in arguments[at + 1] }
+        let against = try arguments.firstIndex(of: "--against").map { at in
+            guard arguments.indices.contains(at + 1) else { throw Refusal.tableless }
+
+            return arguments[at + 1]
+        }
         let printed = try against.map(Self.reading)
         let workloads = try await Self.workloads()
 
