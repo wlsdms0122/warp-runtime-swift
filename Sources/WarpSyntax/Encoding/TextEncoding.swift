@@ -76,8 +76,10 @@ public struct TextEncoding {
     public static let name = "warpt"
     public static let format = 1
 
+    private static let whitespace = Set(" \n\r\t".unicodeScalars)
+
     // What may stand between two tokens, besides the text ending.
-    private static let delimiters = Set(" \n\r\t[]{}".unicodeScalars)
+    private static let delimiters = whitespace.union("[]{}".unicodeScalars)
 
     // What ends a bare token: a delimiter, or a quote.
     private static let enders = delimiters.union(["\""])
@@ -185,7 +187,7 @@ public struct TextEncoding {
     // A bare token past any whitespace, or nothing where the text has none
     // there. The header is read this way, since a header is two of them.
     private func bareToken(from reading: inout ArraySlice<Unicode.Scalar>) -> String {
-        while let character = reading.first, " \n\r\t".unicodeScalars.contains(character) {
+        while let character = reading.first, Self.whitespace.contains(character) {
             reading.removeFirst()
         }
 
@@ -207,7 +209,7 @@ public struct TextEncoding {
             let start = reading.startIndex
 
             switch character {
-            case " ", "\n", "\r", "\t":
+            case _ where Self.whitespace.contains(character):
                 reading.removeFirst()
 
             case "[":
