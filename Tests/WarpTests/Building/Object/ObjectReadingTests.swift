@@ -105,7 +105,7 @@ struct ObjectReadingTests {
 
         // When / Then. Refused as a document, by its own name.
         #expect {
-            try Compiled(written: .dictionary(parts.removing(ObjectLayout.formatKey).writing(Module.versionKey, with: .int(1))), of: nil)
+            try Compiled(written: .dictionary(parts.removing(ObjectLayout.Key.object.name).writing(Module.versionKey, with: .int(1))), of: nil)
         } throws: { error in
             "\(error)".contains("this is a document, and not an object")
         }
@@ -186,7 +186,7 @@ struct ObjectReadingTests {
         // When / Then. The parts behind the number are laid out by it, so what
         // refuses is the number and nothing further in.
         #expect(throws: ObjectRefused.self) {
-            try Compiled(written: .dictionary(parts.writing(ObjectLayout.formatKey, with: .int(ObjectLayout.format + 1))), of: nil)
+            try Compiled(written: .dictionary(parts.writing(ObjectLayout.Key.object.name, with: .int(ObjectLayout.format + 1))), of: nil)
         }
     }
 

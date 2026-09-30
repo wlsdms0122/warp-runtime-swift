@@ -46,9 +46,8 @@ struct ObjectCoverageTests {
 
     @Test("is written under exactly the keys the layout names")
     func everyKeyIsTheLayouts() throws {
-        // Given. The writer lays its keys down as a literal, and the reading
-        // holds a record to the layout's list. The two are one layout only
-        // while they agree.
+        // Given. The writer and the reading both key the record by the
+        // layout's keys.
         guard case let .dictionary(written)? = ObjectCoverageFixture.everything.written else {
             Issue.record("an object is written as a record")
 
@@ -56,7 +55,7 @@ struct ObjectCoverageTests {
         }
 
         // Then
-        #expect(Set(written.names) == ObjectLayout.parts)
+        #expect(Set(written.names) == ObjectLayout.keys)
     }
 
     // MARK: - Public

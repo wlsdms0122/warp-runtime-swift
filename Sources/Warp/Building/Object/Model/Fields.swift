@@ -166,10 +166,10 @@ struct Fields {
 
         try fields.end()
 
-        switch tag {
-        case 0: return .procedure(written)
-        case 1: return .binding(written)
-        default: throw ObjectRefused("'\(part)' writes a declaration of kind \(tag), which this reads none of")
+        switch ObjectLayout.DeclarationTag(rawValue: tag) {
+        case .procedure: return .procedure(written)
+        case .binding: return .binding(written)
+        case nil: throw ObjectRefused("'\(part)' writes a declaration of kind \(tag), which this reads none of")
         }
     }
 
