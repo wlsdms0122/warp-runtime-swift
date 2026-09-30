@@ -10,14 +10,6 @@ import Foundation
 // Runs an image: one evaluator over the lowered code, which a fold reaches
 // through `read` as well.
 public struct Executor: Sendable {
-    // Where a walk over a path came down: on a value, or on a reading gone
-    // wrong. Every slot is there from the frame's making, so there is no
-    // third answer.
-    private enum Walk {
-        case found(Value)
-        case unfit(String)
-    }
-
     // MARK: - Property
     public let observer: (any ExecutionObserver)?
     public let environment: (any Environment)?
@@ -322,13 +314,13 @@ public struct Executor: Sendable {
             case let .assign(address, settling)?:
                 guard case let .hold(handle) = activation.cells[address.slot] else {
                     throw ExecutionError(
-                        "'\(spelled(address, in: activation).rendered)' writes a name that is not a variable here"
+                        "'\(activation.spelled(address).rendered)' writes a name that is not a variable here"
                     )
                 }
 
                 try handle.write(
                     try held(result, as: settling, in: address.slot, of: activation),
-                    at: try positioned(address, in: activation)
+                    at: try activation.projections(of: address)
                 )
 
             // A nameless statement ran for its effect, and the answer is
@@ -385,7 +377,7 @@ public struct Executor: Sendable {
             return value
 
         case let .local(address):
-            return try found(address, in: activation)
+            return try activation.value(at: address)
 
         // Making a closure runs nothing: it is the capture, and the capture is
         // these cells.
@@ -508,7 +500,7 @@ public struct Executor: Sendable {
             var values = try await given(call.arguments, first: first, in: &activation, at: trace)
 
             for handed in call.handed {
-                values[handed.position] = try found(handed.address, in: activation)
+                values[handed.position] = try activation.value(at: handed.address)
             }
 
             return try await answer(callee, with: try settled(callee, given: values), at: trace)
@@ -757,7 +749,7 @@ public struct Executor: Sendable {
                 )
             }
 
-            return (handed.position, handle.extended(by: try positioned(handed.address, in: activation)))
+            return (handed.position, handle.extended(by: try activation.projections(of: handed.address)))
         }
     }
 
@@ -865,19 +857,6 @@ public struct Executor: Sendable {
         return answer
     }
 
-    // What a slot path holds. The head is never absent, since every slot is
-    // there from the frame's making; a hold whose scope changed under
-    // it refuses, and every deeper absence is answered inside the walk.
-    private func found(_ address: Address, in activation: Activation) throws -> Value {
-        switch lookup(address, in: activation) {
-        case let .found(value):
-            return value
-
-        case let .unfit(reason):
-            throw ReferenceUnfit(path: spelled(address, in: activation), reason: reason)
-        }
-    }
-
     // The two doors a native procedure answers through. The procedure's parameters are
     // its own type, so the call is made where that type has a name: handing
     // `any Query` to a generic function opens it.
@@ -941,235 +920,5 @@ public struct Executor: Sendable {
         }
 
         return Settled(values: try callee.settle(applied: values).map { value in Optional(value) })
-    }
-
-    // A dot reads a name and nothing else, and the link judged every one and
-    // wrote the judgment into the step. What may genuinely be absent, a missing
-    // entry or a null on the way, is read as null only where the author spelled
-    // `?.`, and refused everywhere else.
-    private func lookup(_ address: Address, in activation: Activation) -> Walk {
-        let (slot, steps) = (address.slot, address.steps)
-        var current: Value
-
-        do {
-            current = try activation.cells[slot].value()
-        } catch {
-            return .unfit("\(error)")
-        }
-
-        for (index, step) in steps.enumerated() {
-            // The path as far as this step, spelled for a refusal. Only a
-            // refusal reads it, so a read that lands spells nothing.
-            func walked() -> Path {
-                spelled(Address(slot: slot, steps: Array(steps[...index])), in: activation)
-            }
-
-            // This step alone, spelled the same way and for the same reader.
-            func segment() -> PathSegment {
-                spelled(step, in: activation)
-            }
-
-            // Null stops every reading the same way, and the rule lives with
-            // the segment: the link's walk over types asks the same judge, so
-            // the two layers cannot drift apart.
-            if current == .null {
-                switch segment().meetingNull(at: walked()) {
-                case .reads:
-                    return .found(.null)
-
-                case let .refused(reason):
-                    return .unfit(reason)
-                }
-            }
-
-            let read: Walk
-
-            switch step {
-            case let .index(index, _):
-                read = indexed(current, at: index, walked: walked)
-
-            // The name is a path of its own, read against the same frame.
-            case let .at(inner, optional):
-                func name() -> String {
-                    spelled(inner, in: activation).rendered
-                }
-
-                switch lookup(inner, in: activation) {
-                case let .found(.int(index)):
-                    read = indexed(current, at: index, walked: walked)
-
-                // A dictionary's names are data, so a key the run settled
-                // reads an entry the way a written key does.
-                case let .found(.string(key)):
-                    read = keyed(
-                        current,
-                        at: key,
-                        optional: optional,
-                        walked: walked,
-                        segment: segment
-                    )
-
-                case let .found(.double(double)):
-                    switch Int.reading(double) {
-                    case let .int(index):
-                        read = indexed(current, at: index, walked: walked)
-
-                    case .notANumber, .fractional:
-                        return .unfit("index reference \(name()) is not a whole number")
-
-                    case .overflow:
-                        return .unfit(
-                            "index reference \(name()) indexes past the end of any array"
-                        )
-                    }
-
-                case let .found(value):
-                    return .unfit(
-                        "index reference \(name()) is \(value.type), expected int or string"
-                    )
-
-                case let .unfit(reason):
-                    return .unfit(reason)
-                }
-
-            // The place the link proved, which is where a write lands too.
-            case let .field(position, _, _):
-                guard case let .record(record) = current else {
-                    return .unfit("\(walked().rendered) drills a field into \(current.type)")
-                }
-
-                guard record.values.indices.contains(position) else {
-                    return .unfit("\(walked().rendered) drills past the fields this record holds")
-                }
-
-                read = .found(record.values[position])
-
-            case let .key(key, optional):
-                guard current.holdsFields else {
-                    return .unfit("\(walked().rendered) drills a field into \(current.type)")
-                }
-
-                guard let next = current[key] else {
-                    guard optional else {
-                        return .unfit(
-                            "\(walked().rendered): '\(key)' is not there."
-                                + " Only `\(segment().mark)` reads absence"
-                        )
-                    }
-
-                    return .found(.null)
-                }
-
-                read = .found(next)
-            }
-
-            switch read {
-            case let .found(value):
-                current = value
-
-            case .unfit:
-                return read
-            }
-        }
-
-        return .found(current)
-    }
-
-    // One reading for both index spellings. What is indexed is whatever has
-    // elements: the projection owns the `array<byte>` equation, lazily, so
-    // one element read does not unpack a compact spelling. Past the end is a
-    // defect, not absence: the array is there and says how long it is.
-    private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {
-        guard let elements = current.elements else {
-            return .unfit("\(walked().rendered) indexes into \(current.type), expected array")
-        }
-
-        guard index >= 0, index < elements.count else {
-            return .unfit(
-                "\(walked().rendered) indexes past the end of \(elements.count) element(s)"
-            )
-        }
-
-        return .found(elements[elements.index(elements.startIndex, offsetBy: index)])
-    }
-
-    // One reading for a key the run settled. What is keyed is whatever holds
-    // fields, and an absent entry follows the mark the way a written key does.
-    private func keyed(
-        _ current: Value,
-        at key: String,
-        optional: Bool,
-        walked: () -> Path,
-        segment: () -> PathSegment
-    ) -> Walk {
-        guard current.holdsFields else {
-            return .unfit("\(walked().rendered) drills a field into \(current.type)")
-        }
-
-        guard let name = try? Name(key) else {
-            return .unfit("\(walked().rendered) reads '\(key)', which is not a name")
-        }
-
-        guard let next = current[name] else {
-            guard optional else {
-                return .unfit(
-                    "\(walked().rendered): '\(key)' is not there."
-                        + " Only `\(segment().mark)` reads absence"
-                )
-            }
-
-            return .found(.null)
-        }
-
-        return .found(next)
-    }
-
-    // Every index reference read to a position: a write lands on one
-    // position, and a hold is extended by positions.
-    private func positioned(_ address: Address, in activation: Activation) throws -> [Projection] {
-        try address.steps.map { step in
-            switch step {
-            case let .field(position, name, _):
-                return .field(position, name)
-
-            case let .key(name, _):
-                return .key(name)
-
-            case let .index(index, _):
-                return .index(index)
-
-            case let .at(inner, _):
-                guard case let .int(index) = try found(inner, in: activation) else {
-                    throw ExecutionError(
-                        "'\(spelled(address, in: activation).rendered)' indexes with"
-                            + " '\(spelled(inner, in: activation).rendered)', which is not an int"
-                    )
-                }
-
-                return .index(index)
-            }
-        }
-    }
-
-    // The path as the author wrote it, for a sentence that reads it back.
-    private func spelled(_ address: Address, in activation: Activation) -> Path {
-        Path([.key(activation.frame.names[address.slot])] + spelled(address.steps, in: activation))
-    }
-
-    private func spelled(_ steps: [Step], in activation: Activation) -> [PathSegment] {
-        steps.map { step in spelled(step, in: activation) }
-    }
-
-    private func spelled(_ step: Step, in activation: Activation) -> PathSegment {
-        switch step {
-        case let .field(_, name, optional), let .key(name, optional):
-            return .key(name, optional: optional)
-
-        case let .index(index, optional):
-            return .index(index, optional: optional)
-
-        case let .at(inner, optional):
-            return .indexRef(spelled(inner, in: activation), optional: optional)
-        }
     }
 }
