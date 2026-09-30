@@ -28,7 +28,7 @@ public struct BreakForm: ConstructForm {
 
     // Which loop, or nothing for the nearest. A loop answers what it was going
     // to answer, so there is nothing to carry and what stands here is a name.
-    static func target(from decoder: Decoder, called procedure: Name) throws -> Name? {
+    static func target(from decoder: Decoder, called key: Name) throws -> Name? {
         switch try ValueReader(from: decoder).value {
         case .null:
             return nil
@@ -38,7 +38,7 @@ public struct BreakForm: ConstructForm {
 
         case let other:
             throw ReadingError(
-                "\(procedure) takes the name of a loop, or nothing for the"
+                "\(key) takes the name of a loop, or nothing for the"
                     + " nearest one. Got \(other.type)",
                 at: decoder.steps
             )

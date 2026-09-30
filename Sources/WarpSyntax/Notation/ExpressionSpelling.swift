@@ -34,7 +34,7 @@ public protocol ExpressionSpelling: Sendable {
     // asked for, and a record it claims is answered by this spelling or
     // refused by it. Never read as a record that happens to have those
     // fields. Giving up a spelling says a document may not write it; it does
-    // not hand the procedure back to mean something else, which would make the
+    // not hand the keys back to mean something else, which would make the
     // same document mean two things in two notations.
     //
     // Asked of the names and the notation they are read in, since what a

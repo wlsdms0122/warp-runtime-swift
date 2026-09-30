@@ -10,7 +10,7 @@ import Warp
 
 // How a document spells a construct. A keyword and an expression meet here and
 // nowhere else. The language's own constructs have no names, and this is the
-// one surface that says which procedure builds which.
+// one surface that says which key builds which.
 //
 // A form is asked for its expression with the name it is being bound under,
 // because two constructs need a name to exist inside their body and this
@@ -21,7 +21,7 @@ import Warp
 public protocol ConstructForm: Sendable, Decodable {
     // The spelling this form proposes. `ConstructRegistry` may register it
     // under another, so a form never learns which key actually reached it. A
-    // procedure is a fact about a notation, and a form is not one.
+    // key is a fact about a notation, and a form is not one.
     static var key: Name { get }
 
     // Whether this form reads `body` as a key it must have. A writer asks the

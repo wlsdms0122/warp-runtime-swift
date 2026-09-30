@@ -173,7 +173,7 @@ public struct ModuleReader: Decodable {
             )
         }
 
-        // The rest is about the procedure that is written, so it is read standing on
+        // The rest is about the version that is written, so it is read standing on
         // it. Refusing from out here would put the answer at the document's
         // first character, which is a line the author has no reason to look at.
         let written = try envelope.superDecoder(forKey: key)

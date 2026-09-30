@@ -33,13 +33,13 @@ struct LeaveTests {
     func returningAnswers() async throws {
         // Given
         let sut = try await loader.loadProcedure([
-            "parameters": [["name": "procedure", "type": "string"]],
+            "parameters": [["name": "word", "type": "string"]],
             "returns": "string",
             "body": [
                 ["var": "early", "value": "kept going"],
                 [
                     "value": ["conditional": [
-                        "when": ["of": ["ref": "procedure"], "equal": "stop"],
+                        "when": ["of": ["ref": "word"], "equal": "stop"],
                         "then": [["value": ["return": "left early"]]]
                     ]
                 ]]
@@ -48,8 +48,8 @@ struct LeaveTests {
         ], importing: ["std.logic.equal"])
 
         // When
-        let stopped = try await answer(sut, ["procedure": .string("stop")])
-        let carried = try await answer(sut, ["procedure": .string("go")])
+        let stopped = try await answer(sut, ["word": .string("stop")])
+        let carried = try await answer(sut, ["word": .string("go")])
 
         // Then
         #expect(stopped == .string("left early"))

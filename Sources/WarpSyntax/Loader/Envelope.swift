@@ -48,12 +48,12 @@ public enum Envelope {
     // Written and not null. A key holding nothing is not a claim, and the two
     // who ask have to agree about that: the door turns away a document that
     // declares nothing, and the reader takes a key holding nothing as a list
-    // of no procedures. Answering differently is how `imports: null` passes the
+    // of no names. Answering differently is how `imports: null` passes the
     // door as a claim while the module behind it says it takes nothing.
     //
     // Asked twice because the two are in different places. The door holds the
     // document and reads the value; the reader is inside it and has a
-    // container. One rule, said here in both of their procedures.
+    // container. One rule, said here for both.
     public static func declaresImports(_ written: Value?) -> Bool {
         guard let written else { return false }
 

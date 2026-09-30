@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// A place in the procedures a document writes it with.
+// A place in the keys a document writes it with.
 //
 // `Place` carries a slot and a construct as themselves, because the language
 // has no opinion about what a text calls them. This is the side that does: the
@@ -17,7 +17,7 @@ import Warp
 // notation may have respelled one, and then that is the key its author is
 // looking at.
 //
-// Every step answers on its own. A slot whose procedure depends on the construct
+// Every step answers on its own. A slot whose key depends on the construct
 // holding it says which one, so nothing here reads the steps around it and
 // there is no step this can be handed without an answer.
 public extension Place {
@@ -48,7 +48,7 @@ public extension Place {
 
     // MARK: - Private
     // The key a document writes a part under, from the reader that reads it
-    // there. A procedure spelled here as well would be the second of two places
+    // there. A key spelled here as well would be the second of two places
     // deciding what a document says, and the two meet only in stored text.
     private static func key(of part: Place.Part) -> String {
         switch part {
@@ -85,7 +85,7 @@ public extension Place {
         // The one part two constructs write differently, which is why the part
         // says which one holds it. Answered by name and not by a default, so a
         // third construct that holds a condition arrives here as a compiler
-        // error rather than as a procedure nobody chose.
+        // error rather than as a key nobody chose.
         case let .condition(construct):
             switch construct {
             case .conditional: ConditionalForm.CodingKeys.when.stringValue

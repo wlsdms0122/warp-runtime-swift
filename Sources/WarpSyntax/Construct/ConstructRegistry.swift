@@ -43,8 +43,8 @@ public struct ConstructRegistry: Sendable {
         }
     }
 
-    // The same table written as procedures rather than forms, for a notation that is
-    // spelling most of it itself.
+    // The same table keyed by the spellings a notation chose, for a notation
+    // that is spelling most of it itself.
     public init(forms: [String: any ConstructForm.Type]) throws {
         self.forms = [:]
 
@@ -55,7 +55,7 @@ public struct ConstructRegistry: Sendable {
                 try insert(form, as: try Name(written))
             } catch let refusal as NameRefused {
                 throw ValidationError(
-                    "construct key '\(written)' cannot be a procedure: \(refusal)",
+                    "construct key '\(written)' cannot be a name: \(refusal)",
                     at: nil
                 )
             }
@@ -120,7 +120,7 @@ public struct ConstructRegistry: Sendable {
     // written twice has to come out the same both times.
     //
     // Nothing where the form is not registered: a notation that gave up a key
-    // cannot write what that procedure said, and answering with the built-in spelling
+    // cannot write what that key said, and answering with the built-in spelling
     // would put a key in the document that reading it back would refuse.
     public func key(for form: any ConstructForm.Type) -> Name? {
         forms.filter { _, registered in

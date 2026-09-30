@@ -17,7 +17,7 @@ import Warp
 //
 // A front end with a document stops at `Value`. A YAML or JSON parser produces
 // data; turning that data into a procedure is this one path, and what every
-// notation shares is the `Expression` it arrives at rather than the procedures used
+// notation shares is the `Expression` it arrives at rather than the spellings used
 // to get there. A front end with a syntax of its own builds those expressions
 // directly and never comes through here, the way a compiler builds its back
 // end's instructions rather than printing them and reading them back.
@@ -221,7 +221,7 @@ public struct Loader: Sendable {
     //
     // The language names its own slots, which is the reading a caller that
     // assembled a program in Swift is owed: it wrote no document, so no
-    // document's procedures would lead it anywhere. A caller holding a text is owed
+    // document's keys would lead it anywhere. A caller holding a text is owed
     // the other reading (`condition` is a slot they cannot look for and `while`
     // is what they typed) and this is where a stage that has no document of its
     // own gets it.

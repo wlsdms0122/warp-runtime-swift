@@ -16,7 +16,7 @@ import Testing
 // caller that assembled a program in Swift and wrote no text. Here there is a
 // text and the author is holding it: `condition` is a slot they cannot look
 // for, and `where` is what they typed.
-@Suite("A place reads in the procedures the document writes")
+@Suite("A place reads in the keys the document writes")
 struct PlaceWrittenTests {
     // MARK: - Property
     private let loader = Loader.testing
@@ -48,7 +48,7 @@ struct PlaceWrittenTests {
 
     @Test("a conditional and a loop hold one slot and write two keys")
     func oneSlotIsWrittenTwoWays() {
-        // Given. The language calls both a condition, so the procedure a place reads
+        // Given. The language calls both a condition, so the key a place reads
         // with is decided by the construct the walk is inside.
         let conditional = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
@@ -69,10 +69,10 @@ struct PlaceWrittenTests {
         #expect(loop.rendered?.hasSuffix(".loop.condition") == true)
     }
 
-    @Test("a respelled construct reads as the procedure its author wrote")
+    @Test("a respelled construct reads as the key its author wrote")
     func aRespelledConstructIsSpelledAsRegistered() throws {
-        // Given. A notation that registers the conditional form under another procedure.
-        // What an author may look for in their file is that procedure, and nothing
+        // Given. A notation that registers the conditional form under another key.
+        // What an author may look for in their file is that key, and nothing
         // here holds a second copy of it to disagree with.
         let registry = try ConstructRegistry(forms: ["if": ConditionalForm.self])
         let sut = Place.procedure(entryName.spelling, in: .assembled)

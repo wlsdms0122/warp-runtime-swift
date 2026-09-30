@@ -60,7 +60,7 @@ struct NotationTests {
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "procedure", "type": "string"]],
+                    "parameters": [["name": "word", "type": "string"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -68,7 +68,7 @@ struct NotationTests {
                                 "when": [
                                     "call": [
                                         "procedure": "std.logic.equal",
-                                        "arguments": [["ref": "procedure"], "hey"]
+                                        "arguments": [["ref": "word"], "hey"]
                                     ]
                                 ],
                                 "then": [["set": "pick", "value": "matched"]],
@@ -82,7 +82,7 @@ struct NotationTests {
         ], from: .canonical)
 
         // When
-        let outputs = try await run(module, arguments: ["procedure": .string("hey")])
+        let outputs = try await run(module, arguments: ["word": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("matched"))
@@ -127,7 +127,7 @@ struct NotationTests {
         // fields would come back a message. Under `record` they are a record's
         // fields whatever they are called.
         let module = try Self.conditional(on: .record([
-            "of": .reference(path("procedure")),
+            "of": .reference(path("word")),
             "equal": .literal(.string("hey"))
         ]))
 
@@ -147,7 +147,7 @@ struct NotationTests {
             return
         }
 
-        #expect(condition["record"]?["of"] == Value.dictionary(["ref": .string("procedure")]))
+        #expect(condition["record"]?["of"] == Value.dictionary(["ref": .string("word")]))
         #expect(Set(fields.keys) == ["of", "equal"])
     }
 
@@ -160,11 +160,11 @@ struct NotationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "procedure", type: .bool)]),
+                    signature: Signature(parameters: [Parameter(name: "word", type: .bool)]),
                     body: [
                         Statement(expression: .conditional(
                             .record([
-                                "of": .reference(path("procedure")),
+                                "of": .reference(path("word")),
                                 "equal": .literal(.string("hey"))
                             ]),
                             then: [Statement(expression: .literal(.string("yes")))],
@@ -204,11 +204,11 @@ struct NotationTests {
                 "imports": ["std.text.joined", "std.text.text"],
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "procedure", "type": "string"]],
+                        "parameters": [["name": "word", "type": "string"]],
                         "body": [
                             [
                                 "let": "line",
-                                "value": ["format": "${w}!", "with": ["w": ["ref": "procedure"]]]
+                                "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]
                             ]
                         ]
                     ]
@@ -224,9 +224,9 @@ struct NotationTests {
         // Given, which procedures a template lowers to is the notation's answer, and
         // the reader carries none of its own
         let sut = try await Loader.testing.loadProcedure([
-            "parameters": [["name": "procedure", "type": "string"]],
+            "parameters": [["name": "word", "type": "string"]],
             "body": [
-                ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "procedure"]]]]
+                ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
             ]
         ], importing: ["std.text.joined", "std.text.text"])
 
@@ -289,7 +289,7 @@ struct NotationTests {
                 "imports": [],
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "procedure", "type": "string"]],
+                        "parameters": [["name": "word", "type": "string"]],
                         "body": [
                             ["let": "asked", "value": asked]
                         ],
@@ -298,7 +298,7 @@ struct NotationTests {
                 ]
             ]
         }
-        let spelled: Value = ["of": ["ref": "procedure"], "is": "hey"]
+        let spelled: Value = ["of": ["ref": "word"], "is": "hey"]
 
         // When
         let module = try await sut.load(document(asking: ["record": spelled]))
@@ -330,7 +330,7 @@ struct NotationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "word", type: .string)]),
                     body: [
                         Statement(expression: .conditional(
                             condition,

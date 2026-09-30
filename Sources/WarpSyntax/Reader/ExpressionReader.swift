@@ -47,7 +47,7 @@ public struct ExpressionReader: Decodable {
 
     // MARK: - Public
     // The decoder comes along because one form needs more than the value: a
-    // closure carries statements, and which procedures a statement may write is the
+    // closure carries statements, and which construct keys a statement may write is the
     // registry's answer, which travels in the decoder rather than in the data.
     //
     // Not public: a form reading an expression goes through `init(from:)`, which
@@ -301,7 +301,7 @@ public struct ExpressionReader: Decodable {
         } catch let refusal as ReadingError {
             // A reading that says where it is says it deeper than here, and
             // folding it into this form's sentence would spend the address
-            // to say the procedures again.
+            // to say it again.
             throw refusal
         } catch {
             throw ExpressionFormError("{ closure: }: \(error)")

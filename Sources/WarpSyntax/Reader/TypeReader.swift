@@ -141,7 +141,7 @@ public struct TypeReader: Decodable {
         }
 
         guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
-            throw TypeFormError("type '\(text)' writes a procedure twice. Once says it")
+            throw TypeFormError("type '\(text)' writes a modifier twice. Once says it")
         }
 
         if constness == .const || isolation == .isolated {

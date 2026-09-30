@@ -61,7 +61,7 @@ struct ReadingErrorTests {
     @Test("the steps of a reading's refusal are the document's own keys")
     func aReadingWalksTheDocumentsKeys() throws {
         // Given. The address decoding reached, spelled the way every other
-        // stage spells one, so an author follows the same procedures either way: a
+        // stage spells one, so an author follows the same keys either way: a
         // statement wears the name it wrote, which is what validation and the
         // link call it
         let fixture: Value = [
@@ -178,7 +178,7 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "procedures")
     }
 
-    @Test("a document written for another warp is refused at the procedure that says so")
+    @Test("a document written for another warp is refused at the key that says so")
     func aVersionRefusalIsAtTheVersionKey() throws {
         // Given. The key is written, so there is something to point at. What
         // says no version at all is refused about the document, since nothing
