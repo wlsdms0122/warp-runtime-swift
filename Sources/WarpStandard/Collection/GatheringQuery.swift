@@ -58,7 +58,7 @@ struct GatheringQuery: Query {
             // written past the end gets.
             guard number >= 0, number < held.count else {
                 throw ExecutionError(
-                    "gathering asks position \(number) of \(held.count)"
+                    "std.collection.gathering asks position \(number) of \(held.count)"
                 )
             }
 

@@ -15,7 +15,7 @@ struct FlooredQuery: Query {
     typealias Parameters = NumberOperand
 
     // MARK: - Property
-    private let integer = IntegerConversion("floored")
+    private let integer = IntegerConversion("std.math.floored")
 
     // MARK: - Initializer
     // MARK: - Public

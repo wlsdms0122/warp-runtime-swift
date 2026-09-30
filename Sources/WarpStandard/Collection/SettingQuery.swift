@@ -53,7 +53,7 @@ struct SettingQuery: Query {
         do {
             field = try Name(key)
         } catch let refusal as NameRefused {
-            throw ExecutionError("setting asks a key that is a name, and \(refusal.message)")
+            throw ExecutionError("std.collection.setting asks a key that is a name, and \(refusal.message)")
         }
 
         // The names are data from here on: what was written was held to no

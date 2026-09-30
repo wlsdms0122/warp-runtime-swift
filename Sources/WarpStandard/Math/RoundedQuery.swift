@@ -14,7 +14,7 @@ struct RoundedQuery: Query {
     typealias Parameters = NumberOperand
 
     // MARK: - Property
-    private let integer = IntegerConversion("rounded")
+    private let integer = IntegerConversion("std.math.rounded")
 
     // MARK: - Initializer
     // MARK: - Public
