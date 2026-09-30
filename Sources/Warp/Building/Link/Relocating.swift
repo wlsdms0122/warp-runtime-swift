@@ -31,7 +31,7 @@ final class Relocating {
         // entering rather than built at every refusal that never happens.
         let place: Place
 
-        let loweredTypes: LoweredTypeNumbering.Rows
+        let typeRows: LoweredTypeNumbering.Rows
 
         // MARK: - Initializer
         // MARK: - Public
@@ -163,7 +163,7 @@ final class Relocating {
                         in: Context(
                             origin: origin,
                             place: .variable(name.spelling, in: documents[origin]),
-                            loweredTypes: typeRows[origin]
+                            typeRows: typeRows[origin]
                         )
                     )
                 )
@@ -197,7 +197,7 @@ final class Relocating {
         let context = Context(
             origin: row.origin,
             place: .procedure(row.label.spelling, in: documents[row.origin]),
-            loweredTypes: typeRows[row.origin]
+            typeRows: typeRows[row.origin]
         )
         let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: context)) }
 
@@ -259,7 +259,7 @@ final class Relocating {
             body,
             at: context.place,
             operation: { operation in try relocated(operation, in: context) },
-            type: { type in try context.loweredTypes.read(type, at: context.place) }
+            type: { type in try context.typeRows.read(type, at: context.place) }
         )
     }
 
