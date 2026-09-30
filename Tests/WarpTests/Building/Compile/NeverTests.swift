@@ -34,7 +34,7 @@ struct NeverTests {
         #expect(!Block(body: [], result: .literal(.int(1))).alwaysLeaves)
     }
 
-    @Test("a statement after a call that never finishes is refused at link")
+    @Test("a statement after a call that never finishes is refused at the build")
     func nothingRunsAfterANeverCall() async throws {
         // Given. `std.control.abort` declares never, so the statement after it
         // would never run, and a name written there would never bind
@@ -123,7 +123,7 @@ struct NeverTests {
             ]
         )
 
-        // When / Then. Links, and the run answers the 0-round value
+        // When / Then. Builds, and the run answers the 0-round value
         #expect(try await run([sut]) == .int(1))
     }
 
@@ -172,7 +172,7 @@ struct NeverTests {
             ]
         )
 
-        // When / Then. Links, and the run answers what the result wrote
+        // When / Then. Builds, and the run answers what the result wrote
         #expect(try await run([sut]) == .string("s"))
 
         // And the write is definite (every exit made it) so `y` reads as
@@ -322,7 +322,7 @@ struct NeverTests {
         }
     }
 
-    @Test("a result after a statement that never finishes is refused at link")
+    @Test("a result after a statement that never finishes is refused at the build")
     func aResultAfterNeverIsRefused() async throws {
         // Given. The result runs after the body, so it is "after" the same way
         // a trailing statement is; the type reading already knows it (a block

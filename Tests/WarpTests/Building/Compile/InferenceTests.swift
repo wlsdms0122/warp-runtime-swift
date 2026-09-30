@@ -264,7 +264,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. Links, and the run answers what the exit wrote
+        // When / Then. Builds, and the run answers what the exit wrote
         #expect(try await run([sut]) == .string("s"))
     }
 
@@ -1603,7 +1603,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. Links, because `b` is an int by the time it is read
+        // When / Then. Builds, because `b` is an int by the time it is read
         _ = try await builder.build([sut] + Module.standard)
     }
 
@@ -1986,7 +1986,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a name on a call that never finishes is refused at link")
+    @Test("a name on a call that never finishes is refused at the build")
     func refusingBodySaysNothingAboutItsAnswer() async throws {
         // Given. `gives_up` declares never, so a name on its call promises a
         // binding that cannot happen. The build refuses the name where the

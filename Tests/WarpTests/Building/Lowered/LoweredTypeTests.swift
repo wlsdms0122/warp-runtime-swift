@@ -295,7 +295,7 @@ struct LoweredTypeTests {
     }
 
     @Test("the build refuses a chain of names that comes back on itself under a wrapper")
-    func theLinkRefusesACycleUnderAWrapper() async throws {
+    func theBuildRefusesACycleUnderAWrapper() async throws {
         // Given
         let sut = try Module(
             imports: [],

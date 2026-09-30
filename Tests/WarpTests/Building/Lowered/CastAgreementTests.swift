@@ -13,7 +13,7 @@ import Testing
 // whether any value is both, and once by the run, which sees the value that
 // actually arrived and asks whether it is the named type. The two have to
 // agree, and only one of them can be wrong in a way nobody finds out about: the
-// link refusing a cast the run would have taken closes a door with no value on
+// build refusing a cast the run would have taken closes a door with no value on
 // either side of it to show for it.
 //
 // So the contract is one-directional. Wherever a value settles into both
@@ -92,7 +92,7 @@ struct CastAgreementTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("no pair some value satisfies is called impossible")
-    func theLinkNeverRefusesWhatARunWouldTake() {
+    func theBuildNeverRefusesWhatARunWouldTake() {
         for mine in typeExpressions {
             for theirs in typeExpressions {
                 // The witness: one value both judges take. Where there is none,

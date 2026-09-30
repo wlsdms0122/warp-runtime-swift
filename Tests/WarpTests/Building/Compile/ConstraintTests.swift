@@ -22,7 +22,7 @@ struct ConstraintTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a reading outside the constraint refuses at the build")
-    func aReadingOutsideTheConstraintRefusesAtTheLink() async throws {
+    func aReadingOutsideTheConstraintRefusesAtTheBuild() async throws {
         // Given. Both sides of `lessThan` are booleans, and `Comparable` admits
         // none of them. The reading is a literal, so the build can see it.
         let sut = try Module(
@@ -48,7 +48,7 @@ struct ConstraintTests {
     }
 
     @Test("arithmetic on two strings refuses at the build")
-    func arithmeticOnTwoStringsRefusesAtTheLink() async throws {
+    func arithmeticOnTwoStringsRefusesAtTheBuild() async throws {
         // Given. The two sides agree, so the one type parameter reads one
         // thing. Agreement is not admission: `Numeric` does not admit text.
         let sut = try Module(
@@ -165,7 +165,7 @@ struct ConstraintTests {
     }
 
     @Test("a signature naming a constraint nobody declares refuses at the build")
-    func anUndeclaredConstraintRefusesAtTheLink() async throws {
+    func anUndeclaredConstraintRefusesAtTheBuild() async throws {
         // Given. Unreached code still has to compile, and a bound naming
         // nothing is a defect whether or not a call ever fills it
         let sut = try Module(
@@ -751,7 +751,7 @@ struct ConstraintTests {
     }
 
     @Test("a constraint admitting nothing refuses at the build")
-    func anEmptyConstraintRefusesAtTheLink() async throws {
+    func anEmptyConstraintRefusesAtTheBuild() async throws {
         // Given. No parameter it bounds could ever be filled, which is the same
         // fact an empty enum states
         let sut = try Module(
@@ -775,7 +775,7 @@ struct ConstraintTests {
     }
 
     @Test("a type parameter hidden in a declared type refuses at the build")
-    func aParameterInADeclaredTypeRefusesAtTheLink() async throws {
+    func aParameterInADeclaredTypeRefusesAtTheBuild() async throws {
         // Given. A declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
         let sut = try Module(
@@ -806,7 +806,7 @@ struct ConstraintTests {
     }
 
     @Test("a parameter behind a procedure type in a declared type refuses too")
-    func aParameterInADeclaredProcedureTypeRefusesAtTheLink() async throws {
+    func aParameterInADeclaredProcedureTypeRefusesAtTheBuild() async throws {
         // Given. A declared type is not a filling site however deep the
         // parameter hides: nothing ever binds it, so the claim would go
         // unjudged everywhere
@@ -837,7 +837,7 @@ struct ConstraintTests {
     }
 
     @Test("a name that reaches only names refuses at the build")
-    func aNameOnlyCycleRefusesAtTheLink() async throws {
+    func aNameOnlyCycleRefusesAtTheBuild() async throws {
         // Given. A type may name itself through a type, and a name that only
         // names names never becomes one
         let cycles: [[Name: TypeExpression]] = [
@@ -911,7 +911,7 @@ struct ConstraintTests {
     }
 
     @Test("a enum no member of the bound can spell refuses at the build")
-    func aOneOfOutsideTheBoundRefusesAtTheLink() async throws {
+    func aOneOfOutsideTheBoundRefusesAtTheBuild() async throws {
         // Given. Procedures on a Numeric slot: no member of the constraint can spell
         // them, so no call could ever fit this parameter
         let sut = try Module(
@@ -1188,7 +1188,7 @@ struct ConstraintTests {
     }
 
     @Test("a closure's signature is held to the same judgment as a declaration")
-    func aClosureSignatureIsJudgedAtTheLink() async throws {
+    func aClosureSignatureIsJudgedAtTheBuild() async throws {
         // Given. Unreached code still has to compile, and a signature written
         // inline is a declaration however deep a body buries it
         let sut = try Module(

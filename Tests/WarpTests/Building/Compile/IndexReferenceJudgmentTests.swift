@@ -83,7 +83,7 @@ struct IndexReferenceJudgmentTests {
         #expect(try await run(sut) == .int(2))
     }
 
-    @Test("whether a body links is its own text's fact, whoever calls it")
+    @Test("whether a body builds is its own text's fact, whoever calls it")
     func linkabilityDoesNotDependOnCallers() async throws {
         // Given. `helper` folds a constant-headed call through a written procedure; a procedure
         // (`loud`) that happens to call `helper` must not change what `helper`
@@ -123,7 +123,7 @@ struct IndexReferenceJudgmentTests {
             procedures: procedures
         )
 
-        // When / Then. Links and answers, `loud` present or not
+        // When / Then. Builds and answers, `loud` present or not
         #expect(try await run(sut) == .int(2))
 
         var without = procedures

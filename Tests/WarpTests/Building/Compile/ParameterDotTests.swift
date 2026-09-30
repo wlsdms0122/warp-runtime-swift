@@ -201,7 +201,7 @@ struct ParameterDotTests {
             )
         }
 
-        // When / Then. Written the same way twice, and written two ways, link
+        // When / Then. Written the same way twice, and written two ways, build
         // alike
         for marking in [false, true] {
             _ = try await builder.build([module(marking: marking)] + Module.standard)

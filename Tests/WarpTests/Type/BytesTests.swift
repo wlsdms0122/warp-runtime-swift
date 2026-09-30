@@ -245,7 +245,7 @@ struct BytesTests {
         // Given. `joined` declares `array<string>`, which leaves no byte as it
         // is, so the compact spelling does not cross: it is read out and
         // settled element by element. The argument is read `any` here so the
-        // link lets it through and the run is the one that answers.
+        // build lets it through and the run is the one that answers.
         //
         // This is why a procedure whose elements no byte can be still asks for the
         // `.array` case: a bytes value never reaches it.
@@ -341,7 +341,7 @@ struct BytesTests {
     @Test("an encoding the procedures do not name refuses at the build")
     func anUnknownEncodingRefuses() async throws {
         // Given. The enum names the encodings, and a constant is judged at the
-        // link
+        // build
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

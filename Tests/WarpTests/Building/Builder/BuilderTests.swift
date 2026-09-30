@@ -44,7 +44,7 @@ struct BuilderTests {
         )
     }
 
-    @Test("a enum no candidate of which fits the type is refused at link")
+    @Test("a enum no candidate of which fits the type is refused at the build")
     func anUnsatisfiableOneOfIsRefused() async throws {
         // Given. Admitting nothing is a fact about the type and the set
         // together, not about the set being empty
@@ -68,7 +68,7 @@ struct BuilderTests {
         #expect(error?.message.contains("admits nothing") == true)
     }
 
-    @Test("a enum that admits nothing is refused at link")
+    @Test("a enum that admits nothing is refused at the build")
     func anEmptyOneOfIsRefused() async throws {
         // Given. No call could ever fit it, so the declaration is the defect
         let sut = try Module(
@@ -268,7 +268,7 @@ struct BuilderTests {
     }
 
     @Test("a call on a path this run would never take is still resolved")
-    func unreachedCallIsLinked() async throws {
+    func unreachedCallIsResolved() async throws {
         // Given. The else arm cannot be taken with this input, and the warrant
         // for checking it anyway is compilation: unreached code still compiles
         let sut = try Module(
@@ -302,7 +302,7 @@ struct BuilderTests {
     }
 
     @Test("a call inside a rescue body is resolved")
-    func rescueBodyIsLinked() async throws {
+    func rescueBodyIsResolved() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -472,8 +472,8 @@ struct BuilderTests {
         }
     }
 
-    @Test("a self-recursive procedure links once instead of forever")
-    func recursiveProcedureLinksOnce() async throws {
+    @Test("a self-recursive procedure builds once instead of forever")
+    func recursiveProcedureBuildsOnce() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -690,8 +690,8 @@ struct BuilderTests {
         }
     }
 
-    @Test("a procedure that calls nothing links alone")
-    func selfContainedProcedureLinks() async throws {
+    @Test("a procedure that calls nothing builds alone")
+    func selfContainedProcedureBuilds() async throws {
         // Given
         let sut = try Module(
             procedures: [

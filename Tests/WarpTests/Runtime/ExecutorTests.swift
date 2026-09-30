@@ -319,7 +319,7 @@ struct ExecutorTests {
                     ),
                     body: [
                         // Nameless on purpose. A statement that never finishes
-                        // binds nothing, so a name on it is refused at link.
+                        // binds nothing, so a name on it is refused at the build.
                         Statement(
                             expression: refusing(interpolated(
                                         literal("stopped: "),

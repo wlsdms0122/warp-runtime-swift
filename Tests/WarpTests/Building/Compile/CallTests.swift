@@ -82,7 +82,7 @@ struct CallTests {
         }
     }
 
-    @Test("two declarations of one spelling are refused at link")
+    @Test("two declarations of one spelling are refused at the build")
     func oneNameIsDeclaredOnce() async throws {
         // Given / When / Then, which one runs must never be a link-order
         // accident, and an implementation is not a spelling: a body and a
@@ -105,7 +105,7 @@ struct CallTests {
         }
     }
 
-    @Test("a native procedure is linked against its signature like a procedure is")
+    @Test("a call to a native procedure is judged against its signature like any call")
     func hostProcedureIsCheckedAgainstItsSignature() async throws {
         // Given. One argument more than the procedure declares. This was
         // unreachable while an effect was an opaque Swift value.
@@ -208,7 +208,7 @@ struct CallTests {
     }
 
     @Test("a typo in an arm today's arguments never take is still refused")
-    func unreachedArmIsStillLinked() async throws {
+    func unreachedArmIsStillResolved() async throws {
         // Given. The warrant is compilation, not loading: a run with expensive
         // effects should not discover a typo halfway through
         let sut = Procedure(
@@ -234,8 +234,8 @@ struct CallTests {
         }
     }
 
-    @Test("a procedure calling itself links once instead of forever")
-    func recursiveProcedureLinksOnce() async throws {
+    @Test("a procedure calling itself builds once instead of forever")
+    func recursiveProcedureBuildsOnce() async throws {
         // Given
         let countdown = Procedure(
                 signature: Signature(

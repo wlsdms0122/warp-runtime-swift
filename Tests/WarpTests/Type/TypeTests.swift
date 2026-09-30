@@ -110,7 +110,7 @@ struct TypeTests {
 
     @Test("a type may name itself")
     func namedTypeMayRecur() throws {
-        // Given. Kept rather than expanded at link, which is what makes a
+        // Given. Kept rather than expanded at the build, which is what makes a
         // self-naming type a type and not a regress
         let types = TypeTable(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])]
@@ -162,7 +162,7 @@ struct TypeTests {
         #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: string, b: int }")
     }
 
-    @Test("a call handed to a parameter it cannot fit is refused at link")
+    @Test("a call handed to a parameter it cannot fit is refused at the build")
     func mismatchedCallIsABuildError() async {
         // Given. Nothing runs here. Both sides are declarations, and a
         // declaration is text, so this is the half of checking the builder can

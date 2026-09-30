@@ -92,7 +92,7 @@ struct NullableTests {
     @Test("the optional dot on a record field reads it, and its answer may be null")
     func anOptionalDotOverANullable() async throws {
         // Given. The record may be null, so `?.` is the only spelling that
-        // links; what it answers is the field or null
+        // builds; what it answers is the field or null
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -236,7 +236,7 @@ struct NullableTests {
     @Test("a constant's dots are judged like a body's")
     func aConstantPathIsJudged() async throws {
         // Given. The constant is a record, so a field it does not carry is the
-        // link's refusal, not a run's surprise
+        // build's refusal, not a run's surprise
         let sut = try Module(
             constants: ["config": .record(["host": .literal(.string("a"))])],
             procedures: [

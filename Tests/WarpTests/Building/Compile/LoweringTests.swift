@@ -303,7 +303,7 @@ struct LoweringTests {
     @Test("a body reading a module variable does not answer without running")
     func aBodyReadingAVariableIsNotConst() async throws {
         // Given. The variable's value is the run's, so folding the procedure at the
-        // link would fix a value nothing at the run could change
+        // build would fix a value nothing at the run could change
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [

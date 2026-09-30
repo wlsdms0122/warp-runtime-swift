@@ -191,8 +191,8 @@ struct FirstParameterTests {
         #expect(outputs["result"] == .int(2))
     }
 
-    @Test("what answers without running is worked out at link, not declared")
-    func constnessIsALinkFact() async throws {
+    @Test("what answers without running is worked out at the build, not declared")
+    func constnessIsABuildFact() async throws {
         // Given
         let sut = try Module(
             procedures: [

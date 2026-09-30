@@ -95,7 +95,7 @@ struct RangeTests {
     }
 
     @Test("a constant argument is judged at the build")
-    func aConstantArgumentIsJudgedAtTheLink() async throws {
+    func aConstantArgumentIsJudgedAtTheBuild() async throws {
         // Given. The argument is text, so the miss is the build's to see
         let sut = try Module(
             procedures: [
@@ -123,7 +123,7 @@ struct RangeTests {
     }
 
     @Test("a range that admits nothing refuses where it was written")
-    func anEmptyRangeRefusesAtTheLink() async throws {
+    func anEmptyRangeRefusesAtTheBuild() async throws {
         // Given. No whole number is at once at least 9 and at most 1
         let sut = try Module(
             procedures: [

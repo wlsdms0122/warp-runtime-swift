@@ -87,7 +87,7 @@ struct RefinementTests {
     }
 
     @Test("a range whose bounds meet on an excluded edge admits nothing")
-    func anEmptyOpenRangeRefusesAtTheLink() async throws {
+    func anEmptyOpenRangeRefusesAtTheBuild() async throws {
         // Given. The far bound is outside, so a floor standing on it leaves
         // nothing between them. A slot no call could fill is refused where it
         // was written, the way a range below its own floor is.

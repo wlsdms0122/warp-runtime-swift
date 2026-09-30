@@ -141,7 +141,7 @@ struct ReturnTypeTests {
         #expect(answer == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
     }
 
-    @Test("an answer naming a type nobody declared is refused at link")
+    @Test("an answer naming a type nobody declared is refused at the build")
     func unknownReturnTypeIsABuildError() async throws {
         // Given
         let sut = try Module(

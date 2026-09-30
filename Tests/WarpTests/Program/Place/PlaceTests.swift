@@ -139,7 +139,7 @@ struct PlaceTests {
     }
 
     @Test("the build narrows to the argument it refused, not to the call holding it")
-    func aLinkRefusalNarrowsToTheArgument() async throws {
+    func aBuildRefusalNarrowsToTheArgument() async throws {
         // Given. A call written with several arguments, one of which holds what
         // the declaration does not take. Reported from the call, an author is
         // told a thing is wrong and not which of the three it is.
@@ -182,7 +182,7 @@ struct PlaceTests {
         // that checks a document against itself and once by the walk that
         // resolves its names. Two spellings of one place is two documents as
         // far as an author following the keys is concerned.
-        let linked = try Module(
+        let built = try Module(
             procedures: [
                 entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(
@@ -211,13 +211,13 @@ struct PlaceTests {
             )
         }
 
-        let link = await #expect(throws: BuildError.self) {
-            try await Builder().build([linked] + Module.standard)
+        let build = await #expect(throws: BuildError.self) {
+            try await Builder().build([built] + Module.standard)
         }
 
         // Then
         #expect(load?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
-        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
+        #expect(build?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
     }
 
     @Test("every walk that reports a place steps through the same slots to reach one")
@@ -497,19 +497,19 @@ struct PlaceTests {
             )
         }
 
-        let link = await #expect(throws: BuildError.self) {
+        let build = await #expect(throws: BuildError.self) {
             try await Builder().build([declared] + Module.standard)
         }
 
         // Then
         #expect(load?.place?.rendered == "procedures.entry.body[0].leave")
-        #expect(link?.place?.rendered == "procedures.entry.body[0].call")
+        #expect(build?.place?.rendered == "procedures.entry.body[0].call")
     }
 
     @Test("a name two documents declare is refused at the one that could not be added")
     func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() async throws {
         // Given. A caller receiving a module from somewhere else appends it to
-        // what it already holds and links again. What that link refuses is a
+        // what it already holds and builds again. What that build refuses is a
         // collision between two documents, and only the caller knows which file
         // either arrived in. A refusal naming neither sends it opening all of
         // them.
