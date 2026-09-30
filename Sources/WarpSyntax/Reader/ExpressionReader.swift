@@ -52,10 +52,9 @@ public struct ExpressionReader: Decodable {
     //
     // Not public: a form reading an expression goes through `init(from:)`, which
     // is where a refusal from this grammar is given the address of the walk
-    // that asked for it. A door around that boundary is a way to refuse with no
-    // address at all, and one existed for exactly as long as this was public.
-    static func read(_ value: Value, in decoder: Decoder? = nil) throws -> Expression {
-        try read(value, at: decoder?.steps ?? [], in: decoder)
+    // that asked for it.
+    static func read(_ value: Value, in decoder: Decoder) throws -> Expression {
+        try read(value, at: decoder.steps, in: decoder)
     }
 
     // MARK: - Private
@@ -73,7 +72,7 @@ public struct ExpressionReader: Decodable {
     private static func read(
         _ value: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         do {
             switch value {
@@ -116,7 +115,7 @@ public struct ExpressionReader: Decodable {
     private static func read(
         record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         switch Tagging(record.entries, reading: ExpressionTag.init) {
         case let .one(tag, written):
@@ -148,9 +147,7 @@ public struct ExpressionReader: Decodable {
 
         if !Set(record.names).isDisjoint(with: Interpolation.keys) { return try template(in: record, at: steps, in: decoder) }
 
-        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
-
-        guard notation.readsBareRecords else {
+        guard decoder.notation.readsBareRecords else {
             throw ExpressionFormError(
                 "a mapping where a value is wanted is one of"
                     + " \(Self.tags.map { tag in "`\(tag)`" }.sorted().joined(separator: ", ")),"
@@ -168,15 +165,11 @@ public struct ExpressionReader: Decodable {
     private static func spelled(
         _ record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression? {
-        // A surface reading expressions alone reads with no notation, so a
-        // record it meets is the record it is.
         guard
-            let decoder,
-            let notation = decoder.userInfo[.notation] as? Notation,
-            let spelling = notation.spelling,
-            spelling.claims(Set(record.names), in: notation)
+            let spelling = decoder.notation.spelling,
+            spelling.claims(Set(record.names), in: decoder.notation)
         else { return nil }
 
         return try spelling.expression(from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder))
@@ -186,7 +179,7 @@ public struct ExpressionReader: Decodable {
     private static func fields(
         under written: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         // A named record is data written as itself, so the name has no place
         // under the tag: kept, it would be a second spelling of that data, and
@@ -203,7 +196,7 @@ public struct ExpressionReader: Decodable {
     private static func fields(
         in record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         .record(
             try record.entries.reduce(into: [Name: Expression]()) { fields, entry in
@@ -234,7 +227,7 @@ public struct ExpressionReader: Decodable {
         _ written: Value,
         optional: Bool,
         at inside: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         let key = (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key
 
@@ -254,17 +247,10 @@ public struct ExpressionReader: Decodable {
 
         do {
             if case let .string(spelling) = spelled {
-                let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
+                let notation = decoder.notation
 
                 type = try TypeReader.parse(spelling) { name in notation.qualified(name, as: .type) }
             } else {
-                guard let decoder else {
-                    throw ExpressionFormError(
-                        "{ \(key): } with a type written as a mapping cannot be read here."
-                            + " This surface reads a type by its name alone"
-                    )
-                }
-
                 type = try TypeReader(from: ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside))
                     .type
             }
@@ -282,15 +268,8 @@ public struct ExpressionReader: Decodable {
     private static func closure(
         _ written: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
-        guard let decoder else {
-            throw ExpressionFormError(
-                "{ closure: } cannot be read here. A closure carries statements,"
-                    + " and this surface reads expressions alone"
-            )
-        }
-
         do {
             return .closure(
                 try ProcedureReader(from: ValueDecoder(below: decoder, key: ExpressionTag.closure.key.spelling, holding: written, at: steps))
@@ -309,15 +288,8 @@ public struct ExpressionReader: Decodable {
     private static func call(
         _ written: Value,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
-        guard let decoder else {
-            throw ExpressionFormError(
-                "{ call: } cannot be read here. A call may carry bodies,"
-                    + " and this surface reads expressions alone"
-            )
-        }
-
         do {
             return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.rawValue, holding: written, at: steps))
                 .expression
@@ -331,15 +303,13 @@ public struct ExpressionReader: Decodable {
     private static func template(
         in record: Value.Dictionary,
         at steps: [Place.Step],
-        in decoder: Decoder?
+        in decoder: Decoder
     ) throws -> Expression {
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
         // says a text may not write it; it does not hand the keys back to mean
         // something else.
-        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
-
-        guard let interpolation = notation.interpolation else {
+        guard let interpolation = decoder.notation.interpolation else {
             throw ExpressionFormError(
                 "this notation does not spell a template. Put the text together"
                     + " by sending the procedures that put text together"

@@ -47,7 +47,7 @@ public struct ModuleReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+        let notation = decoder.notation
 
         // Read standing on the procedures rather than on the module holding
         // them, because what is refused just below is about the procedures. A

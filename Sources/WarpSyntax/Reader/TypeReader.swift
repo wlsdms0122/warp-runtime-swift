@@ -444,7 +444,7 @@ public struct TypeReader: Decodable {
     }
 
     private static func read(from decoder: Decoder) throws -> TypeExpression {
-        let notation = decoder.userInfo[.notation] as? Notation ?? .canonical
+        let notation = decoder.notation
         if let written = try? decoder.singleValueContainer().decode(String.self) {
             return try parse(written) { name in notation.qualified(name, as: .type) }
         }

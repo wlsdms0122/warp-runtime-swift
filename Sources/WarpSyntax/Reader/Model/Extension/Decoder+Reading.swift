@@ -14,6 +14,10 @@ extension Decoder {
     // decoder whose descent nobody here watched.
     var steps: [Place.Step] { (self as? ValueDecoder)?.steps ?? [] }
 
+    // The notation this reading is in. A reading handed none reads a
+    // document, which has no spellings.
+    var notation: Notation { userInfo[.notation] as? Notation ?? .canonical }
+
     // Read what is written here, standing on it.
     //
     // For a reader that has to judge a value after reading it: what is judged
