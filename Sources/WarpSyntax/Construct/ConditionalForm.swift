@@ -36,9 +36,8 @@ public struct ConditionalForm: ConstructForm {
     }
 
     // MARK: - Public
-    // The namelessness is not this form's to enforce. `StatementReader` asks
-    // the expression itself (`answersNothing`), so a notation's own spelling of a
-    // conditional is held to the same rule without remembering it.
+    // A name on a conditional is `Validator`'s to refuse (`answersNothing`),
+    // whichever notation spelled it.
     public func expression(boundTo name: String?) -> Expression {
         .conditional(condition, then: then, else: otherwise)
     }
