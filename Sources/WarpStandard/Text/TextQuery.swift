@@ -1,5 +1,5 @@
 //
-//  SpellingQuery.swift
+//  TextQuery.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/23/26.
@@ -12,7 +12,7 @@ import Warp
 // value, because it is what interpolation is made of: interpolating a number
 // is the ordinary case, and null spells as `null`, the way it does inside a
 // container.
-struct SpellingQuery: Query {
+struct TextQuery: Query {
     // What this takes: the value spelled, and nothing else.
     enum Parameters: Int, ParameterSet {
         case value
