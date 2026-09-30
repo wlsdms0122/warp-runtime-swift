@@ -163,8 +163,8 @@ public struct Builder: Sendable {
             compiling.lay(document, at: origin, rows: rows, answering: answered)
         }
 
-        try compiling.answerHeld()
-        try compiling.answering()
+        try compiling.resolveHeldClosures()
+        try compiling.resolveEvery()
 
         var declarers = DeclarerTable()
 

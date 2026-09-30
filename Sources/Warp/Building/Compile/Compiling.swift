@@ -45,7 +45,7 @@ struct Compiling {
     // the run will read.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
-    // Which row each document's numbers stand for, answered when the document
+    // Which row each document's numbers stand for, resolved when the document
     // is laid down.
     private var named: [Int: [Int?]] = [:]
 
@@ -155,7 +155,7 @@ struct Compiling {
 
     // One document laid down: its declarations take the rows after the ones
     // already here, and its numbering says what the bodies it lowers are
-    // written with. Which rows those are is answered here rather than looked
+    // written with. Which rows those are is resolved here rather than looked
     // up again, since laying them down is what decided it.
     @discardableResult
     mutating func hold(
@@ -175,9 +175,9 @@ struct Compiling {
     }
 
     // Which row each number this document gave stands for. A number of its own
-    // reaches a name it declared or one behind it, so the answer never moves
-    // after this.
-    mutating func answering(_ origin: Int) {
+    // reaches a name it declared or one behind it, so the resolution never
+    // moves after this.
+    mutating func resolve(_ origin: Int) {
         named[origin] = lowering.documents[origin].numbering.resolved(rows: lowering.rows, own: lowering.own(origin))
     }
 
@@ -189,9 +189,9 @@ struct Compiling {
     // A number none of them reaches is a document laid without what it sends,
     // which is refused here rather than left to read as a number with no row
     // where a body of it is run.
-    mutating func answering() throws {
+    mutating func resolveEvery() throws {
         for origin in documents.indices {
-            answering(origin)
+            resolve(origin)
 
             for (number, row) in (named[origin] ?? []).enumerated() where row == nil {
                 guard case let .unfound(.sent(declared)) = lowering.documents[origin].numbering.row(
@@ -255,14 +255,14 @@ struct Compiling {
         )
     }
 
-    // Every closure a laid document's values hold answered with the row it
-    // stands at here, through the door the link answers them by. A document
+    // Every closure a laid document's values hold resolved to the row it
+    // stands at here, through the door the link resolves them by. A document
     // read out of an object holds its closures by spelling alone, and one
     // compiled in memory holds them standing as the rows of the compile that
     // folded them, which is not this one; a fold through either hands them
-    // on, so every one is answered here before anything folds. The numbers
+    // on, so every one is resolved here before anything folds. The numbers
     // their code carries read against this table as they are.
-    mutating func answerHeld() throws {
+    mutating func resolveHeldClosures() throws {
         let resolver = ClosureResolver(
             spelled: ClosureRows(
                 naming: naming,

@@ -248,7 +248,7 @@ struct Compiler {
             variables: boxes
         )
 
-        compiling.answering(origin)
+        compiling.resolve(origin)
 
         // The bodies the documents behind this one lowered, which this one
         // may run.
