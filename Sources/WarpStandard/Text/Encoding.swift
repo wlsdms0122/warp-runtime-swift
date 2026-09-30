@@ -8,31 +8,11 @@
 import Foundation
 import Warp
 
-// The named mapping between bytes and text. The declaration's `enum` says the
-// same names early, and this keeps its own contract too, so a name added there
-// without a mapping here refuses instead of quietly answering in the wrong
-// encoding.
+// The named mapping between bytes and text.
 struct Encoding: Sendable {
     // MARK: - Property
-    private let procedure: String
-
     // MARK: - Initializer
-    init(_ procedure: String) {
-        self.procedure = procedure
-    }
-
     // MARK: - Public
-    // Refuses a name this has no mapping for, before either direction runs.
-    func named(_ value: Value) throws {
-        guard case let .string(name) = value else {
-            throw ExecutionError("\(procedure) asks \(value.type) for an encoding name")
-        }
-
-        guard name == "utf8" else {
-            throw ExecutionError("\(procedure) has no encoding named '\(name)'")
-        }
-    }
-
     // Validated by the standard library's own UTF-8, not a platform string
     // bridge: which bytes are text is this language's judgment, and it must
     // land the same on every host. A broken sequence answers nil, never a

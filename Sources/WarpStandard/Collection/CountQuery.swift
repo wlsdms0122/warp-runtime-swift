@@ -26,13 +26,15 @@ struct CountQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        // A list in either spelling. Bytes have a length the way text has a
-        // count, and unlike text, no Unicode question about what "one" means.
-        if let elements = question[.collection].elements { return .int(elements.count) }
-
         switch question[.collection] {
         case let .string(text):
             return .int(text.count)
+
+        case let .array(elements):
+            return .int(elements.count)
+
+        case let .bytes(bytes):
+            return .int(bytes.count)
 
         case let .record(record):
             return .int(record.count)
@@ -41,7 +43,7 @@ struct CountQuery: Query {
             return .int(held.count)
 
         default:
-            return nil
+            throw ExecutionError("std.collection.count asks a collection")
         }
     }
 

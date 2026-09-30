@@ -33,14 +33,12 @@ struct EncodedQuery: Query {
     }
 
     // MARK: - Property
-    private let encoding = Encoding("encoded")
-
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        try encoding.named(question[.encoding])
-
-        guard case let .string(text) = question[.text] else { return nil }
+        guard case let .string(text) = question[.text] else {
+            throw ExecutionError("std.text.encoded asks a string")
+        }
 
         return .bytes(Array(text.utf8))
     }

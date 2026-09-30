@@ -34,14 +34,14 @@ struct DecodedQuery: Query {
     }
 
     // MARK: - Property
-    private let encoding = Encoding("decoded")
+    private let encoding = Encoding()
 
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        try encoding.named(question[.encoding])
-
-        guard let bytes = question[.bytes].bytes else { return nil }
+        guard let bytes = question[.bytes].bytes else {
+            throw ExecutionError("std.text.decoded asks bytes")
+        }
 
         guard let text = encoding.text(of: bytes) else {
             throw ExecutionError("the bytes are not utf8 text")

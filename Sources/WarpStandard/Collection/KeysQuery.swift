@@ -28,7 +28,9 @@ struct KeysQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let held = question[.dictionary].asDictionary else { return nil }
+        guard let held = question[.dictionary].asDictionary else {
+            throw ExecutionError("std.collection.keys asks a dictionary")
+        }
 
         // In name order, the order both spellings hold: a walk that answered a
         // different order each run would make a program that reads it depend on

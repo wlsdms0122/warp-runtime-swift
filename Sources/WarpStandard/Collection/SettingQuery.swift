@@ -41,10 +41,11 @@ struct SettingQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let held = question[.dictionary].asDictionary else { return nil }
-
-        guard case let .string(key) = question[.key] else {
-            throw ExecutionError("setting asks a string key")
+        guard
+            let held = question[.dictionary].asDictionary,
+            case let .string(key) = question[.key]
+        else {
+            throw ExecutionError("std.collection.setting asks a dictionary and a string")
         }
 
         let field: Name

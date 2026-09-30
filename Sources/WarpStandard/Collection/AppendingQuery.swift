@@ -20,13 +20,12 @@ struct AppendingQuery: Query {
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Answered in the spelling the collection arrived in, so a compact one
         // stays compact until an element that is not a byte is put among them,
-        // which `adding` reads for itself. Only the arriving element decides
-        // that, so only it is looked at.
-        let collection = question[.array]
+        // which `adding` reads for itself.
+        guard let appended = question[.array].adding(question[.element], atFront: false) else {
+            throw ExecutionError("std.collection.appending asks an array")
+        }
 
-        guard collection.elements != nil else { return nil }
-
-        return collection.adding(question[.element], atFront: false)
+        return appended
     }
 
     // MARK: - Private

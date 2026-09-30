@@ -28,7 +28,7 @@ struct FlooredQuery: Query {
             return .int(try integer.of(real, rounded: .down))
 
         default:
-            return nil
+            throw ExecutionError("std.math.floored asks a number")
         }
     }
 

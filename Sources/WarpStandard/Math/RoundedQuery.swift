@@ -27,7 +27,7 @@ struct RoundedQuery: Query {
             return .int(try integer.of(real, rounded: .toNearestOrAwayFromZero))
 
         default:
-            return nil
+            throw ExecutionError("std.math.rounded asks a number")
         }
     }
 

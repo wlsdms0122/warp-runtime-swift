@@ -360,29 +360,6 @@ struct StandardTests {
         )
     }
 
-    @Test("a codec keeps its own contract on the encoding name")
-    func aCodecReadsItsEncodingArgument() async throws {
-        // Given. The declaration's enum says the same names early; this is the
-        // implementation refusing a name it has no mapping for, so a drifted
-        // declaration cannot make it answer in the wrong encoding
-        let sut = DecodedQuery()
-
-        // When / Then
-        #expect(
-            try await sut.evaluate(Question(
-                arguments: ["bytes": .bytes([104]), "encoding": .string("utf8")]
-            )) == .string("h")
-        )
-
-        await #expect {
-            try await sut.evaluate(Question(
-                arguments: ["bytes": .bytes([104]), "encoding": .string("utf16")]
-            ))
-        } throws: { error in
-            "\(error)".contains("no encoding named 'utf16'")
-        }
-    }
-
     @Test("text spells a whole number the same way at every size and depth")
     func textSpellsWholeNumbersUniformly() async throws {
         // Given. The quotes must not change with the value's size: a number is

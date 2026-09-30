@@ -110,7 +110,7 @@ struct Fanout: Sendable {
             Piece(
                 key: entry.name,
                 position: position,
-                closure: try closure(entry.value, called: entry.name.spelling),
+                closure: try closure(entry.value),
                 arguments: []
             )
         }
@@ -135,35 +135,21 @@ struct Fanout: Sendable {
                     Piece(
                         key: nil,
                         position: position,
-                        closure: try closure(element, called: "[\(position)]"),
+                        closure: try closure(element),
                         arguments: []
                     )
                 },
                 keyed: false
             )
 
-        case let value:
-            throw ExecutionError(
-                "\(name) asks a record or an array of closures, and was sent \(value.type)"
-            )
+        default:
+            throw ExecutionError("\(name) asks a record or an array of closures")
         }
     }
 
-    private func closure(_ value: Value, called label: String) throws -> Closure {
+    private func closure(_ value: Value) throws -> Closure {
         guard case let .procedure(closure) = value else {
-            throw ExecutionError(
-                "\(name) runs closures, and piece \(label) is \(value.type)"
-            )
-        }
-
-        // The slot asks for isolated closures, so a piece that reached here
-        // has already been settled against that. Asked again at the procedure's own
-        // door, where a host that assembled the invocation itself arrives.
-        guard try closure.runsBeside() else {
-            throw ExecutionError(
-                "\(name) runs isolated closures, and piece \(label) writes"
-                    + " what another body could touch"
-            )
+            throw ExecutionError("\(name) runs closures")
         }
 
         return closure

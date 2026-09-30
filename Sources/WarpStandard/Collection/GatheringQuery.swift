@@ -41,21 +41,16 @@ struct GatheringQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
-        // equation, so bytes are read where an array is.
+        // equation, so bytes are read where an array is, on either side.
         let collection = question[.array]
 
-        guard let held = collection.elements else { return nil }
-
-        guard let given = question[.positions].elements else {
-            throw ExecutionError(
-                "gathering asks an array of positions, and"
-                    + " \(question[.positions].type) arrived"
-            )
+        guard let held = collection.elements, let given = question[.positions].elements else {
+            throw ExecutionError("std.collection.gathering asks two arrays")
         }
 
         let positions = try given.map { position -> Int in
             guard case let .int(number) = position else {
-                throw ExecutionError("gathering asks whole numbers, and \(position.type) arrived")
+                throw ExecutionError("std.collection.gathering asks whole positions")
             }
 
             // The collection is there and says how long it is, so a position it
