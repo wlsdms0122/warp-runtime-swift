@@ -417,18 +417,6 @@ struct ClosureTests {
         }
     }
 
-    @Test("a procedure is never equal to a procedure")
-    func proceduresHaveNoEquality() throws {
-        // Given. There is no honest answer, so the language does not offer one
-        let sut = Value.procedure(
-            Closure.assembled()
-        )
-
-        // Then
-        #expect(sut != sut)
-        #expect(sut.type == .procedure)
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

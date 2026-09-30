@@ -268,18 +268,6 @@ struct FieldPlaceTests {
         #expect(byPlace == byName)
     }
 
-    @Test("a write lands on the place the link put the field at, whatever spelling stands beside it")
-    func aWriteLandsOnItsPlace() throws {
-        // Given
-        let point = Value.record(Record(name: nil, ["x": .int(1), "y": .int(2)]))
-
-        // When
-        let written = try point.writing(.int(9), at: [.field(1, "z")], under: "point.z")
-
-        // Then
-        #expect(written == .record(Record(name: nil, ["x": .int(1), "y": .int(9)])))
-    }
-
     // MARK: - Public
     // MARK: - Private
     // The steps of the path a body answers with, which is where these tests

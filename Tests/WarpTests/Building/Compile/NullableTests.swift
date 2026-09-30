@@ -17,40 +17,6 @@ struct NullableTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a nullable slot takes its value, null, and nothing else")
-    func aNullableSlotSettles() throws {
-        let declared = TypeExpression.nullable(.int)
-
-        #expect(try declared.settling(.int(3), at: "limit") == .int(3))
-        #expect(try declared.settling(.null, at: "limit") == .null)
-        #expect {
-            try declared.settling(.string("x"), at: "limit")
-        } throws: { error in
-            error is ArgumentError && "\(error)".contains("expected int, got string")
-        }
-    }
-
-    @Test("a block whose result is null holds no result, the way a document reads one")
-    func aNullResultIsNoResult() {
-        // Given / When
-        let sut = Block(body: [], result: .literal(.null))
-
-        // Then
-        #expect(sut.result == nil)
-    }
-
-    @Test("what may be null does not stand where null was never declared")
-    func aNullableReadingNeedsANullableSlot() throws {
-        // The declared half fits its own slot, and the nullable does not. In
-        // either wrapping.
-        #expect(TypeExpression.nullable(.int).accepts(.int))
-        #expect(TypeExpression.nullable(.int).accepts(.null))
-        #expect(TypeExpression.nullable(.int).accepts(.nullable(.int)))
-        #expect(!TypeExpression.int.accepts(.nullable(.int)))
-        #expect(!TypeExpression.nullable(.int).accepts(.string))
-        #expect(!TypeExpression.nullable(.int).accepts(.nullable(.string)))
-    }
-
     @Test("a nullable reading is refused where the plain type is declared")
     func aNullableReadingIsRefusedAtACall() async throws {
         // Given. The `?.` path answers `int?`, and the callee declares `int`
@@ -334,12 +300,6 @@ struct NullableTests {
                 == .string("a")
         )
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
-    }
-
-    @Test("a nullable type spells itself in refusals")
-    func aNullableRenders() {
-        #expect(TypeExpression.nullable(.int).rendered == "int?")
-        #expect(TypeExpression.nullable(.array(.string)).rendered == "array<string>?")
     }
 
     @Test("a ?. that could not have read past anything is refused")

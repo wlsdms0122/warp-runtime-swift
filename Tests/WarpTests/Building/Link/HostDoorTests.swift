@@ -83,34 +83,6 @@ struct HostDoorTests {
         #expect(settled["balance"] == .int(1))
     }
 
-    @Test("a dictionary slot takes a record and answers one whose names are data")
-    func aRecordSettlesIntoADictionaryAsData() async throws {
-        // Given. A name is proved where a slot declares one, and a `dictionary`
-        // slot declares none
-        let image = try await Builder().build([sut])
-        let named = try image.settling(.dictionary(["balance": .int(1)]), as: "bank.Account")
-
-        // When
-        let settled = try TypeExpression.dictionary(.any).settling(named, at: "held")
-
-        // Then
-        #expect(named == .record(Record(name: "bank.Account", ["balance": .int(1)])))
-        #expect(settled == .dictionary(["balance": .int(1)]))
-    }
-
-    @Test("a layout a host builds carries no name of its own")
-    func aHostBuiltLayoutHasNoName() throws {
-        // Given. A name says a declaration, and a declaration is the build's
-        let layout = try Layout(fields: ["balance"])
-
-        // When
-        let built = try Record(layout: layout, checking: [.int(1)])
-
-        // Then
-        #expect(built.name == nil)
-        #expect(Value.record(built) == .dictionary(["balance": .int(1)]))
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

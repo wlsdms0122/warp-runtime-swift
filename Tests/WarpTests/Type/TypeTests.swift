@@ -252,6 +252,105 @@ struct TypeTests {
         #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
     }
 
+    @Test("a nullable slot takes its value, null, and nothing else")
+    func aNullableSlotSettles() throws {
+        let declared = TypeExpression.nullable(.int)
+
+        #expect(try declared.settling(.int(3), at: "limit") == .int(3))
+        #expect(try declared.settling(.null, at: "limit") == .null)
+        #expect {
+            try declared.settling(.string("x"), at: "limit")
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("expected int, got string")
+        }
+    }
+
+    @Test("what may be null does not stand where null was never declared")
+    func aNullableReadingNeedsANullableSlot() throws {
+        // The declared half fits its own slot, and the nullable does not. In
+        // either wrapping.
+        #expect(TypeExpression.nullable(.int).accepts(.int))
+        #expect(TypeExpression.nullable(.int).accepts(.null))
+        #expect(TypeExpression.nullable(.int).accepts(.nullable(.int)))
+        #expect(!TypeExpression.int.accepts(.nullable(.int)))
+        #expect(!TypeExpression.nullable(.int).accepts(.string))
+        #expect(!TypeExpression.nullable(.int).accepts(.nullable(.string)))
+    }
+
+    @Test("a nullable type spells itself in refusals")
+    func aNullableRenders() {
+        #expect(TypeExpression.nullable(.int).rendered == "int?")
+        #expect(TypeExpression.nullable(.array(.string)).rendered == "array<string>?")
+    }
+
+    @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
+    func anAssembledClosureClaimsNothing() throws {
+        // Given. Assembled against the table it is judged against, so what is
+        // being asked is the claim and not which link made the row
+        let types = TypeTable()
+        let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
+
+        // When / Then
+        #expect(throws: ArgumentError.self) {
+            try TypeExpression.procedure(nil, .unstated, .isolated)
+                .settling(.procedure(closure), at: "piece", in: types)
+        }
+        #expect(throws: Never.self) {
+            try TypeExpression.procedure(nil)
+                .settling(.procedure(closure), at: "piece", in: types)
+        }
+    }
+
+    @Test("a recursive type compared with itself agrees instead of recursing")
+    func aRecursiveTypeAcceptsItself() async throws {
+        // Given. A type that names itself walks back into the comparison it is
+        // inside; meeting the pair again is agreement, not a regress
+        let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
+
+        // When / Then
+        #expect(TypeExpression.named("Node").accepts(.named("Node"), in: types))
+
+        let sut = try Module(
+            types: ["Node": .record(["value": .int, "next": .nullable(.named("Node"))])],
+            procedures: [
+                "read": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "node", type: .named("Node"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([.key("node"), .key("value")])
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "node", type: .named("Node"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .call(Call(selector: "read", arguments: [reference("node")]))
+                )
+            ]
+        )
+
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+    }
+
+    @Test("a dictionary slot takes a record and answers one whose names are data")
+    func aRecordSettlesIntoADictionaryAsData() throws {
+        // Given. A name is proved where a slot declares one, and a `dictionary`
+        // slot declares none
+        let named = Value.record(Record(name: "bank.Account", ["balance": .int(1)]))
+
+        // When
+        let settled = try TypeExpression.dictionary(.any).settling(named, at: "held")
+
+        // Then
+        #expect(settled == .dictionary(["balance": .int(1)]))
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

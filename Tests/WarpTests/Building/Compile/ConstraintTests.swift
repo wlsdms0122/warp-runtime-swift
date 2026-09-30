@@ -1066,43 +1066,6 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a recursive type compared with itself agrees instead of recursing")
-    func aRecursiveTypeAcceptsItself() async throws {
-        // Given. A type that names itself walks back into the comparison it is
-        // inside; meeting the pair again is agreement, not a regress
-        let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
-
-        // When / Then
-        #expect(TypeExpression.named("Node").accepts(.named("Node"), in: types))
-
-        let sut = try Module(
-            types: ["Node": .record(["value": .int, "next": .nullable(.named("Node"))])],
-            procedures: [
-                "read": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "node", type: .named("Node"))],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .reference([.key("node"), .key("value")])
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [Parameter(name: "node", type: .named("Node"))],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .call(Call(selector: "read", arguments: [reference("node")]))
-                )
-            ]
-        )
-
-        await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-    }
-
     @Test("a dot on a record is a read, and a procedure there is written as a call")
     func aDotOnARecordDoesNotReachAProcedure() async throws {
         // Given. The record does not declare the name, and a type with fields

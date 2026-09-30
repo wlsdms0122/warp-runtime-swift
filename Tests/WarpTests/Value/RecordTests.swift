@@ -142,6 +142,46 @@ struct RecordTests {
         #expect(record["a"] == .int(1))
     }
 
+    @Test("a path write reaches a nameless record and the dictionary it equals the same way")
+    func aPathWriteReadsEitherSpelling() throws {
+        // Given. The contract says these are one value
+        let laid = Value.record(Record(name: nil, ["a": .int(1)]))
+        let held = Value.dictionary(["a": .int(1)])
+        let path: [Projection] = [.key("b")]
+
+        // When / Then
+        #expect(laid == held)
+        #expect(
+            try laid.writing(.int(2), at: path, under: "x.b")
+                == (try held.writing(.int(2), at: path, under: "x.b"))
+        )
+    }
+
+    @Test("a write lands on the place the link put the field at, whatever spelling stands beside it")
+    func aWriteLandsOnItsPlace() throws {
+        // Given
+        let point = Value.record(Record(name: nil, ["x": .int(1), "y": .int(2)]))
+
+        // When
+        let written = try point.writing(.int(9), at: [.field(1, "z")], under: "point.z")
+
+        // Then
+        #expect(written == .record(Record(name: nil, ["x": .int(1), "y": .int(9)])))
+    }
+
+    @Test("a layout a host builds carries no name of its own")
+    func aHostBuiltLayoutHasNoName() throws {
+        // Given. A name says a declaration, and a declaration is the build's
+        let layout = try Layout(fields: ["balance"])
+
+        // When
+        let built = try Record(layout: layout, checking: [.int(1)])
+
+        // Then
+        #expect(built.name == nil)
+        #expect(Value.record(built) == .dictionary(["balance": .int(1)]))
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
