@@ -23,10 +23,10 @@ struct Scope: Sendable {
     // closure's included) refuses a parameter that would take one's place:
     // linking folds a constant wherever its name is read, so a parameter under
     // that name would never be the one that answers.
-    let constants: Set<Name>
+    let bound: Set<Name>
 
     // A procedure's own body: no loop yet.
-    static let procedure = Scope(rounds: [], constants: [])
+    static let procedure = Scope(rounds: [], bound: [])
 
     // A procedure written inside another. It may be called anywhere and long
     // after, so the loops around where it was *written* are not around where it
@@ -34,17 +34,17 @@ struct Scope: Sendable {
     // variable's box is one thing under one name everywhere the name is
     // visible, and this body is one of those places.
     var enclosed: Scope {
-        Scope(rounds: [], constants: constants)
+        Scope(rounds: [], bound: bound)
     }
 
     // MARK: - Initializer
     // MARK: - Public
-    static func procedure(constants: Set<Name>) -> Scope {
-        Scope(rounds: [], constants: constants)
+    static func procedure(bound: Set<Name>) -> Scope {
+        Scope(rounds: [], bound: bound)
     }
 
     func inside(_ round: Name?) -> Scope {
-        Scope(rounds: rounds + [round], constants: constants)
+        Scope(rounds: rounds + [round], bound: bound)
     }
 
     // MARK: - Private

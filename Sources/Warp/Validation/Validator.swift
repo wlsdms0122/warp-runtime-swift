@@ -41,7 +41,7 @@ public struct Validator: Sendable {
             try validate(
                 expression,
                 visible: constants,
-                scope: .procedure(constants: constants),
+                scope: .procedure(bound: constants),
                 at: .constant(name.spelling, in: .of(module))
             )
         }
@@ -61,7 +61,7 @@ public struct Validator: Sendable {
             try validate(
                 variable.start,
                 visible: constants,
-                scope: .procedure(constants: constants),
+                scope: .procedure(bound: constants),
                 at: .variable(name.spelling, in: .of(module))
             )
         }
@@ -193,7 +193,7 @@ public struct Validator: Sendable {
             visible: bound.union(parameters),
             variables: variables.subtracting(parameters).union(handed),
             declared: parameters,
-            scope: .procedure(constants: bound),
+            scope: .procedure(bound: bound),
             at: place
         )
     }
@@ -279,7 +279,7 @@ public struct Validator: Sendable {
 
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
-                    try introduced(name, beside: scope.constants, at: here)
+                    try introduced(name, beside: scope.bound, at: here)
 
                     guard !declared.contains(name) else {
                         throw ValidationError("duplicate statement id '\(name)'", at: here)
@@ -428,7 +428,7 @@ public struct Validator: Sendable {
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
             for (position, parameter) in procedure.signature.names.enumerated() {
-                try introduced(parameter, beside: scope.constants, at: inside.part(.parameters).index(position))
+                try introduced(parameter, beside: scope.bound, at: inside.part(.parameters).index(position))
             }
 
             try reads(procedure, at: place)
@@ -504,7 +504,7 @@ public struct Validator: Sendable {
         // lets `while` read how many rounds have passed.
         case let .loop(condition, body, round):
             if let round {
-                try introduced(round, beside: scope.constants, at: place)
+                try introduced(round, beside: scope.bound, at: place)
             }
 
             let inner = visible.union(round.map { round in [round] } ?? [])
@@ -528,7 +528,7 @@ public struct Validator: Sendable {
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
             if let failure {
-                try introduced(failure, beside: scope.constants, at: place)
+                try introduced(failure, beside: scope.bound, at: place)
             }
 
             try validate(
@@ -722,10 +722,10 @@ public struct Validator: Sendable {
     // under that spelling would never be the one that answers.
     private func introduced(
         _ name: Name,
-        beside constants: Set<Name>,
+        beside bound: Set<Name>,
         at place: Place
     ) throws {
-        guard constants.contains(name) else { return }
+        guard bound.contains(name) else { return }
 
         throw ValidationError(
             "'\(name)' collides with a name the module bound, which it would"
