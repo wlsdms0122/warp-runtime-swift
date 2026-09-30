@@ -94,8 +94,13 @@ public struct Writer: Sendable {
                         try procedures.mapValues { asked in
                             var written = try fields(of: asked.signature)
 
-                            if asked.constness == .const { written["const"] = .bool(true) }
-                            if asked.isolation == .isolated { written["isolated"] = .bool(true) }
+                            if asked.constness == .const {
+                                written[ContractProcedureReader.CodingKeys.const.name] = .bool(true)
+                            }
+
+                            if asked.isolation == .isolated {
+                                written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
+                            }
 
                             return .dictionary(written)
                         }
@@ -165,7 +170,7 @@ public struct Writer: Sendable {
         written.merge(try fields(of: block, in: nil)) { one, _ in one }
 
         if let bounds = try TypeWriter(readBy: readBy).bounds(of: procedure.signature) {
-            written["bounds"] = bounds
+            written[ProcedureReader.CodingKeys.bounds.name] = bounds
         }
 
         return .dictionary(written)
@@ -176,18 +181,18 @@ public struct Writer: Sendable {
     }
 
     public func value(of parameter: Parameter) throws -> Value {
-        var written: [Name: Value] = ["name": .string(parameter.name.spelling)]
+        var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 
         if let type = parameter.type {
-            written["type"] = try value(of: type)
+            written[ParameterReader.CodingKeys.type.name] = try value(of: type)
         }
 
         if let candidates = parameter.candidates {
-            written["enum"] = .array(candidates.map(Value.string))
+            written[ParameterReader.CodingKeys.candidates.name] = .array(candidates.map(Value.string))
         }
 
         if let description = parameter.description {
-            written["description"] = .string(description)
+            written[ParameterReader.CodingKeys.description.name] = .string(description)
         }
 
         // A record holding nothing but the name is one pair, which a notation
@@ -314,11 +319,11 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [:]
 
         if form?.requiresBody == true || !block.body.statements.isEmpty {
-            written["body"] = .array(try block.body.statements.map(value(of:)))
+            written[BlockReader.CodingKeys.body.name] = .array(try block.body.statements.map(value(of:)))
         }
 
         if let result = block.result {
-            written["result"] = try value(of: result)
+            written[BlockReader.CodingKeys.result.name] = try value(of: result)
         }
 
         return written
@@ -330,11 +335,11 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [:]
 
         if !signature.parameters.isEmpty {
-            written["parameters"] = .array(try signature.parameters.map(value(of:)))
+            written[ProcedureReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
         }
 
         if let returns = signature.returns {
-            written["returns"] = try value(of: returns)
+            written[ProcedureReader.CodingKeys.returns.name] = try value(of: returns)
         }
 
         return written
@@ -364,14 +369,14 @@ public struct Writer: Sendable {
         // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
-                "when": try value(of: condition),
-                "then": .array(try then.statements.map(value(of:)))
+                ConditionalForm.CodingKeys.when.name: try value(of: condition),
+                ConditionalForm.CodingKeys.then.name: .array(try then.statements.map(value(of:)))
             ]
 
             // An empty `else` runs what no `else` runs, so it is written the
             // one way: not at all.
             if let otherwise, !otherwise.statements.isEmpty {
-                written["else"] = .array(try otherwise.statements.map(value(of:)))
+                written[ConditionalForm.CodingKeys.else.name] = .array(try otherwise.statements.map(value(of:)))
             }
 
             return (try spelling(ConditionalForm.self), .dictionary(written))
@@ -380,7 +385,7 @@ public struct Writer: Sendable {
             try named(round, matches: id, in: "loop", binding: "round")
 
             var written: [Name: Value] = [
-                "while": try value(of: condition)
+                LoopForm.CodingKeys.while.name: try value(of: condition)
             ]
 
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
@@ -410,7 +415,7 @@ public struct Writer: Sendable {
 
             var written = try fields(of: attempted, in: AttemptForm.self)
 
-            written["rescue"] = .dictionary(try fields(of: rescue, in: nil))
+            written[AttemptForm.CodingKeys.rescue.name] = .dictionary(try fields(of: rescue, in: nil))
 
             return (try spelling(AttemptForm.self), .dictionary(written))
 
@@ -429,20 +434,24 @@ public struct Writer: Sendable {
             throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
         }
 
-        var written: [Name: Value] = ["procedure": try value(of: callee)]
+        var written: [Name: Value] = [CallForm.CodingKeys.procedure.name: try value(of: callee)]
 
         if !arguments.isEmpty {
-            written["arguments"] = .array(try arguments.map { argument in try value(of: argument) })
+            written[CallForm.CodingKeys.arguments.name] = .array(
+                try arguments.map { argument in try value(of: argument) }
+            )
         }
 
         return .dictionary(written)
     }
 
     private func call(of call: Call) throws -> Value {
-        var written: [Name: Value] = ["procedure": .string(call.selector.spelling)]
+        var written: [Name: Value] = [CallForm.CodingKeys.procedure.name: .string(call.selector.spelling)]
 
         if !call.arguments.isEmpty {
-            written["arguments"] = .array(try call.arguments.map { argument in try value(of: argument) })
+            written[CallForm.CodingKeys.arguments.name] = .array(
+                try call.arguments.map { argument in try value(of: argument) }
+            )
         }
 
         return .dictionary(written)
@@ -481,9 +490,9 @@ public struct Writer: Sendable {
 
     private func key(of binding: Statement.Binding) -> Name {
         switch binding {
-        case .constant: "let"
-        case .variable: "var"
-        case .assignment: "set"
+        case .constant: StatementReader.EnvelopeKeys.constant.name
+        case .variable: StatementReader.EnvelopeKeys.variable.name
+        case .assignment: StatementReader.EnvelopeKeys.assignment.name
         }
     }
 

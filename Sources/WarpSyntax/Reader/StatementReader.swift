@@ -30,7 +30,7 @@ import Warp
 // A name may say what it holds, under `type`. `set` writes a name something
 // else declared, so it takes no type of its own.
 public struct StatementReader: Decodable {
-    private enum EnvelopeKeys: String, CodingKey, CaseIterable {
+    enum EnvelopeKeys: String, CodingKey, CaseIterable {
         case constant = "let"
         case variable = "var"
         case assignment = "set"

@@ -145,18 +145,10 @@ struct TypeWriter {
         // own key where the element has none. An array of procedures is the
         // case with none.
         case let .array(element):
-            guard let spelling = try named(element) else {
-                return .dictionary([try Name("array"): try value(of: element)])
-            }
-
-            return .string("array<\(spelling)>")
+            return try value(of: element, in: .array)
 
         case let .dictionary(element):
-            guard let spelling = try named(element) else {
-                return .dictionary([try Name("dictionary"): try value(of: element)])
-            }
-
-            return .string("dictionary<\(spelling)>")
+            return try value(of: element, in: .dictionary)
 
         // Spelt with the trailing `?` the reader takes, which is why the
         // declared half has to have a name of its own. A record has no spelling
@@ -203,11 +195,13 @@ struct TypeWriter {
             var written: [Name: Value] = [:]
 
             if !type.parameters.isEmpty {
-                written["parameters"] = .array(try type.parameters.map(value(of:)))
+                written[TypeReader.ProcedureTypeReader.CodingKeys.parameters.name] = .array(
+                    try type.parameters.map(value(of:))
+                )
             }
 
             if let returns = type.returns {
-                written["returns"] = try value(of: returns)
+                written[TypeReader.ProcedureTypeReader.CodingKeys.returns.name] = try value(of: returns)
             }
 
             return .dictionary([try Name(spelling): .dictionary(written)])
@@ -234,6 +228,15 @@ struct TypeWriter {
         case let .borrowing(inner): return .borrowing(canonical(inner))
         default: return type
         }
+    }
+
+    // A built-in holding another type, under the reading's own key for it.
+    private func value(of element: TypeExpression, in holding: TypeReader.Holding) throws -> Value {
+        guard case let .string(spelling) = try form(of: element) else {
+            return .dictionary([Name(normal: holding.rawValue): try value(of: element)])
+        }
+
+        return .string("\(holding.rawValue)<\(spelling)>")
     }
 
     // A marked slot is written with the mark in front of the inner type,
@@ -327,14 +330,6 @@ struct TypeWriter {
 
     // One fact (only a type with a spelling of its own composes) said with the
     // place the author wrote, so the refusal points at their text.
-    // The name this type is written as, or nil where it is written as a
-    // mapping instead.
-    private func named(_ type: TypeExpression) throws -> String? {
-        guard case let .string(name) = try form(of: type) else { return nil }
-
-        return name
-    }
-
     private func spelt(_ type: TypeExpression, at context: String) throws -> String {
         guard case let .string(name) = try form(of: type) else {
             throw WritingError("only a type with a name is written \(context)")

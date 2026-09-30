@@ -12,7 +12,7 @@ import Warp
 // notation may offer the pair form, `count: int`; a document has the one
 // spelling.
 public struct ParameterReader: Decodable {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case name
         case type
         case candidates = "enum"
