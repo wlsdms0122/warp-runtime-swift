@@ -83,15 +83,6 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Public
-    // Whether this may run beside another body. Constness does not answer it: a
-    // const body can still call a native procedure that holds state, and that procedure
-    // is what two of these would meet in. Asked of the row the link answered,
-    // so a closure no link answered is refused here rather than read as one
-    // that may not.
-    public func runsBeside() throws -> Bool {
-        try answered().isolation == .isolated
-    }
-
     // The row a link answered for this closure. A closure reaches a run only
     // through a link, so one without a row there is one no link read. A
     // settling reads the row for itself, since it refuses in its caller's

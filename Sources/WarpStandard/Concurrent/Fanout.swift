@@ -150,7 +150,7 @@ struct Fanout: Sendable {
 
     private func closure(_ value: Value) throws -> Closure {
         guard case let .procedure(closure) = value else {
-            throw ExecutionError("\(name) runs closures")
+            throw ExecutionError("\(name) asks every piece to be a closure")
         }
 
         return closure
