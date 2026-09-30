@@ -45,7 +45,7 @@ struct ProcedureSendsTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.times, handing: [question[.of], .int(2)])
         }
 
@@ -115,7 +115,7 @@ struct ProcedureSendsTests {
         }
 
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.ticket)
         }
 
@@ -140,7 +140,7 @@ struct ProcedureSendsTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.nowhere)
         }
 
@@ -165,7 +165,7 @@ struct ProcedureSendsTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.hidden)
         }
 
@@ -190,7 +190,7 @@ struct ProcedureSendsTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.shout)
         }
 
@@ -410,7 +410,7 @@ struct ProcedureSendsTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.first)
         }
 

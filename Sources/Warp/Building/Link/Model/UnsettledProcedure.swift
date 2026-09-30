@@ -19,7 +19,7 @@ struct UnsettledProcedure: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         throw ExecutionError(
             "this procedure's body is being resolved beside the constants it"
                 + " may read, so a constant that runs it is a circle with no start"

@@ -39,7 +39,7 @@ struct ReachTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.times, handing: [question[.of], .int(2)])
         }
 

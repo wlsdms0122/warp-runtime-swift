@@ -13,7 +13,7 @@ public extension Module {
 
     private static let nativeLogic = Module(
         unchecked: Draft(
-            description: "Equality, negation, the connectives and choosing a value.",
+            description: "Equality.",
             procedures: [
                 "std.logic.equal": Procedure(
                     description: "Whether two values are the same.",

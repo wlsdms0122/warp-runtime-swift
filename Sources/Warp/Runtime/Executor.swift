@@ -838,7 +838,7 @@ public struct Executor: Sendable {
     ) async throws -> Value {
         switch callee.implementation {
         case let .native(.query(query)):
-            return try await evaluate(query, of: callee, settled: arguments) ?? .null
+            return try await evaluate(query, of: callee, settled: arguments)
 
         case let .body(body, frame):
             return try await answer(
@@ -885,7 +885,7 @@ public struct Executor: Sendable {
         _ query: W,
         of callee: Linked,
         settled: Settled
-    ) async throws -> Value? {
+    ) async throws -> Value {
         try await query.evaluate(
             Question(
                 settled: settled,

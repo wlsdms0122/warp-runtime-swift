@@ -39,23 +39,18 @@ struct GatheringQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         // Through the one projection that owns the `bytes = array<byte>`
-        // equation, so bytes are read where an array is.
+        // equation, so bytes are read where an array is, on either side.
         let collection = question[.array]
 
-        guard let held = collection.elements else { return nil }
-
-        guard case let .array(given) = question[.positions] else {
-            throw ExecutionError(
-                "gathering asks an array of positions, and"
-                    + " \(question[.positions].type) arrived"
-            )
+        guard let held = collection.elements, let given = question[.positions].elements else {
+            throw ExecutionError("std.collection.gathering asks two arrays")
         }
 
         let positions = try given.map { position -> Int in
             guard case let .int(number) = position else {
-                throw ExecutionError("gathering asks whole numbers, and \(position.type) arrived")
+                throw ExecutionError("std.collection.gathering asks whole positions")
             }
 
             // The collection is there and says how long it is, so a position it
@@ -63,14 +58,18 @@ struct GatheringQuery: Query {
             // written past the end gets.
             guard number >= 0, number < held.count else {
                 throw ExecutionError(
-                    "gathering asks position \(number) of \(held.count)"
+                    "std.collection.gathering asks position \(number) of \(held.count)"
                 )
             }
 
             return number
         }
 
-        return collection.elements(at: positions)
+        guard let gathered = collection.elements(at: positions) else {
+            throw ExecutionError("std.collection.gathering asks two arrays")
+        }
+
+        return gathered
     }
 
     // MARK: - Private

@@ -43,8 +43,8 @@ public extension Module {
                 ),
                 "std.concurrent.first": Procedure(
                     description: "Runs every closure, answers the first success and"
-                        + " asks the rest to stop. Which one wins is timing's. The"
-                        + " one fact here that is.",
+                        + " asks the rest to stop. Which one wins is the one fact"
+                        + " here timing decides.",
                     signature: Signature(of: FirstEffect.self, returns: .any),
                     implementation: .effect(FirstEffect())
                 )

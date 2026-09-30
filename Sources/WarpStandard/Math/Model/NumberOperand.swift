@@ -14,7 +14,9 @@ enum NumberOperand: Int, ParameterSet {
     case number
 
     // MARK: - Property
-    var declared: Parameter { Parameter(name: "number", type: .parameter(name: "N", constraints: ["std.Numeric"])) }
+    var declared: Parameter {
+        Parameter(name: "number", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+    }
 
     // MARK: - Initializer
     // MARK: - Public

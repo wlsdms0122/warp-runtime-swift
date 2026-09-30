@@ -28,7 +28,7 @@ struct IntegerConversion: Sendable {
     // here, so what is narrowed has no digits after the point to refuse.
     func of(_ asked: Double, rounded rule: FloatingPointRoundingRule) throws -> Int {
         guard !asked.isNaN else {
-            throw ExecutionError("\(asked) has no whole answer")
+            throw ExecutionError("\(procedure) of \(asked) has no whole answer")
         }
 
         guard let answered = Int(exactly: asked.rounded(rule)) else {

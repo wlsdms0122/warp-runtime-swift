@@ -20,7 +20,7 @@ struct BakedTests {
 
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             .int(1)
         }
 
@@ -44,7 +44,7 @@ struct BakedTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             question[.of]
         }
 
@@ -66,7 +66,7 @@ struct BakedTests {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value? {
+        func evaluate(_ question: Question<Self>) async throws -> Value {
             question[.value]
         }
 

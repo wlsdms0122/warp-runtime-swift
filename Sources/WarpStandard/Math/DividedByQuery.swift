@@ -8,8 +8,7 @@
 import Foundation
 import Warp
 
-// The quotient. Always a fraction, even between wholes, which is why
-// `remainder` exists to read a whole division's other half.
+// The quotient. Always a fraction, even between wholes.
 struct DividedByQuery: Query {
     typealias Parameters = NumericPair
 
@@ -18,7 +17,7 @@ struct DividedByQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value {
         try arithmetic.answer(question[.lhs], question[.rhs])
     }
 
