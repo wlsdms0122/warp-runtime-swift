@@ -11,7 +11,7 @@ import Foundation
 //
 // A type written `linear` says the values of it are handed on: given to a procedure,
 // or answered. A body holding one has to do that on every way through, and may
-// not do it twice, and the link says so before anything runs. That is the whole
+// not do it twice, and the build says so before anything runs. That is the whole
 // of what "this resource is closed exactly once" means here.
 //
 // The walk refuses wherever it cannot see: a value handed to a value call, a
@@ -63,8 +63,7 @@ struct LinearityChecker {
             // Two ways through, joined. Being handed on and being borrowed are
             // facts either way may have made, so both accumulate; what is
             // still held has to be the same on both, which the arms say where
-            // they are judged. The rule lives here so that a field added later
-            // is joined by whoever owns it rather than by every caller.
+            // they are judged.
             func merged(with other: Held) -> Held {
                 Held(
                     live: live,
@@ -266,10 +265,6 @@ struct LinearityChecker {
                     )
                 }
 
-                // The same fact from the other side: this walk never enters a
-                // closure, so what a borrowed name does in there is not
-                // something the text shows, and the one thing a borrow is
-                // proven by is being read where it is written.
                 for name in held.borrowed.sorted() where reads(block, name: name) {
                     throw refusal(
                         "captures '\(name)' in a closure, and it borrowed"
@@ -526,16 +521,11 @@ struct LinearityChecker {
         }
 
         // What this expression hands out, where that is an obligation at all.
-        // A different question from whether a *type* is one of these.
-        //
-        // Said once, because the three questions this walk asks of a value are
-        // the same question about the same tree: may it stand in a list, whom
-        // does a refusal name, and does binding it take the obligation. Three
-        // walks over the shapes had to stay in step and nothing made them.
-        //
-        // No `default`: a shape nobody thought about must be a compile error
-        // here rather than an answer of no. Every hole this walk has had was a
-        // shape that fell through to false and took an obligation with it.
+        // A different question from whether a *type* is one of these. It
+        // answers all three questions the walk asks of a value: may it stand
+        // in a list, whom does a refusal name, and does binding it take the
+        // obligation. No `default`, so a new kind of expression is a compile
+        // error here rather than an answer of no.
         private func handedOut(_ expression: Expression, held: Held) -> HandedOut {
             switch expression {
             // A literal is data, a closure is a procedure, and a list or a
@@ -705,7 +695,7 @@ struct LinearityChecker {
     // MARK: - Public
     // Every value a body must hand on, handed on once. The declaration's own
     // slots are where such a value enters a body: `linear` is a document's
-    // spelling and a value the link folded is a value, never a promise.
+    // spelling and a folded value is a value, never a promise.
     func consumed(
         _ block: Block,
         at place: Place,
