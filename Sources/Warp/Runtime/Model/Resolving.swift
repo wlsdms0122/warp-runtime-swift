@@ -19,9 +19,9 @@ enum Resolving: Sendable {
     // that relocated it.
     case rows
 
-    // What each document's numbers stand for, by the document and then by the
+    // What each document's numbers stand for, by origin and then by the
     // number. A number the link found no row for stands as nothing.
-    case documents([Int: [Int?]])
+    case documents([[Int?]])
 
     // MARK: - Property
     // MARK: - Initializer
@@ -32,9 +32,9 @@ enum Resolving: Sendable {
             return number
 
         case let .documents(held):
-            guard let view = held[origin], view.indices.contains(number) else { return nil }
+            guard held.indices.contains(origin), held[origin].indices.contains(number) else { return nil }
 
-            return view[number]
+            return held[origin][number]
         }
     }
 

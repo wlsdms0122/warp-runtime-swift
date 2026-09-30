@@ -647,7 +647,7 @@ struct CompiledTests {
         let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
 
         // Then. Every number it gave reaches a row.
-        #expect(laid.carried.named[0]?.allSatisfy { row in row != nil } == true)
+        #expect(laid.carried.documents[0].named?.allSatisfy { row in row != nil } == true)
     }
 
     @Test("a document sending a contract's procedure is laid beside a later one")

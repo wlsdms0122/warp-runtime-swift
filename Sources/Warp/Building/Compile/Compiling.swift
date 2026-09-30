@@ -45,10 +45,6 @@ struct Compiling {
     // the run will read.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
-    // Which row each document's numbers stand for, resolved when the document
-    // is laid down.
-    private var named: [Int: [Int?]] = [:]
-
     // The rows folding runs against, held apart from the lowering: a row is
     // written in when the phase that lowered it ends, so what a body folds
     // through is what stood settled before its phase began rather than
@@ -63,7 +59,6 @@ struct Compiling {
             table: lowering.table,
             rows: lowering.rows,
             concealed: lowering.concealed,
-            named: named,
             documents: lowering.documents,
             answers: answers
         )
@@ -111,7 +106,6 @@ struct Compiling {
             loweredTypes: types.loweredTypes
         )
         self.answers = carried.answers
-        self.named = carried.named
 
         // Every body laid down is lowered already, so all of them are
         // something the next document may fold through.
@@ -135,13 +129,14 @@ struct Compiling {
         rows: [Linked],
         answering read: [Name: LoweredType]
     ) {
-        hold(
-            origin,
+        let held = lowering.hold(
             standing: Array(rows[document.standing]),
             closures: Array(rows[document.lifted]),
             numbering: document.numbering,
             variables: document.variables.map(\.name)
         )
+
+        assert(held.origin == origin, "a document is laid at the origin it is held at")
 
         // What the build read off a body stands by the row it was read off.
         let own = lowering.own(origin)
@@ -151,34 +146,6 @@ struct Compiling {
 
             answers[row] = answer
         }
-    }
-
-    // One document laid down: its declarations take the rows after the ones
-    // already here, and its numbering says what the bodies it lowers are
-    // written with. Which rows those are is resolved here rather than looked
-    // up again, since laying them down is what decided it.
-    @discardableResult
-    mutating func hold(
-        _ origin: Int,
-        standing block: [Linked],
-        closures lifted: [Linked] = [],
-        numbering: Numbering,
-        variables ordered: [Name]
-    ) -> Range<Int> {
-        lowering.hold(
-            origin,
-            standing: block,
-            closures: lifted,
-            numbering: numbering,
-            variables: ordered
-        )
-    }
-
-    // Which row each number this document gave stands for. A number of its own
-    // reaches a name it declared or one behind it, so the resolution never
-    // moves after this.
-    mutating func resolve(_ origin: Int) {
-        named[origin] = lowering.documents[origin].numbering.resolved(rows: lowering.rows, own: lowering.own(origin))
     }
 
     // The same for every document laid down, said once they all stand. This
@@ -191,9 +158,9 @@ struct Compiling {
     // where a body of it is run.
     mutating func resolveEvery() throws {
         for origin in documents.indices {
-            resolve(origin)
+            lowering.resolve(origin)
 
-            for (number, row) in (named[origin] ?? []).enumerated() where row == nil {
+            for (number, row) in (lowering.documents[origin].named ?? []).enumerated() where row == nil {
                 guard case let .unfound(.sent(declared)) = lowering.documents[origin].numbering.row(
                     number,
                     rows: lowering.rows,
@@ -249,9 +216,7 @@ struct Compiling {
             foldingRows,
             rows: lowering.rows,
             naming: naming,
-            numbering: lowering.documents.map(\.numbering),
-            named: named,
-            closures: lowering.documents.map(\.closureRows)
+            documents: lowering.documents
         )
     }
 

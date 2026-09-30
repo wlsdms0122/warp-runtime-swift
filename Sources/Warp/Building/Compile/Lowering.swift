@@ -40,6 +40,23 @@ struct Lowering {
         let variables: [Name: Int]
         var closureRows: [Int]
 
+        // Which row each name it numbers stands for, once resolved. The names
+        // and the closures settle at different times: a name's row is the
+        // link's before anything is lowered, and a closure's row is made by
+        // lowering.
+        var named: [Int?]?
+
+        // Which row each number it gave stands for: its names, then its
+        // closures. A closure with no row yet stands as nothing, the same as a
+        // name with none, and so does every number before its names resolve.
+        var resolved: [Int?] {
+            guard let named else { return [] }
+
+            return named + (0..<numbering.closureCount).map { written in
+                closureRows.indices.contains(written) ? closureRows[written] : nil
+            }
+        }
+
         // MARK: - Initializer
         // MARK: - Public
         // MARK: - Private
@@ -308,14 +325,15 @@ struct Lowering {
     //
     // A document being compiled lifts its closures as it lowers, so it hands
     // none over here. One already compiled hands over the block it left.
-    @discardableResult
+    //
+    // Its origin is where it is held, which is what this answers beside the
+    // rows its declarations took.
     mutating func hold(
-        _ origin: Int,
         standing block: [Linked],
         closures lifted: [Linked] = [],
         numbering held: Numbering,
         variables ordered: [Name]
-    ) -> Range<Int> {
+    ) -> (origin: Int, block: Range<Int>) {
         let start = table.count
 
         // A private declaration takes no spelling from the link: its own
@@ -334,8 +352,6 @@ struct Lowering {
             rows[row.label] = start + offset
         }
 
-        assert(origin == documents.count, "documents are held in the order of their origins")
-
         documents.append(
             Document(
                 numbering: held,
@@ -350,7 +366,14 @@ struct Lowering {
         table.append(contentsOf: block)
         table.append(contentsOf: lifted)
 
-        return start ..< start + block.count
+        return (origin: documents.count - 1, block: start ..< start + block.count)
+    }
+
+    // Which row each number a document gave stands for. A number of its own
+    // reaches a name it declared or one behind it, so the resolution never
+    // moves after this.
+    mutating func resolve(_ origin: Int) {
+        documents[origin].named = documents[origin].numbering.resolved(rows: rows, own: own(origin))
     }
 
     // The same rows, answered. One per row, in place: what stands in the

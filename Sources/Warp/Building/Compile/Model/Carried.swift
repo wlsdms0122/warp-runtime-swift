@@ -25,9 +25,6 @@ struct Carried: Sendable {
     // link's names holds and a refusal reads.
     let concealed: Set<Name>
 
-    // Which row each number a document gave reaches.
-    let named: [Int: [Int?]]
-
     // Each document as it was held, by origin.
     let documents: [Lowering.Document]
 
@@ -41,7 +38,6 @@ struct Carried: Sendable {
         table: [],
         rows: [:],
         concealed: [],
-        named: [:],
         documents: [],
         answers: [:]
     )

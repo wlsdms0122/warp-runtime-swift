@@ -67,7 +67,7 @@ struct Folding {
         return try await read(
             code,
             in: frame,
-            of: resolved.holding(lowering.table.map(\.folding), closures: lowering.documents.map(\.closureRows)),
+            of: resolved.holding(lowering.table.map(\.folding), documents: lowering.documents),
             at: place
         )
     }

@@ -20,11 +20,9 @@ struct ResolvedTable: Sendable {
         // This link's own rows.
         case rows
 
-        // Each document's own, with where its numbers came from and which row
-        // each of them stands for. The names and the closures stand apart
-        // because they settle at different times: a name's row is the link's
-        // before anything is lowered, and a closure's row is made by lowering.
-        case documents([Numbering], named: [Int: [Int?]], closures: [[Int]])
+        // Each document's own, by origin, as compiling holds it: where its
+        // numbers came from and which row each of them stands for.
+        case documents([Lowering.Document])
     }
 
     // MARK: - Property
@@ -42,21 +40,8 @@ struct ResolvedTable: Sendable {
         case .rows:
             return .rows
 
-        case let .documents(numbering, named, closures):
-            return .documents(
-                named.reduce(into: [Int: [Int?]]()) { views, entry in
-                    // A closure the link has no row for yet stands as nothing,
-                    // the same as a name it has no row for. Constants fold
-                    // before any body is lowered, so at that point every one of
-                    // them is nothing, and nothing there can reach one.
-                    let held = closures[entry.key]
-                    let counted = numbering[entry.key].closureCount
-
-                    views[entry.key] = entry.value + (0..<counted).map { written in
-                        held.indices.contains(written) ? held[written] : nil
-                    }
-                }
-            )
+        case let .documents(documents):
+            return .documents(documents.map(\.resolved))
         }
     }
 
@@ -75,42 +60,29 @@ struct ResolvedTable: Sendable {
         ResolvedTable(table: table, rows: rows, naming: naming, numbers: .rows)
     }
 
-    // A table as compiling left it, and where each document numbers from. The
-    // bodies keep the numbers they were lowered with, so what reads one is
-    // told which document it came from, and `named` says which row each of
-    // those numbers stands for.
+    // A table as compiling left it, and each document as compiling holds it.
+    // The bodies keep the numbers they were lowered with, so what reads one is
+    // told which document it came from, and the document says which row each
+    // of those numbers stands for.
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
         naming: [Closure.Document],
-        numbering: [Numbering],
-        named: [Int: [Int?]],
-        closures: [[Int]]
+        documents: [Lowering.Document]
     ) -> ResolvedTable {
-        ResolvedTable(
-            table: table,
-            rows: rows,
-            naming: naming,
-            numbers: .documents(numbering, named: named, closures: closures)
-        )
+        ResolvedTable(table: table, rows: rows, naming: naming, numbers: .documents(documents))
     }
 
-    // The same resolution over a table lowered since, with the closure rows that
-    // lowering took. What a name stands for is the documents' and this link's,
-    // and neither moved while the bodies were lowered; the closures are the
-    // rows those bodies just made, so only they are handed again.
-    func holding(_ table: [Linked], closures: [[Int]]) -> ResolvedTable {
+    // The same resolution over a table lowered since, with the documents as
+    // that lowering left them. What a name stands for did not move while the
+    // bodies were lowered; the closures are the rows those bodies just made.
+    func holding(_ table: [Linked], documents: [Lowering.Document]) -> ResolvedTable {
         switch numbers {
         case .rows:
             return ResolvedTable(table: table, rows: rows, naming: naming, numbers: numbers)
 
-        case let .documents(numbering, named, _):
-            return ResolvedTable(
-                table: table,
-                rows: rows,
-                naming: naming,
-                numbers: .documents(numbering, named: named, closures: closures)
-            )
+        case .documents:
+            return ResolvedTable(table: table, rows: rows, naming: naming, numbers: .documents(documents))
         }
     }
 

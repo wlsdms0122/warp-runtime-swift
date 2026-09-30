@@ -227,8 +227,7 @@ struct Compiler {
         // it is from the start; a written body stands as the refusal it
         // would earn until it is lowered, so nothing folds through a body
         // half-made.
-        let block = compiling.hold(
-            origin,
+        let (heldAt, block) = compiling.lowering.hold(
             standing: try holding.map { symbol in
                 Linked.unlowered(
                     label: symbol.declared,
@@ -246,7 +245,9 @@ struct Compiler {
             variables: boxes
         )
 
-        compiling.resolve(origin)
+        assert(heldAt == origin, "a document is compiled at the origin it is held at")
+
+        compiling.lowering.resolve(origin)
 
         // The bodies the documents behind this one lowered, which this one
         // may run.
