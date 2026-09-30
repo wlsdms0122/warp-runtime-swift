@@ -15,8 +15,8 @@ import Warp
 // closures are isolated the link derived, and each piece is asked as it is
 // started.
 //
-// One machine under three procedures, because what a piece is, how it is started and
-// how a failure is reported are the same for all three, and only what "done"
+// One machine under two procedures, because what a piece is, how it is started
+// and how a failure is reported are the same for both, and only what "done"
 // means differs.
 //
 // The rest a sibling ignores: asking is what cancellation is. A piece that
@@ -38,14 +38,13 @@ struct Fanout: Sendable {
         // MARK: - Private
     }
 
-    // One closure to run: its name if its author gave one, where it sat, and
-    // what it is offered. How a piece is reported is `Outcome`'s to derive.
+    // One closure to run: its name if its author gave one, and where it sat.
+    // How a piece is reported is `Outcome`'s to derive.
     private struct Piece: Sendable {
         // MARK: - Property
         let key: Name?
         let position: Int
         let closure: Closure
-        let arguments: [Value]
 
         // MARK: - Initializer
         // MARK: - Public
@@ -53,9 +52,9 @@ struct Fanout: Sendable {
     }
 
     // MARK: - Property
-    // The declared spelling, because `first` and `map` are also collection
-    // procedures. A refusal that says which module's procedure refused is the one a
-    // caller can act on.
+    // The declared spelling, because `first` is also a collection procedure. A
+    // refusal that says which module's procedure refused is the one a caller
+    // can act on.
     private let name: String
 
     // MARK: - Initializer
@@ -88,8 +87,8 @@ struct Fanout: Sendable {
 
         // A `first` with nothing in it has nothing to win it, and waiting for
         // no one answers nothing. Refused as the author mistake it is. `all`
-        // and `map` answer collections, and a collection may be empty; a
-        // `first` answers exactly one thing, so it cannot be.
+        // answers a collection, and a collection may be empty; a `first`
+        // answers exactly one thing, so it cannot be.
         guard !pieces.isEmpty else {
             throw ExecutionError("\(name) asks at least one closure, and none arrived")
         }
@@ -110,8 +109,7 @@ struct Fanout: Sendable {
             Piece(
                 key: entry.name,
                 position: position,
-                closure: try closure(entry.value),
-                arguments: []
+                closure: try closure(entry.value)
             )
         }
     }
@@ -135,8 +133,7 @@ struct Fanout: Sendable {
                     Piece(
                         key: nil,
                         position: position,
-                        closure: try closure(element),
-                        arguments: []
+                        closure: try closure(element)
                     )
                 },
                 keyed: false
@@ -214,7 +211,7 @@ struct Fanout: Sendable {
         guard let environment = invocation.environment else {
             return try await invocation.call(
                 piece.closure,
-                handing: piece.arguments,
+                handing: [],
                 piece: frame
             )
         }
@@ -222,7 +219,7 @@ struct Fanout: Sendable {
         return try await environment.isolateConcurrentWork {
             try await invocation.call(
                 piece.closure,
-                handing: piece.arguments,
+                handing: [],
                 piece: frame
             )
         }
