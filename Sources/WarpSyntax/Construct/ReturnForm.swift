@@ -16,9 +16,9 @@ import Warp
 // table would have three answers and no way to say which. Three forms also make
 // each key droppable on its own, which one would not.
 //
-//     { id: done,   return: { ref: answer } }
-//     { id: enough, break: }
-//     { id: skip,   continue: outer }
+//     { value { return { ref "answer" } } }
+//     { value { break null } }
+//     { value { continue "outer" } }
 public struct ReturnForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "return"

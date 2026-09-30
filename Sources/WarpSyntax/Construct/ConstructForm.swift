@@ -12,12 +12,9 @@ import Warp
 // nowhere else. The language's own constructs have no names, and this is the
 // one surface that says which key builds which.
 //
-// A form is asked for its expression with the name it is being bound under,
-// because two constructs need a name to exist inside their body and this
-// notation supplies the statement's own id for it: `loop` binds round state,
-// `attempt` binds the failure. In the IR those names are written down; here
-// they are inherited from the envelope, which is why the reader hands one
-// over.
+// A form is asked for its expression with the name of the statement it stands
+// in, because two constructs bind that name inside their body: `loop` binds
+// the round, `attempt` binds the failure.
 public protocol ConstructForm: Sendable, Decodable {
     // The spelling this form proposes. `ConstructRegistry` may register it
     // under another, so a form never learns which key actually reached it. A
