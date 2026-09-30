@@ -437,6 +437,128 @@ struct BuilderTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
+    @Test("whether a body builds is its own text's fact, whoever calls it")
+    func linkabilityDoesNotDependOnCallers() async throws {
+        // Given. `helper` folds a constant-headed call through a written procedure; a procedure
+        // (`loud`) that happens to call `helper` must not change what `helper`
+        // means, because nothing about `helper`'s text changed
+        let procedures: [Name: Procedure] = [
+            "shout": Procedure(
+                signature: Signature(
+                    parameters: [Parameter(name: "of", type: .string)],
+                    returns: .int
+                ),
+                body: [],
+                result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
+            ),
+            "helper": Procedure(
+                signature: Signature(returns: .int),
+                body: [],
+                result: .call(Call(selector: "shout", arguments: [reference("greeting")]))
+            ),
+            "loud": Procedure(
+                signature: Signature(
+                    parameters: [Parameter(name: "of", type: .int)],
+                    returns: .int
+                ),
+                body: [],
+                result: .call(Call(selector: "helper"))
+            ),
+            entryName: Procedure(
+                access: .public,
+                signature: Signature(returns: .int),
+                body: [],
+                result: .call(Call(selector: "helper"))
+            )
+        ]
+
+        let sut = try Module(
+            constants: ["greeting": .literal(.string("hi"))],
+            procedures: procedures
+        )
+
+        // When / Then. Builds and answers, `loud` present or not
+        #expect(try await run(sut) == .int(2))
+
+        var without = procedures
+        without["loud"] = nil
+
+        #expect(
+            try await run(try Module(
+                constants: ["greeting": .literal(.string("hi"))],
+                procedures: without
+            )) == .int(2)
+        )
+    }
+
+    @Test("a closure a constant holds has its sends checked")
+    func aConstantClosureIsChecked() async throws {
+        // Given. The closure runs later, so evaluating the constant proves
+        // nothing about the call inside it; the gate every gathered call passes
+        // catches the argument no parameter stands to take
+        let sut = try Module(
+            constants: [
+                "f": .closure(Procedure(
+                    signature: Signature(returns: .string),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.text.uppercased",
+                        arguments: [.literal(.string("a")), .literal(.bool(true))]
+                    ))
+                ))
+            ],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .reference([.key("f")])
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
+        }
+    }
+
+    @Test("a const body nobody reaches still has its sends checked")
+    func anUnreachedConstBodyIsChecked() async throws {
+        // Given. Nothing reaches `shout`, and a call it writes wrongly is the
+        // build's to refuse all the same
+        let sut = try Module(
+            procedures: [
+                "shout": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .string)],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.text.uppercased",
+                        arguments: [.reference([.key("of")]), .literal(.bool(true))]
+                    ))
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When / Then. `uppercased` takes one argument and is sent two
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

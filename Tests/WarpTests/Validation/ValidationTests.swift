@@ -710,6 +710,38 @@ struct ValidationTests {
         )
     }
 
+    @Test("a closure parameter may not take a constant's name")
+    func aClosureParameterDoesNotShadowAConstant() throws {
+        // Given. Compiling folds a constant wherever its name is read, so a
+        // closure parameter under that name would never be the one that
+        // answers; refused where the top-level signature's is
+        let procedure = Procedure(
+            signature: Signature(),
+            body: [
+                Statement(binding: .constant("f"), expression: .closure(Procedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "greeting", type: .string)]
+                        ),
+                        body: [],
+                        result: .reference([.key("greeting")])
+                    ))
+                )
+            ],
+            result: .literal(.int(1))
+        )
+
+        // When / Then. There is no such module to hand anywhere: making one is
+        // what refuses
+        #expect {
+            try Module(
+                constants: ["greeting": .literal(.string("hi"))],
+                procedures: [entryName: procedure]
+            )
+        } throws: { error in
+            "\(error)".contains("take the place of")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
