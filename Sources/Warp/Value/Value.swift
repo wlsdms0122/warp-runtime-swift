@@ -655,8 +655,8 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].reading(at: rest, under: rendered)
 
-        case let (.record(record), .key(name)):
-            guard let field = record[name] else {
+        case let (_, .key(name)) where holdsFields:
+            guard let field = self[name] else {
                 throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
             }
 
