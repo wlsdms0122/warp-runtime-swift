@@ -134,8 +134,59 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("sends 'app.Describable.describe' 2 arguments, and it takes 1")
+            "\(error)".contains("sending 'app.Describable.describe' 2 arguments, and it takes 1")
         }
+    }
+
+    @Test("an argument sent through a contract passes the gates an argument sent to a declaration does")
+    func aContractCallHoldsItsArgumentsAsADeclaredCallDoes() async throws {
+        // Given. `app.Sized.size` takes a whole number up to 10, and
+        // `app.Bumping.bump` takes a variable in place
+        let small = TypeExpression.ranged(.whole(from: 0, to: .through(10)))
+        func sending(_ contract: Name, _ procedure: Name, _ parameter: TypeExpression, _ argument: Warp.Expression) throws -> Module {
+            try Module(
+                types: ["bank.Account": .record(["balance": .int])],
+                contracts: [contract: [procedure: Signature(parameters: [Parameter(name: "of", type: .named(contract)), Parameter(name: "n", type: parameter)], returns: .int)]],
+                claims: ["bank.Account": [contract]],
+                procedures: [
+                    Name(stringLiteral: "bank.Account.\(procedure.spelling)"): Procedure(
+                        signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account")), Parameter(name: "n", type: parameter)], returns: .int),
+                        body: [],
+                        result: .literal(.int(1))
+                    ),
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .int),
+                        body: [
+                            Statement(
+                                binding: .constant("account"),
+                                expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("bank.Account"), optional: false)
+                            )
+                        ],
+                        result: .call(
+                            Call(
+                                selector: Name(stringLiteral: "\(contract.spelling).\(procedure.spelling)"),
+                                arguments: [reference("account"), argument]
+                            )
+                        )
+                    )
+                ]
+            )
+        }
+
+        // When
+        let outside = await #expect(throws: BuildError.self) {
+            try await Builder().build([try sending("app.Sized", "size", small, .literal(.int(99)))] + Module.standard)
+        }
+        let inPlace = await #expect(throws: BuildError.self) {
+            try await Builder().build([try sending("app.Bumping", "bump", .inout(.int), .literal(.int(3)))] + Module.standard)
+        }
+
+        // Then. Each refused where the argument is written, for what the author wrote
+        #expect(outside?.message == "sending 'app.Sized.size': input 'n': 99 is outside int(0...10)")
+        #expect(outside?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
+        #expect(inPlace?.message.hasPrefix("hands 'n' in place") == true)
+        #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
     }
 
     @Test("a declaration named for a type and a procedure is held to the contract")

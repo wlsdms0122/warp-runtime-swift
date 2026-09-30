@@ -963,14 +963,9 @@ struct Lowering {
         }
 
         // The document's own declaration by its block, another document's by
-        // its spelling. A spelling only a private declaration wears is one
-        // this document cannot name.
+        // its spelling.
         guard let row = reached(stands, on: slots) else {
-            guard concealed.contains(call.selector) else {
-                throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
-            }
-
-            throw BuildError.concealed(call.selector, at: place)
+            throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
         }
 
         let callee = table[row]

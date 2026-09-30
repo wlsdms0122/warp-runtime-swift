@@ -326,6 +326,7 @@ struct Compiling {
             linked: lowering.table,
             rows: lowering.rows,
             own: lowering.own(origin),
+            concealed: lowering.concealed,
             answers: answers,
             contractProcedures: contractProcedures,
             variables: variables

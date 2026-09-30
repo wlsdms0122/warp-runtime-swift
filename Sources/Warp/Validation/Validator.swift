@@ -584,22 +584,14 @@ public struct Validator: Sendable {
         )
     }
 
-    // A call's operand is data the const half reads. A document cannot even
-    // write a construct there, and the run refuses one that arrives anyway.
-    // Held here too, so a program assembled directly meets the same rule before
-    // it runs, and at the link, which asks the same predicate, so a program
-    // that skipped this door still cannot slip one through: the body a procedure is
-    // to run travels as a closure, and there is no second channel for bodies.
+    // A call's operand is data the run reads rather than runs, so it holds no construct.
     private func refuseConstruct(_ expression: Expression, at place: Place) throws {
         guard expression.holdsConstruct else { return }
 
         throw ValidationError(Expression.constructInOperand, at: place)
     }
 
-    // A condition is data by the same fact an operand is: the run reads it
-    // rather than runs it. Refused with its own sentence, because the fix is
-    // different. What
-    // a body decides reaches a condition through a procedure.
+    // A condition is data by the same fact, refused with its own sentence because the fix differs.
     private func refuseConstructCondition(_ expression: Expression, at place: Place) throws {
         guard expression.holdsConstruct else { return }
 
