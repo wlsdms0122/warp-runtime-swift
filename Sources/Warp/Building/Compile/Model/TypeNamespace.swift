@@ -27,11 +27,6 @@ struct TypeNamespace {
     // the pair, so the second says what the first said.
     let claims: [Placed<Claim>]
 
-    // The names in the order their documents stand, each document's in name
-    // order: the order the type rows and the membership rows are laid in.
-    let typeOrder: [Name]
-    let constraintOrder: [Name]
-
     // MARK: - Initializer
     init(_ documents: [any Declaring]) throws {
         var types: [Name: Placed<TypeExpression>] = [:]
@@ -141,8 +136,6 @@ struct TypeNamespace {
         self.constraints = constraints
         self.contracts = contracts
         self.claims = claims
-        self.typeOrder = documents.flatMap { document in document.types.keys.sorted() }
-        self.constraintOrder = documents.flatMap { document in document.constraints.keys.sorted() }
     }
 
     // MARK: - Public

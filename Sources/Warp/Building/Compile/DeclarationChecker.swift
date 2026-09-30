@@ -20,7 +20,11 @@ struct DeclarationChecker {
     // compile, and a signature naming a type nobody declared is a defect
     // whether or not this run walks that way. This judges content: what a
     // declaration holds, not what it is called.
-    func types(of namespace: TypeNamespace, numbered linkage: Linkage) throws -> TypeTable {
+    func types(
+        of namespace: TypeNamespace,
+        standing documents: [any Declaring],
+        numbered linkage: Linkage
+    ) throws -> TypeTable {
         let declared = namespace.types
         let members = namespace.constraints
 
@@ -31,8 +35,8 @@ struct DeclarationChecker {
             types: declared.mapValues(\.held),
             constraints: members.mapValues(\.held),
             contracts: namespace.contracts.mapValues(\.held),
-            standing: namespace.typeOrder,
-            constraintStanding: namespace.constraintOrder,
+            standing: documents.flatMap { document in document.types.keys.sorted() },
+            constraintStanding: documents.flatMap { document in document.constraints.keys.sorted() },
             of: linkage
         )
 

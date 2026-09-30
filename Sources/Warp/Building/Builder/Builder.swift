@@ -119,7 +119,7 @@ public struct Builder: Sendable {
         let assembled = try Assembled(compiled)
         let linkage = Linkage()
         let namespace = try TypeNamespace(compiled)
-        let declaring = try DeclarationChecker().types(of: namespace, numbered: linkage)
+        let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: linkage)
 
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
@@ -226,7 +226,7 @@ public struct Builder: Sendable {
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
 
-        let declaring = try DeclarationChecker().types(of: namespace, numbered: laid.linkage)
+        let declaring = try DeclarationChecker().types(of: namespace, standing: documents, numbered: laid.linkage)
 
         try DeclarationChecker().judge(laying, in: declaring)
 
@@ -359,7 +359,7 @@ public struct Builder: Sendable {
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.
         let namespace = try TypeNamespace(compiled)
-        let declaring = try DeclarationChecker().types(of: namespace, numbered: Linkage())
+        let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: Linkage())
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         let lowered = try ClaimChecker().lowered(
