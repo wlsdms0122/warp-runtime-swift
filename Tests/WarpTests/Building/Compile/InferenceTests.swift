@@ -468,9 +468,9 @@ struct InferenceTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
-    @Test("a declared answer is checked against what the body actually names")
-    func rightTypesLink() async throws {
-        // Given. The same types, agreeing
+    @Test("a declared answer the body's answer fits builds")
+    func agreeingTypesBuild() async throws {
+        // Given. `counts` declares an int and answers one
         let sut = try Module(
             procedures: [
                 "counts": Procedure(
@@ -949,7 +949,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast onto any in code nothing reaches is still refused")
+    @Test("a cast onto never in code nothing reaches is still refused")
     func anUnreadableClaimIsRefusedWhereNoWalkGoes() async throws {
         // Given. It runs, and nothing reaches it, so no typing walk sees it. What the
         // claim names is a fact about the spelling, so it is held anyway; `as?:

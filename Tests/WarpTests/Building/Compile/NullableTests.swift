@@ -141,10 +141,10 @@ struct NullableTests {
         }
     }
 
-    @Test("a nullable parameter takes null without leaning on a default")
+    @Test("a nullable parameter takes null, and nothing given is refused")
     func aNullableParameterTakesNullByType() async throws {
         // Given. `T?` says null is a value, so the boundary lets it in the way
-        // the build does: no `default: null` crutch required
+        // the build does
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -191,8 +191,8 @@ struct NullableTests {
         }
     }
 
-    @Test("a written call hands a nullable argument like any other")
-    func aNullableArgumentIsHanded() async throws {
+    @Test("a written call leaving out a nullable argument is refused")
+    func aNullableArgumentLeftOutIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [

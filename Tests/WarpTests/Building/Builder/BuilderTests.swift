@@ -330,8 +330,8 @@ struct BuilderTests {
         }
     }
 
-    @Test("resolution follows the callee's own calls")
-    func linkingIsTransitive() async throws {
+    @Test("every declaration's calls are resolved, whoever calls it")
+    func everyDeclarationIsResolved() async throws {
         // Given. `caller` names nothing missing; `middle` does
         let sut = try Module(
             procedures: [

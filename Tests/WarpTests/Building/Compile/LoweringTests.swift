@@ -447,8 +447,8 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .bool(true))
     }
 
-    @Test("a constant folding through a written procedure is refused whichever is declared first")
-    func aConstantFoldingThroughAProcedureIsRefusedInAnyOrder() async throws {
+    @Test("a constant folding through a procedure its own document writes is refused")
+    func aConstantFoldingThroughItsOwnProcedureIsRefused() async throws {
         // Given. `J` settles by calling `app.alpha`, a written procedure; while the
         // constants settle every written body stands as its refusal, so the
         // order is not the text's
