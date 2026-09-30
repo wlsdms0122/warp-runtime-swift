@@ -36,7 +36,7 @@ public struct Compiled: Sendable, Declaring {
 
     // MARK: - Property
     // Which document this is, so a refusal a build makes about it says
-    // where the procedures are.
+    // which text it is about.
     let document: Place.Document
 
     // What it declares in the three type tables, as it wrote them. A

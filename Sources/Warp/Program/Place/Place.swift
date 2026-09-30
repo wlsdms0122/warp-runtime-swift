@@ -11,7 +11,7 @@ import Foundation
 //
 // A refusal that names no place sends the author searching the whole document,
 // so every stage that reads a document before running it carries one. It is the
-// text's answer to what `Trace` answers about a run: this says where the procedures
+// text's answer to what `Trace` answers about a run: this says where the words
 // are, that says where the run had been, and a stage that refuses before
 // anything runs has only the first to give.
 //
@@ -70,7 +70,7 @@ public struct Place: Sendable, Equatable {
     // where something sits in the structure of a program; the boundary's `Slot` is
     // what a call fills, and the two are named apart because they are two
     // things. No spelling rides along: what a document writes a part under is
-    // the reading side's, and a procedure declared in two places is a procedure the two
+    // the reading side's, and a spelling written in two places is one the two
     // can come to disagree about with nothing going wrong loudly enough to
     // notice.
     //
@@ -157,7 +157,7 @@ public struct Place: Sendable, Equatable {
         case loop
     }
 
-    // What one step of a place is. The cases divide on who chose the procedure,
+    // What one step of a place is. The cases divide on who chose the words,
     // because that is the division a reader that maps a place back to a file
     // has to make.
     public enum Step: Sendable, Equatable {
@@ -186,8 +186,8 @@ public struct Place: Sendable, Equatable {
         // A body a caller assembled and handed over, which has no document
         // under it to have a key in. It renders like a key on purpose, since a
         // person reading a line wants a line. What tells the two apart is this
-        // case, for the reader that has to know which of the procedures it may look
-        // for in a file.
+        // case, for the reader that has to know which steps it may look for in
+        // a file.
         case landmark(String)
 
         // MARK: - Property
@@ -289,8 +289,8 @@ public struct Place: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // The four things a module declares, each in the part that holds it and
-    // then under the name the author gave it. Which document is stated and
+    // What a module declares, each in the part that holds it and then under
+    // the name the author gave it. Which document is stated and
     // never defaulted, so that a caller meaning to say which text it was in
     // cannot get "none" by saying nothing.
     public static func procedure(_ name: String, in document: Document) -> Place {
@@ -325,9 +325,7 @@ public struct Place: Sendable, Equatable {
     }
 
     // A caller holding a program it assembled itself, with no document under
-    // it. There is no key to name, so the place says what was handed in, and no
-    // document either, which is a third thing and not a module that wrote no
-    // name.
+    // it. There is no key to name, so the place says what was handed in.
     public static func given(_ name: String) -> Place {
         Place([.landmark(name)], in: .assembled)
     }
