@@ -62,8 +62,10 @@ struct ArgumentValidationTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([odd, Self.host])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'app.even': even takes an even number, and 3 is odd")
         }
     }
 

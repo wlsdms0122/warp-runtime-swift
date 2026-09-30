@@ -13,13 +13,13 @@ import Testing
 //
 // What these hold a place to is that it leads somewhere for the reader it is
 // shown to. These programs are assembled in Swift and were never written down,
-// so the reader is the caller that built them and the procedures are the language's
+// so the reader is the caller that built them and the keys are the language's
 // own. A document's would name keys that exist in no file. Reading a place in a
-// document's procedures is asked of `WarpSyntax`, which has the document.
+// document's keys is asked of `WarpSyntax`, which has the document.
 //
 // The steps are what makes both readings possible: a slot and a construct
-// travel as themselves, and only what an author named travels as a procedure.
-@Suite
+// travel as themselves, and only what an author named travels as a key.
+@Suite("Where a refusal says the words are")
 struct PlaceTests {
     // MARK: - Property
     // A document to stand in for one that was read. What derives an identity is
@@ -31,9 +31,9 @@ struct PlaceTests {
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
     func aPlaceIsSpelledFromTheLanguagesNames() async {
-        // Given. A slot a document calls something else. A loop's condition is
-        // `where` in a document, and that procedure appears nowhere in what a caller
-        // assembling this wrote.
+        // Given / When. A slot a document calls something else. A loop's
+        // condition is `while` in a document, and that key appears nowhere in
+        // what a caller assembling this wrote.
         let spin = place(
             refusing: Statement(binding: .constant("spin"), expression: .loop(
                     while: .block(Block(body: [], result: .literal(.bool(true)))),
@@ -49,13 +49,13 @@ struct PlaceTests {
 
     @Test("what a call is written with is named by the position holding it")
     func anArgumentIsNamedByItsPosition() async {
-        // Given. An argument reported from the statement's own place says a
-        // thing is wrong and does not say which of the several written there.
+        // Given / When. An argument reported from the statement's own place
+        // says a thing is wrong and does not say which of the several written
+        // there.
         let sut = place(
             refusing: Statement(binding: .constant("sent"), expression: .call(
-                    Call(selector: "send", arguments: [reference("missing")])
-                )
-            )
+                Call(selector: "send", arguments: [reference("missing")])
+            ))
         )
 
         // Then
@@ -67,6 +67,8 @@ struct PlaceTests {
         // Given. A statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
         let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
+
+        // When
         let bare = place(refusing: Statement(expression: reference("missing")))
 
         // Then
@@ -103,9 +105,10 @@ struct PlaceTests {
 
     @Test("the place is carried as data, and the sentence is only the reason")
     func aPlaceIsNotProse() async throws {
-        // Given. A place written into the message is a place nothing can read
-        // back. A front end holding the file this was authored in has to walk
-        // the steps to point at the line, and a sentence has no steps. When
+        // Given / When. A place written into the message is a place nothing can
+        // read back. A front end holding the file this was authored in has to
+        // walk the steps to point at the line, and a sentence has no steps.
+        // When
         let error = #expect(throws: ValidationError.self) {
             try module(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         }
@@ -139,7 +142,7 @@ struct PlaceTests {
     }
 
     @Test("the build narrows to the argument it refused, not to the call holding it")
-    func aLinkRefusalNarrowsToTheArgument() async throws {
+    func aBuildRefusalNarrowsToTheArgument() async throws {
         // Given. A call written with several arguments, one of which holds what
         // the declaration does not take. Reported from the call, an author is
         // told a thing is wrong and not which of the three it is.
@@ -181,14 +184,13 @@ struct PlaceTests {
         // Given. The same slot of the same statement, reached once by the walk
         // that checks a document against itself and once by the walk that
         // resolves its names. Two spellings of one place is two documents as
-        // far as an author following the procedures is concerned.
-        let linked = try Module(
+        // far as an author following the keys is concerned.
+        let built = try Module(
             procedures: [
                 entryName: Procedure(access: .public, body: [
                     Statement(binding: .constant("sent"), expression: .call(
-                            Call(selector: "helper", arguments: [.literal(.string("x"))])
-                        )
-                    )
+                        Call(selector: "helper", arguments: [.literal(.string("x"))])
+                    ))
                 ]),
                 "helper": Procedure(
                     signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
@@ -203,21 +205,20 @@ struct PlaceTests {
                 procedures: [
                     entryName: Procedure(access: .public, body: [
                         Statement(binding: .constant("sent"), expression: .call(
-                                Call(selector: "helper", arguments: [reference("missing")])
-                            )
-                        )
+                            Call(selector: "helper", arguments: [reference("missing")])
+                        ))
                     ])
                 ]
             )
         }
 
-        let link = await #expect(throws: BuildError.self) {
-            try await Builder().build([linked] + Module.standard)
+        let build = await #expect(throws: BuildError.self) {
+            try await Builder().build([built] + Module.standard)
         }
 
         // Then
         #expect(load?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
-        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
+        #expect(build?.place?.rendered == "procedures.entry.body.sent[0].call.arguments[0]")
     }
 
     @Test("every walk that reports a place steps through the same slots to reach one")
@@ -241,9 +242,8 @@ struct PlaceTests {
                                 Block(body: [mayFail()]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("sent"), expression: .call(
-                                            Call(selector: selector, arguments: [argument])
-                                        )
-                                    )
+                                        Call(selector: selector, arguments: [argument])
+                                    ))
                                 ]),
                                 failure: "guarded"
                             )
@@ -283,7 +283,7 @@ struct PlaceTests {
         #expect(typed?.place?.rendered?.hasPrefix(reached) == true)
 
         // And the walk that only gathers puts it in the same place
-        let gathered = try await #require(
+        let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
                 .procedures[entryName]?.block?
                 .subexpressions(at: .procedure(entryName.spelling, in: .assembled))
@@ -416,23 +416,22 @@ struct PlaceTests {
 
     @Test("a statement's construct is the language's name, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() async throws {
-        // Given. One construct, two texts: `{ call: … }` and `{ value: { call: … }
-        // }` are both a call by the time anything here sees one, so the
-        // name for the construct is this implementation's rather than something
-        // a reader may go looking for in a file.
+        // Given / When. One construct, two texts: `{ call: … }` and `{ value: {
+        // call: … } }` are both a call by the time anything here sees one, so
+        // the name for the construct is this implementation's rather than
+        // something a reader may go looking for in a file.
         let sut = try #require(
             place(
                 refusing: Statement(binding: .constant("sent"), expression: .call(
-                        Call(selector: "send", arguments: [reference("missing")])
-                    )
-                )
+                    Call(selector: "send", arguments: [reference("missing")])
+                ))
             )
         )
 
-        // Then. The procedure is spelled for the person reading the line
+        // Then. The construct is spelled for the person reading the line
         #expect(sut.rendered?.contains(".sent[0].call.") == true)
 
-        // And carried as the type rather than as any procedure, so the side that
+        // And carried as the type rather than as any key, so the side that
         // spells it is the side that knows what its reader is looking at
         #expect(sut.steps.contains(.construct(.call)))
         #expect(sut.steps.contains(.part(.arguments)))
@@ -444,9 +443,9 @@ struct PlaceTests {
 
     @Test("what a return carries is checked, and placed where the return is")
     func aReturnsValueIsWalked() async throws {
-        // Given. The door a caller assembling a program itself passes. What
-        // `return` carries is an operand like any other: a name it reads has to
-        // be visible where it was written. When
+        // Given / When. The door a caller assembling a program itself passes.
+        // What `return` carries is an operand like any other: a name it reads
+        // has to be visible where it was written
         let error = #expect(throws: ValidationError.self) {
             try module(
                 refusing: Statement(
@@ -497,19 +496,19 @@ struct PlaceTests {
             )
         }
 
-        let link = await #expect(throws: BuildError.self) {
+        let build = await #expect(throws: BuildError.self) {
             try await Builder().build([declared] + Module.standard)
         }
 
         // Then
         #expect(load?.place?.rendered == "procedures.entry.body[0].leave")
-        #expect(link?.place?.rendered == "procedures.entry.body[0].call")
+        #expect(build?.place?.rendered == "procedures.entry.body[0].call")
     }
 
     @Test("a name two documents declare is refused at the one that could not be added")
     func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() async throws {
         // Given. A caller receiving a module from somewhere else appends it to
-        // what it already holds and links again. What that link refuses is a
+        // what it already holds and builds again. What that build refuses is a
         // collision between two documents, and only the caller knows which file
         // either arrived in. A refusal naming neither sends it opening all of
         // them.

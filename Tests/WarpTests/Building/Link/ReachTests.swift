@@ -232,6 +232,88 @@ struct ReachTests {
         #expect(try !image.reached(from: entryName).contains("std.math.plus"))
     }
 
+    @Test("names resolve across every module in the link, flat")
+    func symbolsResolveAcrossModules() async throws {
+        // Given. No module says anything about the others; what to link is the
+        // caller's statement and joining the names up is the builder's work
+        let caller = try Module(
+            procedures: [
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle")))
+                    ]
+                )
+            ]
+        )
+        let middle = try Module(
+            procedures: [
+                "middle": Procedure(
+                    body: [
+                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf")))
+                    ]
+                )
+            ]
+        )
+        let leaf = try Module(
+            procedures: [
+                "leaf": Procedure(
+                    body: [
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([caller, middle, leaf])
+
+        // Then
+        #expect(try image.reached(from: "caller") == ["caller", "middle", "leaf"])
+    }
+
+    @Test("a self-recursive procedure builds once instead of forever")
+    func recursiveProcedureBuildsOnce() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "loopy": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("again"), expression: .call(Call(selector: "loopy")))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut])
+
+        // Then
+        #expect(try image.reached(from: "loopy") == ["loopy"])
+    }
+
+    @Test("a procedure that calls nothing builds alone")
+    func selfContainedProcedureBuilds() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "alone": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut])
+
+        // Then
+        #expect(try image.reached(from: "alone") == ["alone"])
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

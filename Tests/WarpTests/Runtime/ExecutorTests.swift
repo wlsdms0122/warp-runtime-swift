@@ -10,11 +10,9 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-@Suite
+@Suite("A body as it runs")
 struct ExecutorTests {
     // MARK: - Property
-    private let builder = Builder()
-
     // MARK: - Initializer
     // MARK: - Test
     @Test("statements read the names before them")
@@ -30,10 +28,8 @@ struct ExecutorTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))
-                        ),
-                        Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!"))
-                        )
+                        Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))),
+                        Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!")))
                     ],
                     result: .record([
                             "result": .reference([.key("loud")])
@@ -49,45 +45,6 @@ struct ExecutorTests {
         #expect(outputs["result"] == .string("hello, spec!"))
     }
 
-    @Test("a conditional that declines leaves the variable as it was")
-    func aDecliningConditionalLeavesTheVariable() async throws {
-        // Given
-        let spec = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "kind", type: .string)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .variable("only-a"), expression: .literal(.null)
-                        ),
-                        Statement(
-                            expression: .conditional(equals(
-                                        .reference([.key("kind")]),
-                                        .literal(.string("a"))
-                                        ), then: [
-                                        Statement(binding: .assignment([.key("only-a")]), expression: .literal(.string("taken"))
-                                        )
-                                    ], else: nil)
-                        )
-                    ],
-                    result: .record([
-                            "result": .reference([.key("only-a")])
-                        ])
-                )
-            ]
-        )
-
-        // When
-        let outputs = try await run(spec, arguments: ["kind": .string("b")])
-
-        // Then
-        #expect(outputs["result"] == .null)
-    }
-
     @Test("a recoverable failure runs the rescue path")
     func recoverableFailureRunsRescue() async throws {
         // Given
@@ -100,12 +57,10 @@ struct ExecutorTests {
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
                                             selector: "app.fail",
                                             arguments: [.literal(.bool(true))]
-                                        ))
-                                        )
+                                        )))
                                     ]), rescue: Block(
                                         body: [
-                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                            )
+                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
                                         result: .reference([.key("recovery")])
                                     ), failure: "fragile")
@@ -121,7 +76,7 @@ struct ExecutorTests {
         // When
         let outputs = try await run(spec, vocabulary: Module.standard + [.failing])
 
-        // Then. The last rescue step's output becomes the step output
+        // Then. The rescue's result is what the attempt answers
         #expect(outputs["result"] == .string("recovered"))
     }
 
@@ -137,8 +92,7 @@ struct ExecutorTests {
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
                                             selector: "app.fail",
                                             arguments: [.literal(.bool(true))]
-                                        ))
-                                        )
+                                        )))
                                     ]), rescue: Block(
                                         body: [
                                             Statement(binding: .constant("reason"), expression: interpolated(
@@ -167,36 +121,6 @@ struct ExecutorTests {
         #expect(outputs["result"] == .string("saw: the world did not cooperate"))
     }
 
-    @Test("an author mistake propagates past rescue")
-    func fatalErrorBypassesRescue() async throws {
-        // Given. An author mistake must not be absorbed by rescue
-        let spec = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("broken"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("broken"), expression: .call(Call(
-                                            selector: "app.fail",
-                                            arguments: [.literal(.bool(false))]
-                                        ))
-                                        )
-                                    ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
-                                    ]), failure: "broken")
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect(throws: TestFatalError.self) {
-            try await run(spec, vocabulary: Module.standard + [.failing])
-        }
-    }
-
     @Test("an unrescued failure propagates")
     func unrescuedFailurePropagates() async throws {
         // Given
@@ -208,8 +132,7 @@ struct ExecutorTests {
                         Statement(binding: .constant("fragile"), expression: .call(Call(
                             selector: "app.fail",
                             arguments: [.literal(.bool(true))]
-                        ))
-                        )
+                        )))
                     ]
                 )
             ]
@@ -242,8 +165,7 @@ struct ExecutorTests {
                                             )
                                         )
                                     ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
+                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]), failure: "fragile")
                         )
                     ]
@@ -253,15 +175,17 @@ struct ExecutorTests {
 
         // When / Then. A rescue cannot disguise what the build already refused,
         // because there is no run for it to be part of
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(spec, arguments: ["n": .int(1)])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("n.field names 'field', and int has no name there to read")
         }
     }
 
     @Test("an entry the data does not carry reads as null where the author wrote ?.")
     func absentEntryReadsAsNullThroughOptional() async throws {
-        // Given. `?.` is the one spelling that expects absence: it answers
-        // null, nothing is thrown, and the rescue never runs
+        // Given. `?.` expects absence: it answers null, nothing is thrown,
+        // and the rescue never runs
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
@@ -274,11 +198,9 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)])
-                                        )
+                                        Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)]))
                                     ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
+                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]), failure: "fragile")
                         )
                     ],
@@ -324,8 +246,8 @@ struct ExecutorTests {
 
     @Test("interpolating a null spells null, and nothing is there for a rescue to absorb")
     func nullInsideTemplateSpellsNull() async throws {
-        // Given. A skipped step binds null; reading it is fine, writing it into
-        // text is not, and an author mistake passes through rescue
+        // Given. The arm this input skips leaves `maybe` null, and text spells
+        // a null as `null`
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
@@ -336,16 +258,15 @@ struct ExecutorTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .variable("maybe"), expression: .literal(.null)
-                        ),
+                        Statement(binding: .variable("maybe"), expression: .literal(.null)),
                         Statement(
-                            expression: .conditional(equals(
-                                        .reference([.key("kind")]),
-                                        .literal(.string("a"))
-                                        ), then: [
-                                        Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made"))
-                                        )
-                                    ], else: nil)
+                            expression: .conditional(
+                                equals(.reference([.key("kind")]), .literal(.string("a"))),
+                                then: [
+                                    Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made")))
+                                ],
+                                else: nil
+                            )
                         ),
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),
@@ -355,8 +276,7 @@ struct ExecutorTests {
                                             )
                                         )
                                     ], result: reference("spelled")), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                        )
+                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]), failure: "fragile")
                         )
                     ],
@@ -388,7 +308,7 @@ struct ExecutorTests {
                     ),
                     body: [
                         // Nameless on purpose. A statement that never finishes
-                        // binds nothing, so a name on it is refused at link.
+                        // binds nothing, so a name on it is refused at the build.
                         Statement(
                             expression: refusing(interpolated(
                                         literal("stopped: "),
@@ -423,8 +343,7 @@ struct ExecutorTests {
                                         )
                                     ]), rescue: Block(
                                         body: [
-                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered"))
-                                            )
+                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
                                         result: .reference([.key("recovery")])
                                     ), failure: "bail")

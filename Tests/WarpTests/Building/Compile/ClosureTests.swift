@@ -10,72 +10,38 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// A procedure is a value. What that buys is not the case list. It is that an
-// author can write the two things only Swift could write before: a construct
-// that takes a body, and a procedure that makes one.
+// A procedure is a value, so an author can write a construct that takes a
+// body, and a procedure that makes one.
 @Suite("A procedure is a value")
 struct ClosureTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a body declares as many parameters as the slot hands, under any name", arguments: [
-        ([Parameter(name: "item", type: .int)] as [Parameter], true),
-        ([Parameter(name: "anything", type: .int)] as [Parameter], true),
-        ([] as [Parameter], false),
-        ([Parameter(name: "item", type: .int), Parameter(name: "index", type: .int)] as [Parameter], false)
-    ])
-    func aBodyDeclaresWhatTheSlotHandsIt(declared: [Parameter], fits: Bool) async throws {
-        // Given. The slot hands one value. A body declaring one parameter
-        // stands whatever it calls it, since a value is applied by position;
-        // one declaring none or two is a different procedure.
-        let walking = Procedure(
-            signature: Signature(
-                parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int]))
-                    )
-                ]
-            ),
-            body: [
-                Statement(
-                    binding: .constant("once"),
-                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
-                )
-            ]
-        )
-        let sut = try Module(
-            procedures: [
-                "walking": walking,
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(
-                            binding: .constant("body"),
-                            expression: .closure(
-                                Procedure(
-                                    signature: Signature(parameters: declared),
-                                    body: [],
-                                    result: .literal(.int(1))
-                                )
-                            )
-                        ),
-                        Statement(
-                            binding: .constant("ran"),
-                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
-                        )
-                    ]
-                )
-            ]
-        )
+    @Test("a body declaring the one parameter the slot hands fits it, under any name", arguments: ["item", "anything"] as [Name])
+    func aBodyDeclaringWhatTheSlotHandsFits(name: Name) async throws {
+        // Given. The slot hands one value, and a value is applied by position
+        let sut = try module(declaring: [Parameter(name: name, type: .int)])
 
         // When / Then
-        if fits {
-            await #expect(throws: Never.self) {
-                try await Builder().build([sut] + Module.standard)
-            }
-        } else {
-            await #expect(throws: BuildError.self) {
-                try await Builder().build([sut] + Module.standard)
-            }
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+    }
+
+    @Test("a body declaring another count than the slot hands does not fit", arguments: [
+        [] as [Parameter],
+        [Parameter(name: "item", type: .int), Parameter(name: "index", type: .int)]
+    ])
+    func aBodyDeclaringAnotherCountDoesNotFit(declared: [Parameter]) async throws {
+        // Given. The slot hands one value, and a body declaring none or two is
+        // a different procedure
+        let sut = try module(declaring: declared)
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("where procedure<(int) -> any> is declared")
         }
     }
 
@@ -131,22 +97,28 @@ struct ClosureTests {
 
     @Test("a closure captures the scope it was written in, not the one it runs in")
     func closureCapturesLexically() async throws {
-        // Given. `made` is written where `outer` says "written"; the call site
-        // has an `outer` of its own saying something else
-        let sut: Body = [
-            Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
-            Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer")))
-            )
-        ]
+        // Given. `made` is written where `outer` says "written", and `running`
+        // applies it beside an `outer` of its own saying "called"
+        let running = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string)))],
+                returns: .string
+            ),
+            body: [
+                Statement(binding: .constant("outer"), expression: .literal(.string("called"))),
+                Statement(binding: .constant("said"), expression: .apply(reference("by"), arguments: []))
+            ],
+            result: reference("said")
+        )
 
         // When
         let answer = try await answer(
-            of: Body(sut.statements + [
-                Statement(binding: .constant("shadow"), expression: .literal(.string("called"))),
-                Statement(binding: .constant("said"), expression: .apply(reference("made"), arguments: [])
-                )
-            ]),
-            result: reference("said")
+            of: [
+                Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
+                Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer"))))
+            ],
+            result: .call(Call(selector: "running", arguments: [reference("made")])),
+            beside: ["running": running]
         )
 
         // Then
@@ -161,8 +133,7 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int]))
-                    )
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
                 ]
             ),
             body: [
@@ -201,8 +172,11 @@ struct ClosureTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds const isolated procedure<(int, int?) -> any> where procedure<(int) -> any> is declared")
         }
     }
 
@@ -215,8 +189,7 @@ struct ClosureTests {
                 parameters: [Parameter(name: "body", type: .procedure(nil, .const))]
             ),
             body: [
-                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [])
-                )
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
             ]
         )
         let sut = try Module(
@@ -231,8 +204,7 @@ struct ClosureTests {
                                         Statement(binding: .constant("said"), expression: .call(Call(
                                             selector: "app.shout",
                                             arguments: [.literal(.string("hi"))]
-                                        ))
-                                        )
+                                        )))
                                     ],
                                     result: reference("said")
                                 )
@@ -241,16 +213,18 @@ struct ClosureTests {
                         Statement(binding: .constant("ran"), expression: .call(Call(
                             selector: "twice",
                             arguments: [reference("loud")]
-                        ))
-                        )
+                        )))
                     ]
                 )
             ]
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut, .shouting] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
         }
     }
 
@@ -263,8 +237,7 @@ struct ClosureTests {
                 returns: .string
             ),
             body: [
-                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [])
-                )
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
             ],
             result: reference("once")
         )
@@ -275,9 +248,8 @@ struct ClosureTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("quiet"), expression: .closure(
-                                Procedure(body: [], result: .literal(.string("read")))
-                            )
-                        )
+                            Procedure(body: [], result: .literal(.string("read")))
+                        ))
                     ],
                     result: .call(Call(selector: "twice", arguments: [reference("quiet")]))
                 )
@@ -299,10 +271,8 @@ struct ClosureTests {
         let twice = Procedure(
             signature: Signature(parameters: [Parameter(name: "body", type: .procedure(nil))]),
             body: [
-                Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])
-                ),
-                Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: [])
-                )
+                Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])),
+                Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: []))
             ],
             result: .array([reference("first"), reference("second")])
         )
@@ -350,9 +320,8 @@ struct ClosureTests {
         let answer = try await answer(
             of: [
                 Statement(binding: .constant("hello"), expression: .call(
-                        Call(selector: "makeGreeter", arguments: [.literal(.string("hello"))])
-                    )
-                ),
+                    Call(selector: "makeGreeter", arguments: [.literal(.string("hello"))])
+                )),
                 Statement(binding: .constant("said"), expression: .apply(
                         reference("hello"),
                         arguments: [.literal(.string("warp"))]
@@ -376,8 +345,7 @@ struct ClosureTests {
                     "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
                 ])
             ),
-            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: [])
-            )
+            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: []))
         ]
 
         // When
@@ -392,8 +360,7 @@ struct ClosureTests {
         // Given
         let sut: Body = [
             Statement(binding: .constant("notCallable"), expression: .literal(.int(1))),
-            Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: [])
-            )
+            Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: []))
         ]
 
         // When / Then
@@ -404,43 +371,48 @@ struct ClosureTests {
         }
     }
 
-    @Test("a closure body is validated where it is written")
-    func closureBodyIsValidatedAtItsSite() {
-        // Given. The body may read what surrounds the literal and what the
-        // literal declares, and nothing else
-        let readsEnclosing = Warp.Expression.closure(
-            Procedure(body: [], result: reference("outer"))
-        )
-        let readsItsOwn = Warp.Expression.closure(
-            Procedure(
-                signature: Signature(parameters: [Parameter(name: "mine", type: .int)]),
-                body: [],
-                result: reference("mine")
-            )
-        )
-        let readsNothingReal = Warp.Expression.closure(
-            Procedure(body: [], result: reference("nowhere"))
-        )
-
-        // Then
-        #expect(validates(readsEnclosing, visible: ["outer"]))
-        #expect(!validates(readsEnclosing))
-        #expect(validates(readsItsOwn))
-        #expect(!validates(readsNothingReal))
-    }
-
-    @Test("a procedure is never equal to a procedure")
-    func proceduresHaveNoEquality() throws {
-        // Given. There is no honest answer, so the language does not offer one
-        let sut = Value.procedure(
-            Closure.assembled()
-        )
-
-        // Then
-        #expect(sut != sut)
-        #expect(sut.type == .procedure)
-    }
-
     // MARK: - Public
     // MARK: - Private
+    // A procedure whose slot hands one int, and an entry handing it a closure
+    // that declares these parameters.
+    private func module(declaring declared: [Parameter]) throws -> Module {
+        let walking = Procedure(
+            signature: Signature(
+                parameters: [
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
+                ]
+            ),
+            body: [
+                Statement(
+                    binding: .constant("once"),
+                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
+                )
+            ]
+        )
+
+        return try Module(
+            procedures: [
+                "walking": walking,
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("body"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: declared),
+                                    body: [],
+                                    result: .literal(.int(1))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("ran"),
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
+                        )
+                    ]
+                )
+            ]
+        )
+    }
 }

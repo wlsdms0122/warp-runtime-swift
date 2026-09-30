@@ -1,5 +1,5 @@
 //
-//  BuriedTests.swift
+//  TraversableTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/30/26.
@@ -11,18 +11,11 @@ import Testing
 
 // One walk over everything an expression holds.
 //
-// Three stages want all of it and differ only in what they keep (the closure
-// literals a body buries, the types its casts name, the selectors it sends)
-// and each used to walk the language itself. A case added to `Expression`
-// reached whichever copies somebody remembered, and a case *handled* but not
-// descended into reached none of them while still compiling.
-//
-// The switch has no default, so a new case cannot be forgotten. What it cannot
-// say is that the case goes *through*: an arm answering `[]` compiles. That is
-// what this asks. A marker in every position a child can sit in, and the walk
-// has to come back with all of them.
+// The switch has no default, so a new case cannot be forgotten, but an arm
+// answering `[]` compiles. So a marker stands in every position a child can
+// sit in, and the walk has to come back with all of them.
 @Suite("One walk finds everything an expression holds")
-struct BuriedTests {
+struct TraversableTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -128,10 +121,6 @@ struct BuriedTests {
         // read this walk report the first thing they refuse, so which sibling
         // an author is shown has to be a fact of the text; and the place they
         // report has to say which one it was.
-        //
-        // Walked in whatever order a `Dictionary` handed them and reported
-        // from one shared place, both were lost: the first refusal moved from
-        // run to run, and the place it named was the record, not the field.
         let sut = Warp.Expression.record([
             "beta": .cast(.literal(.int(2)), as: .string, optional: false),
             "alpha": .cast(.literal(.int(1)), as: .string, optional: false),

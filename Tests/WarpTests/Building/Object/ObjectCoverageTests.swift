@@ -11,10 +11,8 @@ import Testing
 
 // An object naming every kind of thing an object can name.
 //
-// The specification's cases round-trip whole programs, and what they reach is
-// what programs happen to be written out of: measured, 55 of the 122 kinds a
-// writing can lay down are never among them. `Construct`, `Argument` and
-// `LoweredType.Bound` are reached by none of them at all.
+// The specification's cases round-trip whole programs, and those reach only
+// the kinds programs happen to be written out of.
 //
 // A kind the pair disagrees about is a silent one. The writing and the reading
 // would each be exhaustive, each be compiled, and the object would come back
@@ -41,7 +39,7 @@ struct ObjectCoverageTests {
 
     @Test("is written under exactly the keys the layout names")
     func everyKeyIsTheLayouts() throws {
-        // Given. The writer and the reading both key the record by the
+        // Given / When. The writer and the reading both key the record by the
         // layout's keys.
         guard case let .dictionary(written) = try ObjectCoverageFixture.everything.object() else {
             Issue.record("an object is written as a record")

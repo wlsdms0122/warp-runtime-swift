@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-@Suite
+@Suite("Reading a reference at the build")
 struct FoldingTests {
     // MARK: - Property
     private let bindings: [Name: Value] = [
@@ -50,8 +50,8 @@ struct FoldingTests {
         #expect(value == .null)
     }
 
-    @Test("a null binding inside format spells null")
-    func nullBindingInFormatSpellsNull() async throws {
+    @Test("a null binding inside a template spells null")
+    func nullBindingInATemplateSpellsNull() async throws {
         // Given. Null has a spelling of its own, the one it has inside a container
         let reference = interpolated(literal("amount="), spelling(reference("maybe")))
 
@@ -73,7 +73,7 @@ struct FoldingTests {
     }
 
     @Test("a type-misusing path throws ReferenceUnfit")
-    func shapeMisuseThrowsUnfit() async {
+    func typeMisuseThrowsUnfit() async {
         // Given
         let reference: Path = [.key("count"), .key("field")]
 
@@ -98,8 +98,8 @@ struct FoldingTests {
         #expect(value == .dictionary(["n": .int(3), "list": .array([.string("x")])]))
     }
 
-    @Test("format renders over its declared with bindings")
-    func declaredBindingsRenderFormat() async throws {
+    @Test("a template renders over the names it reads")
+    func aTemplateRendersOverItsNames() async throws {
         // Given
         let reference = interpolated(literal("n="), spelling(reference("count")))
 
@@ -108,19 +108,6 @@ struct FoldingTests {
 
         // Then
         #expect(value == .string("n=3"))
-    }
-
-    @Test("in a closed scope a binding named after an ambient head is just a binding")
-    func closedScopeServesBindingNamedAfterAmbientHead() async throws {
-        // Given. A closed surface has no reserved heads: a binding named `run`
-        // is just a binding, not the ambient namespace of that name
-        let reference = interpolated(literal("who="), spelling(reference("count")))
-
-        // When
-        let value = try await read(reference)
-
-        // Then
-        #expect(value == .string("who=3"))
     }
 
     @Test("a quoted payload passes verbatim, unevaluated")

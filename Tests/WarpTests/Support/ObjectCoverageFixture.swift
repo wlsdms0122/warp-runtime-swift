@@ -9,11 +9,6 @@ import Foundation
 @testable import Warp
 
 // An object holding one of every kind a writing can lay down.
-//
-// It stands apart from the cases that read it because two of them do: one asks
-// whether the writing and the reading agree about every kind, and one bends
-// every field of it in turn. A fixture named by two suites is a fixture, not a
-// suite's private.
 enum ObjectCoverageFixture {
     // MARK: - Property
     static let everything: Compiled = {

@@ -10,46 +10,13 @@ import Testing
 @testable import Warp
 
 // `T?`. The declared type or null, and the `?.` that reads through it.
-@Suite
+@Suite("A nullable type")
 struct NullableTests {
     // MARK: - Property
     private let builder = Builder()
-    private let entryName: Name = "entry"
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a nullable slot takes its value, null, and nothing else")
-    func aNullableSlotSettles() throws {
-        let declared = TypeExpression.nullable(.int)
-
-        #expect(try declared.settling(.int(3), at: "limit") == .int(3))
-        #expect(try declared.settling(.null, at: "limit") == .null)
-        #expect(throws: (any Error).self) {
-            try declared.settling(.string("x"), at: "limit")
-        }
-    }
-
-    @Test("a block whose result is null holds no result, the way a document reads one")
-    func aNullResultIsNoResult() {
-        // Given / When
-        let sut = Block(body: [], result: .literal(.null))
-
-        // Then
-        #expect(sut.result == nil)
-    }
-
-    @Test("what may be null does not stand where null was never declared")
-    func aNullableReadingNeedsANullableSlot() throws {
-        // The declared half fits its own slot, and the nullable does not. In
-        // either wrapping.
-        #expect(TypeExpression.nullable(.int).accepts(.int))
-        #expect(TypeExpression.nullable(.int).accepts(.null))
-        #expect(TypeExpression.nullable(.int).accepts(.nullable(.int)))
-        #expect(!TypeExpression.int.accepts(.nullable(.int)))
-        #expect(!TypeExpression.nullable(.int).accepts(.string))
-        #expect(!TypeExpression.nullable(.int).accepts(.nullable(.string)))
-    }
-
     @Test("a nullable reading is refused where the plain type is declared")
     func aNullableReadingIsRefusedAtACall() async throws {
         // Given. The `?.` path answers `int?`, and the callee declares `int`
@@ -67,13 +34,11 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int]))
-                            )
+                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)])
-                        )
+                        Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)]))
                     ],
                     result: .call(Call(selector: "half", arguments: [.reference([.key("read")])]))
                 )
@@ -91,15 +56,14 @@ struct NullableTests {
     @Test("the optional dot on a record field reads it, and its answer may be null")
     func anOptionalDotOverANullable() async throws {
         // Given. The record may be null, so `?.` is the only spelling that
-        // links; what it answers is the field or null
+        // builds; what it answers is the field or null
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int]))
-                            )
+                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
                         ],
                         returns: .nullable(.int)
                     ),
@@ -140,10 +104,10 @@ struct NullableTests {
         }
     }
 
-    @Test("a nullable parameter takes null without leaning on a default")
+    @Test("a nullable parameter takes null, and nothing given is refused")
     func aNullableParameterTakesNullByType() async throws {
         // Given. `T?` says null is a value, so the boundary lets it in the way
-        // the build does: no `default: null` crutch required
+        // the build does
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -183,13 +147,15 @@ struct NullableTests {
             ]
         )
 
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await run(plain)
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("required, and nothing was given for limit")
         }
     }
 
-    @Test("a written call hands a nullable argument like any other")
-    func aNullableArgumentIsHanded() async throws {
+    @Test("a written call leaving out a nullable argument is refused")
+    func aNullableArgumentLeftOutIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -207,15 +173,14 @@ struct NullableTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "procedure", type: .string)],
+                        parameters: [Parameter(name: "text", type: .string)],
                         returns: .string
                     ),
                     body: [
                         Statement(binding: .constant("called"), expression: .call(Call(
                             selector: "labelled",
-                            arguments: [.reference([.key("procedure")])]
-                        ))
-                        )
+                            arguments: [.reference([.key("text")])]
+                        )))
                     ],
                     result: .reference([.key("called")])
                 )
@@ -233,7 +198,7 @@ struct NullableTests {
     @Test("a constant's dots are judged like a body's")
     func aConstantPathIsJudged() async throws {
         // Given. The constant is a record, so a field it does not carry is the
-        // link's refusal, not a run's surprise
+        // build's refusal, not a run's surprise
         let sut = try Module(
             constants: ["config": .record(["host": .literal(.string("a"))])],
             procedures: [
@@ -246,6 +211,7 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
@@ -273,6 +239,7 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([hidingAny] + Module.standard)
         } throws: { error in
@@ -326,17 +293,12 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         #expect(
             try await run(sut, arguments: ["task": .dictionary(["name": .string("a")])])
                 == .string("a")
         )
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
-    }
-
-    @Test("a nullable type spells itself in refusals")
-    func aNullableRenders() {
-        #expect(TypeExpression.nullable(.int).rendered == "int?")
-        #expect(TypeExpression.nullable(.array(.string)).rendered == "array<string>?")
     }
 
     @Test("a ?. that could not have read past anything is refused")
@@ -358,6 +320,7 @@ struct NullableTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await builder.build([onAField] + Module.standard)
         } throws: { error in
@@ -476,10 +439,10 @@ struct NullableTests {
 
     @Test("a mark on the head is refused wherever a path is judged")
     func aMarkedHeadIsRefused() async throws {
-        // Given (the head is a name a scope holds, so there is nothing before
-        // it that could have been absent; a document never spells this, and a
-        // frontend that builds segments directly is told so When / Then) the
-        // check meets it first, so there is no such module to take to a link
+        // Given. The head is a name a scope holds, so there is nothing before
+        // it that could have been absent. A front end that builds segments
+        // directly is told so where the module is made
+        // When / Then
         #expect {
             try Module(
                 procedures: [
@@ -502,12 +465,12 @@ struct NullableTests {
         // And the run says the same rather than reading past it. The layers
         // share one sentence, so neither answers what the other refuses
         let marked: Path = [.key("items", optional: true), .index(0)]
-        let resolver = try await builder.build(
+        let folding = try await builder.build(
             [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
         ).folding(["items": .array([.string("one")])])
 
         await #expect {
-            try await resolver.read(marked, at: .given("test"))
+            try await folding.read(marked, at: .given("test"))
         } throws: { error in
             "\(error)".contains(marked.markedHead ?? "")
         }

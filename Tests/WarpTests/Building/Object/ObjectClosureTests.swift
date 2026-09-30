@@ -88,8 +88,11 @@ struct ObjectClosureTests {
         let forged = try holding(Closure(writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("app.nobody")), nth: 0, linked: nil, captured: []), in: compiled)
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.nobody.closure[0]', written in a document no module in this link is")
         }
     }
 
@@ -100,8 +103,11 @@ struct ObjectClosureTests {
         let forged = try holding(Closure(writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("app.later")), nth: 5, linked: nil, captured: []), in: compiled)
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.later.closure[5]', and its writer wrote no closure at that count")
         }
     }
 
@@ -120,7 +126,7 @@ struct ObjectClosureTests {
         }
 
         // When
-        let image = try await builder.link(read, supplying: Supplying(Module.standard))
+        let image = try builder.link(read, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.two") == .int(6))
@@ -166,7 +172,7 @@ struct ObjectClosureTests {
         let other = try await builder.compile([madeOf(6, entry: "app.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
 
         // When
-        let image = try await builder.link(one + other, supplying: Supplying(Module.standard))
+        let image = try builder.link(one + other, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.two") == .int(6))
@@ -207,7 +213,7 @@ struct ObjectClosureTests {
         // When
         let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
         let against = try await builder.compile([folding], against: laid)
-        let image = try await builder.link(reordered + against, supplying: Supplying(Module.standard))
+        let image = try builder.link(reordered + against, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
@@ -228,11 +234,15 @@ struct ObjectClosureTests {
         let changed = try await builder.compile(Module.standard + [madeOf(6, entry: "app.one", identity: Identity([1]))])
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(changed + second, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("that is not laid beside it as it was then")
         }
-        #expect(throws: BuildError.self) {
+        #expect {
             try builder.lay(changed + second, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("that is not laid beside it as it was then")
         }
     }
 
@@ -268,7 +278,7 @@ struct ObjectClosureTests {
         let compiled = try (await builder.compile([folding], against: try builder.lay(read, supplying: Supplying(Module.standard)))).map { document in
             try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
         }
-        let image = try await builder.link(read + compiled, supplying: Supplying(Module.standard))
+        let image = try builder.link(read + compiled, supplying: Supplying(Module.standard))
 
         // Then
         #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
@@ -285,8 +295,11 @@ struct ObjectClosureTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.make.closure[0]' holds cells at [], and its frame is filled at [0]")
         }
     }
 
@@ -335,8 +348,11 @@ struct ObjectClosureTests {
 
         // When / Then. Refused where a link answers it, and where a compile
         // lays a body holding it down to fold through
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.later.closure[0]' holds cells at [99], and its frame is filled at []")
         }
 
         let inBody = try holdingInBody(
@@ -349,8 +365,11 @@ struct ObjectClosureTests {
             in: compiled
         )
 
-        #expect(throws: BuildError.self) {
+        #expect {
             try builder.lay(inBody, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.later.closure[0]' holds cells at [99], and its frame is filled at []")
         }
     }
 
@@ -361,7 +380,7 @@ struct ObjectClosureTests {
     private func holdingInBody(_ closure: Closure, in compiled: [Compiled]) throws -> [Compiled] {
         try compiled.map { one in
             guard let entry = one.declared.firstIndex(of: "app.entry"),
-                  case let .body(_, frame) = one.table[entry].implementation
+                case let .body(_, frame) = one.table[entry].implementation
             else {
                 return one
             }
@@ -397,7 +416,8 @@ struct ObjectClosureTests {
                 numbering: one.numbering,
                 typeNumbering: one.typeNumbering,
                 judging: one.variables,
-                dependencies: one.dependencies
+                dependencies: one.dependencies,
+                token: one.token
             )
         }
     }
@@ -476,7 +496,8 @@ struct ObjectClosureTests {
                 numbering: one.numbering,
                 typeNumbering: one.typeNumbering,
                 judging: [(name: held.name, value: .procedure(closure))],
-                dependencies: one.dependencies
+                dependencies: one.dependencies,
+                token: one.token
             )
         }
     }
@@ -494,7 +515,7 @@ struct ObjectClosureTests {
 
             return try Compiled(written: written, of: one.document.identity, fingerprint: one.fingerprint)
         }
-        let image = try await builder.link(read, supplying: Supplying(Module.standard))
+        let image = try builder.link(read, supplying: Supplying(Module.standard))
 
         return try await Executor().run(image, entry: entry)
     }

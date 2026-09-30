@@ -1,5 +1,5 @@
 //
-//  CompiledTests.swift
+//  SeparateCompilationTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/8/26.
@@ -12,10 +12,10 @@ import WarpStandard
 
 // The boundary between compiling a module graph and linking one.
 //
-// Compiling settles what the documents say on their own. Linking takes that
-// and one name to start from. What each stage may do is what these ask.
+// Compiling settles what the documents say on their own, and linking joins
+// what was compiled. What each half may do is what these ask.
 @Suite("What compiling settles and what linking decides")
-struct CompiledTests {
+struct SeparateCompilationTests {
     // A fixture that does not hold what a test reads out of it.
     private struct Unheld: Error, CustomStringConvertible {
         // MARK: - Property
@@ -50,7 +50,7 @@ struct CompiledTests {
     }
 
     @Test("what a document says holds whichever entry a caller names")
-    func judgementDoesNotDependOnTheEntry() async throws {
+    func judgmentDoesNotDependOnTheEntry() async throws {
         // Given. A declaration nothing reaches, calling a procedure nobody declares.
         let sut = try Module(
             procedures: [
@@ -64,36 +64,28 @@ struct CompiledTests {
         )
 
         // When / Then. Compiling refuses, and no entry was named to refuse it.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await compiled([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'nobody.declares', which no module in this link declares")
         }
-    }
-
-    @Test("a declaration an entry never calls is not reported as reached")
-    func reachIsStillTheEntrysOwn() async throws {
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
-                "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
-            ]
-        )
-
-        let image = try await builder.link(try compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
-
-        #expect(try image.reached(from: entryName).contains(entryName))
-        #expect(try !image.reached(from: entryName).contains("app.aside"))
     }
 
     @Test("an entry no module declares is refused by the run and not by the build")
     func anUnknownEntryIsTheRunsRefusal() async throws {
+        // Given
         let sut = try Module(
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
         )
 
         let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
 
-        await #expect(throws: ExecutionError.self) {
+        // When / Then
+        await #expect {
             try await Executor().run(image, entry: "app.nowhere")
+        } throws: { error in
+            error is ExecutionError
+                && "\(error)".contains("entry 'app.nowhere' is not declared by any module in this link")
         }
     }
 
@@ -119,7 +111,7 @@ struct CompiledTests {
 
         // Then. Each document's rows are next to each other, and in name
         // order inside the run.
-        let ours = try await #require(rows["a.one"])
+        let ours = try #require(rows["a.one"])
 
         #expect(rows["c.three"] == ours + 1)
         #expect(rows["b.two"] == ours + 2)
@@ -289,7 +281,7 @@ struct CompiledTests {
     @Test("a pair no claim answers is refused by the list and not by a compile")
     func aPairNoClaimAnswersIsRefusedByTheList() async throws {
         // Given. The same, with nobody making the claim.
-        let (typed, asking, _, program) = try await leaning()
+        let (typed, asking, _, program) = try leaning()
         let modules = [typed, asking, program] + Module.standard
 
         // When. Compiled one at a time, which settles nothing about a claim.
@@ -357,7 +349,7 @@ struct CompiledTests {
         // the order the graph says they stand.
         var compiled: [Compiled] = []
 
-        for origin in try await ModuleGraph(modules).standing {
+        for origin in try ModuleGraph(modules).standing {
             compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
@@ -370,7 +362,7 @@ struct CompiledTests {
     @Test("a document numbers its calls from itself, and the link answers with rows")
     func aCallCarriesTheDocumentsOwnNumber() async throws {
         // Given. A document calling a procedure it does not declare.
-        let sut = try await calling()
+        let sut = try calling()
 
         // When. Compiled.
         let compiled = try await compiled(sut + Module.standard)
@@ -584,38 +576,6 @@ struct CompiledTests {
             #expect(one.typeNumbering.memberships == other.typeNumbering.memberships)
             #expect(one.variables.map(\.name) == other.variables.map(\.name))
             #expect(one.table.count == other.table.count)
-        }
-    }
-
-    @Test("a document cannot declare a name a document it is compiled against declared")
-    func aCompileAgainstRefusesADoubledName() async throws {
-        // Given. Two documents declaring one spelling.
-        let first = try Module(
-            procedures: [
-                "app.procedure": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-        let second = try Module(
-            procedures: [
-                "app.procedure": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(2))
-                )
-            ]
-        )
-
-        // When. The first is compiled, the second against it.
-        let compiled = try await builder.compile([first])
-
-        // Then. Two declarations of a name have no way to be told apart,
-        // whether the build reads them together or one after the other.
-        await #expect(throws: BuildError.self) {
-            try await builder.compile([second], against: compiled, supplying: Supplying(Module.standard))
         }
     }
 

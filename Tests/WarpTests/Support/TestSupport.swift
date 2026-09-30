@@ -11,14 +11,6 @@ import Testing
 import WarpTestSupport
 import WarpStandard
 
-// This target imports no notation, on purpose. Every other test in the
-// package reaches the language through one, which means it proves two things
-// at once and cannot say which one broke. What is written here is the language
-// on its own: procedures authored as Swift values, paths written as segments
-// rather than parsed from text. The standard vocabulary comes in because a
-// program has to call somewhere, and what those procedures answer is tested where
-// they live.
-
 // A statement that may fail and does not: a plain cast onto a type the value
 // already fits. An `attempt` stands only over a body that can fail, so a test
 // showing what a rescue does *not* catch puts one of these in the body.
@@ -37,11 +29,10 @@ func reference(_ names: Name...) -> Warp.Expression {
 
 // MARK: - Running
 
-// The entry name these tests link against. Any name would do, which procedure a
-// run starts from is an argument, so there is nothing special about this one.
+// The entry these tests run from.
 let entryName: Name = "entry"
 
-// Link the set and run. The way a caller does it, and the way the model reads:
+// Build the set and run. The way a caller does it, and the way the model reads:
 // the caller states its whole graph, then names one procedure in it.
 func run(
     _ modules: [Module],
@@ -164,48 +155,14 @@ func walking(
     )
 }
 
-// Equality and the connectives are procedures, so a test writing one writes the call
-// the notation lowers to.
+// Equality is a procedure, so a test writing one writes the call the notation
+// lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
     .call(Call(selector: "std.logic.equal", arguments: [subject, operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
     .call(Call(selector: "std.logic.notEqual", arguments: [subject, operand]))
-}
-
-func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .call(Call(selector: "std.logic.not", arguments: [condition]))
-}
-
-// A connective leaves its later sides unasked, so each arrives as something that
-// has not been answered yet.
-func every(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("std.logic.and", conditions)
-}
-
-func some(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("std.logic.or", conditions)
-}
-
-private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
-    .call(
-        Call(
-            selector: selector,
-            arguments: [
-                .array(
-                    conditions.map { condition in
-                        .closure(
-                            Procedure(
-                                implementation: .body(Block(body: [], result: condition)),
-                                constness: .const
-                            )
-                        )
-                    }
-                )
-            ]
-        )
-    )
 }
 
 // MARK: - Interpolation

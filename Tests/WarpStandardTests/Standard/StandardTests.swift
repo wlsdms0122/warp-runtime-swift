@@ -122,6 +122,37 @@ struct StandardTests {
         }
     }
 
+    @Test("a bundle mentioning the shared constraints needs std in the link")
+    func aBundleNeedsStdInTheLink() async throws {
+        // Given. Collection's procedures mention `Collection` and
+        // `Comparable`, which only the foundation module declares
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.collection.sorted",
+                        arguments: [.literal(.array([.int(2), .int(1)]))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then, without the foundation the constraint name resolves to
+        // nothing, and the declaration that mentions it is refused
+        await #expect {
+            try await Builder().build([sut] + Module.collection)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which no module in this link declares")
+        }
+
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

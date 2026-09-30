@@ -11,14 +11,14 @@ import Testing
 @Suite("A folded constant is held to the contract it was handed to")
 struct FoldedContractTests {
     // MARK: - Property
-    private let entryName: Name = "app.main"
+    private let main: Name = "app.main"
 
     // MARK: - Initializer
     // MARK: - Test
-    // Given. A procedure answering `any` hands a string where a contract is asked,
-    // and the reading says nothing about what arrives.
     @Test("a value wearing no name is refused however much of the list is in hand")
     func aNamelessValueIsRefused() async throws {
+        // Given. A procedure answering `any` hands a string where a contract is
+        // asked, and the reading says nothing about what arrives.
         let modules = try documents(returning: .any, giving: .literal(.string("x"))) + Module.standard
 
         // When / Then. No claim puts a string under a contract, so a document
@@ -42,11 +42,12 @@ struct FoldedContractTests {
         }
     }
 
-    // Two constants leaning on two pairs, settled one after the other. The
-    // refusal the list makes stands where the pair was folded, which is the
-    // constant that handed it and not whichever was settled last.
     @Test("a deferred pair stands where it was folded, not where the walk ended")
     func aDeferredPairStandsWhereItWasFolded() async throws {
+        // Given. Two constants leaning on two pairs, settled one after the
+        // other. The refusal the list makes stands where the pair was folded,
+        // which is the constant that handed it and not whichever was settled
+        // last.
         let asking = try Module(
             contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
@@ -82,7 +83,7 @@ struct FoldedContractTests {
                 "app.zzz": .call(Call(selector: "app.count", arguments: [.call(Call(selector: "app.giveLate"))]))
             ],
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
@@ -91,6 +92,7 @@ struct FoldedContractTests {
             ]
         )
 
+        // When / Then
         await #expect {
             try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
@@ -99,11 +101,11 @@ struct FoldedContractTests {
         }
     }
 
-    // A procedure answering `any` hands a named record where a contract is asked,
-    // and the reading says nothing about what arrives, so nothing is written
-    // down where the call is read.
     @Test("a value wearing a name is written down where the table cannot settle")
     func aNamedValueIsWrittenDown() async throws {
+        // Given. A procedure answering `any` hands a named record where a
+        // contract is asked, and the reading says nothing about what arrives,
+        // so nothing is written down where the call is read.
         let typed = try Module(
             types: ["bank.Plain": .record(["note": .string])],
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
@@ -162,7 +164,7 @@ struct FoldedContractTests {
                 )
             ],
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],

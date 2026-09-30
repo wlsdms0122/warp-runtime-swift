@@ -13,19 +13,13 @@ import Testing
 // whether any value is both, and once by the run, which sees the value that
 // actually arrived and asks whether it is the named type. The two have to
 // agree, and only one of them can be wrong in a way nobody finds out about: the
-// link refusing a cast the run would have taken closes a door with no value on
+// build refusing a cast the run would have taken closes a door with no value on
 // either side of it to show for it.
 //
 // So the contract is one-directional. Wherever a value settles into both
-// types, the build must not call the pair impossible. The other way round is
-// deliberately free. `couldBothHold` refuses only what it can prove, and
-// everything it cannot read into is left to the run.
-//
-// This is the same kind of guard `holdsEveryByte` earned: two hand-written
-// answers to one question, held together by asking the judge. Every pair the
-// restatement got wrong (`dictionary` beside `record`, `int?` beside `string?`,
-// `bytes` beside `array<int>`, an int where a double is named, `int?` beside
-// `null`) is a witness this walk would have produced on its own.
+// types, the build does not call the pair impossible. `couldBothHold` refuses
+// only what it can prove, and everything it cannot read into is left to the
+// run.
 @Suite("The build calls impossible only what no value satisfies")
 struct CastAgreementTests {
     // MARK: - Property
@@ -49,7 +43,7 @@ struct CastAgreementTests {
         ]
     )
 
-    private let loweredTypes: [TypeExpression] = [
+    private let typeExpressions: [TypeExpression] = [
         .any, .never, .null, .bool, .int, .double, .string,
         .ranged(.whole(from: 0, to: .through(255))),
         .ranged(.whole(from: 300)),
@@ -92,9 +86,10 @@ struct CastAgreementTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("no pair some value satisfies is called impossible")
-    func theLinkNeverRefusesWhatARunWouldTake() {
-        for mine in loweredTypes {
-            for theirs in loweredTypes {
+    func theBuildNeverRefusesWhatARunWouldTake() {
+        // When / Then
+        for mine in typeExpressions {
+            for theirs in typeExpressions {
                 // The witness: one value both judges take. Where there is none,
                 // the build is free. It may still allow the pair, and leaving
                 // what it cannot prove to the run is the whole bias.
@@ -116,8 +111,10 @@ struct CastAgreementTests {
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
         // side has one, which is exactly where an asymmetry would hide.
-        for mine in loweredTypes {
-            for theirs in loweredTypes {
+
+        // When / Then
+        for mine in typeExpressions {
+            for theirs in typeExpressions {
                 #expect(
                     couldBothHold(mine, theirs)
                         == couldBothHold(theirs, mine),

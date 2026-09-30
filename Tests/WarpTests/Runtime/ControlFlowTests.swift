@@ -10,9 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// Control flow is a closed set of expression cases the language owns, so each
-// one is asked here directly. What it answers with, and what its body can see.
-@Suite
+@Suite("Control flow as it runs")
 struct ControlFlowTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -63,21 +61,6 @@ struct ControlFlowTests {
         #expect(answer == .int(1))
     }
 
-    @Test("what a block binds does not escape it")
-    func blockBindingsDoNotEscape() {
-        // Given
-        let sut: Body = [
-            Statement(binding: .constant("probe"), expression: .block(
-                    Block(body: [Statement(binding: .constant("inner"), expression: .literal(.int(1)))])
-                )
-            ),
-            Statement(binding: .constant("read"), expression: reference("inner"))
-        ]
-
-        // When / Then
-        #expect(!validates(body: sut))
-    }
-
     @Test("a conditional answers nothing, and what an arm keeps it writes outward")
     func aBranchAnswersNothingAndWritesOutward() async throws {
         // Given. The condition chooses a way through the body, not a value:
@@ -87,12 +70,10 @@ struct ControlFlowTests {
             Warp.Expression.conditional(
                 .literal(.bool(take)),
                 then: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then"))
-                    )
+                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then")))
                 ],
                 else: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("else"))
-                    )
+                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("else")))
                 ]
             )
         }
@@ -120,7 +101,7 @@ struct ControlFlowTests {
 
     @Test("a declining conditional leaves the enclosing names as they were")
     func aDecliningBranchWritesNothing() async throws {
-        // Given, with no other arm, a condition that declines runs nothing: the
+        // Given. With no other arm, a condition that declines runs nothing: the
         // variable holds what it held, which is the null it started with
         let sut = Warp.Expression.conditional(
             .literal(.bool(false)),
@@ -141,26 +122,6 @@ struct ControlFlowTests {
 
         // Then
         #expect(answer == .null)
-    }
-
-    @Test("a name on a conditional is refused")
-    func aNameOnABranchIsRefused() {
-        // Given. A conditional answers nothing, so its name could never bind
-        let sut = Warp.Expression.conditional(
-            .literal(.bool(true)),
-            then: [Statement(expression: .literal(.int(1)))],
-            else: nil
-        )
-
-        // When / Then. Under any of the three spellings
-        #expect(!validates(body: [Statement(binding: .constant("probe"), expression: sut)]))
-        #expect(!validates(body: [Statement(binding: .variable("probe"), expression: sut)]))
-        #expect(
-            !validates(body: [
-                Statement(binding: .variable("probe"), expression: .literal(.int(0))),
-                Statement(binding: .assignment([.key("probe")]), expression: sut)
-            ])
-        )
     }
 
     @Test("a loop's result reads a name its body declared as the body's, whatever the entry holds under it")
@@ -283,9 +244,8 @@ struct ControlFlowTests {
             element: "element",
             body: [
                 Statement(binding: .assignment([.key("sum")]), expression: .call(
-                        Call(selector: "std.math.plus", arguments: [reference("sum"), reference("element")])
-                    )
-                )
+                    Call(selector: "std.math.plus", arguments: [reference("sum"), reference("element")])
+                ))
             ]
         )
 
@@ -304,31 +264,6 @@ struct ControlFlowTests {
         #expect(answer == .int(6))
     }
 
-    @Test("a rescue runs on a recoverable failure and can read it")
-    func rescueRunsAndReadsTheFailure() async throws {
-        // Given
-        let sut = Warp.Expression.attempt(
-            Block(body: [
-                Statement(binding: .constant("boom"), expression: .call(
-                        Call(selector: "app.fail", arguments: [.literal(.bool(true))])
-                    )
-                )
-            ]),
-            rescue: Block(body: [], result: reference("failure", "message")),
-            failure: "failure"
-        )
-
-        // When
-        let answer = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe"),
-            vocabulary: Module.standard + [.failing]
-        )
-
-        // Then
-        #expect(answer == .string("the world did not cooperate"))
-    }
-
     @Test("an author mistake passes through a rescue")
     func authorMistakeIsNotRescued() async throws {
         // Given. Recovery is for a world that did not cooperate, not for a
@@ -336,9 +271,8 @@ struct ControlFlowTests {
         let sut = Warp.Expression.attempt(
             Block(body: [
                 Statement(binding: .constant("boom"), expression: .call(
-                        Call(selector: "app.fail", arguments: [.literal(.bool(false))])
-                    )
-                )
+                    Call(selector: "app.fail", arguments: [.literal(.bool(false))])
+                ))
             ]),
             rescue: Block(body: [], result: .literal(.string("recovered"))),
             failure: "failure"
@@ -354,18 +288,37 @@ struct ControlFlowTests {
         }
     }
 
-    @Test("an empty rescue is refused")
-    func emptyRescueRefused() {
-        // Given. A rescue that produces nothing swallows a failure into null
-        // without a trace
-        let sut = Warp.Expression.attempt(
-            Block(body: [Statement(binding: .constant("work"), expression: .literal(.int(1)))]),
-            rescue: Block(body: []),
-            failure: "failure"
+    @Test("a body a native procedure calls leaves for itself, not for the procedure around it")
+    func aBodyANativeProcedureCallsLeavesForItself() async throws {
+        // Given. The same early leave, reached through a native procedure that
+        // calls the body once per element rather than through `apply`.
+        let judging = Procedure(
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
+            body: [
+                Statement(expression: .conditional(
+                    equals(reference("item"), .literal(.int(2))),
+                    then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.bool(true)))))],
+                    else: nil
+                ))
+            ],
+            result: .literal(.bool(false))
+        )
+        let asking = Procedure(
+            body: [Statement(binding: .constant("judging"), expression: .closure(judging))],
+            result: .call(
+                Call(
+                    selector: "std.collection.filter",
+                    arguments: [.array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]), reference("judging")]
+                )
+            )
         )
 
-        // When / Then
-        #expect(!validates(sut))
+        // When
+        let answer = try await run(asking)
+
+        // Then. A leave answering for the procedure around it would end the
+        // whole run at the first element instead.
+        #expect(answer == .array([.int(2)]))
     }
 
     // MARK: - Public

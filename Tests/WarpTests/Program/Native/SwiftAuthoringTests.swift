@@ -9,13 +9,32 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// The kernel's own acceptance test: a procedure written in Swift, run without a
-// front end. Nothing here spells a keyword (no `"loop"`, no `"steps"`, no path
-// string) because a caller that reaches for `import Warp` is writing the IR,
-// not a document about it. If a construct cannot be reached from here, it is
-// only reachable through a notation, and the notation has become the language.
+// Procedures written in Swift and run without a front end.
 @Suite("Authoring a procedure in Swift")
 struct SwiftAuthoringTests {
+    // Answers what it was sent, read by the first parameter's own key.
+    private struct EchoQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            question[.of]
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -32,7 +51,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["greet": procedure.with(access: .public)]), .shouting] + Module.standard
+            [try Module(procedures: ["greet": procedure.with(access: .public)])] + Module.standard
         )
         let outputs = try await Executor().run(image, entry: "greet")
 
@@ -60,8 +79,7 @@ struct SwiftAuthoringTests {
                         round: "counted"
                     )
                 ),
-                Statement(binding: .variable("verdict"), expression: .literal(.string("counted otherwise"))
-                ),
+                Statement(binding: .variable("verdict"), expression: .literal(.string("counted otherwise"))),
                 Statement(
                     expression: .conditional(
                         equals(
@@ -69,8 +87,7 @@ struct SwiftAuthoringTests {
                             .literal(.int(3))
                             ),
                         then: [
-                            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("counted to three"))
-                            )
+                            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("counted to three")))
                         ],
                         else: nil
                     )
@@ -79,9 +96,9 @@ struct SwiftAuthoringTests {
             result: .record(["verdict": .reference([.key("verdict")])])
         )
 
-        // When Comparing is a procedure, so this links the bundle that declares
-        // one, and the bundles that bundle leans on. The control flow beside it
-        // needs nothing.
+        // When. Comparing is a procedure, so this builds with the bundle that
+        // declares one, and the bundles that bundle leans on. The control flow
+        // beside it needs nothing.
         let image = try await builder.build(
             [try Module(procedures: ["entry": procedure.with(access: .public)])]
                 + Module.logic + Module.math + Module.collection + Module.foundation
@@ -102,9 +119,8 @@ struct SwiftAuthoringTests {
         let procedure = Procedure(
             body: [
                 Statement(binding: .constant("shout"), expression: .call(
-                        Call(selector: "app.shout", arguments: [.literal(.string("hey"))])
-                    )
-                )
+                    Call(selector: "app.shout", arguments: [.literal(.string("hey"))])
+                ))
             ],
             result: .record(["shout": .reference([.key("shout")])])
         )
@@ -128,17 +144,14 @@ struct SwiftAuthoringTests {
             body: [
                 Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
                 Statement(binding: .constant("counted"), expression: .call(
-                        Call(selector: "std.collection.count", arguments: [.reference([.key("names")])])
-                    )
-                ),
+                    Call(selector: "std.collection.count", arguments: [.reference([.key("names")])])
+                )),
                 Statement(binding: .constant("shouted"), expression: .call(
-                        Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
-                    )
-                ),
+                    Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
+                )),
                 Statement(binding: .constant("called"), expression: .call(
-                        Call(selector: "echo", arguments: [.literal(.string("yo"))])
-                    )
-                )
+                    Call(selector: "echo", arguments: [.literal(.string("yo"))])
+                ))
             ],
             result: .record([
                 "counted": .reference([.key("counted")]),
@@ -150,11 +163,11 @@ struct SwiftAuthoringTests {
         // which module declared it is the builder's business.
         let echo = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "procedure", type: .string)],
+                parameters: [Parameter(name: "text", type: .string)],
                 returns: .record(["said": .string])
             ),
             body: [],
-            result: .record(["said": .reference([.key("procedure")])])
+            result: .record(["said": .reference([.key("text")])])
         )
 
         // When
@@ -169,9 +182,71 @@ struct SwiftAuthoringTests {
         #expect(outputs["called"] == .string("yo"))
     }
 
+    @Test("a native procedure reads its first argument by the parameter's own key")
+    func firstArgumentIsReadByItsKey() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    body: [],
+                    result: .record([
+                        "result": .call(Call(selector: "app.echo", arguments: [.literal(.int(20))]))
+                    ])
+                ),
+                "app.echo": Procedure(
+                    signature: Signature(of: EchoQuery.self, returns: .int),
+                    implementation: .query(EchoQuery())
+                )
+            ]
+        )
+
+        // When
+        let outputs = try await run(sut)
+
+        // Then
+        #expect(outputs["result"] == .int(20))
+    }
+
+    @Test("a native procedure and a written one are declared the same way")
+    func nativeAndWrittenDeclareAlike() async throws {
+        // Given
+        let written = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
+                    ]
+                ),
+                "shout": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "of", type: .string)
+                        ],
+                        returns: .string
+                    ),
+                    body: [
+                        Statement(binding: .constant("loud"), expression: .reference([.key("of")]))
+                    ],
+                    result: .reference([.key("loud")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([written] + Module.standard)
+
+        // Then. One table, and what separates them is only how each is written
+        let shout = try #require(image["shout"])
+        let count = try #require(image["std.collection.count"])
+
+        #expect(shout.signature.names.first == "of")
+        #expect(count.signature.names.first == "collection")
+        #expect(shout.isWritten)
+        #expect(!count.isWritten)
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
-
-// A procedure written in Swift and never taught to a document to spell. It conforms
-// to `Effect` and to nothing else. The proof that the run path asks for no

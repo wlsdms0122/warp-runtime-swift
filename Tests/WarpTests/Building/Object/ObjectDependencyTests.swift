@@ -35,25 +35,39 @@ struct ObjectDependencyTests {
     // is all these ask of it.
     private let builder = Builder { value in Fingerprint(Array("\(value)".utf8)) }
 
-    private let used = try! Module(
-        procedures: [
-            "a.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-        ]
-    )
-    private let unrelated = try! Module(
-        procedures: [
-            "b.bar": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
-        ]
-    )
-    private let program = try! Module(
-        procedures: [
-            "app.main": Procedure(
-                signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "a.foo"))
+    private var used: Module {
+        get throws {
+            try Module(
+                procedures: [
+                    "a.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                ]
             )
-        ]
-    )
+        }
+    }
+
+    private var unrelated: Module {
+        get throws {
+            try Module(
+                procedures: [
+                    "b.bar": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                ]
+            )
+        }
+    }
+
+    private var program: Module {
+        get throws {
+            try Module(
+                procedures: [
+                    "app.main": Procedure(
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(selector: "a.foo"))
+                    )
+                ]
+            )
+        }
+    }
 
     // MARK: - Initializer
     // MARK: - Test
@@ -143,40 +157,18 @@ struct ObjectDependencyTests {
         // and the number does not move. So a caller that kept no record of what
         // it leaned on would read one kind's object for the other's.
         #expect(
-            besideDependencies(asLowered.calling) == besideDependencies(asAnswered.calling),
+            try #require(besideDependencies(asLowered.calling)) == besideDependencies(asAnswered.calling),
             "the caller told the two kinds apart by itself"
         )
-    }
-
-    @Test("reads back saying what it was written saying")
-    func survivesTheRoundTrip() async throws {
-        // Given.
-        let behind = try await builder.compile([used])
-        let compiled = try await builder.compile(
-            [program],
-            against: behind,
-            supplying: Supplying([used, program])
-        )
-
-        // When.
-        let written = try compiled[0].object()
-        let read = try Compiled(written: written, of: compiled[0].identity)
-
-        // Then.
-        #expect(read.dependencies == compiled[0].dependencies)
     }
 
     // MARK: - Public
     // MARK: - Private
     // Everything an object says but what it leaned on.
-    private func besideDependencies(_ value: Value?) -> [Value] {
-        guard case let .array(stamped) = value, stamped.count == 3,
-              case let .array(written) = stamped[2]
-        else {
-            return []
-        }
+    private func besideDependencies(_ value: Value?) -> Value.Dictionary? {
+        guard case let .dictionary(parts) = value else { return nil }
 
-        return Array(written[2...])
+        return parts.removing(ObjectLayout.Key.dependencies.name)
     }
 
     private func written(

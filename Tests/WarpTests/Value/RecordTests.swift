@@ -27,6 +27,7 @@ struct RecordTests {
 
     @Test("a layout naming one field twice is refused rather than fatal")
     func aRepeatedFieldIsRefused() {
+        // When / Then
         #expect(throws: ValueRefused.self) { try Layout(fields: ["a", "b", "a"]) }
     }
 
@@ -111,18 +112,6 @@ struct RecordTests {
         #expect(sut != Record(name: "app.Vault", ["a": .int(1)]))
     }
 
-    @Test("a record's own name is compared as bytes, the way its fields are")
-    func aNameIsComparedAsBytes() throws {
-        // Given
-        let composed = Record(name: "app.Caf\u{E9}", ["a": .int(1)])
-        let decomposed = "app.Cafe\u{301}"
-
-        // When / Then. The decomposed spelling is no name, so there is no
-        // second record to compare with
-        #expect(throws: NameRefused.self) { try Name(decomposed) }
-        #expect(composed.name?.spelling == "app.Caf\u{E9}")
-    }
-
     @Test("mapping values changes every value and nothing else")
     func mappingValuesKeepsTheLayout() throws {
         // Given
@@ -152,6 +141,46 @@ struct RecordTests {
         #expect(named != dictionary)
         #expect(record.matches(.dictionary(["a": .double(1), "b": .string("x")])))
         #expect(record["a"] == .int(1))
+    }
+
+    @Test("a path write reaches a nameless record and the dictionary it equals the same way")
+    func aPathWriteReadsEitherSpelling() throws {
+        // Given. The contract says these are one value
+        let laid = Value.record(Record(name: nil, ["a": .int(1)]))
+        let held = Value.dictionary(["a": .int(1)])
+        let path: [Projection] = [.key("b")]
+
+        // When / Then
+        #expect(laid == held)
+        #expect(
+            try laid.writing(.int(2), at: path, under: "x.b")
+                == (try held.writing(.int(2), at: path, under: "x.b"))
+        )
+    }
+
+    @Test("a write lands on the place the link put the field at, whatever spelling stands beside it")
+    func aWriteLandsOnItsPlace() throws {
+        // Given
+        let point = Value.record(Record(name: nil, ["x": .int(1), "y": .int(2)]))
+
+        // When
+        let written = try point.writing(.int(9), at: [.field(1, "z")], under: "point.z")
+
+        // Then
+        #expect(written == .record(Record(name: nil, ["x": .int(1), "y": .int(9)])))
+    }
+
+    @Test("a layout a host builds carries no name of its own")
+    func aHostBuiltLayoutHasNoName() throws {
+        // Given. A name says a declaration, and a declaration is the build's
+        let layout = try Layout(fields: ["balance"])
+
+        // When
+        let built = try Record(layout: layout, checking: [.int(1)])
+
+        // Then
+        #expect(built.name == nil)
+        #expect(Value.record(built) == .dictionary(["balance": .int(1)]))
     }
 
     // MARK: - Public

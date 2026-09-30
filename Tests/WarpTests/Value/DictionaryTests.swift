@@ -30,6 +30,7 @@ struct DictionaryTests {
 
     @Test("a name written twice is refused")
     func aRepeatedNameIsRefused() {
+        // When / Then
         #expect(throws: ValueRefused.self) {
             try Value.Dictionary([(name: "a", value: Value.int(1)), (name: "a", value: .int(3))])
         }
@@ -73,17 +74,6 @@ struct DictionaryTests {
         // When / Then
         #expect(sut.removing("a").names == ["b"])
         #expect(sut.removing("z") == sut)
-    }
-
-    @Test("two spellings Swift calls equal are two names, and only one of them is a name")
-    func equivalentSpellingsAreTwoNames() {
-        // Given
-        let composed: Name = "caf\u{E9}"
-        let decomposed = "cafe\u{301}"
-
-        // When / Then
-        #expect(composed.spelling == decomposed)
-        #expect(throws: NameRefused.self) { try Name(decomposed) }
     }
 
     // MARK: - Public

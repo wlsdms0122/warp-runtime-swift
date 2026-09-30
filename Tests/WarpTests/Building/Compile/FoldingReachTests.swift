@@ -67,8 +67,10 @@ struct FoldingReachTests {
 
         // When and then. What the procedure answers is its code's, and the
         // compiled document says nothing about which code that was.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build(Module.standard + [brought, document])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
         }
     }
 
@@ -103,8 +105,10 @@ struct FoldingReachTests {
 
         // When and then. The refusal is about what the fold reaches, not about
         // what the constant wrote, so one written name away is still refused.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build(Module.standard + [brought, between, document])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
         }
     }
 
@@ -189,8 +193,11 @@ struct FoldingReachTests {
 
         // When and then. That body is being resolved beside the constants it
         // may read, so running it would be a circle with no start.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build(Module.standard + [document])
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("this procedure's body is being resolved beside the constants it may read")
         }
     }
 
@@ -216,9 +223,41 @@ struct FoldingReachTests {
 
         // When and then. The row came back from an object rather than from the
         // module, and what it may be folded through came back with it.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.compile([document], against: baked, supplying: supplying)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
         }
+    }
+
+    @Test("a body's constant-headed call runs a written procedure, resolved")
+    func aBodyFoldsThroughAWrittenProcedure() async throws {
+        // Given. The constants are settled and the procedures resolved by the time a
+        // body folds, so a constant-headed call may run a written procedure: the
+        // cycle the settling refuses is the constants' own
+        let sut = try Module(
+            constants: ["greeting": .literal(.string("hi"))],
+            procedures: [
+                "shout": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .string)],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "shout", arguments: [reference("greeting")]))
+                )
+            ]
+        )
+
+        // When / Then. Folded at the build to the value the resolved body
+        // answers
+        #expect(try await run(sut) == .int(2))
     }
 
     // MARK: - Public

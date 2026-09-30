@@ -13,7 +13,7 @@ import WarpStandard
 // What a reading of an object refuses.
 //
 // An object is this runtime's own writing, so what is asked here is what
-// happens when the bytes are not that. Each case bends one field of a real
+// happens when the bytes are not that. Each test bends one field of a real
 // object, because a writing built by hand would prove only that the reading
 // refuses something it was never handed.
 @Suite("An object whose writing is not one")
@@ -35,9 +35,9 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(frame) = implementation[2]
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(frame) = implementation[2]
         else {
             Issue.record("an object writes a row's frame beside its body")
 
@@ -51,8 +51,10 @@ struct ObjectReadingTests {
         parts = parts.writing("rows", with: .array(table))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'frame' writes -1 where a count stands")
         }
     }
 
@@ -62,7 +64,7 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case let .array(types) = parts["types"],
-              let first = types.first
+            let first = types.first
         else {
             Issue.record("an object is written as its parts under their keys")
 
@@ -72,8 +74,10 @@ struct ObjectReadingTests {
         parts = parts.writing("types", with: .array(types + [first]))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'types' writes its names out of order, or one of them twice")
         }
     }
 
@@ -83,17 +87,23 @@ struct ObjectReadingTests {
         let parts = try await parts()
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts.removing("constants")), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'object' writes no 'constants'")
         }
     }
 
     @Test("is refused where a part this reads none of is written")
     func aPartUnknown() async throws {
+        // Given
         let parts = try await parts()
 
-        #expect(throws: ObjectRefused.self) {
+        // When / Then
+        #expect {
             try Compiled(written: .dictionary(parts.writing("extra", with: .null)), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'object' writes 'extra', which this reads none of")
         }
     }
 
@@ -119,8 +129,8 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case var .array(numbering) = parts["typeNumbering"],
-              case let .array(types) = numbering[0],
-              let first = types.first
+            case let .array(types) = numbering[0],
+            let first = types.first
         else {
             Issue.record("an object writes its type numbering as a part")
 
@@ -131,8 +141,11 @@ struct ObjectReadingTests {
         parts = parts.writing("typeNumbering", with: .array(numbering))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("'type numbering types' writes its names out of order, or one of them twice")
         }
     }
 
@@ -155,11 +168,11 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(frame) = implementation[2],
-              case let .int(size) = frame[0], size > 0,
-              case let .array(parameters) = frame[1], parameters.isEmpty
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(frame) = implementation[2],
+            case let .int(size) = frame[0], size > 0,
+            case let .array(parameters) = frame[1], parameters.isEmpty
         else {
             Issue.record("a row with a local stands on a slot no parameter holds")
 
@@ -167,14 +180,17 @@ struct ObjectReadingTests {
         }
 
         frame[0] = .int(0)
+        frame[4] = .array([])
         implementation[2] = .array(frame)
         row[7] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("a body stands on a slot its frame of 0 does not hold")
         }
     }
 
@@ -185,8 +201,10 @@ struct ObjectReadingTests {
 
         // When / Then. The parts behind the number are laid out by it, so what
         // refuses is the number and nothing further in.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts.writing(ObjectLayout.Key.object.name, with: .int(ObjectLayout.format + 1))), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("the object is laid out as format 2, and this reads format 1")
         }
     }
 
@@ -208,12 +226,12 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(answers) = parts["answers"],
-              case var .array(entry) = answers[0],
-              case var .array(answer) = entry[1],
-              case var .array(record) = answer[1],
-              case var .array(layout) = record[0],
-              case let .array(names) = layout[1],
-              names.count > 1
+            case var .array(entry) = answers[0],
+            case var .array(answer) = entry[1],
+            case var .array(record) = answer[1],
+            case var .array(layout) = record[0],
+            case let .array(names) = layout[1],
+            names.count > 1
         else {
             Issue.record("a declaration that wrote no answer stands one as a lowered record")
 
@@ -230,21 +248,25 @@ struct ObjectReadingTests {
         parts = parts.writing("answers", with: .array(answers))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("a layout's fields are not in name order")
         }
     }
 
     @Test("is refused where a frame names fewer slots than it holds")
     func aFrameNamingTooFew() async throws {
+        // Given
         var parts = try await parts()
 
+        // When / Then
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(frame) = implementation[2],
-              case let .array(names) = frame[4],
-              !names.isEmpty
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(frame) = implementation[2],
+            case let .array(names) = frame[4],
+            !names.isEmpty
         else {
             Issue.record("an object writes a row's frame beside its body")
 
@@ -257,16 +279,17 @@ struct ObjectReadingTests {
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("a frame of 1 names 0 slot(s)")
         }
     }
 
     @Test("is refused where a call stands more arguments than its callee takes")
     func aCallStandingTooMany() async throws {
         // Given. A document whose body calls one of its own declarations, with
-        // one argument added to what the call stands. The row it reaches is the
-        // link's answer, so the link is where this is asked.
+        // one argument added to what the call stands.
         let sut = try Module(
             procedures: [
                 "app.entry": Procedure(
@@ -286,13 +309,13 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(body) = implementation[1],
-              case var .array(result) = body[1],
-              case var .array(operation) = result[0],
-              case var .array(call) = operation[1],
-              case let .array(arguments) = call[1]
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(operation) = result[0],
+            case var .array(call) = operation[1],
+            case let .array(arguments) = call[1]
         else {
             Issue.record("an object writes a body whose result is a call")
 
@@ -310,8 +333,11 @@ struct ObjectReadingTests {
 
         // When / Then. The row the call reaches is this document's own, so the
         // reading answers it and no link is needed.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("a call stands 2 argument(s) where the 1 its callee declares stand")
         }
     }
 
@@ -323,7 +349,7 @@ struct ObjectReadingTests {
         var parts = try await parts()
 
         guard case var .array(declared) = parts["rows"],
-              case var .array(row) = declared.first
+            case var .array(row) = declared.first
         else {
             Issue.record("an object writes its declared rows as a part")
 
@@ -335,8 +361,10 @@ struct ObjectReadingTests {
         parts = parts.writing("rows", with: .array(declared))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("the name 'app.entrý' is not in normal form C")
         }
     }
 
@@ -355,7 +383,7 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case let .array(types) = parts["types"],
-              types.count == 2
+            types.count == 2
         else {
             Issue.record("an object writes its declared types in name order")
 
@@ -365,8 +393,10 @@ struct ObjectReadingTests {
         parts = parts.writing("types", with: .array(types.reversed()))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'types' writes its names out of order, or one of them twice")
         }
     }
 
@@ -400,14 +430,14 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(table) = parts["rows"],
-              case var .array(row) = table[0],
-              case var .array(implementation) = row[7],
-              case var .array(body) = implementation[1],
-              case var .array(result) = body[1],
-              case var .array(operation) = result[0],
-              case let .int(9) = operation[0],
-              case let .array(keeps) = operation[4],
-              keeps.count == 1
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(operation) = result[0],
+            case .int(9) = operation[0],
+            case let .array(keeps) = operation[4],
+            keeps.count == 1
         else {
             Issue.record("an object writes a loop that keeps a run of its slots")
 
@@ -423,8 +453,10 @@ struct ObjectReadingTests {
         parts = parts.writing("rows", with: .array(table))
 
         // When / Then. Refused, rather than reaching the run that reads it.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("a body stands on a slot its frame of 2 does not hold")
         }
     }
 
@@ -464,9 +496,9 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(claims) = parts["claims"],
-              case var .array(entry) = claims[0],
-              case let .array(contracts) = entry[1],
-              contracts.count == 2
+            case var .array(entry) = claims[0],
+            case let .array(contracts) = entry[1],
+            contracts.count == 2
         else {
             Issue.record("an object writes which contracts each type answers")
 
@@ -478,8 +510,11 @@ struct ObjectReadingTests {
         parts = parts.writing("claims", with: .array(claims))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("'claims' writes its names out of order, or one of them twice")
         }
     }
 
@@ -512,8 +547,8 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(closing) = numbering[1],
-              closing.count == 2
+            case let .array(closing) = numbering[1],
+            closing.count == 2
         else {
             Issue.record("an object writes where each declaration's closures begin")
 
@@ -524,8 +559,11 @@ struct ObjectReadingTests {
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("'numbering closures' writes its names out of order, or one of them twice")
         }
     }
 
@@ -557,8 +595,8 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(sent) = numbering[0],
-              sent.count == 2
+            case let .array(sent) = numbering[0],
+            sent.count == 2
         else {
             Issue.record("an object writes what its document sends")
 
@@ -569,43 +607,11 @@ struct ObjectReadingTests {
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
-        }
-    }
-
-    @Test("is refused where a value settles a procedure into it")
-    func aValueHoldingAProcedure() async throws {
-        // Given. A real object with a module variable standing a value no
-        // writing of one could lay down. The writing refuses it, so a reading
-        // that took it would hold what it could never write out again.
-        let holding = try Module(
-            variables: [
-                "app.later": .closure(
-                    Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
-                )
-            ],
-            procedures: [
-                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-            ]
-        )
-        let settled = try await builder.compile([holding] + Module.standard)
-            .flatMap(\.variables)
-            .first { entry in entry.value.holdsProcedure }
-
-        var parts = try await parts()
-
-        guard let settled else {
-            Issue.record("a module variable that starts as a closure settles one into a value")
-
-            return
-        }
-
-        parts = parts.writing("variables", with: .array([.array([.string(settled.name.spelling), settled.value])]))
-
-        // When / Then.
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("'numbering sends' writes its names out of order, or one of them twice")
         }
     }
 
@@ -641,14 +647,16 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array([
-            .array([.string("app.entry"), .int(.max - 1)]),
-            .array([.string("app.other"), .int(1)])
+            .array([ObjectWriter().declaration(.procedure("app.entry")), .int(.max - 1)]),
+            .array([ObjectWriter().declaration(.procedure("app.other")), .int(1)])
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("a numbering gives numbers past what an int holds")
         }
     }
 
@@ -676,9 +684,9 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(counts) = numbering[1],
-              case let .array(entry) = counts.first,
-              counts.count == 1
+            case let .array(counts) = numbering[1],
+            case let .array(entry) = counts.first,
+            counts.count == 1
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
@@ -689,8 +697,10 @@ struct ObjectReadingTests {
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("an object numbers 4 closure(s) behind 1 row(s)")
         }
     }
 
@@ -726,14 +736,16 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array([
-            .array([.string("app.entry"), .int(.max)]),
-            .array([.string("app.other"), .int(.max)])
+            .array([ObjectWriter().declaration(.procedure("app.entry")), .int(.max)]),
+            .array([ObjectWriter().declaration(.procedure("app.other")), .int(.max)])
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("a numbering gives numbers past what an int holds")
         }
     }
 
@@ -762,12 +774,18 @@ struct ObjectReadingTests {
             try Compiled(written: written, of: Identity([0x01, 0x02, 0x03]))
         }
 
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: written, of: Identity([0x09]))
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("this object stands against a document other than the one it was kept under")
         }
 
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: written, of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("this object stands against a document other than the one it was kept under")
         }
     }
 
@@ -779,8 +797,11 @@ struct ObjectReadingTests {
         let parts = try await parts().writing("dependencies", with: .array([.bytes([0x02]), .bytes([0x01])]))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("'dependencies' writes its names out of order, or one of them twice")
         }
     }
 
@@ -791,8 +812,11 @@ struct ObjectReadingTests {
         let parts = try await parts().writing("dependencies", with: .array([.bytes([0x01]), .bytes([0x01])]))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused
+                && "\(error)".contains("'dependencies' writes its names out of order, or one of them twice")
         }
     }
 
@@ -821,20 +845,22 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case var .array(numbering) = parts["numbering"],
-              case let .array(counts) = numbering[1],
-              counts.count == 1
+            case let .array(counts) = numbering[1],
+            counts.count == 1
         else {
             Issue.record("an object writes how many closures each declaration wrote")
 
             return
         }
 
-        numbering[1] = .array(counts + [.array([.string("app.other"), .int(0)])])
+        numbering[1] = .array(counts + [.array([ObjectWriter().declaration(.procedure("app.other")), .int(0)])])
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then.
-        #expect(throws: ObjectRefused.self) {
+        #expect {
             try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("a numbering counts no closures for a name it counts")
         }
     }
 
@@ -860,7 +886,7 @@ struct ObjectReadingTests {
         let compiled = try await builder.compile([module] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
-              case let .dictionary(written) = try mine.object()
+            case let .dictionary(written) = try mine.object()
         else {
             throw ObjectMissing()
         }

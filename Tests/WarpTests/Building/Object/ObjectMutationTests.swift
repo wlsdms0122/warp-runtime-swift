@@ -12,7 +12,7 @@ import WarpMutation
 
 // What a reading does with every field of an object replaced in turn.
 //
-// The cases beside this one each name a field and say what is refused there,
+// The tests beside this one each name a field and say what is refused there,
 // which asks about the fields someone thought of. This asks about all of them.
 // A refusal is an answer. A trap is not, because the reading runs inside a
 // host's process and a trap there ends the host.
@@ -28,11 +28,13 @@ struct ObjectMutationTests {
     // MARK: - Test
     @Test("is refused wherever it is mutated, and never traps")
     func everyMutationIsAnswered() throws {
+        // Given
         let written = try Self.everything.object()
 
         let mutator = Mutator()
         var mutations = 0
 
+        // When / Then
         for (path, mutated) in mutator.mutations(of: written) {
             mutations += 1
 

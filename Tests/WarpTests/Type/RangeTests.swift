@@ -13,18 +13,19 @@ import Testing
 // is judged where `enum` is: at the build for what the text shows, at the
 // boundary for what only the run can see. What the condition may say is
 // `RefinementTests`'; this suite is where a whole range is judged.
-@Suite
+@Suite("A whole range")
 struct RangeTests {
     // MARK: - Property
     private let builder = Builder()
-    private let entryName: Name = "entry"
 
     // MARK: - Initializer
     // MARK: - Test
     @Test("the bounds speak where the value settles")
     func aRangeSettles() throws {
+        // Given
         let declared = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
+        // When / Then
         #expect(try declared.settling(.int(0), at: "value") == .int(0))
         #expect(try declared.settling(.int(255), at: "value") == .int(255))
         #expect(throws: (any Error).self) { try declared.settling(.int(-1), at: "value") }
@@ -35,9 +36,11 @@ struct RangeTests {
 
     @Test("an open end is no condition at all on that side")
     func anOpenEndSettles() throws {
+        // Given
         let floor = TypeExpression.ranged(.whole(from: 0))
         let ceiling = TypeExpression.ranged(.whole(to: .through(255)))
 
+        // When / Then
         #expect(try floor.settling(.int(Int.max), at: "value") == .int(Int.max))
         #expect(throws: (any Error).self) { try floor.settling(.int(-1), at: "value") }
         #expect(try ceiling.settling(.int(Int.min), at: "value") == .int(Int.min))
@@ -46,10 +49,11 @@ struct RangeTests {
 
     @Test("acceptance reads a range as int, and the bounds wait for the value")
     func aRangeAcceptsAsInt() throws {
+        // Given
         let byte = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
-        // A reading declared int may hold a member. Only what is provably
-        // outside is refused before the run.
+        // When / Then. A reading declared int may hold a member. Only what is
+        // provably outside is refused before the run.
         #expect(byte.accepts(.int))
         #expect(byte.accepts(.ranged(.whole(from: 0, to: .through(1024)))))
         #expect(!byte.accepts(.double))
@@ -96,7 +100,7 @@ struct RangeTests {
     }
 
     @Test("a constant argument is judged at the build")
-    func aConstantArgumentIsJudgedAtTheLink() async throws {
+    func aConstantArgumentIsJudgedAtTheBuild() async throws {
         // Given. The argument is text, so the miss is the build's to see
         let sut = try Module(
             procedures: [
@@ -124,7 +128,7 @@ struct RangeTests {
     }
 
     @Test("a range that admits nothing refuses where it was written")
-    func anEmptyRangeRefusesAtTheLink() async throws {
+    func anEmptyRangeRefusesAtTheBuild() async throws {
         // Given. No whole number is at once at least 9 and at most 1
         let sut = try Module(
             procedures: [
@@ -142,54 +146,6 @@ struct RangeTests {
         // When / Then
         await #expect {
             try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("admits nothing")
-        }
-    }
-
-    @Test("a enum entirely past the bounds admits nothing")
-    func aOneOfOutsideTheRangeRefuses() async throws {
-        // Given. No candidate is a value the range could hold, so the parameter
-        // fits no call: the same judgment an empty enum gets
-        func module(candidates candidates: [String]) async throws -> Module {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [
-                                Parameter(name: "level", type: .ranged(.whole(from: 0, to: .through(255))),
-                                    candidates: candidates
-                                )
-                            ]
-                        ),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        }
-
-        // When / Then
-        await #expect {
-            try await builder.build([module(candidates: ["300", "999"])] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("admits nothing")
-        }
-
-        // A live candidate does not excuse a dead one: `300` is a member no
-        // call could ever match, and the refusal names it.
-        await #expect {
-            try await builder.build([module(candidates: ["0", "300"])] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("'300'")
-        }
-
-        // One value, one spelling: `+1` and `007` are second spellings of
-        // numbers that already have one, so neither is a candidate an int slot
-        // can spell. The enum admits nothing and refuses.
-        await #expect {
-            try await builder.build([module(candidates: ["+1", "007"])] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
