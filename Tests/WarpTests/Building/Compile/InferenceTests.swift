@@ -1844,7 +1844,7 @@ struct InferenceTests {
                                 then: [
                                     Statement(binding: .assignment([.key("many")]), expression: .literal(.int(1)))
                                 ],
-                                else: [Statement(expression: refusing(literal("no")))]
+                                else: [Statement(expression: aborting(literal("no")))]
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1884,7 +1884,7 @@ struct InferenceTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .attempt(
-                                Block(body: [], result: refusing(literal("no"))),
+                                Block(body: [], result: aborting(literal("no"))),
                                 rescue: Block(body: [], result: .literal(.string("fallback"))),
                                 failure: "why"
                             )
@@ -1929,7 +1929,7 @@ struct InferenceTests {
                         returns: .never
                     ),
                     body: [
-                        Statement(binding: .constant("no"), expression: refusing(literal("no")))
+                        Statement(binding: .constant("no"), expression: aborting(literal("no")))
                     ]
                 ),
                 entryName: Procedure(

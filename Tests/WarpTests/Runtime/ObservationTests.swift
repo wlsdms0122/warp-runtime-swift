@@ -256,7 +256,7 @@ struct ObservationTests {
                 "helper": Procedure(
                     body: [
                         Statement(
-                            expression: refusing(literal("no"))
+                            expression: aborting(literal("no"))
                         )
                     ]
                 )
@@ -293,7 +293,7 @@ struct ObservationTests {
                             expression: .closure(
                                 Procedure(
                                     body: [
-                                        Statement(expression: refusing(literal("no")))
+                                        Statement(expression: aborting(literal("no")))
                                     ]
                                 )
                             )

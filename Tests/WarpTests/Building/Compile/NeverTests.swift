@@ -28,7 +28,7 @@ struct NeverTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(expression: refusing(literal("done"))),
+                        Statement(expression: aborting(literal("done"))),
                         Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ],
                     result: .reference([.key("after")])
@@ -53,7 +53,7 @@ struct NeverTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("gone"), expression: refusing(literal("done")))
+                        Statement(binding: .constant("gone"), expression: aborting(literal("done")))
                     ],
                     result: .literal(.int(1))
                 )
@@ -120,7 +120,7 @@ struct NeverTests {
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
-                body: [Statement(expression: refusing(literal("stops")))],
+                body: [Statement(expression: aborting(literal("stops")))],
                 result: .block(
                     Block(
                         body: [
@@ -245,7 +245,7 @@ struct NeverTests {
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
-                body: [Statement(expression: refusing(literal("stops")))],
+                body: [Statement(expression: aborting(literal("stops")))],
                 result: .literal(.string("done"))
             ),
             round: "round"
@@ -268,7 +268,7 @@ struct NeverTests {
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
-                body: [Statement(expression: refusing(literal("stops")))],
+                body: [Statement(expression: aborting(literal("stops")))],
                 result: .literal(.string("done"))
             ),
             round: "round"
@@ -311,7 +311,7 @@ struct NeverTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(expression: refusing(literal("done")))
+                        Statement(expression: aborting(literal("done")))
                     ],
                     result: .literal(.int(1))
                 )

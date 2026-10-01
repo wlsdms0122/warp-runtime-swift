@@ -310,7 +310,7 @@ struct ExecutorTests {
                         // Nameless on purpose. A statement that never finishes
                         // binds nothing, so a name on it is refused at the build.
                         Statement(
-                            expression: refusing(interpolated(
+                            expression: aborting(interpolated(
                                         literal("stopped: "),
                                         spelling(reference("reason"))
                                     ))
@@ -338,7 +338,7 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("bail"), expression: .attempt(Block(body: [
                                         Statement(
-                                            expression: refusing(literal("giving up"))
+                                            expression: aborting(literal("giving up"))
                                         )
                                     ]), rescue: Block(
                                         body: [
