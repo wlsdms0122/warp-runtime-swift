@@ -11,7 +11,7 @@ import Testing
 @testable import WarpSyntax
 import WarpTestSupport
 
-@Suite
+@Suite("A block keeps its bindings inside")
 struct BlockTests {
     // MARK: - Property
     private let loader = Loader.testing

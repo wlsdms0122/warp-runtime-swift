@@ -12,7 +12,7 @@ import Testing
 import WarpStandard
 import WarpTestSupport
 
-@Suite
+@Suite("How a document spells a signature")
 struct SignatureTests {
     // MARK: - Property
     // MARK: - Initializer

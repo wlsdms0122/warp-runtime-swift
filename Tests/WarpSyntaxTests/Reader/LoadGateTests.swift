@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-@Suite
+@Suite("What a load refuses before anything runs")
 struct LoadGateTests {
     // MARK: - Property
     private let loader = Loader.testing

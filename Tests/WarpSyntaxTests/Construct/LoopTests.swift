@@ -11,7 +11,7 @@ import Testing
 @testable import WarpSyntax
 import WarpTestSupport
 
-@Suite
+@Suite("A loop repeats while its condition holds")
 struct LoopTests {
     // MARK: - Property
     private let loader = Loader.testing

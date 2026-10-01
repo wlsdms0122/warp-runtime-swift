@@ -14,7 +14,7 @@ import WarpTestSupport
 // Running at once, as a document spells it: closures handed to the
 // `std.concurrent` procedures. There is no construct here. A fan-out is a call, and
 // what makes it safe is what a closure already is.
-@Suite
+@Suite("Running at once, as a document spells it")
 struct ConcurrentTests {
     // Probe environment counting how many pieces pass through the isolation hook.
     private final class IsolationBoundaryProbe: Environment, @unchecked Sendable {

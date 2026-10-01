@@ -12,7 +12,7 @@ import Testing
 
 // The envelope a document is written in. Other suites here write one procedure
 // and let `loadProcedure` name it; this one writes the envelope out.
-@Suite
+@Suite("The envelope a document is written in")
 struct ModuleNotationTests {
     // MARK: - Property
     private let loader = Loader.testing
