@@ -302,9 +302,7 @@ struct Case: Sendable, CustomStringConvertible {
 
     // MARK: - Property
     // Which types a runner has to understand to ask these questions. It moves
-    // for the same reason `warp` does and on its own schedule. The day a case
-    // may say something new is not the day a document may. Every change
-    // before the first release folds into this one.
+    // for the same reason `warp` does and on its own schedule.
     static let version = 1
 
     static let versionKey: Name = "test"
@@ -361,10 +359,10 @@ struct Case: Sendable, CustomStringConvertible {
         self.name = name
         self.note = note
 
-        // One of `answers`, `reads`, `spells` or `refuses`, and exactly one. The slot
-        // groups them so that this is a question about one record instead of
-        // a rule about sibling keys, but a record is not a choice, so the
-        // count is still counted here. A case edited from one to the other
+        // One of `answers`, `reads`, `spells`, `builds` or `refuses`, and
+        // exactly one. The slot groups them so that this is a question about
+        // one record instead of a rule about sibling keys, but a record is not
+        // a choice, so the count is still counted here. A case edited from one to the other
         // and left holding both would otherwise start asking a different
         // question than it reads as, and nobody would be told.
         guard
