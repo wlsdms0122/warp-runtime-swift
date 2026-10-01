@@ -21,7 +21,8 @@ struct MathTests {
         // judged, and each arrives at run time
         let asks: [(Name, Value, Value)] = [
             ("std.math.remainder", .int(5), .int(0)),
-            ("std.math.dividedBy", .int(5), .int(0))
+            ("std.math.dividedBy", .int(5), .int(0)),
+            ("std.math.dividedBy", .double(5), .double(0))
         ]
 
         for (procedure, subject, operand) in asks {
@@ -73,7 +74,34 @@ struct MathTests {
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0. An answer an int holds, so it answers.
-        await #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
+        #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
+    }
+
+    @Test("fraction arithmetic with no finite answer refuses rather than answering infinity")
+    func fractionArithmeticRefusesRatherThanEscapes() async throws {
+        // Given. Each of these reaches past the largest fraction, and
+        // infinity is a value no document can carry
+        let asks: [(Name, Double, Double)] = [
+            ("std.math.plus", 1e308, 1e308),
+            ("std.math.minus", -1e308, 1e308),
+            ("std.math.times", 1e308, 10.0)
+        ]
+
+        for (procedure, subject, operand) in asks {
+            // When / Then
+            await #expect {
+                try await run(sending(procedure, .double(subject), .double(operand)))
+            } throws: { error in
+                "\(error)".contains("no finite answer")
+            }
+        }
+    }
+
+    @Test("a whole number widens to a fraction on either side")
+    func wholeNumbersWiden() async throws {
+        // When / Then
+        await #expect(try await run(sending("std.math.plus", .int(1), .double(0.5))) == .double(1.5))
+        await #expect(try await run(sending("std.math.plus", .double(0.5), .int(1))) == .double(1.5))
     }
 
     @Test("a quotient is a fraction even between wholes")
@@ -95,9 +123,9 @@ struct MathTests {
         }
 
         // When / Then
-        await #expect(try await run(divided(6, 2)) == .double(3.0))
-        await #expect(try await run(divided(7, 2)) == .double(3.5))
-        await #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
+        #expect(try await run(divided(6, 2)) == .double(3.0))
+        #expect(try await run(divided(7, 2)) == .double(3.5))
+        #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
 
         // The quotient is binary64's own: each whole operand widens first (the
         // same widening every mixed operation performs) and the division rounds
@@ -298,4 +326,16 @@ struct MathTests {
 
     // MARK: - Public
     // MARK: - Private
+    // An entry that sends one procedure a subject and an operand.
+    private func sending(_ procedure: Name, _ subject: Value, _ operand: Value) throws -> Module {
+        try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [],
+                    result: .call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)]))
+                )
+            ]
+        )
+    }
 }

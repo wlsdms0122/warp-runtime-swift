@@ -318,7 +318,9 @@ struct LoweringTests {
         let image = try await builder.build([module] + Module.standard)
 
         // Then
-        #expect(image["app.tally"]?.constness != .const)
+        let tally = try #require(image["app.tally"])
+
+        #expect(tally.constness != .const)
     }
 
     @Test("a name is what it names, wherever a variable is handed in place")

@@ -165,8 +165,8 @@ struct LoadGateTests {
         #expect(throws: Never.self) {
             try loader.loadProcedure(declared)
         }
-        await #expect(throws: ValidationError.self) {
-            try await loader.loadProcedure(assumed)
+        #expect(throws: ValidationError.self) {
+            try loader.loadProcedure(assumed)
         }
     }
 

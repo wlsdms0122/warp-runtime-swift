@@ -230,11 +230,10 @@ struct RefinementTests {
         // spelling for it, and the words a message shows it in read back as an
         // error rather than as the range.
         let unbounded = TypeExpression.Refinement.fraction(from: 0)
-
-        // When
         let infinite = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
 
-        // Then. Both are ranges the build takes, and only one is a document's
+        // When / Then. Both are ranges the build takes, and only one is a
+        // document's
         #expect(!unbounded.admitsNothing)
         #expect(!infinite.admitsNothing)
         #expect(unbounded.spellable)

@@ -56,7 +56,7 @@ struct UnwritableTests {
 
     @Test("a declared type named like a built-in has no document")
     func aTypeNamedLikeABuiltinIsRefused() {
-        // Given. Nothing stops a module declaring a type called `int`; a
+        // When / Then. Nothing stops a module declaring a type called `int`; a
         // document just reads the name it knows as the type it knows
         #expect(throws: WritingError.self) {
             try sut.value(of: TypeExpression.named("int"))
@@ -84,6 +84,7 @@ struct UnwritableTests {
         ]
     )
     func aSpellingThatDoesNotReadBackIsRefused(type: TypeExpression) {
+        // When / Then
         #expect(throws: WritingError.self) {
             try sut.value(of: type)
         }
@@ -121,6 +122,7 @@ struct UnwritableTests {
 
     @Test("one name composing is written as the name, and names in any order are written in name order")
     func aCompositionIsWrittenInItsOneSpelling() throws {
+        // When / Then
         #expect(try sut.value(of: TypeExpression.composition(["app.A"])) == .string("app.A"))
         #expect(try sut.value(of: TypeExpression.array(.composition(["app.A"]))) == .string("array<app.A>"))
         #expect(try sut.value(of: TypeExpression.composition(["app.B", "app.A"])) == .string("app.A & app.B"))
@@ -128,8 +130,8 @@ struct UnwritableTests {
 
     @Test("a nullable writes its trailing ?, and one with no spelling inside has no document")
     func aNullableSpellsOrRefuses() throws {
-        // Given. The trailing `?` needs a name in front of it, and a record
-        // spells as a mapping rather than a name
+        // When / Then. The trailing `?` needs a name in front of it, and a
+        // record spells as a mapping rather than a name
         #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("int?"))
         #expect(
             try sut.value(of: TypeExpression.nullable(.array(.string)))
@@ -143,10 +145,11 @@ struct UnwritableTests {
 
     @Test("a range bounded by a fraction with no spelling has no document")
     func aRangeWithAnUnspellableBoundIsRefused() throws {
-        // Given. The bounds are the whole of what a range is written as, so a
-        // bound with no spelling leaves nothing to write. The language admits
-        // an infinity on purpose (it orders like any other bound) and what a
-        // message shows it in reads back as an error rather than as the range.
+        // When / Then. The bounds are the whole of what a range is written as,
+        // so a bound with no spelling leaves nothing to write. The language
+        // admits an infinity on purpose (it orders like any other bound) and
+        // what a message shows it in reads back as an error rather than as the
+        // range.
         #expect(
             try sut.value(of: TypeExpression.ranged(.whole(from: 0, to: .through(255))))
                 == .string("int(0...255)")
@@ -172,7 +175,7 @@ struct UnwritableTests {
         let dotted = Path([.key("a.b")])
         let bracketed = Path([.key("a"), .key("[0")])
 
-        // Then. Neither as a reference nor as the path a `set` writes
+        // When / Then. Neither as a reference nor as the path a `set` writes
         #expect(throws: WritingError.self) { try sut.value(of: Warp.Expression.reference(dotted)) }
         #expect(throws: WritingError.self) { try sut.value(of: Warp.Expression.reference(bracketed)) }
         #expect(throws: WritingError.self) {

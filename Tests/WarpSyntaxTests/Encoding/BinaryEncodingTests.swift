@@ -56,7 +56,7 @@ struct BinaryEncodingTests {
             backward[key] = .int(index)
         }
 
-        // Then
+        // When / Then
         #expect(
             try BinaryEncoding().data(from: .dictionary(forward))
                 == BinaryEncoding().data(from: .dictionary(backward))
@@ -88,14 +88,15 @@ struct BinaryEncodingTests {
             0x01, 0x65, 0x08, 0x02, 0x6a, 0x73          // "e": two bytes
         ]
 
-        // Then
+        // When / Then
         #expect(try BinaryEncoding().data(from: document) == Data(golden))
         #expect(try BinaryEncoding().value(from: Data(golden)) == document)
     }
 
     @Test("a whole number and a fraction are different bytes")
     func wholeAndFractionDiffer() throws {
-        // Given. The failure JSON invites: `1` and `1.0` as the same token
+        // Given / When. The failure JSON invites: `1` and `1.0` as the same
+        // token
         let whole = try BinaryEncoding().data(from: .int(1))
         let fraction = try BinaryEncoding().data(from: .double(1))
 
@@ -110,6 +111,7 @@ struct BinaryEncodingTests {
         // Given. JSON bytes, which is what will actually be handed to this
         // reader by mistake
         for bytes in [Data("{}".utf8), Data(), Data([0x57, 0x41])] {
+            // When / Then
             #expect {
                 try BinaryEncoding().value(from: bytes)
             } throws: { error in
@@ -123,6 +125,7 @@ struct BinaryEncodingTests {
         // Given. The header's version exists for exactly this reader
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x02, 0x00])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -141,6 +144,7 @@ struct BinaryEncodingTests {
         // and ignoring the rest is how two readers run two different programs.
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x00, 0x00])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -150,8 +154,10 @@ struct BinaryEncodingTests {
 
     @Test("a tag the format never assigned is refused")
     func anUnknownTagIsRefused() {
+        // Given
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x0a])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -165,6 +171,7 @@ struct BinaryEncodingTests {
         // refusal has to come before anything is set aside for the claim.
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x05, 0xff, 0xff, 0xff, 0xff, 0x0f])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -186,6 +193,7 @@ struct BinaryEncodingTests {
 
         bytes.append(0x00)
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: Data(bytes))
         } throws: { error in
@@ -204,6 +212,7 @@ struct BinaryEncodingTests {
             0x01, 0x61, 0x00    // "a": null
         ])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -222,6 +231,7 @@ struct BinaryEncodingTests {
             0x01, 0x61, 0x03, 0x04    // "a": 2
         ])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -241,6 +251,7 @@ struct BinaryEncodingTests {
             0x03, 0x65, 0xcc, 0x81, 0x00    // "é" (NFD): null
         ])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -262,6 +273,7 @@ struct BinaryEncodingTests {
         // Given. Bytes claiming three and carrying one
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x08, 0x03, 0x6a])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -271,10 +283,12 @@ struct BinaryEncodingTests {
 
     @Test("a field name outside normal form C never reaches the way out")
     func aDenormalKeyIsRefusedWhenWriting() {
-        // A record's keys are names, so there is no value carrying one for a
-        // writing to refuse: the refusal is at the door a name comes through.
+        // Given. A record's keys are names, so there is no value carrying one
+        // for a writing to refuse: the refusal is at the door a name comes
+        // through.
         let decomposed = "e\u{301}"
 
+        // When / Then
         #expect(throws: NameRefused.self) {
             try Name(decomposed)
         }
@@ -286,6 +300,7 @@ struct BinaryEncodingTests {
         // spelling is where byte equality and document equality part.
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x03, 0x80, 0x00])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -300,6 +315,7 @@ struct BinaryEncodingTests {
             [0x57, 0x41, 0x52, 0x50, 0x01, 0x03] + Array(repeating: UInt8(0xff), count: 11)
         )
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -315,6 +331,7 @@ struct BinaryEncodingTests {
             from: .dictionary(["a": .array([.int(300), .string("hi"), .double(1.5)])])
         )
 
+        // When / Then
         for end in 5..<bytes.count {
             #expect(throws: (any Error).self) {
                 try BinaryEncoding().value(from: bytes.prefix(end))
@@ -332,6 +349,7 @@ struct BinaryEncodingTests {
                 + [0x00]
         )
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -344,6 +362,7 @@ struct BinaryEncodingTests {
         // Given. A lone continuation byte where text was claimed
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x05, 0x01, 0x80])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in
@@ -366,7 +385,7 @@ struct BinaryEncodingTests {
         // Given
         let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01] + body)
 
-        // Then. Written as its bytes, and read back as the value it was
+        // When / Then. Written as its bytes, and read back as the value it was
         #expect(try BinaryEncoding().data(from: value) == bytes)
         #expect(try BinaryEncoding().value(from: bytes) == value)
     }
@@ -376,6 +395,7 @@ struct BinaryEncodingTests {
         // Given. The value model's edges, not this encoding's: these bytes
         // could be written, and the refusal is that no encoding may
         for value in [Value.double(.infinity), .double(.nan)] {
+            // When / Then
             #expect(throws: EncodingRefused.self) {
                 try BinaryEncoding().data(from: value)
             }
@@ -397,6 +417,7 @@ struct BinaryEncodingTests {
             0x04, 0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         ])
 
+        // When / Then
         #expect {
             try BinaryEncoding().value(from: bytes)
         } throws: { error in

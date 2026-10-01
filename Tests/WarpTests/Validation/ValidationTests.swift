@@ -490,10 +490,10 @@ struct ValidationTests {
 
     @Test("a claim about a type the language names is refused where the document is read")
     func aClaimAboutABuiltinTypeIsRefused() throws {
-        // Given / When. A claim is about a declared type: a value of `int`
+        // When / Then. A claim is about a declared type: a value of `int`
         // wears no name a run could read, so no declaration could answer for
         // it.
-        let sut = {
+        #expect {
             try Module(
                 imports: [],
                 contracts: ["app.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Described"))], returns: .string)]],
@@ -507,16 +507,6 @@ struct ValidationTests {
                     entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
                 ]
             )
-        }
-
-        // Then
-        #expect {
-            do {
-                _ = try sut()
-            } catch {
-                #expect("\(error)".contains("a claim is about a declared type"), "\(error)")
-                throw error
-            }
         } throws: { error in
             error is ValidationError
                 && "\(error)".contains("'int' is a type the language names, and a claim is about a declared type")
@@ -701,13 +691,11 @@ struct ValidationTests {
                 result: reference("mine")
             )
         )
-
-        // When
         let readsNothingReal = Warp.Expression.closure(
             Procedure(body: [], result: reference("nowhere"))
         )
 
-        // Then
+        // When / Then
         #expect(validates(readsEnclosing, visible: ["outer"]))
         #expect(!validates(readsEnclosing))
         #expect(validates(readsItsOwn))

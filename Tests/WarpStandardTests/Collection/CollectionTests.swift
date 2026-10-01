@@ -306,9 +306,9 @@ struct CollectionTests {
 
     @Test("what orders with nothing is not sorted around")
     func aFractionThatIsNotANumberRefusesToSort() async {
-        // Given. NaN answers no comparison, so any placement of it would be an
-        // order sorted could not answer for; refused, the way a mixed array is,
-        // rather than placed arbitrarily
+        // When / Then. NaN answers no comparison, so any placement of it would
+        // be an order sorted could not answer for; refused, the way a mixed
+        // array is, rather than placed arbitrarily
         await #expect {
             try await run(
                 Procedure(
