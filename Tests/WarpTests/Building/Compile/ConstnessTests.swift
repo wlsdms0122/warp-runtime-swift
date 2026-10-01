@@ -439,9 +439,12 @@ struct ConstnessTests {
 
         // Then. `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
+        let dirty = try #require(image["dirty"])
+        let entry = try #require(image["entry"])
+
         #expect(image["clean"]?.constness == .const)
-        #expect(image["dirty"]?.constness != .const)
-        #expect(image["entry"]?.constness != .const)
+        #expect(dirty.constness != .const)
+        #expect(entry.constness != .const)
         #expect(image["std.collection.count"]?.constness == .const)
     }
 

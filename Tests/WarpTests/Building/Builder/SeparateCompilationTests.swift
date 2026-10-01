@@ -372,7 +372,7 @@ struct SeparateCompilationTests {
         let number = try called(in: code(of: "b.asks", in: compiled))
 
         #expect(number == 0)
-        #expect(try number != Assembled(compiled).rows["a.answers"])
+        #expect(try number != #require(Assembled(compiled).rows["a.answers"]))
 
         // And. The link answers with the row.
         let image = try builder.link(compiled, supplying: Supplying(Module.standard))
@@ -464,8 +464,8 @@ struct SeparateCompilationTests {
 
         // Then. The row moved and the number the cast stands on did not.
         #expect(
-            try builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
-                != builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
+                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
         )
         #expect(
             try cast(in: code(of: entryName, in: alone)).row
@@ -502,8 +502,8 @@ struct SeparateCompilationTests {
 
         // And. The row it stands on moved and the number did not.
         #expect(
-            try builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
-                != builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
+                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
         )
         #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
     }
