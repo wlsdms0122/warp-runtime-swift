@@ -117,7 +117,7 @@ struct TextTests {
     @Test("decoded and encoded are two directions of one named mapping")
     func decodedAndEncodedRoundTrip() async throws {
         // Given
-        func procedure(_ selector: Name, on subject: Value) async throws -> Module {
+        func procedure(_ selector: Name, on subject: Value) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(

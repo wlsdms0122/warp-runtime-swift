@@ -105,7 +105,7 @@ struct MembershipTests {
     @Test("a cast to a member opens it, and a cast to an outsider refuses")
     func aCastTellsTheMembersApart() async throws {
         // Given
-        func module(reading type: TypeExpression) async throws -> Module {
+        func module(reading type: TypeExpression) throws -> Module {
             try Module(
                 constraints: ["app.Text": [.string, .array(.byteElement)]],
                 procedures: [

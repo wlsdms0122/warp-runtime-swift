@@ -66,7 +66,7 @@ struct NamelessTests {
     }
 
     @Test("two naming keys are refused")
-    func twoNamingKeysAreRefused() async {
+    func twoNamingKeysAreRefused() {
         // When / Then
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
@@ -182,7 +182,7 @@ struct NamelessTests {
     }
 
     @Test("a nameless statement written and read back is the same statement")
-    func aNamelessStatementRoundTrips() async throws {
+    func aNamelessStatementRoundTrips() throws {
         // Given. The reader's set of legal documents and the writer's must be
         // one set; a document that reads but does not write back broke that
         let document: Value = [

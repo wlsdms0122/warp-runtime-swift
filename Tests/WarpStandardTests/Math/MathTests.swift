@@ -54,7 +54,7 @@ struct MathTests {
             ("std.math.minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ procedure: Name, _ subject: Value, _ operand: Value) async throws -> Module {
+        func asking(_ procedure: Name, _ subject: Value, _ operand: Value) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -101,14 +101,14 @@ struct MathTests {
     @Test("a whole number widens to a fraction on either side")
     func wholeNumbersWiden() async throws {
         // When / Then
-        await #expect(try await run(sending("std.math.plus", .int(1), .double(0.5))) == .double(1.5))
-        await #expect(try await run(sending("std.math.plus", .double(0.5), .int(1))) == .double(1.5))
+        #expect(try await run(sending("std.math.plus", .int(1), .double(0.5))) == .double(1.5))
+        #expect(try await run(sending("std.math.plus", .double(0.5), .int(1))) == .double(1.5))
     }
 
     @Test("a quotient is a fraction even between wholes")
     func aQuotientIsAFraction() async throws {
         // Given. `dividedBy` never answers an int
-        func divided(_ left: Int, _ right: Int) async throws -> Module {
+        func divided(_ left: Int, _ right: Int) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(

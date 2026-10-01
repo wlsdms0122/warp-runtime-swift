@@ -29,7 +29,7 @@ struct ModifierNotationTests {
     }
 
     @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
-    func everyMarkRoundTrips(mark: SlotMark) async throws {
+    func everyMarkRoundTrips(mark: SlotMark) throws {
         // Given. The reading, the writing and the document's vocabulary all
         // come off one list, so a mark added to it is asked these questions
         // without anyone remembering to ask. Both forms a marked type takes:
@@ -92,7 +92,7 @@ struct ModifierNotationTests {
         "a key carrying two marks is a field's name, whichever two they are",
         arguments: SlotMark.allCases, SlotMark.allCases
     )
-    func aKeyCarryingTwoMarksIsAFieldName(mark: SlotMark, inside: SlotMark) async throws {
+    func aKeyCarryingTwoMarksIsAFieldName(mark: SlotMark, inside: SlotMark) throws {
         // Given. A slot writes one mark, so a key carrying two is not a
         // procedure form's, and a key that is not one is a field's name like
         // any other. The writing never makes one: a marked type holding a
@@ -131,7 +131,7 @@ struct ModifierNotationTests {
     }
 
     @Test("a record's field is named whatever the document named it")
-    func aFieldNamedLikeTwoMarksIsStillAField() async throws {
+    func aFieldNamedLikeTwoMarksIsStillAField() throws {
         // Given. The rule about two marks is a procedure form's, and a key is
         // only that form's once what is under the marks says `procedure`.
         // Anything else is a field name, and the writer writes one back
@@ -153,7 +153,7 @@ struct ModifierNotationTests {
         "a record's only field may be named for a key the reading takes another way",
         arguments: ["procedure", "var procedure", "const isolated procedure", "linear", "array", "record"]
     )
-    func aRecordsOnlyFieldMayBeNamedLikeAForm(spelling: String) async throws {
+    func aRecordsOnlyFieldMayBeNamedLikeAForm(spelling: String) throws {
         // Given. A record type is written under `record`, so its field names
         // are never keys the reading takes as a form
         let type = TypeExpression.record([try Name(spelling): .int])
@@ -211,7 +211,7 @@ struct ModifierNotationTests {
     }
 
     @Test("a mark and a modifier on one procedure form survive the round trip")
-    func aMarkAndAModifierRoundTrip() async throws {
+    func aMarkAndAModifierRoundTrip() throws {
         // Given. A parameter typed `inout const procedure<...>`, which the
         // writer spells as a form under one key
         let type = TypeExpression.inout(.procedure(ProcedureType(returns: .int), .const))

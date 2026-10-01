@@ -29,7 +29,7 @@ struct EnvelopeTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a document written for a later reader is refused")
-    func aLaterDocumentIsRefused() async {
+    func aLaterDocumentIsRefused() {
         // When / Then. This is the failure the version exists to prevent.
         // Without it a reader meets a type it does not know, reads what it
         // recognises and ignores the rest, and runs a program nobody wrote.
@@ -116,7 +116,7 @@ struct EnvelopeTests {
     }
 
     @Test("a document that says nothing about what it imports is refused")
-    func aSilentManifestIsRefused() async {
+    func aSilentManifestIsRefused() {
         // When / Then. Silence is not a claim a caller can act on. The list is
         // read before the program and a grant is decided from it, so a document
         // that leaves it out is asking to be trusted about the one thing worth

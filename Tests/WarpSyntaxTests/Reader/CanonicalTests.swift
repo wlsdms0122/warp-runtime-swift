@@ -101,7 +101,7 @@ struct CanonicalTests {
         // Given. The same question asked both ways. This is what makes the
         // spellings a layer rather than a part of the language: what they lower
         // to is writable, so nothing is only reachable by spelling it.
-        func picking(on condition: Value) async throws -> Module {
+        func picking(on condition: Value) throws -> Module {
             try loader.loadProcedure([
                 "parameters": [["name": "word", "type": "string"]],
                 "body": [
@@ -118,8 +118,8 @@ struct CanonicalTests {
             ], importing: ["std.logic.equal"])
         }
 
-        let spelled = try await picking(on: ["of": ["ref": "word"], "equal": "hey"])
-        let plainly = try await picking(on: [
+        let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
+        let plainly = try picking(on: [
             "call": [
                 "procedure": "std.logic.equal",
                 "arguments": [["ref": "word"], "hey"]

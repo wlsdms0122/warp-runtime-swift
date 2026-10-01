@@ -56,7 +56,7 @@ struct BuilderTests {
         // Both spellings of one program, differing only in whether the closure
         // sorts before or after what it reads. An answer that is not the same
         // twice is a program whose meaning is in its names.
-        func module(closure: Name, reading constant: Name) async throws -> Module {
+        func module(closure: Name, reading constant: Name) throws -> Module {
             try Module(
                 constants: [
                     closure: .closure(Procedure(body: [], result: reference(constant))),
@@ -89,7 +89,7 @@ struct BuilderTests {
         // side. Neither module is made, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
         // place.
-        func module(introducing statement: Statement?) async throws -> Module {
+        func module(introducing statement: Statement?) throws -> Module {
             try Module(
                 constants: [
                     "apply": .closure(Procedure(

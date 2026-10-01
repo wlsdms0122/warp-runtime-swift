@@ -80,7 +80,7 @@ struct AnsweringTests {
         // out, so the second answers what holds both, and a dot on that is
         // refused the way a dot on `any` is. Reading the result alone would
         // have called both a record and let both dots stand.
-        func module(leaving early: Bool) async throws -> Module {
+        func module(leaving early: Bool) throws -> Module {
             try Module(
                 procedures: [
                     "counts": Procedure(
@@ -161,7 +161,7 @@ struct AnsweringTests {
     func aDotOnACycleAnswerRefuses() async throws {
         // Given. `any` is what saying nothing looks like at a call site. With
         // the cycle broken, the same dot reads the record `pong` answers
-        func reading(cycling: Bool) async throws -> Module {
+        func reading(cycling: Bool) throws -> Module {
             try Module(
                 procedures: [
                     "ping": Procedure(body: [], result: .call(Call(selector: "pong"))),
@@ -200,7 +200,7 @@ struct AnsweringTests {
         // itself: the parameter is a slot the signature declares and the call
         // fills it, and what a walk *through* a parameter reached is named for
         // a path only that body can read, which nothing fills.
-        func module(reading path: Path, answering answer: Path) async throws -> Module {
+        func module(reading path: Path, answering answer: Path) throws -> Module {
             try Module(
                 procedures: [
                     "peek": Procedure(
