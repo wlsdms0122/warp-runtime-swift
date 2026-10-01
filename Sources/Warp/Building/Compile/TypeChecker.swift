@@ -135,7 +135,7 @@ struct TypeChecker {
     }
 
     // What makes an expression something the run runs rather than reads.
-    private enum Runs {
+    private enum RunReason {
         case calling(Name)
         case applying
         case construct
@@ -1049,7 +1049,7 @@ struct TypeChecker {
     // here. Reading one is what reading a name is; what it costs a body is the
     // promise of answering the same thing twice, and an operand makes no such
     // promise.
-    private func runs(in expression: Expression, given context: TypingContext) -> Runs? {
+    private func runs(in expression: Expression, given context: TypingContext) -> RunReason? {
         switch expression {
         case .literal, .reference, .closure:
             return nil

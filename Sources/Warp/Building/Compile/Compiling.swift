@@ -229,7 +229,7 @@ struct Compiling {
     // their code carries read against this table as they are.
     mutating func resolveHeldClosures() throws {
         let resolver = ClosureResolver(
-            spelled: ClosureRows(
+            spelled: ClosureRowTable(
                 naming: naming,
                 numbering: lowering.documents.map(\.numbering),
                 closures: lowering.documents.map(\.closureRows),

@@ -12,7 +12,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // run as the way back in for a procedure handed a procedure, or given by
     // name where a caller asks the procedure directly, with no declaration and no
     // run behind them.
-    private enum Arguments: Sendable {
+    private enum ArgumentSource: Sendable {
         // The row being asked travels with the run: the sends it declared are
         // its document's numbers, and only a run can say which rows they are.
         case settled(Settled, of: Linked, Evaluator)
@@ -24,7 +24,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // `Query.evaluate`: most procedures never call anything, and a parameter every
     // procedure declares to serve the few that do is a parameter in the wrong
     // place.
-    private let arguments: Arguments
+    private let arguments: ArgumentSource
 
     // MARK: - Initializer
     // Asking a procedure with no declaration and no run behind it: the build

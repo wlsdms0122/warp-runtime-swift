@@ -23,7 +23,7 @@ import Foundation
 // askings that share one.
 final class ClosureResolver {
     // MARK: - Property
-    private let spelled: ClosureRows
+    private let spelled: ClosureRowTable
     private let table: [Linked]
     private let documents: [Place.Document]
 
@@ -37,7 +37,7 @@ final class ClosureResolver {
 
     // MARK: - Initializer
     init(
-        spelled: ClosureRows,
+        spelled: ClosureRowTable,
         table: [Linked],
         documents: [Place.Document],
         rewriting: ((Linked) throws -> Linked)? = nil

@@ -62,7 +62,7 @@ struct Assembled: Sendable {
     let answers: [Int: LoweredType]
 
     // Which row a closure a value holds stands at, by its spelling.
-    let spelled: ClosureRows
+    let spelled: ClosureRowTable
 
     // MARK: - Initializer
     // Each document is read in place and once. A compiled document is a
@@ -154,7 +154,7 @@ struct Assembled: Sendable {
         self.table = table
         self.documents = named
         self.naming = naming
-        self.spelled = ClosureRows(naming: naming, numbering: numbering, closures: closures, documents: named)
+        self.spelled = ClosureRowTable(naming: naming, numbering: numbering, closures: closures, documents: named)
         self.rows = rows
         self.owned = owned
         self.concealed = concealed

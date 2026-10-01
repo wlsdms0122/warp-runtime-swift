@@ -34,7 +34,7 @@ struct LoweredTypeNumbering: Sendable {
 
     // A document's type numbers resolved to the rows of one link, worked out
     // once per number rather than at every type standing on one.
-    struct Rows {
+    struct Renumbering {
         // MARK: - Property
         let types: [Resolution]
         let memberships: [Resolution]
@@ -124,8 +124,8 @@ struct LoweredTypeNumbering: Sendable {
 
     // MARK: - Public
     // Every number this gave, resolved to the rows of one link.
-    func rows(in loweredTypes: LoweredTypeTable) -> Rows {
-        Rows(
+    func rows(in loweredTypes: LoweredTypeTable) -> Renumbering {
+        Renumbering(
             types: types.indices.map { number in type(number, in: loweredTypes) },
             memberships: memberships.indices.map { number in membership(number, in: loweredTypes) }
         )

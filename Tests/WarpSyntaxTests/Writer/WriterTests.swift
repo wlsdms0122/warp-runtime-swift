@@ -598,7 +598,7 @@ struct WriterTests {
                     ]
                 ]]
             ]
-        ], importing: ["example.holds"], from: Notation(spelling: OwnVocabularyConditions()))
+        ], importing: ["example.holds"], from: Notation(spelling: OwnVocabularySpelling()))
 
         // When
         let written = try sut.value(of: module)

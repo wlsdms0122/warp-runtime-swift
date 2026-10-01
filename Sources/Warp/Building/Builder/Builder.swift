@@ -447,7 +447,7 @@ public struct Builder: Sendable {
         in loweredTypes: LoweredTypeTable
     ) throws -> [Name: Placed<Declared>] {
         var signatures: [Name: Placed<Declared>] = [:]
-        var numbered: [Int: LoweredTypeNumbering.Rows] = [:]
+        var numbered: [Int: LoweredTypeNumbering.Renumbering] = [:]
 
         for (name, number) in assembled.rows {
             let row = assembled.table[number]

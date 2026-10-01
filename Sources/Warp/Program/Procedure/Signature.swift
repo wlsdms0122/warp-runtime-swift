@@ -82,7 +82,7 @@ public struct Signature: Sendable, Equatable {
     // set a bounded mention carries, or none where every mention is bare.
     // What a signature holds a name to is one set, so two mentions carrying
     // two sets are two claims about one name, and this says which name.
-    public var parameterBounds: ParameterBounds { type.parameterBounds }
+    public var parameterBounds: ParameterBounding { type.parameterBounds }
 
     // Every declared name this signature reaches, through what it takes and
     // what it answers.

@@ -685,7 +685,7 @@ struct DeclarationChecker {
             throw BuildError("`some \(misspelled)` names its bounds once each and in name order", at: place)
         }
 
-        let bounds = ParameterBounds(occurrences)
+        let bounds = ParameterBounding(occurrences)
 
         if let refusal = bounds.refusal {
             throw BuildError(refusal, at: place)

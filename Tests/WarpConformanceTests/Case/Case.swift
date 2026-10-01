@@ -203,7 +203,7 @@ struct Case: Sendable, CustomStringConvertible {
                 return OneName.self
 
             case ["first", "second"]:
-                return TwoNames.self
+                return AnyPair.self
 
             default:
                 throw ConformanceError(

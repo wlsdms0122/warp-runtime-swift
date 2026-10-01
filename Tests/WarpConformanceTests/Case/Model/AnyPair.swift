@@ -1,5 +1,5 @@
 //
-//  TwoNames.swift
+//  AnyPair.swift
 //  WarpConformanceTests
 //
 //  Created by JSilver on 9/30/26.
@@ -10,7 +10,7 @@ import Warp
 import WarpSyntax
 import WarpStandard
 
-enum TwoNames: Int, ParameterSet {
+enum AnyPair: Int, ParameterSet {
     case first
     case second
 

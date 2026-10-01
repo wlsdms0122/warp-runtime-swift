@@ -1,5 +1,5 @@
 //
-//  TestConditions.swift
+//  TestConditionSpelling.swift
 //  WarpSyntaxTests
 //
 //  Created by JSilver on 9/27/26.
@@ -19,7 +19,7 @@ import Foundation
 // does with the same hole, `is` reaching `std.logic.equal`, a connective
 // wrapping its sides, a spelling that takes no subject, is that notation's, and
 // it is tested where it lives.
-struct TestConditions: ExpressionSpelling {
+struct TestConditionSpelling: ExpressionSpelling {
     // MARK: - Property
     static let subjectKey: Name = "of"
 
