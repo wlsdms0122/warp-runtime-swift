@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // Isolation is derived for a body and declared by a native procedure. The build can
 // read what a body writes and calls; it cannot read what a procedure keeps in the

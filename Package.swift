@@ -49,12 +49,14 @@ let package = Package(
                 "Warp"
             ]
         ),
-        // What every test target says the same way: an entry a test names
-        // outside its text is published there.
+        // What every test target says the same way: the entry a test runs from
+        // and how it runs against the standard vocabulary, the expressions a
+        // test writes by hand, and the native procedures a test declares.
         .target(
             name: "WarpTestSupport",
             dependencies: [
-                "Warp"
+                "Warp",
+                "WarpStandard"
             ],
             path: "Tests/WarpTestSupport"
         ),

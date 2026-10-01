@@ -10,6 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
 // Vocabulary is modules, not a second container beside them with its own
 // registration, namespace and lookup order. These are the facts that follow.

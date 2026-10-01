@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 @Suite("The values a parameter's enum admits")
 struct EnumTests {

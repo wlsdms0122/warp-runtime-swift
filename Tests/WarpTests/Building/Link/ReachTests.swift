@@ -7,6 +7,7 @@
 
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("What a run from the entry can reach")
 struct ReachTests {

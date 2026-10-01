@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A contract: the procedures a value must answer. A document says which types
 // answer one, a signature bounds a type parameter by it, and a body calls the

@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 import WarpStandard
+import WarpTestSupport
 
 // The procedures that ship in bundles, and the fact that they are bundles: a caller
 // takes the ones its programs have use for, and a name from a bundle it left out

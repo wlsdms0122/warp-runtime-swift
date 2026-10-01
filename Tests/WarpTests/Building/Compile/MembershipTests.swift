@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A declared membership standing as a type. `A or B` is written by declaring
 // the set and naming it, so a slot saying "either of these" says something the

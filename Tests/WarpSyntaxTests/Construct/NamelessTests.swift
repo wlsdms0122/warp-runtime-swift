@@ -10,6 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
 // A statement with no naming key: the construct runs and the answer is dropped,
 // which is how an effect is asked for on its own. The other half of the same

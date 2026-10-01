@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpStandard
+import WarpTestSupport
 
 @Suite("What std.text answers")
 struct TextTests {

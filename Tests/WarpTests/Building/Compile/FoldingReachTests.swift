@@ -8,6 +8,7 @@
 import Testing
 @testable import Warp
 @testable import WarpStandard
+import WarpTestSupport
 
 @Suite("What a constant is allowed to settle from")
 struct FoldingReachTests {

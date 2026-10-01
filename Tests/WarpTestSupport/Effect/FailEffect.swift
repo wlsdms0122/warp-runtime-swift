@@ -1,21 +1,21 @@
 //
 //  FailEffect.swift
-//  WarpTests
+//  WarpTestSupport
 //
 //  Created by JSilver on 8/17/26.
 //
 
 import Foundation
-@testable import Warp
+import Warp
 
 // Fails on demand, so a test can ask what the language does with a failure
 // without needing a world to fail in.
-struct FailEffect: Effect {
-    enum Parameters: Int, ParameterSet {
+public struct FailEffect: Effect {
+    public enum Parameters: Int, ParameterSet {
         case recoverable
 
         // MARK: - Property
-        var declared: Parameter { Parameter(name: "recoverable", type: .nullable(.bool)) }
+        public var declared: Parameter { Parameter(name: "recoverable", type: .nullable(.bool)) }
 
         // MARK: - Initializer
         // MARK: - Public
@@ -23,11 +23,14 @@ struct FailEffect: Effect {
     }
 
     // MARK: - Property
-    let failing = Failing.these([TestRecoverableFailure.type])
+    public let failing = Failing.these([TestRecoverableFailure.type])
 
     // MARK: - Initializer
+    public init() {
+    }
+
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) throws -> Value {
+    public func run(_ invocation: Invocation<Self>) throws -> Value {
         guard invocation[.recoverable] == .bool(true) else {
             throw TestFatalError()
         }

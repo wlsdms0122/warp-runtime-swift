@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 @Suite("A statement says what its name holds under 'type'")
 struct DeclaredNameNotationTests {

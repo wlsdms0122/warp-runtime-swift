@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // An author binds a call to a name and passes the name, so a declared answer
 // only reaches the next call site if the build knows what that name holds. These

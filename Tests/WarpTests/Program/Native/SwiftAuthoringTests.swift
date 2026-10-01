@@ -8,6 +8,7 @@
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // Procedures written in Swift and run without a front end.
 @Suite("Authoring a procedure in Swift")

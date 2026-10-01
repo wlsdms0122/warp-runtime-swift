@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // The document has two layers, and this suite is about the lower one: the types
 // that stand one to one with the language, written without any spelling that

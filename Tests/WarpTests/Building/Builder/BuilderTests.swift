@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // Building, asked the way a caller asks it: modules loaded from documents,
 // handed over as a set.

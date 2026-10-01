@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // What a declaration answers when nobody wrote it down. The body is read, in
 // the call graph's order, and where the reading would have to come from itself

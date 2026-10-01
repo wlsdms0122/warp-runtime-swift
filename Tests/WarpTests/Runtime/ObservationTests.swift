@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // What a caller is told while a run happens: the language's only outward
 // account of a run in progress.

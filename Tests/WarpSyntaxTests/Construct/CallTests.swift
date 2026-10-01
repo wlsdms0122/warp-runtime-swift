@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // `call:` names a symbol, never a document. Naming the document would write a
 // linkage fact into the call site, which is the one thing call decided an

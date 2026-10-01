@@ -1,18 +1,21 @@
 //
 //  TestFatalError.swift
-//  WarpTests
+//  WarpTestSupport
 //
 //  Created by JSilver on 8/17/26.
 //
 
 import Foundation
-@testable import Warp
+import Warp
 
-struct TestFatalError: WarpError {
+public struct TestFatalError: WarpError {
     // MARK: - Property
-    let message = "author mistake"
+    public let message = "author mistake"
 
     // MARK: - Initializer
+    public init() {
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

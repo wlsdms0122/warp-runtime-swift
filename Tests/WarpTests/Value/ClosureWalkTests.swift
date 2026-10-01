@@ -7,6 +7,7 @@
 
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("A value names the closures it holds")
 struct ClosureWalkTests {

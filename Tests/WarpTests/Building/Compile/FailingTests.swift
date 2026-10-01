@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // What a body may fail with, before it runs. A native procedure says what it raises
 // and a body is read off what it casts, calls and rescues, so the build can

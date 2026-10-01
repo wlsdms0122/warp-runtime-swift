@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 import WarpStandard
+import WarpTestSupport
 
 @Suite("What std.math answers")
 struct MathTests {

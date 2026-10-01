@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A statement typed `never` does not finish, so it binds nothing and nothing
 // after it runs. The syntactic leaves are refused where they are read; a call

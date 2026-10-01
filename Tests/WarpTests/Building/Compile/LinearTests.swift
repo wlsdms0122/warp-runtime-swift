@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // Values of a type written `linear`, and the build's proof that every way
 // through a body hands each one on exactly once: to a procedure, or as the

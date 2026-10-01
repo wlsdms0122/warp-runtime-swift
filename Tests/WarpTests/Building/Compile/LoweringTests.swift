@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // What the build writes into a body: which slot a name gets, which cells a
 // closure takes, when a loop puts a round back, and where an argument stands.

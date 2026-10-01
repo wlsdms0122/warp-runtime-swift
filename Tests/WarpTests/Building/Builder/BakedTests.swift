@@ -8,6 +8,7 @@
 import Testing
 @testable import Warp
 @testable import WarpStandard
+import WarpTestSupport
 
 @Suite("A caller compiles documents once and links them many times")
 struct BakedTests {

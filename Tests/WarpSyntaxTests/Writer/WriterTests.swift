@@ -10,6 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
 // Writing is how a program leaves the machine that built it, so what it
 // promises is not that the text comes back the same. It is that the program

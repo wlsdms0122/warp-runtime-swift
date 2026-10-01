@@ -1,19 +1,19 @@
 //
 //  ShoutEffect.swift
-//  WarpTests
+//  WarpTestSupport
 //
 //  Created by JSilver on 8/17/26.
 //
 
 import Foundation
-@testable import Warp
+import Warp
 
-struct ShoutEffect: Effect {
-    enum Parameters: Int, ParameterSet {
+public struct ShoutEffect: Effect {
+    public enum Parameters: Int, ParameterSet {
         case text
 
         // MARK: - Property
-        var declared: Parameter { Parameter(name: "text", type: .string) }
+        public var declared: Parameter { Parameter(name: "text", type: .string) }
 
         // MARK: - Initializer
         // MARK: - Public
@@ -22,8 +22,11 @@ struct ShoutEffect: Effect {
 
     // MARK: - Property
     // MARK: - Initializer
+    public init() {
+    }
+
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) throws -> Value {
+    public func run(_ invocation: Invocation<Self>) throws -> Value {
         .string(invocation.string(.text)?.uppercased() ?? "")
     }
 
