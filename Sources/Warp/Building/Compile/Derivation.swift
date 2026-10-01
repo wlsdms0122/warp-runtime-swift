@@ -389,7 +389,7 @@ struct Derivation {
         // Which value is called is the run's answer, so what it reaches is
         // said by the slot the value came out of and nowhere else, and so are
         // the positions it takes in place.
-        case let .apply(callee, arguments, _):
+        case let .apply(callee, arguments):
             guard let inPlace = applied(callee, given: procedures) else { return false }
 
             return handsOwned(arguments, at: inPlace, declaring: names) && arguments.allSatisfy(holds)

@@ -14,7 +14,7 @@ import Foundation
 // address. The cases are the language's own and no document's: what a text
 // spells a type with is the notation's, and two texts spelling one type two
 // ways arrive here as one case.
-public enum Construct: Sendable, Equatable {
+public enum Construct: Sendable, Hashable {
     case literal
     case reference
     case array

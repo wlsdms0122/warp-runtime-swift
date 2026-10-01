@@ -435,7 +435,7 @@ public struct Validator: Sendable {
                 at: inside
             )
 
-        case let .apply(callee, arguments, _):
+        case let .apply(callee, arguments):
             try refuseConstruct(callee, at: place.part(.callee))
             try validate(
                 callee,
