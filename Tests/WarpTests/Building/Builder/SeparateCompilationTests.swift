@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // The boundary between compiling a module graph and linking one.
 //
@@ -106,7 +107,7 @@ struct SeparateCompilationTests {
             ]
         )
 
-        // When.
+        // When
         let rows = try await Assembled(compiled([first, second])).rows
 
         // Then. Each document's rows are next to each other, and in name
@@ -216,7 +217,7 @@ struct SeparateCompilationTests {
         )
         let held = try Module(types: ["a.Held": .int], procedures: [:])
 
-        // When.
+        // When
         let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes
 
         // Then. Each document's rows are a run of their own, in name order
@@ -391,7 +392,7 @@ struct SeparateCompilationTests {
             ]
         )
 
-        // When.
+        // When
         let alone = try await compiled(sut + Module.standard)
         let beside = try await compiled([ahead] + sut + Module.standard)
 
@@ -414,7 +415,7 @@ struct SeparateCompilationTests {
             ]
         )
 
-        // When.
+        // When
         let alone = try await compiled(sut + Module.standard)
         let beside = try await compiled([ahead] + sut + Module.standard)
 
@@ -458,7 +459,7 @@ struct SeparateCompilationTests {
             ]
         )
 
-        // When.
+        // When
         let alone = try await compiled(sut + Module.standard)
         let beside = try await compiled([ahead] + sut + Module.standard)
 

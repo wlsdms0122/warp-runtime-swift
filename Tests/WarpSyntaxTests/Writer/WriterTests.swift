@@ -10,6 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
 // Writing is how a program leaves the machine that built it, so what it
 // promises is not that the text comes back the same. It is that the program
@@ -507,7 +508,7 @@ struct WriterTests {
     }
 
     @Test("every construct survives being written and read back", arguments: Self.corpus)
-    func writingIsAFixedPoint(_ document: Value) async throws {
+    func writingIsAFixedPoint(_ document: Value) throws {
         // Given
         let once = try sut.value(of: try loader.loadDocument(document))
 
@@ -519,7 +520,7 @@ struct WriterTests {
     }
 
     @Test("a program nobody wrote a document for still round-trips", arguments: Self.assembled)
-    func writingIsAFixedPointForAssembledPrograms(_ module: Module) async throws {
+    func writingIsAFixedPointForAssembledPrograms(_ module: Module) throws {
         // Given. Every other corpus here starts from a document, so what they
         // check is that documents survive. The half this direction exists for
         // is the other one: a program built by hand, which no reader has ever
@@ -550,7 +551,7 @@ struct WriterTests {
     }
 
     @Test("a canonical document is written back exactly as it was")
-    func aCanonicalDocumentIsWrittenBackUnchanged() async throws {
+    func aCanonicalDocumentIsWrittenBackUnchanged() throws {
         // Given / When. `canonical` is written in the types themselves, so
         // reading it and writing it must arrive at the same document. A fixed
         // point only says the writing settled; this says nothing was left
@@ -563,7 +564,7 @@ struct WriterTests {
     }
 
     @Test("nothing written is spelled", arguments: Self.corpus)
-    func nothingWrittenIsSpelled(_ document: Value) async throws {
+    func nothingWrittenIsSpelled(_ document: Value) throws {
         // Given. The two template keys, which are reserved in every notation.
         // The condition spelling these are read with is recognised by `of`,
         // which is the key a cast writes what it reads under, so it leaves no
@@ -581,7 +582,7 @@ struct WriterTests {
     }
 
     @Test("a spelling whose key is nobody's procedure does not survive being written")
-    func aSpelledKeyIsNotWrittenBack() async throws {
+    func aSpelledKeyIsNotWrittenBack() throws {
         // Given. The corpus above cannot answer this. Its notation names the
         // procedure in the document (`{ of: x, equal: y }`), so a key that survived
         // and a procedure that was written look the same on the way out. This one
@@ -695,7 +696,7 @@ struct WriterTests {
     }
 
     @Test("a spelling is written back as the procedures it stood for")
-    func aSpellingIsWrittenPlainly() async throws {
+    func aSpellingIsWrittenPlainly() throws {
         // Given. `{ of: x, <procedure>: y }` is a spelling, and what it means is a
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
@@ -772,7 +773,7 @@ struct WriterTests {
     }
 
     @Test("a notation that gave up a procedure cannot write what it said")
-    func aDroppedKeyCannotBeWritten() async throws {
+    func aDroppedKeyCannotBeWritten() throws {
         // Given. The registry is what a notation *is*, so a type whose procedure it
         // no longer registers is a type it can no longer write. Answering with
         // the built-in spelling would put a key in the document that reading it

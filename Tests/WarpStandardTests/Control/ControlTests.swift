@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 import WarpStandard
+import WarpTestSupport
 
 @Suite("What std.control answers")
 struct ControlTests {

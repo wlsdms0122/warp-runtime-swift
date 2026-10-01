@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // A procedure is a value, so an author can write a construct that takes a
 // body, and a procedure that makes one.

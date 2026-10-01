@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A document is checked against itself, before anything is resolved. The walk
 // is structural, which is what these ask: not whether a particular notation

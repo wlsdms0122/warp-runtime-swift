@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 @Suite("A statement says what its name holds under 'type'")
 struct DeclaredNameNotationTests {
@@ -19,7 +20,7 @@ struct DeclaredNameNotationTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a name reads back holding what the document said it holds")
-    func aDeclarationIsRead() async throws {
+    func aDeclarationIsRead() throws {
         // Given
         let sut = try loader.loadProcedure([
             "body": [["let": "held", "type": "double", "value": 1]],
@@ -34,7 +35,7 @@ struct DeclaredNameNotationTests {
     }
 
     @Test("a variable that says what it holds reads back with it, bare or not")
-    func aBareVariableKeepsItsDeclaration() async throws {
+    func aBareVariableKeepsItsDeclaration() throws {
         // Given
         let sut = try loader.loadProcedure([
             "body": [["var": "held", "type": "int?"]],
@@ -49,7 +50,7 @@ struct DeclaredNameNotationTests {
     }
 
     @Test("a document the writer wrote reads back holding the same declaration")
-    func aDeclarationRoundTrips() async throws {
+    func aDeclarationRoundTrips() throws {
         // Given
         let sut = try loader.loadProcedure([
             "body": [["var": "held", "type": ["procedure": ["returns": "int"]], "value": ["closure": ["result": 1]]]],

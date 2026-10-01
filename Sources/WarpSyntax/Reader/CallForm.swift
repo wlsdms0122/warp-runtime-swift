@@ -31,7 +31,7 @@ public struct CallForm: Decodable, Sendable {
     }
 
     // MARK: - Property
-    public let expression: Expression
+    public let expression: Warp.Expression
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {

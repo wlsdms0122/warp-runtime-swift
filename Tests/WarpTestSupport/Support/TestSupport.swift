@@ -1,0 +1,185 @@
+//
+//  TestSupport.swift
+//  WarpTestSupport
+//
+//  Created by JSilver on 8/17/26.
+//
+
+import Foundation
+import Warp
+import WarpStandard
+
+// MARK: - Running
+
+// The entry these tests run from.
+public let entryName: Name = "entry"
+
+// Build the set and run. The way a caller does it, and the way the model reads:
+// the caller states its whole graph, then names one procedure in it.
+public func run(
+    _ modules: [Module],
+    entry: Name = entryName,
+    arguments: [Name: Value] = [:],
+    vocabulary: [Module] = Module.standard,
+    environment: (any Environment)? = nil
+) async throws -> Value {
+    let builder = Builder()
+
+    let image = try await builder.build(try modules.map { module in try module.publishing(entry) } + vocabulary)
+
+    return try await Executor(environment: environment)
+        .run(image, entry: entry, arguments: arguments)
+}
+
+// One module, for a test that wrote its whole graph as one.
+public func run(
+    _ module: Module,
+    entry: Name = entryName,
+    arguments: [Name: Value] = [:],
+    vocabulary: [Module] = Module.standard,
+    environment: (any Environment)? = nil
+) async throws -> Value {
+    try await run(
+        [module],
+        entry: entry,
+        arguments: arguments,
+        vocabulary: vocabulary,
+        environment: environment
+    )
+}
+
+// One procedure, linked alone or beside others. It is the entry, so it is
+// public whatever the test wrote.
+public func run(
+    _ procedure: Procedure,
+    beside others: [Name: Procedure] = [:],
+    arguments: [Name: Value] = [:],
+    vocabulary: [Module] = Module.standard
+) async throws -> Value {
+    try await run(
+        [
+            try Module(
+                procedures: others.merging([entryName: procedure.with(access: .public)]) { _, new in new }
+            )
+        ],
+        arguments: arguments,
+        vocabulary: vocabulary
+    )
+}
+
+// What a body answers with, for the many tests that care about one value rather
+// than a result map.
+public func answer(
+    of body: Body,
+    result: Warp.Expression,
+    beside others: [Name: Procedure] = [:],
+    arguments: [Name: Value] = [:],
+    signature: Signature = Signature(),
+    vocabulary: [Module] = Module.standard
+) async throws -> Value? {
+    try await run(
+        Procedure(signature: signature, body: body, result: result),
+        beside: others,
+        arguments: arguments,
+        vocabulary: vocabulary
+    )
+}
+
+// MARK: - Judging
+
+// What an expression reads is not a property it carries. The validator walks
+// structure and knows which names a body introduces. Asking it is how a test
+// asks the same question.
+public func validates(
+    _ expression: Warp.Expression,
+    visible: Set<Name> = []
+) -> Bool {
+    validates(body: [Statement(binding: .constant("probe"), expression: expression)], visible: visible)
+}
+
+public func validates(body: Body, visible: Set<Name> = []) -> Bool {
+    do {
+        try Validator().validate(Procedure(body: body), constants: visible)
+
+        return true
+    } catch {
+        return false
+    }
+}
+
+// MARK: - Writing
+
+// A reference from segment names, written directly. A path is what the language
+// has, and the spelling belongs to whatever produced it.
+public func reference(_ names: Name...) -> Warp.Expression {
+    .reference(Path(names.map { name in .key(name) }))
+}
+
+// MARK: - Conditions
+
+// Equality and the connectives are procedures, so a test writing one writes
+// the call the notation lowers to.
+public func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
+    .call(Call(selector: "std.logic.equal", arguments: [subject, operand]))
+}
+
+public func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
+    .call(Call(selector: "std.logic.notEqual", arguments: [subject, operand]))
+}
+
+public func negating(_ condition: Warp.Expression) -> Warp.Expression {
+    .call(Call(selector: "std.logic.not", arguments: [condition]))
+}
+
+// A connective leaves its later sides unasked, so each arrives as something
+// that has not been answered yet.
+public func every(_ conditions: Warp.Expression...) -> Warp.Expression {
+    chained("std.logic.and", conditions)
+}
+
+public func some(_ conditions: Warp.Expression...) -> Warp.Expression {
+    chained("std.logic.or", conditions)
+}
+
+private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
+    .call(
+        Call(
+            selector: selector,
+            arguments: [
+                .array(
+                    conditions.map { condition in
+                        .closure(
+                            Procedure(
+                                implementation: .body(Block(body: [], result: condition)),
+                                constness: .const
+                            )
+                        )
+                    }
+                )
+            ]
+        )
+    )
+}
+
+// MARK: - Interpolation
+
+// A template as the language holds one: pieces written one after another, each
+// value asked how it reads. The notation spells this `{ format:, with: }` and
+// lowers it to exactly this.
+public func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
+    .call(Call(selector: "std.text.joined", arguments: [.array(pieces), .literal(.string(""))]))
+}
+
+public func literal(_ text: String) -> Warp.Expression {
+    .literal(.string(text))
+}
+
+public func spelling(_ value: Warp.Expression) -> Warp.Expression {
+    .call(Call(selector: "std.text.text", arguments: [value]))
+}
+
+// MARK: - Refusal
+
+public func aborting(_ message: Warp.Expression) -> Warp.Expression {
+    .call(Call(selector: "std.control.abort", arguments: [message]))
+}

@@ -12,7 +12,7 @@ import Testing
 
 // The envelope a document is written in. Other suites here write one procedure
 // and let `loadProcedure` name it; this one writes the envelope out.
-@Suite
+@Suite("The envelope a document is written in")
 struct ModuleNotationTests {
     // MARK: - Property
     private let loader = Loader.testing
@@ -62,7 +62,7 @@ struct ModuleNotationTests {
 
     @Test("a document carries no name of its own")
     func aDocumentIsNotNamed() {
-        // Given: a declaration is named by its key, and a document is what
+        // Given. A declaration is named by its key, and a document is what
         // it declares. A key naming the document is a key nothing reads.
         let fixture: Value = [
             "name": "deploy",

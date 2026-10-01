@@ -49,5 +49,5 @@ public protocol ExpressionSpelling: Sendable {
     // claims that is not a tag's, and free to refuse. A key this notation
     // names but does not offer is refused here, and so is one written in a
     // form it does not have.
-    func expression(from decoder: Decoder) throws -> Expression
+    func expression(from decoder: Decoder) throws -> Warp.Expression
 }

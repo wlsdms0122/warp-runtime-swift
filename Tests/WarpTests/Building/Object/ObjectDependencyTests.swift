@@ -5,6 +5,7 @@
 //  Created by JSilver on 9/16/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
 
@@ -76,14 +77,14 @@ struct ObjectDependencyTests {
         // Given. The document it calls, compiled and worked out.
         let behind = try await builder.compile([used])
 
-        // When.
+        // When
         let compiled = try await builder.compile(
             [program],
             against: behind,
             supplying: Supplying([used, program])
         )
 
-        // Then.
+        // Then
         #expect(compiled[0].dependencies == behind.compactMap(\.fingerprint))
     }
 
@@ -92,7 +93,7 @@ struct ObjectDependencyTests {
         // Given. Both laid down, and only one of them named.
         let behind = try await builder.compile([used, unrelated])
 
-        // When.
+        // When
         let compiled = try await builder.compile(
             [program],
             against: behind,
@@ -114,7 +115,7 @@ struct ObjectDependencyTests {
 
         #expect(behind[0].fingerprint == nil)
 
-        // When.
+        // When
         let compiled = try await unknowing.compile(
             [program],
             against: behind,
@@ -143,7 +144,7 @@ struct ObjectDependencyTests {
             ]
         )
 
-        // When.
+        // When
         let asLowered = try await written(calling: "box.peek", behind: lowered)
         let asAnswered = try await written(calling: "box.peek", behind: answered)
 
@@ -156,16 +157,15 @@ struct ObjectDependencyTests {
         // The call is the same call either way: a body reaches a row by number
         // and the number does not move. So a caller that kept no record of what
         // it leaned on would read one kind's object for the other's.
-        #expect(
-            try #require(besideDependencies(asLowered.calling)) == besideDependencies(asAnswered.calling),
-            "the caller told the two kinds apart by itself"
-        )
+        let callingLowered = try #require(besideDependencies(asLowered.calling))
+
+        #expect(callingLowered == besideDependencies(asAnswered.calling), "the caller told the two kinds apart by itself")
     }
 
     // MARK: - Public
     // MARK: - Private
     // Everything an object says but what it leaned on.
-    private func besideDependencies(_ value: Value?) -> Value.Dictionary? {
+    private func besideDependencies(_ value: Value) -> Value.Dictionary? {
         guard case let .dictionary(parts) = value else { return nil }
 
         return parts.removing(ObjectLayout.Key.dependencies.name)

@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // The hole a notation is plugged into, and what a document is without one.
 //
@@ -90,7 +91,7 @@ struct NotationTests {
     }
 
     @Test("a record a notation does not claim is the expression it is")
-    func anUnclaimedRecordIsAnExpression() async throws {
+    func anUnclaimedRecordIsAnExpression() throws {
         // Given / When. A condition slot asks for an expression, and a spelling
         // is one way of arriving at one. A record carrying none of the
         // notation's keys never was a condition type, which is what keeps the
@@ -153,7 +154,7 @@ struct NotationTests {
     }
 
     @Test("a record that some notation would read as a condition is still a record")
-    func aRecordInAConditionSlotStaysARecord() async throws {
+    func aRecordInAConditionSlotStaysARecord() throws {
         // Given. The same record, written for a document. A document's
         // condition slot is an expression like any other and no notation is
         // reading it back, so the record is data and is written as data.
@@ -221,7 +222,7 @@ struct NotationTests {
     }
 
     @Test("a template is spelled with the procedures the notation names")
-    func aTemplateSpendsTheNotationsProcedures() async throws {
+    func aTemplateSpendsTheNotationsProcedures() throws {
         // Given / When. Which procedures a template lowers to is the notation's
         // answer, and the reader carries none of its own
         let sut = try Loader.testing.loadProcedure([
@@ -245,7 +246,7 @@ struct NotationTests {
     }
 
     @Test("a tag wins over a notation's condition, in every notation")
-    func aTagIsReadAsItsFormWhereverItIsWritten() async throws {
+    func aTagIsReadAsItsFormWhereverItIsWritten() throws {
         // Given. `{ as: { of: <value>, type: <type> } }` is a cast, and the
         // tags are fixed and read before any spelling. A notation that
         // recognises its conditions by the subject key never sees the `of`
@@ -279,7 +280,7 @@ struct NotationTests {
     }
 
     @Test("reading a document is not a place a notation can reach")
-    func readingCarriesNoNotation() async throws {
+    func readingCarriesNoNotation() throws {
         // Given. The spelling these tests read with, left unlowered in a
         // document. `load` takes a document, and a document has no spellings,
         // so the mapping is not the message some table would have made of it:

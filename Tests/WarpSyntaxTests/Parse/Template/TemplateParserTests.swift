@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-@Suite
+@Suite("A template splits into text and references")
 struct TemplateParserTests {
     // MARK: - Property
     // MARK: - Initializer

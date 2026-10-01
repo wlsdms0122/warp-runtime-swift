@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // A construct's key belongs to the table, not to the type that reads it. The
 // language's constructs are anonymous, so nothing downstream of the registry

@@ -19,7 +19,8 @@ import Warp
 struct BoundsReader {
     // MARK: - Property
     // MARK: - Initializer
-    init() { }
+    init() {
+    }
 
     // MARK: - Public
     // The signature with its bounds applied, and the check that every bound

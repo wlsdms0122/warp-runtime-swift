@@ -10,7 +10,6 @@ import Foundation
 
 // An object holding one of every kind a writing can lay down.
 enum ObjectCoverageFixture {
-    // MARK: - Property
     static let everything: Compiled = {
         // Through the door a reading goes through, so the fixture cannot stand
         // up an object the reading would refuse.
@@ -286,8 +285,6 @@ enum ObjectCoverageFixture {
         calls: ["a.nineteen": callOperation]
     )
 
-    // MARK: - Initializer
-    // MARK: - Public
     // A row a closure literal was lifted into, whose frame holds what the
     // body that stood it up takes into it.
     static func lifted(label: Name) throws -> Judged {
@@ -329,6 +326,4 @@ enum ObjectCoverageFixture {
                 : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: 2)])
         )
     }
-
-    // MARK: - Private
 }

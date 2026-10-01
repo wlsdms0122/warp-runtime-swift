@@ -8,6 +8,7 @@
 import Foundation
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 extension Loader {
     static let testing = Loader(

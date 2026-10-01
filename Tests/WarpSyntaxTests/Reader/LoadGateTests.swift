@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-@Suite
+@Suite("What a load refuses before anything runs")
 struct LoadGateTests {
     // MARK: - Property
     private let loader = Loader.testing
@@ -152,7 +152,7 @@ struct LoadGateTests {
     }
 
     @Test("a name a run supplies is declared like every other name")
-    func runValuesAreDeclared() async throws {
+    func runValuesAreDeclared() throws {
         // Given. There is one way a name gets into a body. A value a run
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [

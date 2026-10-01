@@ -34,7 +34,12 @@ struct Bench {
         // `--against` names the table it reads next.
         case tableless
 
+        // MARK: - Property
         var description: String { "--against takes the path of a table this bench printed" }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
     }
 
     private struct Measurement {

@@ -38,7 +38,6 @@ public extension Place {
         )
     }
 
-    // MARK: - Private
     // The keys a document writes a part under, from the reader that reads it
     // there. A key spelled here as well would be the second of two places
     // deciding what a document says, and the two meet only in stored text.

@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // A module declares more than procedures, and what it declares is its own. A
 // corpus whose names all went into one shared space could not grow without them

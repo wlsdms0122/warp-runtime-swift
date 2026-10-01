@@ -239,7 +239,7 @@ public struct Writer: Sendable {
     // An expression as a document writes it: a scalar as itself, an array as
     // the array of what it holds, and anything else under the one key its
     // form is read by.
-    public func value(of expression: Expression) throws -> Value {
+    public func value(of expression: Warp.Expression) throws -> Value {
         switch expression {
         case let .literal(value):
             return try literal(value)
@@ -336,7 +336,7 @@ public struct Writer: Sendable {
     // rather than from the form, because a notation may have respelled it or
     // given it up.
     private func construct(
-        of expression: Expression,
+        of expression: Warp.Expression,
         named id: String?
     ) throws -> (Name, Value) {
         switch expression {
@@ -413,7 +413,7 @@ public struct Writer: Sendable {
     // A call of a value, under the same key a call of a declaration is. A
     // string under `procedure` reads back as a name, so a value that is
     // literal text has no spelling there.
-    private func call(of callee: Expression, handing arguments: [Expression]) throws -> Value {
+    private func call(of callee: Warp.Expression, handing arguments: [Warp.Expression]) throws -> Value {
         if case .literal(.string) = callee {
             throw WritingError("a call of literal text has no spelling: text under `procedure` names a declaration")
         }
@@ -545,7 +545,7 @@ public struct Writer: Sendable {
         }
     }
 
-    private static func construct(of expression: Expression) -> String {
+    private static func construct(of expression: Warp.Expression) -> String {
         switch expression {
         case .leave: "leaving"
         case .literal: "a literal"

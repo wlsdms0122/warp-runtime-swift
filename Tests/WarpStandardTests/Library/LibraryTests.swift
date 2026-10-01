@@ -8,8 +8,8 @@
 import Foundation
 import Testing
 @testable import Warp
-@testable import WarpStandard
 import WarpSyntax
+@testable import WarpStandard
 
 // The documents of `lib/std` are the source and what ships is a copy of them,
 // so the two being the same bytes is what the copy is worth. A document edited

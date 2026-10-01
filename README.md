@@ -115,7 +115,7 @@ A place reads `0da2e372bba7/procedures.wallet.charge…`: the part before the sl
 
 Whether a place has a text under it is `document.identity != nil`. A place from a program nobody wrote down says `assembled` rather than `none`, since `Optional.none` answers to that spelling too and `document == .none` would read true for a place that does not exist.
 
-Not every refusal has a place. A name declared by two modules is refused at the later declaration. An entry nobody declares has no place, and that refusal carries `nil`, written out at the call because the initializer takes no default. A refusal from reading with a notation (`Loader.canonical`) carries the steps it reached, `ReadingError.steps`, and no document, so its `place` is nil.
+Not every refusal has a place. A name declared by two modules is refused at the later declaration. An entry nobody declares is refused by the run, with an `ExecutionError` that has no place. A refusal from reading with a notation (`Loader.canonical`) carries the steps it reached, `ReadingError.steps`, in no identified document: its `place.document.identity` is nil.
 
 ## Vocabulary: the boundary to the outside
 

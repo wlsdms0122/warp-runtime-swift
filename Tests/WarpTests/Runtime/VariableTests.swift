@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("A variable as it runs")
 struct VariableTests {

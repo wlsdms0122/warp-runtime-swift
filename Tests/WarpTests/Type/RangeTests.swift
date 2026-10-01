@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // `int(0...255)`. A range is a slot's condition on a number, not a new kind. It
 // is judged where `enum` is: at the build for what the text shows, at the

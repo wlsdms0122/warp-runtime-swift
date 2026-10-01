@@ -23,7 +23,7 @@ public struct ReturnForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "return"
 
-    private let value: Expression?
+    private let value: Warp.Expression?
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -41,7 +41,7 @@ public struct ReturnForm: ConstructForm {
     // MARK: - Public
     // Nothing is bound: a statement names what its expression answered, and this
     // one does not answer.
-    public func expression(boundTo name: String?) -> Expression {
+    public func expression(boundTo name: String?) -> Warp.Expression {
         .leave(Leave(reach: .procedure, value: value))
     }
 

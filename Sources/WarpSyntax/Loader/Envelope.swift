@@ -17,7 +17,6 @@ import Warp
 // be answerable from the bytes alone, and both have to be answerable *before*
 // the program runs, because half-running one is worse than refusing it.
 public enum Envelope {
-    // MARK: - Property
     // Which types a reader has to understand. It goes up when a type is added
     // or an existing one changes what it means, and does not move for a new
     // procedure. A procedure is vocabulary, and vocabulary is what `imports` is for.
@@ -37,8 +36,6 @@ public enum Envelope {
     // value a caller built is held to it at the door a document is read at.
     public static let nesting = 128
 
-    // MARK: - Initializer
-    // MARK: - Public
     // Whether a document declares what it imports.
     //
     // Written and not null. A key holding nothing is not a claim, and the two
@@ -62,6 +59,4 @@ public enum Envelope {
     ) throws -> Bool {
         try container.contains(key) && !container.decodeNil(forKey: key)
     }
-
-    // MARK: - Private
 }

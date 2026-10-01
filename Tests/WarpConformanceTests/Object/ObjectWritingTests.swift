@@ -5,6 +5,7 @@
 //  Created by JSilver on 9/13/26.
 //
 
+import Foundation
 import Testing
 import Warp
 import WarpSyntax
@@ -19,7 +20,8 @@ import WarpSyntax
 // own copy of, and no other implementation has one of these.
 @Suite("An object written down")
 struct ObjectWritingTests {
-    private struct ObjectNotWritten: Error { }
+    private struct ObjectNotWritten: Error {
+    }
 
     // MARK: - Property
     // MARK: - Initializer
