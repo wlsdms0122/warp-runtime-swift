@@ -77,6 +77,60 @@ public indirect enum Expression: Sendable {
     // so a body may not have anything after it.
     case leave(Leave)
 
+    // Where a child of an expression stands, by the part it plays, as the steps
+    // from the expression's own place to the child's. Every walk that names a
+    // child's place takes it from here, so a place one walk writes down is the
+    // place another looks up.
+    public enum Child: Sendable {
+        // An array's element at a position.
+        case element(Int)
+
+        // A record's field.
+        case field(Name)
+
+        // The block a closure literal carries.
+        case closure
+
+        // What a cast reads.
+        case subject(optional: Bool)
+
+        // The value a call of a value calls.
+        case callee
+
+        // An argument of a call or of a call of a value, at its position.
+        case argument(Int)
+
+        case condition(of: Place.ConditionHolder)
+        case then
+        case otherwise
+        case rescue
+
+        // What stands at the expression's own place: the block of a block, a
+        // loop or an attempt, and the value a leave carries.
+        case held
+
+        // MARK: - Property
+        public var steps: [Place.Step] {
+            switch self {
+            case let .element(position): [.index(position)]
+            case let .field(name): [.part(.fields), .key(name.spelling)]
+            case .closure: [.part(.closure)]
+            case let .subject(optional): [.part(.subject(optional: optional))]
+            case .callee: [.part(.callee)]
+            case let .argument(position): [.part(.arguments), .index(position)]
+            case let .condition(holder): [.part(.condition(of: holder))]
+            case .then: [.part(.then)]
+            case .otherwise: [.part(.otherwise)]
+            case .rescue: [.part(.rescue)]
+            case .held: []
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // The name of the construct this is, where it stands as a statement's.
     // Everything with no construct of its own answers `value`.

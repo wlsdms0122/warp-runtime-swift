@@ -110,7 +110,7 @@ struct TypeChecker {
         // MARK: - Property
         var rewritten: Expression
         var calls: [CallSite] = []
-        var inPlace: [Place: [Int]] = [:]
+        var inPlace = InPlaceTable()
         var reading: LoweredType
         var flow = Flow()
 
@@ -124,7 +124,7 @@ struct TypeChecker {
     private typealias BodyWalk = (
         body: Body,
         calls: [CallSite],
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         environment: [Name: Binding],
         reading: LoweredType,
         flow: Flow,
@@ -219,7 +219,7 @@ struct TypeChecker {
         folding: Folding?,
         origin: Int? = nil,
         writing fulfillment: Fulfillment
-    ) async throws -> (block: Block, calls: [CallSite], inPlace: [Place: [Int]]) {
+    ) async throws -> (block: Block, calls: [CallSite], inPlace: InPlaceTable) {
         let inner = try await inspected(
             block: block,
             at: place,
@@ -249,7 +249,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (Expression, [CallSite], [Place: [Int]]) {
+    ) async throws -> (Expression, [CallSite], InPlaceTable) {
         let inner = try await inspected(
             expression,
             at: place,
@@ -1397,7 +1397,7 @@ struct TypeChecker {
                 )
             }
 
-            let carried = try await inspected(value, at: place, in: environment, with: context, ask: ask)
+            let carried = try await inspected(value, at: place.child(.held), in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -1456,14 +1456,14 @@ struct TypeChecker {
             var environment = environment
             var rewritten: [Expression] = []
             var calls: [CallSite] = []
-            var inPlace: [Place: [Int]] = [:]
+            var inPlace = InPlaceTable()
             var flowed = Flow()
             var element: LoweredType?
 
             for (position, member) in array.enumerated() {
                 let inner = try await inspected(
                     member,
-                    at: place.index(position),
+                    at: place.child(.element(position)),
                     in: environment,
                     with: context,
                     ask: ask
@@ -1472,7 +1472,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                inPlace.merge(inner.inPlace) { _, later in later }
+                inPlace = try inPlace.absorbing(inner.inPlace)
                 element = element?.joined(inner.reading) ?? inner.reading
                 rewritten.append(inner.rewritten)
             }
@@ -1497,7 +1497,7 @@ struct TypeChecker {
         case let .cast(value, type, optional):
             let inner = try await inspected(
                 value,
-                at: place.part(.subject(optional: optional)),
+                at: place.child(.subject(optional: optional)),
                 in: environment,
                 with: context,
                 ask: ask
@@ -1608,14 +1608,14 @@ struct TypeChecker {
             var environment = environment
             var rewritten: [Name: Expression] = [:]
             var calls: [CallSite] = []
-            var inPlace: [Place: [Int]] = [:]
+            var inPlace = InPlaceTable()
             var flowed = Flow()
             var fields: [Name: LoweredType] = [:]
 
             for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try await inspected(
                     field,
-                    at: place.part(.fields).key(name.spelling),
+                    at: place.child(.field(name)),
                     in: environment,
                     with: context,
                     ask: ask
@@ -1624,7 +1624,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                inPlace.merge(inner.inPlace) { _, later in later }
+                inPlace = try inPlace.absorbing(inner.inPlace)
                 fields[name] = inner.reading
                 rewritten[name] = inner.rewritten
             }
@@ -1652,7 +1652,7 @@ struct TypeChecker {
             let procedure = written.with(signature: written.signature.bounded(by: context.bounds))
             var rewritten = expression
             var calls: [CallSite] = []
-            var inPlace: [Place: [Int]] = [:]
+            var inPlace = InPlaceTable()
             var body = procedure.block
 
             // What the closure takes from where it was written: every name
@@ -1665,9 +1665,9 @@ struct TypeChecker {
             if case .judging = ask, let written = procedure.block {
                 let inner = try await inspected(
                     block: written,
-                    at: place.part(.closure),
+                    at: place.child(.closure),
                     in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
-                        _, declared in declared
+                        _, own in own
                     },
                     with: context.bounding(procedure.signature.parameterBounds.table),
                     ask: ask
@@ -1685,7 +1685,7 @@ struct TypeChecker {
                             "writes '\(name)', which it captured, as"
                                 + " \(write.type.rendered(in: context.loweredTypes)). The body it captured"
                                 + " from holds it as \(held.rendered(in: context.loweredTypes))",
-                            at: place.part(.closure)
+                            at: place.child(.closure)
                         )
                     }
 
@@ -1695,9 +1695,9 @@ struct TypeChecker {
                         as: "writes '\(name)', which it captured, as",
                         in: context.loweredTypes,
                         fulfillment: ask.fulfillment,
-                        at: place.part(.closure)
+                        at: place.child(.closure)
                     ) {
-                        throw BuildError(refusal, at: place.part(.closure))
+                        throw BuildError(refusal, at: place.child(.closure))
                     }
                 }
 
@@ -1706,7 +1706,7 @@ struct TypeChecker {
                     answered: inner.flow.answered,
                     to: procedure.signature.returns,
                     result: inner.block.result,
-                    at: place.part(.closure),
+                    at: place.child(.closure),
                     in: context.loweredTypes,
                     fulfillment: ask.fulfillment
                 )
@@ -1801,15 +1801,15 @@ struct TypeChecker {
 
             // One by one, because a loop over the values alone reports the
             // third operand from the place the first was.
-            try held(callee, asOperand: place.part(.callee), given: context, when: ask)
+            try held(callee, asOperand: place.child(.callee), given: context, when: ask)
 
             for (position, argument) in arguments.enumerated() {
-                try held(argument, asOperand: place.part(.arguments).index(position), given: context, when: ask)
+                try held(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
             }
 
             let called = try await inspected(
                 callee,
-                at: place.part(.callee),
+                at: place.child(.callee),
                 in: environment,
                 with: context,
                 ask: ask
@@ -1823,7 +1823,7 @@ struct TypeChecker {
             if case .nullable = callee {
                 throw BuildError(
                     "calls a value of \(called.reading.rendered(in: context.loweredTypes)), which may be null",
-                    at: place.part(.callee)
+                    at: place.child(.callee)
                 )
             }
 
@@ -1831,7 +1831,7 @@ struct TypeChecker {
                 throw BuildError(
                     "calls a value of \(called.reading.rendered(in: context.loweredTypes)),"
                         + " and only a procedure can be called",
-                    at: place.part(.callee)
+                    at: place.child(.callee)
                 )
             }
 
@@ -1843,7 +1843,7 @@ struct TypeChecker {
             for (position, argument) in arguments.enumerated() {
                 let inner = try await inspected(
                     argument,
-                    at: place.part(.arguments).index(position),
+                    at: place.child(.argument(position)),
                     in: environment,
                     with: context,
                     ask: ask
@@ -1852,7 +1852,7 @@ struct TypeChecker {
                 rewritten.append(inner.rewritten)
                 readings.append(inner.reading)
                 calls += inner.calls
-                inPlace.merge(inner.inPlace) { _, later in later }
+                inPlace = try inPlace.absorbing(inner.inPlace)
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -1882,7 +1882,7 @@ struct TypeChecker {
                     throw BuildError(
                         "calls a value with \(reading.rendered(in: context.loweredTypes))"
                             + " where it takes \(parameter.rendered(in: context.loweredTypes))",
-                        at: place.part(.arguments).index(position)
+                        at: place.child(.argument(position))
                     )
                 }
 
@@ -1899,7 +1899,7 @@ struct TypeChecker {
                             in: context.loweredTypes
                         )
                     } catch {
-                        throw BuildError("calls a value: \(error)", at: place.part(.arguments).index(position))
+                        throw BuildError("calls a value: \(error)", at: place.child(.argument(position)))
                     }
                 }
             }
@@ -1912,7 +1912,7 @@ struct TypeChecker {
                 answers = .any
             }
 
-            inPlace[place] = handed
+            inPlace = try inPlace.absorbing(InPlaceTable([place: handed]))
 
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
@@ -1939,7 +1939,7 @@ struct TypeChecker {
                 for (position, argument) in call.arguments.enumerated() {
                     readings.append(try await inspected(
                         argument,
-                        at: place.argument(position),
+                        at: place.child(.argument(position)),
                         in: environment,
                         with: context,
                         ask: ask
@@ -1963,7 +1963,7 @@ struct TypeChecker {
             // one by one, because a loop over the values alone reports the
             // third operand from the place the first was.
             for (position, argument) in call.arguments.enumerated() {
-                try held(argument, asOperand: place.argument(position), given: context, when: ask)
+                try held(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
             }
 
             // A selector this document cannot name is refused where the walk
@@ -1984,12 +1984,12 @@ struct TypeChecker {
             var arguments: [Expression] = []
             var sent: [LoweredType] = []
             var calls: [CallSite] = []
-            var inPlace: [Place: [Int]] = [:]
+            var inPlace = InPlaceTable()
 
             for (position, argument) in call.arguments.enumerated() {
                 let inner = try await inspected(
                     argument,
-                    at: place.argument(position),
+                    at: place.child(.argument(position)),
                     in: environment,
                     with: context,
                     ask: ask
@@ -1998,7 +1998,7 @@ struct TypeChecker {
                 arguments.append(inner.rewritten)
                 sent.append(inner.reading)
                 calls += inner.calls
-                inPlace.merge(inner.inPlace) { _, later in later }
+                inPlace = try inPlace.absorbing(inner.inPlace)
             }
 
             try handedInPlace(
@@ -2033,7 +2033,7 @@ struct TypeChecker {
             )
 
         case let .block(block):
-            let inner = try await inspected(block: block, at: place, in: environment, with: context, ask: ask)
+            let inner = try await inspected(block: block, at: place.child(.held), in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites ? .block(inner.block) : expression,
@@ -2056,18 +2056,18 @@ struct TypeChecker {
             // environment the conditional stands in.
             let head = try await inspected(
                 condition,
-                at: place.part(.condition(of: .conditional)),
+                at: place.child(.condition(of: .conditional)),
                 in: environment,
                 with: context,
                 ask: ask
             )
 
-            try held(condition, asOperand: place.part(.condition(of: .conditional)), given: context, when: ask)
-            try held(head.reading, asCondition: place.part(.condition(of: .conditional)), in: context, when: ask)
+            try held(condition, asOperand: place.child(.condition(of: .conditional)), given: context, when: ask)
+            try held(head.reading, asCondition: place.child(.condition(of: .conditional)), in: context, when: ask)
 
             let inside = environment
 
-            let taken = try await inspected(then, at: place.part(.then), in: inside, with: context, ask: ask)
+            let taken = try await inspected(then, at: place.child(.then), in: inside, with: context, ask: ask)
 
             guard let otherwise else {
                 return Inspection(
@@ -2075,7 +2075,7 @@ struct TypeChecker {
                         ? .conditional(head.rewritten, then: taken.body, else: nil)
                         : expression,
                     calls: head.calls + taken.calls,
-                    inPlace: head.inPlace.merging(taken.inPlace) { _, later in later },
+                    inPlace: try head.inPlace.absorbing(taken.inPlace),
                     reading: .null,
                     flow: head.flow.followed(by: taken.flow.joined(with: Flow()))
                 )
@@ -2083,7 +2083,7 @@ struct TypeChecker {
 
             let declined = try await inspected(
                 otherwise,
-                at: place.part(.otherwise),
+                at: place.child(.otherwise),
                 in: inside,
                 with: context,
                 ask: ask
@@ -2094,9 +2094,7 @@ struct TypeChecker {
                     ? .conditional(head.rewritten, then: taken.body, else: declined.body)
                     : expression,
                 calls: head.calls + taken.calls + declined.calls,
-                inPlace: head.inPlace
-                    .merging(taken.inPlace) { _, later in later }
-                    .merging(declined.inPlace) { _, later in later },
+                inPlace: try head.inPlace.absorbing(taken.inPlace, declined.inPlace),
                 reading: taken.reading == .never && declined.reading == .never ? .never : .null,
                 flow: head.flow.followed(by: taken.flow.joined(with: declined.flow))
             )
@@ -2121,7 +2119,7 @@ struct TypeChecker {
             ) { entry -> (round: BodyWalk, flow: Flow) in
                 let walk = try await inspected(
                     body.body,
-                    at: place.part(.body),
+                    at: place.child(.held).child(.body),
                     in: entry,
                     with: context,
                     ask: .probing
@@ -2142,17 +2140,17 @@ struct TypeChecker {
 
             let head = try await inspected(
                 condition,
-                at: place.part(.condition(of: .loop)),
+                at: place.child(.condition(of: .loop)),
                 in: seeded,
                 with: context,
                 ask: ask
             )
 
-            try held(condition, asOperand: place.part(.condition(of: .loop)), given: context, when: ask)
-            try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
+            try held(condition, asOperand: place.child(.condition(of: .loop)), given: context, when: ask)
+            try held(head.reading, asCondition: place.child(.condition(of: .loop)), in: context, when: ask)
 
             let rounds = ask.rewrites
-                ? try await inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
+                ? try await inspected(body.body, at: place.child(.held).child(.body), in: seeded, with: context, ask: ask)
                 : probed
 
             // The result runs once, at whichever exit the run takes (a
@@ -2178,7 +2176,7 @@ struct TypeChecker {
                     }
                 }
 
-                tail = try await inspected(result, at: place.part(.result), in: exit, with: context, ask: ask)
+                tail = try await inspected(result, at: place.child(.held).child(.result), in: exit, with: context, ask: ask)
             }
 
             return Inspection(
@@ -2190,9 +2188,7 @@ struct TypeChecker {
                     )
                     : expression,
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
-                inPlace: head.inPlace
-                    .merging(rounds.inPlace) { _, later in later }
-                    .merging(tail?.inPlace ?? [:]) { _, later in later },
+                inPlace: try head.inPlace.absorbing(rounds.inPlace, tail?.inPlace ?? InPlaceTable()),
                 reading: tail?.reading ?? .null,
                 flow: head.flow.followed(
                     by: tail.map { tail in
@@ -2227,14 +2223,14 @@ struct TypeChecker {
 
             let attempted = try await inspected(
                 block: block,
-                at: place,
+                at: place.child(.held),
                 in: environment,
                 with: context,
                 ask: ask
             )
             let rescued = try await inspected(
                 block: rescue,
-                at: place.part(.rescue),
+                at: place.child(.rescue),
                 in: caught(soaking: attempted.flow, failure: failure, in: environment, with: context),
                 with: context,
                 ask: ask
@@ -2245,7 +2241,7 @@ struct TypeChecker {
                     ? .attempt(attempted.block, rescue: rescued.block, failure: failure)
                     : expression,
                 calls: attempted.calls + rescued.calls,
-                inPlace: attempted.inPlace.merging(rescued.inPlace) { _, later in later },
+                inPlace: try attempted.inPlace.absorbing(rescued.inPlace),
                 reading: attempted.reading.joined(rescued.reading),
                 flow: attempted.flow.absorbed().joined(with: rescued.flow.absorbed())
             )
@@ -2261,10 +2257,10 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
-    ) async throws -> (block: Block, calls: [CallSite], inPlace: [Place: [Int]], reading: LoweredType, flow: Flow) {
+    ) async throws -> (block: Block, calls: [CallSite], inPlace: InPlaceTable, reading: LoweredType, flow: Flow) {
         let body = try await inspected(
             block.body,
-            at: place.part(.body),
+            at: place.child(.body),
             in: environment,
             with: context,
             ask: ask
@@ -2284,7 +2280,7 @@ struct TypeChecker {
                 try refuse(
                     "never finishes before it, and nothing"
                         + " written after it would ever run",
-                    at: place.part(.result),
+                    at: place.child(.result),
                     when: ask
                 )
             }
@@ -2295,7 +2291,7 @@ struct TypeChecker {
         } else if let result = block.result {
             let read = try await inspected(
                 result,
-                at: place.part(.result),
+                at: place.child(.result),
                 in: body.environment,
                 with: context,
                 ask: ask
@@ -2317,7 +2313,7 @@ struct TypeChecker {
                 ? Block(body: body.body, result: tail?.rewritten ?? block.result)
                 : block,
             body.calls + (tail?.calls ?? []),
-            body.inPlace.merging(tail?.inPlace ?? [:]) { _, later in later },
+            try body.inPlace.absorbing(tail?.inPlace ?? InPlaceTable()),
             reading,
             flow
         )
@@ -2340,7 +2336,7 @@ struct TypeChecker {
         var flowed = Flow()
         var rewritten: Body = []
         var calls: [CallSite] = []
-        var inPlace: [Place: [Int]] = [:]
+        var inPlace = InPlaceTable()
 
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
@@ -2357,7 +2353,7 @@ struct TypeChecker {
                 Statement(binding: statement.binding, expression: inner.rewritten)
             )
             calls += inner.calls
-            inPlace.merge(inner.inPlace) { _, later in later }
+            inPlace = try inPlace.absorbing(inner.inPlace)
 
             // A write outlives the block it was written in, so a name written
             // anywhere inside this statement may hold something else by the
@@ -2595,7 +2591,7 @@ struct TypeChecker {
         guard case .judging = ask else { return }
 
         for (position, (slot, argument)) in zip(slots, arguments).enumerated() where slot.isInout {
-            let at = place.argument(position)
+            let at = place.child(.argument(position))
 
             guard case let .reference(path) = argument, let head = path.head else {
                 try refuse(
@@ -2769,7 +2765,7 @@ struct TypeChecker {
             } catch {
                 throw BuildError(
                     "sending '\(call.selector)': \(error)",
-                    at: site.place.argument(position)
+                    at: site.place.child(.argument(position))
                 )
             }
         }
@@ -2815,7 +2811,7 @@ struct TypeChecker {
                 "sending '\(call.selector)' with \(slot.name),"
                     + " which holds \(written.rendered(in: loweredTypes))"
                     + " where \(slot.type.rendered(in: loweredTypes)) is declared",
-                at: site.place.argument(position)
+                at: site.place.child(.argument(position))
             )
         }
     }
