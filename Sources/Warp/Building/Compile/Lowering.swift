@@ -786,8 +786,10 @@ struct Lowering {
         )
         var innerScope = SlotScope()
 
-        for name in procedure.signature.names {
-            innerScope.slots[name] = inner.allocateParameter(name)
+        for slot in procedure.signature.lowered(in: loweredTypes) {
+            let allocated = inner.allocateParameter(slot.name)
+            innerScope.slots[slot.name] = allocated
+            inner.hold(allocated, slot.type)
         }
 
         let body = try lower(block, in: innerScope, on: context.holding(inner), at: place.child(.closure))
