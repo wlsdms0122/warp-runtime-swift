@@ -296,7 +296,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .parameter, .composition, .reading,
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .parameter, .composition, .projection,
             .undeclared:
             return false
         }

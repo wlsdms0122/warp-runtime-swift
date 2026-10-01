@@ -1,5 +1,5 @@
 //
-//  EnvelopeTests.swift
+//  ImportsListTests.swift
 //  WarpSyntaxTests
 //
 //  Created by JSilver on 8/20/26.
@@ -21,7 +21,7 @@ import Testing
 // one outcome worse than refusing it, since what already happened cannot be
 // taken back.
 @Suite("A document says what it imports before it is read")
-struct EnvelopeTests {
+struct ImportsListTests {
     // MARK: - Property
     private let loader = Loader.testing
     private let sut = Writer()
