@@ -93,7 +93,7 @@ struct BakedTests {
             supplying: Supplying(Module.standard)
         )
 
-        // Then. It runs, and answers what the same world linked whole answers.
+        // Then. It runs, and answers what the same documents linked whole answer.
         let whole = try await builder.build(Module.standard + [arriving])
 
         #expect(try await Executor().run(image, entry: entry, arguments: ["value": .int(41)]) == .int(42))
@@ -167,7 +167,7 @@ struct BakedTests {
     func aDocumentLaidWithoutWhatItSendsIsRefused() async throws {
         // Given. A document sending a contract's procedure, which no row
         // answers, before a procedure another document declares.
-        let shapes = try Module(
+        let bank = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: [
                 "app.Describable": [
@@ -203,7 +203,7 @@ struct BakedTests {
                 )
             ]
         )
-        let compiled = try await builder.compile([shapes, try adding(1), sending] + Module.standard)
+        let compiled = try await builder.compile([bank, try adding(1), sending] + Module.standard)
 
         // When / Then. Laid without the document declaring `app.add1`.
         #expect {
