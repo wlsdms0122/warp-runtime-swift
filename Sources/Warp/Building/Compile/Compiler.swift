@@ -154,7 +154,7 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, handing: answer.inPlace, at: symbol.place)
+                try compiling.settle(try row(of: symbol), body: rewritten, inPlace: answer.inPlace, at: symbol.place)
             }
 
             return answer.procedure
@@ -415,7 +415,7 @@ struct Compiler {
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
-                    ).read(judged, as: .binding(name), handing: inPlace, writing: &lowering, at: place)
+                    ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -473,7 +473,7 @@ struct Compiler {
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
-                    ).read(judged, as: .binding(name), handing: inPlace, writing: &lowering, at: place)
+                    ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
