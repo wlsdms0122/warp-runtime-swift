@@ -86,7 +86,7 @@ struct Evaluator: Sendable {
         handing arguments: [Value],
         at trace: Trace
     ) async throws -> Value {
-        try await answer(closure, given: arguments, at: trace)
+        try await answer(closure, as: try closure.answered(), given: arguments, holding: [], at: trace)
     }
 
     // One code read against one frame, for a caller outside a run: what a
@@ -461,9 +461,14 @@ struct Evaluator: Sendable {
     // Calling a value. The body runs in the cells the closure captured and not
     // in the caller's: that is what lexical scope means, and it is the reason a
     // closure is worth passing at all.
+    //
+    // A place the build found handed in place is the caller's hold where the
+    // closure's slot takes one, made before any argument is read the way a
+    // call to a declaration makes its holds, and is read as a value where the
+    // slot takes a value.
     private func apply(
         _ callee: Operation,
-        arguments: [Operation],
+        arguments: [Argument],
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -475,31 +480,52 @@ struct Evaluator: Sendable {
             )
         }
 
+        let linked = try closure.answered()
+        let handed = arguments.enumerated().compactMap { position, argument -> CallOperation.Handed? in
+            guard
+                case let .reference(address) = argument,
+                linked.slots.indices.contains(position),
+                case .inout = linked.slots[position].type
+            else { return nil }
+
+            return CallOperation.Handed(position: position, address: address)
+        }
+        let holds = try holds(handed, of: linked, in: activation)
+
         // A value carries no names, so the arguments travel by position, in
         // the order they were written, and land in the slots in that order.
-        var given: [Value] = []
+        var given: [Value?] = []
 
-        for argument in arguments {
-            given.append(try await evaluate(argument, in: &activation, at: trace))
+        for (position, argument) in arguments.enumerated() {
+            switch argument {
+            case let .value(operation):
+                given.append(try await evaluate(operation, in: &activation, at: trace))
+
+            case let .reference(address):
+                given.append(
+                    handed.contains { held in held.position == position } ? nil : try activation.value(at: address)
+                )
+            }
         }
 
-        return try await answer(closure, given: given, at: trace)
+        return try await answer(closure, as: linked, given: given, holding: holds, at: trace)
     }
 
     // The one way a closure is called: the arguments settled by the closure's
     // own row, the captured cells in their slots, the parameters in theirs,
-    // and the body answered in the frame that was just made. The row is asked
-    // whether this run may read it before anything reads its rows.
+    // whatever the call handed in place held as a box, and the body answered
+    // in the frame that was just made. The row is asked whether this run may
+    // read it before anything reads its rows.
     //
     // Making the frame and answering from it are one act here, so no caller
     // holds a frame it has not answered from.
     private func answer(
         _ closure: Closure,
-        given arguments: [Value],
+        as linked: Linked,
+        given arguments: [Value?],
+        holding holds: [(position: Int, handle: Handle)],
         at trace: Trace
     ) async throws -> Value {
-        let linked = try closure.answered()
-
         guard case let .body(body, frame) = linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
         }
@@ -509,14 +535,22 @@ struct Evaluator: Sendable {
             throw ExecutionError("this call \(Linked.unreadable)")
         }
 
-        let settled = try linked.settle(applied: arguments)
+        let settled = try linked.settle(arguments) { position in
+            holds.contains { held in held.position == position }
+        }
         var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
             activation.cells[slot] = cell
         }
 
+        for (position, handle) in holds {
+            activation.cells[frame.parameters[position]] = .hold(handle)
+        }
+
         for (position, value) in settled.enumerated() {
+            guard let value else { continue }
+
             activation.cells[frame.parameters[position]] = .value(value)
         }
 

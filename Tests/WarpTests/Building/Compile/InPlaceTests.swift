@@ -472,6 +472,59 @@ struct InPlaceTests {
         }
     }
 
+    @Test("a call of a value keeps a place where its type takes one in place and reads every other argument")
+    func aCallOfAValueLowersWhatItHandsInPlace() async throws {
+        // Given. Two variables handed to a value taking the first in place and
+        // the second as a value
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .variable("n"), expression: .literal(.int(1))),
+                        Statement(binding: .variable("m"), expression: .literal(.int(2))),
+                        Statement(
+                            binding: .constant("pair"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(
+                                        parameters: [
+                                            Parameter(name: "first", type: .inout(.int)),
+                                            Parameter(name: "second", type: .int)
+                                        ]
+                                    ),
+                                    body: [],
+                                    result: .literal(.null)
+                                )
+                            )
+                        ),
+                        Statement(expression: .apply(reference("pair"), arguments: [reference("n"), reference("m")]))
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        let entry = try #require(image[entryName])
+
+        guard
+            case let .body(body, _) = entry.implementation,
+            case let .apply(_, arguments) = body.instructions.last?.code
+        else {
+            Issue.record("the entry's last statement is a call of a value")
+            return
+        }
+
+        guard case .reference = arguments.first, case .value(.local) = arguments.last else {
+            Issue.record("the first argument is a place and the second a read")
+            return
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

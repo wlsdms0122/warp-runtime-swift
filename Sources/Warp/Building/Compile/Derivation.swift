@@ -393,7 +393,7 @@ struct Derivation {
 
         // Which value is called is the run's answer, so what it reaches is
         // said by the slot the value came out of and nowhere else.
-        case let .apply(callee, arguments):
+        case let .apply(callee, arguments, _):
             return applies(callee, given: procedures) && arguments.allSatisfy(holds)
 
         // Which part of a construct runs is decided inside the body, so a

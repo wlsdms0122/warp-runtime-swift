@@ -28,8 +28,9 @@ indirect enum Operation: Sendable {
     case closure(Int, captures: [(Int, Int)])
 
     // Calling a value. The arguments are positional and settle against the
-    // closure's own row.
-    case apply(Operation, arguments: [Operation])
+    // closure's own row. One the build found handed in place is the caller's
+    // place.
+    case apply(Operation, arguments: [Argument])
 
     case cast(Operation, as: LoweredType, optional: Bool)
     case block(LoweredBody)
@@ -72,8 +73,15 @@ indirect enum Operation: Sendable {
         case let .record(held):
             return held.fields.allSatisfy { field in field.walk(visit) }
 
+        // An argument handed in place is a place and not an operation, and a
+        // place is the node's own to read.
         case let .apply(callee, arguments):
-            return callee.walk(visit) && arguments.allSatisfy { argument in argument.walk(visit) }
+            return callee.walk(visit)
+                && arguments.allSatisfy { argument in
+                    guard case let .value(operation) = argument else { return true }
+
+                    return operation.walk(visit)
+                }
 
         case let .cast(read, _, _):
             return read.walk(visit)

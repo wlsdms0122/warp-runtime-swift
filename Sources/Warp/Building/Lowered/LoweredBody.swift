@@ -37,14 +37,13 @@ struct LoweredBody: Sendable {
                 case let .call(call):
                     return call.handed.contains { handed in handed.address.reads(slots) }
 
+                case let .apply(_, arguments):
+                    return arguments.contains { argument in argument.reads(slots) }
+
                 case let .dispatch(dispatch):
-                    return dispatch.arguments.contains { argument in
-                        guard case let .reference(address) = argument else { return false }
+                    return dispatch.arguments.contains { argument in argument.reads(slots) }
 
-                        return address.reads(slots)
-                    }
-
-                case .literal, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+                case .literal, .array, .record, .cast, .block, .conditional, .loop, .attempt, .leave:
                     return false
                 }
             }
@@ -87,14 +86,13 @@ struct LoweredBody: Sendable {
                     standing.stand(calling: call.procedure, handing: call.arguments.count)
                     call.handed.forEach { handed in handed.address.stand(in: &standing) }
 
+                case let .apply(_, arguments):
+                    arguments.forEach { argument in argument.stand(in: &standing) }
+
                 case let .dispatch(dispatch):
-                    dispatch.arguments.forEach { argument in
-                        guard case let .reference(address) = argument else { return }
+                    dispatch.arguments.forEach { argument in argument.stand(in: &standing) }
 
-                        address.stand(in: &standing)
-                    }
-
-                case .literal, .array, .record, .apply, .cast, .block, .conditional, .leave:
+                case .literal, .array, .record, .cast, .block, .conditional, .leave:
                     break
                 }
             }

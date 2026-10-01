@@ -270,7 +270,7 @@ public struct Writer: Sendable {
         case let .call(call):
             return .dictionary([ExpressionTag.call.key: try self.call(of: call)])
 
-        case let .apply(callee, arguments):
+        case let .apply(callee, arguments, _):
             return .dictionary([ExpressionTag.call.key: try self.call(of: callee, handing: arguments)])
 
         // Everything left is a construct, and this notation spells constructs
@@ -345,7 +345,7 @@ public struct Writer: Sendable {
         case let .call(call):
             return (ExpressionTag.call.key, try self.call(of: call))
 
-        case let .apply(callee, arguments):
+        case let .apply(callee, arguments, _):
             return (ExpressionTag.call.key, try self.call(of: callee, handing: arguments))
 
         case let .block(block):

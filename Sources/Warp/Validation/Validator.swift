@@ -182,14 +182,10 @@ public struct Validator: Sendable {
 
         // A parameter handed in place is a variable in the body: the box is
         // the caller's, and writing it is what the parameter is for.
-        let handed = parameters.filter { name in
-            procedure.signature.parameter(named: name)?.declared.isInout == true
-        }
-
         try validate(
             block,
             visible: bound.union(parameters),
-            variables: variables.subtracting(parameters).union(handed),
+            variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
             scope: .procedure(bound: bound, parameters: parameters),
             at: place
         )
@@ -435,15 +431,17 @@ public struct Validator: Sendable {
 
             guard let block = procedure.block else { return }
 
+            // A parameter it takes in place is a variable in its body, the way
+            // a declaration's is.
             try validate(
                 block,
                 visible: visible.union(parameters),
-                variables: variables.subtracting(parameters),
+                variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
                 scope: scope.enclosed(taking: parameters),
                 at: inside
             )
 
-        case let .apply(callee, arguments):
+        case let .apply(callee, arguments, _):
             try refuseConstruct(callee, at: place.part(.callee))
             try validate(
                 callee,
