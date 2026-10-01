@@ -108,7 +108,6 @@ struct PlaceTests {
         // Given / When. A place written into the message is a place nothing can
         // read back. A front end holding the file this was authored in has to
         // walk the steps to point at the line, and a sentence has no steps.
-        // When
         let error = #expect(throws: ValidationError.self) {
             try module(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         }

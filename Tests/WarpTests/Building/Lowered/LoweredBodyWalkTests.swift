@@ -184,9 +184,8 @@ struct LoweredBodyWalkTests {
         let sut = Operation.array([inner])
         var order: [String] = []
 
+        // When
         let whole = sut.walk { node in
-
-        // When / Then
             guard case let .operation(operation) = node else { return true }
 
             switch operation {
@@ -198,9 +197,6 @@ struct LoweredBodyWalkTests {
             return true
         }
 
-        #expect(whole)
-        #expect(order == ["array", "array", "leaf"])
-
         var visited = 0
         let stopped = sut.walk { _ in
             visited += 1
@@ -208,6 +204,9 @@ struct LoweredBodyWalkTests {
             return false
         }
 
+        // Then
+        #expect(whole)
+        #expect(order == ["array", "array", "leaf"])
         #expect(!stopped)
         #expect(visited == 1)
     }
@@ -221,13 +220,14 @@ struct LoweredBodyWalkTests {
         )
         var instructions = 0
 
+        // When
         sut.walk { node in
             if case .instruction = node { instructions += 1 }
 
             return true
         }
 
-        // When / Then
+        // Then
         #expect(instructions == 1)
         #expect(sut.reads(4..<5))
         #expect(!sut.reads(9..<10))
@@ -241,20 +241,20 @@ struct LoweredBodyWalkTests {
         )
         var locals = 0
 
+        // When
         sut.walk { node in
             if case let .operation(inner) = node, case .local = inner { locals += 1 }
 
             return true
         }
 
-        // When / Then. The place is not walked as an operation, and the reads
-        // and the standing both count it.
+        let standing = LoweredBody(instructions: [], result: sut).standing
+
+        // Then. The place is not walked as an operation, and the reads and the
+        // standing both count it.
         #expect(locals == 0)
         #expect(sut.reads(3..<4))
         #expect(sut.reads(4..<5))
-
-        let standing = LoweredBody(instructions: [], result: sut).standing
-
         #expect(standing.slots.contains(3))
         #expect(standing.slots.contains(4))
     }
@@ -268,6 +268,7 @@ struct LoweredBodyWalkTests {
         )
         var leaves = 0
 
+        // When
         sut.walk { node in
             if case let .operation(inner) = node, case .literal(.int(7)) = inner { leaves += 1 }
 
@@ -280,7 +281,7 @@ struct LoweredBodyWalkTests {
             return operation
         }, type: { type in type })
 
-        // When / Then
+        // Then
         #expect(leaves == 0)
 
         guard case let .dispatch(dispatch) = rewritten, case .literal(.int(7))?? = dispatch.calls["t"]?.arguments.first else {
@@ -299,13 +300,14 @@ struct LoweredBodyWalkTests {
         )
         var types: [LoweredType] = []
 
+        // When
         _ = sut.rewritten(operation: { operation in operation }, type: { type in
             types.append(type)
 
             return type
         })
 
-        // When / Then
+        // Then
         #expect(types.count == 2 && types.contains(.string) && types.contains(.int))
     }
 

@@ -23,7 +23,7 @@ struct StandardTests {
         // Given. The bundles stand without the check
         let bundles = Module.standard.filter(\.builtin)
 
-        // Then
+        // When / Then
         #expect(bundles.count == 7)
 
         for bundle in bundles {
@@ -36,7 +36,8 @@ struct StandardTests {
         // Given. What the bundles declare, and how the one list cuts them
         let shipped = Set(Module.standard.flatMap(\.procedures.keys))
 
-        // Then. A name in `builtin` that nothing declares is a list gone stale
+        // When / Then. A name in `builtin` that nothing declares is a list gone
+        // stale
         #expect(Module.builtin.subtracting(shipped).isEmpty)
         #expect(Module.builtin.count == 25)
         #expect(Module.builtin.union(Module.derived) == shipped)
@@ -58,7 +59,7 @@ struct StandardTests {
                 }
         )
 
-        // Then
+        // When / Then
         #expect(Module.derived.subtracting(written).isEmpty)
     }
 

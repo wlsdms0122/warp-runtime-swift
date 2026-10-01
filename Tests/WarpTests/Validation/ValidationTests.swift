@@ -669,13 +669,11 @@ struct ValidationTests {
                 result: reference("mine")
             )
         )
-
-        // When
         let readsNothingReal = Warp.Expression.closure(
             Procedure(body: [], result: reference("nowhere"))
         )
 
-        // Then
+        // When / Then
         #expect(validates(readsEnclosing, visible: ["outer"]))
         #expect(!validates(readsEnclosing))
         #expect(validates(readsItsOwn))

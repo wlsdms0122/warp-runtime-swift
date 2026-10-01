@@ -70,11 +70,9 @@ struct UnheldClaimTests {
                 )
             ]
         )
-
-        // When
         let linked = [asking, typed, broken, program] + Module.standard
 
-        // Then. The claim stands in the link and puts its type under no
+        // When / Then. The claim stands in the link and puts its type under no
         // contract, and the program that never handed the type where the
         // contract is asked is not the one to hear about it.
         await #expect(throws: Never.self) { try await Builder().build(linked) }
@@ -143,12 +141,10 @@ struct UnheldClaimTests {
                 )
             ]
         )
-
-        // When
         let linked = [asking, typed, adapting, program] + Module.standard
 
-        // Then. The pair the program leans on is answered, and the one beside
-        // it that nothing can answer refuses nobody.
+        // When / Then. The pair the program leans on is answered, and the one
+        // beside it that nothing can answer refuses nobody.
         await #expect(throws: Never.self) { try await Builder().build(linked) }
     }
 
