@@ -117,7 +117,7 @@ struct ConformanceTests {
     private func laid(_ sut: Case.Program, with builder: Builder, supplying: Supplying) async throws -> [Compiled] {
         var laid = try await builder.compile(try await sut.brought + Module.standard, against: [], supplying: supplying)
 
-        for document in try sut.beside {
+        for document in sut.beside {
             laid += try await builder.compile([document], against: laid, supplying: supplying)
         }
 

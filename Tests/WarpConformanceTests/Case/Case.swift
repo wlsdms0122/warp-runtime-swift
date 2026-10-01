@@ -125,27 +125,12 @@ struct Case: Sendable, CustomStringConvertible {
         // build that much. Nil where the case asks for none.
         let vocabulary: Vocabulary?
 
-        // The documents laid beside the program, each written as a document
-        // is. A rule about two documents is asked with the program and one of
+        // The documents laid beside the program, read the way the program is.
+        // A rule about two documents is asked with the program and one of
         // these. Empty where the case lays none.
-        let documents: [Value]
+        let beside: [Module]
 
         let expectation: Expectation
-
-        // The documents the case laid beside its program, read the way the
-        // program is. One that does not read is the case's own fault, since the
-        // question was about the program.
-        var beside: [Module] {
-            get throws {
-                try documents.map { document in
-                    do {
-                        return try Loader().load(document, identity: try Identity.of(document))
-                    } catch {
-                        throw ConformanceError("a document laid beside the program does not read: \(error)")
-                    }
-                }
-            }
-        }
 
         // The vocabulary the case asked the runner for, as a module standing in
         // front of the case's own document so that what the host brings is there
@@ -422,7 +407,7 @@ struct Case: Sendable, CustomStringConvertible {
                     document: document,
                     arguments: try Self.given(written["arguments"], of: name),
                     vocabulary: try Self.supplied(in: written["vocabulary"]),
-                    documents: try Self.beside(written["documents"]),
+                    beside: try Self.beside(written["documents"]),
                     expectation: expectation
                 )
             )
@@ -528,8 +513,10 @@ struct Case: Sendable, CustomStringConvertible {
 
     // MARK: - Private
     // The documents a case lays beside its program. A list of records, each a
-    // document; anything else is a case no two runners would read alike.
-    private static func beside(_ written: Value?) throws -> [Value] {
+    // document that reads; anything else is a case no two runners would read
+    // alike. One that does not read is the case's own fault, since the
+    // question was about the program.
+    private static func beside(_ written: Value?) throws -> [Module] {
         guard let written else { return [] }
 
         guard case let .array(documents) = written, documents.allSatisfy({ document in
@@ -540,7 +527,13 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the documents a case lays beside its program are a list of documents")
         }
 
-        return documents
+        return try documents.map { document in
+            do {
+                return try Loader().load(document, identity: try Identity.of(document))
+            } catch {
+                throw ConformanceError("a document laid beside the program does not read: \(error)")
+            }
+        }
     }
 
     private static func stage(_ expected: Value) throws -> Stage {
