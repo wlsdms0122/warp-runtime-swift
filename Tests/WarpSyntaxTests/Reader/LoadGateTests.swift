@@ -136,9 +136,9 @@ struct LoadGateTests {
         }
     }
 
-    @Test("an empty index segment is rejected at parse")
+    @Test("an empty index segment is rejected at the load")
     func emptyIndexSegmentRejected() {
-        // Given. `[]` is an author mistake, rejected at parse instead of being
+        // Given. `[]` is an author mistake, rejected at the load instead of being
         // carried into the model
         let fixture: Value = [
             "parameters": [["name": "items", "type": "array<any>"]],

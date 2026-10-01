@@ -114,7 +114,7 @@ struct ModuleDeclarationTests {
     }
 
     @Test("a constant is a name bound to a value, settled before any run")
-    func constantsFoldAtLink() async throws {
+    func constantsFoldAtTheBuild() async throws {
         // Given
         let sut = try loader.loadDocument([
             "const": ["greeting": "hello", "limit": 3],
