@@ -677,8 +677,16 @@ struct Lowering {
         case let .closure(procedure):
             return try lower(closure: procedure, in: scope, on: slots, writer: writer, at: place)
 
-        case let .apply(callee, arguments):
-            return try lower(apply: callee, arguments: arguments, in: scope, on: slots, writer: writer, at: place)
+        case let .apply(callee, arguments, inPlace):
+            return try lower(
+                apply: callee,
+                arguments: arguments,
+                inPlace: inPlace,
+                in: scope,
+                on: slots,
+                writer: writer,
+                at: place
+            )
 
         case let .cast(value, type, optional):
             return try lower(cast: value, as: type, optional: optional, in: scope, on: slots, writer: writer, at: place)
@@ -802,9 +810,12 @@ struct Lowering {
         return .closure(stands.number, captures: inner.captures)
     }
 
+    // A position the build found handed in place keeps the place its path
+    // names, and every other argument is read as a value.
     private mutating func lower(
         apply callee: Expression,
         arguments: [Expression],
+        inPlace: [Int],
         in scope: Names,
         on slots: Slots,
         writer: Closure.Declaration,
@@ -812,8 +823,18 @@ struct Lowering {
     ) throws -> Operation {
         return .apply(
             try lower(callee, in: scope, on: slots, writer: writer, at: place),
-            arguments: try arguments.map { argument in
-                try lower(argument, in: scope, on: slots, writer: writer, at: place)
+            arguments: try arguments.enumerated().map { position, argument in
+                guard inPlace.contains(position) else {
+                    return .value(try lower(argument, in: scope, on: slots, writer: writer, at: place))
+                }
+
+                guard case let .reference(path) = argument else {
+                    throw BuildError.unjudged("a call of a value handing in place what is no path", at: place)
+                }
+
+                let (address, _) = try lower(path, in: scope, on: slots, at: place)
+
+                return .reference(address)
             }
         )
     }

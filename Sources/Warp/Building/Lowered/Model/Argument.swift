@@ -11,7 +11,8 @@ import Foundation
 //
 // What the argument is and which slot takes it are two facts. A call through a
 // contract writes one argument list and has as many callees as there are types
-// answering the procedure, so the list is lowered once and placed against each.
+// answering the procedure, so the list is lowered once and placed against each,
+// and a call of a value meets the closure's slots only at the run.
 enum Argument: Sendable {
     case value(Operation)
 
@@ -33,6 +34,20 @@ enum Argument: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
+    // Whether the place this hands reads any slot in the range. A value is an
+    // operation, read where the walk reaches it.
+    func reads(_ slots: Range<Int>) -> Bool {
+        guard case let .reference(address) = self else { return false }
+
+        return address.reads(slots)
+    }
+
+    func stand(in standing: inout LoweredBody.Standing) {
+        guard case let .reference(address) = self else { return }
+
+        address.stand(in: &standing)
+    }
+
     func rewritten(
         operation: (Operation) throws -> Operation,
         type: (LoweredType) throws -> LoweredType

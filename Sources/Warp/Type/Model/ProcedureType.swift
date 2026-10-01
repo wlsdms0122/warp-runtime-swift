@@ -29,6 +29,11 @@ public struct ProcedureType: Sendable, Equatable {
         }
     }
 
+    // The positions taking their argument in place.
+    var inPlacePositions: Set<Int> {
+        Set(parameters.indices.filter { position in parameters[position].isInout })
+    }
+
     // Whether a type parameter stands anywhere in its parameters or answer.
     public var isGeneric: Bool {
         parameters.contains { parameter in parameter.isGeneric }

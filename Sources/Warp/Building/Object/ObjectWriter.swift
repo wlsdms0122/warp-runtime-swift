@@ -759,9 +759,7 @@ struct ObjectWriter {
             return tagged(
                 Tag.apply,
                 try self.operation(callee),
-                .array(try arguments.map { (argument) throws(ObjectUnwritable) -> Value in
-                    try self.operation(argument)
-                })
+                .array(try arguments.map(argument))
             )
 
         case let .cast(read, as: type, optional: optional):

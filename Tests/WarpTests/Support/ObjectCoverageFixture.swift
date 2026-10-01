@@ -207,7 +207,10 @@ enum ObjectCoverageFixture {
             Instruction(binding: nil, code: .closure(3, captures: [(4, 0), (5, 1)]), label: "closure"),
             Instruction(
                 binding: nil,
-                code: .apply(.local(Address(slot: 6, steps: [])), arguments: [.literal(.int(2))]),
+                code: .apply(
+                    .local(Address(slot: 6, steps: [])),
+                    arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))]
+                ),
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),

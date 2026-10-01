@@ -47,7 +47,12 @@ public indirect enum Expression: Sendable {
     // Calling a value rather than a name. `call` names a declaration the build
     // finds; this calls the value in hand, which the build judges by the
     // procedure type its reading carries.
-    case apply(Expression, arguments: [Expression])
+    //
+    // `inPlace` is the positions at which the call hands a variable's path in
+    // place. The build writes them, read off that procedure type; a document
+    // writes none, and a call the build has not judged hands every argument
+    // as a value.
+    case apply(Expression, arguments: [Expression], inPlace: [Int] = [])
 
     // Reading a value as a type the text names. `any` declares nothing, so a
     // dot on one is refused at the build. This is the door: the author says what
@@ -190,7 +195,7 @@ public indirect enum Expression: Sendable {
         case let .record(record):
             return record.values.contains { field in field.holdsConstruct }
 
-        case let .apply(callee, arguments):
+        case let .apply(callee, arguments, _):
             return callee.holdsConstruct
                 || arguments.contains { argument in argument.holdsConstruct }
 

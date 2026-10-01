@@ -1723,8 +1723,9 @@ struct TypeChecker {
                     declaring: procedure.signature.ownedParameters,
                     given: context.isConst,
                     reading: reading,
-                    applying: procedure.signature.constProcedures
-                        .union(captured.filter { _, held in held.isConstProcedure }.keys),
+                    applying: procedure.signature.constProcedures.merging(
+                        captured.filter { _, held in held.isConstProcedure }.mapValues(\.inPlacePositions)
+                    ) { declared, _ in declared },
                     taking: context.signature(of:)
                 )
             } ?? false
@@ -1733,8 +1734,9 @@ struct TypeChecker {
                     block,
                     declaring: Set(procedure.signature.names),
                     given: context.isIsolated,
-                    applying: procedure.signature.isolatedProcedures
-                        .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
+                    applying: procedure.signature.isolatedProcedures.merging(
+                        captured.filter { _, held in held.isIsolatedProcedure }.mapValues(\.inPlacePositions)
+                    ) { declared, _ in declared },
                     taking: context.signature(of:)
                 )
             } ?? false
@@ -1768,9 +1770,10 @@ struct TypeChecker {
         // Which value is called is settled at the run, and what it answers is
         // the slot's to say: a procedure type that wrote `returns` answers
         // that, and one that wrote none opens to `any`. Its operands are data,
-        // held as operands below, so nothing writes and there is no flow to
+        // held as operands below, and a variable handed in place is the slot's
+        // own type, so no write retypes anything and there is no flow to
         // carry.
-        case let .apply(callee, arguments):
+        case let .apply(callee, arguments, _):
             guard case .judging = ask else {
                 return Inspection(rewritten: expression, reading: .any)
             }
@@ -1829,6 +1832,10 @@ struct TypeChecker {
                 calls += inner.calls
             }
 
+            // The positions the call hands a variable in place: the ones the
+            // slot's type marks `inout`, where the build reads its parameters.
+            var inPlace: [Int] = []
+
             // The arguments are handed by position the way a call's are, so
             // a count the slot's type does not take is one no run could take,
             // and an argument the slot's type refuses is refused here the way
@@ -1842,8 +1849,12 @@ struct TypeChecker {
                     )
                 }
 
+                try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
+
+                inPlace = parameters.indices.filter { position in parameters[position].isInout }
+
                 for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
-                where !parameter.slotUnwrapped.accepts(reading, in: context.loweredTypes) {
+                where !parameter.accepts(reading, in: context.loweredTypes) {
                     throw BuildError(
                         "calls a value with \(reading.rendered(in: context.loweredTypes))"
                             + " where it takes \(parameter.rendered(in: context.loweredTypes))",
@@ -1878,7 +1889,7 @@ struct TypeChecker {
             }
 
             return Inspection(
-                rewritten: .apply(called.rewritten, arguments: rewritten),
+                rewritten: .apply(called.rewritten, arguments: rewritten, inPlace: inPlace),
                 calls: calls,
                 reading: answers
             )
@@ -1962,8 +1973,8 @@ struct TypeChecker {
             }
 
             try handedInPlace(
-                by: call,
-                to: signature,
+                call.arguments,
+                to: context.slots(of: call.selector).map(\.type),
                 in: environment,
                 with: context,
                 at: place,
@@ -2522,14 +2533,17 @@ struct TypeChecker {
         return (widened, settled, false)
     }
 
-    // The rules a call handing variables in place is held to: the argument is
-    // a path, the path's head is a variable here, and the path is one a write
-    // may take. Two parameters handed paths under one head hold one box two
-    // ways, and every write lands in it as it is made, so nothing here keeps
-    // them apart.
+    // The rules a call handing variables in place is held to, at each
+    // position whose slot takes one: the argument is a path, the path's head
+    // is a variable here, and the path is one a write may take. A call to a
+    // declaration and a call of a value both come here with the slots they
+    // hand to by position. That the variable is the slot's own type is the
+    // slot's acceptance, read where each call kind reads it. Two parameters
+    // handed paths under one head hold one box two ways, and every write
+    // lands in it as it is made, so nothing here keeps them apart.
     private func handedInPlace(
-        by call: Call,
-        to signature: Signature,
+        _ arguments: [Expression],
+        to slots: [LoweredType],
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
@@ -2537,15 +2551,13 @@ struct TypeChecker {
     ) throws {
         guard case .judging = ask else { return }
 
-        for (position, (parameter, argument)) in zip(signature.parameters, call.arguments).enumerated()
-        where parameter.declared.isInout {
-            let name = parameter.name
+        for (position, (slot, argument)) in zip(slots, arguments).enumerated() where slot.isInout {
             let at = place.argument(position)
 
             guard case let .reference(path) = argument, let head = path.head else {
                 try refuse(
-                    "hands '\(name)' in place, and what is handed in place is a"
-                        + " variable's path. This argument is not one",
+                    "hands this argument in place, and what is handed in place"
+                        + " is a variable's path. This argument is not one",
                     at: at,
                     when: ask
                 )
@@ -2563,7 +2575,7 @@ struct TypeChecker {
             }
 
             if case let .refused(reason) = writable(path, in: environment, with: context, at: at, writing: ask.fulfillment) {
-                try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
+                try refuse("hands '\(path.rendered)' in place, and \(reason)", at: at, when: ask)
             }
         }
     }

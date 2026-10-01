@@ -63,7 +63,7 @@ extension Expression: Traversable {
         case let .record(record):
             named(record, under: stepping(here, .part(.fields)))
 
-        case let .apply(callee, written):
+        case let .apply(callee, written, _):
             inner(callee, under: .callee) + arguments(written)
 
         case let .call(call):

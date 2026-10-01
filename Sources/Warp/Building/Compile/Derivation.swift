@@ -191,13 +191,15 @@ struct Derivation {
     // run. `reading` is the module's variables: a body reading one answers by
     // the run's state. `declaring` is the names the body may write; a write
     // landing anywhere else, or handing such a name in place to a call,
-    // reaches the run's state the same way.
+    // reaches the run's state the same way. `applying` is the names a slot
+    // said hold a procedure with the fact, each with the positions that
+    // procedure takes in place.
     func isConst(
         _ block: Block,
         declaring names: Set<Name>,
         given const: @escaping (Name) -> Bool,
         reading variables: Set<Name>,
-        applying procedures: Set<Name>,
+        applying procedures: [Name: Set<Int>],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         holds(
@@ -216,7 +218,7 @@ struct Derivation {
         _ block: Block,
         declaring parameters: Set<Name>,
         given isolated: @escaping (Name) -> Bool,
-        applying procedures: Set<Name>,
+        applying procedures: [Name: Set<Int>],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         holds(
@@ -238,7 +240,7 @@ struct Derivation {
         settling holding: inout Set<Name>,
         natively: (Implementation) -> Bool,
         declaring: (Signature) -> Set<Name>,
-        applying: (Signature) -> Set<Name>,
+        applying: (Signature) -> [Name: Set<Int>],
         fact: (@escaping (Name) -> Bool) -> Fact,
         taking asked: (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool
@@ -249,7 +251,7 @@ struct Derivation {
         // declaration said hold a procedure with the fact, since applying one
         // of those is what the body is judged on.
         let bodies = symbols.reduce(
-            into: [Name: (block: Block, declaring: Set<Name>, applying: Set<Name>)]()
+            into: [Name: (block: Block, declaring: Set<Name>, applying: [Name: Set<Int>])]()
         ) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
@@ -296,7 +298,7 @@ struct Derivation {
         _ block: Block,
         _ fact: Fact,
         declaring names: Set<Name>,
-        applying procedures: Set<Name>,
+        applying procedures: [Name: Set<Int>],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         var declared = names
@@ -318,14 +320,11 @@ struct Derivation {
             guard let introduced = statement.binding?.introduced else { continue }
 
             // A name says what it holds, and a later name of the same spelling
-            // is a different name, so the set is read forward.
-            if
-                statement.binding?.declared.map(fact.slot) == true
-                    || applies(statement.expression, given: procedures)
-            {
-                procedures.insert(introduced)
+            // is a different name, so the table is read forward.
+            if let declared = statement.binding?.declared, fact.slot(declared) {
+                procedures[introduced] = declared.inPlacePositions
             } else {
-                procedures.remove(introduced)
+                procedures[introduced] = applied(statement.expression, given: procedures)
             }
         }
 
@@ -338,7 +337,7 @@ struct Derivation {
         _ expression: Expression,
         _ fact: Fact,
         declaring names: Set<Name>,
-        applying procedures: Set<Name>,
+        applying procedures: [Name: Set<Int>],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         func holds(_ inner: Expression) -> Bool {
@@ -376,25 +375,24 @@ struct Derivation {
         case let .record(record):
             return record.values.allSatisfy(holds)
 
-        // A name handed in place is written by the callee, so the call writes
-        // it here: one the body does not own reaches the run's state.
         case let .call(call):
             guard fact.callee(call.selector) else { return false }
 
             if let signature = asked(call.selector) {
-                for (parameter, argument) in zip(signature.parameters, call.arguments) where parameter.declared.isInout {
-                    guard case let .reference(path) = argument, let head = path.head else { continue }
-
-                    guard names.contains(head) else { return false }
+                guard handsOwned(call.arguments, at: signature.type.inPlacePositions, declaring: names) else {
+                    return false
                 }
             }
 
             return call.arguments.allSatisfy(holds)
 
         // Which value is called is the run's answer, so what it reaches is
-        // said by the slot the value came out of and nowhere else.
-        case let .apply(callee, arguments):
-            return applies(callee, given: procedures) && arguments.allSatisfy(holds)
+        // said by the slot the value came out of and nowhere else, and so are
+        // the positions it takes in place.
+        case let .apply(callee, arguments, _):
+            guard let inPlace = applied(callee, given: procedures) else { return false }
+
+            return handsOwned(arguments, at: inPlace, declaring: names) && arguments.allSatisfy(holds)
 
         // Which part of a construct runs is decided inside the body, so a
         // construct holds the fact as far as the parts it holds.
@@ -412,15 +410,34 @@ struct Derivation {
         }
     }
 
-    // Whether what this reads came out of a slot that said the fact of its
-    // procedures. The head is the name the slot gave, and indexing past it
-    // keeps the claim, since a slot asking for an array of them says it about
-    // every element. Reading a field walks into a value the slot said nothing
+    // The positions a procedure takes in place, where what this reads came
+    // out of a slot that said the fact of its procedures, and nil where it
+    // did not. The head is the name the slot gave, and indexing past it keeps
+    // the claim, since a slot asking for an array of them says it about every
+    // element. Reading a field walks into a value the slot said nothing
     // about, and so does anything that is not a name at all.
-    private func applies(_ expression: Expression, given procedures: Set<Name>) -> Bool {
-        guard case let .reference(path) = expression, let head = path.head else { return false }
+    private func applied(_ expression: Expression, given procedures: [Name: Set<Int>]) -> Set<Int>? {
+        guard
+            case let .reference(path) = expression,
+            let head = path.head,
+            path.segments.dropFirst().allSatisfy({ segment in segment.named == nil })
+        else { return nil }
 
-        return procedures.contains(head)
-            && path.segments.dropFirst().allSatisfy { segment in segment.named == nil }
+        return procedures[head]
+    }
+
+    // Whether every name a call hands in place at these positions is one the
+    // body owns. A name handed in place is written by the callee, so the call
+    // writes it here, and one the body does not own reaches the run's state.
+    private func handsOwned(_ arguments: [Expression], at positions: Set<Int>, declaring names: Set<Name>) -> Bool {
+        positions.allSatisfy { position in
+            guard
+                arguments.indices.contains(position),
+                case let .reference(path) = arguments[position],
+                let head = path.head
+            else { return true }
+
+            return names.contains(head)
+        }
     }
 }

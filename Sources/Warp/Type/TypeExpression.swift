@@ -695,6 +695,22 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
+    // The positions a procedure a slot declaring this holds takes in place,
+    // holding one or an array of them. Empty where the slot says nothing of
+    // the procedure's parameters.
+    var inPlacePositions: Set<Int> {
+        switch self {
+        case let .procedure(type?, _, _):
+            return type.inPlacePositions
+
+        case let .array(element):
+            return element.inPlacePositions
+
+        default:
+            return []
+        }
+    }
+
     // The same, for the other claim a slot may make about a procedure it
     // holds.
     var isIsolatedProcedure: Bool {
