@@ -60,8 +60,8 @@ let package = Package(
             ],
             path: "Tests/WarpTestSupport"
         ),
-        // One test target per library product. Each writes its fixtures in the
-        // form its layer takes.
+        // One test target per library. Each writes its fixtures in the form its
+        // layer takes.
         .testTarget(
             name: "WarpTests",
             dependencies: [
@@ -88,6 +88,13 @@ let package = Package(
                 "WarpSyntax",
                 "WarpStandard",
                 "WarpTestSupport"
+            ]
+        ),
+        .testTarget(
+            name: "WarpMutationTests",
+            dependencies: [
+                "Warp",
+                "WarpMutation"
             ]
         ),
         // The specification's cases, run through the doors a caller has, with
