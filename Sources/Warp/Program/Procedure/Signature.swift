@@ -40,12 +40,12 @@ public struct Signature: Sendable, Equatable {
     // each with the positions that procedure takes in place. A body may apply
     // a name standing in one and still answer without running.
     var constProcedures: [Name: Set<Int>] {
-        procedures(in: parameters, asking: \.isConstProcedure)
+        procedures(asking: \.isConstProcedure)
     }
 
     // The same, for the claim isolation reads.
     var isolatedProcedures: [Name: Set<Int>] {
-        procedures(in: parameters, asking: \.isIsolatedProcedure)
+        procedures(asking: \.isIsolatedProcedure)
     }
 
     // The parameters whose box is the body's own. One handed in place is the
@@ -262,10 +262,7 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
-    private func procedures(
-        in parameters: [Parameter],
-        asking claim: (TypeExpression) -> Bool
-    ) -> [Name: Set<Int>] {
+    private func procedures(asking claim: (TypeExpression) -> Bool) -> [Name: Set<Int>] {
         parameters.reduce(into: [Name: Set<Int>]()) { held, parameter in
             guard let type = parameter.type, claim(type) else { return }
 
