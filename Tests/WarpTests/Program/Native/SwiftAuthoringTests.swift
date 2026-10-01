@@ -5,6 +5,7 @@
 //  Created by JSilver on 8/16/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
