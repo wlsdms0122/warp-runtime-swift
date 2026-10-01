@@ -148,7 +148,7 @@ struct SignatureTests {
         #expect {
             try settled(sut, given: ["file": "a"])
         } throws: { error in
-            "\(error)".contains("required, and nothing was given for dir")
+            "\(error)".contains("was given nothing for 'dir'")
         }
     }
 
@@ -157,7 +157,7 @@ struct SignatureTests {
     // The boundary over no table, answered by name.
     private func settled(_ signature: Signature, given: [Name: Value]) throws -> [Name: Value] {
         let slots = signature.lowered(in: .empty)
-        let settled = try signature.settle(given, over: slots, in: .empty)
+        let settled = try signature.settle(given, over: slots, as: "entry '\(entryName)'", in: .empty)
 
         return settled.enumerated().reduce(into: [Name: Value]()) { named, entry in
             guard let value = entry.element else { return }

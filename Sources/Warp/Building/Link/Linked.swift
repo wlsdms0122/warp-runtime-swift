@@ -223,19 +223,19 @@ public final class Linked: Sendable {
         _ given: [Value?],
         skipping: (Int) -> Bool = { _ in false }
     ) throws -> [Value?] {
-        try signature.settle(given, over: slots, skipping: skipping, in: table)
+        try signature.settle(given, over: slots, skipping: skipping, as: "'\(rendered)'", in: table)
     }
 
     // The same, over arguments handed by position: the way every call hands
     // them.
     func settle(applied given: [Value]) throws -> [Value] {
-        try signature.settle(applied: given, over: slots, in: table)
+        try signature.settle(applied: given, over: slots, as: "'\(rendered)'", in: table)
     }
 
     // The same, over arguments given by name: the door a host outside the
     // build comes through.
     func settle(_ given: [Name: Value]) throws -> [Value?] {
-        try signature.settle(given, over: slots, in: table)
+        try signature.settle(given, over: slots, as: "entry '\(label)'", in: table)
     }
 
     // The returned value, checked against what was declared.
