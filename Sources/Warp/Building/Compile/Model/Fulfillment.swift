@@ -33,7 +33,8 @@ final class Fulfillment: @unchecked Sendable {
     private var folding = Place(in: .assembled)
 
     // MARK: - Initializer
-    init() { }
+    init() {
+    }
 
     // MARK: - Public
     // The document laid down from here on, and where its refusals stand.

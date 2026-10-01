@@ -19,7 +19,8 @@ import WarpSyntax
 // own copy of, and no other implementation has one of these.
 @Suite("An object written down")
 struct ObjectWritingTests {
-    private struct ObjectNotWritten: Error { }
+    private struct ObjectNotWritten: Error {
+    }
 
     // MARK: - Property
     // MARK: - Initializer

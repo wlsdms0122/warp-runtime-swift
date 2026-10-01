@@ -20,7 +20,8 @@ import Foundation
 struct ObjectWriter {
     // MARK: - Property
     // MARK: - Initializer
-    init() { }
+    init() {
+    }
 
     // MARK: - Public
     // What a field that may hold nothing is laid down as: a list of none or

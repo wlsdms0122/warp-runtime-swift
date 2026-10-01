@@ -14,7 +14,8 @@ import Warp
 public struct TemplateParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
-    public init() { }
+    public init() {
+    }
 
     // MARK: - Public
     public func parse(_ text: String) throws -> [TemplateSegment] {

@@ -27,7 +27,8 @@ public struct Mutator: Sendable {
 
     // MARK: - Property
     // MARK: - Initializer
-    public init() { }
+    public init() {
+    }
 
     // MARK: - Public
     // Every place in the value, each replaced the ways its kind can be.

@@ -19,7 +19,8 @@ import WarpTestSupport
 // refuses something it was never handed.
 @Suite("An object whose writing is not one")
 struct ObjectReadingTests {
-    private struct ObjectMissing: Error { }
+    private struct ObjectMissing: Error {
+    }
 
     // MARK: - Property
     // A stand-in for what a caller works out from the bytes, which this
