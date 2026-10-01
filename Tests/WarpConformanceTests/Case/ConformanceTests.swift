@@ -95,7 +95,57 @@ struct ConformanceTests {
     }
 
     // MARK: - Public
+    // How far a case got before it was refused. The stage is part of the answer:
+    // stopping at a run what another implementation stops at a build means
+    // something already happened, and what already happened cannot be taken back.
+    func reached(_ sut: Case.Program) async throws -> Case.Stage? {
+        let builder = Builder()
+        let vocabulary = try await sut.brought
+        let module: Module
+
+        // The case's own document is read apart from the rest, because a
+        // document that does not read is the answer to this question and a
+        // vocabulary that does not read is a case nobody can ask.
+        do {
+            module = try Loader().load(sut.document, identity: try Identity.of(sut.document))
+        } catch {
+            return .load
+        }
+
+        let image: Image
+
+        do {
+            let supplying = try Supplying(vocabulary + sut.beside + [module] + Module.standard)
+            let laid = try await laid(sut, with: builder, supplying: supplying)
+            let own = try await builder.compile([module], against: laid, supplying: supplying)
+
+            image = try builder.link(laid + own, supplying: supplying)
+        } catch {
+            return .build
+        }
+
+        do {
+            _ = try await Executor().run(image, entry: "entry", arguments: sut.arguments)
+        } catch {
+            return try refused(error)
+        }
+
+        return nil
+    }
+
     // MARK: - Private
+    // A run that stopped. A refusal is the run's, and a failure that escaped
+    // the entry is a failure, which is not a refusal and matches no
+    // expectation: a case measuring one catches it with `attempt` and answers
+    // what the rescue saw.
+    private func refused(_ error: any Error) throws -> Case.Stage {
+        if let failure = error as? any RecoverableFailure {
+            throw ConformanceError("a failure escaped the entry: \(failure.type): \(failure.message)")
+        }
+
+        return .run
+    }
+
     private func run(_ sut: Case.Program) async throws -> Value {
         let builder = Builder()
         let supplying = try await Supplying(sut.modules())
@@ -117,7 +167,7 @@ struct ConformanceTests {
     private func laid(_ sut: Case.Program, with builder: Builder, supplying: Supplying) async throws -> [Compiled] {
         var laid = try await builder.compile(try await sut.brought + Module.standard, against: [], supplying: supplying)
 
-        for document in try sut.beside {
+        for document in sut.beside {
             laid += try await builder.compile([document], against: laid, supplying: supplying)
         }
 
@@ -178,45 +228,7 @@ struct ConformanceTests {
         do {
             _ = try await Executor().run(image, entry: "entry", arguments: sut.arguments)
         } catch {
-            return .run
-        }
-
-        return nil
-    }
-
-    // How far a case got before it was refused. The stage is part of the answer:
-    // stopping at a run what another implementation stops at a build means
-    // something already happened, and what already happened cannot be taken back.
-    private func reached(_ sut: Case.Program) async throws -> Case.Stage? {
-        let builder = Builder()
-        let vocabulary = try await sut.brought
-        let module: Module
-
-        // The case's own document is read apart from the rest, because a
-        // document that does not read is the answer to this question and a
-        // vocabulary that does not read is a case nobody can ask.
-        do {
-            module = try Loader().load(sut.document, identity: try Identity.of(sut.document))
-        } catch {
-            return .load
-        }
-
-        let image: Image
-
-        do {
-            let supplying = try Supplying(vocabulary + sut.beside + [module] + Module.standard)
-            let laid = try await laid(sut, with: builder, supplying: supplying)
-            let own = try await builder.compile([module], against: laid, supplying: supplying)
-
-            image = try builder.link(laid + own, supplying: supplying)
-        } catch {
-            return .build
-        }
-
-        do {
-            _ = try await Executor().run(image, entry: "entry", arguments: sut.arguments)
-        } catch {
-            return .run
+            return try refused(error)
         }
 
         return nil
