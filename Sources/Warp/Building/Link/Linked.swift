@@ -48,7 +48,7 @@ public final class Linked: Sendable {
 
     public let signature: Signature
 
-    // Who may name this row: its own document, the link, or the caller too.
+    // Who may name this row: its own document, the link, or the host too.
     public let access: Access
 
     public let constness: Constness
@@ -80,7 +80,7 @@ public final class Linked: Sendable {
     // Whether a fold may run this. A body is read from the text an object is
     // keyed by and the specification says what its own procedures answer, so
     // both fold to a value that means the same wherever the object is read. A
-    // procedure a caller brought answers what its code answers, which is
+    // procedure a host brought answers what its code answers, which is
     // written down nowhere the object goes.
     let foldable: Bool
 
@@ -88,7 +88,7 @@ public final class Linked: Sendable {
         + " One is read where the link that made it is being read, which"
         + " for a judgment is the image's own types"
 
-    // The same row as a fold reads it: what a caller brought answers with the
+    // The same row as a fold reads it: what a host brought answers with the
     // refusal it earns there, and everything else answers as it is.
     var folding: Linked {
         guard !foldable else { return self }
@@ -232,7 +232,7 @@ public final class Linked: Sendable {
         try signature.settle(applied: given, over: slots, in: table)
     }
 
-    // The same, over arguments given by name: the door a caller outside the
+    // The same, over arguments given by name: the door a host outside the
     // build comes through.
     func settle(_ given: [Name: Value]) throws -> [Value?] {
         try signature.settle(given, over: slots, in: table)

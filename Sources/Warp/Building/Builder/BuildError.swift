@@ -22,7 +22,7 @@ public struct BuildError: WarpError {
     // Two modules declaring one name is two places, and the refusal is
     // addressed to the second (the declaration that cannot be added) with the
     // first named in the sentence. A build holds several documents and only the
-    // caller knows which file each arrived in, so a refusal that named neither
+    // host knows which file each arrived in, so a refusal that named neither
     // would send it opening all of them.
     //
     // A document and no steps is what is wrong with a document rather than with

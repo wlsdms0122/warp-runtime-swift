@@ -114,7 +114,7 @@ public struct Validator: Sendable {
 
     // MARK: - Private
     // What a module says it imports against what it uses: the procedures it
-    // sends and the types, constraints and contracts it names. A caller reads
+    // sends and the types, constraints and contracts it names. A host reads
     // the list to decide what to grant and what to lay in the link before it
     // links anything, so a list allowed to drift would be worse than none: it
     // would be trusted and wrong.

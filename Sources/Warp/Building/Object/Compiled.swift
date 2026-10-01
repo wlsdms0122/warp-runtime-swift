@@ -106,12 +106,12 @@ public struct Compiled: Sendable, Declaring {
     // into a value has no writing.
     let dependencies: [Fingerprint]?
 
-    // What this object is, where a caller worked it out. Derived from the
+    // What this object is, where a host worked it out. Derived from the
     // bytes and so not something this can answer for itself: reading bytes is
     // another package's, and nothing here is allowed to learn how they are
     // written.
     //
-    // A caller compiling against this hands it over as it kept it, and that is
+    // A host compiling against this hands it over as it kept it, and that is
     // what the next object records leaning on.
     public let fingerprint: Fingerprint?
 
@@ -143,7 +143,7 @@ public struct Compiled: Sendable, Declaring {
         )
     }
 
-    // Which document this stands against, which is what a caller keeps it
+    // Which document this stands against, which is what a host keeps it
     // under and hands back when it reads one.
     public var identity: Identity? {
         document.identity
@@ -268,11 +268,11 @@ public struct Compiled: Sendable, Declaring {
     //
     // An identity is derived and never declared, which is what makes it worth
     // having: nobody writes one down, so nobody writes one down wrongly. An
-    // object does write one down. So a caller hands over the one it keeps
+    // object does write one down. So a host hands over the one it keeps
     // the object under, and an object saying it belongs somewhere else is
-    // one that belongs to no cache this caller holds.
+    // one that belongs to no cache this host holds.
     //
-    // `fingerprint` is what the caller kept it under, carried in the same way
+    // `fingerprint` is what the host kept it under, carried in the same way
     // and for the same reason: an object cannot work out what it is, because
     // that answer is about bytes and reading bytes is another package's.
     public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
@@ -292,7 +292,7 @@ public struct Compiled: Sendable, Declaring {
         return numbering.writer(of: index - lifted.lowerBound)
     }
 
-    // This object said as a value, so a caller can keep it where bytes are
+    // This object said as a value, so a host can keep it where bytes are
     // kept, or what keeps it from being one.
     public func object() throws(ObjectUnwritable) -> Value {
         try ObjectWriter().value(of: self)

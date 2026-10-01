@@ -14,7 +14,7 @@ import Warp
 //
 // It exists because a program has to be able to leave the machine that built
 // it. Building the language's types directly is what a front end with a syntax
-// of its own does, and a caller assembling procedures in native code does the
+// of its own does, and a host assembling procedures in native code does the
 // same, but neither can hand what it built to anything running elsewhere unless
 // the result can be written down. Reading was half a door.
 //

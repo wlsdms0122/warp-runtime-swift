@@ -206,7 +206,7 @@ struct Compiler {
         // Where this document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
         // document alone, so a body lowers to the same numbers whatever
-        // else the caller put in the link.
+        // else the host put in the link.
         let numbering = Numbering(
             sends: module.sends,
             declared: declared,

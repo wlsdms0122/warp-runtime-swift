@@ -10,8 +10,8 @@ import Warp
 
 public extension Module {
     // Procedures that run closures at once. Vocabulary rather than grammar, so
-    // running things concurrently is something a caller grants by linking this
-    // bundle. A program whose caller left it out cannot fan out at all.
+    // running things concurrently is something a host grants by linking this
+    // bundle. A program whose host left it out cannot fan out at all.
     static let concurrent = bundled(nativeConcurrent, with: "concurrent")
 
     private static let nativeConcurrent = Module(

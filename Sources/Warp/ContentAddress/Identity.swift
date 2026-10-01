@@ -9,7 +9,7 @@ import Foundation
 
 // Which document this is, worked out from what it says rather than from what it
 // is called: the digest of its canonical bytes. Derived and never declared, so
-// two callers holding the same document work out the same answer without
+// two hosts holding the same document work out the same answer without
 // having agreed on anything but the language.
 //
 // Deriving it is `WarpSyntax`'s. This type is here so that a place can carry

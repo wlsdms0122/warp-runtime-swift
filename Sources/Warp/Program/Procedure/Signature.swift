@@ -186,7 +186,7 @@ public struct Signature: Sendable, Equatable {
 
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused, and so is one it declares that
-    // was not given. The door a caller outside the build comes through, since
+    // was not given. The door a host outside the build comes through, since
     // the build resolves names itself.
     func settle(
         _ given: [Name: Value],

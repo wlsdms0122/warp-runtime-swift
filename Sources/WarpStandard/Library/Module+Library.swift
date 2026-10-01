@@ -13,7 +13,7 @@ extension Module {
     // The vocabulary written in Warp rather than in Swift, read from the
     // documents of `lib/std`.
     //
-    // Plain Warp modules with no standing of their own: a caller that brings a
+    // Plain Warp modules with no standing of their own: a host that brings a
     // procedure of its own under one of these names links that one instead.
     // What they save is every implementation writing these again, and they are
     // carried in the library rather than read off a disk so that taking this
@@ -32,7 +32,7 @@ extension Module {
 
     // A bundle and what `lib/std` writes for it. A bundle is taken whole, so
     // which of its procedures the host wrote and which the language did is not
-    // a thing a caller picks apart; it is two modules rather than one because
+    // a thing a host picks apart; it is two modules rather than one because
     // a module is compiled against the modules standing before it, and a
     // declaration the host answers has no body to compile.
     //

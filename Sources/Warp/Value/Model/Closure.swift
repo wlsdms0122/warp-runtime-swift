@@ -16,7 +16,7 @@ import Foundation
 // is: what an object writes a closure down as, and what a link answers a row
 // for. A closure a fold settled into an object stands by that spelling alone
 // until the link reading the object answers it. No position in any link
-// rides along: a compiled document is laid into whatever link a caller makes
+// rides along: a compiled document is laid into whatever link a host makes
 // of it, in whatever order, and a spelling is what survives that.
 public struct Closure: Sendable {
     // The declaration that wrote a closure, in the document it stands in. A

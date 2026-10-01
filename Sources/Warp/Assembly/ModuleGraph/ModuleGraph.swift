@@ -35,7 +35,7 @@ public struct ModuleGraph: Sendable {
     // MARK: - Property
     // Where each module stands in the list it was given in, in the order each
     // one's needs stand before it. Positions rather than the modules, because
-    // everything else a link builds is keyed by where the caller put a module
+    // everything else a link builds is keyed by where the host put a module
     // and a second numbering would be a second answer to that.
     public let standing: [Int]
 
@@ -48,7 +48,7 @@ public struct ModuleGraph: Sendable {
 
     // MARK: - Initializer
     // `held` is how many documents stand in the link before these, so a
-    // refusal counts the list the caller handed over rather than this array.
+    // refusal counts the list the host handed over rather than this array.
     public init(_ modules: [Module], after held: Int = 0) throws {
         // Which module declares each reference. One table, since every one of
         // them answers the same question; the kind rides on the reference, so
@@ -57,7 +57,7 @@ public struct ModuleGraph: Sendable {
 
         for (position, module) in modules.enumerated() {
             // In no order. Which module answers a reference is the order the
-            // caller handed the modules over, and inside one module no two of
+            // host handed the modules over, and inside one module no two of
             // these are the same reference, so nothing here reads an order.
             for reference in module.supplies {
                 guard declares[reference] == nil else { continue }
@@ -86,7 +86,7 @@ public struct ModuleGraph: Sendable {
 
         // Depth first, so the ring a refusal names is the one path that closed
         // it rather than every module the walk had open. Roots in the order the
-        // caller handed the modules over, and needs in name order, so which
+        // host handed the modules over, and needs in name order, so which
         // ring is found first is a fact of the modules and not of a hash seed.
         var standing: [Int] = []
         var settled = [Bool](repeating: false, count: modules.count)

@@ -57,8 +57,8 @@ public struct Place: Sendable, Equatable {
         }
 
         // What a sentence calls this document when it names one among several.
-        // Without an identity there is only where the caller put it: the
-        // caller counts its own modules, in the order it handed them over.
+        // Without an identity there is only where the host put it: the
+        // host counts its own modules, in the order it handed them over.
         func spelled(at origin: Int) -> String {
             rendered ?? "the module at \(origin) in this link"
         }

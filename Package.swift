@@ -88,7 +88,7 @@ let package = Package(
                 "WarpTestSupport"
             ]
         ),
-        // The specification's cases, run through the doors a caller has, with
+        // The specification's cases, run through the doors a host has, with
         // `WarpMutation` for the cases that damage an object.
         .testTarget(
             name: "WarpConformanceTests",

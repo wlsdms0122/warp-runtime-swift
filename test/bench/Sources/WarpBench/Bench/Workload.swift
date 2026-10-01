@@ -12,7 +12,7 @@ import WarpStandard
 
 // One program from `program/`, linked once and run as many times as asked.
 //
-// Every act a caller pays for is timed apart. `load()` is what the text costs
+// Every act a host pays for is timed apart. `load()` is what the text costs
 // to become a module, `build()` what that module costs to become an image, and
 // `time(rounds:)` what running the image costs. A document arrives while the
 // program is running, so the first two are run time too: work moved out of the
@@ -55,7 +55,7 @@ struct Workload {
 
     // How long this document costs to arrive: its text read as a value, and
     // that value read as a module. Nothing can be linked until this is paid,
-    // and a caller that is handed documents often pays it every time.
+    // and a host that is handed documents often pays it every time.
     func load() throws -> Duration {
         try Stopwatch().elapsed { _ = try Loader().load(try TextEncoding().value(from: text), identity: nil) }
     }
@@ -66,7 +66,7 @@ struct Workload {
     }
 
     // The same build where the vocabulary was compiled and laid down already,
-    // which is what a caller building many documents against one vocabulary
+    // which is what a host building many documents against one vocabulary
     // pays.
     func baked() async throws -> Duration {
         let vocabulary = try await Vocabulary.standard.value

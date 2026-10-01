@@ -33,7 +33,7 @@ public struct Loader: Sendable {
     // Every procedure a notation reaches on its own through this table. From the
     // readers that spell one, and from the forms registered here. A document
     // written entirely in these spellings still needs them declared somewhere
-    // in its link, so a caller assembling a graph can ask what it owes before
+    // in its link, so a host assembling a graph can ask what it owes before
     // assembling it.
     //
     // What a notation says with a procedure rather than a construct is a choice it
@@ -83,10 +83,10 @@ public struct Loader: Sendable {
         let module = try reading(by: .standard) { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
 
         // What a document imports is read before the program it belongs to, so
-        // a caller decides whether to grant before it decides whether to link.
+        // a host decides whether to grant before it decides whether to link.
         // A document that leaves the list out is asking to be trusted about the
         // one thing that was worth checking, and silence is not a claim a
-        // caller can act on, so the door a program arrives through wants it
+        // host can act on, so the door a program arrives through wants it
         // said. Whether the list is *right* is the reader's, and it refuses
         // there.
         //
@@ -108,7 +108,7 @@ public struct Loader: Sendable {
         // program it read. Anything else is a second text for one program, and
         // a second identity for it.
         // A document is read and written by the standard table, the one
-        // `canonical` writes with. A table a caller composes is for what it
+        // `canonical` writes with. A table a host composes is for what it
         // lowers into a document, and a document is spelled one way.
         let spelling = try Writer(registry: .standard, readBy: .canonical).value(of: module)
 
@@ -223,7 +223,7 @@ public struct Loader: Sendable {
     //     let image = try await loader.reading { try await Builder().build(modules) }
     //
     // The reading path takes it on its own; a link is the stage that does not,
-    // because what to link is the caller's statement and the modules in it may
+    // because what to link is the host's statement and the modules in it may
     // have come from anywhere.
     public func reading<T>(_ refused: () throws -> T) throws -> T {
         try reading(by: registry, refused)

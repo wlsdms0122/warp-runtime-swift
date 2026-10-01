@@ -23,8 +23,8 @@ struct Symbol: Sendable {
     // down.
     let origin: Int
 
-    // Where the caller put that module in the list it handed over. What a
-    // sentence names, since a caller reading a refusal counts its own list
+    // Where the host put that module in the list it handed over. What a
+    // sentence names, since a host reading a refusal counts its own list
     // rather than the order the build worked out.
     let handed: Int
 
