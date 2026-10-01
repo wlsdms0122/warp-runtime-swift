@@ -96,13 +96,13 @@ struct Numbering: Sendable {
     // body's number reaches is resolved from here rather than from those: the
     // declarations stand at the end of this list, behind what it sends.
     init(written value: Value, declaring declared: [Name]) throws {
-        var fields = try Fields(value, of: "numbering")
-        let sent = try Field(fields.next(), of: "numbering sends").ordered { written in
+        var cursor = try FieldCursor(value, of: "numbering")
+        let sent = try Field(cursor.next(), of: "numbering sends").ordered { written in
             try Field(written, of: "numbering sends").name()
         }
-        let counts = try Self.read(try fields.next(), of: "numbering closures")
+        let counts = try Self.read(try cursor.next(), of: "numbering closures")
 
-        try fields.end()
+        try cursor.end()
 
         // A writing counts a name only where that name wrote one, so a count
         // of none is a count no writing lays down, and one writing reads
@@ -286,7 +286,7 @@ struct Numbering: Sendable {
         }
 
         return try Field(value, of: part).gathered { entry in
-            var place = try Fields(entry, of: part)
+            var place = try FieldCursor(entry, of: part)
             let held = (try Field(place.next(), of: part).declaration(), try place.count())
 
             try place.end()

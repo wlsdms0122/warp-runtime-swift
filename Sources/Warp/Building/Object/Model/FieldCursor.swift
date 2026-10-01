@@ -1,5 +1,5 @@
 //
-//  Fields.swift
+//  FieldCursor.swift
 //  Warp
 //
 //  Created by JSilver on 9/13/26.
@@ -13,7 +13,7 @@ import Foundation
 // place holds, so a reading that runs short or finds the wrong kind is
 // refused here rather than further in, where the sentence would be about
 // something else. What each field is, is read through `Field`.
-struct Fields {
+struct FieldCursor {
     // MARK: - Property
     private let part: String
     private let written: [Value]

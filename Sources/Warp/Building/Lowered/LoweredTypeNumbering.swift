@@ -110,16 +110,16 @@ struct LoweredTypeNumbering: Sendable {
 
     // Read back from an object: the two lists, in this order.
     init(written value: Value) throws {
-        var fields = try Fields(value, of: "type numbering")
+        var cursor = try FieldCursor(value, of: "type numbering")
 
-        self.types = try Field(fields.next(), of: "type numbering types").ordered { written in
+        self.types = try Field(cursor.next(), of: "type numbering types").ordered { written in
             try Field(written, of: "type numbering types").name()
         }
-        self.memberships = try Field(fields.next(), of: "type numbering memberships").ordered { written in
+        self.memberships = try Field(cursor.next(), of: "type numbering memberships").ordered { written in
             try Field(written, of: "type numbering memberships").name()
         }
 
-        try fields.end()
+        try cursor.end()
     }
 
     // MARK: - Public
