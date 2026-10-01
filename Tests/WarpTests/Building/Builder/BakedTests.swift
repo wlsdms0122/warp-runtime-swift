@@ -11,7 +11,7 @@ import Testing
 @testable import WarpStandard
 import WarpTestSupport
 
-@Suite("A caller compiles documents once and links them many times")
+@Suite("A host compiles documents once and links them many times")
 struct BakedTests {
     // A procedure answering a number, which says whether it touches anything shared.
     private struct CountingQuery: Query {
