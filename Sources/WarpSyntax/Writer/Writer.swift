@@ -146,7 +146,7 @@ public struct Writer: Sendable {
         guard case let .body(block) = procedure.implementation else {
             throw WritingError(
                 "a procedure implemented in native code has no document."
-                    + " What a caller brings is declared where the run is assembled"
+                    + " What the host brings is declared in a module it assembles into the link"
             )
         }
 

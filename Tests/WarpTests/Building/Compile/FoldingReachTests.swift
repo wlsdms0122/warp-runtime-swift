@@ -70,7 +70,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.build(Module.standard + [brought, document])
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
         }
     }
 
@@ -108,7 +108,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.build(Module.standard + [brought, between, document])
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
         }
     }
 
@@ -226,7 +226,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.compile([document], against: baked, supplying: supplying)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
         }
     }
 

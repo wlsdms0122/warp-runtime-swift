@@ -343,7 +343,7 @@ struct Judged: Sendable {
     private func brought(nothing document: Place.Document) -> BuildError {
         BuildError(
             "'\(label)' is implemented in native code and this link was handed none."
-                + " What a caller brings is declared where the run is assembled",
+                + " What the host brings is declared in a module it assembles into the link",
             at: .procedure(label.spelling, in: document)
         )
     }
