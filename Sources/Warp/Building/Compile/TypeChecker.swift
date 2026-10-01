@@ -60,7 +60,7 @@ struct TypeChecker {
 
     // The two asks the one walk answers. Judging is the compile's own pass (every
     // dot rewritten, every call gathered, every refusal thrown) and it happens
-    // once per site. Reading answers the type and flow questions alone and
+    // once per site. Probing answers the type and flow questions alone and
     // refuses nothing (what cannot be read is `any`) because its askers read a
     // body out of place or more than once: an operand typed where it stands, a
     // round re-read until its writes settle, where a refusal would be transient
@@ -72,7 +72,7 @@ struct TypeChecker {
         // in, where it was declared in one; a constant's expression has no
         // module to read its variables by.
         case judging(folding: Folding?, origin: Int? = nil, writing: Fulfillment? = nil)
-        case reading
+        case probing
 
         // MARK: - Property
         // Where a walk writes down the pairs its calls lean on. A walk that
@@ -83,7 +83,7 @@ struct TypeChecker {
             return fulfillment
         }
 
-        // Whether this ask keeps what the walk rebuilds. Reading reads a body
+        // Whether this ask keeps what the walk rebuilds. Probing reads a body
         // out of place or more than once, so it hands the expression back as
         // written instead of paying for a copy nobody takes. In an expression
         // case the pieces are gathered either way, so a gate there only spares
@@ -103,7 +103,7 @@ struct TypeChecker {
 
     // One walk's answers: the expression with every dot's meaning written
     // in, the sends gathered on the way, what the whole of it holds, and
-    // what it wrote to the names around it. The reading ask hands the
+    // what it wrote to the names around it. The probing ask hands the
     // expression back as written and gathers nothing.
     private struct Inspection {
         // MARK: - Property
@@ -448,7 +448,7 @@ struct TypeChecker {
             at: place,
             in: environment,
             with: context,
-            ask: .reading
+            ask: .probing
         )
 
         return walked.flow.answered.map(\.reading).reduce(walked.reading) { joined, answered in joined.joined(answered) }
@@ -1283,7 +1283,7 @@ struct TypeChecker {
         }
     }
 
-    // The gate a refusal passes: judging throws it, and the reading ask has
+    // The gate a refusal passes: judging throws it, and the probing ask has
     // none to throw. A refusal the walk states passes here, so it cannot forget
     // which ask refuses, and what remains after it under reading is the
     // degraded answer beside each call. The constant-folding throws stand apart
@@ -1899,7 +1899,7 @@ struct TypeChecker {
         // answers nothing until this call fills it, so the parameters are read
         // from what was actually sent and the answer comes back with them
         // filled, and only a generic answer reads the operands at all, so under
-        // the reading ask only a generic call pays for taking their readings.
+        // the probing ask only a generic call pays for taking their readings.
         // The operands are data, held as operands below, so nothing here
         // writes: every operand stands in the one environment the call stands
         // in.
@@ -2074,12 +2074,12 @@ struct TypeChecker {
         // the body read the settled environment. The one the rounds' own writes
         // have already joined into. Readings that cycle instead of settling
         // would be widened to `any` behind the author's back. Judging says so
-        // out loud, where a refusal can carry the reason; the reading ask stays
+        // out loud, where a refusal can carry the reason; the probing ask stays
         // total and takes the widened answer.
         case let .loop(condition, body, round):
             // The fixpoint probes the statements alone. The rounds are what
             // leave things for one another, and the result never runs between
-            // rounds. The probe reads, so a reading asker takes the settled
+            // rounds. The probe reads, so a probing asker takes the settled
             // probe as its own walk; judging walks once more for the rewrite.
             let (seeded, probed, converged) = try await settled(
                 from: rounded(environment, as: round)
@@ -2089,7 +2089,7 @@ struct TypeChecker {
                     at: place.part(.body),
                     in: entry,
                     with: context,
-                    ask: .reading
+                    ask: .probing
                 )
 
                 return (walk, walk.flow)
@@ -2215,7 +2215,7 @@ struct TypeChecker {
 
     // A block: its body, then the result in the environment the body left
     // visible. A result after a statement no run comes back from is judging's
-    // to refuse. The reading ask answers `never` and moves on.
+    // to refuse. The probing ask answers `never` and moves on.
     private func inspected(
         block: Block,
         at place: Place,
@@ -2491,7 +2491,7 @@ struct TypeChecker {
     // A round's body, read in the environment its own earlier rounds may have
     // written. The caller hands the one reader its rounds have, the body's flow
     // joins into the entry environment, and the body is re-read until the
-    // reading stops moving. The reader reads with the reading ask, because a
+    // reading stops moving. The reader reads with the probing ask, because a
     // refusal mid-climb would be a refusal of an environment no run ever stands
     // in. A body that writes nothing outward settles on the first look; a chain
     // of writes settles one link per look, so the bound is the chain's own
@@ -2599,7 +2599,7 @@ struct TypeChecker {
                 when: ask
             )
 
-            // The reading ask has no refusal to throw, and what the name holds
+            // The probing ask has no refusal to throw, and what the name holds
             // is what it declared either way. Handing back what it was given
             // would leave the two walks reading one name as two types.
             return declared
