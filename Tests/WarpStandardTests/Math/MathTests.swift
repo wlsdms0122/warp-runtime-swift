@@ -73,7 +73,7 @@ struct MathTests {
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0. An answer an int holds, so it answers.
-        await #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
+        #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("a quotient is a fraction even between wholes")
@@ -95,9 +95,9 @@ struct MathTests {
         }
 
         // When / Then
-        await #expect(try await run(divided(6, 2)) == .double(3.0))
-        await #expect(try await run(divided(7, 2)) == .double(3.5))
-        await #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
+        #expect(try await run(divided(6, 2)) == .double(3.0))
+        #expect(try await run(divided(7, 2)) == .double(3.5))
+        #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
 
         // The quotient is binary64's own: each whole operand widens first (the
         // same widening every mixed operation performs) and the division rounds

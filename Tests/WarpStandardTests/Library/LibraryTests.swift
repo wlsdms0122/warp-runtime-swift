@@ -22,6 +22,7 @@ struct LibraryTests {
     // MARK: - Test
     @Test("what ships is what lib/std holds")
     func whatShipsIsWhatTheRepositoryHolds() throws {
+        // Given
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()   // Library
             .deletingLastPathComponent()   // WarpStandardTests
@@ -35,6 +36,7 @@ struct LibraryTests {
             .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { file in file.pathExtension == "warpt" }
 
+        // When / Then
         #expect(Set(files.map { file in file.deletingPathExtension().lastPathComponent })
             == Set(Library.documents.keys))
 
@@ -62,8 +64,10 @@ struct LibraryTests {
 
     @Test("every procedure it declares is one this package does not")
     func itDeclaresWhatSwiftDoesNot() throws {
+        // Given
         let written = Set(Module.library.values.flatMap(\.procedures.keys))
 
+        // When / Then
         #expect(!written.isEmpty)
         #expect(written.intersection(Module.builtin).isEmpty)
     }

@@ -103,7 +103,7 @@ struct VocabularyTests {
                 )
             ]
         )
-        let sut = try await loader.loadProcedure([
+        let sut = try loader.loadProcedure([
             "parameters": [["name": "names", "type": "array<string>"]],
             "body": [
                 ["var": "verdict"],
@@ -134,7 +134,7 @@ struct VocabularyTests {
     func omittedVocabularyDoesNotResolve() async throws {
         // Given. Nothing is privileged, so the standard module is a file like
         // any other and leaving it out means leaving out what it declares
-        let sut = try await loader.loadProcedure([
+        let sut = try loader.loadProcedure([
             "parameters": [["name": "names", "type": "array<string>"]],
             "body": [
                 ["let": "said", "value": ["call": ["procedure": "std.collection.count"]]]

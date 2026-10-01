@@ -130,27 +130,20 @@ struct InPlaceTests {
     }
 
     @Test("a module variable is not visible to another document")
-    func moduleVariableIsPrivateToItsDocument() throws {
-        // Given. One document declares `app.total`
-        _ = try Module(
-            variables: ["app.total": .literal(.int(0))],
-            procedures: [
-                "app.read": Procedure(signature: Signature(returns: .int), body: [], result: reference("app.total"))
-            ]
-        )
+    func moduleVariableIsPrivateToItsDocument() {
+        // Given. One write of `app.total`
+        let write = Statement(binding: .assignment([.key("app.total")]), expression: .literal(.int(1)))
 
-        // When / Then. Another document writing the name is refused where it
-        // is made
-        #expect {
+        // When / Then. Taken in the document declaring `app.total`, and refused
+        // in another where it is made
+        #expect(throws: Never.self) {
             try Module(
-                procedures: [
-                    "other.poke": Procedure(
-                        body: [
-                            Statement(binding: .assignment([.key("app.total")]), expression: .literal(.int(1)))
-                        ]
-                    )
-                ]
+                variables: ["app.total": .literal(.int(0))],
+                procedures: ["app.poke": Procedure(body: [write])]
             )
+        }
+        #expect {
+            try Module(procedures: ["other.poke": Procedure(body: [write])])
         } throws: { error in
             error is ValidationError && "\(error)".contains("assigns 'app.total', which is not visible here")
         }

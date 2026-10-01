@@ -27,7 +27,7 @@ struct OneSpellingTests {
         ]
 
         // When / Then
-        await #expect {
+        #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
             let refusal = error as? ReadingError
@@ -56,7 +56,7 @@ struct OneSpellingTests {
         ]
 
         // When / Then
-        await #expect {
+        #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
             "\(error)".contains("imports[0]") && "\(error)".contains("The one way writes \"std.logic.not\"")
@@ -74,7 +74,7 @@ struct OneSpellingTests {
         ]
 
         // When / Then
-        await #expect {
+        #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
             "\(error)".contains("no name")
@@ -98,7 +98,7 @@ struct OneSpellingTests {
         let document = try sut.canonical(text, from: .canonical)
 
         // Then
-        await #expect(throws: Never.self) { try sut.load(document, identity: nil) }
+        #expect(throws: Never.self) { try sut.load(document, identity: nil) }
     }
 
     @Test("a document is read by the standard table, whatever aliases a loader holds")
@@ -117,7 +117,7 @@ struct OneSpellingTests {
         ]
 
         // When / Then
-        await #expect(throws: ReadingError.self) { try sut.load(document, identity: nil) }
+        #expect(throws: ReadingError.self) { try sut.load(document, identity: nil) }
     }
 
     @Test("a record type nested in another keeps its own refusal and place")
@@ -132,7 +132,7 @@ struct OneSpellingTests {
         ]
 
         // When / Then
-        await #expect {
+        #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
             (error as? ReadingError)?.place?.rendered == "types.app.Outer.record.inner"
@@ -164,7 +164,7 @@ struct OneSpellingTests {
         ]
 
         // When / Then
-        await #expect {
+        #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
             (error as? any WarpError)?.place?.rendered == place

@@ -32,7 +32,7 @@ struct IdentityTests {
             )
         ]
 
-        // Then
+        // When / Then
         for (written, expected) in cases {
             #expect(Identity(SHA256().digest(of: Data(written.utf8))).rendered == expected)
         }
@@ -60,7 +60,7 @@ struct IdentityTests {
         let throughText = try TextEncoding().value(from: try TextEncoding().text(from: document))
         let throughBytes = try BinaryEncoding().value(from: try BinaryEncoding().data(from: document))
 
-        // Then
+        // When / Then
         #expect(try Identity.of(throughText) == Identity.of(document))
         #expect(try Identity.of(throughBytes) == Identity.of(document))
     }
@@ -78,7 +78,7 @@ struct IdentityTests {
             "procedures": .dictionary(["refund": .dictionary(["body": .array([])])])
         ])
 
-        // Then
+        // When / Then
         #expect(try Identity.of(first) != Identity.of(second))
     }
 
@@ -87,7 +87,7 @@ struct IdentityTests {
         // Given
         let sut = Identity(SHA256().digest(of: Data("abc".utf8)))
 
-        // Then
+        // When / Then
         #expect(sut.short == "ba7816bf8f01")
         #expect(sut.rendered.count == 64)
         #expect(sut.description == sut.short)

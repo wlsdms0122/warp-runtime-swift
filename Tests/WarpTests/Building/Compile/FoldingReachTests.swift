@@ -65,7 +65,7 @@ struct FoldingReachTests {
             procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
         )
 
-        // When and then. What the procedure answers is its code's, and the
+        // When / Then. What the procedure answers is its code's, and the
         // compiled document says nothing about which code that was.
         await #expect {
             try await builder.build(Module.standard + [brought, document])
@@ -103,7 +103,7 @@ struct FoldingReachTests {
             procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))]
         )
 
-        // When and then. The refusal is about what the fold reaches, not about
+        // When / Then. The refusal is about what the fold reaches, not about
         // what the constant wrote, so one written name away is still refused.
         await #expect {
             try await builder.build(Module.standard + [brought, between, document])
@@ -139,7 +139,7 @@ struct FoldingReachTests {
             ]
         )
 
-        // When and then. The box is the fold's run's, and a link holds values.
+        // When / Then. The box is the fold's run's, and a link holds values.
         await #expect {
             try await builder.build(Module.standard + [maker, document])
         } throws: { error in
@@ -172,7 +172,7 @@ struct FoldingReachTests {
             ]
         )
 
-        // When and then. A variable's start passes the gate a constant does.
+        // When / Then. A variable's start passes the gate a constant does.
         await #expect {
             try await builder.build(Module.standard + [maker, document])
         } throws: { error in
@@ -191,7 +191,7 @@ struct FoldingReachTests {
             ]
         )
 
-        // When and then. That body is being resolved beside the constants it
+        // When / Then. That body is being resolved beside the constants it
         // may read, so running it would be a circle with no start.
         await #expect {
             try await builder.build(Module.standard + [document])
@@ -221,7 +221,7 @@ struct FoldingReachTests {
             procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
         )
 
-        // When and then. The row came back from an object rather than from the
+        // When / Then. The row came back from an object rather than from the
         // module, and what it may be folded through came back with it.
         await #expect {
             try await builder.compile([document], against: baked, supplying: supplying)

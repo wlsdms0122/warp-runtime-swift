@@ -21,7 +21,7 @@ struct LoopTests {
     func loopRepeatsWhileConditionHolds() async throws {
         // Given. The loop writes a variable declared outside it and reads its
         // own round index through ${gate.index}
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "body": [
                 ["var": "latest", "value": 0],
                 [
@@ -47,7 +47,7 @@ struct LoopTests {
     func loopRunsUnbounded() async throws {
         // Given. The language carries no budget; the world (here, the
         // condition) ends the repetition
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "body": [
                 ["var": "latest", "value": 0],
                 [
@@ -71,9 +71,9 @@ struct LoopTests {
 
     @Test("a guard key on loop is refused at decode")
     func aGuardKeyIsRefusedAtDecode() throws {
-        // Given. Repetition carries no budget of its own: an author bounds a
-        // loop with a counter and a procedure, and a caller stops one with
-        // cancellation. The key is gone rather than ignored.
+        // When / Then. Repetition carries no budget of its own: an author
+        // bounds a loop with a counter and a procedure, and a caller stops one
+        // with cancellation. The key is gone rather than ignored.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "body": [
@@ -94,7 +94,7 @@ struct LoopTests {
     func emptyBodyObservesCancellation() async throws {
         // Given. An empty body must still observe cancellation, or the caller's
         // one lever against a runaway loop stops working
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "body": [
                 [
                     "let": "gate",

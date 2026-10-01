@@ -127,8 +127,8 @@ struct FoldedContractTests {
         // is the same answer the whole graph gives, and both say which
         // declaration was being settled when the fold turned it up.
         for link in [compiled, try await Builder().compile(modules)] {
-            await #expect {
-                try await Builder().link(link, supplying: Supplying(Module.standard))
+            #expect {
+                try Builder().link(link, supplying: Supplying(Module.standard))
             } throws: { error in
                 "\(error)".contains("constants.app.counted:")
                     && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
