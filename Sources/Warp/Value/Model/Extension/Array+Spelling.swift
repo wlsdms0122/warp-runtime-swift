@@ -1,5 +1,5 @@
 //
-//  Bytes+Spelling.swift
+//  Array+Spelling.swift
 //  Warp
 //
 //  Created by JSilver on 8/30/26.
