@@ -99,7 +99,7 @@ struct Compiler {
 
             let declaration = symbol.procedure
 
-            var answer = (procedure: declaration, calls: [CallSite](), inPlace: [Place: [Int]]())
+            var answer = (procedure: declaration, calls: [CallSite](), inPlace: InPlaceTable())
 
             if let block = declaration.block {
                 // A body not yet lowered stands as its refusal, so a procedure

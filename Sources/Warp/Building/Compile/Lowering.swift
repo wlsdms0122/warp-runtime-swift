@@ -403,7 +403,7 @@ struct Lowering {
     // Lowers a declaration's body into its row. `inPlace` is what the build
     // found each call of a value in it hands in place, by where the call
     // stands.
-    mutating func settle(_ row: Int, body block: Block, handing inPlace: [Place: [Int]], at place: Place) throws {
+    mutating func settle(_ row: Int, body block: Block, handing inPlace: InPlaceTable, at place: Place) throws {
         let declared = table[row]
         let slots = SlotAllocator(
             origin: declared.origin,
@@ -446,7 +446,7 @@ struct Lowering {
         reading names: [Name],
         origin: Int,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> (Operation, Frame) {
         let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
@@ -542,7 +542,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> LoweredBody {
         var inner = scope
@@ -569,7 +569,7 @@ struct Lowering {
         in scope: inout SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> [Instruction] {
         var instructions: [Instruction] = []
@@ -675,7 +675,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         switch expression {
@@ -748,7 +748,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         let ordered = record.sorted { $0.key < $1.key }
@@ -775,7 +775,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         guard let block = procedure.block else {
@@ -848,7 +848,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         guard let handed = inPlace[place] else {
@@ -882,7 +882,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         let lowered = type.lowered(in: loweredTypes)
@@ -909,7 +909,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         var thenScope = scope
@@ -938,7 +938,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         var inner = scope
@@ -985,7 +985,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         let attempted = try lower(block, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place)
@@ -1008,7 +1008,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
         return .leave(
@@ -1026,7 +1026,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> DispatchOperation {
         guard let written = call.arguments.first else {
@@ -1057,7 +1057,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> Argument {
         guard case let .reference(path) = expression else {
@@ -1074,7 +1074,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         writer: Closure.Declaration,
-        inPlace: [Place: [Int]],
+        inPlace: InPlaceTable,
         at place: Place
     ) throws -> CallOperation {
         guard let stands = documents[slots.origin].numbering.call(call.selector) else {

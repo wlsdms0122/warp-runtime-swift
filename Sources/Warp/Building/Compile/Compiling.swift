@@ -202,7 +202,7 @@ struct Compiling {
 
     // A body lowered into its row. Noted as well as written, because what
     // folding runs is a table of its own and this is what is copied into it.
-    mutating func settle(_ row: Int, body block: Block, handing inPlace: [Place: [Int]], at place: Place) throws {
+    mutating func settle(_ row: Int, body block: Block, handing inPlace: InPlaceTable, at place: Place) throws {
         try lowering.settle(row, body: block, handing: inPlace, at: place)
 
         loweredRows.append(row)
