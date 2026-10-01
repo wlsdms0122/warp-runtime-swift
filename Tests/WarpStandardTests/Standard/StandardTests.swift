@@ -38,9 +38,9 @@ struct StandardTests {
 
         // When / Then. A name in `builtin` that nothing declares is a list gone
         // stale
-        #expect(Module.builtin.subtracting(shipped).isEmpty)
-        #expect(Module.builtin.count == 25)
-        #expect(Module.builtin.union(Module.derived) == shipped)
+        #expect(Module.builtinProcedures.subtracting(shipped).isEmpty)
+        #expect(Module.builtinProcedures.count == 25)
+        #expect(Module.builtinProcedures.union(Module.derived) == shipped)
     }
 
     @Test("a procedure this package calls derived has a body here")

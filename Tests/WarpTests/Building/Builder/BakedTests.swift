@@ -330,9 +330,9 @@ struct BakedTests {
         let baked = try await builder.compile(Module.standard)
 
         // Then. Every builtin has a row, and each says the code is the host's.
-        let builtin = baked.flatMap(\.table).filter { row in Module.builtin.contains(row.label) }
+        let builtin = baked.flatMap(\.table).filter { row in Module.builtinProcedures.contains(row.label) }
 
-        #expect(Set(builtin.map(\.label)) == Module.builtin)
+        #expect(Set(builtin.map(\.label)) == Module.builtinProcedures)
 
         for row in builtin {
             guard case .native = row.implementation else {

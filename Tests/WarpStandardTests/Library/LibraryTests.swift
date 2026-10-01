@@ -69,7 +69,7 @@ struct LibraryTests {
 
         // When / Then
         #expect(!written.isEmpty)
-        #expect(written.intersection(Module.builtin).isEmpty)
+        #expect(written.intersection(Module.builtinProcedures).isEmpty)
     }
 
     // MARK: - Public
