@@ -321,11 +321,10 @@ struct ExecutorTests {
         )
 
         // When / Then. Abort is the language's throw, and carries its message
-        do {
-            _ = try await run(spec, arguments: ["reason": .string("no data")])
-            Issue.record("expected Aborted")
-        } catch let aborted as Aborted {
-            #expect(aborted.message == "stopped: no data")
+        await #expect {
+            try await run(spec, arguments: ["reason": .string("no data")])
+        } throws: { error in
+            (error as? Aborted)?.message == "stopped: no data"
         }
     }
 

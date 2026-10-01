@@ -304,15 +304,13 @@ struct ObservationTests {
             ]
         )
 
-        // When
         let image = try await builder.build([sut] + Module.standard)
 
-        // Then
-        do {
-            _ = try await Executor().run(image)
-            Issue.record("the closure was expected to refuse")
-        } catch let error as Aborted {
-            #expect(error.trace?.rendered == "called.entry.closure[1].[0]")
+        // When / Then
+        await #expect {
+            try await Executor().run(image)
+        } throws: { error in
+            (error as? Aborted)?.trace?.rendered == "called.entry.closure[1].[0]"
         }
     }
 
