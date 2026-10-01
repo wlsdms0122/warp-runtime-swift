@@ -695,19 +695,19 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // Whether a slot declaring this asks for procedures taking a parameter in
-    // place, holding one or an array of them. Only a call a body writes hands
-    // a variable, so only a body can call what fills it.
-    var isProcedureTakingInPlace: Bool {
+    // The positions a procedure a slot declaring this holds takes in place,
+    // holding one or an array of them. Empty where the slot says nothing of
+    // the procedure's parameters.
+    var inPlacePositions: Set<Int> {
         switch self {
         case let .procedure(type?, _, _):
-            return type.parameters.contains { parameter in parameter.isInout }
+            return type.inPlacePositions
 
         case let .array(element):
-            return element.isProcedureTakingInPlace
+            return element.inPlacePositions
 
         default:
-            return false
+            return []
         }
     }
 

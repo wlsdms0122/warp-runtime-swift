@@ -1723,8 +1723,9 @@ struct TypeChecker {
                     declaring: procedure.signature.ownedParameters,
                     given: context.isConst,
                     reading: reading,
-                    applying: procedure.signature.constProcedures
-                        .union(captured.filter { _, held in held.isConstProcedure }.keys),
+                    applying: procedure.signature.constProcedures.merging(
+                        captured.filter { _, held in held.isConstProcedure }.mapValues(\.inPlacePositions)
+                    ) { declared, _ in declared },
                     taking: context.signature(of:)
                 )
             } ?? false
@@ -1733,8 +1734,9 @@ struct TypeChecker {
                     block,
                     declaring: Set(procedure.signature.names),
                     given: context.isIsolated,
-                    applying: procedure.signature.isolatedProcedures
-                        .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
+                    applying: procedure.signature.isolatedProcedures.merging(
+                        captured.filter { _, held in held.isIsolatedProcedure }.mapValues(\.inPlacePositions)
+                    ) { declared, _ in declared },
                     taking: context.signature(of:)
                 )
             } ?? false

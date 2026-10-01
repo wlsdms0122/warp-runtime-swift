@@ -261,6 +261,21 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // The positions a procedure a slot holding this holds takes in place.
+    // Empty where the slot says nothing of the procedure's parameters.
+    var inPlacePositions: Set<Int> {
+        switch self {
+        case let .procedure(parameters?, _, _, _):
+            return Set(parameters.indices.filter { position in parameters[position].isInout })
+
+        case let .array(element), let .dictionary(element):
+            return element.inPlacePositions
+
+        default:
+            return []
+        }
+    }
+
     // One value of every kind a decided type can hold, for asking the judge
     // rather than restating it.
     private static let witnesses: [Value] = [
