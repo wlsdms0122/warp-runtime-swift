@@ -507,9 +507,9 @@ struct PlaceTests {
 
     @Test("a name two documents declare is refused at the one that could not be added")
     func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() async throws {
-        // Given. A caller receiving a module from somewhere else appends it to
+        // Given. A host receiving a module from somewhere else appends it to
         // what it already holds and builds again. What that build refuses is a
-        // collision between two documents, and only the caller knows which file
+        // collision between two documents, and only the host knows which file
         // either arrived in. A refusal naming neither sends it opening all of
         // them.
         func declaring(_ procedure: Name, as identity: Identity) throws -> Module {
@@ -537,11 +537,11 @@ struct PlaceTests {
 
     @Test("the same document handed to one link twice is refused as that")
     func theSameDocumentHandedTwiceIsRefusedAsOneDocument() async throws {
-        // Given. A caller that appends what arrives without checking whether it
+        // Given. A host that appends what arrives without checking whether it
         // already holds it. An identity is derived from the text, so the two
         // are one document and every name in it collides with itself. Read as a
         // collision between two declarations, the sentence names the same
-        // document on both sides and tells the caller nothing it can act on.
+        // document on both sides and tells the host nothing it can act on.
         let module = try Module(
             procedures: ["pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
             identity: Identity([0x01])
@@ -603,7 +603,7 @@ struct PlaceTests {
         #expect(error?.message.contains("01") == true)
     }
 
-    @Test("constants that name each other are placed at one of the ring, and the same one")
+    @Test("constants that name each other are placed at one of the cycle, and the same one")
     func aConstantCycleIsPlacedInSortedOrder() async throws {
         // Given. A cycle has no first member, so which of them an author is
         // sent to is chosen rather than found. Read off a dictionary it would
@@ -625,12 +625,12 @@ struct PlaceTests {
         #expect(error?.message.contains("alpha, zebra") == true)
     }
 
-    @Test("a constant merely blocked by a ring is neither placed nor accused")
+    @Test("a constant merely blocked by a cycle is neither placed nor accused")
     func aConstantWaitingOnARingIsNotOnIt() async throws {
-        // Given. `aardvark` names one of a ring, so it never settles either and
-        // is still waiting when the ring is refused. It is sorted first, which
+        // Given. `aardvark` names one of a cycle, so it never settles either and
+        // is still waiting when the cycle is refused. It is sorted first, which
         // is how it becomes the place if what is waiting is mistaken for what
-        // is wrong, and changing it would leave the ring exactly as it is.
+        // is wrong, and changing it would leave the cycle exactly as it is.
         let sut = try Module(
             constants: [
                 "aardvark": reference("zebra"),
@@ -678,12 +678,12 @@ struct PlaceTests {
         #expect(error?.message.contains("delta") == false)
     }
 
-    @Test("two modules nobody wrote down are told apart by where the caller put them")
+    @Test("two modules nobody wrote down are told apart by where the host put them")
     func modulesWithNoDocumentAreToldApartByPosition() async throws {
-        // Given. A caller assembling modules itself. Neither was read from
+        // Given. A host assembling modules itself. Neither was read from
         // anything, so neither has an identity and both spell the same: the
         // sentence names two documents that read as one, and the place renders
-        // without a document at all. Where the caller put them is what is left.
+        // without a document at all. Where the host put them is what is left.
         func declaring() throws -> Module {
             try Module(procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))])
         }

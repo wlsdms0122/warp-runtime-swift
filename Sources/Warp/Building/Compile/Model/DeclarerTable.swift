@@ -40,7 +40,7 @@ struct DeclarerTable {
         var against: Set<Fingerprint> = []
 
         for used in module.references {
-            // A name nothing here declares is left alone. The link refuses it,
+            // A name nothing here declares is left alone. The build refuses it,
             // and refusing here would be a second copy of a rule that has to be
             // right once.
             guard let declared = declares[used] else { continue }

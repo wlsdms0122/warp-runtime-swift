@@ -145,7 +145,7 @@ struct ValueWalk {
     // this one is one more of them. Counted where a container opens, so an
     // empty one past the bound is refused the same as a full one.
     private func opening() throws {
-        guard opened.count < Envelope.nesting else {
+        guard opened.count < Value.nestingBound else {
             throw EncodingRefused("the value nests deeper than a document may")
         }
     }

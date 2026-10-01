@@ -18,7 +18,7 @@ public struct Image: Sendable {
     // MARK: - Property
     public let linked: [Linked]
 
-    // Every declared spelling a caller may name, by row.
+    // Every declared spelling a host may name, by row.
     public let rows: [Name: Int]
 
     // The spellings only a private declaration wears: declared, and by

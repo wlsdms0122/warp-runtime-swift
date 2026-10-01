@@ -149,7 +149,7 @@ struct Compiling {
     }
 
     // The same for every document laid down, said once they all stand. This
-    // reads the rows whole and the documents arrive in the order the caller
+    // reads the rows whole and the documents arrive in the order the host
     // handed them over, so one of them may import a procedure another laid after it
     // declares.
     //
@@ -229,7 +229,7 @@ struct Compiling {
     // their code carries read against this table as they are.
     mutating func resolveHeldClosures() throws {
         let resolver = ClosureResolver(
-            spelled: ClosureRows(
+            spelled: ClosureRowTable(
                 naming: naming,
                 numbering: lowering.documents.map(\.numbering),
                 closures: lowering.documents.map(\.closureRows),

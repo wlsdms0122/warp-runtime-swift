@@ -162,7 +162,7 @@ struct Compiler {
 
         // The facts nobody declared. All three are fixed points over what a
         // body reaches, so a document's answer is settled once the documents
-        // it reaches have theirs, and the standing refused a ring where that
+        // it reaches have theirs, and the standing refused a cycle where that
         // is not so. Read over every declaration the document holds.
         //
         // What this document declares, by the spelling a call in it writes.
@@ -207,7 +207,7 @@ struct Compiler {
         // Where this document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
         // document alone, so a body lowers to the same numbers whatever
-        // else the caller put in the link.
+        // else the host put in the link.
         let numbering = Numbering(
             sends: module.sends,
             declared: declared,
@@ -488,7 +488,7 @@ struct Compiler {
                 let holding = declared.lowered(in: context.loweredTypes)
 
                 if case let .undeclared(label, _) = holding {
-                    throw BuildError("declares type '\(label)', which nothing declares", at: place)
+                    throw BuildError("declares type '\(label)', which no module in this link declares", at: place)
                 }
 
                 do {

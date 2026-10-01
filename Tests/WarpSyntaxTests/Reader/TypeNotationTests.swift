@@ -347,7 +347,7 @@ struct TypeNotationTests {
         #expect {
             try loader.load(
                 [
-                    "warp": .int(Envelope.version),
+                    "warp": .int(ModuleReader.version),
                     "imports": [],
                     "procedures": [
                         "entry": [

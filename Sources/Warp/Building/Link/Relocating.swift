@@ -31,7 +31,7 @@ final class Relocating {
         // entering rather than built at every refusal that never happens.
         let place: Place
 
-        let typeRows: LoweredTypeNumbering.Rows
+        let typeRows: LoweredTypeNumbering.Renumbering
 
         // MARK: - Initializer
         // MARK: - Public
@@ -57,7 +57,7 @@ final class Relocating {
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no type
     // and has no entry here.
-    private let typeRows: [LoweredTypeNumbering.Rows]
+    private let typeRows: [LoweredTypeNumbering.Renumbering]
 
     private let contractProcedures: [Name: LoweredContractProcedure]
     private let loweredTypes: LoweredTypeTable
@@ -67,7 +67,7 @@ final class Relocating {
     // answer a spelling.
     private let closures: [[Int]]
 
-    private let spelled: ClosureRows
+    private let spelled: ClosureRowTable
 
     // Every row relocated once, whichever asks for it first: the table, or a
     // value holding a closure whose row it is. One object per row, so a
@@ -87,7 +87,7 @@ final class Relocating {
     init(
         table: [Linked],
         rows: [Name: Int],
-        spelled: ClosureRows,
+        spelled: ClosureRowTable,
         documents: [Place.Document],
         naming: [Closure.Document],
         numbering: [Numbering],

@@ -27,7 +27,7 @@ public struct Module: Sendable {
     // with, and a link that does not declare all of them cannot run it.
     //
     // Exactly what it uses, always: every procedure it sends and every type,
-    // constraint and contract it names without declaring. A caller lays the
+    // constraint and contract it names without declaring. A host lays the
     // link from this list, so a list saying less would be trusted and wrong,
     // and one saying more asks for what the program has no use for. Which of
     // those the module is refused for is `Validator`'s to say.
@@ -104,7 +104,7 @@ public struct Module: Sendable {
     public let identity: Identity?
 
     // Whether these are the procedures the specification names rather than
-    // ones a caller brought. A constant settles from a body in the link and
+    // ones a host brought. A constant settles from a body in the link and
     // from these alone: what one of these answers is the same in every
     // implementation, so a value folded through one still means what it says
     // wherever the object it was written into is read.

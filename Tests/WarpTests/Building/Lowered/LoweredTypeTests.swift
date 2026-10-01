@@ -94,19 +94,19 @@ struct LoweredTypeTests {
         #expect(table.recordRows[byte] == nil)
     }
 
-    @Test("a walk's reading lowers to itself, and every judgment answers it as any")
-    func aReadingLowersToItself() throws {
+    @Test("a projection lowers to itself, and every judgment answers it as any")
+    func aProjectionLowersToItself() throws {
         // Given
         let table = types.loweredTypes
-        let reading = try TypeExpression.reading(of: "T", path: [.key("inner")]).lowered(in: table)
+        let projection = try TypeExpression.projection(of: "T", path: [.key("inner")]).lowered(in: table)
 
         // When / Then
-        #expect(reading == .reading(of: "T", path: [.key("inner")]))
-        #expect(try TypeExpression.array(.reading(of: "T", path: [])).lowered(in: table)
-            == .array(.reading(of: "T", path: [])))
-        #expect(LoweredType.int.accepts(reading, in: table))
-        #expect(reading.accepts(.int, in: table))
-        #expect(try reading.settling(.int(1), at: "", in: table) == .int(1))
+        #expect(projection == .projection(of: "T", path: [.key("inner")]))
+        #expect(try TypeExpression.array(.projection(of: "T", path: [])).lowered(in: table)
+            == .array(.projection(of: "T", path: [])))
+        #expect(LoweredType.int.accepts(projection, in: table))
+        #expect(projection.accepts(.int, in: table))
+        #expect(try projection.settling(.int(1), at: "", in: table) == .int(1))
     }
 
     @Test("a record settling into an alias slot takes the canonical name, and passes it again by comparison")

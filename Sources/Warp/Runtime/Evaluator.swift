@@ -212,7 +212,7 @@ struct Evaluator: Sendable {
     ) async throws {
         // The cancellation check sits at sequence entry, not only per statement:
         // an empty body inside a loop round must still observe cancellation, or
-        // the caller's one lever against a runaway loop silently stops working.
+        // the host's one lever against a runaway loop silently stops working.
         try Task.checkCancellation()
 
         for instruction in instructions {

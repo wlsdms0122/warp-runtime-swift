@@ -26,10 +26,10 @@ struct LinkBoundaryTests {
         // numbered in the order they sort, so one more name ahead of `Thing`
         // moves what its number stands for
         let mine = try await Builder().build(
-            try world(declaring: ["app.Thing": .record(["a": .int])])
+            try link(declaring: ["app.Thing": .record(["a": .int])])
         )
         let theirs = try await Builder().build(
-            try world(declaring: [
+            try link(declaring: [
                 "app.Alpha": .record(["z": .string]),
                 "app.Thing": .record(["a": .int])
             ])
@@ -60,7 +60,7 @@ struct LinkBoundaryTests {
     // MARK: - Public
     // MARK: - Private
     // A document that hands out a procedure taking one of its declared types.
-    private func world(declaring types: [Name: TypeExpression]) throws -> [Module] {
+    private func link(declaring types: [Name: TypeExpression]) throws -> [Module] {
         [
             try Module(Draft(
                 types: types,

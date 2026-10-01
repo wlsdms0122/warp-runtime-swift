@@ -95,11 +95,11 @@ struct Field {
     // The declaration that wrote a closure, its kind before its name. What
     // lays one down is `ObjectWriter.declaration`.
     func declaration() throws -> Closure.Declaration {
-        var fields = try Fields(written, of: part)
-        let tag = try fields.tag()
-        let declared = try fields.name()
+        var cursor = try FieldCursor(written, of: part)
+        let tag = try cursor.field().integer()
+        let declared = try cursor.field().name()
 
-        try fields.end()
+        try cursor.end()
 
         switch ObjectLayout.DeclarationTag(rawValue: tag) {
         case .procedure: return .procedure(declared)

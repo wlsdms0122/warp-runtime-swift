@@ -1,5 +1,5 @@
 //
-//  ClosureRows.swift
+//  ClosureRowTable.swift
 //  Warp
 //
 //  Created by JSilver on 9/18/26.
@@ -11,7 +11,7 @@ import Foundation
 // the writer's document is whose numbering answers, and the number stands
 // among the rows that document's closures took. One door for the link and
 // for a compile laying objects down, so the two answer alike.
-struct ClosureRows {
+struct ClosureRowTable {
     // MARK: - Property
     // Which documents each writer of a closure stands in. A document laid
     // twice stands a writer in both places, and a closure spelled by it has

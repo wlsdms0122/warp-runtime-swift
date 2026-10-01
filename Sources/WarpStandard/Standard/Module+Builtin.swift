@@ -19,7 +19,7 @@ public extension Module {
     // `trimmed` names the set it removes and still stands here: whether a
     // character is whitespace is a question about the code points inside it,
     // and `characters` answers characters.
-    static let builtin: Set<Name> = [
+    static let builtinProcedures: Set<Name> = [
         "std.logic.equal",
 
         "std.math.plus", "std.math.minus", "std.math.times", "std.math.dividedBy",
@@ -40,6 +40,6 @@ public extension Module {
     // what is left rather than listed, so a procedure added to a bundle lands
     // here unless it is put in the set above, and never in neither.
     static var derived: Set<Name> {
-        Set(standard.flatMap(\.procedures.keys)).subtracting(builtin)
+        Set(standard.flatMap(\.procedures.keys)).subtracting(builtinProcedures)
     }
 }

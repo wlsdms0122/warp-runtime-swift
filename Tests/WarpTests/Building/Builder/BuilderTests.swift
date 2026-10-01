@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpTestSupport
 
-// Building, asked the way a caller asks it: modules loaded from documents,
+// Building, asked the way a host asks it: modules loaded from documents,
 // handed over as a set.
 @Suite("Building a set of modules")
 struct BuilderTests {

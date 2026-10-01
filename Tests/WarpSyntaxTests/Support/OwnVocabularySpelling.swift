@@ -1,5 +1,5 @@
 //
-//  OwnVocabularyConditions.swift
+//  OwnVocabularySpelling.swift
 //  WarpSyntaxTests
 //
 //  Created by JSilver on 9/30/26.
@@ -12,7 +12,7 @@ import Foundation
 // A spelling with one key of its own, `holds`, reaching a procedure no
 // standard bundle declares, so what it owes is told apart from what the
 // standard table owes.
-struct OwnVocabularyConditions: ExpressionSpelling {
+struct OwnVocabularySpelling: ExpressionSpelling {
     // MARK: - Property
     let vocabulary: Set<Name> = ["example.holds"]
 

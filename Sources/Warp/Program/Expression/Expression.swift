@@ -24,7 +24,7 @@ import Foundation
 // block, the name itself, so an expression means the same thing wherever it
 // appears, instead of borrowing the name of whatever bound it.
 //
-// `call` is the one open case. A procedure, a bundled procedure and a caller's own
+// `call` is the one open case. A procedure, a bundled procedure and a host's own
 // all lower to it, because they differ only in where the name is found, and
 // finding it is the build's job, not the grammar's.
 //
@@ -86,7 +86,7 @@ public indirect enum Expression: Sendable {
     // as far as an author following the names is concerned.
     //
     // It is what this implementation calls the type and **not** a key read
-    // off any document: a caller registers the forms it likes under the
+    // off any document: a host registers the forms it likes under the
     // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
     // two texts that arrive here as one type.
     public var construct: Construct {
@@ -163,9 +163,8 @@ public indirect enum Expression: Sendable {
     }
 
     // The sentences the construct rule refuses with, stated once beside the
-    // predicate that decides them. The load wraps them as validation refusals
-    // and the build as build refusals, so the two stages cannot say different
-    // things.
+    // predicate that decides them. The load and the build both refuse a
+    // construct in an operand, with `constructInOperand`.
     public static let constructInOperand =
         "a construct runs a body, and a call's operand is data."
             + " A body a procedure is to run travels as a closure"

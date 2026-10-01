@@ -57,7 +57,7 @@ struct CallTests {
         #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .null]))
     }
 
-    @Test("a constant argument violating the callee signature is rejected at link")
+    @Test("a constant argument violating the callee signature is rejected at the build")
     func signatureViolationRejectsCall() async throws {
         // Given
         let sut = try loader.loadDocument([
@@ -148,7 +148,7 @@ struct CallTests {
     }
 
     @Test("a call carries values only, and a blocks key has no meaning to refuse quietly")
-    func aBlocksKeyIsRefusedAtDecode() {
+    func aBlocksKeyIsRefusedAtTheLoad() {
         // Given. A body a procedure is to run travels as a closure argument, so
         // `blocks:` names nothing. An unknown key is refused where it is
         // written rather than dropped.
@@ -176,11 +176,11 @@ struct CallTests {
         }
     }
 
-    @Test("runaway recursive calls end by caller cancellation")
+    @Test("runaway recursive calls end when the host cancels the run")
     func recursiveCallStopsOnCancellation() async throws {
         // Given. The kernel carries no recursion guard (a reappearing name is
-        // not a cycle oracle); runaway calls end by caller cancellation, which
-        // must propagate through the call chain
+        // not a cycle oracle); runaway calls end when the host cancels the run,
+        // which must propagate through the call chain
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["access": "public", "body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])

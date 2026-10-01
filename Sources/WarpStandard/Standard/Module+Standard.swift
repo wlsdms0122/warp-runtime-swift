@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 public extension Module {
-    // A list rather than one module: these are separate bundles, and a caller
+    // A list rather than one module: these are separate bundles, and a host
     // takes the ones its programs have use for. Together with `foundation`,
     // which holds the constraints the other bundles' signatures mention. Each
     // bundle is a list of its own, under `bundled`.

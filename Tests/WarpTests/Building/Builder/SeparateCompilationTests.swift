@@ -50,7 +50,7 @@ struct SeparateCompilationTests {
         #expect(try await Executor().run(image, entry: "app.there") == .int(2))
     }
 
-    @Test("what a document says holds whichever entry a caller names")
+    @Test("what a document says holds whichever entry a host names")
     func judgmentDoesNotDependOnTheEntry() async throws {
         // Given. A declaration nothing reaches, calling a procedure nobody declares.
         let sut = try Module(
@@ -221,7 +221,7 @@ struct SeparateCompilationTests {
         let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes
 
         // Then. Each document's rows are a run of their own, in name order
-        // inside it, laid down in the order the caller handed the documents
+        // inside it, laid down in the order the host handed the documents
         // over.
         let row = { (declared: Name) in loweredTypes.labels.firstIndex(of: declared) }
 
@@ -266,7 +266,7 @@ struct SeparateCompilationTests {
 
         // When / Then. The whole graph, and each document on its own with the
         // claim standing before the program and after it. Nothing in the
-        // program points at the claim, so the order the caller listed them in
+        // program points at the claim, so the order the host listed them in
         // is what decides which side it lands on, and it decides nothing.
         await #expect(throws: Never.self) {
             try await builder.build([typed, asking, claims, program] + Module.standard)
@@ -597,7 +597,7 @@ struct SeparateCompilationTests {
         )
         let compiled = try await builder.compile([library] + Module.standard)
 
-        // When. Laid first, so what it sends stands after it. A caller hands
+        // When. Laid first, so what it sends stands after it. A host hands
         // compiled documents over in whatever order it holds them, and nothing
         // says that order is the standing one.
         var reordered = compiled
@@ -734,7 +734,7 @@ struct SeparateCompilationTests {
     // program handing the type where the contract is asked. The program names
     // the type and the procedure it sends and has no reason to name the third, so
     // the standing puts the claim on either side of it depending on the order
-    // the caller wrote the list in.
+    // the host wrote the list in.
     private func leaning() throws -> (typed: Module, asking: Module, claims: Module, program: Module) {
         (
             typed: try Module(

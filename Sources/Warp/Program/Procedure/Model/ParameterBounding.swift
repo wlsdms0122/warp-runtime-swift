@@ -1,5 +1,5 @@
 //
-//  ParameterBounds.swift
+//  ParameterBounding.swift
 //  Warp
 //
 //  Created by JSilver on 9/23/26.
@@ -9,7 +9,7 @@ import Foundation
 
 // What a signature holds its type parameters to: one set of bounds per
 // name, or the name two mentions bound two ways and the two sets.
-public enum ParameterBounds: Equatable {
+public enum ParameterBounding: Equatable {
     case held([Name: [Name]])
     case disagreeing(Name, [Name], [Name])
 

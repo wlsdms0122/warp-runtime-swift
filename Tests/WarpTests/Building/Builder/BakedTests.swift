@@ -11,7 +11,7 @@ import Testing
 @testable import WarpStandard
 import WarpTestSupport
 
-@Suite("A caller compiles documents once and links them many times")
+@Suite("A host compiles documents once and links them many times")
 struct BakedTests {
     // A procedure answering a number, which says whether it touches anything shared.
     private struct CountingQuery: Query {
@@ -95,7 +95,7 @@ struct BakedTests {
             supplying: Supplying(Module.standard)
         )
 
-        // Then. It runs, and answers what the same world linked whole answers.
+        // Then. It runs, and answers what the same documents linked whole answer.
         let whole = try await builder.build(Module.standard + [arriving])
 
         #expect(try await Executor().run(image, entry: entry, arguments: ["value": .int(41)]) == .int(42))
@@ -105,7 +105,7 @@ struct BakedTests {
     @Test("documents compiled together are ordered by what they reach")
     func documentsAreOrderedByWhatTheyReach() async throws {
         // Given. Two documents handed over with the one that reaches the other
-        // first, which is the order a caller has no way to sort out.
+        // first, which is the order a host has no way to sort out.
         let reaching = try Module(
             imports: ["app.add1"],
             procedures: [
@@ -169,7 +169,7 @@ struct BakedTests {
     func aDocumentLaidWithoutWhatItSendsIsRefused() async throws {
         // Given. A document sending a contract's procedure, which no row
         // answers, before a procedure another document declares.
-        let shapes = try Module(
+        let bank = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: [
                 "app.Describable": [
@@ -205,7 +205,7 @@ struct BakedTests {
                 )
             ]
         )
-        let compiled = try await builder.compile([shapes, try adding(1), sending] + Module.standard)
+        let compiled = try await builder.compile([bank, try adding(1), sending] + Module.standard)
 
         // When / Then. Laid without the document declaring `app.add1`.
         #expect {
@@ -241,7 +241,7 @@ struct BakedTests {
         let one = try await builder.compile([try adding(1)], against: baked, supplying: Supplying(Module.standard))
         let two = try await builder.compile([try adding(2)], against: baked, supplying: Supplying(Module.standard))
 
-        // When / Then. A compile against both is refused whichever the caller
+        // When / Then. A compile against both is refused whichever the host
         // listed first: the table has no answer for the name either way.
         for held in [baked + one + two, baked + two + one] {
             await #expect {
@@ -257,8 +257,8 @@ struct BakedTests {
         }
     }
 
-    @Test("a refusal counts the list the caller handed over")
-    func aRefusalCountsTheCallersList() async throws {
+    @Test("a refusal counts the list the host handed over")
+    func aRefusalCountsTheHostsList() async throws {
         // Given. A vocabulary already compiled, so what arrives stands after
         // it. The two arriving documents are the vocabulary's count and one
         // past it.
@@ -332,9 +332,9 @@ struct BakedTests {
         let baked = try await builder.compile(Module.standard)
 
         // Then. Every builtin has a row, and each says the code is the host's.
-        let builtin = baked.flatMap(\.table).filter { row in Module.builtin.contains(row.label) }
+        let builtin = baked.flatMap(\.table).filter { row in Module.builtinProcedures.contains(row.label) }
 
-        #expect(Set(builtin.map(\.label)) == Module.builtin)
+        #expect(Set(builtin.map(\.label)) == Module.builtinProcedures)
 
         for row in builtin {
             guard case .native = row.implementation else {

@@ -1,5 +1,5 @@
 //
-//  Fields.swift
+//  FieldCursor.swift
 //  Warp
 //
 //  Created by JSilver on 9/13/26.
@@ -13,7 +13,7 @@ import Foundation
 // place holds, so a reading that runs short or finds the wrong kind is
 // refused here rather than further in, where the sentence would be about
 // something else. What each field is, is read through `Field`.
-struct Fields {
+struct FieldCursor {
     // MARK: - Property
     private let part: String
     private let written: [Value]
@@ -42,46 +42,9 @@ struct Fields {
         return written[position]
     }
 
-    mutating func integer() throws -> Int {
-        try field().integer()
-    }
-
-    mutating func double() throws -> Double {
-        try field().double()
-    }
-
-    mutating func count() throws -> Int {
-        try field().count()
-    }
-
-    mutating func text() throws -> String {
-        try field().text()
-    }
-
-    mutating func flag() throws -> Bool {
-        try field().flag()
-    }
-
-    mutating func name() throws -> Name {
-        try field().name()
-    }
-
-    mutating func bytes() throws -> [UInt8] {
-        try field().bytes()
-    }
-
-    mutating func list<T>(_ read: (Value) throws -> T) throws -> [T] {
-        try field().list(read)
-    }
-
-    mutating func maybe<T>(_ read: (Value) throws -> T) throws -> T? {
-        try field().maybe(read)
-    }
-
-    // Which of a kind's cases was written. The tag stands first, so this is
-    // read before the fields the case carries.
-    mutating func tag() throws -> Int {
-        try integer()
+    // The next field, read as the kind that stands there.
+    mutating func field() throws -> Field {
+        Field(try next(), of: part)
     }
 
     // That every field written has been read. A writing this reading does not
@@ -93,7 +56,4 @@ struct Fields {
     }
 
     // MARK: - Private
-    private mutating func field() throws -> Field {
-        Field(try next(), of: part)
-    }
 }

@@ -10,7 +10,7 @@ import Foundation
 // An object handed back that is not one: a field missing, a tag no writing
 // gives, a number where a name was written, or parts that each read and do not
 // stand to each other. What it says is which part of the writing did not
-// read, so a caller holding a cache knows to build again rather than to go
+// read, so a host holding a cache knows to build again rather than to go
 // looking at a document.
 public struct ObjectRefused: WarpError {
     // MARK: - Property
