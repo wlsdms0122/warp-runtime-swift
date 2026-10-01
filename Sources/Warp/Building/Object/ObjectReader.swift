@@ -178,7 +178,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "value")
         let read: Value
 
-        switch ObjectLayout.ValueTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.ValueTag(rawValue: try cursor.field().integer()) {
         case .null: read = .null
         case .bool:
             guard case let .bool(held) = try cursor.next() else {
@@ -187,25 +187,25 @@ struct ObjectReader {
 
             read = .bool(held)
 
-        case .int: read = .int(try cursor.integer())
-        case .double: read = .double(try cursor.double())
-        case .string: read = .string(try cursor.text())
-        case .bytes: read = .bytes(try cursor.bytes())
-        case .array: read = .array(try cursor.list(self.value))
+        case .int: read = .int(try cursor.field().integer())
+        case .double: read = .double(try cursor.field().double())
+        case .string: read = .string(try cursor.field().text())
+        case .bytes: read = .bytes(try cursor.field().bytes())
+        case .array: read = .array(try cursor.field().list(self.value))
 
         // A value the model refuses is one the writing could not have laid
         // down, and so one this reading refuses as an object.
         case .record:
-            let named = try cursor.maybe(name)
-            let names = try cursor.list(name)
-            let values = try cursor.list(self.value)
+            let named = try cursor.field().maybe(name)
+            let names = try cursor.field().list(name)
+            let values = try cursor.field().list(self.value)
 
             read = try refusing {
                 .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
             }
 
         case .dictionary:
-            let entries = try Field(cursor.next(), of: "value").led { entry -> (name: Name, value: Value) in
+            let entries = try cursor.field().led { entry -> (name: Name, value: Value) in
                 var cursor = try FieldCursor(entry, of: "entry")
                 let read = (name: try name(cursor.next()), value: try self.value(cursor.next()))
 
@@ -219,12 +219,12 @@ struct ObjectReader {
         case .closure:
             let writer = Closure.Writer(
                 document: try writing(cursor.next()),
-                declaration: try Field(cursor.next(), of: "value").declaration()
+                declaration: try cursor.field().declaration()
             )
-            let nth = try cursor.count()
-            let captured = try cursor.list { cell -> (slot: Int, cell: Cell) in
+            let nth = try cursor.field().count()
+            let captured = try cursor.field().list { cell -> (slot: Int, cell: Cell) in
                 var cursor = try FieldCursor(cell, of: "captured")
-                let read = (slot: try cursor.count(), cell: Cell.value(try self.value(cursor.next())))
+                let read = (slot: try cursor.field().count(), cell: Cell.value(try self.value(cursor.next())))
 
                 try cursor.end()
 
@@ -249,7 +249,7 @@ struct ObjectReader {
     ) throws -> [Name: T] {
         try Field(value, of: part).gathered { entry in
             var cursor = try FieldCursor(entry, of: part)
-            let held = (try cursor.name(), try read(cursor.next()))
+            let held = (try cursor.field().name(), try read(cursor.next()))
 
             try cursor.end()
 
@@ -329,7 +329,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "type")
         let read: TypeExpression
 
-        switch ObjectLayout.TypeTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.TypeTag(rawValue: try cursor.field().integer()) {
         case .any: read = .any
         case .never: read = .never
         case .null: read = .null
@@ -343,7 +343,7 @@ struct ObjectReader {
         case .record: read = .record(try keyed(cursor.next(), of: "record", expression))
         case .procedure:
             read = .procedure(
-                try cursor.maybe(procedureType),
+                try cursor.field().maybe(procedureType),
                 try constness(cursor.next()),
                 try isolation(cursor.next())
             )
@@ -389,17 +389,17 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "range")
         let read: TypeExpression.Refinement
 
-        switch ObjectLayout.RefinementTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.RefinementTag(rawValue: try cursor.field().integer()) {
         case .whole:
             read = .whole(
-                from: try cursor.maybe(integer),
-                to: try cursor.maybe { written in try edge(written, integer) }
+                from: try cursor.field().maybe(integer),
+                to: try cursor.field().maybe { written in try edge(written, integer) }
             )
 
         case .fraction:
             read = .fraction(
-                from: try cursor.maybe(fraction),
-                to: try cursor.maybe { written in try edge(written, fraction) }
+                from: try cursor.field().maybe(fraction),
+                to: try cursor.field().maybe { written in try edge(written, fraction) }
             )
 
         case nil:
@@ -418,7 +418,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "edge")
         let held: TypeExpression.Refinement.Edge<Bound>
 
-        switch ObjectLayout.EdgeTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.EdgeTag(rawValue: try cursor.field().integer()) {
         case .through: held = .through(try read(cursor.next()))
         case .upTo: held = .upTo(try read(cursor.next()))
         case nil: throw ObjectRefused("'edge' says neither that its bound is inside nor that it is out")
@@ -453,13 +453,13 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "path segment")
         let read: PathSegment
 
-        switch ObjectLayout.SegmentTag(rawValue: try cursor.tag()) {
-        case .key: read = .key(try name(cursor.next()), optional: try cursor.flag())
-        case .index: read = .index(try cursor.integer(), optional: try cursor.flag())
+        switch ObjectLayout.SegmentTag(rawValue: try cursor.field().integer()) {
+        case .key: read = .key(try name(cursor.next()), optional: try cursor.field().flag())
+        case .index: read = .index(try cursor.field().integer(), optional: try cursor.field().flag())
         case .indexRef:
             read = .indexRef(
                 try path(cursor.next()),
-                optional: try cursor.flag()
+                optional: try cursor.field().flag()
             )
 
         case nil:
@@ -488,7 +488,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "procedure type")
         let read = ProcedureType(
             parameters: try Field(cursor.next(), of: "parameters").list(expression),
-            returns: try cursor.maybe(expression)
+            returns: try cursor.field().maybe(expression)
         )
 
         try cursor.end()
@@ -500,7 +500,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "signature")
         let read = Signature(
             parameters: try Field(cursor.next(), of: "parameters").list(parameter),
-            returns: try cursor.maybe(expression)
+            returns: try cursor.field().maybe(expression)
         )
 
         try cursor.end()
@@ -512,9 +512,9 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "parameter")
         let read = Parameter(
             name: try name(cursor.next()),
-            type: try cursor.maybe(expression),
-            candidates: try cursor.maybe { written in try Field(written, of: "candidates").list(text) },
-            description: try cursor.maybe(text)
+            type: try cursor.field().maybe(expression),
+            candidates: try cursor.field().maybe { written in try Field(written, of: "candidates").list(text) },
+            description: try cursor.field().maybe(text)
         )
 
         try cursor.end()
@@ -551,10 +551,10 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "failing")
         let read: Failing
 
-        switch ObjectLayout.FailingTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.FailingTag(rawValue: try cursor.field().integer()) {
         case .unstated: read = .unstated
         case .these:
-            read = .these(Set(try Field(cursor.next(), of: "failing").ordered(text)))
+            read = .these(Set(try cursor.field().ordered(text)))
         case nil: throw ObjectRefused("'failing' says neither nothing nor which failures")
         }
 
@@ -566,7 +566,7 @@ struct ObjectReader {
     private func place(_ value: Value) throws -> Place {
         var cursor = try FieldCursor(value, of: "place")
         let stands = try held(cursor.next())
-        let read = Place(try Field(cursor.next(), of: "place").list(step), in: stands)
+        let read = Place(try cursor.field().list(step), in: stands)
 
         try cursor.end()
 
@@ -577,13 +577,13 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "place step")
         let read: Place.Step
 
-        switch ObjectLayout.PlaceStepTag(rawValue: try cursor.tag()) {
-        case .key: read = .key(try cursor.text())
+        switch ObjectLayout.PlaceStepTag(rawValue: try cursor.field().integer()) {
+        case .key: read = .key(try cursor.field().text())
         case .part: read = .part(try part(cursor.next()))
         case .construct: read = .construct(try construct(cursor.next()))
-        case .index: read = .index(try cursor.integer())
-        case .statement: read = .statement(name: try cursor.maybe(text), at: try cursor.integer())
-        case .landmark: read = .landmark(try cursor.text())
+        case .index: read = .index(try cursor.field().integer())
+        case .statement: read = .statement(name: try cursor.field().maybe(text), at: try cursor.field().integer())
+        case .landmark: read = .landmark(try cursor.field().text())
         case nil: throw ObjectRefused("'place step' steps in a way this reads none of")
         }
 
@@ -596,7 +596,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "part")
         let read: Place.Part
 
-        switch ObjectLayout.PartTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.PartTag(rawValue: try cursor.field().integer()) {
         case .procedures: read = .procedures
         case .constants: read = .constants
         case .variables: read = .variables
@@ -637,7 +637,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "condition holder")
         let read: Place.ConditionHolder
 
-        switch ObjectLayout.ConditionHolderTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.ConditionHolderTag(rawValue: try cursor.field().integer()) {
         case .conditional: read = .conditional
         case .loop: read = .loop
         case nil: throw ObjectRefused("'condition holder' holds a condition in no way this reads")
@@ -652,7 +652,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "construct")
         let read: Construct
 
-        switch ObjectLayout.ConstructTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.ConstructTag(rawValue: try cursor.field().integer()) {
         case .literal: read = .literal
         case .reference: read = .reference
         case .array: read = .array
@@ -684,8 +684,8 @@ struct ObjectReader {
 
     private func layout(_ value: Value) throws -> Layout {
         var cursor = try FieldCursor(value, of: "layout")
-        let named = try cursor.maybe(name)
-        let written = try Field(cursor.next(), of: "layout").list(name)
+        let named = try cursor.field().maybe(name)
+        let written = try cursor.field().list(name)
 
         try cursor.end()
 
@@ -700,7 +700,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "lowered type")
         let read: LoweredType
 
-        switch ObjectLayout.LoweredTypeTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.LoweredTypeTag(rawValue: try cursor.field().integer()) {
         case .any: read = .any
         case .never: read = .never
         case .null: read = .null
@@ -714,10 +714,10 @@ struct ObjectReader {
         case .record: read = .record(try loweredRecord(cursor.next()))
         case .procedure:
             read = .procedure(
-                parameters: try cursor.maybe { written in
+                parameters: try cursor.field().maybe { written in
                     try Field(written, of: "parameters").list(lowered)
                 },
-                returns: try cursor.maybe(lowered),
+                returns: try cursor.field().maybe(lowered),
                 constness: try constness(cursor.next()),
                 isolation: try isolation(cursor.next())
             )
@@ -725,7 +725,7 @@ struct ObjectReader {
         case .variable: read = .variable(try lowered(cursor.next()))
         case .`inout`: read = .inout(try lowered(cursor.next()))
         case .nullable: read = .nullable(try lowered(cursor.next()))
-        case .named: read = .named(try cursor.count())
+        case .named: read = .named(try cursor.field().count())
         case .parameter:
             read = .parameter(
                 label: try name(cursor.next()),
@@ -747,7 +747,7 @@ struct ObjectReader {
                 path: try path(cursor.next())
             )
 
-        case .undeclared: read = .undeclared(label: try cursor.text(), because: try undeclared(cursor.next()))
+        case .undeclared: read = .undeclared(label: try cursor.field().text(), because: try undeclared(cursor.next()))
         case nil: throw ObjectRefused("'lowered type' names a kind this reads none of")
         }
 
@@ -760,7 +760,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "undeclared")
         let read: LoweredType.Undeclared
 
-        switch ObjectLayout.UndeclaredTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.UndeclaredTag(rawValue: try cursor.field().integer()) {
         case .noTypeNamed: read = .noTypeNamed(try name(cursor.next()))
         case .noBoundNamed: read = .noBoundNamed(try name(cursor.next()))
         case .namesItself: read = .namesItself
@@ -776,8 +776,8 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "bound")
         let read: LoweredType.Bound
 
-        switch ObjectLayout.BoundTag(rawValue: try cursor.tag()) {
-        case .membership: read = .membership(try cursor.count())
+        switch ObjectLayout.BoundTag(rawValue: try cursor.field().integer()) {
+        case .membership: read = .membership(try cursor.field().count())
         case .contract: read = .contract(try name(cursor.next()))
         case nil: throw ObjectRefused("'bound' holds a parameter to nothing this reads")
         }
@@ -792,7 +792,7 @@ struct ObjectReader {
         let held = try layout(cursor.next())
         let read = try LoweredRecord(
             layout: held,
-            judging: try Field(cursor.next(), of: "record").list(lowered)
+            judging: try cursor.field().list(lowered)
         )
 
         try cursor.end()
@@ -813,7 +813,7 @@ struct ObjectReader {
             constness: try constness(cursor.next()),
             isolation: try isolation(cursor.next()),
             failing: try failing(cursor.next()),
-            sends: try Field(cursor.next(), of: "row").list(sent),
+            sends: try cursor.field().list(sent),
             judging: try implementation(cursor.next())
         )
 
@@ -826,7 +826,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "implementation")
         let read: Judged.Implementation
 
-        switch ObjectLayout.ImplementationTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.ImplementationTag(rawValue: try cursor.field().integer()) {
         case .body: read = .body(try body(cursor.next()), try frame(cursor.next()))
 
         case .native: read = .native(sending: try Field(cursor.next(), of: "sending").list(send))
@@ -841,8 +841,8 @@ struct ObjectReader {
     private func sent(_ value: Value) throws -> Sent {
         var cursor = try FieldCursor(value, of: "send")
         let read = Sent(
-            row: try cursor.count(),
-            handing: try cursor.count()
+            row: try cursor.field().count(),
+            handing: try cursor.field().count()
         )
 
         try cursor.end()
@@ -853,9 +853,9 @@ struct ObjectReader {
     private func send(_ value: Value) throws -> Native.Send {
         var cursor = try FieldCursor(value, of: "native send")
         let read = Native.Send(
-            position: try cursor.count(),
+            position: try cursor.field().count(),
             selector: try name(cursor.next()),
-            handing: try cursor.count()
+            handing: try cursor.field().count()
         )
 
         try cursor.end()
@@ -865,20 +865,20 @@ struct ObjectReader {
 
     private func frame(_ value: Value) throws -> Frame {
         var cursor = try FieldCursor(value, of: "frame")
-        let size = try cursor.count()
+        let size = try cursor.field().count()
         let read = Frame(
             size: size,
-            parameters: try Field(cursor.next(), of: "frame").list(counted),
-            variables: try Field(cursor.next(), of: "frame").list { written in
+            parameters: try cursor.field().list(counted),
+            variables: try cursor.field().list { written in
                 var held = try FieldCursor(written, of: "frame variable")
-                let taken = (variable: try held.count(), slot: try held.count())
+                let taken = (variable: try held.field().count(), slot: try held.field().count())
 
                 try held.end()
 
                 return taken
             },
-            captures: try Field(cursor.next(), of: "frame").list(counted),
-            names: try Field(cursor.next(), of: "frame").list(name)
+            captures: try cursor.field().list(counted),
+            names: try cursor.field().list(name)
         )
 
         try cursor.end()
@@ -889,8 +889,8 @@ struct ObjectReader {
     private func body(_ value: Value) throws -> LoweredBody {
         var cursor = try FieldCursor(value, of: "body")
         let read = LoweredBody(
-            instructions: try Field(cursor.next(), of: "body").list(instruction),
-            result: try cursor.maybe(operation)
+            instructions: try cursor.field().list(instruction),
+            result: try cursor.field().maybe(operation)
         )
 
         try cursor.end()
@@ -901,9 +901,9 @@ struct ObjectReader {
     private func instruction(_ value: Value) throws -> Instruction {
         var cursor = try FieldCursor(value, of: "instruction")
         let read = Instruction(
-            binding: try cursor.maybe(binding),
+            binding: try cursor.field().maybe(binding),
             code: try operation(cursor.next()),
-            label: try cursor.text()
+            label: try cursor.field().text()
         )
 
         try cursor.end()
@@ -915,10 +915,10 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "binding")
         let read: Instruction.Binding
 
-        switch ObjectLayout.BindingTag(rawValue: try cursor.tag()) {
-        case .bind: read = .bind(try cursor.count(), settling: try cursor.maybe(lowered))
-        case .declare: read = .declare(try cursor.count(), settling: try cursor.maybe(lowered))
-        case .assign: read = .assign(try address(cursor.next()), settling: try cursor.maybe(lowered))
+        switch ObjectLayout.BindingTag(rawValue: try cursor.field().integer()) {
+        case .bind: read = .bind(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
+        case .declare: read = .declare(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
+        case .assign: read = .assign(try address(cursor.next()), settling: try cursor.field().maybe(lowered))
         case nil: throw ObjectRefused("'binding' binds in a way this reads none of")
         }
 
@@ -930,8 +930,8 @@ struct ObjectReader {
     private func address(_ value: Value) throws -> Address {
         var cursor = try FieldCursor(value, of: "address")
         let read = Address(
-            slot: try cursor.count(),
-            steps: try Field(cursor.next(), of: "address").list(walk)
+            slot: try cursor.field().count(),
+            steps: try cursor.field().list(walk)
         )
 
         try cursor.end()
@@ -943,13 +943,13 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "walk")
         let read: Step
 
-        switch ObjectLayout.StepTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.StepTag(rawValue: try cursor.field().integer()) {
         case .field:
-            read = .field(try cursor.count(), try name(cursor.next()), optional: try cursor.flag())
+            read = .field(try cursor.field().count(), try name(cursor.next()), optional: try cursor.field().flag())
 
-        case .key: read = .key(try name(cursor.next()), optional: try cursor.flag())
-        case .index: read = .index(try cursor.integer(), optional: try cursor.flag())
-        case .at: read = .at(try address(cursor.next()), optional: try cursor.flag())
+        case .key: read = .key(try name(cursor.next()), optional: try cursor.field().flag())
+        case .index: read = .index(try cursor.field().integer(), optional: try cursor.field().flag())
+        case .at: read = .at(try address(cursor.next()), optional: try cursor.field().flag())
         case nil: throw ObjectRefused("'walk' steps in a way this reads none of")
         }
 
@@ -962,17 +962,17 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "operation")
         let read: Operation
 
-        switch ObjectLayout.OperationTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.OperationTag(rawValue: try cursor.field().integer()) {
         case .literal: read = .literal(try self.value(cursor.next()))
         case .local: read = .local(try address(cursor.next()))
         case .array: read = .array(try Field(cursor.next(), of: "array").list(operation))
         case .record: read = .record(try recordOperation(cursor.next()))
         case .closure:
             read = .closure(
-                try cursor.count(),
+                try cursor.field().count(),
                 captures: try Field(cursor.next(), of: "captures").list { written in
                     var held = try FieldCursor(written, of: "capture")
-                    let taken = (try held.count(), try held.count())
+                    let taken = (try held.field().count(), try held.field().count())
 
                     try held.end()
 
@@ -990,7 +990,7 @@ struct ObjectReader {
             read = .cast(
                 try operation(cursor.next()),
                 as: try lowered(cursor.next()),
-                optional: try cursor.flag()
+                optional: try cursor.field().flag()
             )
 
         case .block: read = .block(try body(cursor.next()))
@@ -998,7 +998,7 @@ struct ObjectReader {
             read = .conditional(
                 try operation(cursor.next()),
                 then: try Field(cursor.next(), of: "then").list(instruction),
-                else: try cursor.maybe { written in
+                else: try cursor.field().maybe { written in
                     try Field(written, of: "otherwise").list(instruction)
                 }
             )
@@ -1007,11 +1007,11 @@ struct ObjectReader {
             read = .loop(
                 while: try operation(cursor.next()),
                 body: try body(cursor.next()),
-                round: try cursor.maybe(counted),
-                keeps: try cursor.maybe { written in
+                round: try cursor.field().maybe(counted),
+                keeps: try cursor.field().maybe { written in
                     var held = try FieldCursor(written, of: "keeps")
-                    let low = try held.count()
-                    let high = try held.count()
+                    let low = try held.field().count()
+                    let high = try held.field().count()
 
                     try held.end()
 
@@ -1027,7 +1027,7 @@ struct ObjectReader {
             read = .attempt(
                 try body(cursor.next()),
                 rescue: try body(cursor.next()),
-                failure: try cursor.maybe(counted)
+                failure: try cursor.field().maybe(counted)
             )
 
         case .call: read = .call(try callOperation(cursor.next()))
@@ -1035,8 +1035,8 @@ struct ObjectReader {
         case .leave:
             read = .leave(
                 try reach(cursor.next()),
-                target: try cursor.maybe(name),
-                try cursor.maybe(operation)
+                target: try cursor.field().maybe(name),
+                try cursor.field().maybe(operation)
             )
 
         case nil:
@@ -1053,7 +1053,7 @@ struct ObjectReader {
         let held = try layout(cursor.next())
         let read = try RecordOperation(
             layout: held,
-            judging: try Field(cursor.next(), of: "record").list(operation)
+            judging: try cursor.field().list(operation)
         )
 
         try cursor.end()
@@ -1064,14 +1064,14 @@ struct ObjectReader {
     private func callOperation(_ value: Value) throws -> CallOperation {
         var cursor = try FieldCursor(value, of: "call")
         let read = try CallOperation(
-            procedure: try cursor.count(),
+            procedure: try cursor.field().count(),
             arguments: try Field(cursor.next(), of: "arguments").list { written in
                 try Field(written, of: "argument").maybe(operation)
             },
             judging: try Field(cursor.next(), of: "handed").list { written in
                 var held = try FieldCursor(written, of: "handed")
                 let taken = CallOperation.Handed(
-                    position: try held.count(),
+                    position: try held.field().count(),
                     address: try address(held.next())
                 )
 
@@ -1104,7 +1104,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "argument")
         let read: Argument
 
-        switch ObjectLayout.ArgumentTag(rawValue: try cursor.tag()) {
+        switch ObjectLayout.ArgumentTag(rawValue: try cursor.field().integer()) {
         case .value: read = .value(try operation(cursor.next()))
         case .reference: read = .reference(try address(cursor.next()))
         case nil: throw ObjectRefused("'argument' is handed in a way this reads none of")

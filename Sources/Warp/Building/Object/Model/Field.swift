@@ -96,8 +96,8 @@ struct Field {
     // lays one down is `ObjectWriter.declaration`.
     func declaration() throws -> Closure.Declaration {
         var cursor = try FieldCursor(written, of: part)
-        let tag = try cursor.tag()
-        let declared = try cursor.name()
+        let tag = try cursor.field().integer()
+        let declared = try cursor.field().name()
 
         try cursor.end()
 

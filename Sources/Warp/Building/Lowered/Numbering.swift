@@ -287,7 +287,7 @@ struct Numbering: Sendable {
 
         return try Field(value, of: part).gathered { entry in
             var place = try FieldCursor(entry, of: part)
-            let held = (try Field(place.next(), of: part).declaration(), try place.count())
+            let held = (try place.field().declaration(), try place.field().count())
 
             try place.end()
 
