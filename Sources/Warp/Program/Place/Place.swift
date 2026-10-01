@@ -328,9 +328,11 @@ public struct Place: Sendable, Hashable {
     // The part of a program something sits in.
     public func part(_ part: Part) -> Place { appending(.part(part)) }
 
-    // What a call is written with. Two steps and not one: a document nests them
-    // under a key of their own.
-    public func argument(_ position: Int) -> Place { part(.arguments).index(position) }
+    // Where a child of an expression standing here stands.
+    public func child(_ child: Expression.Child) -> Place { appending(child.steps) }
+
+    // Where a block standing here holds its body or its result.
+    public func child(_ child: Block.Child) -> Place { appending(child.steps) }
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
@@ -349,7 +351,11 @@ public struct Place: Sendable, Hashable {
     }
 
     public func appending(_ step: Step) -> Place {
-        Place(steps + [step], in: document)
+        appending([step])
+    }
+
+    public func appending(_ more: [Step]) -> Place {
+        Place(steps + more, in: document)
     }
 
     // MARK: - Private

@@ -16,7 +16,7 @@ extension Body: Traversable {
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Node)] {
         statements.enumerated().flatMap { position, statement in
-            let here = stepping(trail, .statement(name: statement.name?.spelling, at: position))
+            let here = stepping(trail, Place.Step.statement(statement.name?.spelling, at: position))
 
             return [(here, Node.statement(statement))]
                 + statement.expression.walked(

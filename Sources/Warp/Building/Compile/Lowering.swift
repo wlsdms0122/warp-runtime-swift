@@ -552,10 +552,10 @@ struct Lowering {
             on: slots,
             writer: writer,
             inPlace: inPlace,
-            at: place.part(.body)
+            at: place.child(.body)
         )
         let result = try block.result.map { result in
-            try lower(result, in: inner, on: slots, writer: writer, inPlace: inPlace, at: place.part(.result))
+            try lower(result, in: inner, on: slots, writer: writer, inPlace: inPlace, at: place.child(.result))
         }
 
         return LoweredBody(instructions: instructions, result: result)
@@ -689,7 +689,7 @@ struct Lowering {
 
         case let .array(array):
             return .array(try array.enumerated().map { position, element in
-                try lower(element, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.index(position))
+                try lower(element, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.element(position)))
             })
 
         case let .record(record):
@@ -713,7 +713,7 @@ struct Lowering {
             return try lower(cast: value, as: type, optional: optional, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place)
 
         case let .block(block):
-            return .block(try lower(block, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place))
+            return .block(try lower(block, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.held)))
 
         case let .conditional(condition, then, otherwise):
             return try lower(conditional: condition, then: then, else: otherwise, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place)
@@ -763,7 +763,7 @@ struct Lowering {
                         on: slots,
                         writer: writer,
                         inPlace: inPlace,
-                        at: place.part(.fields).key(name.spelling)
+                        at: place.child(.field(name))
                     )
                 }
             )
@@ -792,7 +792,7 @@ struct Lowering {
             innerScope.slots[name] = inner.allocateParameter(name)
         }
 
-        let body = try lower(block, in: innerScope, on: inner, writer: writer, inPlace: inPlace, at: place.part(.closure))
+        let body = try lower(block, in: innerScope, on: inner, writer: writer, inPlace: inPlace, at: place.child(.closure))
 
         // Taken before the body is lowered would number a closure before
         // the ones it holds; taken after numbers the innermost first. The
@@ -856,9 +856,9 @@ struct Lowering {
         }
 
         return .apply(
-            try lower(callee, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.part(.callee)),
+            try lower(callee, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.callee)),
             arguments: try arguments.enumerated().map { position, argument in
-                let here = place.part(.arguments).index(position)
+                let here = place.child(.argument(position))
 
                 guard handed.contains(position) else {
                     return .value(try lower(argument, in: scope, on: slots, writer: writer, inPlace: inPlace, at: here))
@@ -895,7 +895,7 @@ struct Lowering {
                 on: slots,
                 writer: writer,
                 inPlace: inPlace,
-                at: place.part(.subject(optional: optional))
+                at: place.child(.subject(optional: optional))
             ),
             as: lowered,
             optional: optional
@@ -922,11 +922,11 @@ struct Lowering {
                 on: slots,
                 writer: writer,
                 inPlace: inPlace,
-                at: place.part(.condition(of: .conditional))
+                at: place.child(.condition(of: .conditional))
             ),
-            then: try lower(then, in: &thenScope, on: slots, writer: writer, inPlace: inPlace, at: place.part(.then)),
+            then: try lower(then, in: &thenScope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.then)),
             else: try otherwise.map { otherwise in
-                try lower(otherwise, in: &elseScope, on: slots, writer: writer, inPlace: inPlace, at: place.part(.otherwise))
+                try lower(otherwise, in: &elseScope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.otherwise))
             }
         )
     }
@@ -955,13 +955,13 @@ struct Lowering {
             on: slots,
             writer: writer,
             inPlace: inPlace,
-            at: place.part(.condition(of: .loop))
+            at: place.child(.condition(of: .loop))
         )
         let start = slots.size
-        let instructions = try lower(body.body, in: &inner, on: slots, writer: writer, inPlace: inPlace, at: place.part(.body))
+        let instructions = try lower(body.body, in: &inner, on: slots, writer: writer, inPlace: inPlace, at: place.child(.held).child(.body))
         let bound = start ..< slots.size
         let result = try body.result.map { result in
-            try lower(result, in: inner, on: slots, writer: writer, inPlace: inPlace, at: place.part(.result))
+            try lower(result, in: inner, on: slots, writer: writer, inPlace: inPlace, at: place.child(.held).child(.result))
         }
 
         // A round that ends early has bound part of what a full round
@@ -988,7 +988,7 @@ struct Lowering {
         inPlace: InPlaceTable,
         at place: Place
     ) throws -> Operation {
-        let attempted = try lower(block, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place)
+        let attempted = try lower(block, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.held))
         var inner = scope
         let slot = failure.map { failure in slots.allocate(failure) }
 
@@ -998,7 +998,7 @@ struct Lowering {
 
         return .attempt(
             attempted,
-            rescue: try lower(rescue, in: inner, on: slots, writer: writer, inPlace: inPlace, at: place.part(.rescue)),
+            rescue: try lower(rescue, in: inner, on: slots, writer: writer, inPlace: inPlace, at: place.child(.rescue)),
             failure: slot
         )
     }
@@ -1015,7 +1015,7 @@ struct Lowering {
             leave.reach,
             target: leave.target,
             try leave.value.map { value in
-                try lower(value, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place)
+                try lower(value, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.held))
             }
         )
     }
@@ -1042,9 +1042,9 @@ struct Lowering {
         return DispatchOperation(
             contract: asked.contract,
             procedure: asked.procedure,
-            first: try lower(written, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.argument(0)),
+            first: try lower(written, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.argument(0))),
             arguments: try call.arguments.enumerated().dropFirst().map { position, written in
-                try argument(written, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.argument(position))
+                try argument(written, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.argument(position)))
             }
         )
     }
@@ -1091,7 +1091,7 @@ struct Lowering {
 
         return try CallOperation(
             handing: try call.arguments.enumerated().map { position, written in
-                try argument(written, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.argument(position))
+                try argument(written, in: scope, on: slots, writer: writer, inPlace: inPlace, at: place.child(.argument(position)))
             },
             to: callee,
             row: stands,

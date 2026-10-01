@@ -17,8 +17,8 @@ struct InPlaceTableTests {
     @Test("two tables naming calls at different places hold both")
     func absorbingKeepsEveryPlace() throws {
         // Given
-        let first = Place.procedure("entry", in: .assembled).argument(0)
-        let second = Place.procedure("entry", in: .assembled).argument(1)
+        let first = Place.procedure("entry", in: .assembled).child(.argument(0))
+        let second = Place.procedure("entry", in: .assembled).child(.argument(1))
         let sut = InPlaceTable([first: [0]])
 
         // When
@@ -32,7 +32,7 @@ struct InPlaceTableTests {
     @Test("two calls at one place are refused rather than one kept")
     func absorbingOnePlaceTwiceRefuses() {
         // Given
-        let place = Place.procedure("entry", in: .assembled).argument(0)
+        let place = Place.procedure("entry", in: .assembled).child(.argument(0))
         let sut = InPlaceTable([place: [0]])
 
         // When / Then

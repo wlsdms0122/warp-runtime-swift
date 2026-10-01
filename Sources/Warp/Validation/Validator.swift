@@ -362,7 +362,7 @@ public struct Validator: Sendable {
 
         case let .array(array):
             for (position, element) in array.enumerated() {
-                let here = place.index(position)
+                let here = place.child(.element(position))
 
                 try refuseAnswerless(element, at: here)
                 try validate(element, visible: visible, variables: variables, scope: scope, at: here)
@@ -370,7 +370,7 @@ public struct Validator: Sendable {
 
         case let .record(record):
             for (name, field) in record.sorted(by: { one, other in one.key < other.key }) {
-                let here = place.part(.fields).key(name.spelling)
+                let here = place.child(.field(name))
 
                 try refuseAnswerless(field, at: here)
                 try validate(field, visible: visible, variables: variables, scope: scope, at: here)
@@ -380,13 +380,13 @@ public struct Validator: Sendable {
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
         case let .cast(value, _, optional):
-            try refuseAnswerless(value, at: place.part(.subject(optional: optional)))
+            try refuseAnswerless(value, at: place.child(.subject(optional: optional)))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.part(.subject(optional: optional))
+                at: place.child(.subject(optional: optional))
             )
 
         case let .leave(leave):
@@ -399,20 +399,20 @@ public struct Validator: Sendable {
             // that end a loop.
             guard let value = leave.value else { return }
 
-            try refuseAnswerless(value, at: place)
+            try refuseAnswerless(value, at: place.child(.held))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place
+                at: place.child(.held)
             )
 
         // A closure sees where it was written plus what it declares, which is
         // the capture read statically. Its parameters hold for its body the way
         // a procedure's do, and it is written inside the parameters around it.
         case let .closure(procedure):
-            let inside = place.part(.closure)
+            let inside = place.child(.closure)
             let parameters = Set(procedure.signature.names)
 
             // The same rule the top-level signature gets. A closure's parameter
@@ -436,17 +436,17 @@ public struct Validator: Sendable {
             )
 
         case let .apply(callee, arguments):
-            try refuseConstruct(callee, at: place.part(.callee))
+            try refuseConstruct(callee, at: place.child(.callee))
             try validate(
                 callee,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.part(.callee)
+                at: place.child(.callee)
             )
 
             for (position, argument) in arguments.enumerated() {
-                let here = place.part(.arguments).index(position)
+                let here = place.child(.argument(position))
 
                 try refuseConstruct(argument, at: here)
                 try validate(
@@ -459,26 +459,26 @@ public struct Validator: Sendable {
             }
 
         case let .block(block):
-            try validate(block, visible: visible, variables: variables, scope: scope, at: place)
+            try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
 
         case let .conditional(condition, then, otherwise):
             try refuseConstructCondition(
                 condition,
-                at: place.part(.condition(of: .conditional))
+                at: place.child(.condition(of: .conditional))
             )
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.part(.condition(of: .conditional))
+                at: place.child(.condition(of: .conditional))
             )
             try validate(
                 then,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.part(.then)
+                at: place.child(.then)
             )
 
             if let otherwise {
@@ -487,7 +487,7 @@ public struct Validator: Sendable {
                     visible: visible,
                     variables: variables,
                     scope: scope,
-                    at: place.part(.otherwise)
+                    at: place.child(.otherwise)
                 )
             }
 
@@ -500,20 +500,20 @@ public struct Validator: Sendable {
 
             let inner = visible.union(round.map { round in [round] } ?? [])
 
-            try refuseConstructCondition(condition, at: place.part(.condition(of: .loop)))
+            try refuseConstructCondition(condition, at: place.child(.condition(of: .loop)))
             try validate(
                 condition,
                 visible: inner,
                 variables: variables,
                 scope: scope,
-                at: place.part(.condition(of: .loop))
+                at: place.child(.condition(of: .loop))
             )
             try validate(
                 body,
                 visible: inner,
                 variables: variables,
                 scope: scope.inside(round),
-                at: place
+                at: place.child(.held)
             )
 
         // While the rescue runs, the failure is a value under the declared name.
@@ -527,14 +527,14 @@ public struct Validator: Sendable {
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place
+                at: place.child(.held)
             )
 
             guard !rescue.body.statements.isEmpty || rescue.result != nil else {
                 // An empty rescue would swallow a failure into null without a
                 // trace. If the alternate path produces nothing, the author's
                 // honest form is no rescue at all.
-                throw ValidationError("must not be empty", at: place.part(.rescue))
+                throw ValidationError("must not be empty", at: place.child(.rescue))
             }
 
             try validate(
@@ -542,12 +542,12 @@ public struct Validator: Sendable {
                 visible: visible.union(failure.map { failure in [failure] } ?? []),
                 variables: variables,
                 scope: scope,
-                at: place.part(.rescue)
+                at: place.child(.rescue)
             )
 
         case let .call(call):
             for (position, argument) in call.arguments.enumerated() {
-                let here = place.argument(position)
+                let here = place.child(.argument(position))
 
                 try refuseConstruct(argument, at: here)
                 try validate(
@@ -601,7 +601,7 @@ public struct Validator: Sendable {
             visible: visible,
             variables: variables,
             scope: scope,
-            at: place.part(.body)
+            at: place.child(.body)
         )
 
         if let result = block.result {
@@ -611,7 +611,7 @@ public struct Validator: Sendable {
                 throw ValidationError(
                     "nothing runs after leaving,"
                         + " and this result would never be reached",
-                    at: place.part(.result)
+                    at: place.child(.result)
                 )
             }
 
@@ -619,14 +619,14 @@ public struct Validator: Sendable {
             // exists to hold an answer) has nothing to take from one. Refused
             // for that reason, rather than as a type that fails to fit
             // downstream.
-            try refuseAnswerless(result, at: place.part(.result))
+            try refuseAnswerless(result, at: place.child(.result))
 
             try validate(
                 result,
                 visible: inner.visible,
                 variables: inner.variables,
                 scope: scope,
-                at: place.part(.result)
+                at: place.child(.result)
             )
         }
     }

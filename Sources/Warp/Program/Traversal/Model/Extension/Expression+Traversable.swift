@@ -15,29 +15,10 @@ extension Expression: Traversable {
         // A closure names its own place: the literal and the body it carries
         // are found under one name, so a report says which closure without
         // having to say it twice.
-        let here: Trail = if case .closure = self { stepping(trail, .part(.closure)) } else { trail }
+        let here: Trail = if case .closure = self { stepped(trail, to: .closure, by: stepping) } else { trail }
 
-        func inner(_ expression: Expression, under part: Place.Part? = nil) -> [(Trail, Node)] {
-            expression.walked(
-                at: part.map { part in stepping(here, .part(part)) } ?? here,
-                stepping: stepping
-            )
-        }
-
-        // What a call or an application is written with, walked in position
-        // order and each given its own place: two of them reported from the
-        // same one would say a thing is wrong and not say which.
-        func arguments(_ children: [Expression]) -> [(Trail, Node)] {
-            children.enumerated().flatMap { position, argument in
-                argument.walked(at: stepping(stepping(here, .part(.arguments)), .index(position)), stepping: stepping)
-            }
-        }
-
-        func named(_ children: [Name: Expression], under place: Trail) -> [(Trail, Node)] {
-            children.sorted { mine, theirs in mine.key < theirs.key }
-                .flatMap { name, child in
-                    child.walked(at: stepping(place, .key(name.spelling)), stepping: stepping)
-                }
+        func inner(_ expression: Expression, as child: Child) -> [(Trail, Node)] {
+            expression.walked(at: stepped(here, to: child, by: stepping), stepping: stepping)
         }
 
         let held: [(Trail, Node)] = switch self {
@@ -48,44 +29,54 @@ extension Expression: Traversable {
             procedure.block?.walked(at: here, stepping: stepping) ?? []
 
         case let .cast(value, _, optional):
-            inner(value, under: .subject(optional: optional))
+            inner(value, as: .subject(optional: optional))
 
-        // A leave writes what it carries directly under its own construct,
-        // which the statement holding it already stepped into.
         case let .leave(leave):
-            leave.value.map { value in inner(value) } ?? []
+            leave.value.map { value in inner(value, as: .held) } ?? []
 
         case let .array(array):
-            array.enumerated().flatMap { position, element in
-                element.walked(at: stepping(here, .index(position)), stepping: stepping)
-            }
+            array.enumerated().flatMap { position, element in inner(element, as: .element(position)) }
 
         case let .record(record):
-            named(record, under: stepping(here, .part(.fields)))
+            record.sorted { mine, theirs in mine.key < theirs.key }
+                .flatMap { name, field in inner(field, as: .field(name)) }
 
+        // What a call or an application is written with, walked in position
+        // order and each given its own place: two of them reported from the
+        // same one would say a thing is wrong and not say which.
         case let .apply(callee, written):
-            inner(callee, under: .callee) + arguments(written)
+            inner(callee, as: .callee)
+                + written.enumerated().flatMap { position, argument in inner(argument, as: .argument(position)) }
 
         case let .call(call):
-            arguments(call.arguments)
+            call.arguments.enumerated().flatMap { position, argument in inner(argument, as: .argument(position)) }
 
         case let .block(block):
-            block.walked(at: here, stepping: stepping)
+            block.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)
 
         case let .conditional(condition, then, otherwise):
-            inner(condition, under: .condition(of: .conditional))
-                + then.walked(at: stepping(here, .part(.then)), stepping: stepping)
-                + (otherwise?.walked(at: stepping(here, .part(.otherwise)), stepping: stepping) ?? [])
+            inner(condition, as: .condition(of: .conditional))
+                + then.walked(at: stepped(here, to: .then, by: stepping), stepping: stepping)
+                + (otherwise?.walked(at: stepped(here, to: .otherwise, by: stepping), stepping: stepping) ?? [])
 
         case let .loop(condition, body, _):
-            inner(condition, under: .condition(of: .loop))
-                + body.walked(at: here, stepping: stepping)
+            inner(condition, as: .condition(of: .loop))
+                + body.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)
 
         case let .attempt(attempted, rescue, _):
-            attempted.walked(at: here, stepping: stepping)
-                + rescue.walked(at: stepping(here, .part(.rescue)), stepping: stepping)
+            attempted.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)
+                + rescue.walked(at: stepped(here, to: .rescue, by: stepping), stepping: stepping)
         }
 
         return [(here, .expression(self))] + held
+    }
+
+    // Where a child stands from the trail of the expression holding it.
+    private func stepped<Trail>(
+        _ trail: Trail,
+        to child: Child,
+        by stepping: (Trail, Place.Step) -> Trail
+    ) -> Trail {
+        child.steps.reduce(trail, stepping)
     }
 }
