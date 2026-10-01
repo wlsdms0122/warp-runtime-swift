@@ -74,18 +74,7 @@ struct Evaluator: Sendable {
     // MARK: - Public
     // A run starting from an entry, its arguments by name.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
-        guard case let .body(body, frame) = entry.implementation else {
-            throw ExecutionError("a run starts from a body, and this declaration is native")
-        }
-
-        let settled = try entry.settle(arguments)
-        var activation = try activation(of: entry, in: frame)
-
-        for (position, value) in settled.enumerated() {
-            activation.cells[frame.parameters[position]] = .value(value ?? .null)
-        }
-
-        return try await answer(body, of: entry, in: &activation, at: Trace())
+        try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
     }
 
     // Calling a closure a procedure holds. What may be called is what the
@@ -119,31 +108,12 @@ struct Evaluator: Sendable {
         at trace: Trace
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
-        let settled = try settled(callee, sending: sending, handing: values)
 
-        switch callee.implementation {
-        case .native(.query):
-            return try await answer(callee, with: settled, at: trace)
-
-        case let .native(.effect(effect)):
-            return try await run(
-                effect,
-                of: callee,
-                settled: settled,
-                holds: [],
-                trace: trace.appending(callee.hop)
-            )
-
-        case let .body(body, frame):
-            return try await answer(
-                callee,
-                running: body,
-                in: frame,
-                settled: settled,
-                holding: [],
-                at: trace.appending(callee.hop)
-            )
-        }
+        return try await answer(
+            callee,
+            settled: try settled(callee, sending: sending, handing: values),
+            at: trace.appending(callee.hop)
+        )
     }
 
     // The same send, where the sender answers without running. The link
@@ -556,6 +526,26 @@ struct Evaluator: Sendable {
             in: &activation,
             at: trace.appending(linked.hop)
         )
+    }
+
+    // A row answered with its arguments settled and nothing handed in place,
+    // through the door its implementation is: what a send reaches and what a
+    // run starts from.
+    private func answer(
+        _ callee: Linked,
+        settled: Settled,
+        at trace: Trace
+    ) async throws -> Value {
+        switch callee.implementation {
+        case .native(.query):
+            return try await answer(callee, with: settled, at: trace)
+
+        case let .native(.effect(effect)):
+            return try await run(effect, of: callee, settled: settled, holds: [], trace: trace)
+
+        case let .body(body, frame):
+            return try await answer(callee, running: body, in: frame, settled: settled, holding: [], at: trace)
+        }
     }
 
     // The one way a written procedure is called: its frame, the settled
