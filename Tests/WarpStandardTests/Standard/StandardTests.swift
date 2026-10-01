@@ -36,7 +36,7 @@ struct StandardTests {
         // Given. What the bundles declare, and how the one list cuts them
         let shipped = Set(Module.standard.flatMap(\.procedures.keys))
 
-        // When / Then. A name in `builtin` that nothing declares is a list gone
+        // When / Then. A name in `builtinProcedures` that nothing declares is a list gone
         // stale
         #expect(Module.builtinProcedures.subtracting(shipped).isEmpty)
         #expect(Module.builtinProcedures.count == 25)

@@ -487,7 +487,7 @@ struct Compiler {
                 let holding = declared.lowered(in: context.loweredTypes)
 
                 if case let .undeclared(label, _) = holding {
-                    throw BuildError("declares type '\(label)', which nothing declares", at: place)
+                    throw BuildError("declares type '\(label)', which no module in this link declares", at: place)
                 }
 
                 do {
