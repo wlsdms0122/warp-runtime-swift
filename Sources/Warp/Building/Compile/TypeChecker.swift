@@ -387,7 +387,7 @@ struct TypeChecker {
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,
-                with: context().bounding(only.symbol.procedure.signature.parameterBounds.table)
+                with: context().bounding(only.symbol.procedure.signature.parameterBounding.table)
             )
 
             // A reading naming a type parameter is handed on as it is. What a
@@ -577,7 +577,7 @@ struct TypeChecker {
             return .refusal(named.joined(separator: ", "))
         }
 
-        let bounds = declared.parameterBounds
+        let bounds = declared.parameterBounding
 
         if let refusal = bounds.refusal {
             return .refusal(refusal)
@@ -1669,7 +1669,7 @@ struct TypeChecker {
                     in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
                         _, own in own
                     },
-                    with: context.bounding(procedure.signature.parameterBounds.table),
+                    with: context.bounding(procedure.signature.parameterBounding.table),
                     ask: ask
                 )
 
