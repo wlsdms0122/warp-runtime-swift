@@ -25,8 +25,8 @@ struct PlaceWrittenTests {
     // MARK: - Test
     @Test("a refusal from the checking is addressed in the document's keys")
     func aCheckingRefusalIsSpelledForTheAuthor() {
-        // Given. A loop whose condition reads a name nothing declares. The
-        // language calls that slot a condition and this document writes it
+        // Given / When. A loop whose condition reads a name nothing declares.
+        // The language calls that slot a condition and this document writes it
         // `where`.
         let error = #expect(throws: ValidationError.self) {
             try loader.loadProcedure([
@@ -60,7 +60,7 @@ struct PlaceWrittenTests {
             .appending(.construct(.loop))
             .part(.condition(of: .loop))
 
-        // Then
+        // When / Then
         #expect(conditional.written(by: .standard).rendered?.hasSuffix(".conditional.when") == true)
         #expect(loop.written(by: .standard).rendered?.hasSuffix(".loop.while") == true)
 
@@ -80,7 +80,7 @@ struct PlaceWrittenTests {
             .appending(.construct(.conditional))
             .part(.condition(of: .conditional))
 
-        // Then
+        // When / Then
         #expect(sut.written(by: registry).rendered?.hasSuffix(".if.when") == true)
     }
 
@@ -117,9 +117,9 @@ struct PlaceWrittenTests {
 
     @Test("a construct in a slot no statement holds is still spelled for its own construct")
     func aSlotOutsideAStatementKnowsItsOwner() throws {
-        // Given. A loop standing in a block's result. Nothing puts a construct
-        // step in front of it, so a reading that asked the steps around it
-        // would call a loop's condition `when`.
+        // Given / When. A loop standing in a block's result. Nothing puts a
+        // construct step in front of it, so a reading that asked the steps
+        // around it would call a loop's condition `when`.
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 procedures: [

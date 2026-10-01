@@ -18,9 +18,9 @@ struct SignatureTests {
     // MARK: - Test
     @Test("a parameter written without a type declares nothing, and takes anything")
     func untypedParameterDeclaresNothing() async throws {
-        // Given. `any` would say every type is welcome; this says nothing at
-        // all, and the two are not the same declaration even though neither is
-        // checked
+        // Given / When. `any` would say every type is welcome; this says nothing
+        // at all, and the two are not the same declaration even though neither
+        // is checked
         let sut = try Loader.testing.loadDocument([
             "procedures": [
                 "keep": [
@@ -36,7 +36,7 @@ struct SignatureTests {
         #expect(signature.parameter(named: "subject")?.type == nil)
         #expect(signature.parameter(named: "labelled")?.type == .any)
 
-        // Neither checks, so both take a type nothing was said about.
+        // And. Neither checks, so both take a type nothing was said about.
         let settled = try settled(signature, given: ["subject": .int(1), "labelled": .int(2)])
 
         #expect(settled["subject"] == .int(1))
@@ -45,7 +45,7 @@ struct SignatureTests {
 
     @Test("a procedure written without a return type declares nothing")
     func untypedReturnDeclaresNothing() async throws {
-        // Given
+        // Given / When
         let sut = try Loader.testing.loadDocument([
             "procedures": [
                 "quiet": ["body": [["let": "done", "value": "end"]]],

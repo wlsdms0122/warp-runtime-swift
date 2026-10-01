@@ -220,8 +220,8 @@ struct LeaveTests {
 
     @Test("leaving is refused where there is nothing to leave")
     func leavingNeedsSomethingToLeave() async {
-        // Given. A loop's name is not visible to a closure, because a closure
-        // is a procedure and runs wherever it is called from
+        // When / Then. A loop's name is not visible to a closure, because a
+        // closure is a procedure and runs wherever it is called from
         #expect {
             try loader.loadProcedure([
                 "body": [["value": ["break": Value.null]]]
@@ -249,8 +249,8 @@ struct LeaveTests {
 
     @Test("a closure cannot leave the loop it was written in")
     func aClosureCannotLeaveAnEnclosingLoop() {
-        // Given. A closure may be called anywhere, including long after the
-        // loop it was written in has ended. So the loops around where it is
+        // When / Then. A closure may be called anywhere, including long after
+        // the loop it was written in has ended. So the loops around where it is
         // *written* are not around where it runs.
         #expect {
             try loader.loadProcedure([
@@ -437,8 +437,8 @@ struct LeaveTests {
 
     @Test("a result under a body that always leaves is refused on the result")
     func aResultUnderALeavingBodyIsRefused() {
-        // Given. The result runs after the body, so it is "after" the same way
-        // a trailing statement is
+        // When / Then. The result runs after the body, so it is "after" the
+        // same way a trailing statement is
         #expect {
             try loader.loadProcedure([
                 "returns": "int",
@@ -456,9 +456,10 @@ struct LeaveTests {
 
     @Test("nothing may be written after leaving")
     func nothingRunsAfterLeaving() {
-        // Given. A statement after one that leaves never runs, so the name it
-        // was going to bind never binds. Reading it later would read nothing,
-        // and there is no kind of program where that is what the author meant.
+        // When / Then. A statement after one that leaves never runs, so the
+        // name it was going to bind never binds. Reading it later would read
+        // nothing, and there is no kind of program where that is what the
+        // author meant.
         #expect {
             try loader.loadProcedure([
                 "returns": "string",

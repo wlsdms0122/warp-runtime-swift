@@ -336,8 +336,9 @@ struct ReadingErrorTests {
 
     @Test("a fragment is refused about no document, and says so by naming none")
     func aFragmentNamesNoDocument() throws {
-        // Given. What a fragment will be part of is the caller's, and a reader
-        // that named a document here would be naming one it was never shown
+        // Given / When. What a fragment will be part of is the caller's, and a
+        // reader that named a document here would be naming one it was never
+        // shown
         let error = #expect(throws: ReadingError.self) {
             try loader.statement(from: ["id": "broken", "value": "x", "fallbck": "y"])
         }

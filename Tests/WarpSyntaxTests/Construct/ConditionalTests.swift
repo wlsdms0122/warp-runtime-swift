@@ -47,7 +47,8 @@ struct ConditionalTests {
 
     @Test("a name on a conditional is refused at reading")
     func aNameOnABranchIsRefused() {
-        // Given. A conditional answers nothing, so its name could never bind
+        // When / Then. A conditional answers nothing, so its name could never
+        // bind
         #expect {
             try loader.loadProcedure([
                 "body": [

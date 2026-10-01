@@ -19,7 +19,8 @@ struct ExpressionFormTests {
     // MARK: - Test
     @Test("a string spelling a placeholder stays a literal")
     func placeholderStringStaysLiteral() throws {
-        // Given. The injection doctrine: no string is ever re-parsed into a ref
+        // Given / When. The injection doctrine: no string is ever re-parsed
+        // into a ref
         let reference = try loader.expression(from: "${secret}")
 
         // Then
@@ -54,8 +55,8 @@ struct ExpressionFormTests {
 
     @Test("a bytes value decodes as a bytes literal, and numbers stay numbers")
     func bytesDecodeAsBytes() throws {
-        // Given. The one binary kind crosses the Value bridge whole; an array
-        // of small numbers next to it must stay an array of numbers
+        // Given / When. The one binary kind crosses the Value bridge whole; an
+        // array of small numbers next to it must stay an array of numbers
         let bytes = try loader.expression(from: .bytes([0x6A, 0x73]))
         let numbers = try loader.expression(from: .array([.int(1), .int(2)]))
 
@@ -77,7 +78,7 @@ struct ExpressionFormTests {
 
     @Test("only the exact { ref: } form decodes as a reference")
     func exactRefFormDecodes() throws {
-        // Given
+        // Given / When
         let reference = try loader.expression(from: ["ref": "items[0].name"])
 
         // Then
@@ -86,8 +87,8 @@ struct ExpressionFormTests {
 
     @Test("a record's field named like a tag is a field, and reaches nothing")
     func aFieldNamedLikeATagStaysInert() throws {
-        // Given. Under `record`, a field's name is never a key the grammar
-        // reads, so a field called `ref` holds the text it was given
+        // Given / When. Under `record`, a field's name is never a key the
+        // grammar reads, so a field called `ref` holds the text it was given
         let reference = try loader.expression(from: ["record": ["ref": "secret", "value": 1]])
 
         // Then
@@ -137,7 +138,7 @@ struct ExpressionFormTests {
 
     @Test("a closed format template decodes")
     func closedFormatDecodes() throws {
-        // Given
+        // Given / When
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",
             "with": ["who": ["ref": "who"]]
@@ -151,7 +152,7 @@ struct ExpressionFormTests {
 
     @Test("a template lowers to the procedures that build it")
     func templateLowersToProcedures() throws {
-        // Given
+        // Given / When
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",
             "with": ["who": ["ref": "name"]]
@@ -178,16 +179,17 @@ struct ExpressionFormTests {
             return
         }
 
-        // The binding is substituted, so the placeholder never names anything
-        // the template was not given.
+        // And. The binding is substituted, so the placeholder never names
+        // anything the template was not given.
         #expect(spelled.selector == Notation.testing.interpolation?.read)
         #expect(spelled.arguments.first?.referencePath == [.key("name")])
     }
 
     @Test("an index reference inside a placeholder stays inside the template")
     func indexReferenceStaysClosed() throws {
-        // Given. `${xs[i]}` names two bindings, and a template refuses a name
-        // `with` does not bind. What is built must read both from the template
+        // Given / When. `${xs[i]}` names two bindings, and a template refuses a
+        // name `with` does not bind. What is built must read both from the
+        // template
         let reference = try loader.expression(from: [
             "format": "at ${xs[i]}",
             "with": ["xs": ["ref": "items"], "i": ["ref": "cursor"]]
@@ -223,7 +225,7 @@ struct ExpressionFormTests {
 
     @Test("a record is written under `record`, and each field is an expression")
     func aRecordIsWrittenUnderItsTag() throws {
-        // Given
+        // Given / When
         let reference = try loader.expression(from: ["record": ["name": "report", "target": ["ref": "target"]]])
 
         // Then

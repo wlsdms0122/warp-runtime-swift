@@ -84,15 +84,15 @@ struct PathParserTests {
         // Given
         let sut = PathParser()
 
-        // Then. A trailing `?`, a `?` before the head, and a doubled `?` each
-        // claim an absence no segment reads
+        // When / Then. A trailing `?`, a `?` before the head, and a doubled `?`
+        // each claim an absence no segment reads
         #expect(throws: PathSyntaxError.self) { try sut.parse("a.b?") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("?.a") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a??.b") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a?b.c") }
 
-        // An empty segment after `?.` is nothing to mark. Dropping it would
-        // parse a path the author never wrote.
+        // And. An empty segment after `?.` is nothing to mark. Dropping it
+        // would parse a path the author never wrote.
         #expect(throws: PathSyntaxError.self) { try sut.parse("a?..b") }
     }
 
@@ -102,14 +102,15 @@ struct PathParserTests {
         // `?.` or not
         let sut = PathParser()
 
-        // Then
+        // When / Then
         #expect(throws: PathSyntaxError.self) { try sut.parse("a..b") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("items[0]..name") }
         #expect(throws: PathSyntaxError.self) { try sut.parse(".a") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a.") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a.[0]") }
 
-        // The dot after an index is a segment boundary, not an empty segment.
+        // And. The dot after an index is a segment boundary, not an empty
+        // segment.
         #expect(
             try sut.parse("items[0].name") == [.key("items"), .index(0), .key("name")]
         )
@@ -120,7 +121,7 @@ struct PathParserTests {
         // Given
         let sut = PathParser()
 
-        // Then. Neither bracket is folded into a name
+        // When / Then. Neither bracket is folded into a name
         #expect(throws: PathSyntaxError.self) { try sut.parse("a[0") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a[i[0]") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a]") }

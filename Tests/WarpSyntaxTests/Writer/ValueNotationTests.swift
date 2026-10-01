@@ -41,20 +41,21 @@ struct ValueNotationTests {
 
     @Test("bytes are written as the array they are, and come back as that array")
     func bytesAreWrittenAsTheArrayTheyAre() throws {
-        // Given. A Codable carrier has no compact spelling for bytes, and
+        // Given / When. A Codable carrier has no compact spelling for bytes, and
         // `bytes = array<byte>` says what to write instead. It reads back as
         // the array rather than as bytes, which is what this carrier does to
         // `1.0` too. A spelling it cannot hold is a spelling it loses.
         let written = try JSONEncoder().encode(ValueWriter(.bytes([104, 105])))
 
+        // Then
         #expect(String(decoding: written, as: UTF8.self) == "[104,105]")
         #expect(
             try JSONDecoder().decode(ValueReader.self, from: written).value
                 == .array([.int(104), .int(105)])
         )
 
-        // Refusing instead would close the only way out for a value that never
-        // spelled itself bytes: an `array<int>` slot hands on what it was
+        // And. Refusing instead would close the only way out for a value that
+        // never spelled itself bytes: an `array<int>` slot hands on what it was
         // given, and what it was given may have been written `x"6869"`.
         #expect(
             try TypeExpression.array(.int).settling(.bytes([104, 105]), at: "value")
@@ -64,20 +65,21 @@ struct ValueNotationTests {
 
     @Test("a decoder walks bytes where it walks an array")
     func aDecoderWalksBytesWhereItWalksAnArray() throws {
-        // The two spellings are one collection to anything reading elements
-        // out, and `Data` is still held to its own spelling, so an array of
-        // small numbers cannot quietly become bytes.
+        // Given. The two spellings are one collection to anything reading
+        // elements out, and `Data` is still held to its own spelling, so an
+        // array of small numbers cannot quietly become bytes.
         func decoding<T: Decodable>(_ type: T.Type, from value: Value) throws -> T {
             try T(from: ValueDecoder(value: value, codingPath: [], steps: [], userInfo: [:]))
         }
 
+        // When / Then
         #expect(try decoding([Int].self, from: .bytes([1, 2])) == [1, 2])
         #expect(try decoding([Int].self, from: .array([.int(1), .int(2)])) == [1, 2])
 
-        // Asking for `Data` is answered by the containers, which hold bytes to
-        // their own spelling. An array of small numbers is refused there rather
-        // than let through to `Data`'s own decoding, which reads an unkeyed
-        // list and would quietly make bytes of it.
+        // And. Asking for `Data` is answered by the containers, which hold bytes
+        // to their own spelling. An array of small numbers is refused there
+        // rather than let through to `Data`'s own decoding, which reads an
+        // unkeyed list and would quietly make bytes of it.
         struct Held: Decodable { let blob: Data }
 
         #expect(try decoding(Held.self, from: .dictionary(["blob": .bytes([1, 2])])).blob == Data([1, 2]))
@@ -89,8 +91,8 @@ struct ValueNotationTests {
 
     @Test("a foreign numeral past the int reads as the double the carrier holds")
     func aForeignNumeralPastTheIntReadsAsDouble() throws {
-        // Given. A JSON number is a binary64 by the carrier's own nature: its
-        // digits cannot be told from a fraction, and whatever exactness the
+        // When / Then. A JSON number is a binary64 by the carrier's own nature:
+        // its digits cannot be told from a fraction, and whatever exactness the
         // writing had was the carrier's to lose before this reader saw it; the
         // warp encodings are where every size is exact
         #expect(

@@ -74,8 +74,8 @@ struct FingerprintTests {
 
     @Test("moves when the object behind it moves")
     func movesWithWhatItLeansOn() async throws {
-        // Given. The same document, compiled against two objects that declare
-        // the same procedure and answer differently.
+        // Given / When. The same document, compiled against two objects that
+        // declare the same procedure and answer differently.
         let first = try await fingerprint(of: program, against: answering(.int(1)))
         let second = try await fingerprint(of: program, against: answering(.int(2)))
 
@@ -106,9 +106,9 @@ struct FingerprintTests {
 
     @Test("moves when a native procedure it uses declares itself differently")
     func movesWithANativeDeclaration() async throws {
-        // Given. The same document, against a host procedure of one spelling
-        // declared to answer two different types. The declaration is the
-        // native's document's, and that document's object is what this one
+        // Given / When. The same document, against a host procedure of one
+        // spelling declared to answer two different types. The declaration is
+        // the native's document's, and that document's object is what this one
         // leans on.
         let first = try await fingerprint(of: program, against: native(returning: .int))
         let second = try await fingerprint(of: program, against: native(returning: .any))
@@ -119,9 +119,9 @@ struct FingerprintTests {
 
     @Test("stays when a native procedure it uses answers differently under one declaration")
     func staysWithANativeAnswer() async throws {
-        // Given. Two hosts bringing one declaration with two bodies. What a
-        // native answers is the host's code, which no object holds, so the
-        // key cannot see it: what tells two hosts apart is the release the
+        // Given / When. Two hosts bringing one declaration with two bodies.
+        // What a native answers is the host's code, which no object holds, so
+        // the key cannot see it: what tells two hosts apart is the release the
         // object is stamped with.
         let first = try await fingerprint(of: program, against: native(returning: .int, answering: .int(1)))
         let second = try await fingerprint(of: program, against: native(returning: .int, answering: .int(2)))

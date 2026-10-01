@@ -45,9 +45,9 @@ struct NamelessTests {
 
     @Test("a nameless statement binds nothing a later statement could read")
     func aNamelessStatementBindsNothing() {
-        // Given. The dropped answer is dropped, not bound under some invented
-        // name a reference could reach; the reference resolves nowhere and the
-        // reading says so
+        // When / Then. The dropped answer is dropped, not bound under some
+        // invented name a reference could reach; the reference resolves nowhere
+        // and the reading says so
         #expect {
             try loader.loadDocument([
                 "procedures": [
@@ -66,6 +66,7 @@ struct NamelessTests {
 
     @Test("two naming keys are refused")
     func twoNamingKeysAreRefused() async {
+        // When / Then
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "body": [["let": "one", "var": "another", "value": 1]]
@@ -79,8 +80,8 @@ struct NamelessTests {
         ["set": "past", "value": ["continue": Value.null]]
     ])
     func aNamedLeavingStatementIsRefused(_ statement: Value) {
-        // Given. A leaving statement never finishes, so a naming key on one
-        // promises a binding that cannot happen
+        // When / Then. A leaving statement never finishes, so a naming key on
+        // one promises a binding that cannot happen
         #expect {
             try loader.loadProcedure(["body": [statement]])
         } throws: { error in
@@ -90,7 +91,7 @@ struct NamelessTests {
 
     @Test("a name on a conditional both of whose arms leave is refused")
     func aNamedStructuralLeaveIsRefused() {
-        // Given. The leave rules reach through structure
+        // When / Then. The leave rules reach through structure
         #expect {
             try loader.loadProcedure([
                 "returns": "int",
@@ -112,7 +113,7 @@ struct NamelessTests {
 
     @Test("a statement after one that leaves is refused on the leaving one")
     func aTrailingStatementAfterALeaveIsRefused() {
-        // Given. Order is a fact only the sequence shows
+        // When / Then. Order is a fact only the sequence shows
         #expect {
             try loader.loadProcedure([
                 "returns": "int",
@@ -130,12 +131,13 @@ struct NamelessTests {
 
     @Test("a name on a leaving statement is refused for the leave, not for the name")
     func aLeavingStatementIsRefusedBeforeItsNameIsJudged() {
-        // Given (a caller assembling statements directly, with a `set` naming a
+        // Given. A caller assembling statements directly, with a `set` naming a
         // leave: that the statement takes no name at all comes before any
-        // question about which name it is) visibility included
+        // question about which name it is
         let statement = Statement(binding: .assignment([.key("past")]), expression: .leave(Leave(reach: .procedure, value: .literal(.int(1))))
         )
 
+        // When / Then
         #expect {
             try Validator().validate(body: [statement], visible: [])
         } throws: { error in
@@ -145,13 +147,13 @@ struct NamelessTests {
 
     @Test("a construct that binds through its name binds nothing when written nameless")
     func aBindingConstructWrittenNamelessBindsNothing() throws {
-        // Given, a loop and an attempt with no naming key
+        // Given / When. A loop and an attempt with no naming key
         let module = try loader.loadProcedure(["body": [
             ["value": ["loop": ["while": false, "body": [["let": "x", "value": 1]]]]] as Value,
             ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
         ]])
 
-        // Then, each reads with no round and no failure to bind
+        // Then. Each reads with no round and no failure to bind
         guard case let .body(block) = module.procedures[entryName]?.implementation else {
             Issue.record("expected a body")
             return
@@ -170,8 +172,9 @@ struct NamelessTests {
 
     @Test("a naming key holding null is a broken name, not a nameless statement")
     func aNullNameIsRefused() {
-        // Given. A key written with no name in it: reading it as "no naming
-        // key" would make a failed name and an omitted one the same document
+        // When / Then. A key written with no name in it: reading it as "no
+        // naming key" would make a failed name and an omitted one the same
+        // document
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": [["let": Value.null, "value": 1]]])
         }
@@ -195,9 +198,11 @@ struct NamelessTests {
             ]
         ]
 
+        // When
         let loaded = try loader.loadDocument(document)
         let written = try Writer(registry: loader.registry).value(of: loaded)
 
+        // Then
         #expect(try Writer(registry: loader.registry).value(of: try loader.load(written)) == written)
     }
 

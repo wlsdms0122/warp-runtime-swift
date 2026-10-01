@@ -62,7 +62,7 @@ struct ConditionTests {
         // Given
         let sut = Scope(scope)
 
-        // Then
+        // When / Then
         #expect(try await sut.evaluate(
             equals(.reference(path("kind")), .literal(.string("a")))
         ))
@@ -92,7 +92,7 @@ struct ConditionTests {
             "candidates": .array([.string("same"), .string("other")])
         ])
 
-        // Then. A reference compares against another reference
+        // When / Then. A reference compares against another reference
         #expect(try await sut.evaluate(
             equals(.reference(path("left")), .reference(path("right")))
         ))
@@ -108,7 +108,7 @@ struct ConditionTests {
         // Given
         let sut = Scope(scope)
 
-        // Then
+        // When / Then
         #expect(try await sut.evaluate(
             equals(.reference(path("n")), .literal(.double(3.0)))
         ))
@@ -123,7 +123,7 @@ struct ConditionTests {
             negating(equals(.reference(path("n")), .literal(.int(4))))
             )
 
-        // Then
+        // When / Then
         #expect(try await sut.evaluate(condition))
     }
 
@@ -137,7 +137,7 @@ struct ConditionTests {
             "gone": .null
         ])
 
-        // Then
+        // When / Then
         #expect(try await sut.evaluate(
             .call(Call(selector: "std.text.contains", arguments: [.reference(path("title")), .literal(.string("spec"))]))
         ))
@@ -147,7 +147,8 @@ struct ConditionTests {
         #expect(try await sut.evaluate(
             .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("title")), .literal(.string("hello"))]))
         ))
-        // Absence is not an empty collection. `contains` walks what it was
+
+        // And. Absence is not an empty collection. `contains` walks what it was
         // handed, the way every other collection procedure does, so asking it
         // of nothing is refused rather than answered false.
         await #expect(throws: (any Error).self) {
@@ -156,8 +157,8 @@ struct ConditionTests {
             )
         }
 
-        // A text atom asking a number is type misuse, not a false answer. The
-        // number is refused where the argument it stands at is settled
+        // And. A text atom asking a number is type misuse, not a false answer.
+        // The number is refused where the argument it stands at is settled
         await #expect(throws: ArgumentError.self) {
             try await sut.evaluate(
                 .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("n")), .literal(.string("3"))]))
@@ -207,7 +208,7 @@ struct ConditionTests {
             .reference(path("outer.right"))
             )
 
-        // Then. Neither side is skipped
+        // When / Then. Neither side is skipped
         #expect(validates(condition, visible: ["left", "outer"]))
         #expect(!validates(condition, visible: ["left"]))
         #expect(!validates(condition, visible: ["outer"]))

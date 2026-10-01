@@ -33,7 +33,7 @@ struct TextEncodingTests {
             "nothing": .array([])
         ])
 
-        // Then
+        // When / Then
         #expect(try TextEncoding().value(from: TextEncoding().text(from: document)) == document)
     }
 
@@ -65,14 +65,14 @@ struct TextEncodingTests {
 
         """
 
-        // Then
+        // When / Then
         #expect(try TextEncoding().text(from: document) == golden)
         #expect(try TextEncoding().value(from: golden) == document)
     }
 
     @Test("a whole number and a fraction are different tokens")
     func wholeAndFractionDiffer() throws {
-        // Given. The difference is grammar, not a reader's guess
+        // When / Then. The difference is grammar, not a reader's guess
         #expect(try TextEncoding().value(from: "warpt 1\n1\n") == .int(1))
         #expect(try TextEncoding().value(from: "warpt 1\n1.0\n") == .double(1))
         #expect(try TextEncoding().value(from: "warpt 1\n-3\n") == .int(-3))
@@ -86,6 +86,7 @@ struct TextEncodingTests {
             "warpt 1\n1.50\n",  // a longer fraction
             "warpt 1\n1e2\n"    // an exponent the writer does not use here
         ] {
+            // When / Then
             #expect {
                 try TextEncoding().value(from: text)
             } throws: { error in
@@ -106,6 +107,7 @@ struct TextEncodingTests {
             "warpt 1\n{\n      a 1\n  b \"A\"\n    }\n",
             "warpt 1\n{\n  a 1\n  b \"A\"\n}"
         ] {
+            // When / Then
             #expect(try TextEncoding().value(from: text) == document, "\(text)")
         }
 
@@ -115,6 +117,7 @@ struct TextEncodingTests {
 
     @Test("keys read in any order, and a key written twice is refused")
     func aShuffledKeyReads() throws {
+        // When / Then
         #expect(
             try TextEncoding().value(from: "warpt 1\n{\n  b 1\n  a 2\n}\n")
                 == .dictionary(["a": .int(2), "b": .int(1)])
@@ -133,6 +136,7 @@ struct TextEncodingTests {
         // byte spelling for a name the value model reads as é
         let text = "warpt 1\n{\n  \"\u{65}\u{301}\" 1\n}\n"
 
+        // When / Then
         #expect {
             try TextEncoding().value(from: text)
         } throws: { error in
@@ -158,6 +162,7 @@ struct TextEncodingTests {
 
     @Test("text that does not begin as a document is refused")
     func aForeignHeaderIsRefused() {
+        // When / Then
         for text in ["{}", "", "json 1\n{}", "warpt\n{}"] {
             #expect(throws: (any Error).self) {
                 try TextEncoding().value(from: text)
@@ -167,6 +172,7 @@ struct TextEncodingTests {
 
     @Test("a document laid out by a later format is refused, not guessed at")
     func aLaterFormatIsRefused() {
+        // When / Then
         #expect {
             try TextEncoding().value(from: "warpt 2\nnull")
         } throws: { error in
@@ -180,6 +186,7 @@ struct TextEncodingTests {
 
     @Test("text after the document is refused")
     func trailingTextIsRefused() {
+        // When / Then
         #expect {
             try TextEncoding().value(from: "warpt 1\nnull null")
         } throws: { error in
@@ -200,6 +207,7 @@ struct TextEncodingTests {
             "warpt 1\n\"half an escape \\",
             "warpt 1\n"
         ] {
+            // When / Then
             #expect(throws: (any Error).self) {
                 try TextEncoding().value(from: text)
             }
@@ -208,6 +216,7 @@ struct TextEncodingTests {
 
     @Test("a close with nothing to close is refused")
     func aStrayCloseIsRefused() {
+        // When / Then
         for text in ["warpt 1\n]", "warpt 1\n}", "warpt 1\n[ } ]", "warpt 1\n{ a ] }"] {
             #expect(throws: (any Error).self) {
                 try TextEncoding().value(from: text)
@@ -217,6 +226,7 @@ struct TextEncodingTests {
 
     @Test("a bare token the format never assigned is refused")
     func anUnknownTokenIsRefused() {
+        // When / Then
         for text in ["warpt 1\nyes", "warpt 1\nnul", "warpt 1\n--1", "warpt 1\n1.5.5", "warpt 1\n1e"] {
             #expect(throws: (any Error).self) {
                 try TextEncoding().value(from: text)
@@ -226,6 +236,7 @@ struct TextEncodingTests {
 
     @Test("a record writes a field name where one is due")
     func aValueWhereAKeyIsDueIsRefused() throws {
+        // When / Then
         for text in ["warpt 1\n{ 1 2 }", "warpt 1\n{ [ ] null }", "warpt 1\n{ {} null }"] {
             #expect {
                 try TextEncoding().value(from: text)
@@ -244,6 +255,7 @@ struct TextEncodingTests {
 
     @Test("an escape that names no character is refused")
     func aBrokenEscapeIsRefused() throws {
+        // When / Then
         for text in [
             #"warpt 1\#n"\q""#,
             #"warpt 1\#n"\u12""#,
@@ -271,6 +283,7 @@ struct TextEncodingTests {
             "warpt 1\n\"\\u000a\"\n",
             "warpt 1\n\"\\u001B\"\n"
         ] {
+            // When / Then
             #expect(throws: (any Error).self, "\(text)") {
                 try TextEncoding().value(from: text)
             }
@@ -282,7 +295,7 @@ struct TextEncodingTests {
 
     @Test("a control character is carried as an escape, never raw")
     func controlCharactersTravelEscaped() throws {
-        // Given
+        // Given / When
         let text = try TextEncoding().text(from: .string("a\u{01}b"))
 
         // Then
@@ -303,6 +316,7 @@ struct TextEncodingTests {
             + "null"
             + String(repeating: "]", count: 600)
 
+        // When / Then
         #expect {
             try TextEncoding().value(from: text)
         } throws: { error in
@@ -312,6 +326,7 @@ struct TextEncodingTests {
 
     @Test("what a document cannot carry is refused on the way out")
     func theUnwritableIsRefusedWhenWriting() {
+        // When / Then
         for value in [Value.double(.infinity), .double(.nan)] {
             #expect(throws: (any Error).self) {
                 try TextEncoding().data(from: value)
@@ -327,7 +342,7 @@ struct TextEncodingTests {
 
     @Test("bytes are lowercase hex, two digits each, and nothing else")
     func bytesSpellingIsHeld() throws {
-        // Given. The one spelling, both ways
+        // When / Then. The one spelling, both ways
         #expect(try TextEncoding().value(from: "warpt 1\nx\"\"\n") == .bytes([]))
         #expect(try TextEncoding().text(from: .bytes([0x00, 0xff])) == "warpt 1\nx\"00ff\"\n")
 
@@ -359,10 +374,12 @@ struct TextEncodingTests {
 
     @Test("a field name outside normal form C never reaches the way out")
     func aDenormalKeyIsRefusedWhenWriting() {
-        // A record's keys are names, so there is no value carrying one for a
-        // writing to refuse: the refusal is at the door a name comes through.
+        // Given. A record's keys are names, so there is no value carrying one
+        // for a writing to refuse: the refusal is at the door a name comes
+        // through.
         let decomposed = "e\u{301}"
 
+        // When / Then
         #expect(throws: NameRefused.self) {
             try Name(decomposed)
         }
@@ -370,6 +387,7 @@ struct TextEncodingTests {
 
     @Test("bytes that are not UTF-8 are refused before they are text")
     func foreignBytesAreRefused() {
+        // When / Then
         #expect {
             try TextEncoding().value(from: Data([0x80, 0xff]))
         } throws: { error in
@@ -382,6 +400,7 @@ struct TextEncodingTests {
         // Given
         let bytes = Data([0xEF, 0xBB, 0xBF] + Array("warpt 1\n1\n".utf8))
 
+        // When / Then
         #expect {
             try TextEncoding().value(from: bytes)
         } throws: { error in
@@ -391,21 +410,23 @@ struct TextEncodingTests {
 
     @Test("a refusal says the line and column the reader stood at")
     func aRefusalIsPlaced() {
-        // A value where a field name is due: the reader stands on the `2`.
+        // When / Then. A value where a field name is due: the reader stands on
+        // the `2`.
         #expect {
             try TextEncoding().value(from: "warpt 1\n{\n  a 1\n  2\n}\n")
         } throws: { error in
             Self.refused(error, "a record writes a field name here", at: 4, 3)
         }
 
-        // Text that ends inside a record: the reader stands past the last line.
+        // And. Text that ends inside a record: the reader stands past the last
+        // line.
         #expect {
             try TextEncoding().value(from: "warpt 1\n{\n  a\n")
         } throws: { error in
             Self.refused(error, "the text ends where a value should begin", at: 4, 1)
         }
 
-        // A token the tokenizer refuses, before any value is read.
+        // And. A token the tokenizer refuses, before any value is read.
         #expect {
             try TextEncoding().value(from: "warpt 1\n[\n  \"a\"b\n]\n")
         } throws: { error in

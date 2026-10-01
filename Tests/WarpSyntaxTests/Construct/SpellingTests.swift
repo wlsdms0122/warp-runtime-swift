@@ -74,9 +74,9 @@ struct SpellingTests {
 
     @Test("a key can be given up, and a built-in respelled by giving it up first")
     func removingFreesTheKey() throws {
-        // Given. A notation that wants `loop` for something of its own takes
-        // it by dropping ours, which is why a rename here is not a rename of
-        // the language
+        // Given / When. A notation that wants `loop` for something of its own
+        // takes it by dropping ours, which is why a rename here is not a rename
+        // of the language
         let sut = try ConstructRegistry.standard
             .removing("loop")
             .registering(LoopForm.self, as: "repeat")

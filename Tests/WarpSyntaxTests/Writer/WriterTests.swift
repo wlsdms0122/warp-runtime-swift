@@ -539,7 +539,8 @@ struct WriterTests {
         // data
         let point = try Value.holding([(name: Name("ref"), value: Value.int(1))], named: "Point")
 
-        // Then. The writer leaves it as it is and the reader reads it as itself
+        // When / Then. The writer leaves it as it is and the reader reads it as
+        // itself
         #expect(try Writer().value(of: Expression.literal(point)) == point)
         guard case let .literal(read) = try Loader().expression(from: point), read == point else {
             Issue.record("the named record was not read as itself")
@@ -550,11 +551,11 @@ struct WriterTests {
 
     @Test("a canonical document is written back exactly as it was")
     func aCanonicalDocumentIsWrittenBackUnchanged() async throws {
-        // Given. `canonical` is written in the types themselves, so reading it
-        // and writing it must arrive at the same document. A fixed point only
-        // says the writing settled; this says nothing was left behind, because
-        // every slot the language has is written down here and a slot that
-        // stopped being written would go missing from the answer.
+        // Given / When. `canonical` is written in the types themselves, so
+        // reading it and writing it must arrive at the same document. A fixed
+        // point only says the writing settled; this says nothing was left
+        // behind, because every slot the language has is written down here and
+        // a slot that stopped being written would go missing from the answer.
         let sut = try sut.value(of: try loader.load(Self.canonical))
 
         // Then
@@ -563,20 +564,19 @@ struct WriterTests {
 
     @Test("nothing written is spelled", arguments: Self.corpus)
     func nothingWrittenIsSpelled(_ document: Value) async throws {
-        // Given. The corpus is written with every spelling the notation has.
-        // What comes back may use none of them, because a spelling is a rule
-        // the reading side would have to implement the same way, and the
-        // reading side is somewhere else.
-        let written = try sut.value(of: try loader.loadDocument(document))
-
-        // When. The two template keys, which are reserved in every notation.
+        // Given. The two template keys, which are reserved in every notation.
         // The condition spelling these are read with is recognised by `of`,
         // which is the key a cast writes what it reads under, so it leaves no
         // key here that a survival could be told apart by. A spelling whose key
         // is not also a procedure is asked about below.
         let spellings: Set<Name> = ["format", "with"]
 
-        // Then
+        // When. The corpus is written with every spelling the notation has.
+        let written = try sut.value(of: try loader.loadDocument(document))
+
+        // Then. What comes back may use none of them, because a spelling is a
+        // rule the reading side would have to implement the same way, and the
+        // reading side is somewhere else.
         #expect(Self.keys(in: written).isDisjoint(with: spellings))
     }
 
