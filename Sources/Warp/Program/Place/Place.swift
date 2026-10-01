@@ -41,7 +41,7 @@ public struct Place: Sendable, Equatable {
         public static let assembled = Document(identity: nil)
 
         // How the document reads on its own. An identity tells one document
-        // from every other in a link, since a link refuses the same one twice.
+        // from every other in a link, since the build refuses the same one twice.
         var rendered: String? {
             identity?.short
         }

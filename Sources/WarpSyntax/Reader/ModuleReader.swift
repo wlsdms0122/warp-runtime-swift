@@ -13,8 +13,9 @@ import Warp
 //
 // There is no top level to run. A body written at the root would make every
 // document an entry point and leave no way to write one that only declares.
-// Procedures are named here and which one runs is said at link time, so a
-// document that declares three of them is ordinary rather than a special case.
+// Procedures are named here and which one runs is named when a run starts, so
+// a document that declares three of them is ordinary rather than a special
+// case.
 public struct ModuleReader: Decodable {
     public enum CodingKeys: String, CodingKey, CaseIterable {
         case imports

@@ -168,9 +168,8 @@ public indirect enum Expression: Sendable {
     }
 
     // The sentences the construct rule refuses with, stated once beside the
-    // predicate that decides them. The load wraps them as validation refusals
-    // and the build as build refusals, so the two stages cannot say different
-    // things.
+    // predicate that decides them. The load and the build both refuse a
+    // construct in an operand, with `constructInOperand`.
     public static let constructInOperand =
         "a construct runs a body, and a call's operand is data."
             + " A body a procedure is to run travels as a closure"

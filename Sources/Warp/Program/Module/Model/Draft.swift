@@ -117,7 +117,7 @@ public struct Draft: Sendable {
     }
 
     // What this declares in the type namespace. Types, constraints and
-    // contracts share it: a link refuses a name standing for a type and a
+    // contracts share it: the build refuses a name standing for a type and a
     // membership at once.
     var declaredTypes: Set<Name> {
         Set(types.keys).union(constraints.keys).union(contracts.keys)

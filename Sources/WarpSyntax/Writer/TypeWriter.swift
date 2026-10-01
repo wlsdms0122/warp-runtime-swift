@@ -106,8 +106,8 @@ struct TypeWriter {
         case let .named(name):
             return .string(name.spelling)
 
-        // No document spells this. It is a type the link worked out from a
-        // body, and the link refuses one written into a declaration. Reaching
+        // No document spells this. It is a type the build worked out from a
+        // body, and the build refuses one written into a declaration. Reaching
         // here means a type got past that, so it is said rather than silently
         // written as something else.
         case let .reading(of, path):

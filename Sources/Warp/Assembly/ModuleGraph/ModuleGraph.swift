@@ -23,7 +23,7 @@ import Foundation
 //
 // What a module needs is read the way a link reads it: the procedures it calls and
 // the types its signatures name. A name nothing here declares is left alone:
-// the link refuses it, and refusing here would be a second copy of a rule that
+// the build refuses it, and refusing here would be a second copy of a rule that
 // has to be right once.
 //
 // A name two modules declare is answered by whichever declared it first, which
