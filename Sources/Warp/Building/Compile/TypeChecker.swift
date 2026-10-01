@@ -1746,7 +1746,6 @@ struct TypeChecker {
                     applying: procedure.signature.constProcedures(in: context.loweredTypes).merging(
                         captured
                             .filter { _, held in held.isConstProcedure(in: context.loweredTypes) }
-                            .mapValues { held in held.inPlacePositions(in: context.loweredTypes) }
                     ) { own, _ in own },
                     taking: context.signature(of:),
                     in: context.loweredTypes
@@ -1760,7 +1759,6 @@ struct TypeChecker {
                     applying: procedure.signature.isolatedProcedures(in: context.loweredTypes).merging(
                         captured
                             .filter { _, held in held.isIsolatedProcedure(in: context.loweredTypes) }
-                            .mapValues { held in held.inPlacePositions(in: context.loweredTypes) }
                     ) { own, _ in own },
                     taking: context.signature(of:),
                     in: context.loweredTypes

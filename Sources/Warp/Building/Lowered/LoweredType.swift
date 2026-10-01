@@ -396,6 +396,25 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // What a dot reads on this: an entry, where this is a dictionary, whose
+    // names are data. Nil on anything else, where a dot reads a field or
+    // nothing.
+    func entry(in table: LoweredTypeTable) -> LoweredType? {
+        switch self {
+        case let .dictionary(entry):
+            return entry
+
+        case let .named(row):
+            return table.loweredTypes[row].entry(in: table)
+
+        case let .variable(inner), let .inout(inner):
+            return inner.entry(in: table)
+
+        default:
+            return nil
+        }
+    }
+
     // What an element of this stands as, for a walk taking an index. Nil
     // where the build proved no element type.
     func element(in table: LoweredTypeTable) -> LoweredType? {

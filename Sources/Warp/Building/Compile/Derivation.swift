@@ -207,7 +207,7 @@ struct Derivation {
         declaring names: Set<Name>,
         given const: @escaping (Name) -> Bool,
         reading variables: Set<Name>,
-        applying procedures: [Name: Set<Int>],
+        applying procedures: [Name: LoweredType],
         taking asked: (Name) -> Signature?,
         in table: LoweredTypeTable
     ) -> Bool {
@@ -227,7 +227,7 @@ struct Derivation {
         _ block: Block,
         declaring parameters: Set<Name>,
         given isolated: @escaping (Name) -> Bool,
-        applying procedures: [Name: Set<Int>],
+        applying procedures: [Name: LoweredType],
         taking asked: (Name) -> Signature?,
         in table: LoweredTypeTable
     ) -> Bool {
@@ -250,7 +250,7 @@ struct Derivation {
         settling holding: inout Set<Name>,
         natively: (Implementation) -> Bool,
         declaring: (Signature) -> Set<Name>,
-        applying: (Signature) -> [Name: Set<Int>],
+        applying: (Signature) -> [Name: LoweredType],
         fact: (@escaping (Name) -> Bool) -> Fact,
         taking asked: (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool
@@ -261,7 +261,7 @@ struct Derivation {
         // declaration said hold a procedure with the fact, since applying one
         // of those is what the body is judged on.
         let bodies = symbols.reduce(
-            into: [Name: (block: Block, declaring: Set<Name>, applying: [Name: Set<Int>])]()
+            into: [Name: (block: Block, declaring: Set<Name>, applying: [Name: LoweredType])]()
         ) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
@@ -308,7 +308,7 @@ struct Derivation {
         _ block: Block,
         _ fact: Fact,
         declaring names: Set<Name>,
-        applying procedures: [Name: Set<Int>],
+        applying procedures: [Name: LoweredType],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         var declared = names
@@ -332,9 +332,9 @@ struct Derivation {
             // A name says what it holds, and a later name of the same spelling
             // is a different name, so the table is read forward.
             if let declared = statement.binding?.declared?.lowered(in: fact.table), fact.slot(declared) {
-                procedures[introduced] = declared.inPlacePositions(in: fact.table)
+                procedures[introduced] = declared
             } else {
-                procedures[introduced] = applied(statement.expression, given: procedures)
+                procedures[introduced] = applied(statement.expression, given: procedures, as: fact)
             }
         }
 
@@ -347,7 +347,7 @@ struct Derivation {
         _ expression: Expression,
         _ fact: Fact,
         declaring names: Set<Name>,
-        applying procedures: [Name: Set<Int>],
+        applying procedures: [Name: LoweredType],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         func holds(_ inner: Expression) -> Bool {
@@ -400,9 +400,10 @@ struct Derivation {
         // said by the slot the value came out of and nowhere else, and so are
         // the positions it takes in place.
         case let .apply(callee, arguments):
-            guard let inPlace = applied(callee, given: procedures) else { return false }
+            guard let reached = applied(callee, given: procedures, as: fact) else { return false }
 
-            return handsOwned(arguments, at: inPlace, declaring: names) && arguments.allSatisfy(holds)
+            return handsOwned(arguments, at: reached.inPlacePositions(in: fact.table), declaring: names)
+                && arguments.allSatisfy(holds)
 
         // Which part of a construct runs is decided inside the body, so a
         // construct holds the fact as far as the parts it holds.
@@ -420,20 +421,35 @@ struct Derivation {
         }
     }
 
-    // The positions a procedure takes in place, where what this reads came
-    // out of a slot that said the fact of its procedures, and nil where it
-    // did not. The head is the name the slot gave, and indexing past it keeps
-    // the claim, since a slot asking for an array of them says it about every
-    // element. Reading a field walks into a value the slot said nothing
-    // about, and so does anything that is not a name at all.
-    private func applied(_ expression: Expression, given procedures: [Name: Set<Int>]) -> Set<Int>? {
-        guard
-            case let .reference(path) = expression,
-            let head = path.head,
-            path.segments.dropFirst().allSatisfy({ segment in segment.named == nil })
-        else { return nil }
+    // The type this reads, where it came out of a slot that said the fact of
+    // its procedures and still says it, and nil where it did not. The head is
+    // the name the slot gave, and the walk follows the slot's type past it:
+    // an index reads an element of an array or a dictionary, and a dot reads
+    // an entry of a dictionary, both of which the slot said the fact of. A dot
+    // on anything else reads a field, a value the slot said nothing about, and
+    // so does anything that is not a name at all.
+    private func applied(
+        _ expression: Expression,
+        given procedures: [Name: LoweredType],
+        as fact: Fact
+    ) -> LoweredType? {
+        guard case let .reference(path) = expression, let head = path.head, let held = procedures[head] else {
+            return nil
+        }
 
-        return procedures[head]
+        let reached = path.segments.dropFirst().reduce(Optional(held)) { reached, segment in
+            switch segment {
+            case .index, .indexRef:
+                return reached?.element(in: fact.table)
+
+            case .key:
+                return reached?.entry(in: fact.table)
+            }
+        }
+
+        guard let reached, fact.slot(reached) else { return nil }
+
+        return reached
     }
 
     // Whether every name a call hands in place at these positions is one the

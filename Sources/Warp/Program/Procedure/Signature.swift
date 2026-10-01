@@ -37,15 +37,15 @@ public struct Signature: Sendable, Equatable {
     }
 
     // The parameters asking for a procedure that answers without running,
-    // each with the positions that procedure takes in place. A body may apply
-    // a name standing in one and still answer without running. Judged on the
-    // type a parameter lowers to, the way every slot is.
-    func constProcedures(in table: LoweredTypeTable) -> [Name: Set<Int>] {
+    // each with the type it lowers to, which is what a path from it walks. A
+    // body may apply a name standing in one and still answer without running.
+    // Judged on the type a parameter lowers to, the way every slot is.
+    func constProcedures(in table: LoweredTypeTable) -> [Name: LoweredType] {
         procedures(asking: { type in type.isConstProcedure(in: table) }, in: table)
     }
 
     // The same, for the claim isolation reads.
-    func isolatedProcedures(in table: LoweredTypeTable) -> [Name: Set<Int>] {
+    func isolatedProcedures(in table: LoweredTypeTable) -> [Name: LoweredType] {
         procedures(asking: { type in type.isIsolatedProcedure(in: table) }, in: table)
     }
 
@@ -263,11 +263,11 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
-    private func procedures(asking claim: (LoweredType) -> Bool, in table: LoweredTypeTable) -> [Name: Set<Int>] {
-        lowered(in: table).reduce(into: [Name: Set<Int>]()) { held, slot in
+    private func procedures(asking claim: (LoweredType) -> Bool, in table: LoweredTypeTable) -> [Name: LoweredType] {
+        lowered(in: table).reduce(into: [Name: LoweredType]()) { held, slot in
             guard claim(slot.type) else { return }
 
-            held[slot.name] = slot.type.inPlacePositions(in: table)
+            held[slot.name] = slot.type
         }
     }
 }
