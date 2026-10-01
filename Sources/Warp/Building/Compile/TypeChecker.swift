@@ -577,14 +577,14 @@ struct TypeChecker {
             return .refusal(named.joined(separator: ", "))
         }
 
-        let bounds = declared.parameterBounding
+        let bounding = declared.parameterBounding
 
-        if let refusal = bounds.refusal {
+        if let refusal = bounding.refusal {
             return .refusal(refusal)
         }
 
         if let refusal = constraintRefusal(
-            mentions: bounds.table,
+            mentions: bounding.table,
             readings: substitution.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
