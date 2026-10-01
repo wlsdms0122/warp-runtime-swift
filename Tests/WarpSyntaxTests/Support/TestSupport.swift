@@ -45,29 +45,22 @@ func run(
     _ modules: [Module],
     entry: Name = entryName,
     arguments: [Name: Value] = [:],
-    vocabulary: [Module] = Module.standard + [.testing],
+    vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
-) async throws -> [Name: Value] {
+) async throws -> Value {
     let image = try await Builder().build(try modules.map { module in try module.publishing(entry) } + vocabulary)
 
-    let answer = try await Executor(environment: environment)
+    return try await Executor(environment: environment)
         .run(image, entry: entry, arguments: arguments)
-
-    // This notation spells several named outputs, which the reader lowers to
-    // one record, so a test that asks about `outputs["x"]` is asking about a
-    // field of the answer, and unwrapping here keeps that phrasing.
-    guard let outputs = answer.asDictionary else { return [:] }
-
-    return Dictionary(uniqueKeysWithValues: outputs.entries.map { entry in (entry.name, entry.value) })
 }
 
 func run(
     _ module: Module,
     entry: Name = entryName,
     arguments: [Name: Value] = [:],
-    vocabulary: [Module] = Module.standard + [.testing],
+    vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
-) async throws -> [Name: Value] {
+) async throws -> Value {
     try await run(
         [module],
         entry: entry,
@@ -76,9 +69,6 @@ func run(
         environment: environment
     )
 }
-
-// Every procedure a list of modules declares, as two tables for two questions:
-// what a selector names, and what a path segment reaches.
 
 // MARK: - Conditions
 

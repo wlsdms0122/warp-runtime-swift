@@ -13,7 +13,9 @@ struct TestRecoverableFailure: RecoverableFailure {
     // MARK: - Property
     let message = "the world did not cooperate"
 
-    let type = "test"
+    var type: String { Self.type }
+
+    static let type = "test"
 
     // MARK: - Initializer
     // MARK: - Public

@@ -111,7 +111,7 @@ struct ConcurrentTests {
         ], importing: ["std.concurrent.all", "test.fail"])
 
         // When
-        let outputs = try await run(spec)
+        let outputs = try await run(spec, vocabulary: Module.standard + [.testing])
 
         // Then
         #expect(outputs["result"] == .string("recovered"))
@@ -157,7 +157,7 @@ struct ConcurrentTests {
 
         // When / Then
         await #expect(throws: TestFatalError.self) {
-            try await run(spec)
+            try await run(spec, vocabulary: Module.standard + [.testing])
         }
     }
 
@@ -233,7 +233,7 @@ struct ConcurrentTests {
         ], importing: ["test.fail", "std.concurrent.first"])
 
         // When
-        let outputs = try await run(sut)
+        let outputs = try await run(sut, vocabulary: Module.standard + [.testing])
 
         // Then
         #expect(outputs["result"] == .string("answered"))

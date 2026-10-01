@@ -16,9 +16,7 @@ extension Module {
     static let testing = try! Module(
         procedures: [
             "test.fail": Procedure(
-                signature: Signature(
-                    parameters: [Parameter(name: "recoverable", type: .bool)]
-                ),
+                signature: Signature(of: FailEffect.self),
                 implementation: .effect(FailEffect())
             )
         ]
