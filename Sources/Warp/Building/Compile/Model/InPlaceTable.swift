@@ -34,7 +34,11 @@ struct InPlaceTable: Sendable {
 
         for other in others {
             for (place, handed) in other.positions where absorbed.updateValue(handed, forKey: place) != nil {
-                throw BuildError.unjudged("two calls of a value at one place", at: place)
+                throw BuildError(
+                    "the build named two calls of a value by one place, which is the build's own"
+                        + " mistake rather than the author's",
+                    at: place
+                )
             }
         }
 
