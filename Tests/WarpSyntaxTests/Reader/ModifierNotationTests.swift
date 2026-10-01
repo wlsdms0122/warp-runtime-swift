@@ -135,7 +135,7 @@ struct ModifierNotationTests {
         // Given. The rule about two marks is a procedure form's, and a key is
         // only that form's once what is under the marks says `procedure`.
         // Anything else is a field name, and the writer writes one back
-        let type = TypeExpression.record([try Name("var inout x"): .int])
+        let type = TypeExpression.record(["var inout x": .int])
 
         // When
         let written = try Writer().value(of: type)

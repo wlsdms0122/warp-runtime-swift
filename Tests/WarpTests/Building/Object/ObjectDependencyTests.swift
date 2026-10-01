@@ -156,16 +156,15 @@ struct ObjectDependencyTests {
         // The call is the same call either way: a body reaches a row by number
         // and the number does not move. So a caller that kept no record of what
         // it leaned on would read one kind's object for the other's.
-        #expect(
-            try #require(besideDependencies(asLowered.calling)) == besideDependencies(asAnswered.calling),
-            "the caller told the two kinds apart by itself"
-        )
+        let callingLowered = try #require(besideDependencies(asLowered.calling))
+
+        #expect(callingLowered == besideDependencies(asAnswered.calling), "the caller told the two kinds apart by itself")
     }
 
     // MARK: - Public
     // MARK: - Private
     // Everything an object says but what it leaned on.
-    private func besideDependencies(_ value: Value?) -> Value.Dictionary? {
+    private func besideDependencies(_ value: Value) -> Value.Dictionary? {
         guard case let .dictionary(parts) = value else { return nil }
 
         return parts.removing(ObjectLayout.Key.dependencies.name)

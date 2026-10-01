@@ -48,12 +48,12 @@ struct NormalFormTests {
     }
 
     @Test("names are ordered by their bytes")
-    func namesAreOrderedByBytes() throws {
+    func namesAreOrderedByBytes() {
         // When / Then. The order a canonical writing puts fields in, and the
         // order a reader holds a document's keys to.
-        #expect(try Name("Z") < Name("a"))
-        #expect(try Name("a") < Name("ab"))
-        #expect(try !(Name("b") < Name("ab")))
+        #expect(("Z" as Name) < "a")
+        #expect(("a" as Name) < "ab")
+        #expect(!(("b" as Name) < "ab"))
     }
 
     @Test("a type's name is identifiers joined by dots, and never a scalar's keyword", arguments: [
