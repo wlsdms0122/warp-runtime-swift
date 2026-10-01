@@ -485,7 +485,7 @@ struct Evaluator: Sendable {
             guard
                 case let .reference(address) = argument,
                 linked.slots.indices.contains(position),
-                case .inout = linked.slots[position].type
+                linked.slots[position].type.isInout
             else { return nil }
 
             return CallOperation.Handed(position: position, address: address)
@@ -533,6 +533,18 @@ struct Evaluator: Sendable {
         // Its rows are numbered by the table of the link that made it.
         guard linked.readable(in: loweredTypes) else {
             throw ExecutionError("this call \(Linked.unreadable)")
+        }
+
+        // A parameter handed in place takes a variable, and a call hands one
+        // only where the build read the callee's type. A call of a value whose
+        // type said nothing of its parameters and a procedure the host
+        // answers hand values, so a closure taking one from them is refused
+        // here, before its body runs.
+        for (position, slot) in linked.slots.enumerated()
+        where slot.type.isInout && !holds.contains(where: { held in held.position == position }) {
+            throw ExecutionError(
+                "'\(linked.rendered)' takes '\(slot.name)' in place, and this call hands it a value"
+            )
         }
 
         let settled = try linked.settle(arguments) { position in

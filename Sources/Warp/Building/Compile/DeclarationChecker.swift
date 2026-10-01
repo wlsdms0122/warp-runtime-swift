@@ -144,6 +144,17 @@ struct DeclarationChecker {
             for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
+                // A procedure the host answers calls a procedure it was handed
+                // with values, so it could never call one taking a parameter
+                // in place.
+                if procedure.implementation.native != nil, let parameter = procedure.signature.procedureTakingInPlace {
+                    throw BuildError(
+                        "'\(name)' takes '\(parameter)', a procedure taking a parameter in place,"
+                            + " and a procedure the host answers calls what it is handed with values",
+                        at: Place.procedure(name.spelling, in: .of(module)).part(.parameters)
+                    )
+                }
+
                 // A closure literal carries a signature the way a declaration
                 // does, and unreached code still has to compile, so what the
                 // top level is held to, a signature written inline is held to

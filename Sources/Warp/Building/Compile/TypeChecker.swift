@@ -1849,11 +1849,7 @@ struct TypeChecker {
 
                 try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
 
-                inPlace = parameters.indices.filter { position in
-                    guard case .inout = parameters[position] else { return false }
-
-                    return true
-                }
+                inPlace = parameters.indices.filter { position in parameters[position].isInout }
 
                 for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
                 where !parameter.accepts(reading, in: context.loweredTypes) {
@@ -2553,9 +2549,7 @@ struct TypeChecker {
     ) throws {
         guard case .judging = ask else { return }
 
-        for (position, (slot, argument)) in zip(slots, arguments).enumerated() {
-            guard case .inout = slot else { continue }
-
+        for (position, (slot, argument)) in zip(slots, arguments).enumerated() where slot.isInout {
             let at = place.argument(position)
 
             guard case let .reference(path) = argument, let head = path.head else {

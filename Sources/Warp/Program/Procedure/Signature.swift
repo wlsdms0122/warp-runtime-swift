@@ -59,6 +59,12 @@ public struct Signature: Sendable, Equatable {
         parameters.first { parameter in parameter.declared.isInout }?.name
     }
 
+    // The first parameter asking for a procedure that takes one in place,
+    // which only a body can call.
+    var procedureTakingInPlace: Name? {
+        parameters.first { parameter in parameter.declared.isProcedureTakingInPlace }?.name
+    }
+
     // Whether the declaration writes a type parameter anywhere.
     public var isGeneric: Bool { type.isGeneric }
 

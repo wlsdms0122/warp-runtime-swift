@@ -134,6 +134,13 @@ indirect enum LoweredType: Sendable, Equatable {
         return false
     }
 
+    // Whether a slot holding this takes a variable in place.
+    var isInout: Bool {
+        if case .inout = self { return true }
+
+        return false
+    }
+
     // What a slot holds, through the two marks that say how it is held
     // rather than what it is.
     var slotUnwrapped: LoweredType {
@@ -661,6 +668,10 @@ indirect enum LoweredType: Sendable, Equatable {
             // required must accept everything it will get back.
             for (parameter, taken) in zip(required, given) {
                 guard taken.accepts(parameter, in: table, assuming: assuming) else { return false }
+
+                // A position taken in place takes a variable, and a slot
+                // handing a value there has none to give.
+                guard !taken.isInout || parameter.isInout else { return false }
             }
 
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assuming: assuming)

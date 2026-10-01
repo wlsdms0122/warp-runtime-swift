@@ -12,6 +12,57 @@ import WarpStandard
 
 @Suite("Writing in place")
 struct InPlaceTests {
+    // Calls the procedure it is handed with one value, the way a procedure the
+    // host answers calls what it is handed.
+    private struct CallingEffect: Effect {
+        enum Parameters: Int, ParameterSet {
+            case body
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "body", type: .procedure(nil)) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func run(_ invocation: Invocation<Self>) async throws -> Value {
+            guard case let .procedure(closure) = invocation[.body] else { return .null }
+
+            return try await invocation.call(closure, handing: [.int(1)])
+        }
+
+        // MARK: - Private
+    }
+
+    // Declares it is handed a procedure taking its one parameter in place.
+    private struct InPlaceCallingEffect: Effect {
+        enum Parameters: Int, ParameterSet {
+            case body
+
+            // MARK: - Property
+            var declared: Parameter {
+                Parameter(name: "body", type: .procedure(ProcedureType(parameters: [.inout(.int)])))
+            }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func run(_ invocation: Invocation<Self>) async throws -> Value {
+            .null
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -523,6 +574,78 @@ struct InPlaceTests {
             Issue.record("the first argument is a place and the second a read")
             return
         }
+    }
+
+    @Test("a procedure the host answers calling a closure that takes a parameter in place is refused before the closure runs")
+    func aHostCallOfAClosureTakingInPlaceRefuses() async throws {
+        // Given. The closure would answer what it was handed, and a run that
+        // reached its body would answer 1
+        let calling = try Module(
+            procedures: [
+                "app.calling": Procedure(
+                    signature: Signature(of: CallingEffect.self),
+                    implementation: .effect(CallingEffect())
+                )
+            ]
+        )
+        let sut = try Module(
+            imports: ["app.calling"],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("reading"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(
+                                        parameters: [Parameter(name: "count", type: .inout(.int))],
+                                        returns: .int
+                                    ),
+                                    body: [],
+                                    result: reference("count")
+                                )
+                            )
+                        )
+                    ],
+                    result: .call(Call(selector: "app.calling", arguments: [reference("reading")]))
+                )
+            ]
+        )
+
+        let image = try await Builder().build([sut, calling] + Module.standard)
+
+        // When / Then
+        await #expect {
+            try await Executor().run(image)
+        } throws: { error in
+            error is ExecutionError && "\(error)".contains("takes 'count' in place, and this call hands it a value")
+        }
+    }
+
+    @Test("a procedure the host answers declaring a procedure that takes a parameter in place is refused at the build")
+    func aHostProcedureTakingAnInPlaceProcedureRefuses() async {
+        // Given
+        let calling = try? Module(
+            procedures: [
+                "app.calling": Procedure(
+                    signature: Signature(of: InPlaceCallingEffect.self),
+                    implementation: .effect(InPlaceCallingEffect())
+                )
+            ]
+        )
+
+        // When
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([try #require(calling)] + Module.standard)
+        }
+
+        // Then
+        #expect(
+            refusal?.message.contains(
+                "takes 'body', a procedure taking a parameter in place, and a procedure the host answers calls"
+            ) == true
+        )
     }
 
     // MARK: - Public
