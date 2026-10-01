@@ -294,8 +294,8 @@ struct SeparateCompilationTests {
         }
 
         // Then. The list refuses, naming the pair the program leaned on.
-        await #expect {
-            try await builder.link(compiled, supplying: Supplying(Module.standard))
+        #expect {
+            try builder.link(compiled, supplying: Supplying(Module.standard))
         } throws: { error in
             "\(error)".contains("no document in this link says 'bank.Account' answers it")
         }

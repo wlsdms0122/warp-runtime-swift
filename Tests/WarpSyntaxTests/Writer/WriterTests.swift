@@ -509,10 +509,10 @@ struct WriterTests {
     @Test("every construct survives being written and read back", arguments: Self.corpus)
     func writingIsAFixedPoint(_ document: Value) async throws {
         // Given
-        let once = try await sut.value(of: try loader.loadDocument(document))
+        let once = try sut.value(of: try loader.loadDocument(document))
 
         // When
-        let twice = try await sut.value(of: try loader.load(once))
+        let twice = try sut.value(of: try loader.load(once))
 
         // Then
         #expect(once == twice)
@@ -527,7 +527,7 @@ struct WriterTests {
         let once = try sut.value(of: module)
 
         // When
-        let twice = try await sut.value(of: try loader.load(once))
+        let twice = try sut.value(of: try loader.load(once))
 
         // Then
         #expect(once == twice)
@@ -555,7 +555,7 @@ struct WriterTests {
         // says the writing settled; this says nothing was left behind, because
         // every slot the language has is written down here and a slot that
         // stopped being written would go missing from the answer.
-        let sut = try await sut.value(of: try loader.load(Self.canonical))
+        let sut = try sut.value(of: try loader.load(Self.canonical))
 
         // Then
         #expect(sut == Self.canonical)
@@ -567,7 +567,7 @@ struct WriterTests {
         // What comes back may use none of them, because a spelling is a rule
         // the reading side would have to implement the same way, and the
         // reading side is somewhere else.
-        let written = try await sut.value(of: try loader.loadDocument(document))
+        let written = try sut.value(of: try loader.loadDocument(document))
 
         // When. The two template keys, which are reserved in every notation.
         // The condition spelling these are read with is recognised by `of`,
@@ -588,7 +588,7 @@ struct WriterTests {
         // spells `holds` and reaches `example.holds`, and the key appears in a
         // document only if the writing side kept a spelling.
         let loader = Loader()
-        let module = try await loader.loadProcedure([
+        let module = try loader.loadProcedure([
             "parameters": [["name": "ready", "type": "bool"]],
             "body": [
                 [
@@ -699,7 +699,7 @@ struct WriterTests {
         // Given. `{ of: x, <procedure>: y }` is a spelling, and what it means is a
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
-        let module = try await loader.loadProcedure([
+        let module = try loader.loadProcedure([
             "parameters": [["name": "procedure", "type": "string"]],
             "body": [
                 [
@@ -777,7 +777,7 @@ struct WriterTests {
         // no longer registers is a type it can no longer write. Answering with
         // the built-in spelling would put a key in the document that reading it
         // back through this same notation would refuse.
-        let module = try await loader.loadProcedure([
+        let module = try loader.loadProcedure([
             "body": [
                 [
                     "let": "walked",

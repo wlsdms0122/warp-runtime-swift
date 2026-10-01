@@ -20,7 +20,7 @@ struct BlockTests {
     @Test("inner bindings stay inside; the block speaks with its declared output")
     func groupSpeaksWithDeclaredOutput() async throws {
         // Given
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "parameters": [["name": "who", "type": "string"]],
             "body": [
                 [
@@ -58,7 +58,7 @@ struct BlockTests {
         // Given. A block is a body, and a body answers what it says it answers.
         // Reading the last statement would make appending one change what the
         // block was worth, silently.
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "body": [
                 [
                     "let": "block",

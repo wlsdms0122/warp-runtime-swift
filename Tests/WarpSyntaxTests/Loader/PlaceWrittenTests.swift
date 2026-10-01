@@ -89,7 +89,7 @@ struct PlaceWrittenTests {
         // Given. The stage that has no document of its own. What to link is the
         // caller's statement, so a link cannot know which text a module came
         // out of; the side that read the text can say.
-        let module = try await loader.loadProcedure([
+        let module = try loader.loadProcedure([
             "body": [
                 [
                     "let": "sent",

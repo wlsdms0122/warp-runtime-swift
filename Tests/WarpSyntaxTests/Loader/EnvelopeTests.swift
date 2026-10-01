@@ -43,7 +43,7 @@ struct EnvelopeTests {
         }
 
         // And one written for this reader is read
-        await #expect(throws: Never.self) {
+        #expect(throws: Never.self) {
             try loader.load([
                 "warp": .int(Envelope.version),
                 "imports": [],
@@ -131,7 +131,7 @@ struct EnvelopeTests {
 
         // And a program that sends nothing still says so, rather than saying
         // nothing. The empty list is a claim and the absent one is not.
-        await #expect(throws: Never.self) {
+        #expect(throws: Never.self) {
             try loader.load([
                 "warp": .int(Envelope.version),
                 "imports": [],

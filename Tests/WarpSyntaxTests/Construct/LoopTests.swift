@@ -21,7 +21,7 @@ struct LoopTests {
     func loopRepeatsWhileConditionHolds() async throws {
         // Given. The loop writes a variable declared outside it and reads its
         // own round index through ${gate.index}
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "body": [
                 ["var": "latest", "value": 0],
                 [
@@ -47,7 +47,7 @@ struct LoopTests {
     func loopRunsUnbounded() async throws {
         // Given. The language carries no budget; the world (here, the
         // condition) ends the repetition
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "body": [
                 ["var": "latest", "value": 0],
                 [
@@ -94,7 +94,7 @@ struct LoopTests {
     func emptyBodyObservesCancellation() async throws {
         // Given. An empty body must still observe cancellation, or the caller's
         // one lever against a runaway loop stops working
-        let spec = try await loader.loadProcedure([
+        let spec = try loader.loadProcedure([
             "body": [
                 [
                     "let": "gate",

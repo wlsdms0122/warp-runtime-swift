@@ -66,8 +66,8 @@ struct NamelessTests {
 
     @Test("two naming keys are refused")
     func twoNamingKeysAreRefused() async {
-        await #expect(throws: ReadingError.self) {
-            try await loader.loadProcedure([
+        #expect(throws: ReadingError.self) {
+            try loader.loadProcedure([
                 "body": [["let": "one", "var": "another", "value": 1]]
             ])
         }
@@ -198,7 +198,7 @@ struct NamelessTests {
         let loaded = try loader.loadDocument(document)
         let written = try Writer(registry: loader.registry).value(of: loaded)
 
-        await #expect(try await Writer(registry: loader.registry).value(of: try loader.load(written)) == written)
+        #expect(try Writer(registry: loader.registry).value(of: try loader.load(written)) == written)
     }
 
     // MARK: - Public

@@ -56,7 +56,7 @@ struct NotationTests {
         // Given. This is what makes the spellings a layer rather than a part of
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
-        let module = try await sut.loadDocument([
+        let module = try sut.loadDocument([
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
@@ -94,7 +94,7 @@ struct NotationTests {
         // way of arriving at one. A record carrying none of the notation's keys
         // never was a condition type, which is what keeps the spellings
         // optional wherever a condition is asked for.
-        let sut = try await Loader.testing.loadProcedure([
+        let sut = try Loader.testing.loadProcedure([
             "parameters": [["name": "ready", "type": "bool"]],
             "body": [
                 [
@@ -177,7 +177,7 @@ struct NotationTests {
 
         // When. Written, and read back by a reader with no notation at all
         let written = try Writer().value(of: module)
-        let read = try await sut.load(written)
+        let read = try sut.load(written)
 
         // Then. The same record arrived, rather than a message
         guard
@@ -223,7 +223,7 @@ struct NotationTests {
     func aTemplateSpendsTheNotationsProcedures() async throws {
         // Given, which procedures a template lowers to is the notation's answer, and
         // the reader carries none of its own
-        let sut = try await Loader.testing.loadProcedure([
+        let sut = try Loader.testing.loadProcedure([
             "parameters": [["name": "word", "type": "string"]],
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
@@ -265,7 +265,7 @@ struct NotationTests {
         // Then. Both readers arrive at the cast
         for notation in [Notation.canonical, .testing] {
             guard
-                case let .body(block) = try await sut.loadProcedure(written, from: notation)
+                case let .body(block) = try sut.loadProcedure(written, from: notation)
                     .procedures[entryName]?.implementation,
                 case let .conditional(condition, _, _) = block.body.statements.first?.expression,
                 case .cast = condition
@@ -301,7 +301,7 @@ struct NotationTests {
         let spelled: Value = ["of": ["ref": "word"], "is": "hey"]
 
         // When
-        let module = try await sut.load(document(asking: ["record": spelled]))
+        let module = try sut.load(document(asking: ["record": spelled]))
 
         // Then
         #expect {

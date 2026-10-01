@@ -50,7 +50,7 @@ struct WriterRoundTripTests {
             let written = try sut.value(of: module)
 
             // Then
-            await #expect(throws: Never.self) { try Loader().load(written, identity: nil) }
+            #expect(throws: Never.self) { try Loader().load(written, identity: nil) }
         }
     }
 

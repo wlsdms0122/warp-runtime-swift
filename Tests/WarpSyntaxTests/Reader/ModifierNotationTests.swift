@@ -51,7 +51,7 @@ struct ModifierNotationTests {
             ])
         )
 
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]]]]
@@ -100,7 +100,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": [
@@ -137,7 +137,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
@@ -158,7 +158,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
@@ -212,7 +212,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let module = try await Loader().load([
+        let module = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
