@@ -85,7 +85,8 @@ public struct TextEncoding {
     private static let enders = delimiters.union(["\""])
 
     // MARK: - Initializer
-    public init() { }
+    public init() {
+    }
 
     // MARK: - Public
     public func text(from value: Value) throws -> String {

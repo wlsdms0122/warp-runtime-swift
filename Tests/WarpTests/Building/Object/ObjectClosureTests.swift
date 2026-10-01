@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // A closure a fold settled into a value, written down and read back. An
 // object spells it by the declaration that wrote it and which of that

@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // What the build writes into a body: which slot a name gets, which cells a
 // closure takes, when a loop puts a round back, and where an argument stands.
@@ -404,7 +405,7 @@ struct LoweringTests {
         // would answer it named; in place there is nothing to settle into. The
         // procedure writes through the caller's box, so what the caller reads back
         // is whatever the procedure left there.
-        func module(holding held: Warp.Expression) async throws -> Module {
+        func module(holding held: Warp.Expression) throws -> Module {
             try Module(
                 types: ["Tag": .record(["a": .int])],
                 procedures: [

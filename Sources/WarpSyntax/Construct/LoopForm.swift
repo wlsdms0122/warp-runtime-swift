@@ -25,7 +25,7 @@ public struct LoopForm: ConstructForm {
     // in it is still written with an empty one.
     public static let requiresBody = true
 
-    private let condition: Expression
+    private let condition: Warp.Expression
     private let body: Block
 
     // MARK: - Initializer
@@ -44,7 +44,7 @@ public struct LoopForm: ConstructForm {
     // MARK: - Public
     // The round is bound under the statement's name, which a document reads
     // as `{ ref "<name>.index" }`. A nameless loop binds none.
-    public func expression(boundTo name: String?) throws -> Expression {
+    public func expression(boundTo name: String?) throws -> Warp.Expression {
         .loop(while: condition, body: body, round: try named(name))
     }
 

@@ -10,6 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
 // A capability the language has and the notation cannot spell is a capability
 // only Swift has. These are the two keys that close that gap.

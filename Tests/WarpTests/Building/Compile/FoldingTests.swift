@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 @Suite("Reading a reference at the build")
 struct FoldingTests {

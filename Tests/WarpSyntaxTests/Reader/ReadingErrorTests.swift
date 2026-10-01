@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-@Suite
+@Suite("A reading refusal says where it was")
 struct ReadingErrorTests {
     // MARK: - Property
     private let loader = Loader.testing

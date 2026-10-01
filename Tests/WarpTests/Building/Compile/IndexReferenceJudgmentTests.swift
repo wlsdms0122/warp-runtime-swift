@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // The dot judged behind an index reference. The walk continues through `[i]`
 // the way it does through `[0]`, so nothing after one escapes the build.

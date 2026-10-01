@@ -51,7 +51,7 @@ struct CaseTests {
             }
             """)
 
-        // When / Then.
+        // When / Then
         #expect {
             try Case(from: sut, in: "broken")
         } throws: { error in
@@ -115,7 +115,7 @@ struct CaseTests {
             return
         }
 
-        // When / Then.
+        // When / Then
         await #expect {
             try await program.brought
         } throws: { error in
@@ -147,7 +147,7 @@ struct CaseTests {
             }
             """)
 
-        // When / Then.
+        // When / Then
         #expect {
             try Case(from: sut, in: "broken")
         } throws: { error in

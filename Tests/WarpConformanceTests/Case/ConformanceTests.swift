@@ -8,8 +8,8 @@
 import Foundation
 import Testing
 import Warp
-import WarpStandard
 import WarpSyntax
+import WarpStandard
 
 // The specification's cases, run against this implementation.
 //

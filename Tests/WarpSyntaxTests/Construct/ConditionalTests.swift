@@ -9,8 +9,9 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
-@Suite
+@Suite("A conditional runs the arm its condition picks")
 struct ConditionalTests {
     // MARK: - Property
     private let loader = Loader.testing

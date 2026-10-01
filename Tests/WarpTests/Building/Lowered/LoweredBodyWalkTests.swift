@@ -5,6 +5,7 @@
 //  Created by JSilver on 9/18/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
 
@@ -31,7 +32,7 @@ struct LoweredBodyWalkTests {
 
         // MARK: - Property
         // MARK: - Initializer
-        init(_ operation: Operation) {
+        init(_ operation: Warp.Operation) {
             switch operation {
             case .literal: self = .literal
             case .local: self = .local
@@ -51,7 +52,7 @@ struct LoweredBodyWalkTests {
         }
 
         // MARK: - Public
-        func operations(holding leaf: Operation) throws -> [Operation] {
+        func operations(holding leaf: Warp.Operation) throws -> [Warp.Operation] {
             let body = LoweredBody(instructions: [Instruction(binding: nil, code: leaf, label: "leaf")], result: nil)
             let empty = LoweredBody(instructions: [], result: nil)
 
@@ -103,13 +104,13 @@ struct LoweredBodyWalkTests {
     // MARK: - Property
     // A distinctive leaf, so a test can tell whether a case's children were
     // reached at all.
-    private let leaf = Operation.literal(.int(7))
+    private let leaf = Warp.Operation.literal(.int(7))
 
     private var address: Address { Address(slot: 3, steps: [.at(Address(slot: 4, steps: []), optional: false)]) }
 
     // Every case of `Operation` that holds another operation, each holding
     // the leaf where it holds one.
-    private var holders: [(kind: Kind, operation: Operation)] {
+    private var holders: [(kind: Kind, operation: Warp.Operation)] {
         get throws {
             try Kind.allCases.flatMap { kind in
                 try kind.operations(holding: leaf).map { operation in (kind: kind, operation: operation) }
@@ -180,8 +181,8 @@ struct LoweredBodyWalkTests {
     @Test("a walk reaches a node before what nests in it, and stops where a visit says")
     func aWalkIsOutermostFirstAndStops() {
         // Given
-        let inner = Operation.array([leaf])
-        let sut = Operation.array([inner])
+        let inner = Warp.Operation.array([leaf])
+        let sut = Warp.Operation.array([inner])
         var order: [String] = []
 
         // When
@@ -236,7 +237,7 @@ struct LoweredBodyWalkTests {
     @Test("an argument handed in place is the dispatch's own to read")
     func aReferenceArgumentIsReadByItsNode() {
         // Given
-        let sut = Operation.dispatch(
+        let sut = Warp.Operation.dispatch(
             DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [.reference(address)])
         )
         var locals = 0
@@ -263,7 +264,7 @@ struct LoweredBodyWalkTests {
     func aDispatchsCallsAreTheLinks() {
         // Given
         let beside = CallOperation(procedure: 5, arguments: [leaf], handed: [])
-        let sut = Operation.dispatch(
+        let sut = Warp.Operation.dispatch(
             DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [], calls: ["t": beside])
         )
         var leaves = 0

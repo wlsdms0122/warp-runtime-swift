@@ -878,7 +878,7 @@ struct TypeChecker {
             // rule is asked here like everywhere else and always answers yes:
             // the mark has an absence to expect on an entry, unwrapped or not,
             // and that fact lives in the rule rather than in this landing.
-            case (.key, .dictionary(let entry)):
+            case let (.key, .dictionary(entry)):
                 if let refusal = needless(.entry) { return refusal }
 
                 if segment.optional { optional = true }

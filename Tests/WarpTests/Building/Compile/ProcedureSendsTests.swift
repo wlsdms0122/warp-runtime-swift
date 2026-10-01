@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // What a native procedure sending another procedure answers, and what the build refuses
 // before anything runs. A procedure declares the procedures it sends the way it declares

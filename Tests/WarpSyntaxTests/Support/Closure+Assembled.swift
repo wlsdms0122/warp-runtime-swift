@@ -11,8 +11,8 @@ import Foundation
 
 extension Closure {
     // A closure a caller assembles in Swift: no body a document spelled, no
-    // captures, claiming nothing.
-    static func assembled() -> Closure {
+    // captures, claiming nothing. What a slot that asks nothing takes.
+    static func assembled(answering result: Value? = nil, in table: LoweredTypeTable = .empty) -> Closure {
         Closure(
             writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("assembled")),
             nth: 0,
@@ -25,11 +25,11 @@ extension Closure {
                 isolation: .unstated,
                 failing: .unstated,
                 implementation: .body(
-                    LoweredBody(instructions: [], result: nil),
+                    LoweredBody(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
                 ),
                 foldable: true,
-                in: .empty
+                in: table
             ),
             captured: []
         )

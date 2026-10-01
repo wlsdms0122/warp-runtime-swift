@@ -5,8 +5,10 @@
 //  Created by JSilver on 9/17/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("What a run from the entry can reach")
 struct ReachTests {

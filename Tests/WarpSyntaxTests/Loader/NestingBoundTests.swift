@@ -5,10 +5,11 @@
 //  Created by JSilver on 9/17/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
-@testable import WarpStandard
 @testable import WarpSyntax
+@testable import WarpStandard
 
 // A document nested as deep as the wire admits is a document, and reading,
 // building and running one on an ordinary stack is what an implementation

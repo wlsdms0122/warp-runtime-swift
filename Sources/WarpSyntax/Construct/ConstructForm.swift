@@ -37,7 +37,7 @@ public protocol ConstructForm: Sendable, Decodable {
     static func vocabulary(with notation: Notation) -> Set<Name>
 
     // Throws when the form cannot be the statement it was written as.
-    func expression(boundTo name: String?) throws -> Expression
+    func expression(boundTo name: String?) throws -> Warp.Expression
 }
 
 public extension ConstructForm {

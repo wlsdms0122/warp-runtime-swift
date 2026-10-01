@@ -28,7 +28,8 @@ public struct Compiled: Sendable, Declaring {
         private let id = UUID()
 
         // MARK: - Initializer
-        init() {}
+        init() {
+        }
 
         // MARK: - Public
         // MARK: - Private

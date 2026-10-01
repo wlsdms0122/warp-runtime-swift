@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // What the writer writes, the reader reads.
 //
@@ -24,7 +25,7 @@ struct WriterRoundTripTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a construct whose body is empty still writes the key its reader wants")
-    func anEmptyBodyIsStillWritten() async throws {
+    func anEmptyBodyIsStillWritten() throws {
         // Given. The three constructs whose `body` the document format calls
         // required. A block written as a `block` is the exception and stays
         // one: nothing there has to have it.

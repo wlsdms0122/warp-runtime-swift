@@ -107,7 +107,8 @@ public struct BinaryEncoding {
     public static let format: UInt8 = 1
 
     // MARK: - Initializer
-    public init() { }
+    public init() {
+    }
 
     // MARK: - Public
     public func data(from value: Value) throws -> Data {

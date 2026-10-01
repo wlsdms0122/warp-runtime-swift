@@ -35,7 +35,7 @@ public struct ExpressionReader: Decodable {
     static let subjectKey: Name = "of"
     static let typeKey: Name = "type"
 
-    public let expression: Expression
+    public let expression: Warp.Expression
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -50,7 +50,7 @@ public struct ExpressionReader: Decodable {
     // Not public: a form reading an expression goes through `init(from:)`, which
     // is where a refusal from this grammar is given the address of the walk
     // that asked for it.
-    static func read(_ value: Value, in decoder: Decoder) throws -> Expression {
+    static func read(_ value: Value, in decoder: Decoder) throws -> Warp.Expression {
         try read(value, at: decoder.steps, in: decoder)
     }
 
@@ -70,7 +70,7 @@ public struct ExpressionReader: Decodable {
         _ value: Value,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         do {
             switch value {
             case .null, .bool, .int, .double, .string, .bytes:
@@ -112,7 +112,7 @@ public struct ExpressionReader: Decodable {
         record: Value.Dictionary,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         switch Tagging(record.entries, reading: ExpressionTag.init) {
         case let .one(tag, written):
             let inside = steps + [.key(tag.rawValue)]
@@ -162,7 +162,7 @@ public struct ExpressionReader: Decodable {
         _ record: Value.Dictionary,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression? {
+    ) throws -> Warp.Expression? {
         guard
             let spelling = decoder.notation.spelling,
             spelling.claims(Set(record.names), in: decoder.notation)
@@ -176,7 +176,7 @@ public struct ExpressionReader: Decodable {
         under written: Value,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         // A named record is data written as itself, so the name has no place
         // under the tag: kept, it would be a second spelling of that data, and
         // dropped, a name the text wrote that nothing reads.
@@ -193,9 +193,9 @@ public struct ExpressionReader: Decodable {
         in record: Value.Dictionary,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         .record(
-            try record.entries.reduce(into: [Name: Expression]()) { fields, entry in
+            try record.entries.reduce(into: [Name: Warp.Expression]()) { fields, entry in
                 fields[entry.name] = try read(
                     entry.value,
                     at: steps + [.key(entry.name.spelling)],
@@ -205,7 +205,7 @@ public struct ExpressionReader: Decodable {
         )
     }
 
-    private static func reference(_ written: Value, at steps: [Place.Step]) throws -> Expression {
+    private static func reference(_ written: Value, at steps: [Place.Step]) throws -> Warp.Expression {
         guard case let .string(rendered) = written else {
             throw ReadingError("{ ref: } takes a path string like a.b[0]", at: steps)
         }
@@ -224,7 +224,7 @@ public struct ExpressionReader: Decodable {
         optional: Bool,
         at inside: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         let key = (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key
 
         guard
@@ -265,7 +265,7 @@ public struct ExpressionReader: Decodable {
         _ written: Value,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         do {
             return .closure(
                 try ProcedureReader(from: ValueDecoder(below: decoder, key: ExpressionTag.closure.key.spelling, holding: written, at: steps))
@@ -285,7 +285,7 @@ public struct ExpressionReader: Decodable {
         _ written: Value,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         do {
             return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.rawValue, holding: written, at: steps))
                 .expression
@@ -300,7 +300,7 @@ public struct ExpressionReader: Decodable {
         in record: Value.Dictionary,
         at steps: [Place.Step],
         in decoder: Decoder
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
         // says a text may not write it; it does not hand the keys back to mean
@@ -331,14 +331,14 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError("{ format: } takes a template string")
         }
 
-        let bindings: [Name: Expression]
+        let bindings: [Name: Warp.Expression]
 
         switch record[Interpolation.withKey] {
         case nil:
             bindings = [:]
 
         case let .dictionary(withRecord)?:
-            bindings = try withRecord.entries.reduce(into: [Name: Expression]()) { bound, entry in
+            bindings = try withRecord.entries.reduce(into: [Name: Warp.Expression]()) { bound, entry in
                 bound[entry.name] = try read(
                     entry.value,
                     at: steps + [.key(Interpolation.withKey.spelling), .key(entry.name.spelling)],
@@ -373,10 +373,10 @@ public struct ExpressionReader: Decodable {
     // being a type only the template walk knew how to read.
     private static func lowered(
         _ segments: [TemplateSegment],
-        over bindings: [Name: Expression],
+        over bindings: [Name: Warp.Expression],
         spending interpolation: Interpolation
-    ) throws -> Expression {
-        let pieces: [Expression] = try segments.map { segment in
+    ) throws -> Warp.Expression {
+        let pieces: [Warp.Expression] = try segments.map { segment in
             switch segment {
             case let .text(literal):
                 return .literal(.string(literal))
@@ -411,8 +411,8 @@ public struct ExpressionReader: Decodable {
     // sees only its own bindings, so a name `with` does not bind is refused.
     private static func substituted(
         _ path: Path,
-        over bindings: [Name: Expression]
-    ) throws -> Expression {
+        over bindings: [Name: Warp.Expression]
+    ) throws -> Warp.Expression {
         guard let head = path.head, let bound = bindings[head] else {
             throw ExpressionFormError(
                 "{ format: } placeholder ${\(path.rendered)} names"
@@ -443,7 +443,7 @@ public struct ExpressionReader: Decodable {
     // index reference holds one; the rest name nothing.
     private static func closing(
         _ segment: PathSegment,
-        over bindings: [Name: Expression]
+        over bindings: [Name: Warp.Expression]
     ) throws -> PathSegment {
         guard case let .indexRef(inner, optionally) = segment else { return segment }
 

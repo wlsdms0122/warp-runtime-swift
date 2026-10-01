@@ -10,6 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
 // A statement with no naming key: the construct runs and the answer is dropped,
 // which is how an effect is asked for on its own. The other half of the same
@@ -65,7 +66,7 @@ struct NamelessTests {
     }
 
     @Test("two naming keys are refused")
-    func twoNamingKeysAreRefused() async {
+    func twoNamingKeysAreRefused() {
         // When / Then
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
@@ -139,7 +140,7 @@ struct NamelessTests {
 
         // When / Then
         #expect {
-            try Validator().validate(body: [statement], visible: [])
+            try Validator().validate(Procedure(body: [statement]))
         } throws: { error in
             "\(error)".contains("takes no name")
         }
@@ -181,7 +182,7 @@ struct NamelessTests {
     }
 
     @Test("a nameless statement written and read back is the same statement")
-    func aNamelessStatementRoundTrips() async throws {
+    func aNamelessStatementRoundTrips() throws {
         // Given. The reader's set of legal documents and the writer's must be
         // one set; a document that reads but does not write back broke that
         let document: Value = [

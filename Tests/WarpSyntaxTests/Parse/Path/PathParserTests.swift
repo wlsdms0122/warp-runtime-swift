@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-@Suite
+@Suite("A path parses into segments")
 struct PathParserTests {
     // MARK: - Property
     // MARK: - Initializer

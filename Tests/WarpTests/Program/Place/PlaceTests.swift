@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // Where a refusal says the words are.
 //
@@ -30,7 +31,7 @@ struct PlaceTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
-    func aPlaceIsSpelledFromTheLanguagesNames() async {
+    func aPlaceIsSpelledFromTheLanguagesNames() {
         // Given / When. A slot a document calls something else. A loop's
         // condition is `while` in a document, and that key appears nowhere in
         // what a caller assembling this wrote.
@@ -48,7 +49,7 @@ struct PlaceTests {
     }
 
     @Test("what a call is written with is named by the position holding it")
-    func anArgumentIsNamedByItsPosition() async {
+    func anArgumentIsNamedByItsPosition() {
         // Given / When. An argument reported from the statement's own place
         // says a thing is wrong and does not say which of the several written
         // there.
@@ -63,7 +64,7 @@ struct PlaceTests {
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
-    func aStatementIsFoundByWhicheverItHas() async {
+    func aStatementIsFoundByWhicheverItHas() {
         // Given. A statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
         let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
@@ -104,7 +105,7 @@ struct PlaceTests {
     }
 
     @Test("the place is carried as data, and the sentence is only the reason")
-    func aPlaceIsNotProse() async throws {
+    func aPlaceIsNotProse() throws {
         // Given / When. A place written into the message is a place nothing can
         // read back. A front end holding the file this was authored in has to
         // walk the steps to point at the line, and a sentence has no steps.
@@ -322,7 +323,7 @@ struct PlaceTests {
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
-    func anAssembledProgramNamesNoDocument() async {
+    func anAssembledProgramNamesNoDocument() {
         // Given. The same program twice: once handed in as a caller assembling
         // one in memory holds it, and once read out of a document. There is no
         // text under the first, which is a different fact from a text that
@@ -414,7 +415,7 @@ struct PlaceTests {
     }
 
     @Test("a statement's construct is the language's name, and says so")
-    func aConstructIsNotClaimedAsTheDocumentsOwn() async throws {
+    func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
         // Given / When. One construct, two texts: `{ call: … }` and `{ value: {
         // call: … } }` are both a call by the time anything here sees one, so
         // the name for the construct is this implementation's rather than
@@ -441,7 +442,7 @@ struct PlaceTests {
     }
 
     @Test("what a return carries is checked, and placed where the return is")
-    func aReturnsValueIsWalked() async throws {
+    func aReturnsValueIsWalked() throws {
         // Given / When. The door a caller assembling a program itself passes.
         // What `return` carries is an operand like any other: a name it reads
         // has to be visible where it was written

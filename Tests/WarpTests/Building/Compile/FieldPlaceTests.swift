@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // Where a path's field is found. The build lays out every record it proved, so
 // a field of one is lowered to the place it stands in and the run reads that

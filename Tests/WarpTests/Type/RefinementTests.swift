@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // What a range may say. The condition names the kind it refines and the far
 // bound says whether it is inside. The near bound always is, which keeps one

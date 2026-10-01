@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // What a caller is told while a run happens: the language's only outward
 // account of a run in progress.
@@ -256,7 +257,7 @@ struct ObservationTests {
                 "helper": Procedure(
                     body: [
                         Statement(
-                            expression: refusing(literal("no"))
+                            expression: aborting(literal("no"))
                         )
                     ]
                 )
@@ -293,7 +294,7 @@ struct ObservationTests {
                             expression: .closure(
                                 Procedure(
                                     body: [
-                                        Statement(expression: refusing(literal("no")))
+                                        Statement(expression: aborting(literal("no")))
                                     ]
                                 )
                             )

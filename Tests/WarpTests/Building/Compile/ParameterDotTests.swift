@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A dot on a type parameter. The type is the call's fact, so the build leaves
 // the segments as written rather than judging on nothing.
