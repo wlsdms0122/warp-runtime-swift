@@ -13,6 +13,93 @@ import Testing
 // caller.
 @Suite("A body walked and rewritten")
 struct LoweredBodyWalkTests {
+    private enum Kind: CaseIterable {
+        case literal
+        case local
+        case array
+        case record
+        case closure
+        case apply
+        case cast
+        case block
+        case conditional
+        case loop
+        case attempt
+        case call
+        case dispatch
+        case leave
+
+        // MARK: - Property
+        // MARK: - Initializer
+        init(_ operation: Operation) {
+            switch operation {
+            case .literal: self = .literal
+            case .local: self = .local
+            case .array: self = .array
+            case .record: self = .record
+            case .closure: self = .closure
+            case .apply: self = .apply
+            case .cast: self = .cast
+            case .block: self = .block
+            case .conditional: self = .conditional
+            case .loop: self = .loop
+            case .attempt: self = .attempt
+            case .call: self = .call
+            case .dispatch: self = .dispatch
+            case .leave: self = .leave
+            }
+        }
+
+        // MARK: - Public
+        func operations(holding leaf: Operation) throws -> [Operation] {
+            let body = LoweredBody(instructions: [Instruction(binding: nil, code: leaf, label: "leaf")], result: nil)
+            let empty = LoweredBody(instructions: [], result: nil)
+
+            switch self {
+            case .literal, .local, .closure:
+                return []
+
+            case .array:
+                return [.array([leaf])]
+
+            case .record:
+                return [.record(RecordOperation(layout: try Layout(fields: ["a"]), fields: [leaf]))]
+
+            case .apply:
+                return [.apply(leaf, arguments: [])]
+
+            case .cast:
+                return [.cast(leaf, as: .int, optional: false)]
+
+            case .block:
+                return [.block(body)]
+
+            case .conditional:
+                return [.conditional(leaf, then: [], else: nil)]
+
+            case .loop:
+                return [.loop(while: leaf, body: empty, round: 0, keeps: nil)]
+
+            case .attempt:
+                return [.attempt(body, rescue: empty, failure: 0)]
+
+            case .call:
+                return [.call(CallOperation(procedure: 1, arguments: [leaf, nil], handed: []))]
+
+            case .dispatch:
+                return [
+                    .dispatch(DispatchOperation(contract: "c", procedure: "p", first: leaf, arguments: [])),
+                    .dispatch(DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [.value(leaf)]))
+                ]
+
+            case .leave:
+                return [.leave(.procedure, target: nil, leaf)]
+            }
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // A distinctive leaf, so a test can tell whether a case's children were
     // reached at all.
@@ -22,53 +109,28 @@ struct LoweredBodyWalkTests {
 
     // Every case of `Operation` that holds another operation, each holding
     // the leaf where it holds one.
-    private var holders: [(name: String, operation: Operation)] {
+    private var holders: [(kind: Kind, operation: Operation)] {
         get throws {
-            let body = LoweredBody(instructions: [Instruction(binding: nil, code: leaf, label: "leaf")], result: nil)
-            let call = CallOperation(procedure: 1, arguments: [leaf, nil], handed: [])
-
-            return [
-                ("array", .array([leaf])),
-                ("record", .record(RecordOperation(layout: try Layout(fields: ["a"]), fields: [leaf]))),
-                ("apply", .apply(leaf, arguments: [])),
-                ("cast", .cast(leaf, as: .int, optional: false)),
-                ("block", .block(body)),
-                ("conditional", .conditional(leaf, then: [], else: nil)),
-                ("loop", .loop(while: leaf, body: LoweredBody(instructions: [], result: nil), round: 0, keeps: nil)),
-                ("attempt", .attempt(body, rescue: LoweredBody(instructions: [], result: nil), failure: 0)),
-                ("call", .call(call)),
-                ("dispatch", .dispatch(DispatchOperation(contract: "c", procedure: "p", first: leaf, arguments: []))),
-                ("dispatch argument", .dispatch(DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [.value(leaf)]))),
-                ("leave", .leave(.procedure, target: nil, leaf))
-            ]
+            try Kind.allCases.flatMap { kind in
+                try kind.operations(holding: leaf).map { operation in (kind: kind, operation: operation) }
+            }
         }
     }
 
-    // Every case `kind(of:)` spells, so a case added there is held to being a
-    // leaf or having a holder.
-    private let kinds: Set<String> = [
-        "literal", "local", "array", "record", "closure", "apply", "cast", "block",
-        "conditional", "loop", "attempt", "call", "dispatch", "leave"
-    ]
-
     // MARK: - Initializer
     // MARK: - Test
-    @Test("every case that holds an operation has a holder here")
-    func everyHoldingCaseIsAHolder() throws {
-        // Given. The cases that hold no operation, and every other case is held
-        // to having a holder above
-        let leaves: Set<String> = ["literal", "local", "closure"]
-        let holding = Set(try holders.map { _, operation in kind(of: operation) })
-
+    @Test("every holder here is the case it stands for")
+    func everyHolderIsItsKind() throws {
         // When / Then
-        #expect(holding.isDisjoint(with: leaves))
-        #expect(holding.union(leaves) == kinds)
+        for (kind, operation) in try holders {
+            #expect(Kind(operation) == kind, "\(kind)")
+        }
     }
 
     @Test("every case that holds an operation walks into it")
     func everyHolderIsWalkedInto() throws {
         // When / Then
-        for (name, operation) in try holders {
+        for (kind, operation) in try holders {
             var reached = false
 
             operation.walk { node in
@@ -77,14 +139,14 @@ struct LoweredBodyWalkTests {
                 return true
             }
 
-            #expect(reached, "\(name)")
+            #expect(reached, "\(kind)")
         }
     }
 
     @Test("every case that holds an operation hands it to a rewrite first")
     func everyHolderIsRewrittenInsideFirst() throws {
         // When / Then
-        for (name, operation) in try holders {
+        for (kind, operation) in try holders {
             var seen: [String] = []
 
             let rewritten = operation.rewritten(
@@ -104,14 +166,14 @@ struct LoweredBodyWalkTests {
 
             // The leaf is handed over before the case holding it, which comes
             // last, and the case arrives holding the rewritten leaf.
-            let leafAt = try #require(seen.firstIndex(of: "leaf"), "\(name)")
+            let leafAt = try #require(seen.firstIndex(of: "leaf"), "\(kind)")
 
-            #expect(seen.last == "holder" && leafAt < seen.count - 1, "\(name)")
+            #expect(seen.last == "holder" && leafAt < seen.count - 1, "\(kind)")
             #expect(rewritten.contains { node in
                 if case let .operation(inner) = node, case .literal(.int(8)) = inner { return true }
 
                 return false
-            }, "\(name)")
+            }, "\(kind)")
         }
     }
 
@@ -249,24 +311,4 @@ struct LoweredBodyWalkTests {
 
     // MARK: - Public
     // MARK: - Private
-    // Which case an operation is, spelled. Exhaustive, so a case added to
-    // `Operation` lands here as a compile error.
-    private func kind(of operation: Operation) -> String {
-        switch operation {
-        case .literal: return "literal"
-        case .local: return "local"
-        case .array: return "array"
-        case .record: return "record"
-        case .closure: return "closure"
-        case .apply: return "apply"
-        case .cast: return "cast"
-        case .block: return "block"
-        case .conditional: return "conditional"
-        case .loop: return "loop"
-        case .attempt: return "attempt"
-        case .call: return "call"
-        case .dispatch: return "dispatch"
-        case .leave: return "leave"
-        }
-    }
 }
