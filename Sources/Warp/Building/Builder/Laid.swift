@@ -14,7 +14,7 @@ import Foundation
 // into what a compile reads is work: each declaration's signature lowered into
 // slots, each native joined to the code the host brought under its spelling,
 // and every number their bodies carry answered with the row it reaches. A
-// caller compiling one document after another against the same documents would
+// host compiling one document after another against the same documents would
 // pay for that once a document. This is where it is paid once.
 //
 // The rows a document takes are the rows after the ones already laid, and both

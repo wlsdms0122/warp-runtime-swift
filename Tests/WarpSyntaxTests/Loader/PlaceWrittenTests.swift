@@ -88,7 +88,7 @@ struct PlaceWrittenTests {
     @Test("a link refusal reads in the document's keys where a reader is asked for it")
     func aLinkRefusalIsSpelledForTheAuthor() async throws {
         // Given. The stage that has no document of its own. What to link is the
-        // caller's statement, so a link cannot know which text a module came
+        // host's statement, so a link cannot know which text a module came
         // out of; the side that read the text can say.
         let module = try loader.loadProcedure([
             "body": [

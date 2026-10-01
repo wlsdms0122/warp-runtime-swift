@@ -10,7 +10,7 @@ import Warp
 
 // Repetition governed by a condition: the body runs while `while` holds.
 // Nothing here bounds a body that never settles. An author bounds a loop with a
-// counter and a procedure, and a receiver stops one with cancellation.
+// counter and a procedure, and the host stops one by cancelling the run.
 public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case `while`

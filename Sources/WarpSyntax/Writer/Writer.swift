@@ -14,7 +14,7 @@ import Warp
 //
 // It exists because a program has to be able to leave the machine that built
 // it. Building the language's types directly is what a front end with a syntax
-// of its own does, and a caller assembling procedures in native code does the
+// of its own does, and a host assembling procedures in native code does the
 // same, but neither can hand what it built to anything running elsewhere unless
 // the result can be written down. Reading was half a door.
 //
@@ -63,8 +63,8 @@ public struct Writer: Sendable {
         // nothing is written with what it sends, since a document that says
         // nothing is not one and there is nobody left to ask.
         var written: [Name: Value] = [
-            Envelope.versionKey: .int(Envelope.version),
-            Envelope.importsKey: .array(
+            Module.versionKey: .int(ModuleReader.version),
+            ModuleReader.CodingKeys.imports.name: .array(
                 (draft.imports ?? draft.uses).sorted().map { name in .string(name.spelling) }
             ),
             ModuleReader.CodingKeys.procedures.name:
@@ -146,7 +146,7 @@ public struct Writer: Sendable {
         guard case let .body(block) = procedure.implementation else {
             throw WritingError(
                 "a procedure implemented in native code has no document."
-                    + " What a caller brings is declared where the run is assembled"
+                    + " What the host brings is declared in a module it assembles into the link"
             )
         }
 

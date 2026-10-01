@@ -93,7 +93,7 @@ struct DeclarationChecker {
                 case .parameter, .any, .never, .composition: false
                 case .null, .bool, .int, .double, .string, .ranged, .array,
                     .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
-                    .borrowing, .nullable, .reading: true
+                    .borrowing, .nullable, .projection: true
                 }
 
                 guard concrete else {
@@ -381,7 +381,7 @@ struct DeclarationChecker {
         // Nobody promised it, and no document could have spelled it. It is
         // refused here rather than left to the reader, because a reader is one
         // way a declaration is built and a host assembling one is another.
-        case let .reading(of, path):
+        case let .projection(of, path):
             throw BuildError(
                 "writes `\(type.rendered)`, which is a type the build"
                     + " read out of a body. A declaration says what a call fills,"
@@ -697,7 +697,7 @@ struct DeclarationChecker {
             throw BuildError("`some \(misspelled)` names its bounds once each and in name order", at: place)
         }
 
-        let bounds = ParameterBounds(occurrences)
+        let bounds = ParameterBounding(occurrences)
 
         if let refusal = bounds.refusal {
             throw BuildError(refusal, at: place)

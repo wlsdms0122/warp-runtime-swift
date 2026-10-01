@@ -49,7 +49,7 @@ enum Binding: Equatable, Sendable {
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .nullable,
-            .named, .parameter, .composition, .reading, .undeclared:
+            .named, .parameter, .composition, .projection, .undeclared:
             self = .fixed(declared)
         }
     }

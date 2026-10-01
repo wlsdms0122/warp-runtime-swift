@@ -46,7 +46,7 @@ struct ConditionalTests {
         #expect(elseOutputs["result"] == .string("took-else"))
     }
 
-    @Test("a name on a conditional is refused at reading")
+    @Test("a name on a conditional is refused at the load")
     func aNameOnABranchIsRefused() {
         // When / Then. A conditional answers nothing, so its name could never
         // bind

@@ -11,7 +11,7 @@ import Testing
 import WarpStandard
 import WarpTestSupport
 
-// What a caller is told while a run happens: the language's only outward
+// What a host is told while a run happens: the language's only outward
 // account of a run in progress.
 @Suite("What a run reports while it runs")
 struct ObservationTests {

@@ -34,10 +34,10 @@ public struct Executor: Sendable {
         arguments: [Name: Value] = [:]
     ) async throws -> Value {
         // A name is its declared spelling and nothing else, so the entry is
-        // looked up as the caller wrote it.
+        // looked up as the host wrote it.
         guard let start = image.rows[entry] else {
             // A spelling only a private declaration wears is declared, and by
-            // nothing the caller may name.
+            // nothing the host may name.
             guard !image.concealed.contains(entry) else {
                 throw ExecutionError(
                     "entry '\(entry)' is private to the document that declares it, and a run"
@@ -56,7 +56,7 @@ public struct Executor: Sendable {
 
         // A run starts from outside the link, and only a public declaration
         // is named from there.
-        guard entry.access.reachesCaller else {
+        guard entry.access.reachesHost else {
             throw ExecutionError(
                 "entry '\(entry.label)' is \(entry.access.rawValue), and a run starts"
                     + " only from a public declaration"

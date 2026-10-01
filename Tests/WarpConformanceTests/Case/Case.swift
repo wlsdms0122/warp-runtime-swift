@@ -52,7 +52,7 @@ struct Case: Sendable, CustomStringConvertible {
         let expectation: Outcome
 
         // The identity the case reads the object under, where the case says
-        // one; the object's own where it says none. A caller keeps an object
+        // one; the object's own where it says none. A host keeps an object
         // under a document and hands that back, and a case that hands back
         // another asks whether the reading notices.
         let document: Identity?
@@ -203,7 +203,7 @@ struct Case: Sendable, CustomStringConvertible {
                 return OneName.self
 
             case ["first", "second"]:
-                return TwoNames.self
+                return AnyPair.self
 
             default:
                 throw ConformanceError(

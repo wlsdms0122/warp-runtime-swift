@@ -131,13 +131,13 @@ public struct ConstructRegistry: Sendable {
     }
 
     // MARK: - Private
-    // A key is claimed once. Silently replacing a form would let a caller swap
+    // A key is claimed once. Silently replacing a form would let a host swap
     // out the language's own control structures without a trace. Deliberately
     // replacing one is `removing(_:)` first, which leaves the intent written
     // down.
     private mutating func insert(_ form: any ConstructForm.Type, as key: Name) throws {
         guard forms[key] == nil else {
-            // A registry is assembled by a caller and not read out of a
+            // A registry is assembled by a host and not read out of a
             // document, so there is no place in one to point at.
             throw ValidationError("construct key '\(key)' is already registered", at: nil)
         }

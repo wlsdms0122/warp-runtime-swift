@@ -7,7 +7,7 @@
 
 import Foundation
 
-// The stand-in, in the table a fold runs against, for a procedure a caller
+// The stand-in, in the table a fold runs against, for a procedure a host
 // brought. A constant settles at the build and what it settles to is written
 // into the object, so it settles from what every implementation answers the
 // same way: a body in the link, read from the text the object is keyed by, and
@@ -31,7 +31,7 @@ struct UnfoldableProcedure: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         throw ExecutionError(
-            "'\(label)' is a procedure a caller brought, and a constant settles"
+            "'\(label)' is a procedure the host brought, and a constant settles"
                 + " from the standard vocabulary and from bodies in the link"
         )
     }

@@ -237,7 +237,7 @@ struct ReachTests {
     @Test("names resolve across every module in the link, flat")
     func symbolsResolveAcrossModules() async throws {
         // Given. No module says anything about the others; what to link is the
-        // caller's statement and joining the names up is the builder's work
+        // host's statement and joining the names up is the builder's work
         let caller = try Module(
             procedures: [
                 "caller": Procedure(

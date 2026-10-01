@@ -14,7 +14,7 @@ extension Notation {
     // fixtures link against the standard modules, not because this notation
     // knows anything about them.
     static let testing = Notation(
-        spelling: TestConditions(),
+        spelling: TestConditionSpelling(),
         interpolation: Interpolation(read: "std.text.text", joined: "std.text.joined")
     )
 }

@@ -14,7 +14,7 @@ import WarpTestSupport
 // What a reading of an object refuses.
 //
 // An object is this runtime's own writing, so what is asked here is what
-// happens when the bytes are not that. Each test bends one field of a real
+// happens when the bytes are not that. Each test mutates one field of a real
 // object, because a writing built by hand would prove only that the reading
 // refuses something it was never handed.
 @Suite("An object whose writing is not one")
@@ -23,7 +23,7 @@ struct ObjectReadingTests {
     }
 
     // MARK: - Property
-    // A stand-in for what a caller works out from the bytes, which this
+    // A stand-in for what a host works out from the bytes, which this
     // package does not write. What these ask is what a reading refuses, so any
     // answer stands as long as an object compiled against another one can be
     // written down at all.
@@ -918,8 +918,8 @@ struct ObjectReadingTests {
 
     // MARK: - Public
     // MARK: - Private
-    // The object as written, its parts under their keys, so a test bends
-    // what it means to bend.
+    // The object as written, its parts under their keys, so a test mutates
+    // what it means to mutate.
     private func parts() async throws -> Value.Dictionary {
         try await parts(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],

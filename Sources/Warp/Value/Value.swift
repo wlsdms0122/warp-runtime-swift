@@ -399,7 +399,7 @@ public indirect enum Value: Sendable, Equatable {
 
     // A field of a record, and nil for anything else. Several answers travel as
     // one record because a procedure answers one value, so reading a field back
-    // out is the ordinary thing a caller does with what a run gave it.
+    // out is the ordinary thing a host does with what a run gave it.
     public subscript(field: Name) -> Value? {
         switch self {
         case let .record(record): record[field]

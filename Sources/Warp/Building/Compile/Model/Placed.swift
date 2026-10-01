@@ -15,9 +15,9 @@ struct Placed<Held> {
     let held: Held
     let place: Place
 
-    // Where the caller put the document that wrote it. What tells two
+    // Where the host put the document that wrote it. What tells two
     // documents apart when neither was read from anything, since a module a
-    // caller built has no identity.
+    // host built has no identity.
     let handed: Int
 
     // What a sentence calls this declaration when it names one among several.

@@ -91,7 +91,7 @@ public extension Place {
     }
 
     // The key this notation writes a type under. Asked of the registry
-    // because a caller registers the forms it likes under the spellings it
+    // because a host registers the forms it likes under the spellings it
     // likes, and a type whose key was given up has none to offer. The
     // language's own name stands in there, which is what a place said before
     // anybody asked a document.

@@ -108,7 +108,7 @@ enum ObjectCoverageFixture {
         "named": .named("a.one"),
         "parameter": .parameter(name: "T", constraints: ["a.four"]),
         "composition": .composition(["a.five", "a.four"]),
-        "reading": .reading(
+        "projection": .projection(
             of: "a.fifteen",
             path: [
                 .key("k", optional: true),
@@ -150,7 +150,7 @@ enum ObjectCoverageFixture {
         ("parameterMembership", .parameter(label: "T", bounds: [.membership(5)])),
         ("parameterContract", .parameter(label: "U", bounds: [.contract("a.five")])),
         ("parameterNone", .parameter(label: "V", bounds: [])),
-        ("reading", .reading(of: "a.sixteen", path: [.index(1, optional: true)])),
+        ("projection", .projection(of: "a.sixteen", path: [.index(1, optional: true)])),
         ("composition", .composition([.membership(7), .contract("a.five")])),
         ("undeclaredBound", .undeclared(label: "W", because: .noBoundNamed("a.thirteen"))),
         ("undeclaredType", .undeclared(label: "X", because: .noTypeNamed("a.fourteen"))),

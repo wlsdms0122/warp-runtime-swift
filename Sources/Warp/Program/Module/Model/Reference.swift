@@ -31,7 +31,7 @@ enum Reference: Hashable, Sendable, Comparable {
     // MARK: - Initializer
     // MARK: - Public
     // Procedures before types, and each in name order. The module graph walks
-    // a module's needs in this order, so which ring it refuses is a fact of
+    // a module's needs in this order, so which cycle it refuses is a fact of
     // the modules.
     static func < (lhs: Reference, rhs: Reference) -> Bool {
         switch (lhs, rhs) {

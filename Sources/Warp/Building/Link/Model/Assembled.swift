@@ -10,7 +10,7 @@ import Foundation
 // The documents of one link, laid end to end, and the tables that say what
 // its rows are. Where a document's rows first stand somewhere.
 //
-// No body is read: the blocks are copied in, in the order the caller handed
+// No body is read: the blocks are copied in, in the order the host handed
 // them over, and the names are answered with where their block began.
 struct Assembled: Sendable {
     // One row of the link: the judged row, which document it came out of,
@@ -62,7 +62,7 @@ struct Assembled: Sendable {
     let answers: [Int: LoweredType]
 
     // Which row a closure a value holds stands at, by its spelling.
-    let spelled: ClosureRows
+    let spelled: ClosureRowTable
 
     // MARK: - Initializer
     // Each document is read in place and once. A compiled document is a
@@ -154,7 +154,7 @@ struct Assembled: Sendable {
         self.table = table
         self.documents = named
         self.naming = naming
-        self.spelled = ClosureRows(naming: naming, numbering: numbering, closures: closures, documents: named)
+        self.spelled = ClosureRowTable(naming: naming, numbering: numbering, closures: closures, documents: named)
         self.rows = rows
         self.owned = owned
         self.concealed = concealed

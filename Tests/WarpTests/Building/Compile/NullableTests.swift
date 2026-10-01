@@ -75,7 +75,7 @@ struct NullableTests {
         )
 
         // When / Then. The value that arrived reads its field, and the null the
-        // caller handed answers null
+        // host handed answers null
         #expect(try await run(sut, arguments: ["task": .dictionary(["size": .int(7)])]) == .int(7))
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
     }
@@ -130,7 +130,7 @@ struct NullableTests {
         await #expect {
             try await run(sut)
         } throws: { error in
-            "\(error)".contains("nothing was given for limit")
+            "\(error)".contains("entry 'entry' was given nothing for 'limit'")
         }
 
         // A plain typed parameter still means "give me something".
@@ -151,7 +151,7 @@ struct NullableTests {
         await #expect {
             try await run(plain)
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("required, and nothing was given for limit")
+            error is ArgumentError && "\(error)".contains("entry 'entry' was given nothing for 'limit'")
         }
     }
 

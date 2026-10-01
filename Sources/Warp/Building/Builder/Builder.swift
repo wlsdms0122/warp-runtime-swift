@@ -11,11 +11,11 @@ import Foundation
 // refuses.
 //
 // A build is handed its whole module graph at once. The procedures a program can
-// call are the procedures the caller put in front of it, so what to build is the
-// caller's statement and joining the names up is this. A module's `imports` says what it
+// call are the procedures the host put in front of it, so what to build is the
+// host's statement and joining the names up is this. A module's `imports` says what it
 // asks for and never where to find it. Which declaration a run starts from is
 // the run's argument: an image is every declaration the link judged, and a
-// caller starts a run from any public one.
+// host starts a run from any public one.
 //
 // Every declaration is judged. A misspelled procedure in an arm today's
 // arguments never take is a defect whether or not a run walks that way, and so
@@ -41,12 +41,12 @@ import Foundation
 // answered, judges what only the whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
-    // How an object's fingerprint is worked out, where a caller wants its
+    // How an object's fingerprint is worked out, where a host wants its
     // objects to say what they are true against.
     //
     // Taken rather than done here. A fingerprint is about bytes, and what
     // writes bytes is another package: this one is the language and does not
-    // know how a value is laid down. A caller that never files an object
+    // know how a value is laid down. A host that never files an object
     // hands nothing over and is handed objects that say they cannot be
     // filed, which is what they are.
     private let fingerprinting: (@Sendable (Value) throws -> Fingerprint)?
@@ -59,33 +59,33 @@ public struct Builder: Sendable {
     // MARK: - Public
     // Compiling and then linking, which is what building is.
     //
-    // What to build is the caller's statement, the whole graph at once. A
-    // bundled vocabulary is one of those modules, and a caller that leaves it
-    // out is a caller whose `count` does not resolve.
+    // What to build is the host's statement, the whole graph at once. A
+    // bundled vocabulary is one of those modules, and a host that leaves it
+    // out is a host whose `count` does not resolve.
     public func build(_ modules: [Module]) async throws -> Image {
         try await link(compile(modules), supplying: Supplying(modules))
     }
 
-    // Documents compiled and handed back, for a caller that means to build
+    // Documents compiled and handed back, for a host that means to build
     // them more than once.
     //
     // A build does two things: it works out what each document says, and it
     // lays the documents down together. The first is a function of the
-    // document and of what it reaches, so a caller holding the answer can hand
+    // document and of what it reaches, so a host holding the answer can hand
     // it over instead of asking for it again. The vocabulary a host brings is
     // the same documents every run, and this is how it stops paying for them
     // every run.
     //
     // The order is worked out here. What a document reaches is read off the
     // procedures it sends and the types its signatures name, neither of which a
-    // caller wrote down, so a caller has nothing to sort by.
+    // host wrote down, so a host has nothing to sort by.
     public func compile(_ modules: [Module]) async throws -> [Compiled] {
         try await compile(modules, against: [], supplying: .none)
     }
 
-    // The same, against documents the caller already holds.
+    // The same, against documents the host already holds.
     //
-    // `compiled` is what the caller already holds, and the documents given
+    // `compiled` is what the host already holds, and the documents given
     // here are compiled against it. A procedure a document sends is answered by
     // either, and one that nothing here answers is refused where it is sent.
     //
@@ -102,7 +102,7 @@ public struct Builder: Sendable {
     }
 
     // Documents already compiled, with the rows they stand as made once, so a
-    // caller compiling against them more than once pays for that once.
+    // host compiling against them more than once pays for that once.
     //
     // What it costs is every declaration behind the one being compiled: its
     // signature lowered into slots, and for a native the host's procedure joined to
@@ -182,7 +182,7 @@ public struct Builder: Sendable {
         )
     }
 
-    // The same, against documents a caller already laid down.
+    // The same, against documents a host already laid down.
     public func compile(_ modules: [Module], against laid: Laid) async throws -> [Compiled] {
         let compiled = laid.compiled
 
@@ -196,7 +196,7 @@ public struct Builder: Sendable {
 
         // Back in the order the documents were handed over. A document says
         // nothing about where it stands, so the order a link reads them in is
-        // the caller's.
+        // the host's.
         var ordered = lowered
 
         for (position, origin) in standing.enumerated() {
@@ -235,7 +235,7 @@ public struct Builder: Sendable {
         // their rows, and what they wrote themselves. A name two of them
         // declare is refused here.
         //
-        // Refused rather than taken as the caller's statement, which the order
+        // Refused rather than taken as the host's statement, which the order
         // is: a doubled spelling is not a question of which document to read
         // first, it is a table with no answer for that name.
         var signatures = laid.signatures
@@ -421,7 +421,7 @@ public struct Builder: Sendable {
         }
     }
 
-    // An object said as what it is, where the caller handed over how that is
+    // An object said as what it is, where the host handed over how that is
     // worked out. One that cannot be written down has nothing to work it out
     // from, which is the same absence said one step earlier.
     private func fingerprinted(_ object: Compiled) throws -> Compiled {
@@ -438,7 +438,7 @@ public struct Builder: Sendable {
     // Every declaration the documents laid down made, under the spelling it
     // was declared by and at the place it was written. What a document
     // declares is its own; where it stands among the documents is the
-    // caller's order.
+    // host's order.
     //
     // What the build read off a body is written in its document's type
     // numbers, so it is read as the rows of `loweredTypes`.
@@ -447,7 +447,7 @@ public struct Builder: Sendable {
         in loweredTypes: LoweredTypeTable
     ) throws -> [Name: Placed<Declared>] {
         var signatures: [Name: Placed<Declared>] = [:]
-        var numbered: [Int: LoweredTypeNumbering.Rows] = [:]
+        var numbered: [Int: LoweredTypeNumbering.Renumbering] = [:]
 
         for (name, number) in assembled.rows {
             let row = assembled.table[number]
@@ -480,9 +480,9 @@ public struct Builder: Sendable {
     //
     // Refused here rather than left to the collision, because the collision has
     // nothing to say: both sides of its sentence are the same document, and the
-    // fix is not a spelling but a caller holding what it already had.
+    // fix is not a spelling but a host holding what it already had.
     //
-    // What the caller already compiled counts: those documents are in this
+    // What the host already compiled counts: those documents are in this
     // link too, and handing one over again is the same document twice however
     // it arrived.
     private func refuseRepeated(_ documents: [Place.Document], held: Set<Identity> = []) throws {
@@ -504,7 +504,7 @@ public struct Builder: Sendable {
     // No spelling another document may name declared by two of these. Refused
     // before the order is worked out: the order reads a name as whichever
     // document declared it, and where two declare one name that reading can
-    // put a document in its own reach and call the pair a ring.
+    // put a document in its own reach and call the pair a cycle.
     private func refuseDoubled(_ modules: [Module], after held: Int) throws {
         var claimed: [Name: Placed<Procedure>] = [:]
 

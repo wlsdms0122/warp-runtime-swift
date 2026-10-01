@@ -17,13 +17,13 @@ import Foundation
 // resolves closures alike without hearing of it.
 //
 // Rows are resolved once each, whichever asks first, and a row asked for
-// again while its own resolving is underway is a ring of rows holding
+// again while its own resolving is underway is a cycle of rows holding
 // closures of one another through the values in their bodies, which no
 // build lowers. A class, since the rows resolved are remembered across the
 // askings that share one.
 final class ClosureResolver {
     // MARK: - Property
-    private let spelled: ClosureRows
+    private let spelled: ClosureRowTable
     private let table: [Linked]
     private let documents: [Place.Document]
 
@@ -37,7 +37,7 @@ final class ClosureResolver {
 
     // MARK: - Initializer
     init(
-        spelled: ClosureRows,
+        spelled: ClosureRowTable,
         table: [Linked],
         documents: [Place.Document],
         rewriting: ((Linked) throws -> Linked)? = nil
@@ -57,7 +57,7 @@ final class ClosureResolver {
 
         guard !underway[row] else {
             throw BuildError.unjudged(
-                "a closure closing a ring of rows through the values they hold",
+                "a closure closing a cycle of rows through the values they hold",
                 at: .procedure(table[row].label.spelling, in: documents[table[row].origin])
             )
         }

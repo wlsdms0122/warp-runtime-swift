@@ -472,7 +472,7 @@ struct LoweringTests {
         await #expect {
             try await builder.build([module] + Module.standard)
         } throws: { error in
-            "\(error)".contains("a circle with no start")
+            "\(error)".contains("a cycle with no start")
         }
     }
 

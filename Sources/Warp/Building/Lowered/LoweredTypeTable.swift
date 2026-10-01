@@ -232,7 +232,7 @@ final class LoweredTypeTable: Sendable {
         asking pairs: [(LoweredType, LoweredType)] = []
     ) -> Bool {
         switch reading {
-        case .any, .reading:
+        case .any, .projection:
             return true
 
         // A parameter bounded by a membership stands for some member of it, so
@@ -382,7 +382,7 @@ final class LoweredTypeTable: Sendable {
     // MARK: - Private
     private func answering(contract name: Name, reading: LoweredType, assuming: [Int]) -> Answering {
         switch reading {
-        case .any, .reading, .undeclared, .never:
+        case .any, .projection, .undeclared, .never:
             return .settled(true)
 
         case let .named(row):

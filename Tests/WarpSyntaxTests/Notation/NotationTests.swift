@@ -42,13 +42,13 @@ struct NotationTests {
         // one, so what it reaches is owed whether or not any form is
         // registered. Nothing in this package knows what those procedures are.
         let notation = Notation(
-            spelling: OwnVocabularyConditions(),
+            spelling: OwnVocabularySpelling(),
             interpolation: Interpolation(read: "text", joined: "joined")
         )
 
         // When / Then. With no forms at all, and with the standard ones
         for sut in [Loader(registry: try ConstructRegistry(forms: [])), Loader()] {
-            #expect(sut.vocabulary(of: notation).isSuperset(of: OwnVocabularyConditions().vocabulary))
+            #expect(sut.vocabulary(of: notation).isSuperset(of: OwnVocabularySpelling().vocabulary))
             #expect(sut.vocabulary(of: notation) == notation.vocabulary)
         }
     }
@@ -287,7 +287,7 @@ struct NotationTests {
         // standing bare it is refused, and under `record` it is a record.
         func document(asking asked: Value) -> Value {
             [
-                "warp": .int(Envelope.version),
+                "warp": .int(ModuleReader.version),
                 "imports": [],
                 "procedures": [
                     "entry": [

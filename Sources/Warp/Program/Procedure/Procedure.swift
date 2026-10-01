@@ -24,7 +24,7 @@ public struct Procedure: Sendable {
     public let signature: Signature
     public let implementation: Implementation
 
-    // Who may name this declaration: its own document, the link, or the caller
+    // Who may name this declaration: its own document, the link, or the host
     // as well. `internal` where the declaration said nothing.
     public let access: Access
 

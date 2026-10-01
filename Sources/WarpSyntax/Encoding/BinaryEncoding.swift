@@ -479,7 +479,7 @@ public struct BinaryEncoding {
     // The same count the writer keeps: containers open on the path, and the
     // one about to open is one more of them.
     private func opening(_ opened: [Opened]) throws {
-        guard opened.count < Envelope.nesting else {
+        guard opened.count < Value.nestingBound else {
             throw EncodingRefused("the document nests deeper than a reader must follow")
         }
     }

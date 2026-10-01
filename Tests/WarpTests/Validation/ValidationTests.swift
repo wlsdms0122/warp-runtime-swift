@@ -23,7 +23,7 @@ struct ValidationTests {
         (claimed: ["std.collection.count", "std.math.plus"] as Set<Name>, refusal: "imports [\"std.math.plus\"], which it does not use")
     ])
     func aModuleIsHeldToItsImports(_ claimed: Set<Name>, refusal: String) {
-        // Given. A caller decides what to grant from this list and then links
+        // Given. A host decides what to grant from this list and then links
         // what it granted, so a list that says less than the program sends
         // links a procedure nobody allowed, and one that says more takes a grant the
         // program never uses

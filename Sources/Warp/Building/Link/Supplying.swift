@@ -15,7 +15,7 @@ import Foundation
 // to say what that value is, so the code arrives beside the objects and a
 // link joins the two by name.
 //
-// Held by the caller rather than read out of the modules at every call. The
+// Held by the host rather than read out of the modules at every call. The
 // procedures a host brings are the same procedures every run, and joining them up is
 // what a link would otherwise pay for again each time.
 public struct Supplying: Sendable {
@@ -42,7 +42,7 @@ public struct Supplying: Sendable {
     }
 
     // MARK: - Property
-    // A caller bringing no native code at all. What a document left to its
+    // A host bringing no native code at all. What a document left to its
     // host is then refused wherever it stands.
     public static let none = Supplying()
 
@@ -63,7 +63,7 @@ public struct Supplying: Sendable {
     // A spelling two of them bring is refused here, for the reason a link
     // refuses a name two documents declare: a table with two answers for one
     // name has no answer, and which of the two a run would get is the order
-    // the caller happened to write.
+    // the host happened to write.
     public init(_ modules: [Module]) throws {
         var procedures: [Name: Brought] = [:]
         var hidden: [Identity: [Name: Brought]] = [:]

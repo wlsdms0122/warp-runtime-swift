@@ -41,7 +41,7 @@ public struct Place: Sendable, Hashable {
         public static let assembled = Document(identity: nil)
 
         // How the document reads on its own. An identity tells one document
-        // from every other in a link, since a link refuses the same one twice.
+        // from every other in a link, since the build refuses the same one twice.
         var rendered: String? {
             identity?.short
         }
@@ -57,8 +57,8 @@ public struct Place: Sendable, Hashable {
         }
 
         // What a sentence calls this document when it names one among several.
-        // Without an identity there is only where the caller put it: the
-        // caller counts its own modules, in the order it handed them over.
+        // Without an identity there is only where the host put it: the
+        // host counts its own modules, in the order it handed them over.
         func spelled(at origin: Int) -> String {
             rendered ?? "the module at \(origin) in this link"
         }

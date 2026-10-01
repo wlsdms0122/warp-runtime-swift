@@ -16,7 +16,7 @@ import Foundation
 // beside the bodies instead, since it runs a few of them once and writing all
 // of them over would cost more than the running.
 struct ResolvedTable: Sendable {
-    private enum Numbers: Sendable {
+    private enum NumberSource: Sendable {
         // This link's own rows.
         case rows
 
@@ -32,7 +32,7 @@ struct ResolvedTable: Sendable {
     // What a closure a run over these rows makes is spelled with, by origin.
     let naming: [Closure.Document]
 
-    private let numbers: Numbers
+    private let numbers: NumberSource
 
     // How a run reads the numbers the bodies carry.
     var resolving: Resolving {
@@ -46,7 +46,7 @@ struct ResolvedTable: Sendable {
     }
 
     // MARK: - Initializer
-    private init(table: [Linked], rows: [Name: Int], naming: [Closure.Document], numbers: Numbers) {
+    private init(table: [Linked], rows: [Name: Int], naming: [Closure.Document], numbers: NumberSource) {
         self.table = table
         self.rows = rows
         self.naming = naming

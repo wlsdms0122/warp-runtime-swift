@@ -64,7 +64,7 @@ struct Lowering {
 
     // The names visible at one point of a body, by slot. A value, so a block
     // takes a copy and what it introduces dies with it.
-    private struct Names {
+    private struct Scope {
         // MARK: - Property
         var slots: [Name: Int] = [:]
 
@@ -76,7 +76,7 @@ struct Lowering {
     // The slots of one body being lowered. A closure's slots know the slots
     // and names of the body it was written in, and take a cell from there
     // the first time the closure reads a name it did not declare.
-    private final class Slots {
+    private final class SlotAllocator {
         // MARK: - Property
         let origin: Int
         let variables: [Name: Int]
@@ -86,7 +86,7 @@ struct Lowering {
         // read, an index the run settles, and then the constant takes a slot
         // the body binds before its first statement.
         let constants: [Name: (value: Value, type: LoweredType)]
-        let outer: (slots: Slots, names: Names)?
+        let outer: (slots: SlotAllocator, names: Scope)?
 
         private(set) var names: [Name] = []
         private(set) var parameters: [Int] = []
@@ -111,7 +111,7 @@ struct Lowering {
 
         var size: Int { names.count }
 
-        private var root: Slots {
+        private var root: SlotAllocator {
             outer?.slots.root ?? self
         }
 
@@ -124,7 +124,7 @@ struct Lowering {
             origin: Int,
             variables: [Name: Int],
             constants: [Name: (value: Value, type: LoweredType)],
-            outer: (slots: Slots, names: Names)? = nil
+            outer: (slots: SlotAllocator, names: Scope)? = nil
         ) {
             self.origin = origin
             self.variables = variables
@@ -191,7 +191,7 @@ struct Lowering {
         // then the module's variables. A closure reaches a module variable
         // through the body it was written in, so the hold it takes is that
         // body's.
-        func slot(of name: Name, in names: Names) -> Int? {
+        func slot(of name: Name, in names: Scope) -> Int? {
             if let slot = names.slots[name] { return slot }
 
             if let slot = capturedSlots[name] { return slot }
@@ -405,12 +405,12 @@ struct Lowering {
     // stands.
     mutating func settle(_ row: Int, body block: Block, handing inPlace: [Place: [Int]], at place: Place) throws {
         let declared = table[row]
-        let slots = Slots(
+        let slots = SlotAllocator(
             origin: declared.origin,
             variables: documents[declared.origin].variables,
             constants: constants[declared.origin] ?? [:]
         )
-        var scope = Names()
+        var scope = Scope()
 
         for slot in declared.slots {
             let allocated = slots.allocateParameter(slot.name)
@@ -449,8 +449,8 @@ struct Lowering {
         inPlace: [Place: [Int]],
         at place: Place
     ) throws -> (Operation, Frame) {
-        let slots = Slots(origin: origin, variables: [:], constants: [:])
-        var scope = Names()
+        let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
+        var scope = Scope()
 
         for name in names {
             scope.slots[name] = slots.allocate(name)
@@ -469,8 +469,8 @@ struct Lowering {
         origin: Int,
         at place: Place
     ) throws -> (Operation, Frame) {
-        let slots = Slots(origin: origin, variables: [:], constants: [:])
-        var scope = Names()
+        let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
+        var scope = Scope()
 
         for name in names {
             scope.slots[name] = slots.allocate(name)
@@ -539,8 +539,8 @@ struct Lowering {
     // MARK: - Private
     private mutating func lower(
         _ block: Block,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -566,8 +566,8 @@ struct Lowering {
     // bound.
     private mutating func lower(
         _ body: Body,
-        in scope: inout Names,
-        on slots: Slots,
+        in scope: inout Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -633,7 +633,7 @@ struct Lowering {
     // walk made for it, a call on what its row answers, a cast on what it
     // casts to, and a path on what it reaches. Nil everywhere else, which
     // leaves the fields below it to be read by name.
-    private func standing(_ code: Operation, on slots: Slots) -> LoweredType? {
+    private func standing(_ code: Operation, on slots: SlotAllocator) -> LoweredType? {
         switch code {
         case let .record(held):
             return .record(
@@ -672,8 +672,8 @@ struct Lowering {
 
     private mutating func lower(
         _ expression: Expression,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -745,8 +745,8 @@ struct Lowering {
     // is lowering.
     private mutating func lower(
         record: [Name: Expression],
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -772,8 +772,8 @@ struct Lowering {
 
     private mutating func lower(
         closure procedure: Procedure,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -785,8 +785,8 @@ struct Lowering {
         // A closure reaches a constant the way it reaches a module variable,
         // through the body it was written in, so the slot it takes is that
         // body's and the binding is that body's.
-        let inner = Slots(origin: slots.origin, variables: [:], constants: [:], outer: (slots, scope))
-        var innerScope = Names()
+        let inner = SlotAllocator(origin: slots.origin, variables: [:], constants: [:], outer: (slots, scope))
+        var innerScope = Scope()
 
         for name in procedure.signature.names {
             innerScope.slots[name] = inner.allocateParameter(name)
@@ -845,8 +845,8 @@ struct Lowering {
     private mutating func lower(
         apply callee: Expression,
         arguments: [Expression],
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -879,8 +879,8 @@ struct Lowering {
         cast value: Expression,
         as type: TypeExpression,
         optional: Bool,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -906,8 +906,8 @@ struct Lowering {
         conditional condition: Expression,
         then: Body,
         else otherwise: Body?,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -935,8 +935,8 @@ struct Lowering {
         loop condition: Expression,
         body: Block,
         round: Name?,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -982,8 +982,8 @@ struct Lowering {
         attempt block: Block,
         rescue: Block,
         failure: Name?,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -1005,8 +1005,8 @@ struct Lowering {
 
     private mutating func lower(
         leave: Leave,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -1023,8 +1023,8 @@ struct Lowering {
     private mutating func lower(
         _ call: Call,
         through asked: LoweredContractProcedure,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -1054,8 +1054,8 @@ struct Lowering {
     // callee's to say.
     private mutating func argument(
         _ expression: Expression,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -1071,8 +1071,8 @@ struct Lowering {
 
     private mutating func lower(
         _ call: Call,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         writer: Closure.Declaration,
         inPlace: [Place: [Int]],
         at place: Place
@@ -1102,8 +1102,8 @@ struct Lowering {
 
     private func lower(
         _ path: Path,
-        in scope: Names,
-        on slots: Slots,
+        in scope: Scope,
+        on slots: SlotAllocator,
         at place: Place
     ) throws -> (address: Address, reached: LoweredType?) {
         // A mark on the head expects a name to be missing, which is not
@@ -1159,7 +1159,7 @@ struct Lowering {
     // Which row of the link a number in a lowered body stands for. The body
     // carries its document's numbering, and this walk reads what it just
     // wrote.
-    private func reached(_ number: Int, on slots: Slots) -> Int? {
+    private func reached(_ number: Int, on slots: SlotAllocator) -> Int? {
         guard case let .row(row) = documents[slots.origin].numbering.row(
             number,
             rows: rows,

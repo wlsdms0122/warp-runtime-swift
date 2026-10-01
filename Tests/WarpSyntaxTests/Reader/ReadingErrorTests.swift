@@ -20,7 +20,7 @@ struct ReadingErrorTests {
     // MARK: - Test
     @Test("a document refused while being read says which document it was")
     func aReadingSaysWhichDocument() throws {
-        // Given. A caller reading four documents into one link holds the only
+        // Given. A host reading four documents into one link holds the only
         // answer to which file to open, and a refusal that names none sends it
         // opening all four
         let fixture: Value = [
@@ -41,7 +41,7 @@ struct ReadingErrorTests {
     @Test("a document refused for what it says about itself says which document it was")
     func aCheckSaysWhichDocument() throws {
         // Given. The same answer is owed by the refusals that come from making
-        // the module rather than from reading it, since a caller holding four
+        // the module rather than from reading it, since a host holding four
         // files cannot tell which stage refused and still has to open one
         let fixture: Value = [
             "warp": 1,
