@@ -30,7 +30,7 @@ struct ObjectDependencyTests {
     }
 
     // MARK: - Property
-    // A stand-in for what a caller works out from the bytes, which this package
+    // A stand-in for what a host works out from the bytes, which this package
     // does not write. Two objects that differ answer differently here, which
     // is all these ask of it.
     private let builder = Builder { value in Fingerprint(Array("\(value)".utf8)) }
@@ -130,7 +130,7 @@ struct ObjectDependencyTests {
     @Test("tells a document written in Warp from one the host answers")
     func tellsTheTwoKindsApart() async throws {
         // Given. One declaration made twice: once as a body this language
-        // lowers, once as a procedure the host answers. A caller may build the
+        // lowers, once as a procedure the host answers. A host may build the
         // same thing either way.
         let lowered = try Module(
             procedures: [
@@ -152,13 +152,13 @@ struct ObjectDependencyTests {
         #expect(asLowered.behind != asAnswered.behind)
         #expect(asLowered.calling != asAnswered.calling)
 
-        // And what carries that into the caller is the record and nothing else.
+        // And what carries that into the host is the record and nothing else.
         // The call is the same call either way: a body reaches a row by number
-        // and the number does not move. So a caller that kept no record of what
+        // and the number does not move. So a host that kept no record of what
         // it leaned on would read one kind's object for the other's.
         #expect(
             try #require(besideDependencies(asLowered.calling)) == besideDependencies(asAnswered.calling),
-            "the caller told the two kinds apart by itself"
+            "the host told the two kinds apart by itself"
         )
     }
 

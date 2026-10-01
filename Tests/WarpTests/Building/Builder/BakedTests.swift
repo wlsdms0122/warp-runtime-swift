@@ -103,7 +103,7 @@ struct BakedTests {
     @Test("documents compiled together are ordered by what they reach")
     func documentsAreOrderedByWhatTheyReach() async throws {
         // Given. Two documents handed over with the one that reaches the other
-        // first, which is the order a caller has no way to sort out.
+        // first, which is the order a host has no way to sort out.
         let reaching = try Module(
             imports: ["app.add1"],
             procedures: [
@@ -239,7 +239,7 @@ struct BakedTests {
         let one = try await builder.compile([try adding(1)], against: baked, supplying: Supplying(Module.standard))
         let two = try await builder.compile([try adding(2)], against: baked, supplying: Supplying(Module.standard))
 
-        // When / Then. A compile against both is refused whichever the caller
+        // When / Then. A compile against both is refused whichever the host
         // listed first: the table has no answer for the name either way.
         for held in [baked + one + two, baked + two + one] {
             await #expect {
@@ -255,8 +255,8 @@ struct BakedTests {
         }
     }
 
-    @Test("a refusal counts the list the caller handed over")
-    func aRefusalCountsTheCallersList() async throws {
+    @Test("a refusal counts the list the host handed over")
+    func aRefusalCountsTheHostsList() async throws {
         // Given. A vocabulary already compiled, so what arrives stands after
         // it. The two arriving documents are the vocabulary's count and one
         // past it.

@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 
-// The types of a link are read the same whatever order the caller handed its
+// The types of a link are read the same whatever order the host handed its
 // documents over in. What stands behind what is the graph's to say, and the
 // namespace judges every space whole.
 @Suite

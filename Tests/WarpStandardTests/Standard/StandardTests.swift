@@ -10,7 +10,7 @@ import Testing
 import Warp
 import WarpStandard
 
-// The procedures that ship in bundles, and the fact that they are bundles: a caller
+// The procedures that ship in bundles, and the fact that they are bundles: a host
 // takes the ones its programs have use for, and a name from a bundle it left out
 // does not resolve.
 @Suite("The standard vocabulary")

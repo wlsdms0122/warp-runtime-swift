@@ -89,7 +89,7 @@ struct EnvelopeTests {
 
     @Test("what a document says it imports is what it sends")
     func theManifestIsTheTruth() throws {
-        // Given. A caller reads this to decide whether to run the program at
+        // Given. A host reads this to decide whether to run the program at
         // all, so a list allowed to drift would be worse than none: it would be
         // trusted and wrong.
         let module = try loader.loadDocument([
@@ -117,10 +117,10 @@ struct EnvelopeTests {
 
     @Test("a document that says nothing about what it imports is refused")
     func aSilentManifestIsRefused() async {
-        // When / Then. Silence is not a claim a caller can act on. The list is
+        // When / Then. Silence is not a claim a host can act on. The list is
         // read before the program and a grant is decided from it, so a document
         // that leaves it out is asking to be trusted about the one thing worth
-        // checking, and a caller with no list has no way to tell a program that
+        // checking, and a host with no list has no way to tell a program that
         // touches nothing from one that touches everything.
         #expect {
             try loader.load([
@@ -186,7 +186,7 @@ struct EnvelopeTests {
     @Test("a document that oversells what it imports is refused the same way")
     func anOverstatedManifestIsRefused() {
         // When / Then. The list is the set of what the program sends, not a
-        // bound around it: a caller grants from this list, and a procedure
+        // bound around it: a host grants from this list, and a procedure
         // listed but never sent is a grant the program had no use for
         #expect {
             try loader.loadDocument([
@@ -211,7 +211,7 @@ struct EnvelopeTests {
     @Test("a procedure sent from a constant is imported like any other")
     func constantsSendProceduresToo() throws {
         // Given. A constant is an expression, and understating what a program
-        // imports is worse than saying nothing: a caller decides from this list
+        // imports is worse than saying nothing: a host decides from this list
         // what to allow, and would then be refused at the build by a procedure the
         // list never mentioned.
         let constant: Value = [

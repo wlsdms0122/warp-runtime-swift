@@ -16,7 +16,7 @@ import WarpSyntax
 // Every other test here reaches inside (`@testable`, private types, internal
 // helpers) which is right for a test about how something is built. These are
 // about something else: whether this is the language `spec/` describes. So this
-// file imports what any caller imports and nothing more. A runner that could
+// file imports what any host imports and nothing more. A runner that could
 // see inside could pass by agreeing with the implementation rather than with
 // the specification, which is the one thing it must not be able to do.
 //

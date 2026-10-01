@@ -92,7 +92,7 @@ struct LoopTests {
 
     @Test("an empty-body loop still observes cancellation")
     func emptyBodyObservesCancellation() async throws {
-        // Given. An empty body must still observe cancellation, or the caller's
+        // Given. An empty body must still observe cancellation, or the host's
         // one lever against a runaway loop stops working
         let spec = try loader.loadProcedure([
             "body": [

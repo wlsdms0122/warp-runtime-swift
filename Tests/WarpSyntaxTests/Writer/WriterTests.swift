@@ -915,9 +915,9 @@ struct WriterTests {
 
     @Test("a procedure backed by native code has no document")
     func nativeCodeHasNoDocument() throws {
-        // Given. What a caller brings is declared where the run is assembled,
-        // not carried in the program. Writing its name alone would make a
-        // document that loads into a body nobody wrote.
+        // Given. What the host brings is declared in a module it assembles into
+        // the link, not carried in the program. Writing its name alone would
+        // make a document that loads into a body nobody wrote.
         let module = try Module(
             procedures: Module.logic.reduce(into: [Name: Procedure]()) { held, bundle in
                 held.merge(bundle.procedures) { first, _ in first }

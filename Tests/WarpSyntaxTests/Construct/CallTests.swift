@@ -175,11 +175,11 @@ struct CallTests {
         }
     }
 
-    @Test("runaway recursive calls end by caller cancellation")
+    @Test("runaway recursive calls end when the host cancels the run")
     func recursiveCallStopsOnCancellation() async throws {
         // Given. The kernel carries no recursion guard (a reappearing name is
-        // not a cycle oracle); runaway calls end by caller cancellation, which
-        // must propagate through the call chain
+        // not a cycle oracle); runaway calls end when the host cancels the run,
+        // which must propagate through the call chain
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["access": "public", "body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])

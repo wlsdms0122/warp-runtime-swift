@@ -21,7 +21,7 @@ struct ObjectReadingTests {
     private struct ObjectMissing: Error { }
 
     // MARK: - Property
-    // A stand-in for what a caller works out from the bytes, which this
+    // A stand-in for what a host works out from the bytes, which this
     // package does not write. What these ask is what a reading refuses, so any
     // answer stands as long as an object compiled against another one can be
     // written down at all.

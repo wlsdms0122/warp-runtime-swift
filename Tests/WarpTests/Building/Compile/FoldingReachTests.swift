@@ -47,9 +47,9 @@ struct FoldingReachTests {
         #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
     }
 
-    @Test("a constant refuses to settle from a procedure a caller brought")
-    func aConstantRefusesAProcedureACallerBrought() async throws {
-        // Given. A procedure whose code the caller supplied, answering without
+    @Test("a constant refuses to settle from a procedure the host brought")
+    func aConstantRefusesAProcedureTheHostBrought() async throws {
+        // Given. A procedure whose code the host supplied, answering without
         // running, and a constant written from it.
         let brought = try Module(
             procedures: [
@@ -203,7 +203,7 @@ struct FoldingReachTests {
 
     @Test("a constant refuses one brought by a module compiled earlier")
     func aConstantRefusesOneBroughtByACompiledModule() async throws {
-        // Given. The brought procedure compiled on its own, the way a caller
+        // Given. The brought procedure compiled on its own, the way a host
         // that means to link many documents compiles a vocabulary once.
         let brought = try Module(
             procedures: [
