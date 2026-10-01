@@ -143,9 +143,9 @@ struct Sending {
 
         // A send hands values, and a parameter handed in place takes a
         // variable.
-        if let parameter = signature.parameters.first(where: { parameter in parameter.declared.isInout }) {
+        if let parameter = signature.inPlace {
             throw BuildError(
-                "'\(label)' sends '\(send.selector)', which takes '\(parameter.name)' in place,"
+                "'\(label)' sends '\(send.selector)', which takes '\(parameter)' in place,"
                     + " and a send hands values",
                 at: place
             )

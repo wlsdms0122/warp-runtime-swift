@@ -761,9 +761,9 @@ struct Evaluator: Sendable {
         return given
     }
 
-    // What a row answers where a caller reads it as data. A query answers
-    // through its own door and a body the build proved answers without running
-    // is run here, on a frame of its own.
+    // What a row answers from its settled arguments, with nothing handed in
+    // place. A query answers through its own door and a body runs on a frame
+    // of its own. An effect answers only by running, so it is not read here.
     private func answer(
         _ callee: Linked,
         with arguments: Settled,

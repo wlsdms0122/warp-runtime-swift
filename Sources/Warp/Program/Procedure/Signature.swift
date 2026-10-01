@@ -53,6 +53,12 @@ public struct Signature: Sendable, Equatable {
         Set(parameters.compactMap { parameter in parameter.declared.isInout ? nil : parameter.name })
     }
 
+    // The first parameter handed in place, which only a call a body writes
+    // can fill.
+    var inPlace: Name? {
+        parameters.first { parameter in parameter.declared.isInout }?.name
+    }
+
     // Whether the declaration writes a type parameter anywhere.
     public var isGeneric: Bool { type.isGeneric }
 

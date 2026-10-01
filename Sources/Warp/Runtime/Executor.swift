@@ -65,9 +65,9 @@ public struct Executor: Sendable {
 
         // A run hands its entry values, and a parameter handed in place takes
         // a variable.
-        if let parameter = entry.signature.parameters.first(where: { parameter in parameter.declared.isInout }) {
+        if let parameter = entry.signature.inPlace {
             throw ExecutionError(
-                "entry '\(entry.label)' takes '\(parameter.name)' in place, and a run hands"
+                "entry '\(entry.label)' takes '\(parameter)' in place, and a run hands"
                     + " its entry values"
             )
         }
