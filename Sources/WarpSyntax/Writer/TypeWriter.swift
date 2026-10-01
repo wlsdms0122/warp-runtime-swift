@@ -62,7 +62,7 @@ struct TypeWriter {
     // bound differently is two claims about one thing: a signature the link
     // refuses has no document.
     func bounds(of signature: Signature) throws -> Value? {
-        let held = signature.parameterBounds
+        let held = signature.parameterBounding
 
         if let refusal = held.refusal {
             throw WritingError(refusal + ", so there is no `bounds` to write")

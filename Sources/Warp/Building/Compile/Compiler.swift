@@ -119,7 +119,7 @@ struct Compiler {
                     at: symbol.place,
                     in: opening(declaration.signature),
                     answering: declaration.signature.returns,
-                    with: context().bounding(declaration.signature.parameterBounds.table),
+                    with: context().bounding(declaration.signature.parameterBounding.table),
                     folding: folding,
                     origin: origin,
                     writing: fulfillment

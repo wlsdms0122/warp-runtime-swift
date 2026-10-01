@@ -47,7 +47,7 @@ public struct ProcedureType: Sendable, Equatable {
     }
 
     // What this type holds its type parameters to, read off every occurrence.
-    public var parameterBounds: ParameterBounding {
+    public var parameterBounding: ParameterBounding {
         ParameterBounding(parameterOccurrences)
     }
 

@@ -679,15 +679,15 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Whether a slot declaring this asks for procedures that answer without
-    // running, holding one or an array of them. A name standing in such a slot
-    // may be applied where a body must answer without running: what fills it
-    // passed that judgement where it was handed over.
+    // running, holding one, or an array or a dictionary of them. A name
+    // standing in such a slot may be applied where a body must answer without
+    // running: what fills it passed that judgement where it was handed over.
     var isConstProcedure: Bool {
         switch self {
         case .procedure(_, .const, _):
             return true
 
-        case let .array(element):
+        case let .array(element), let .dictionary(element):
             return element.isConstProcedure
 
         default:
@@ -696,14 +696,14 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // The positions a procedure a slot declaring this holds takes in place,
-    // holding one or an array of them. Empty where the slot says nothing of
-    // the procedure's parameters.
+    // holding one, or an array or a dictionary of them. Empty where the slot
+    // says nothing of the procedure's parameters.
     var inPlacePositions: Set<Int> {
         switch self {
         case let .procedure(type?, _, _):
             return type.inPlacePositions
 
-        case let .array(element):
+        case let .array(element), let .dictionary(element):
             return element.inPlacePositions
 
         default:
@@ -718,7 +718,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .procedure(_, _, .isolated):
             return true
 
-        case let .array(element):
+        case let .array(element), let .dictionary(element):
             return element.isIsolatedProcedure
 
         default:
