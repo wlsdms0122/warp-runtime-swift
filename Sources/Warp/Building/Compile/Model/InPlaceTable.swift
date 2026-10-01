@@ -14,7 +14,7 @@ import Foundation
 // alike, and recording it refuses rather than keeping either.
 struct InPlaceTable: Sendable {
     // MARK: - Property
-    private var positions: [Place: [Int]] = [:]
+    private(set) var positions: [Place: [Int]] = [:]
 
     // MARK: - Initializer
     init() {
