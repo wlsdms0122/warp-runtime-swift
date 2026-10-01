@@ -1734,7 +1734,7 @@ struct TypeChecker {
 
                 return bound.type
             }.filter { _, held in
-                held.isConstProcedure || held.isIsolatedProcedure
+                held.isConstProcedure(in: context.loweredTypes) || held.isIsolatedProcedure(in: context.loweredTypes)
             }
 
             let const = body.map { block in
@@ -1743,10 +1743,13 @@ struct TypeChecker {
                     declaring: procedure.signature.ownedParameters,
                     given: context.isConst,
                     reading: reading,
-                    applying: procedure.signature.constProcedures.merging(
-                        captured.filter { _, held in held.isConstProcedure }.mapValues(\.inPlacePositions)
+                    applying: procedure.signature.constProcedures(in: context.loweredTypes).merging(
+                        captured
+                            .filter { _, held in held.isConstProcedure(in: context.loweredTypes) }
+                            .mapValues { held in held.inPlacePositions(in: context.loweredTypes) }
                     ) { own, _ in own },
-                    taking: context.signature(of:)
+                    taking: context.signature(of:),
+                    in: context.loweredTypes
                 )
             } ?? false
             let isolated = body.map { block in
@@ -1754,10 +1757,13 @@ struct TypeChecker {
                     block,
                     declaring: declared,
                     given: context.isIsolated,
-                    applying: procedure.signature.isolatedProcedures.merging(
-                        captured.filter { _, held in held.isIsolatedProcedure }.mapValues(\.inPlacePositions)
+                    applying: procedure.signature.isolatedProcedures(in: context.loweredTypes).merging(
+                        captured
+                            .filter { _, held in held.isIsolatedProcedure(in: context.loweredTypes) }
+                            .mapValues { held in held.inPlacePositions(in: context.loweredTypes) }
                     ) { own, _ in own },
-                    taking: context.signature(of:)
+                    taking: context.signature(of:),
+                    in: context.loweredTypes
                 )
             } ?? false
 

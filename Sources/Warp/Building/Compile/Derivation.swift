@@ -13,12 +13,14 @@ import Foundation
 struct Derivation {
     // What a body is walked for. Constness and isolation are read by one walk
     // and differ only in these: which callee holds the fact, which slot says a
-    // procedure it holds does, and which names a body loses it by reading.
+    // procedure it holds does, and which names a body loses it by reading. A
+    // slot is judged on the type it lowers to, in the table the walk reads.
     private struct Fact {
         // MARK: - Property
         let callee: (Name) -> Bool
-        let slot: (TypeExpression) -> Bool
+        let slot: (LoweredType) -> Bool
         let unread: Set<Name>
+        let table: LoweredTypeTable
 
         // MARK: - Initializer
         // MARK: - Public
@@ -40,7 +42,8 @@ struct Derivation {
         settling const: inout Set<Name>,
         reading variables: Set<Name>,
         taking asked: @escaping (Name) -> Signature?,
-        beyond: @escaping (Name) -> Bool
+        beyond: @escaping (Name) -> Bool,
+        in table: LoweredTypeTable
     ) {
         // A body may write what its signature owns: a parameter handed in
         // place is the caller's box, not the body's own.
@@ -49,8 +52,10 @@ struct Derivation {
             settling: &const,
             natively: { implementation in implementation.isNativelyConst != false },
             declaring: \.ownedParameters,
-            applying: \.constProcedures,
-            fact: { given in Fact(callee: given, slot: \.isConstProcedure, unread: variables) },
+            applying: { signature in signature.constProcedures(in: table) },
+            fact: { given in
+                Fact(callee: given, slot: { type in type.isConstProcedure(in: table) }, unread: variables, table: table)
+            },
             taking: asked,
             beyond: beyond
         )
@@ -63,15 +68,18 @@ struct Derivation {
         among symbols: [Symbol],
         settling isolated: inout Set<Name>,
         taking asked: @escaping (Name) -> Signature?,
-        beyond: @escaping (Name) -> Bool
+        beyond: @escaping (Name) -> Bool,
+        in table: LoweredTypeTable
     ) {
         strike(
             among: symbols,
             settling: &isolated,
             natively: { implementation in implementation.isNativelyIsolated != false },
             declaring: { signature in Set(signature.names) },
-            applying: \.isolatedProcedures,
-            fact: { given in Fact(callee: given, slot: \.isIsolatedProcedure, unread: []) },
+            applying: { signature in signature.isolatedProcedures(in: table) },
+            fact: { given in
+                Fact(callee: given, slot: { type in type.isIsolatedProcedure(in: table) }, unread: [], table: table)
+            },
             taking: asked,
             beyond: beyond
         )
@@ -200,11 +208,12 @@ struct Derivation {
         given const: @escaping (Name) -> Bool,
         reading variables: Set<Name>,
         applying procedures: [Name: Set<Int>],
-        taking asked: (Name) -> Signature?
+        taking asked: (Name) -> Signature?,
+        in table: LoweredTypeTable
     ) -> Bool {
         holds(
             block,
-            Fact(callee: const, slot: \.isConstProcedure, unread: variables),
+            Fact(callee: const, slot: { type in type.isConstProcedure(in: table) }, unread: variables, table: table),
             declaring: names,
             applying: procedures,
             taking: asked
@@ -219,11 +228,12 @@ struct Derivation {
         declaring parameters: Set<Name>,
         given isolated: @escaping (Name) -> Bool,
         applying procedures: [Name: Set<Int>],
-        taking asked: (Name) -> Signature?
+        taking asked: (Name) -> Signature?,
+        in table: LoweredTypeTable
     ) -> Bool {
         holds(
             block,
-            Fact(callee: isolated, slot: \.isIsolatedProcedure, unread: []),
+            Fact(callee: isolated, slot: { type in type.isIsolatedProcedure(in: table) }, unread: [], table: table),
             declaring: parameters,
             applying: procedures,
             taking: asked
@@ -321,8 +331,8 @@ struct Derivation {
 
             // A name says what it holds, and a later name of the same spelling
             // is a different name, so the table is read forward.
-            if let declared = statement.binding?.declared, fact.slot(declared) {
-                procedures[introduced] = declared.inPlacePositions
+            if let declared = statement.binding?.declared?.lowered(in: fact.table), fact.slot(declared) {
+                procedures[introduced] = declared.inPlacePositions(in: fact.table)
             } else {
                 procedures[introduced] = applied(statement.expression, given: procedures)
             }
