@@ -224,7 +224,7 @@ public struct TypeReader: Decodable {
             // A bare one: the signature declares the parameter itself, so a
             // dotted spelling names something declared elsewhere and there is
             // nothing here for it to mean. It is also what keeps a declared
-            // parameter apart from the reading the link derives for a walk
+            // parameter apart from the projection the build derives for a walk
             // through one, which is named for the dotted path that reached it.
             guard isName(bare), !bare.contains(".") else {
                 throw TypeFormError(

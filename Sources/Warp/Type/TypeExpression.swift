@@ -169,7 +169,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // The path is segments and not their spelling for the same reason: `.a`
     // and `?.a` land on one field, and a spelling would make them two unknowns
     // that never meet.
-    case reading(of: Name, path: Path)
+    case projection(of: Name, path: Path)
 
     // The condition a refinement writes on a number.
     //
@@ -595,7 +595,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // Spelled as what it is. The type reached by that path. No document
         // writes this, so the spelling answers to the message alone: an author
         // reading a refusal about `item.a` should see where it came from.
-        case let .reading(of, path):
+        case let .projection(of, path):
             return "some \(Path([.key(of)] + path.segments).rendered)"
 
         case let .variable(inner):
@@ -670,7 +670,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // to judge on.
     var decidedAtCall: Bool {
         switch self {
-        case .parameter, .reading:
+        case .parameter, .projection:
             return true
 
         default:
@@ -808,7 +808,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .composition(names):
             Set(names)
 
-        case .reading:
+        case .projection:
             []
         }
     }
@@ -820,7 +820,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .parameter(name, constraints):
             return [ParameterOccurrence(name: name, constraints: constraints)]
 
-        case .reading, .composition:
+        case .projection, .composition:
             return []
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
@@ -847,7 +847,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         switch self {
         // Both are types a call decides, and the deep question is only
         // whether this declaration has to be filled at all.
-        case .parameter, .reading:
+        case .parameter, .projection:
             return true
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
@@ -881,7 +881,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
-            .nullable, .named, .parameter, .reading, .composition:
+            .nullable, .named, .parameter, .projection, .composition:
             return self
         }
     }
@@ -904,7 +904,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
-            .consuming, .borrowing, .nullable, .named, .parameter, .reading, .composition:
+            .consuming, .borrowing, .nullable, .named, .parameter, .projection, .composition:
             return self
         }
     }
@@ -944,7 +944,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .parameter(name, constraints):
             return .parameter(name: name, constraints: constraints.isEmpty ? bounds[name] ?? [] : constraints)
 
-        case .reading, .composition:
+        case .projection, .composition:
             return self
 
         case let .linear(inner):
@@ -1094,7 +1094,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // once is followed by the name that holds it, and a name does not go
         // into a type.
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .reading:
+            .ranged, .array, .dictionary, .record, .procedure, .projection:
             return false
         }
     }

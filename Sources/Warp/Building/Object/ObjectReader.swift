@@ -370,8 +370,8 @@ struct ObjectReader {
 
             read = .composition(names)
 
-        case .reading:
-            read = .reading(
+        case .projection:
+            read = .projection(
                 of: try name(cursor.next()),
                 path: try path(cursor.next())
             )
@@ -741,8 +741,8 @@ struct ObjectReader {
 
             read = .composition(bounds)
 
-        case .reading:
-            read = .reading(
+        case .projection:
+            read = .projection(
                 of: try name(cursor.next()),
                 path: try path(cursor.next())
             )
