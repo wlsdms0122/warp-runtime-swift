@@ -129,13 +129,14 @@ struct InPlaceTests {
         }
     }
 
-    @Test("a module variable is not visible to another document")
-    func moduleVariableIsPrivateToItsDocument() {
+    @Test("a document writes only the variables it declares")
+    func aDocumentWritesOnlyItsOwnVariables() {
         // Given. One write of `app.total`
         let write = Statement(binding: .assignment([.key("app.total")]), expression: .literal(.int(1)))
 
-        // When / Then. Taken in the document declaring `app.total`, and refused
-        // in another where it is made
+        // When / Then. Taken at the load of the document declaring
+        // `app.total`, and refused at the load of one that does not, though
+        // it imports the name
         #expect(throws: Never.self) {
             try Module(
                 variables: ["app.total": .literal(.int(0))],
@@ -143,7 +144,7 @@ struct InPlaceTests {
             )
         }
         #expect {
-            try Module(procedures: ["other.poke": Procedure(body: [write])])
+            try Module(imports: ["app.total"], procedures: ["other.poke": Procedure(body: [write])])
         } throws: { error in
             error is ValidationError && "\(error)".contains("assigns 'app.total', which is not visible here")
         }
