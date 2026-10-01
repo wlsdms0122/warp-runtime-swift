@@ -144,15 +144,8 @@ struct DeclarationChecker {
             for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
-                // A procedure the host answers calls a procedure it was handed
-                // with values, so it could never call one taking a parameter
-                // in place.
-                if procedure.implementation.native != nil, let parameter = procedure.signature.procedureTakingInPlace {
-                    throw BuildError(
-                        "'\(name)' takes '\(parameter)', a procedure taking a parameter in place,"
-                            + " and a procedure the host answers calls what it is handed with values",
-                        at: Place.procedure(name.spelling, in: .of(module)).part(.parameters)
-                    )
+                if procedure.implementation.native != nil {
+                    try judge(hostAnswered: procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
                 }
 
                 // A closure literal carries a signature the way a declaration
@@ -269,6 +262,25 @@ struct DeclarationChecker {
         )
 
         try judgeConstraints(signature.parameterOccurrences, at: place, in: table)
+    }
+
+    // A procedure the host answers calls a procedure it was handed with
+    // values, so a parameter that may carry one taking a parameter in place
+    // asks for what it could never call. Judged on the type a name declares,
+    // wherever the parameter holds it.
+    private func judge(
+        hostAnswered signature: Signature,
+        at place: Place,
+        in table: TypeTable
+    ) throws {
+        for (position, parameter) in signature.parameters.enumerated()
+        where parameter.declared.lowered(in: table.loweredTypes).carriesProcedureTakingInPlace(in: table.loweredTypes) {
+            throw BuildError(
+                "takes '\(parameter.name)', which may hold a procedure taking a parameter in place,"
+                    + " and a procedure the host answers calls what it is handed with values",
+                at: place.part(.parameters).index(position)
+            )
+        }
     }
 
     // Everything a cast's type is held to on its spelling alone: the names it

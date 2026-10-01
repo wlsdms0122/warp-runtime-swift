@@ -624,13 +624,33 @@ struct InPlaceTests {
         }
     }
 
-    @Test("a procedure the host answers declaring a procedure that takes a parameter in place is refused at the build")
-    func aHostProcedureTakingAnInPlaceProcedureRefuses() async {
-        // Given
+    @Test(
+        "a procedure the host answers declaring a parameter that may hold a procedure taking one in place is refused at the build",
+        arguments: [
+            "plain",
+            "nullable",
+            "array",
+            "dictionary",
+            "record field",
+            "declared name"
+        ]
+    )
+    func aHostProcedureTakingAnInPlaceProcedureRefuses(wrapped: String) async {
+        // Given. The same procedure type, held each way a slot may hold it
+        let taking = TypeExpression.procedure(ProcedureType(parameters: [.inout(.int)]))
+        let held: [String: TypeExpression] = [
+            "plain": taking,
+            "nullable": .nullable(taking),
+            "array": .array(taking),
+            "dictionary": .dictionary(taking),
+            "record field": .record(["hook": taking]),
+            "declared name": .named("app.Hook")
+        ]
         let calling = try? Module(
+            types: ["app.Hook": taking],
             procedures: [
                 "app.calling": Procedure(
-                    signature: Signature(of: InPlaceCallingEffect.self),
+                    signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped])]),
                     implementation: .effect(InPlaceCallingEffect())
                 )
             ]
@@ -644,7 +664,8 @@ struct InPlaceTests {
         // Then
         #expect(
             refusal?.message.contains(
-                "takes 'body', a procedure taking a parameter in place, and a procedure the host answers calls"
+                "takes 'body', which may hold a procedure taking a parameter in place,"
+                    + " and a procedure the host answers calls what it is handed with values"
             ) == true
         )
     }

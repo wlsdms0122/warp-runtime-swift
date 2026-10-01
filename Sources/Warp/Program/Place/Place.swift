@@ -25,9 +25,9 @@ import Foundation
 // holding a program it assembled in Swift is owed. It wrote no document, so no
 // document's keys would lead it anywhere. A reading in a document's keys is
 // the reading side's, and a reading in lines and columns is the front end's.
-public struct Place: Sendable, Equatable {
+public struct Place: Sendable, Hashable {
     // Which document a place is an address in.
-    public struct Document: Sendable, Equatable {
+    public struct Document: Sendable, Hashable {
         // MARK: - Property
         // Which text this is. Nil where the program was never written down (a
         // caller that built it in memory) and that is the whole of what nil
@@ -77,7 +77,7 @@ public struct Place: Sendable, Equatable {
     // One case per part and not per key. A conditional and a loop both hold a
     // condition; that a document writes the two under different keys is a fact
     // about the document.
-    public enum Part: Sendable, Equatable {
+    public enum Part: Sendable, Hashable {
         case procedures
         case constants
         case variables
@@ -152,7 +152,7 @@ public struct Place: Sendable, Equatable {
     // A construct that holds a condition. Two of them, and a third would be a
     // third here, which is the point: whoever spells a condition for a document
     // is asked about every one of these by name.
-    public enum ConditionHolder: Sendable, Equatable {
+    public enum ConditionHolder: Sendable, Hashable {
         case conditional
         case loop
     }
@@ -160,7 +160,7 @@ public struct Place: Sendable, Equatable {
     // What one step of a place is. The cases divide on who chose the words,
     // because that is the division a reader that maps a place back to a file
     // has to make.
-    public enum Step: Sendable, Equatable {
+    public enum Step: Sendable, Hashable {
         // A name the document itself writes: a procedure's, a field's, an
         // argument's. The author typed it, so it is carried as it was typed.
         case key(String)

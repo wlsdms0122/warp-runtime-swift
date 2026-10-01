@@ -277,7 +277,7 @@ struct LinearityChecker {
 
             // Which value is called is settled at run time, so nothing here
             // says what it does with what it was handed.
-            case let .apply(callee, arguments, _):
+            case let .apply(callee, arguments):
                 var carried = try moving(callee, held: held, guarded: "in a call of a value")
 
                 for argument in arguments {

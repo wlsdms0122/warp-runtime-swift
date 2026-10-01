@@ -276,6 +276,32 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // Whether a value this holds may carry a procedure that takes a parameter
+    // in place: one written here, or one inside a `?`, an array, a dictionary,
+    // a record's field or the type a name declares. A procedure's own
+    // parameters and answer are that procedure's business and are not walked.
+    func carriesProcedureTakingInPlace(in table: LoweredTypeTable, walked: Set<Int> = []) -> Bool {
+        switch self {
+        case let .procedure(parameters, _, _, _):
+            return parameters?.contains { parameter in parameter.isInout } ?? false
+
+        case let .nullable(inner), let .array(inner), let .dictionary(inner), let .variable(inner), let .inout(inner):
+            return inner.carriesProcedureTakingInPlace(in: table, walked: walked)
+
+        case let .record(record):
+            return record.fields.contains { field in field.carriesProcedureTakingInPlace(in: table, walked: walked) }
+
+        case let .named(row):
+            guard !walked.contains(row) else { return false }
+
+            return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .parameter, .composition, .reading,
+            .undeclared:
+            return false
+        }
+    }
+
     // One value of every kind a decided type can hold, for asking the judge
     // rather than restating it.
     private static let witnesses: [Value] = [
