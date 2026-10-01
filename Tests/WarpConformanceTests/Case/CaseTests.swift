@@ -127,7 +127,8 @@ struct CaseTests {
         ("object {}", "documents [\n    {}\n  ]", "a case about an object writes `documents`"),
         ("bytes x\"57415250010700\"", "documents [\n    {}\n  ]", "a case about an encoding writes `documents`"),
         ("text \"warpt 1\\n{}\\n\"", "document x\"00\"", "a case about an encoding writes `document`"),
-        ("program {\n    imports []\n    procedures {}\n    warp 1\n  }", "document x\"00\"", "a case about a program writes `document`")
+        ("program {\n    imports []\n    procedures {}\n    warp 1\n  }", "document x\"00\"", "a case about a program writes `document`"),
+        ("program {\n    imports []\n    procedures {}\n    warp 1\n  }", "argument {}", "a case about a program writes `argument`")
     ])
     func aKeyItsSubjectCannotUse(subject: String, key: String, refusal: String) throws {
         // Given. A case whose subject is read and nothing more, beside a key

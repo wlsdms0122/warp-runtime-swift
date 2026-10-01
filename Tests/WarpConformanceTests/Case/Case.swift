@@ -381,12 +381,8 @@ struct Case: Sendable, CustomStringConvertible {
         // or it builds, and what it builds is an object; an object is read,
         // linked and run, so it answers or is refused.
         switch (written["program"], written["bytes"], written["text"], written["object"]) {
-        // A program is not read under an identity the case names, so a case
-        // writing `document` asked a question only an object is asked.
         case let (document?, nil, nil, nil):
-            guard written["document"] == nil else {
-                throw ConformanceError("a case about a program writes `document`, which only an object is read under")
-            }
+            try Self.reads(written, ["program", "arguments", "vocabulary", "documents"], about: "a program")
 
             let expectation: Expectation
 
@@ -435,12 +431,9 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the text a case asks about is written as a string, or as bytes")
 
         // An object leans on what is written inside it, so it asks the runner
-        // to bring nothing and lay nothing beside it, and a case writing
-        // `vocabulary` or `documents` asked a question the runner would not ask.
+        // to bring nothing and lay nothing beside it.
         case let (nil, nil, nil, object?):
-            if let key = (["vocabulary", "documents"] as [Name]).first(where: { key in written[key] != nil }) {
-                throw ConformanceError("a case about an object writes `\(key)`, which only a program asks for")
-            }
+            try Self.reads(written, ["object", "arguments", "document"], about: "an object")
 
             let expectation: Object.Outcome
 
@@ -553,10 +546,21 @@ struct Case: Sendable, CustomStringConvertible {
     // laid beside it or read under an identity. A case writing any of those
     // asked something the runner would not ask, and it is refused rather than
     // left unasked.
-    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
-        if let key = (["arguments", "vocabulary", "documents", "document"] as [Name]).first(where: { key in written[key] != nil }) {
-            throw ConformanceError("a case about an encoding writes `\(key)`, and an encoding is only read")
+    // A case holds what every case writes and the keys its subject reads, and
+    // nothing else: a key outside them, a misspelled one included, is a
+    // question the runner would not ask.
+    private static func reads(_ written: Value, _ subject: Set<Name>, about named: String) throws {
+        guard case let .dictionary(fields) = written else { return }
+
+        let every: Set<Name> = [versionKey, "name", "note", "expect"]
+
+        if let (key, _) = fields.entries.first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
+            throw ConformanceError("a case about \(named) writes `\(key)`, which it does not read")
         }
+    }
+
+    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
+        try reads(written, ["bytes", "text"], about: "an encoding")
 
         // The binary encoding is canonical, so bytes that read as a value
         // write back as themselves, and a case about them says so.
