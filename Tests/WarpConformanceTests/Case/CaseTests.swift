@@ -59,6 +59,101 @@ struct CaseTests {
         }
     }
 
+    @Test("is refused where a procedure it asks for declares a place other than first and second")
+    func aBroughtProcedureNamingAnotherPlace() async throws {
+        // Given. A procedure the runner brings whose one parameter is not
+        // called `first`.
+        let sut = try Case(from: try TextEncoding().value(from: """
+            warpt 1
+            {
+              expect {
+                answers 1
+              }
+              name "broken"
+              note "a brought procedure naming a place no runner has"
+              program {
+                imports [
+                  "app.one"
+                ]
+                procedures {
+                  entry {
+                    access "public"
+                    result {
+                      call {
+                        arguments [
+                          1
+                        ]
+                        procedure "app.one"
+                      }
+                    }
+                  }
+                }
+                warp 1
+              }
+              test 1
+              vocabulary {
+                procedures {
+                  "app.one" {
+                    access "public"
+                    answers 1
+                    parameters [
+                      {
+                        name "it"
+                        type "int"
+                      }
+                    ]
+                    returns "int"
+                  }
+                }
+              }
+            }
+            """), in: "broken")
+
+        guard case let .program(program) = sut.asked else {
+            Issue.record("a case with a program asks about a program")
+
+            return
+        }
+
+        // When / Then.
+        await #expect {
+            try await program.brought
+        } throws: { error in
+            error is ConformanceError && "\(error)".contains("the places a case may name are `first` and `second`")
+        }
+    }
+
+    @Test("is refused where it writes a key its subject cannot use", arguments: [
+        ("object {}", "documents [\n    {}\n  ]", "a case about an object writes `documents`"),
+        ("bytes x\"57415250010700\"", "documents [\n    {}\n  ]", "a case about an encoding writes `documents`"),
+        ("text \"warpt 1\\n{}\\n\"", "document x\"00\"", "a case about an encoding writes `document`"),
+        ("program {\n    imports []\n    procedures {}\n    warp 1\n  }", "document x\"00\"", "a case about a program writes `document`")
+    ])
+    func aKeyItsSubjectCannotUse(subject: String, key: String, refusal: String) throws {
+        // Given. A case whose subject is read and nothing more, beside a key
+        // only another subject is asked with.
+        let sut = try TextEncoding().value(from: """
+            warpt 1
+            {
+              \(key)
+              expect {
+                refuses "load"
+              }
+              name "broken"
+              note "a key its subject cannot use"
+              \(subject)
+              test 1
+            }
+            """)
+
+        // When / Then.
+        #expect {
+            try Case(from: sut, in: "broken")
+        } throws: { error in
+            error is ConformanceError && "\(error)".contains(refusal)
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

@@ -187,28 +187,29 @@ struct Case: Sendable, CustomStringConvertible {
             Procedure(
                 access: read.access,
                 signature: read.signature,
-                implementation: door(one, reading: try places(read.signature.parameters.count))
+                implementation: door(one, reading: try places(read.signature.parameters.map(\.name)))
             )
         }
 
         // Which of the fixed place sets this declaration reads its arguments
-        // through. A case declares `first` and `second` and nothing else, so the
-        // arity picks one.
-        private func places(_ count: Int) throws -> any ParameterSet.Type {
-            switch count {
-            case 0:
+        // through. A case declares `first` and `second`, in that order, and
+        // nothing else, so the names pick one.
+        private func places(_ declared: [Name]) throws -> any ParameterSet.Type {
+            switch declared {
+            case []:
                 return NoParameters.self
 
-            case 1:
+            case ["first"]:
                 return OneName.self
 
-            case 2:
+            case ["first", "second"]:
                 return TwoNames.self
 
             default:
                 throw ConformanceError(
-                    "a procedure a case asks for declares \(count) names, and the places"
-                        + " a case may name are `first` and `second`"
+                    "a procedure a case asks for declares"
+                        + " \(declared.map(\.spelling).joined(separator: ", ")), and the places"
+                        + " a case may name are `first` and `second`, in that order"
                 )
             }
         }
@@ -382,7 +383,13 @@ struct Case: Sendable, CustomStringConvertible {
         // or it builds, and what it builds is an object; an object is read,
         // linked and run, so it answers or is refused.
         switch (written["program"], written["bytes"], written["text"], written["object"]) {
+        // A program is not read under an identity the case names, so a case
+        // writing `document` asked a question only an object is asked.
         case let (document?, nil, nil, nil):
+            guard written["document"] == nil else {
+                throw ConformanceError("a case about a program writes `document`, which only an object is read under")
+            }
+
             let expectation: Expectation
 
             switch held {
@@ -430,11 +437,11 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the text a case asks about is written as a string, or as bytes")
 
         // An object leans on what is written inside it, so it asks the runner
-        // to bring nothing, and a case writing `vocabulary` asked a question
-        // the runner would not ask.
+        // to bring nothing and lay nothing beside it, and a case writing
+        // `vocabulary` or `documents` asked a question the runner would not ask.
         case let (nil, nil, nil, object?):
-            guard written["vocabulary"] == nil else {
-                throw ConformanceError("a case about an object writes `vocabulary`, which only a program is brought")
+            if let key = (["vocabulary", "documents"] as [Name]).first(where: { key in written[key] != nil }) {
+                throw ConformanceError("a case about an object writes `\(key)`, which only a program asks for")
             }
 
             let expectation: Object.Outcome
@@ -544,12 +551,13 @@ struct Case: Sendable, CustomStringConvertible {
         return stage
     }
 
-    // An encoding is read and nothing is run, so nothing is given and nothing
-    // is brought. A case writing either asked something the runner would not
-    // ask, and it is refused rather than left unasked.
+    // An encoding is read and nothing is run, so nothing is given, brought,
+    // laid beside it or read under an identity. A case writing any of those
+    // asked something the runner would not ask, and it is refused rather than
+    // left unasked.
     private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
-        if let key = (["arguments", "vocabulary"] as [Name]).first(where: { key in written[key] != nil }) {
-            throw ConformanceError("a case about an encoding writes `\(key)`, which only a program is given")
+        if let key = (["arguments", "vocabulary", "documents", "document"] as [Name]).first(where: { key in written[key] != nil }) {
+            throw ConformanceError("a case about an encoding writes `\(key)`, and an encoding is only read")
         }
 
         // The binary encoding is canonical, so bytes that read as a value
