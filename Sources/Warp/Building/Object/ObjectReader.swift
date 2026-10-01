@@ -205,7 +205,7 @@ struct ObjectReader {
             }
 
         case .dictionary:
-            let entries = try fields.list { entry -> (name: Name, value: Value) in
+            let entries = try Field(fields.next(), of: "value").led { entry -> (name: Name, value: Value) in
                 var fields = try Fields(entry, of: "entry")
                 let read = (name: try name(fields.next()), value: try self.value(fields.next()))
 
@@ -214,7 +214,7 @@ struct ObjectReader {
                 return read
             }
 
-            read = try refusing { .dictionary(try Value.Dictionary(entries)) }
+            read = .dictionary(Value.Dictionary(ordered: entries))
 
         case .closure:
             let writer = Closure.Writer(

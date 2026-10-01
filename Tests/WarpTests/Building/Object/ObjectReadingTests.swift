@@ -400,6 +400,56 @@ struct ObjectReadingTests {
         }
     }
 
+    @Test("is refused where a dictionary value's entries stand out of order")
+    func aDictionaryOutOfOrder() async throws {
+        // Given. A real object whose body answers a dictionary literal, its
+        // entries turned around. A reading that sorted them would read two
+        // writings as one object.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .any),
+                    body: [],
+                    result: .literal(.dictionary(["a": .int(1), "b": .int(2)]))
+                )
+            ]
+        )
+
+        var parts = try await parts(of: sut)
+
+        guard case var .array(table) = parts["rows"],
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(literal) = result[0],
+            case var .array(value) = literal[1],
+            case let .array(entries) = value[1],
+            entries.count == 2
+        else {
+            Issue.record("an object writes a literal dictionary as its entries")
+
+            return
+        }
+
+        value[1] = .array(entries.reversed())
+        literal[1] = .array(value)
+        result[0] = .array(literal)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[7] = .array(implementation)
+        table[0] = .array(row)
+        parts = parts.writing("rows", with: .array(table))
+
+        // When / Then.
+        #expect {
+            try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'value' writes its names out of order, or one of them twice")
+        }
+    }
+
     @Test("is refused where a loop keeps a run its frame does not hold")
     func aRunPastTheFrame() async throws {
         // Given. A body whose loop keeps a run of its slots, with the run moved

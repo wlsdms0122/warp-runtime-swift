@@ -84,10 +84,11 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         // The inner door: entries in the order a name puts them, under names
-        // none of which repeats. A layout carries both facts, so what stands
-        // on one comes through here rather than being sorted again. A value
-        // born outside a link has no layout behind it and comes through the
-        // door above.
+        // none of which repeats. A layout carries both facts, and so does an
+        // object's list of entries once its reading judged the order, so what
+        // stands on either comes through here rather than being sorted again.
+        // A value born outside a link has neither behind it and comes through
+        // the door above.
         init(ordered entries: [(name: Name, value: Value)]) {
             self.entries = entries
         }
