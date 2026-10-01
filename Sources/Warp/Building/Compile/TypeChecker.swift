@@ -1643,12 +1643,19 @@ struct TypeChecker {
             var calls: [CallSite] = []
             var body = procedure.block
 
+            // What the closure takes from where it was written: every name
+            // there but the ones it declares, which are its own whatever a
+            // name of the same spelling outside holds. The writes it makes
+            // and the procedures it calls are judged against this.
+            let declared = Set(procedure.signature.names)
+            let outside = environment.filter { name, _ in !declared.contains(name) }
+
             if case .judging = ask, let written = procedure.block {
                 let inner = try await inspected(
                     block: written,
                     at: place.part(.closure),
-                    in: environment.merging(procedure.signature.environment(in: context.loweredTypes)) {
-                        _, new in new
+                    in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
+                        _, declared in declared
                     },
                     with: context.bounding(procedure.signature.parameterBounds.table),
                     ask: ask
@@ -1659,7 +1666,7 @@ struct TypeChecker {
                 // and the body that declared the variable reads it as the
                 // type it gave it. A write here retypes nothing outside.
                 for (name, write) in inner.flow.written.sorted(by: { $0.key < $1.key }) {
-                    guard let held = environment[name]?.type else { continue }
+                    guard let held = outside[name]?.type else { continue }
 
                     guard held.accepts(write.type, in: context.loweredTypes) else {
                         throw BuildError(
@@ -1699,7 +1706,7 @@ struct TypeChecker {
             var reading: Set<Name> = []
 
             if case .judging(_, _?, _) = ask {
-                reading = context.variables
+                reading = context.variables.subtracting(declared)
             }
 
             // A name this closure captured carries what the slot it came from
@@ -1709,7 +1716,7 @@ struct TypeChecker {
             // may be retyped after the capture says nothing the closure can
             // hold on to; one that declared its type holds it through every
             // write.
-            let captured = environment.compactMapValues { bound -> LoweredType? in
+            let captured = outside.compactMapValues { bound -> LoweredType? in
                 if case .assigned = bound { return nil }
 
                 return bound.type
@@ -1725,18 +1732,18 @@ struct TypeChecker {
                     reading: reading,
                     applying: procedure.signature.constProcedures.merging(
                         captured.filter { _, held in held.isConstProcedure }.mapValues(\.inPlacePositions)
-                    ) { declared, _ in declared },
+                    ) { own, _ in own },
                     taking: context.signature(of:)
                 )
             } ?? false
             let isolated = body.map { block in
                 Derivation().isIsolated(
                     block,
-                    declaring: Set(procedure.signature.names),
+                    declaring: declared,
                     given: context.isIsolated,
                     applying: procedure.signature.isolatedProcedures.merging(
                         captured.filter { _, held in held.isIsolatedProcedure }.mapValues(\.inPlacePositions)
-                    ) { declared, _ in declared },
+                    ) { own, _ in own },
                     taking: context.signature(of:)
                 )
             } ?? false
