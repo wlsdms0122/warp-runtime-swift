@@ -19,12 +19,6 @@ public struct Validator: Sendable {
     }
 
     // MARK: - Public
-    // Statements assembled without a document: the same gate the load path
-    // passes, against the heads visible where the body will run.
-    func validate(body: Body, visible: Set<Name>) throws {
-        try validate(body, visible: visible, at: .given("lowered"))
-    }
-
     // Every declaration a module makes, in name order so the first refusal is
     // stable across runs. Whether its names collide with another module's is a
     // link question, and there is no other module in sight from inside one.

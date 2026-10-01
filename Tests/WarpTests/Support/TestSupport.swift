@@ -114,7 +114,7 @@ func validates(
 
 func validates(body: Body, visible: Set<Name> = []) -> Bool {
     do {
-        try Validator().validate(body: body, visible: visible)
+        try Validator().validate(Procedure(body: body), constants: visible)
 
         return true
     } catch {

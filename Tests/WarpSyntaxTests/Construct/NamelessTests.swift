@@ -139,7 +139,7 @@ struct NamelessTests {
 
         // When / Then
         #expect {
-            try Validator().validate(body: [statement], visible: [])
+            try Validator().validate(Procedure(body: [statement]))
         } throws: { error in
             "\(error)".contains("takes no name")
         }

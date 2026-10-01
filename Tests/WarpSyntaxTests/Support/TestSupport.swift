@@ -25,8 +25,8 @@ func validates(
 ) -> Bool {
     do {
         try Validator().validate(
-            body: [Statement(binding: .constant("probe"), expression: expression)],
-            visible: visible
+            Procedure(body: [Statement(binding: .constant("probe"), expression: expression)]),
+            constants: visible
         )
 
         return true
