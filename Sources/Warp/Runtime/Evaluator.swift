@@ -528,24 +528,19 @@ struct Evaluator: Sendable {
         )
     }
 
-    // A row answered with its arguments settled and nothing handed in place,
-    // through the door its implementation is: what a send reaches and what a
-    // run starts from.
+    // A row answered with its arguments settled and nothing handed in place:
+    // what a send reaches and what a run starts from. An effect runs here,
+    // and every other row answers the way it does as data.
     private func answer(
         _ callee: Linked,
         settled: Settled,
         at trace: Trace
     ) async throws -> Value {
-        switch callee.implementation {
-        case .native(.query):
+        guard case let .native(.effect(effect)) = callee.implementation else {
             return try await answer(callee, with: settled, at: trace)
-
-        case let .native(.effect(effect)):
-            return try await run(effect, of: callee, settled: settled, holds: [], trace: trace)
-
-        case let .body(body, frame):
-            return try await answer(callee, running: body, in: frame, settled: settled, holding: [], at: trace)
         }
+
+        return try await run(effect, of: callee, settled: settled, holds: [], trace: trace)
     }
 
     // The one way a written procedure is called: its frame, the settled

@@ -494,6 +494,16 @@ struct ProcedureSendsTests {
         ]
     )
 
+    private static let pickedInPlace = try! Module(
+        procedures: [
+            "app.pick": Procedure(
+                signature: Signature(parameters: [Parameter(name: "a", type: .inout(.int))], returns: .int),
+                body: [],
+                result: .reference([.key("a")])
+            )
+        ]
+    )
+
     private static let picking = try! Module(
         procedures: [
             "app.picking": Procedure(
@@ -771,6 +781,20 @@ struct ProcedureSendsTests {
         }
 
         #expect(refusal?.message.contains("sends 'app.pick' 1 arguments, and it takes 2") == true)
+    }
+
+    @Test("a procedure sending one that takes a parameter in place is refused at the build")
+    func aSendToAParameterInPlaceIsRefused() async {
+        // Given / When / Then. A send hands values, and `app.pick` here takes
+        // its one parameter in place
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build(
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])]
+                    + [Self.undercounting, Self.pickedInPlace]
+            )
+        }
+
+        #expect(refusal?.message.contains("sends 'app.pick', which takes 'a' in place, and a send hands values") == true)
     }
 
     @Test("a procedure handing more than it declared it hands is refused when it sends")
