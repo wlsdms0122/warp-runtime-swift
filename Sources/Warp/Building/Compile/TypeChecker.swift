@@ -1667,7 +1667,7 @@ struct TypeChecker {
                     block: written,
                     at: place.child(.closure),
                     in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
-                        _, declared in declared
+                        _, own in own
                     },
                     with: context.bounding(procedure.signature.parameterBounds.table),
                     ask: ask
