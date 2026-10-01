@@ -35,7 +35,7 @@ struct EnvelopeTests {
         // recognises and ignores the rest, and runs a program nobody wrote.
         #expect {
             try loader.load([
-                "warp": .int(Envelope.version + 1),
+                "warp": .int(ModuleReader.version + 1),
                 "procedures": ["entry": ["result": "hello"]]
             ])
         } throws: { error in
@@ -45,7 +45,7 @@ struct EnvelopeTests {
         // And one written for this reader is read
         #expect(throws: Never.self) {
             try loader.load([
-                "warp": .int(Envelope.version),
+                "warp": .int(ModuleReader.version),
                 "imports": [],
                 "procedures": ["entry": ["result": "hello"]]
             ])
@@ -112,7 +112,7 @@ struct EnvelopeTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(written[Envelope.importsKey] == .array([.string("std.math.plus")]))
+        #expect(written[ModuleReader.CodingKeys.imports.name] == .array([.string("std.math.plus")]))
     }
 
     @Test("a document that says nothing about what it imports is refused")
@@ -124,7 +124,7 @@ struct EnvelopeTests {
         // touches nothing from one that touches everything.
         #expect {
             try loader.load([
-                "warp": .int(Envelope.version),
+                "warp": .int(ModuleReader.version),
                 "procedures": ["entry": ["result": "hello"]]
             ])
         } throws: { error in
@@ -135,7 +135,7 @@ struct EnvelopeTests {
         // nothing. The empty list is a claim and the absent one is not.
         #expect(throws: Never.self) {
             try loader.load([
-                "warp": .int(Envelope.version),
+                "warp": .int(ModuleReader.version),
                 "imports": [],
                 "procedures": ["entry": ["result": "hello"]]
             ])
@@ -150,7 +150,7 @@ struct EnvelopeTests {
         // about.
         #expect {
             try loader.load([
-                "warp": .int(Envelope.version),
+                "warp": .int(ModuleReader.version),
                 "procedures": ["entry": ["nonsense": "hello"]]
             ])
         } throws: { error in
@@ -256,7 +256,7 @@ struct EnvelopeTests {
         // answers differ: one is upgrade me, the other is fix the sender.
         #expect {
             try loader.load([
-                "warp": .int(Envelope.version + 1),
+                "warp": .int(ModuleReader.version + 1),
                 "somethingALaterVersionAdded": "…",
                 "procedures": ["entry": ["result": "hello"]]
             ])
@@ -272,7 +272,7 @@ struct EnvelopeTests {
         #expect {
             try loader.load([
                 "imports": [],
-                "warp": .int(Envelope.version - 1),
+                "warp": .int(ModuleReader.version - 1),
                 "procedures": ["entry": ["result": "hello"]]
             ])
         } throws: { error in

@@ -30,6 +30,17 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Property
+    // Which types a reader has to understand. It goes up when a type is added
+    // or an existing one changes what it means, and does not move for a new
+    // procedure. A procedure is vocabulary, and vocabulary is what `imports` is for.
+    //
+    // Every document says it. A reader that filled in a default would be
+    // reading a document that never said which language it was written for, and
+    // a file that is not a document at all would get as far as having its keys
+    // judged. Turned away for being a malformed module rather than for not
+    // being one.
+    public static let version = 1
+
     // What the document declares, unjudged. Reading and checking are two
     // questions and only one of them is about the program: a text nobody can
     // run is still a text, and still that one, so the reading answers for it
@@ -43,7 +54,7 @@ public struct ModuleReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
-            extra: [Envelope.versionKey.spelling],
+            extra: [Module.versionKey.spelling],
             context: "module"
         )
 
@@ -102,6 +113,30 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Public
+    // Whether a document declares what it imports.
+    //
+    // Written and not null. A key holding nothing is not a claim, and the two
+    // who ask have to agree about that: the door turns away a document that
+    // declares nothing, and the reader takes a key holding nothing as a list
+    // of no names. Answering differently is how `imports: null` passes the
+    // door as a claim while the module behind it says it takes nothing.
+    //
+    // Asked twice because the two are in different places. The door holds the
+    // document and reads the value; the reader is inside it and has a
+    // container. One rule, said here for both.
+    public static func declaresImports(_ written: Value?) -> Bool {
+        guard let written else { return false }
+
+        return written != .null
+    }
+
+    public static func declaresImports<Key: CodingKey>(
+        in container: KeyedDecodingContainer<Key>,
+        forKey key: Key
+    ) throws -> Bool {
+        try container.contains(key) && !container.decodeNil(forKey: key)
+    }
+
     // MARK: - Private
     // What the document says it takes from its link, read and not judged. What
     // it is held against is what the module sends, which is a fact about the
@@ -113,7 +148,7 @@ public struct ModuleReader: Decodable {
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>
     ) throws -> Set<Name>? {
-        guard try Envelope.declaresImports(in: container, forKey: .imports) else { return nil }
+        guard try Self.declaresImports(in: container, forKey: .imports) else { return nil }
 
         let written = try container.superDecoder(forKey: .imports)
 
@@ -150,16 +185,16 @@ public struct ModuleReader: Decodable {
     // reader has to tell "I am too old for this" (upgrade me) from "this is
     // wrong" (fix the sender).
     private static func checkVersion(in decoder: Decoder) throws {
-        let envelope = try decoder.container(keyedBy: AnyCodingKey.self)
-        let key = AnyCodingKey(stringValue: Envelope.versionKey.spelling)
+        let document = try decoder.container(keyedBy: AnyCodingKey.self)
+        let key = AnyCodingKey(stringValue: Module.versionKey.spelling)
 
         // About the document and not about anything in it: what is missing is
         // the one thing that would have made this a document, and there is
         // nothing written here to stand on.
-        guard envelope.contains(key), try !envelope.decodeNil(forKey: key) else {
+        guard document.contains(key), try !document.decodeNil(forKey: key) else {
             throw ReadingError(
                 "this is not a warp document. It does not say"
-                    + " which warp it is written for (`\(Envelope.versionKey)`)",
+                    + " which warp it is written for (`\(Module.versionKey)`)",
                 at: decoder.steps
             )
         }
@@ -167,16 +202,16 @@ public struct ModuleReader: Decodable {
         // The rest is about the version that is written, so it is read standing on
         // it. Refusing from out here would put the answer at the document's
         // first character, which is a line the author has no reason to look at.
-        let written = try envelope.superDecoder(forKey: key)
+        let written = try document.superDecoder(forKey: key)
         let version = try written.read(Int.self)
 
         // One version, because a document is spelled one way: the way the
         // writer of this version writes it. An older document is written
         // again, and a later one is for a reader that knows it.
-        guard version == Envelope.version else {
+        guard version == Self.version else {
             throw ReadingError(
-                "this document is written for warp \(version), and this reads warp \(Envelope.version)."
-                    + " Write it again for \(Envelope.version)",
+                "this document is written for warp \(version), and this reads warp \(Self.version)."
+                    + " Write it again for \(Self.version)",
                 at: written.steps
             )
         }

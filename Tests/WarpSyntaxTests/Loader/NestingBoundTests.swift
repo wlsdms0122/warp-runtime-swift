@@ -29,8 +29,8 @@ struct NestingBoundTests {
         // reference at the bottom one.
         var levels: Int {
             switch self {
-            case .call: (Envelope.nesting - 4) / 3
-            case .closure: (Envelope.nesting - 4) / 5
+            case .call: (Value.nestingBound - 4) / 3
+            case .closure: (Value.nestingBound - 4) / 5
             }
         }
 
@@ -107,7 +107,7 @@ struct NestingBoundTests {
         #expect {
             try Loader().load(deeper, identity: nil)
         } throws: { error in
-            "\(error)".contains("nesting deeper than \(Envelope.nesting) containers")
+            "\(error)".contains("nesting deeper than \(Value.nestingBound) containers")
         }
 
         // When. Read, built and run.

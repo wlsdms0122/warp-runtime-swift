@@ -63,8 +63,8 @@ public struct Writer: Sendable {
         // nothing is written with what it sends, since a document that says
         // nothing is not one and there is nobody left to ask.
         var written: [Name: Value] = [
-            Envelope.versionKey: .int(Envelope.version),
-            Envelope.importsKey: .array(
+            Module.versionKey: .int(ModuleReader.version),
+            ModuleReader.CodingKeys.imports.name: .array(
                 (draft.imports ?? draft.uses).sorted().map { name in .string(name.spelling) }
             ),
             ModuleReader.CodingKeys.procedures.name:

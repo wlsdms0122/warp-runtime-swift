@@ -38,12 +38,12 @@ extension Loader {
 
         var written = document
 
-        if written[Envelope.versionKey] == nil {
-            written = written.writing(Envelope.versionKey, with: .int(Envelope.version))
+        if written[Module.versionKey] == nil {
+            written = written.writing(Module.versionKey, with: .int(ModuleReader.version))
         }
 
-        if written[Envelope.importsKey] == nil {
-            written = written.writing(Envelope.importsKey, with: .array([]))
+        if written[ModuleReader.CodingKeys.imports.name] == nil {
+            written = written.writing(ModuleReader.CodingKeys.imports.name, with: .array([]))
         }
 
         // The entry is named outside the text, so the text is not where its

@@ -286,7 +286,7 @@ struct NotationTests {
         // standing bare it is refused, and under `record` it is a record.
         func document(asking asked: Value) -> Value {
             [
-                "warp": .int(Envelope.version),
+                "warp": .int(ModuleReader.version),
                 "imports": [],
                 "procedures": [
                     "entry": [

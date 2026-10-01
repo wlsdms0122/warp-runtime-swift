@@ -98,7 +98,7 @@ public struct TextEncoding {
         return written
     }
 
-    // The same writing on one line and without the envelope, for a sentence
+    // The same writing on one line and without the header, for a sentence
     // that quotes a value.
     func line(from value: Value) throws -> String {
         var written = ""
@@ -703,7 +703,7 @@ public struct TextEncoding {
     // The same count the writer keeps: containers open on the path, and the
     // one about to open is one more of them.
     private func opening(_ opened: [Opened], at offset: Int) throws {
-        guard opened.count < Envelope.nesting else {
+        guard opened.count < Value.nestingBound else {
             throw refused("the document nests deeper than a reader must follow", at: offset)
         }
     }

@@ -78,7 +78,7 @@ public struct Loader: Sendable {
         // reading.
         let document = Place.Document(identity: identity)
 
-        // Reading first and checking second, and both before the envelope
+        // Reading first and checking second, and both before the imports
         // question below.
         let module = try reading(by: .standard) { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
 
@@ -95,11 +95,12 @@ public struct Loader: Sendable {
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
         let written = try Self.document(value)
+        let imports = ModuleReader.CodingKeys.imports.name
 
-        guard Envelope.declaresImports(written[Envelope.importsKey]) else {
+        guard ModuleReader.declaresImports(written[imports]) else {
             throw ReadingError(
                 "a document says what it imports, and this one does not."
-                    + " Write `\(Envelope.importsKey)`, empty where the program uses nothing"
+                    + " Write `\(imports)`, empty where the program uses nothing"
             )
             .read(in: document)
         }
@@ -171,7 +172,7 @@ public struct Loader: Sendable {
     // One procedure, for a caller holding a procedure's worth of data rather than a
     // document. A module is how a *file* declares procedures; a caller that has
     // exactly one and already knows what to call it does not have to write an
-    // envelope around it to say so.
+    // document around it to say so.
     //
     // A fragment is in no document. What it will be part of is the caller's,
     // and a refusal from here says so rather than naming a document it cannot
@@ -271,14 +272,14 @@ public struct Loader: Sendable {
     private func stamped(_ value: Value) throws -> Value {
         let document = try Self.document(value)
 
-        guard document[Envelope.versionKey] == nil else { return value }
+        guard document[Module.versionKey] == nil else { return value }
 
-        return .dictionary(document.writing(Envelope.versionKey, with: .int(Envelope.version)))
+        return .dictionary(document.writing(Module.versionKey, with: .int(ModuleReader.version)))
     }
 
     // What a document holds, or the refusal saying this was not one.
     private static func document(_ value: Value) throws -> Value.Dictionary {
-        // A value under a type's name is a value of that type. The envelope is
+        // A value under a type's name is a value of that type. A document is
         // the reader's own data and stands under no name.
         if case let .record(record) = value, let settled = record.name {
             throw ReadingError("a document stands under no name, and this one stands under '\(settled)'")
@@ -306,8 +307,8 @@ public struct Loader: Sendable {
         // Held here rather than in each reader below: a value a caller built
         // reaches every reader through this one door, and past the bound the
         // readers recurse in the ordinary way.
-        guard value.nesting <= Envelope.nesting else {
-            throw ReadingError("nesting deeper than \(Envelope.nesting) containers", at: value.deepest).read(in: document)
+        guard value.nesting <= Value.nestingBound else {
+            throw ReadingError("nesting deeper than \(Value.nestingBound) containers", at: value.deepest).read(in: document)
         }
 
         let userInfo: [CodingUserInfoKey: Any] = [
