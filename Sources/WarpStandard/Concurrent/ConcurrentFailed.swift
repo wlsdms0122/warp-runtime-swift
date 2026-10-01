@@ -31,7 +31,7 @@ public struct ConcurrentFailed: RecoverableFailure {
             + failures
                 .sorted { left, right in left.key < right.key }
                 .map { piece, envelope in
-                    guard case let .string(message)? = envelope["message"] else { return "\(piece)" }
+                    guard case let .string(message)? = envelope[FailurePayload.message] else { return "\(piece)" }
 
                     return "\(piece): \(message)"
                 }

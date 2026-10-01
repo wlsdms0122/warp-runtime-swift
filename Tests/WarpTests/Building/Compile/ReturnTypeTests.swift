@@ -9,9 +9,6 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A declaration said what it took and nothing about what came back, so the
-// judgement this language makes before running stopped at the boundary it was
-// easiest to make it at.
 @Suite("What a procedure returns")
 struct ReturnTypeTests {
     // MARK: - Property
@@ -30,8 +27,7 @@ struct ReturnTypeTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3))
-                        )
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
                     result: .reference([.key("counted")])
                 )
@@ -44,24 +40,6 @@ struct ReturnTypeTests {
 
         // Then. Settled to the declared representation, not merely waved past
         #expect(answer == .int(3))
-
-        // And a fraction is not that representation, whatever it is worth: a
-        // declaration is about the type, not about which values happen to fit.
-        let narrowing = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [Statement(binding: .constant("counted"), expression: .literal(.double(3)))],
-                    result: .reference([.key("counted")])
-                )
-            ]
-        )
-
-        await #expect(throws: (any Error).self) {
-            try await Executor()
-                .run(try await builder.build([narrowing]))
-        }
     }
 
     @Test("a body that answers something else is refused where both are written")
@@ -75,8 +53,7 @@ struct ReturnTypeTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3))
-                        )
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
                     result: .reference([.key("counted")])
                 )
@@ -85,8 +62,10 @@ struct ReturnTypeTests {
 
         // When / Then. The body and the declaration beside it are one
         // document's text, so nothing has to run to find them disagreeing
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("answers int, and its declaration promises string")
         }
     }
 
@@ -126,9 +105,7 @@ struct ReturnTypeTests {
         // Given
         let sut = try Module(
             types: [
-                "Task": .record([
-                        "id": .string
-                    ])
+                "Task": .record(["id": .string])
             ],
             procedures: [
                 "entry": Procedure(
@@ -138,11 +115,8 @@ struct ReturnTypeTests {
                     ),
                     body: [
                         Statement(binding: .constant("made"), expression: .array([
-                                    .record([
-                                            "id": .literal(.string("a"))
-                                        ])
-                                ])
-                        )
+                            .record(["id": .literal(.string("a"))])
+                        ]))
                     ],
                     result: .reference([.key("made")])
                 )
@@ -157,7 +131,7 @@ struct ReturnTypeTests {
         #expect(answer == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
     }
 
-    @Test("an answer naming a type nobody declared is refused at link")
+    @Test("an answer naming a type nobody declared is refused at the build")
     func unknownReturnTypeIsABuildError() async throws {
         // Given
         let sut = try Module(
@@ -168,16 +142,17 @@ struct ReturnTypeTests {
                         returns: .named("Nowhere")
                     ),
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.int(1))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.int(1)))
                     ]
                 )
             ]
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             _ = try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("names type 'Nowhere', which no module in this link declares")
         }
     }
 

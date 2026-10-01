@@ -16,7 +16,7 @@ struct LoweredBody: Sendable {
         // MARK: - Initializer
         // MARK: - Public
         // Whether this one node reads a slot of the range, apart from what nests
-        // in it. A further question over the same shape as `stand`, and it stays
+        // in it. A further question over the same structure as `stand`, and it stays
         // apart: this counts only the slots a body's value depends on, and leaves
         // out the ones it binds.
         func reads(_ slots: Range<Int>) -> Bool {
@@ -55,13 +55,11 @@ struct LoweredBody: Sendable {
             switch self {
             case let .instruction(instruction):
                 switch instruction.binding {
-                case let .bind(slot, settling)?, let .declare(slot, settling)?:
+                case let .bind(slot, _)?, let .declare(slot, _)?:
                     standing.stand(on: slot)
-                    settling.map { type in standing.stand(on: type) }
 
-                case let .assign(address, settling)?:
+                case let .assign(address, _)?:
                     address.stand(in: &standing)
-                    settling.map { type in standing.stand(on: type) }
 
                 case nil:
                     break
@@ -77,9 +75,6 @@ struct LoweredBody: Sendable {
                 case let .closure(number, captures):
                     captures.forEach { outer, _ in standing.stand(on: outer) }
                     standing.stand(up: number, taking: captures.map { _, inner in inner })
-
-                case let .cast(_, type, _):
-                    standing.stand(on: type)
 
                 case let .loop(_, _, round, keeps):
                     round.map { round in standing.stand(on: round) }
@@ -99,7 +94,7 @@ struct LoweredBody: Sendable {
                         address.stand(in: &standing)
                     }
 
-                case .literal, .array, .record, .apply, .block, .conditional, .leave:
+                case .literal, .array, .record, .apply, .cast, .block, .conditional, .leave:
                     break
                 }
             }
@@ -137,11 +132,6 @@ struct LoweredBody: Sendable {
         // is only that this document gave them at all.
         private(set) var calls: [(number: Int, arguments: Int)] = []
 
-        // The type numbers its code stands on, kept apart because a document
-        // numbers its types and its memberships in two spaces.
-        private(set) var types: [Int] = []
-        private(set) var memberships: [Int] = []
-
         // MARK: - Initializer
         // MARK: - Public
         mutating func stand(on slot: Int) {
@@ -154,34 +144,6 @@ struct LoweredBody: Sendable {
 
         mutating func stand(calling number: Int, handing arguments: Int) {
             calls.append((number: number, arguments: arguments))
-        }
-
-        mutating func stand(on type: LoweredType) {
-            switch type {
-            case let .named(number):
-                types.append(number)
-
-            case let .parameter(_, bounds), let .composition(bounds):
-                for bound in bounds {
-                    guard case let .membership(number) = bound else { continue }
-
-                    memberships.append(number)
-                }
-
-            case let .array(held), let .dictionary(held), let .variable(held),
-                let .inout(held), let .nullable(held):
-                stand(on: held)
-
-            case let .record(record):
-                record.fields.forEach { field in stand(on: field) }
-
-            case let .procedure(parameters, returns, _, _):
-                parameters?.forEach { parameter in stand(on: parameter) }
-                returns.map { answer in stand(on: answer) }
-
-            default:
-                return
-            }
         }
 
         mutating func stand(up number: Int, taking inner: [Int]) {

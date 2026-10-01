@@ -156,7 +156,7 @@ public struct TextEncoding {
         // would be a second text for a document the reader already has one for.
         let claimed: Int
 
-        switch Int.reading(spelling: version) {
+        switch IntSpelling(version) {
         case let .int(read):
             claimed = read
 
@@ -531,7 +531,7 @@ public struct TextEncoding {
             // and `1e0` are not documents even though a looser parse would read
             // a number out of them.
             guard bare.contains(where: { character in ".eE".contains(character) }) else {
-                switch Int.reading(spelling: bare) {
+                switch IntSpelling(bare) {
                 case let .int(int):
                     return .int(int)
 

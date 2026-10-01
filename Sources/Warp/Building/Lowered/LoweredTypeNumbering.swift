@@ -12,7 +12,7 @@ import Foundation
 //
 // A body stands on types as well as on calls, and the same rule holds for
 // both: the number a document writes is the document's, and which row of a
-// link it is stays the link's answer. So a document numbers the types its
+// link it is stays the link's resolution. So a document numbers the types its
 // bodies stand on from itself, in name order, and a link that puts other
 // documents beside it moves no number.
 //
@@ -26,18 +26,18 @@ import Foundation
 struct LoweredTypeNumbering: Sendable {
     // What a number turned out to be, with the reason where it is not a row:
     // a name the link does not declare, or a number the document never gave.
-    enum Answer: Sendable {
+    enum Resolution: Sendable {
         case row(Int)
         case unfound(Name)
         case unnumbered
     }
 
-    // A document's type numbers answered as the rows of one link, worked out
+    // A document's type numbers resolved to the rows of one link, worked out
     // once per number rather than at every type standing on one.
     struct Rows {
         // MARK: - Property
-        let types: [Answer]
-        let memberships: [Answer]
+        let types: [Resolution]
+        let memberships: [Resolution]
 
         // MARK: - Initializer
         // MARK: - Public
@@ -53,21 +53,21 @@ struct LoweredTypeNumbering: Sendable {
 
         // MARK: - Private
         // Which row a document's type number turned out to be. The reading is
-        // the numbering's; what to say when it does not answer is this.
+        // the numbering's; what to say when it does not resolve is this.
         private func row(
-            _ answers: [Answer],
+            _ resolutions: [Resolution],
             at number: Int,
             calling what: String,
             in place: Place
         ) throws -> Int {
-            guard answers.indices.contains(number) else {
+            guard resolutions.indices.contains(number) else {
                 throw BuildError.unjudged(
                     "a type standing at \(number), which its document never numbered",
                     at: place
                 )
             }
 
-            switch answers[number] {
+            switch resolutions[number] {
             case let .row(row):
                 return row
 
@@ -112,18 +112,18 @@ struct LoweredTypeNumbering: Sendable {
     init(written value: Value) throws {
         var fields = try Fields(value, of: "type numbering")
 
-        self.types = try Fields.ordered(fields.next(), of: "type numbering types") { written in
-            try Fields.name(written, of: "type numbering types")
+        self.types = try Field(fields.next(), of: "type numbering types").ordered { written in
+            try Field(written, of: "type numbering types").name()
         }
-        self.memberships = try Fields.ordered(fields.next(), of: "type numbering memberships") { written in
-            try Fields.name(written, of: "type numbering memberships")
+        self.memberships = try Field(fields.next(), of: "type numbering memberships").ordered { written in
+            try Field(written, of: "type numbering memberships").name()
         }
 
         try fields.end()
     }
 
     // MARK: - Public
-    // Every number this gave, answered as the rows of one link.
+    // Every number this gave, resolved to the rows of one link.
     func rows(in loweredTypes: LoweredTypeTable) -> Rows {
         Rows(
             types: types.indices.map { number in type(number, in: loweredTypes) },
@@ -132,20 +132,20 @@ struct LoweredTypeNumbering: Sendable {
     }
 
     // Which row of a link a number stands for, read from that link's table.
-    func type(_ number: Int, in loweredTypes: LoweredTypeTable) -> Answer {
+    func type(_ number: Int, in loweredTypes: LoweredTypeTable) -> Resolution {
         guard types.indices.contains(number) else { return .unnumbered }
 
         let name = types[number]
 
-        return loweredTypes.row(named: name).map(Answer.row) ?? .unfound(name)
+        return loweredTypes.row(named: name).map(Resolution.row) ?? .unfound(name)
     }
 
-    func membership(_ number: Int, in loweredTypes: LoweredTypeTable) -> Answer {
+    func membership(_ number: Int, in loweredTypes: LoweredTypeTable) -> Resolution {
         guard memberships.indices.contains(number) else { return .unnumbered }
 
         let name = memberships[number]
 
-        return loweredTypes.constraintRow(named: name).map(Answer.row) ?? .unfound(name)
+        return loweredTypes.constraintRow(named: name).map(Resolution.row) ?? .unfound(name)
     }
 
     // MARK: - Private

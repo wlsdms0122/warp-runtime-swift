@@ -27,9 +27,10 @@ struct NotationTests {
     // MARK: - Test
     @Test("a notation with no spellings owes nothing")
     func spellingNothingLeavesNothingOwed() throws {
-        // Given. A canonical notation offers no spellings and registers no
-        // construct that lowers to a procedure, so every type it can still write is
-        // one the language already has, and it owes no vocabulary at all.
+        // When / Then. A canonical notation offers no spellings and registers
+        // no construct that lowers to a procedure, so every type it can still
+        // write is one the language already has, and it owes no vocabulary at
+        // all.
         #expect(sut.vocabulary(of: .canonical).isEmpty)
         #expect(!sut.vocabulary(of: .testing).isEmpty)
     }
@@ -44,7 +45,7 @@ struct NotationTests {
             interpolation: Interpolation(read: "text", joined: "joined")
         )
 
-        // Then. With no forms at all, and with the standard ones
+        // When / Then. With no forms at all, and with the standard ones
         for sut in [Loader(registry: try ConstructRegistry(forms: [])), Loader()] {
             #expect(sut.vocabulary(of: notation).isSuperset(of: OwnVocabularyConditions().vocabulary))
             #expect(sut.vocabulary(of: notation) == notation.vocabulary)
@@ -56,7 +57,7 @@ struct NotationTests {
         // Given. This is what makes the spellings a layer rather than a part of
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
-        let module = try await sut.loadDocument([
+        let module = try sut.loadDocument([
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
@@ -90,11 +91,11 @@ struct NotationTests {
 
     @Test("a record a notation does not claim is the expression it is")
     func anUnclaimedRecordIsAnExpression() async throws {
-        // Given. A condition slot asks for an expression, and a spelling is one
-        // way of arriving at one. A record carrying none of the notation's keys
-        // never was a condition type, which is what keeps the spellings
-        // optional wherever a condition is asked for.
-        let sut = try await Loader.testing.loadProcedure([
+        // Given / When. A condition slot asks for an expression, and a spelling
+        // is one way of arriving at one. A record carrying none of the
+        // notation's keys never was a condition type, which is what keeps the
+        // spellings optional wherever a condition is asked for.
+        let sut = try Loader.testing.loadProcedure([
             "parameters": [["name": "ready", "type": "bool"]],
             "body": [
                 [
@@ -177,7 +178,7 @@ struct NotationTests {
 
         // When. Written, and read back by a reader with no notation at all
         let written = try Writer().value(of: module)
-        let read = try await sut.load(written)
+        let read = try sut.load(written)
 
         // Then. The same record arrived, rather than a message
         guard
@@ -195,10 +196,10 @@ struct NotationTests {
 
     @Test("a template nobody offers is refused, not read as a record")
     func anUnofferedTemplateIsRefused() {
-        // Given. The two template keys stay reserved whether or not a notation
-        // offers one. Reading them as an ordinary record would make the same
-        // document mean one thing here and another in the notation next door,
-        // and nothing would say so.
+        // When / Then. The two template keys stay reserved whether or not a
+        // notation offers one. Reading them as an ordinary record would make
+        // the same document mean one thing here and another in the notation
+        // next door, and nothing would say so.
         #expect {
             try sut.loadDocument([
                 "imports": ["std.text.joined", "std.text.text"],
@@ -221,9 +222,9 @@ struct NotationTests {
 
     @Test("a template is spelled with the procedures the notation names")
     func aTemplateSpendsTheNotationsProcedures() async throws {
-        // Given, which procedures a template lowers to is the notation's answer, and
-        // the reader carries none of its own
-        let sut = try await Loader.testing.loadProcedure([
+        // Given / When. Which procedures a template lowers to is the notation's
+        // answer, and the reader carries none of its own
+        let sut = try Loader.testing.loadProcedure([
             "parameters": [["name": "word", "type": "string"]],
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
@@ -262,10 +263,10 @@ struct NotationTests {
             ]
         ]
 
-        // Then. Both readers arrive at the cast
+        // When / Then. Both readers arrive at the cast
         for notation in [Notation.canonical, .testing] {
             guard
-                case let .body(block) = try await sut.loadProcedure(written, from: notation)
+                case let .body(block) = try sut.loadProcedure(written, from: notation)
                     .procedures[entryName]?.implementation,
                 case let .conditional(condition, _, _) = block.body.statements.first?.expression,
                 case .cast = condition
@@ -301,7 +302,7 @@ struct NotationTests {
         let spelled: Value = ["of": ["ref": "word"], "is": "hey"]
 
         // When
-        let module = try await sut.load(document(asking: ["record": spelled]))
+        let module = try sut.load(document(asking: ["record": spelled]))
 
         // Then
         #expect {

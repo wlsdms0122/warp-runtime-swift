@@ -334,7 +334,7 @@ struct ProcedureSendsTests {
     }
 
     // Hands null to a procedure whose first parameter is declared string.
-    private struct NullingToAParameter: Effect {
+    private struct NullingEffect: Effect {
         typealias Parameters = NoParameters
 
         enum Imports: Int, ImportSet {
@@ -361,7 +361,7 @@ struct ProcedureSendsTests {
     }
 
     // Declares what it is handed, as a string.
-    private struct SaidReporter: Effect {
+    private struct ReportingEffect: Effect {
         enum Parameters: Int, ParameterSet {
             case said
 
@@ -459,8 +459,8 @@ struct ProcedureSendsTests {
         identity: Identity([0x01])
     )
 
-    // The same procedure under two claims: one says it touches nothing shared and
-    // is refused for sending the ticketing procedure, and one says it does.
+    // `app.counted` twice: here it says it touches nothing shared and is refused
+    // for sending the ticketing procedure, and in `counting` it says it does.
     private static let claims = try! Module(
         procedures: [
             "app.counted": Procedure(
@@ -479,8 +479,8 @@ struct ProcedureSendsTests {
         ]
     )
 
-    // The callee three of the tests above hand arguments to: it answers `z`, so an
-    // argument standing at the wrong place shows in the answer.
+    // The callee the handing tests below hand arguments to: it answers `z`, so
+    // an argument standing at the wrong place shows in the answer.
     private static let picked = try! Module(
         procedures: [
             "app.pick": Procedure(
@@ -555,8 +555,8 @@ struct ProcedureSendsTests {
     private static let reporting = try! Module(
         procedures: [
             "app.reporting": Procedure(
-                signature: Signature(of: SaidReporter.self, returns: .string),
-                implementation: .effect(SaidReporter())
+                signature: Signature(of: ReportingEffect.self, returns: .string),
+                implementation: .effect(ReportingEffect())
             )
         ]
     )
@@ -565,7 +565,7 @@ struct ProcedureSendsTests {
         procedures: [
             "app.nullingToAParameter": Procedure(
                 signature: Signature(returns: .string),
-                implementation: .effect(NullingToAParameter())
+                implementation: .effect(NullingEffect())
             )
         ]
     )
@@ -611,18 +611,21 @@ struct ProcedureSendsTests {
     @Test("a procedure sending a spelling nothing declares is refused at the build")
     func anUndeclaredSendIsRefused() async {
         // Given / When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.strayed]
             )
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'app.nowhere' is called here, and no module in this link declares it")
         }
     }
 
     @Test("a procedure sending another document's private declaration is refused at the build")
-    func aSendReachingAPrivateDeclarationIsRefused() async {
+    func aSendReachingAPrivateDeclarationIsRefused() async throws {
         // Given. A document declares `app.hidden` privately, and a procedure the
         // caller brings declares it sends that spelling.
-        let document = try! Module(procedures: [
+        let document = try Module(procedures: [
             "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
             "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
         ])
@@ -637,8 +640,8 @@ struct ProcedureSendsTests {
 
     @Test("a query sending something that answers only by running is refused in its own document")
     func aQuerySendingAnEffectIsRefused() async {
-        // Given. `app.shouting` claims it answers without running and sends
-        // `app.shout`, which does not
+        // Given / When. `app.shouting` claims it answers without running and
+        // sends `app.shout`, which does not
         let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.contradicting, .shouting]
@@ -651,13 +654,16 @@ struct ProcedureSendsTests {
 
     @Test("an isolated procedure sending one that keeps state is refused")
     func anIsolatedProcedureSendingSharedStateIsRefused() async {
-        // Given / When / Then. `app.counting` says it touches nothing shared
+        // Given / When / Then. `app.counted` says it touches nothing shared
         // and sends `app.ticket`, which answers from a box it keeps between
         // calls
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.claims, .ticketing]
             )
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("says it touches no name another body could touch at the same time, and sends 'app.ticket'")
         }
     }
 
@@ -689,7 +695,7 @@ struct ProcedureSendsTests {
     @Test("a module claiming a list its procedures contradict is refused")
     func aDriftedDisclosureIsRefused() {
         // Given / When / Then
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Module(
                 imports: [],
                 procedures: [
@@ -699,6 +705,8 @@ struct ProcedureSendsTests {
                     )
                 ]
             )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("uses [\"std.math.times\"], which it does not import")
         }
     }
 
@@ -706,7 +714,7 @@ struct ProcedureSendsTests {
     func aProcedureSendingFromScatteredPlacesIsRefused() {
         // Given / When / Then. A run reaches a sent procedure by the place the procedure
         // names it at, so a place nothing stands at reaches nothing.
-        #expect(throws: ValidationError.self) {
+        #expect {
             try Module(
                 procedures: [
                     "app.scattered": Procedure(
@@ -715,6 +723,8 @@ struct ProcedureSendsTests {
                     )
                 ]
             )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("this procedure sends procedures standing at [0, 5]")
         }
     }
 
@@ -776,8 +786,11 @@ struct ProcedureSendsTests {
         )
 
         // When / Then
-        await #expect(throws: ExecutionError.self) {
+        await #expect {
             try await Executor().run(image)
+        } throws: { error in
+            error is ExecutionError
+                && "\(error)".contains("'app.pick' is handed 3 here, and the procedure sending it declares it hands 2")
         }
     }
 

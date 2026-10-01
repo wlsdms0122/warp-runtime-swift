@@ -29,6 +29,39 @@ struct Lowering {
         // MARK: - Private
     }
 
+    // One document as it was held: where its calls are numbered from, its
+    // declarations by row, private ones included, its variables by name in
+    // the order a run makes their boxes, and which row each of its closures
+    // took, in the order it numbers them.
+    struct Document: Sendable {
+        // MARK: - Property
+        let numbering: Numbering
+        let owned: [Name: Int]
+        let variables: [Name: Int]
+        var closureRows: [Int]
+
+        // Which row each name it numbers stands for, once resolved. The names
+        // and the closures settle at different times: a name's row is the
+        // link's before anything is lowered, and a closure's row is made by
+        // lowering.
+        var named: [Int?]?
+
+        // Which row each number it gave stands for: its names, then its
+        // closures. A closure with no row yet stands as nothing, the same as a
+        // name with none, and so does every number before its names resolve.
+        var resolved: [Int?] {
+            guard let named else { return [] }
+
+            return named + (0..<numbering.closureCount).map { written in
+                closureRows.indices.contains(written) ? closureRows[written] : nil
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // The names visible at one point of a body, by slot. A value, so a block
     // takes a copy and what it introduces dies with it.
     private struct Names {
@@ -222,13 +255,10 @@ struct Lowering {
     // thing.
     private(set) var rows: [Name: Int] = [:]
 
-    // Where each document's calls are numbered from. A body carries these
-    // numbers rather than the rows above, so a document lowers the same way
-    // whatever else the build was handed.
-    private(set) var numbering: [Int: Numbering] = [:]
-
-    // Each document's variables by name, in the order a run makes their boxes.
-    private(set) var variables: [Int: [Name: Int]] = [:]
+    // Every document held, by origin. A body carries its document's numbers
+    // rather than the rows above, so a document lowers the same way whatever
+    // else the build was handed.
+    private(set) var documents: [Document] = []
 
     // Every contract's procedures, under the spelling a call writes to reach one.
     // A selector in here names no row: it names the table of rows the run
@@ -245,16 +275,8 @@ struct Lowering {
     // out from it once everything is lowered.
     private(set) var standing: [Int: Standing] = [:]
 
-    // Which row of this table each document's closures took, in the order the
-    // document numbers them. A closure is a row like any other; what tells it
-    // apart is that no declared spelling reaches it, so this stands beside
-    // `rows` rather than in it.
-    private(set) var closureRows: [Int: [Int]] = [:]
-
-    // Each document's declarations by row, private ones included: what the
-    // document itself may name whoever else may. A document's own numbers
-    // answer by it.
-    private(set) var owned: [Int: [Name: Int]] = [:]
+    // Each document's constants, settled, with what each reads as.
+    private var constants: [Int: [Name: (value: Value, type: LoweredType)]] = [:]
 
     // The spellings of the private declarations held so far, for the refusal
     // alone: not in `rows`, since nothing outside their documents names them,
@@ -289,27 +311,9 @@ struct Lowering {
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
-        self.owned = carried.owned
         self.concealed = carried.concealed
-        self.numbering = carried.numbering
-        self.variables = carried.variables
-        self.closureRows = carried.closureRows
+        self.documents = carried.documents
         self.contractProcedures = contractProcedures
-        self.loweredTypes = loweredTypes
-    }
-
-    // A lowering standing on tables something else holds: an expression
-    // folded beside a document's bodies rather than into a row of its own.
-    init(
-        table: [Linked],
-        rows: [Name: Int],
-        numbering: [Int: Numbering],
-        loweredTypes: LoweredTypeTable
-    ) {
-        self.table = table
-        self.rows = rows
-        self.numbering = numbering
-        self.contractProcedures = [:]
         self.loweredTypes = loweredTypes
     }
 
@@ -321,14 +325,15 @@ struct Lowering {
     //
     // A document being compiled lifts its closures as it lowers, so it hands
     // none over here. One already compiled hands over the block it left.
-    @discardableResult
+    //
+    // Its origin is where it is held, which is what this answers beside the
+    // rows its declarations took.
     mutating func hold(
-        _ origin: Int,
         standing block: [Linked],
         closures lifted: [Linked] = [],
         numbering held: Numbering,
         variables ordered: [Name]
-    ) -> Range<Int> {
+    ) -> (origin: Int, block: Range<Int>) {
         let start = table.count
 
         // A private declaration takes no spelling from the link: its own
@@ -347,18 +352,28 @@ struct Lowering {
             rows[row.label] = start + offset
         }
 
-        owned[origin] = own
-
-        closureRows[origin] = lifted.indices.map { offset in start + block.count + offset }
+        documents.append(
+            Document(
+                numbering: held,
+                owned: own,
+                variables: ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
+                    positions[name.element] = name.offset
+                },
+                closureRows: lifted.indices.map { offset in start + block.count + offset }
+            )
+        )
 
         table.append(contentsOf: block)
         table.append(contentsOf: lifted)
-        numbering[origin] = held
-        variables[origin] = ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
-            positions[name.element] = name.offset
-        }
 
-        return start ..< start + block.count
+        return (origin: documents.count - 1, block: start ..< start + block.count)
+    }
+
+    // Which row each number a document gave stands for. A number of its own
+    // reaches a name it declared or one behind it, so the resolution never
+    // moves after this.
+    mutating func resolve(_ origin: Int) {
+        documents[origin].named = documents[origin].numbering.resolved(rows: rows, own: own(origin))
     }
 
     // The same rows, answered. One per row, in place: what stands in the
@@ -380,15 +395,19 @@ struct Lowering {
         standing[origin] = stood
     }
 
+    // A document's constants, once they settle.
+    mutating func settle(constants settled: [Name: (value: Value, type: LoweredType)], of origin: Int) {
+        constants[origin] = settled
+    }
+
     // Lowers a declaration's body into its row.
-    mutating func settle(
-        _ row: Int,
-        body block: Block,
-        constants: [Name: (value: Value, type: LoweredType)],
-        at place: Place
-    ) throws {
+    mutating func settle(_ row: Int, body block: Block, at place: Place) throws {
         let declared = table[row]
-        let slots = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:], constants: constants)
+        let slots = Slots(
+            origin: declared.origin,
+            variables: documents[declared.origin].variables,
+            constants: constants[declared.origin] ?? [:]
+        )
         var scope = Names()
 
         for slot in declared.slots {
@@ -407,13 +426,12 @@ struct Lowering {
 
     // A document's own declarations by row, as they were held.
     func own(_ origin: Int) -> [Name: Int] {
-        owned[origin] ?? [:]
+        documents[origin].owned
     }
 
     // Lowers one expression read against a frame of constants, as a constant's
-    // own expression is, and as a body's constant path is when it folds. The
-    // frame starts as `names` in slot order and grows with what the
-    // expression declares; the frame says how large it is.
+    // own expression is. The frame starts as `names` in slot order and grows
+    // with what the expression declares; the frame says how large it is.
     mutating func lower(
         _ expression: Expression,
         reading names: [Name],
@@ -431,6 +449,26 @@ struct Lowering {
         let code = try lower(expression, in: scope, on: slots, writer: writer, at: place)
 
         return (code, slots.frame)
+    }
+
+    // Lowers a path read against a frame of constants in slot order, as a
+    // body's constant path is when it folds.
+    func lower(
+        _ path: Path,
+        reading names: [Name],
+        origin: Int,
+        at place: Place
+    ) throws -> (Operation, Frame) {
+        let slots = Slots(origin: origin, variables: [:], constants: [:])
+        var scope = Names()
+
+        for name in names {
+            scope.slots[name] = slots.allocate(name)
+        }
+
+        let (address, _) = try lower(path, in: scope, on: slots, at: place)
+
+        return (.local(address), slots.frame)
     }
 
     // One document's rows with the types in them numbered by that document,
@@ -709,7 +747,7 @@ struct Lowering {
         // A closure reaches a constant the way it reaches a module variable,
         // through the body it was written in, so the slot it takes is that
         // body's and the binding is that body's.
-        let inner = Slots(origin: slots.origin, variables: slots.variables, constants: [:], outer: (slots, scope))
+        let inner = Slots(origin: slots.origin, variables: [:], constants: [:], outer: (slots, scope))
         var innerScope = Names()
 
         for name in procedure.signature.names {
@@ -725,18 +763,15 @@ struct Lowering {
         let count = written[slots.origin, default: [:]][writer, default: 0]
         written[slots.origin, default: [:]][writer] = count + 1
 
-        let held = numbered(slots.origin)
+        let held = documents[slots.origin].numbering
         let row = table.count
-        let stands: (number: Int, nth: Int)?
 
-        if held.numbersAreRows {
-            stands = nil
-        } else if let given = held.closure(count, of: writer) {
-            stands = given
-        } else if let counted = held.count(of: writer) {
+        guard let stands = held.closure(count, of: writer) else {
+            guard let counted = held.count(of: writer) else {
+                throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
+            }
+
             throw BuildError.unjudged("closure \(count) of a declaration whose document numbered \(counted)", at: place)
-        } else {
-            throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
         }
 
         table.append(
@@ -755,16 +790,14 @@ struct Lowering {
             )
         )
 
-        guard let stands else { return .closure(row, captures: inner.captures) }
-
-        var taken = closureRows[slots.origin] ?? []
+        var taken = documents[slots.origin].closureRows
 
         if taken.count <= stands.nth {
             taken.append(contentsOf: Array(repeating: row, count: stands.nth + 1 - taken.count))
         }
 
         taken[stands.nth] = row
-        closureRows[slots.origin] = taken
+        documents[slots.origin].closureRows = taken
 
         return .closure(stands.number, captures: inner.captures)
     }
@@ -958,7 +991,7 @@ struct Lowering {
         writer: Closure.Declaration,
         at place: Place
     ) throws -> CallOperation {
-        guard let stands = numbered(slots.origin).call(call.selector) else {
+        guard let stands = documents[slots.origin].numbering.call(call.selector) else {
             throw BuildError.unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
         }
 
@@ -981,7 +1014,7 @@ struct Lowering {
         )
     }
 
-    private mutating func lower(
+    private func lower(
         _ path: Path,
         in scope: Names,
         on slots: Slots,
@@ -1041,23 +1074,16 @@ struct Lowering {
     // carries its document's numbering, and this walk reads what it just
     // wrote.
     private func reached(_ number: Int, on slots: Slots) -> Int? {
-        guard case let .row(row) = numbered(slots.origin).row(
+        guard case let .row(row) = documents[slots.origin].numbering.row(
             number,
             rows: rows,
             own: own(slots.origin),
-            closures: closureRows[slots.origin] ?? []
+            closures: documents[slots.origin].closureRows
         ) else {
             return nil
         }
 
         return row
-    }
-
-    // Where the document being lowered numbers its calls from. A document
-    // with nothing to number has none, and a call in a body it never held is
-    // the link's own mistake.
-    private func numbered(_ origin: Int) -> Numbering {
-        numbering[origin] ?? Numbering(sends: [], declared: [])
     }
 
     // One type written as the numbers its document gave the rows it stands

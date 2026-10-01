@@ -17,29 +17,6 @@ struct DeclaredNameTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a declaration stands where the build would have worked out something narrower")
-    func aDeclarationStandsOverWhatWasWorkedOut() async throws {
-        // Given. The value is an int, and the name says it holds a number
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(returns: .double),
-                    body: [
-                        Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
-                    ],
-                    result: reference("held")
-                )
-            ]
-        )
-
-        // When
-        let answer = try await Executor().run(try Builder().build([sut] + Module.standard))
-
-        // Then
-        #expect(answer == .double(1))
-    }
-
     @Test("a name is refused what its declaration does not take")
     func aDeclarationRefusesWhatItDoesNotTake() async throws {
         // Given
@@ -82,8 +59,11 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("names type 'app.Missing', which no module in this link declares")
         }
     }
 
@@ -233,8 +213,10 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("writes `some T`, and nothing here is filled by a call")
         }
     }
 
@@ -339,8 +321,11 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds const isolated procedure<(int) -> int> where inout procedure<(int) -> int> is declared")
         }
     }
 

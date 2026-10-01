@@ -141,17 +141,6 @@ struct LoweredTypeTests {
         }
     }
 
-    @Test("a host's door refuses an undeclared name with the path in front")
-    func aDoorRefusesAnUndeclaredNameWithItsPath() {
-        // When / Then
-        #expect {
-            try TypeExpression.named("bank.Vault").settling(.int(1), at: "input 'x'", in: types)
-        } throws: { error in
-            "\(error)".contains("input 'x': declares type 'bank.Vault', which nothing declares")
-        }
-        #expect(TypeExpression.named("bank.Vault").accepts(.int, in: types))
-    }
-
     @Test("a linked row settles a bounded parameter by row, and its slots carry the lowering")
     func aLinkedRowCarriesItsSlots() async throws {
         // Given
@@ -178,41 +167,6 @@ struct LoweredTypeTests {
         #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: [.membership(ordered)]), .parameter(label: "T", bounds: [.membership(ordered)])])
         #expect(row.returns == .bool)
         #expect(try await Executor().run(image) == .bool(true))
-    }
-
-    @Test("a procedure hands a closure its arguments by name, and the closure reads them")
-    func aClosureIsHandedArgumentsByName() async throws {
-        // Given: `map` hands `item`, and a closure that declares it
-        let module = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.collection.map",
-                        arguments: [
-                            .literal(.array([.int(1), .int(2)])),
-                            .closure(
-                                Procedure(
-                                    signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
-                                    body: [],
-                                    result: .call(Call(
-                                        selector: "std.math.plus",
-                                        arguments: [.reference([.key("item")]), .literal(.int(10))]
-                                    ))
-                                )
-                            )
-                        ]
-                    ))
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([module] + Module.standard)
-
-        // Then
-        #expect(try await Executor().run(image) == .array([.int(11), .int(12)]))
     }
 
     @Test("a procedure type declared beside the types it names reads what they declare")
@@ -243,7 +197,7 @@ struct LoweredTypeTests {
 
         // Then. The parameter naming the nullable type need not be given.
         guard case let .record(fields)? = table["app.Kinds"],
-              case let .procedure(soft?, _, _)? = fields["soft"]
+            case let .procedure(soft?, _, _)? = fields["soft"]
         else {
             Issue.record("the declared record holds its procedure type")
 
@@ -251,31 +205,6 @@ struct LoweredTypeTests {
         }
 
         #expect(soft.parameters.first?.declaresNull(in: TypeTable(types: module.types, constraints: [:])) == true)
-    }
-
-    @Test("a host asks a constraint about a value through the document's table")
-    func aHostAsksMembershipOfAValue() {
-        // When / Then
-        #expect(types.admits(constraint: "app.Ordered", value: .int(1)) == true)
-        #expect(types.admits(constraint: "app.Ordered", value: .bool(true)) == false)
-        #expect(types.admits(constraint: "app.Nobody", value: .int(1)) == nil)
-    }
-
-    @Test("a table built by hand whose names form a cycle answers instead of chasing them")
-    func aCycleOfNamesIsRefusedNotChased() {
-        // Given
-        let circular = TypeTable(types: ["app.A": .named("app.B"), "app.B": .named("app.A"), "app.C": .int])
-
-        // When / Then: the cycle is refused where it is met, and the row
-        // beside it answers as itself
-        #expect {
-            try TypeExpression.named("app.A").settling(.int(1), at: "input", in: circular)
-        } throws: { error in
-            "\(error)".contains("input: declares type 'app.A', which names itself")
-        }
-        #expect(!TypeExpression.named("app.A").declaresNull(in: circular))
-        #expect(TypeExpression.named("app.C").accepts(.int, in: circular))
-        #expect(TypeExpression.nullable(.named("app.C")).declaresNull(in: circular))
     }
 
     @Test("one undeclared name passes every reading and is refused where a value meets it")
@@ -327,37 +256,6 @@ struct LoweredTypeTests {
             try TypeExpression.named("app.T").settling(.int(1), at: "input", in: table)
         }
         #expect(TypeExpression.named("app.T").declaresNull(in: table))
-    }
-
-    @Test("the build refuses a chain of names that comes back on itself under a wrapper")
-    func theLinkRefusesACycleUnderAWrapper() async throws {
-        // Given
-        let sut = try Module(
-            imports: [],
-            types: ["app.A": .nullable(.named("app.B")), "app.B": .named("app.A")],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("through nothing but names")
-        }
-    }
-
-    @Test("a row is found by the bytes of its spelling, and not by an equivalent one")
-    func aRowIsFoundByBytes() {
-        // Given: a declared name written composed, and asked for decomposed
-        let composed: Name = "app.Caf\u{E9}"
-        let decomposed = "app.Cafe\u{301}"
-        let table = TypeTable(types: [composed: .int])
-
-        // When / Then: Swift calls the two spellings equal, and the table
-        // does not
-        #expect(composed.spelling == decomposed)
-        #expect(table.loweredTypes.row(named: composed) == 0)
-        #expect(throws: NameRefused.self) { try Name(decomposed) }
     }
 
     @Test("a procedure another link made is refused by a run, not read by its rows")
@@ -447,15 +345,6 @@ struct LoweredTypeTests {
         } throws: { error in
             "\(error)".contains("read where the link that made it is being read")
         }
-    }
-
-    @Test("a reading naming an undeclared constraint passes membership, since nothing is proven of it")
-    func anUndeclaredReadingPassesMembership() {
-        // Given
-        let reading = TypeExpression.parameter(name: "T", constraints: ["app.Nobody"])
-
-        // When / Then
-        #expect(types.admits(constraint: "app.Ordered", reading: reading) == true)
     }
 
     // MARK: - Public

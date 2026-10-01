@@ -67,24 +67,6 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         return true
     }
 
-    // This name without whatever qualified it: `std.logic.equal` is `equal`.
-    // A dotted name is where a declaration sits, and the last segment is what
-    // it is called.
-    //
-    // Read as bytes, the way every other reading of a name is. A dot is a dot
-    // wherever it stands, including where the scalar after it combines with it
-    // into one character.
-    public var unqualified: Name {
-        let bytes = spelling.utf8
-
-        guard let last = Name.lastSegment(of: bytes) else { return self }
-        guard last.lowerBound > bytes.startIndex || last.upperBound < bytes.endIndex else { return self }
-
-        // Cut in the view it was scanned in. A dot is a starter and combines
-        // with nothing, so a segment of a spelling in normal form is normal.
-        return Name(normal: String(decoding: bytes[last], as: UTF8.self))
-    }
-
     public var description: String { spelling }
 
     private static let dot = UInt8(ascii: ".")
@@ -117,10 +99,10 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         self.digest = Name.digested(spelling)
     }
 
-    // A spelling this package built out of parts that are already normal. A
-    // segment of a name, or ASCII written in this source. The door above is the
-    // one every spelling from outside comes through, and this one is not
-    // reachable from outside the package.
+    // A spelling this package built out of parts that are already normal:
+    // names joined by a dot, or ASCII written in this source. The door above
+    // is the one every spelling from outside comes through, and this one is
+    // not reachable from outside the package.
     package init(normal spelling: String) {
         self.spelling = spelling
         self.digest = Name.digested(spelling)
@@ -147,22 +129,6 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     }
 
     // MARK: - Private
-    // The last segment a dot does not end, or nothing where the spelling holds
-    // no such segment. A spelling of dots alone is every reader's `self`.
-    private static func lastSegment(of bytes: String.UTF8View) -> Range<String.UTF8View.Index>? {
-        var end = bytes.endIndex
-
-        while true {
-            let (segment, rest) = Name.segment(of: bytes, endingAt: end)
-
-            if !segment.isEmpty { return segment }
-
-            guard let rest else { return nil }
-
-            end = rest
-        }
-    }
-
     // The segment of a dotted spelling ending where the caller says, and
     // where the one before it ends, which is nothing where this one is the
     // first, so a caller steps from the end until it stops.

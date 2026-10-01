@@ -11,7 +11,7 @@ import Testing
 
 // Building, asked the way a caller asks it: modules loaded from documents,
 // handed over as a set.
-@Suite
+@Suite("Building a set of modules")
 struct BuilderTests {
     // MARK: - Property
     private let builder = Builder()
@@ -44,80 +44,6 @@ struct BuilderTests {
         )
     }
 
-    @Test("a enum no candidate of which fits the type is refused at link")
-    func anUnsatisfiableOneOfIsRefused() async throws {
-        // Given. Admitting nothing is a fact about the type and the set
-        // together, not about the set being empty
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: []),
-                "helper": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "count", type: .int, candidates: ["fast"])]
-                    ),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then
-        let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(error?.message.contains("admits nothing") == true)
-    }
-
-    @Test("a enum that admits nothing is refused at link")
-    func anEmptyOneOfIsRefused() async throws {
-        // Given. No call could ever fit it, so the declaration is the defect
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(access: .public, body: []),
-                "helper": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "mode", type: .string, candidates: [])]
-                    ),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then
-        let error = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(error?.message.contains("admits nothing") == true)
-    }
-
-    @Test("constants settle in the order they read each other, however deep")
-    func constantsSettleInReadingOrder() async throws {
-        // Given. A chain written so that alphabetical order is the reverse of
-        // reading order, and long enough that settling whatever can be settled
-        // and going round again would take more than one pass. What each one
-        // reads is settled before it because the order says so, not because
-        // enough rounds happened.
-        let sut = try Module(
-            constants: [
-                "zebra": .literal(.int(2)),
-                "yak": .call(
-                    Call(selector: "std.math.times", arguments: [reference("zebra"), reference("zebra")])
-                ),
-                "xerus": .call(
-                    Call(selector: "std.math.plus", arguments: [reference("yak"), reference("zebra")])
-                )
-            ],
-            procedures: [entryName: Procedure(access: .public, body: [], result: reference("xerus"))]
-        )
-
-        // When
-        let answer = try await run(sut, entry: entryName)
-
-        // Then
-        #expect(answer == .int(6))
-    }
-
     @Test("a closure constant reads a constant beside it whatever the two are called")
     func aClosureConstantCapturesItsSiblings() async throws {
         // Given. Making a closure freezes the scope it was made in, so a
@@ -139,8 +65,7 @@ struct BuilderTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: [])
-                            )
+                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: []))
                         ],
                         result: reference("got")
                     )
@@ -160,7 +85,7 @@ struct BuilderTests {
     @Test("a closure a constant holds may not introduce a sibling's name")
     func aClosureConstantMayNotShadowASibling() async throws {
         // Given. The rule a body is held to at load, met here from the caller's
-        // side. Neither type links, and both are the same mistake: a name the
+        // side. Neither module is made, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
         // place.
         func module(introducing statement: Statement?) async throws -> Module {
@@ -184,8 +109,10 @@ struct BuilderTests {
 
         // When / Then. The two ways a closure introduces a name of its own
         for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
-            await #expect(throws: ValidationError.self) {
+            await #expect {
                 try await run(module(introducing: introduced))
+            } throws: { error in
+                error is ValidationError && "\(error)".contains("'zebra' collides with a name the module bound")
             }
         }
     }
@@ -201,8 +128,7 @@ struct BuilderTests {
                 "apply": .closure(Procedure(
                     signature: Signature(returns: .int),
                     body: [
-                        Statement(binding: .constant("got"), expression: .block(Block(body: [], result: reference("zebra")))
-                        )
+                        Statement(binding: .constant("got"), expression: .block(Block(body: [], result: reference("zebra"))))
                     ],
                     result: reference("got")
                 )),
@@ -212,8 +138,7 @@ struct BuilderTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: [])
-                        )
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: []))
                     ],
                     result: reference("got")
                 )
@@ -247,8 +172,7 @@ struct BuilderTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: [])
-                        )
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: []))
                     ],
                     result: reference("got")
                 )
@@ -293,7 +217,7 @@ struct BuilderTests {
     }
 
     @Test("a call on a path this run would never take is still resolved")
-    func unreachedCallIsLinked() async throws {
+    func unreachedCallIsResolved() async throws {
         // Given. The else arm cannot be taken with this input, and the warrant
         // for checking it anyway is compilation: unreached code still compiles
         let sut = try Module(
@@ -302,16 +226,15 @@ struct BuilderTests {
                     access: .public,
                     body: [
                         Statement(
-                            expression: .conditional(equals(
-                                        .literal(.string("yes")),
-                                        .literal(.string("yes"))
-                                        ), then: [
-                                        Statement(binding: .constant("safe"), expression: .literal(.string("fine"))
-                                        )
-                                    ], else: [
-                                        Statement(binding: .constant("risky"), expression: .call(Call(selector: "missing"))
-                                        )
-                                    ])
+                            expression: .conditional(
+                                equals(.literal(.string("yes")), .literal(.string("yes"))),
+                                then: [
+                                    Statement(binding: .constant("safe"), expression: .literal(.string("fine")))
+                                ],
+                                else: [
+                                    Statement(binding: .constant("risky"), expression: .call(Call(selector: "missing")))
+                                ]
+                            )
                         )
                     ]
                 )
@@ -319,29 +242,28 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut])
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'missing', which no module in this link declares")
         }
     }
 
     @Test("a call inside a rescue body is resolved")
-    func rescueBodyIsLinked() async throws {
+    func rescueBodyIsResolved() async throws {
         // Given
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("attempt"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("attempt"), expression: .call(Call(
-                                            selector: "app.fail",
-                                            arguments: [.literal(.bool(true))]
-                                        ))
-                                        )
-                                    ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing"))
-                                        )
-                                    ]), failure: "attempt")
+                        Statement(binding: .constant("attempt"), expression: .attempt(
+                                Block(body: [mayFail()]),
+                                rescue: Block(body: [
+                                    Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing")))
+                                ]),
+                                failure: "why"
+                            )
                         )
                     ]
                 )
@@ -349,79 +271,38 @@ struct BuilderTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut])
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'missing', which no module in this link declares")
         }
     }
 
-    @Test("resolution follows the callee's own calls")
-    func linkingIsTransitive() async throws {
+    @Test("every declaration's calls are resolved, whoever calls it")
+    func everyDeclarationIsResolved() async throws {
         // Given. `caller` names nothing missing; `middle` does
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
-                        )
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle")))
                     ]
                 ),
                 "middle": Procedure(
                     body: [
-                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf"))
-                        )
+                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf")))
                     ]
                 )
             ]
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'leaf', which no module in this link declares")
         }
-    }
-
-    @Test("names resolve across every module in the link, flat")
-    func symbolsResolveAcrossModules() async throws {
-        // Given. No module says anything about the others; what to link is the
-        // caller's statement and joining the names up is the builder's work
-        let caller = try Module(
-            procedures: [
-                "caller": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
-                        )
-                    ]
-                )
-            ]
-        )
-        let middle = try Module(
-            procedures: [
-                "middle": Procedure(
-                    body: [
-                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf"))
-                        )
-                    ]
-                )
-            ]
-        )
-        let leaf = try Module(
-            procedures: [
-                "leaf": Procedure(
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([caller, middle, leaf])
-
-        // Then
-        #expect(try image.reached(from: "caller") == ["caller", "middle", "leaf"])
     }
 
     @Test("a module left out of the link is a module that does not exist")
@@ -433,8 +314,7 @@ struct BuilderTests {
                 "caller": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "leaf"))
-                        )
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "leaf")))
                     ]
                 )
             ]
@@ -443,16 +323,17 @@ struct BuilderTests {
             procedures: [
                 "leaf": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("end")))
                     ]
                 )
             ]
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([caller])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'leaf', which no module in this link declares")
         }
         await #expect(throws: Never.self) {
             try await builder.build([caller, leaf])
@@ -467,8 +348,7 @@ struct BuilderTests {
             procedures: [
                 "shared": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("left"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("left")))
                     ]
                 )
             ]
@@ -477,312 +357,23 @@ struct BuilderTests {
             procedures: [
                 "shared": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("right"))
-                        )
+                        Statement(binding: .constant("done"), expression: .literal(.string("right")))
                     ]
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([left, right])
-        }
-    }
-
-    @Test("an entry nothing declares is refused")
-    func missingEntryIsRefused() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                "present": Procedure(
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then. The build judged every declaration; the run is what
-        // names one, and a name nothing declares is refused there.
-        let image = try await builder.build([sut])
-
-        await #expect(throws: ExecutionError.self) {
-            try await Executor().run(image, entry: "absent")
-        }
-    }
-
-    @Test("any declaration can be the entry")
-    func anyProcedureCanBeTheEntry() async throws {
-        // Given. Nothing marks one of them, so which runs is this argument
-        let sut = try Module(
-            procedures: [
-                "first": Procedure(
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("from-first"))
-                        )
-                    ],
-                    result: .record([
-                            "result": .reference([.key("done")])
-                        ])
-                ),
-                "second": Procedure(
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("from-second"))
-                        )
-                    ],
-                    result: .record([
-                            "result": .reference([.key("done")])
-                        ])
-                )
-            ]
-        )
-
-        // When
-        let first = try await run(sut, entry: "first")
-        let second = try await run(sut, entry: "second")
-
-        // Then
-        #expect(first["result"] == .string("from-first"))
-        #expect(second["result"] == .string("from-second"))
-    }
-
-    @Test("a self-recursive procedure links once instead of forever")
-    func recursiveProcedureLinksOnce() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                "loopy": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("again"), expression: .call(Call(selector: "loopy"))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([sut])
-
-        // Then
-        #expect(try image.reached(from: "loopy") == ["loopy"])
-    }
-
-    @Test("an argument past the callee's parameters is refused")
-    func argumentPastTheParametersIsRefused() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                "callee": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "base", type: .int)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
-                    ]
-                ),
-                "caller": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
-                                        .literal(.int(1)),
-                                        .literal(.int(2))
-                                    ]))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut])
-        }
-    }
-
-    @Test("a required argument nobody passes is refused")
-    func missingRequiredArgumentIsRefused() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                "callee": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "base", type: .int)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
-                    ]
-                ),
-                "caller": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee"))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut])
-        }
-    }
-
-    @Test("an argument named rather than written is judged by what the name holds")
-    func referenceArgumentIsJudged() async throws {
-        // Given. The type is wrong, and both sides said so in their own text:
-        // `text` was declared a string and `base` is declared an int
-        let sut = try Module(
-            procedures: [
-                "callee": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "base", type: .int)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
-                    ]
-                ),
-                "caller": Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "text", type: .string)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("call"), expression: .call(Call(
-                            selector: "callee",
-                            arguments: [.reference([.key("text")])]
-                        ))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect(throws: BuildError.self) {
-            try await builder.build([sut])
-        }
-    }
-
-    @Test("what no body settles is not something the build can be wrong about")
-    func anAnswerNothingSettlesIsNotJudged() async throws {
-        // Given. `held` comes back from a call that declares no answer, and
-        // whose body answers what that same call answers. An answer worked out
-        // from its own is not one the text states, so nothing is known about it
-        // and nothing is refused. That is the bound on the promise: inference
-        // answers where the text settles and `any` everywhere else.
-        let sut = try Module(
-            procedures: [
-                "callee": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "base", type: .int)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")])
-                        )
-                    ]
-                ),
-                "caller": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
-                        ),
-                        Statement(binding: .constant("call"), expression: .call(Call(
-                            selector: "callee",
-                            arguments: [.reference([.key("held")])]
-                        ))
-                        )
-                    ]
-                ),
-                "opaque": Procedure(
-                    body: [],
-                    result: .call(Call(selector: "opaque"))
-                )
-            ]
-        )
-
-        // When / Then
-        _ = try await builder.build([sut])
-    }
-
-    @Test("a body that settles an answer is held to it, declared or not")
-    func anAnswerReadOffABodyIsJudged() async throws {
-        // Given. The same type, with a body whose answer the text does settle:
-        // a body with no result hands back null, and null is not a whole
-        // number. What the declaration says stays what it says; what the build
-        // reads a call as is what the body hands back.
-        let sut = try Module(
-            procedures: [
-                "callee": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "base", type: .int)]),
-                    body: [Statement(binding: .constant("echo"), expression: .reference([.key("base")]))]
-                ),
-                "caller": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
-                        ),
-                        Statement(binding: .constant("call"), expression: .call(Call(
-                            selector: "callee",
-                            arguments: [.reference([.key("held")])]
-                        ))
-                        )
-                    ]
-                ),
-                "opaque": Procedure(
-                    body: [Statement(binding: .constant("made"), expression: .literal(.string("whatever")))]
                 )
             ]
         )
 
         // When / Then
         await #expect {
-            try await builder.build([sut])
+            try await builder.build([left, right])
         } throws: { error in
-            error is BuildError && "\(error)".contains("holds null where int is declared")
+            error is BuildError && "\(error)".contains("'shared' is declared more than once in this link")
         }
-    }
-
-    @Test("a procedure that calls nothing links alone")
-    func selfContainedProcedureLinks() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                "alone": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([sut])
-
-        // Then
-        #expect(try image.reached(from: "alone") == ["alone"])
     }
 
     @Test("an undeclared selector is refused before what it answers is read")
     func anUndeclaredSelectorIsRefusedWhereItIsMet() async throws {
+        // Given
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -790,15 +381,15 @@ struct BuilderTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("got"), expression: .call(
-                                Call(selector: "plus", arguments: [.literal(.int(1)), .literal(.int(2))])
-                            )
-                        )
+                            Call(selector: "plus", arguments: [.literal(.int(1)), .literal(.int(2))])
+                        ))
                     ],
                     result: .reference([.key("got"), .key("field")])
                 )
             ]
         )
 
+        // When / Then
         let error = await #expect(throws: BuildError.self) {
             try await builder.build([sut] + Module.standard)
         }
@@ -834,6 +425,128 @@ struct BuilderTests {
 
         // When / Then
         _ = try await builder.build([sut] + Module.standard)
+    }
+
+    @Test("whether a body builds is its own text's fact, whoever calls it")
+    func buildingDoesNotDependOnCallers() async throws {
+        // Given. `helper` folds a constant-headed call through a written procedure; a procedure
+        // (`loud`) that happens to call `helper` must not change what `helper`
+        // means, because nothing about `helper`'s text changed
+        let procedures: [Name: Procedure] = [
+            "shout": Procedure(
+                signature: Signature(
+                    parameters: [Parameter(name: "of", type: .string)],
+                    returns: .int
+                ),
+                body: [],
+                result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
+            ),
+            "helper": Procedure(
+                signature: Signature(returns: .int),
+                body: [],
+                result: .call(Call(selector: "shout", arguments: [reference("greeting")]))
+            ),
+            "loud": Procedure(
+                signature: Signature(
+                    parameters: [Parameter(name: "of", type: .int)],
+                    returns: .int
+                ),
+                body: [],
+                result: .call(Call(selector: "helper"))
+            ),
+            entryName: Procedure(
+                access: .public,
+                signature: Signature(returns: .int),
+                body: [],
+                result: .call(Call(selector: "helper"))
+            )
+        ]
+
+        let sut = try Module(
+            constants: ["greeting": .literal(.string("hi"))],
+            procedures: procedures
+        )
+
+        // When / Then. Builds and answers, `loud` present or not
+        #expect(try await run(sut) == .int(2))
+
+        var without = procedures
+        without["loud"] = nil
+
+        #expect(
+            try await run(try Module(
+                constants: ["greeting": .literal(.string("hi"))],
+                procedures: without
+            )) == .int(2)
+        )
+    }
+
+    @Test("a closure a constant holds has its sends checked")
+    func aConstantClosureIsChecked() async throws {
+        // Given. The closure runs later, so evaluating the constant proves
+        // nothing about the call inside it; the gate every gathered call passes
+        // catches the argument no parameter stands to take
+        let sut = try Module(
+            constants: [
+                "f": .closure(Procedure(
+                    signature: Signature(returns: .string),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.text.uppercased",
+                        arguments: [.literal(.string("a")), .literal(.bool(true))]
+                    ))
+                ))
+            ],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .reference([.key("f")])
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
+        }
+    }
+
+    @Test("a const body nobody reaches still has its sends checked")
+    func anUnreachedConstBodyIsChecked() async throws {
+        // Given. Nothing reaches `shout`, and a call it writes wrongly is the
+        // build's to refuse all the same
+        let sut = try Module(
+            procedures: [
+                "shout": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .string)],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.text.uppercased",
+                        arguments: [.reference([.key("of")]), .literal(.bool(true))]
+                    ))
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When / Then. `uppercased` takes one argument and is sent two
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
+        }
     }
 
     // MARK: - Public

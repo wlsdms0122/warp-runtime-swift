@@ -9,38 +9,39 @@ import Foundation
 import Testing
 @testable import Warp
 
-// The procedure-boundary judges in one place: every judge that meets a fraction or
+// The int-boundary judges in one place: every judge that meets a fraction or
 // a spelled candidate reads through these, so the edges are pinned here once
 // rather than rediscovered at each caller.
-@Suite("Procedure readings and spellings")
+@Suite("Int readings and spellings")
 struct IntSpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
     @Test("a fraction reads as the int it is, and misses by the fact it is")
     func readingNamesTheFact() {
-        #expect({ if case .int(42) = Int.reading(42.0) { true } else { false } }())
-        #expect({ if case .int(Int.min) = Int.reading(-0x1p63) { true } else { false } }())
-        #expect({ if case .int(0) = Int.reading(-0.0) { true } else { false } }())
+        // When / Then
+        #expect({ if case .int(42) = IntNarrowing(42.0) { true } else { false } }())
+        #expect({ if case .int(Int.min) = IntNarrowing(-0x1p63) { true } else { false } }())
+        #expect({ if case .int(0) = IntNarrowing(-0.0) { true } else { false } }())
 
-        // The procedure's upper edge: 2^63 itself is already past Int.max, and
-        // infinity is past every procedure, the same fact at its limit.
-        #expect({ if case .overflow = Int.reading(0x1p63) { true } else { false } }())
-        #expect({ if case .overflow = Int.reading(1e30) { true } else { false } }())
-        #expect({ if case .overflow = Int.reading(-1e30) { true } else { false } }())
-        #expect({ if case .overflow = Int.reading(.infinity) { true } else { false } }())
-        #expect({ if case .overflow = Int.reading(-.infinity) { true } else { false } }())
+        // The int's upper edge: 2^63 itself is already past Int.max, and
+        // infinity is past every int, the same fact at its limit.
+        #expect({ if case .overflow = IntNarrowing(0x1p63) { true } else { false } }())
+        #expect({ if case .overflow = IntNarrowing(1e30) { true } else { false } }())
+        #expect({ if case .overflow = IntNarrowing(-1e30) { true } else { false } }())
+        #expect({ if case .overflow = IntNarrowing(.infinity) { true } else { false } }())
+        #expect({ if case .overflow = IntNarrowing(-.infinity) { true } else { false } }())
 
-        #expect({ if case .fractional = Int.reading(2.5) { true } else { false } }())
-        #expect({ if case .fractional = Int.reading(-0.25) { true } else { false } }())
+        #expect({ if case .fractional = IntNarrowing(2.5) { true } else { false } }())
+        #expect({ if case .fractional = IntNarrowing(-0.25) { true } else { false } }())
 
-        #expect({ if case .notANumber = Int.reading(.nan) { true } else { false } }())
+        #expect({ if case .notANumber = IntNarrowing(.nan) { true } else { false } }())
     }
 
     @Test("a fraction's spelling follows the document's form rule")
     func fractionSpellingFollowsTheFormRule() {
-        // The point form inside -5 < k < 16, the exponent form outside, and
-        // the exponent signed with two digits at least.
+        // When / Then. The point form inside -5 < k < 16, the exponent form
+        // outside, and the exponent signed with two digits at least.
         #expect(Double(1e15).spelling == "1000000000000000.0")
         #expect(Double(1e16).spelling == "1e+16")
         #expect(Double(1e-4).spelling == "0.0001")
@@ -66,6 +67,7 @@ struct IntSpellingTests {
 
     @Test("one value, one spelling")
     func spellingIsCanonical() {
+        // When / Then
         #expect(Int(spelling: "0") == 0)
         #expect(Int(spelling: "-1") == -1)
         #expect(Int(spelling: "9223372036854775807") == Int.max)
@@ -83,11 +85,11 @@ struct IntSpellingTests {
 
         // The reading behind the door tells the two misses apart: an alias
         // is not the one spelling, and the one spelling of a number past the
-        // procedure is exactly that.
-        #expect({ if case .notOneSpelling = Int.reading(spelling: "-0") { true } else { false } }())
-        #expect({ if case .notOneSpelling = Int.reading(spelling: "007") { true } else { false } }())
-        #expect({ if case .overflow = Int.reading(spelling: "9223372036854775808") { true } else { false } }())
-        #expect({ if case .overflow = Int.reading(spelling: "-9223372036854775809") { true } else { false } }())
+        // int is exactly that.
+        #expect({ if case .notOneSpelling = IntSpelling("-0") { true } else { false } }())
+        #expect({ if case .notOneSpelling = IntSpelling("007") { true } else { false } }())
+        #expect({ if case .overflow = IntSpelling("9223372036854775808") { true } else { false } }())
+        #expect({ if case .overflow = IntSpelling("-9223372036854775809") { true } else { false } }())
 
         // The fraction-side door holds the same line.
         #expect(Double(spelling: "1.5") == 1.5)

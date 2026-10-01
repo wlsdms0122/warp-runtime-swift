@@ -11,9 +11,8 @@ import Foundation
 //
 // It has no name of its own. A procedure's name is the key it is declared under
 // in its `Module`, the same way a symbol's name is not stored inside the
-// function it names. Which of them a run starts from is decided at link time,
-// so every declaration is equally a procedure and none of them is the
-// procedure.
+// function it names. A run names which one it starts from, so every
+// declaration is equally a procedure and none of them is the procedure.
 //
 // A signature and an implementation, and nothing else. The implementation is a
 // body of statements or native code, and that axis is the only thing separating
@@ -29,8 +28,8 @@ public struct Procedure: Sendable {
     // as well. `internal` where the declaration said nothing.
     public let access: Access
 
-    // What the link derived about this body, where the link has seen it: a
-    // closure literal is rewritten by the link to carry both, and the closure
+    // What the build derived about this body, where the build has seen it: a
+    // closure literal is rewritten by the build to carry them, and the closure
     // value made from it carries them on into a slot that asks. A procedure a
     // caller assembles claims nothing.
     public let constness: Constness

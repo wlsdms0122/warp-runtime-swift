@@ -95,8 +95,11 @@ struct IsolationTests {
         )
 
         // When / Then
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await run([sut, .ticketing])
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("right: const procedure<() -> any> }, which 'std.concurrent.Pieces' does not admit")
         }
     }
 

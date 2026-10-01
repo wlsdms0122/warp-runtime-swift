@@ -9,10 +9,9 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A declared membership standing as a type. `A or B` is written the one way
-// the language writes a set of types, by declaring it and naming it, so a
-// slot saying "either of these" says something the build can hold to, where it
-// used to have to say `any` and mean nothing.
+// A declared membership standing as a type. `A or B` is written by declaring
+// the set and naming it, so a slot saying "either of these" says something the
+// build can hold to.
 @Suite("A membership as a type")
 struct MembershipTests {
     // MARK: - Property
@@ -64,8 +63,11 @@ struct MembershipTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'app.hold': 'it' holds int, which 'app.Text' does not admit")
         }
     }
 
@@ -91,8 +93,11 @@ struct MembershipTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'app.narrow' with it, which holds app.Text where string is declared")
         }
     }
 
@@ -121,8 +126,10 @@ struct MembershipTests {
         await #expect(throws: Never.self) {
             try await Builder().build([try module(reading: .string)] + Module.standard)
         }
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([try module(reading: .int)] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("reads app.Text as int, and no value is both")
         }
     }
 
@@ -145,8 +152,10 @@ struct MembershipTests {
         // When / Then
         #expect(try await run(sut, arguments: ["it": .string("a")]) == .string("a"))
 
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await run(sut, arguments: ["it": .int(1)])
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("expected app.Text, and nothing 'app.Text' admits takes int")
         }
     }
 

@@ -11,16 +11,15 @@ import Testing
 @Suite("A claim nobody leans on refuses nobody")
 struct UnheldClaimTests {
     // MARK: - Property
-    private let entryName: Name = "app.main"
+    private let main: Name = "app.main"
 
     // MARK: - Initializer
     // MARK: - Test
     @Test("a claim with no procedure behind it refuses only what leans on it")
     func anUnheldClaimRefusesOnlyWhatLeansOnIt() async throws {
         // Given. A contract, a type, and a claim about the two with no procedure
-        // anywhere to answer it. The program names both for its own reasons
-        // and hands the type nowhere.
-        // A contract and a type, both named by the program for their own sake.
+        // anywhere to answer it. The program names both and hands the type
+        // nowhere.
         let asking = try Module(
             contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
             procedures: [
@@ -54,7 +53,7 @@ struct UnheldClaimTests {
                     body: [],
                     result: .call(Call(selector: "app.tell", arguments: [.reference([.key("it")])]))
                 ),
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [
@@ -71,16 +70,12 @@ struct UnheldClaimTests {
                 )
             ]
         )
+        let linked = [asking, typed, broken, program] + Module.standard
 
-        // When
-        let catalog = try Catalog([asking, typed, broken] + Module.standard)
-        let closed = catalog.closing([program])
-
-        // Then. The claim stands in the link and puts its type under no
+        // When / Then. The claim stands in the link and puts its type under no
         // contract, and the program that never handed the type where the
         // contract is asked is not the one to hear about it.
-        #expect(closed.contains { module in module.claims.isEmpty == false })
-        await #expect(throws: Never.self) { try await Builder().build(closed) }
+        await #expect(throws: Never.self) { try await Builder().build(linked) }
     }
 
     @Test("a good claim beside an unheld one in the same document")
@@ -129,7 +124,7 @@ struct UnheldClaimTests {
         )
         let program = try Module(
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
                     body: [
@@ -146,14 +141,11 @@ struct UnheldClaimTests {
                 )
             ]
         )
+        let linked = [asking, typed, adapting, program] + Module.standard
 
-        // When
-        let catalog = try Catalog([asking, typed, adapting] + Module.standard)
-        let closed = catalog.closing([program])
-
-        // Then. The pair the program leans on is answered, and the one beside
-        // it that nothing can answer refuses nobody.
-        await #expect(throws: Never.self) { try await Builder().build(closed) }
+        // When / Then. The pair the program leans on is answered, and the one
+        // beside it that nothing can answer refuses nobody.
+        await #expect(throws: Never.self) { try await Builder().build(linked) }
     }
 
     @Test("an unheld claim refuses at the call that leaned on it")
@@ -187,7 +179,7 @@ struct UnheldClaimTests {
         )
         let program = try Module(
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
                     body: [
@@ -269,7 +261,7 @@ struct UnheldClaimTests {
                 )
             ],
             procedures: [
-                entryName: Procedure(
+                main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],

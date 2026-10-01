@@ -9,11 +9,9 @@ import Foundation
 
 // What one document declares, and nothing about running.
 //
-// A module is not a procedure and cannot be run. It becomes runnable only when a
-// builder is handed it together with the others and told which name to start
-// from. Which declaration that is stays an argument to linking rather than a
-// property one of them carries, so there is no marking to put on a declaration
-// and no reserved name.
+// A module is not a procedure and cannot be run. A build takes it with the
+// others, and a run names the declaration it starts from, so there is no
+// marking to put on a declaration and no reserved name.
 public struct Module: Sendable {
     // MARK: - Property
     // The document this was made from. What a module declares is what its
@@ -49,12 +47,6 @@ public struct Module: Sendable {
     // the document's fact, so it is settled with the document.
     let closures: [Closure.Declaration: Int]
 
-    // What this declares, by the name a link resolves to it. Where each one
-    // was written is not here: a refusal that names a place reads it off the
-    // draft, and every other reader wants the names alone.
-    let declaredProcedures: Set<Name>
-    let declaredTypes: Set<Name>
-
     // What this supplies to a link under a spelling another document may
     // name: its types, and the procedures that are not private. One answer,
     // read by everything that asks which module supplies a reference.
@@ -87,7 +79,7 @@ public struct Module: Sendable {
     // claim to.
     public var claims: [Name: Set<Name>] { source.claims }
 
-    // Names bound to values, settled at link and gone by run time. Private to
+    // Names bound to values, settled at the build and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second name table in path
     // position. Where a declared spelling cannot be told from drilling into a
@@ -136,24 +128,14 @@ public struct Module: Sendable {
     public static let versionKey: Name = "warp"
 
     // MARK: - Initializer
-    // Making one is checking one, so a module that came from outside this
-    // package has been checked against itself.
+    // Making one is checking one, so a module that came in any way (a reader,
+    // a serialization, a caller assembling types in Swift) has been checked
+    // against itself.
     //
-    // A document arrives through a reader, a serialization or a caller
-    // assembling types in Swift, and each of those is a way in. A check that
-    // sat on one of them would leave the others open, and what comes through
-    // them is the same module. Here there is one way in.
-    //
-    // What linking then reads a body for is names across modules, and it reads
-    // one on the footing that a body introduces no name the module bound. That
-    // footing is this call.
-    //
-    // The imports are a claim, and nil is no claim. A document makes one (it
-    // travelled, and what it said about itself is the thing worth holding it
-    // to) so a reader hands over what the text wrote and a drifting list is
-    // refused. A caller assembling types in Swift has the module in hand and
-    // nobody to disclose it to, so it says nothing and the module states the
-    // fact instead. Either way `imports` afterwards is what the module uses.
+    // The imports are a claim, and nil is no claim. A reader hands over what
+    // the text wrote and a drifting list is refused; a caller assembling types
+    // in Swift says nothing and the module states the fact instead. Either way
+    // `imports` afterwards is what the module uses.
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
@@ -242,11 +224,9 @@ public struct Module: Sendable {
         self.references = Set(reading.sends.map(Reference.procedure))
             .union(reading.mentions.map(Reference.type))
         self.closures = reading.closures
-        self.declaredProcedures = reading.declaredProcedures
-        self.declaredTypes = reading.declaredTypes
         let hidden = Set(draft.procedures.filter { _, procedure in !procedure.access.reachesOtherDocuments }.keys)
-        self.supplies = Set(reading.declaredProcedures.subtracting(hidden).map(Reference.procedure))
-            .union(reading.declaredTypes.map(Reference.type))
+        self.supplies = Set(draft.declaredProcedures.subtracting(hidden).map(Reference.procedure))
+            .union(draft.declaredTypes.map(Reference.type))
     }
 
     // MARK: - Public

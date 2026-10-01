@@ -17,10 +17,15 @@ import WarpStandard
 struct ConcurrencyTests {
     private actor CancellationWatch {
         // MARK: - Property
+        private(set) var hasStarted = false
         private(set) var wasCancelled = false
 
         // MARK: - Initializer
         // MARK: - Public
+        func start() {
+            hasStarted = true
+        }
+
         func record() {
             wasCancelled = true
         }
@@ -37,6 +42,8 @@ struct ConcurrencyTests {
         // MARK: - Initializer
         // MARK: - Public
         func run(_ invocation: Invocation<Self>) async throws -> Value {
+            await watch.start()
+
             do {
                 try await Task.sleep(for: .seconds(30))
             } catch {
@@ -300,9 +307,14 @@ struct ConcurrencyTests {
             ]
         )
 
-        // Then
+        // Then. Every piece has ended by the time `first` answers, so a piece
+        // that started was asked to stop. One the ask reached before it
+        // started never runs.
+        let started = await waiting.hasStarted
+        let cancelled = await waiting.wasCancelled
+
         #expect(answer == .string("answered"))
-        #expect(await waiting.wasCancelled)
+        #expect(!started || cancelled)
     }
 
     @Test("a first nothing wins fails like all does")
@@ -410,6 +422,47 @@ struct ConcurrencyTests {
         } throws: { error in
             "\(error)".contains("expected array") && "\(error)".contains("got string")
         }
+    }
+
+    @Test("an effect reads the first argument it was handed")
+    func anEffectReadsItsFirstArgument() async throws {
+        // Given. A native procedure reads its first argument through its
+        // invocation.
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "items", type: .array(.int))],
+                        returns: .array(.int)
+                    ),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.concurrent.map",
+                        arguments: [
+                            .call(Call(selector: "std.collection.reversed", arguments: [reference("items")])),
+                            .closure(Procedure(
+                                signature: Signature(
+                                    parameters: [
+                                        Parameter(name: "item", type: .int),
+                                        Parameter(name: "index", type: .int)
+                                    ],
+                                    returns: .int
+                                ),
+                                body: [],
+                                result: reference("item")
+                            ))
+                        ]
+                    ))
+                )
+            ]
+        )
+
+        // When
+        let answered = try await run(sut, arguments: ["items": .array([.int(1), .int(2)])])
+
+        // Then
+        #expect(answered == .array([.int(2), .int(1)]))
     }
 
     // MARK: - Public

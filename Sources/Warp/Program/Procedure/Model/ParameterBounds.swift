@@ -72,7 +72,7 @@ public enum ParameterBounds: Equatable {
             disagreeing[name] = sets
         }
 
-        guard let (name, sets) = disagreeing.min(by: { $0.key < $1.key }) else {
+        guard let (name, sets) = disagreeing.min(by: { one, other in one.key < other.key }) else {
             self = .held(bounds)
 
             return

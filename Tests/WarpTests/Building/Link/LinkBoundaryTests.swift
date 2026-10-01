@@ -15,9 +15,6 @@ import WarpStandard
 // from: the number means a declaration of that link and nothing about any
 // other, so a row read where it was not made reads whatever stands at its
 // number there.
-//
-// Not a conformance case: the question needs two images at once, and a case
-// holds one document.
 @Suite("A row is read where the link that made it is read")
 struct LinkBoundaryTests {
     // MARK: - Property

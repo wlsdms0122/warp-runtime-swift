@@ -223,8 +223,8 @@ struct BakedTests {
 
         // When / Then. The table a link makes has no answer for the name, so
         // it is refused rather than answered by whichever was laid down last.
-        await #expect {
-            try await builder.link(baked + one + two, supplying: Supplying(Module.standard))
+        #expect {
+            try builder.link(baked + one + two, supplying: Supplying(Module.standard))
         } throws: { error in
             "\(error)".contains("'app.add1' is declared by")
                 && "\(error)".contains("Two declarations of a name have no way to be told apart")
@@ -275,7 +275,7 @@ struct BakedTests {
         // from the same place.
         await #expect {
             try await builder.compile(
-                [try await adding(2)],
+                [try adding(2)],
                 against: baked + (try await builder.compile([try adding(1)], against: baked, supplying: Supplying(Module.standard))),
                 supplying: Supplying(Module.standard)
             )
@@ -325,17 +325,19 @@ struct BakedTests {
 
     @Test("a compiled document names its native procedures and holds none of their code")
     func anObjectHoldsNoNativeCode() async throws {
-        // Given. The standard vocabulary: its builtin procedures are the
+        // Given / When. The standard vocabulary: its builtin procedures are the
         // host's, and the rest are written in Warp and carry their bodies.
         let baked = try await builder.compile(Module.standard)
 
-        // Then. Every builtin row it settled says the code is the host's.
-        for document in baked {
-            for row in document.table where Module.builtin.contains(row.label) {
-                guard case .native = row.implementation else {
-                    Issue.record("\(row.label) carries code")
-                    continue
-                }
+        // Then. Every builtin has a row, and each says the code is the host's.
+        let builtin = baked.flatMap(\.table).filter { row in Module.builtin.contains(row.label) }
+
+        #expect(Set(builtin.map(\.label)) == Module.builtin)
+
+        for row in builtin {
+            guard case .native = row.implementation else {
+                Issue.record("\(row.label) carries code")
+                continue
             }
         }
     }
@@ -348,8 +350,8 @@ struct BakedTests {
 
         // When / Then. The objects alone say which procedures are native and
         // nothing more, so a link brought none of the code cannot run them.
-        await #expect {
-            try await builder.link(baked + compiled, supplying: Supplying([]))
+        #expect {
+            try builder.link(baked + compiled, supplying: Supplying([]))
         } throws: { error in
             "\(error)".contains("is implemented in native code and this link was handed none")
         }
@@ -364,8 +366,8 @@ struct BakedTests {
         // When / Then. Linking with a procedure of the same spelling saying it
         // touches something shared judges the row against a claim nothing in
         // the build makes.
-        await #expect {
-            try await builder.link(
+        #expect {
+            try builder.link(
                 baked,
                 supplying: Supplying([try counting(isolated: false)] + Module.standard)
             )
@@ -382,8 +384,8 @@ struct BakedTests {
 
         // When / Then. A procedure of the same spelling reading under another name
         // reads its arguments at places this row does not stand on.
-        await #expect {
-            try await builder.link(
+        #expect {
+            try builder.link(
                 baked,
                 supplying: Supplying([try reading(under: "value")] + Module.standard)
             )

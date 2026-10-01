@@ -23,7 +23,7 @@ final class Relocating {
     // Where the walk is: which document wrote this row, what a refusal calls
     // it, and this link's answers to the type numbers that document gave.
     // Read once on entering a row rather than at every type inside it.
-    private struct Standing {
+    private struct Context {
         // MARK: - Property
         let origin: Int
 
@@ -31,7 +31,7 @@ final class Relocating {
         // entering rather than built at every refusal that never happens.
         let place: Place
 
-        let loweredTypes: LoweredTypeNumbering.Rows
+        let typeRows: LoweredTypeNumbering.Rows
 
         // MARK: - Initializer
         // MARK: - Public
@@ -53,7 +53,7 @@ final class Relocating {
 
     // What each document's type numbers turned out to be in this link.
     //
-    // Answered once per number rather than at every type met: a name is read
+    // ResolvedTable once per number rather than at every type met: a name is read
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no type
     // and has no entry here.
@@ -73,7 +73,7 @@ final class Relocating {
     // value holding a closure whose row it is. One object per row, so a
     // closure a value holds holds the row of the table it stands in. Made
     // with this link's reading of a row, which is why it waits for self.
-    private lazy var answering = ClosureAnswering(
+    private lazy var resolver = ClosureResolver(
         spelled: spelled,
         table: table,
         documents: documents,
@@ -146,8 +146,8 @@ final class Relocating {
     // MARK: - Public
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
-    func linked() throws -> Answered {
-        Answered.relocated(try table.indices.map(relocated(at:)), rows: rows, naming: naming)
+    func linked() throws -> ResolvedTable {
+        ResolvedTable.relocated(try table.indices.map(relocated(at:)), rows: rows, naming: naming)
     }
 
     // What each document's variables start a run holding, read as this link's
@@ -160,10 +160,10 @@ final class Relocating {
                     name,
                     try relocated(
                         value,
-                        in: Standing(
+                        in: Context(
                             origin: origin,
                             place: .variable(name.spelling, in: documents[origin]),
-                            loweredTypes: typeRows[origin]
+                            typeRows: typeRows[origin]
                         )
                     )
                 )
@@ -180,26 +180,26 @@ final class Relocating {
     // The body is relocated where it is met rather than read out of a table of
     // finished rows: the rows are being made in this same walk, and a row
     // holding a closure of another is the reason a value carries one at all.
-    private func relocated(_ value: Value, in standing: Standing) throws -> Value {
+    private func relocated(_ value: Value, in context: Context) throws -> Value {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            try answering.answered(closure, at: standing.place)
+            try resolver.resolved(closure, at: context.place)
         }
     }
 
     // A row relocated once.
     private func relocated(at row: Int) throws -> Linked {
-        try answering.row(at: row)
+        try resolver.row(at: row)
     }
 
     private func relocated(_ row: Linked) throws -> Linked {
-        let standing = Standing(
+        let context = Context(
             origin: row.origin,
             place: .procedure(row.label.spelling, in: documents[row.origin]),
-            loweredTypes: typeRows[row.origin]
+            typeRows: typeRows[row.origin]
         )
-        let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: standing)) }
+        let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: context)) }
 
         guard case let .body(body, frame) = row.implementation else {
             guard sends != row.sends else { return row }
@@ -209,19 +209,19 @@ final class Relocating {
 
         return Linked(
             row,
-            implementation: .body(try filled(body, in: standing), frame),
+            implementation: .body(try filled(body, in: context), frame),
             sends: sends
         )
     }
 
     // Which row of this link a document's number stands for. The reading is
     // the numbering's; what to say when it does not answer is this.
-    private func row(_ number: Int, in standing: Standing) throws -> Int {
-        switch numbering[standing.origin].row(
+    private func row(_ number: Int, in context: Context) throws -> Int {
+        switch numbering[context.origin].row(
             number,
             rows: rows,
-            own: owned[standing.origin],
-            closures: closures[standing.origin]
+            own: owned[context.origin],
+            closures: closures[context.origin]
         ) {
         case let .row(row):
             return row
@@ -230,53 +230,53 @@ final class Relocating {
         // cannot name: a call from another document and a native's declared
         // send alike meet it here.
         case let .unfound(.sent(declared)) where concealed.contains(declared):
-            throw BuildError.concealed(declared, at: standing.place)
+            throw BuildError.concealed(declared, at: context.place)
 
         case let .unfound(.sent(declared)):
             throw BuildError(
                 "'\(declared)' is called here, and no module in this link declares it",
-                at: standing.place
+                at: context.place
             )
 
         case let .unfound(.closure(written)):
             throw BuildError.unjudged(
                 "closure \(written) of this document, which the build lowered no row for",
-                at: standing.place
+                at: context.place
             )
 
         case .unnumbered:
             throw BuildError.unjudged(
                 "a call standing at \(number), which its document never numbered",
-                at: standing.place
+                at: context.place
             )
         }
     }
 
     // The closures its literal values hold are the door's to answer; the
     // numbers are this link's.
-    private func filled(_ body: LoweredBody, in standing: Standing) throws -> LoweredBody {
-        try answering.answered(
+    private func filled(_ body: LoweredBody, in context: Context) throws -> LoweredBody {
+        try resolver.resolved(
             body,
-            at: standing.place,
-            operation: { operation in try relocated(operation, in: standing) },
-            type: { type in try standing.loweredTypes.read(type, at: standing.place) }
+            at: context.place,
+            operation: { operation in try relocated(operation, in: context) },
+            type: { type in try context.typeRows.read(type, at: context.place) }
         )
     }
 
     // One operation with the rows its document's numbers stand for, handed
     // over with what nests in it already relocated.
-    private func relocated(_ operation: Operation, in standing: Standing) throws -> Operation {
+    private func relocated(_ operation: Operation, in context: Context) throws -> Operation {
         switch operation {
         // A closure is a body of its own, and a call through a contract can be
         // written in one.
         case let .closure(number, captures):
-            return .closure(try row(number, in: standing), captures: captures)
+            return .closure(try row(number, in: context), captures: captures)
 
         case let .call(call):
-            return .call(try relocated(call, in: standing))
+            return .call(try relocated(call, in: context))
 
         case let .dispatch(dispatch):
-            return .dispatch(try relocated(dispatch, in: standing))
+            return .dispatch(try relocated(dispatch, in: context))
 
         case .literal, .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             return operation
@@ -286,9 +286,9 @@ final class Relocating {
     // A named call with the row its document's number stands for.
     private func relocated(
         _ call: CallOperation,
-        in standing: Standing
+        in context: Context
     ) throws -> CallOperation {
-        let procedure = try row(call.procedure, in: standing)
+        let procedure = try row(call.procedure, in: context)
 
         // What a call hands over fills the slots the row it reaches declares.
         // The row is this link's answer and is known here, so the question is
@@ -302,7 +302,7 @@ final class Relocating {
             throw BuildError(
                 "a call stands \(call.arguments.count) argument(s) where the"
                     + " \(table[procedure].slots.count) its callee declares stand",
-                at: standing.place
+                at: context.place
             )
         }
 
@@ -315,14 +315,14 @@ final class Relocating {
 
     // A call through a contract with the calls the rows answering it stand
     // for, one per type that answers.
-    private func relocated(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
-        let spelling = LoweredContractProcedure.spelling(
+    private func relocated(_ dispatch: DispatchOperation, in context: Context) throws -> DispatchOperation {
+        let spelling = ContractProcedure.spelling(
             of: dispatch.contract,
             procedure: dispatch.procedure
         )
 
         guard let asked = contractProcedures[spelling] else {
-            throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
+            throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: context.place)
         }
 
         return DispatchOperation(
@@ -334,7 +334,7 @@ final class Relocating {
                 guard let row = rows[entry.value] else {
                     throw BuildError.unjudged(
                         "'\(entry.value)' answering '\(spelling)', which has no row",
-                        at: standing.place
+                        at: context.place
                     )
                 }
 
@@ -343,7 +343,7 @@ final class Relocating {
                     to: table[row],
                     row: row,
                     in: loweredTypes,
-                    at: standing.place
+                    at: context.place
                 )
             }
         )

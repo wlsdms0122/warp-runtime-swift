@@ -54,7 +54,7 @@ struct LoweredContractProcedure: Sendable {
             let answering = types.loweredTypes.satisfying[entry.key] ?? []
 
             for (procedure, asked) in entry.value {
-                table[spelling(of: entry.key, procedure: procedure)] = LoweredContractProcedure(
+                table[ContractProcedure.spelling(of: entry.key, procedure: procedure)] = LoweredContractProcedure(
                     contract: entry.key,
                     procedure: procedure,
                     signature: asked.signature,
@@ -63,19 +63,11 @@ struct LoweredContractProcedure: Sendable {
                     slots: asked.signature.lowered(in: types.loweredTypes),
                     answers: asked.signature.returns?.lowered(in: types.loweredTypes),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in
-                        held[type] = spelling(of: type, procedure: procedure)
+                        held[type] = ContractProcedure.spelling(of: type, procedure: procedure)
                     }
                 )
             }
         }
-    }
-
-    // The spelling a call writes to reach one: the name it is asked of and the
-    // procedure's, with a dot between them. A contract's procedure and the
-    // declaration answering it are spelled the same way, by the contract and
-    // by the type.
-    static func spelling(of name: Name, procedure: Name) -> Name {
-        Name(normal: "\(name.spelling).\(procedure.spelling)")
     }
 
     // MARK: - Private

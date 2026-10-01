@@ -23,7 +23,7 @@ struct StandardTests {
         // Given. The bundles stand without the check
         let bundles = Module.standard.filter(\.builtin)
 
-        // Then
+        // When / Then
         #expect(bundles.count == 7)
 
         for bundle in bundles {
@@ -36,7 +36,8 @@ struct StandardTests {
         // Given. What the bundles declare, and how the one list cuts them
         let shipped = Set(Module.standard.flatMap(\.procedures.keys))
 
-        // Then. A name in `builtin` that nothing declares is a list gone stale
+        // When / Then. A name in `builtin` that nothing declares is a list gone
+        // stale
         #expect(Module.builtin.subtracting(shipped).isEmpty)
         #expect(Module.builtin.count == 25)
         #expect(Module.builtin.union(Module.derived) == shipped)
@@ -58,7 +59,7 @@ struct StandardTests {
                 }
         )
 
-        // Then
+        // When / Then
         #expect(Module.derived.subtracting(written).isEmpty)
     }
 
@@ -119,6 +120,37 @@ struct StandardTests {
         // When / Then
         await #expect(throws: BuildError.self) {
             try await Builder().build([sut] + Module.standard)
+        }
+    }
+
+    @Test("a bundle mentioning the shared constraints needs std in the link")
+    func aBundleNeedsStdInTheLink() async throws {
+        // Given. Collection's procedures mention `Collection` and
+        // `Comparable`, which only the foundation module declares
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.collection.sorted",
+                        arguments: [.literal(.array([.int(2), .int(1)]))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then, without the foundation the constraint name resolves to
+        // nothing, and the declaration that mentions it is refused
+        await #expect {
+            try await Builder().build([sut] + Module.collection)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which no module in this link declares")
+        }
+
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
         }
     }
 

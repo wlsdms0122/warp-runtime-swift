@@ -29,7 +29,7 @@ struct CanonicalTests {
     func branchReadsAPlainCondition() async throws {
         // Given. `{ of: x, is: 1 }` is one way to arrive at a condition. The
         // slot asks for an expression, and this is another.
-        let sut = try await loader.loadProcedure([
+        let sut = try loader.loadProcedure([
             "parameters": [["name": "count", "type": "int"]],
             "body": [
                 ["var": "pick"],
@@ -61,7 +61,7 @@ struct CanonicalTests {
     @Test("a loop reads a condition written as a plain call")
     func loopReadsAPlainCondition() async throws {
         // Given
-        let sut = try await loader.loadProcedure([
+        let sut = try loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],
                 [
@@ -101,7 +101,7 @@ struct CanonicalTests {
         // spellings a layer rather than a part of the language: what they lower
         // to is writable, so nothing is only reachable by spelling it.
         func picking(on condition: Value) async throws -> Module {
-            try await loader.loadProcedure([
+            try loader.loadProcedure([
                 "parameters": [["name": "word", "type": "string"]],
                 "body": [
                     ["var": "pick"],
@@ -147,7 +147,7 @@ struct CanonicalTests {
         // Given. Nothing about a condition says it must be a comparison. A
         // boolean already is one, and demanding it be spelled as `{ of: x, is:
         // true }` would be the notation making up a requirement.
-        let sut = try await loader.loadProcedure([
+        let sut = try loader.loadProcedure([
             "parameters": [["name": "ready", "type": "bool"]],
             "body": [
                 ["var": "pick"],

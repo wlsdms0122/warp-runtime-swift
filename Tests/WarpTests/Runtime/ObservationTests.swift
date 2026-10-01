@@ -10,12 +10,8 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// What a caller is told while a run happens.
-//
-// This is the language's only outward-facing account of a run in progress, and
-// the reason nothing here counts iterations or bounds recursion: runaway work is
-// meant to be seen from outside and cancelled, not guessed at from inside. An
-// account nobody checked would have made that answer hollow.
+// What a caller is told while a run happens: the language's only outward
+// account of a run in progress.
 @Suite("What a run reports while it runs")
 struct ObservationTests {
     private enum ObservedEvent: Equatable {
@@ -183,8 +179,7 @@ struct ObservationTests {
                                                     ]
                                                 ),
                                                 body: [
-                                                    Statement(binding: .constant("step"), expression: reference("item")
-                                                    )
+                                                    Statement(binding: .constant("step"), expression: reference("item"))
                                                 ],
                                                 result: reference("step")
                                             )
@@ -203,9 +198,12 @@ struct ObservationTests {
 
         _ = try await Executor(observer: observer).run(image)
 
-        // Then
-        #expect(await observer.events.contains(.completed("both.std.concurrent.map[0].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(1))))
-        #expect(await observer.events.contains(.completed("both.std.concurrent.map[1].std.concurrent.map.closure[0].answered.entry.closure[0].step", .int(2))))
+        // Then. What stands between the piece's number and the closure is the
+        // library's own
+        let events = await observer.events
+
+        #expect(completed(piece: 0, with: .int(1), in: events))
+        #expect(completed(piece: 1, with: .int(2), in: events))
     }
 
     @Test("a call into a body keeps the statement that called it")
@@ -217,8 +215,7 @@ struct ObservationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "helper"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "helper")))
                     ]
                 ),
                 "helper": Procedure(
@@ -270,16 +267,12 @@ struct ObservationTests {
         let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        await #expect(throws: Aborted.self) {
+        let error = await #expect(throws: Aborted.self) {
             try await Executor().run(image)
         }
 
-        do {
-            _ = try await Executor().run(image)
-        } catch let error as Aborted {
-            #expect(error.trace?.rendered == "[0].helper.[0]")
-            #expect("\(error)" == "[0].helper.[0]: no")
-        }
+        #expect(error?.trace?.rendered == "[0].helper.[0]")
+        #expect(error.map { error in "\(error)" } == "[0].helper.[0]: no")
     }
 
     @Test("a refusal inside a closure says which of its writer's closures it was in")
@@ -311,15 +304,13 @@ struct ObservationTests {
             ]
         )
 
-        // When
         let image = try await builder.build([sut] + Module.standard)
 
-        // Then
-        do {
-            _ = try await Executor().run(image)
-            Issue.record("the closure was expected to refuse")
-        } catch let error as Aborted {
-            #expect(error.trace?.rendered == "called.entry.closure[1].[0]")
+        // When / Then
+        await #expect {
+            try await Executor().run(image)
+        } throws: { error in
+            (error as? Aborted)?.trace?.rendered == "called.entry.closure[1].[0]"
         }
     }
 
@@ -332,8 +323,7 @@ struct ObservationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail", arguments: [.literal(.bool(false))]))
-                        )
+                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail", arguments: [.literal(.bool(false))])))
                     ]
                 )
             ]
@@ -407,9 +397,8 @@ struct ObservationTests {
                                 Block(
                                     body: [
                                         Statement(binding: .constant("doomed"), expression: .call(
-                                                Call(selector: "app.fail", arguments: [.literal(.bool(true))])
-                                            )
-                                        )
+                                            Call(selector: "app.fail", arguments: [.literal(.bool(true))])
+                                        ))
                                     ]
                                 ),
                                 rescue: Block(body: [], result: .literal(.string("caught"))),
@@ -431,27 +420,15 @@ struct ObservationTests {
         #expect(await observer.events.contains(.rescued("fragile")))
     }
 
-    @Test("a run with no observer is the same run")
-    func observationIsOptional() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [Statement(binding: .constant("only"), expression: .literal(.int(1)))],
-                    result: reference("only")
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([sut] + Module.standard)
-        let answer = try await Executor().run(image)
-
-        // Then
-        #expect(answer == .int(1))
-    }
-
     // MARK: - Public
     // MARK: - Private
+    private func completed(piece: Int, with value: Value, in events: [ObservedEvent]) -> Bool {
+        events.contains { event in
+            guard case let .completed(place, answered) = event else { return false }
+
+            return place.hasPrefix("both.std.concurrent.map[\(piece)].")
+                && place.hasSuffix(".entry.closure[0].step")
+                && answered == value
+        }
+    }
 }

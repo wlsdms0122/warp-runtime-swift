@@ -11,12 +11,8 @@ extension Double {
     // The fraction as something to read, spelled where a document spells it and
     // said in this vocabulary's own terms where none does. Only a host's hand
     // brings an infinity or a nan here, and every surface that has to show one
-    // says it the same way rather than in whatever the host's formatter says
-    // today.
-    //
-    // Apart from `spelling` because the two are asked by different callers: a
-    // message shows whatever it was handed, and a document may only carry what
-    // reads back.
+    // says it the same way. A message shows whatever it was handed, and a
+    // document carries only what reads back, which is `spelling`.
     var shown: String {
         guard isFinite else {
             guard !isNaN else { return "<not a number>" }

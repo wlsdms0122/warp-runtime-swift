@@ -17,10 +17,6 @@ import WarpStandard
 // round left. Which slots those are is read off the result before the link
 // runs, and a call through a contract is the one that is still a contract at
 // that moment: the calls beside it are the link's copy and are empty here.
-//
-// The two ways of writing one call stand side by side, because a contract that
-// answered differently from the declaration behind it is the failure this is
-// about.
 @Suite("A loop whose result calls through a contract")
 struct ContractCallKeepsTests {
     // MARK: - Property

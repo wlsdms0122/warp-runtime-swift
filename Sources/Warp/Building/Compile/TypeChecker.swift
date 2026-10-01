@@ -11,7 +11,7 @@ import Foundation
 //
 // An author binds a call to a name and passes the name, so a declared `returns`
 // only reaches the next call site if the build knows what that name holds. This
-// is what knows: `said = call counts` followed by `wants(procedure: said)` is two
+// is what knows: `said = call counts` followed by `wants(said)` is two
 // declarations disagreeing, and both are text.
 //
 // Nothing here is required to say anything: what cannot be read is `any`, and
@@ -32,7 +32,6 @@ struct TypeChecker {
     // put in the declaration's type parameters is read once: a parameter read
     // two ways is refused rather than folded, a bounded one is judged against
     // its membership, and the declaration comes back with the readings filled.
-    // One machine, so a surface added later cannot lose a step in the copying.
     private enum Judgment {
         case fits(slots: [Slot], returns: LoweredType?)
         case refusal(String)
@@ -57,48 +56,6 @@ struct TypeChecker {
     private enum IndexReading {
         case judged(Path)
         case refused(String)
-    }
-
-    // What ran inside an expression may have written the enclosing names. The
-    // one thing a nested body does that the body around it has to know about,
-    // because a write is to a box the enclosing body holds. Flow gathers those
-    // writes with the one distinction the reading after needs: whether every
-    // finishing way through made the write. A definite write retypes the name;
-    // an indefinite one joins with what the name held.
-    private struct Flow {
-        // MARK: - Property
-        var written: [Name: (type: LoweredType, definite: Bool)] = [:]
-
-        // What was written on ways that left. It flows past nothing here (no
-        // run comes back from a leave) but a `break` ends only its loop and an
-        // attempt's body only its attempt, so the construct that absorbs the
-        // leave puts these back in play. Nothing about an escaped write is ever
-        // certain, and the type says so by having no room for the claim. A flow
-        // that leaves holds everything it wrote here and nothing under
-        // `written`.
-        var escaped: [Name: LoweredType] = [:]
-
-        // Whether every way through leaves.
-        var leaves = false
-
-        // What every `return` inside here carried out of the procedure, each
-        // with the value it carried where that is a constant, and where it
-        // was written. Nothing absorbs one (a loop ends its
-        // rounds and an attempt its body, and neither is what a `return`
-        // reaches) so this only ever gathers on the way up, and what it
-        // gathers is the other half of what the procedure answers: the result
-        // the block reads is one way out, and every `return` is another. Kept
-        // apart rather than joined, so each is held to the declaration on its
-        // own: two that disagree join to `any`, and `any` fits everything.
-        //
-        // Beside `escaped` rather than folded into it: an escaped write is
-        // about a name the body around this one holds, and this is about the
-        // value the procedure hands its caller.
-        var answered: [(reading: LoweredType, value: Value?, place: Place)] = []
-
-        // MARK: - Initializer
-        // MARK: - Public
-        // MARK: - Private
     }
 
     // The two asks the one walk answers. Judging is the compile's own pass (every
@@ -177,13 +134,20 @@ struct TypeChecker {
         case refused(String)
     }
 
+    // What makes an expression something the run runs rather than reads.
+    private enum Runs {
+        case calling(Name)
+        case applying
+        case construct
+    }
+
     // A declaration whose answer nobody wrote, with what it takes to read one
     // off the body: the body itself, the names in scope before its first
     // statement, and which other unwritten answers its own may come from.
     struct Unsaid {
         // MARK: - Property
         // The declaration itself, rather than the two things this walk asks of
-        // it. What it is called across the link and where its procedures are in the
+        // it. What it is called across the link and where it is written in the
         // document are both the symbol's to say, and copying either out here
         // would be a second place the rule for it lives.
         let symbol: Symbol
@@ -202,16 +166,6 @@ struct TypeChecker {
 
     // MARK: - Initializer
     // MARK: - Public
-    // The environment a procedure's body starts from: its own parameters, which
-    // are the only names declared before the first statement.
-    func environment(of signature: Signature, in table: LoweredTypeTable) -> [Name: Binding] {
-        Dictionary(
-            signature.parameters.map { parameter in
-                (parameter.name, Binding(parameter: parameter.declared.lowered(in: table)))
-            }
-        ) { first, _ in first }
-    }
-
     // Why what arrived is provably outside what a declaration holds it to,
     // wherever in the declaration a composition stands, or nothing. What
     // leans on a claim this table cannot settle is written down for the
@@ -374,63 +328,6 @@ struct TypeChecker {
         )
     }
 
-    // What a settled value reads as. Internal, because a constant is a value
-    // whose type seeds the environment its readers are judged in.
-    func type(of value: Value, in table: LoweredTypeTable) -> LoweredType {
-        switch value {
-        case .null:
-            return .null
-
-        case .bool:
-            return .bool
-
-        case .int:
-            return .int
-
-        case .double:
-            return .double
-
-        case .string:
-            return .string
-
-        case .bytes:
-            return .array(.byteElement)
-
-        // A procedure that already exists as a value says nothing about itself
-        // that this walk can read.
-        case .procedure:
-            return .procedure(parameters: nil, returns: nil, constness: .unstated, isolation: .unstated)
-
-        case let .array(elements):
-            return .array(
-                elements
-                    .map { element in type(of: element, in: table) }
-                    .reduce(nil) { joined, next in join(joined, next) } ?? .any
-            )
-
-        // A record under a name reads as that name; the type is the
-        // declaration's, and the name is what the value fits. A document's
-        // type names its fields by Swift's equality, so two spellings the
-        // value keeps apart are one field here, the first by bytes.
-        case let .record(record):
-            return record.name.flatMap { name in table.row(named: name).map(LoweredType.named) }
-                ?? .record(
-                    Dictionary(
-                        zip(record.names, record.values).map { name, value in (name, type(of: value, in: table)) }
-                    ) { first, _ in first }
-                )
-
-        // A dictionary's names are data, so what it reads as is what its
-        // entries hold, not which names it holds them under today.
-        case let .dictionary(dictionary):
-            return .dictionary(
-                dictionary.entries
-                    .map { entry in type(of: entry.value, in: table) }
-                    .reduce(nil) { joined, next in join(joined, next) } ?? .any
-            )
-        }
-    }
-
     // What a declaration answers when nobody wrote it down, read off its body.
     // Not into the declaration: what the author wrote is what the image
     // carries and what the boundary checks, and an answer worked out here is
@@ -481,9 +378,8 @@ struct TypeChecker {
             }
 
             // A refusal is the judging pass's to state, in its own terms and
-            // at its own place. Raising one here would put the first refusal
-            // an author sees somewhere the frontier never decided, so what
-            // this pass cannot read it treats as unread.
+            // at its own place, so what this pass cannot read it treats as
+            // unread.
             let read = try? await reading(
                 from: only.block,
                 at: only.symbol.place,
@@ -555,7 +451,7 @@ struct TypeChecker {
             ask: .reading
         )
 
-        return walked.flow.answered.map(\.reading).reduce(walked.reading) { joined, answered in join(joined, answered) }
+        return walked.flow.answered.map(\.reading).reduce(walked.reading) { joined, answered in joined.joined(answered) }
     }
 
     // One answer, held to the `returns`. The refusal stands where the author
@@ -1023,7 +919,7 @@ struct TypeChecker {
             }
         }
 
-        return .reads(resolved, optional ? nullableReading(of: current) : current)
+        return .reads(resolved, optional ? current.admittingNull : current)
     }
 
     // The inner index paths a fold can settle. `items[C]` reads its index from
@@ -1362,7 +1258,7 @@ struct TypeChecker {
             return .index(index, optional: optionally)
 
         case let .double(fraction):
-            switch Int.reading(fraction) {
+            switch IntNarrowing(fraction) {
             case let .int(whole):
                 return .index(whole, optional: optionally)
 
@@ -1383,48 +1279,6 @@ struct TypeChecker {
             throw BuildError(
                 "index reference \(inner.rendered) is \(settled.type), expected int",
                 at: place
-            )
-        }
-    }
-
-    // What a path that read past a possible absence holds. Wrapping what
-    // already admits null would say the one fact twice.
-    private func nullableReading(of type: LoweredType) -> LoweredType {
-        switch type {
-        case .any, .null, .nullable:
-            return type
-
-        default:
-            return .nullable(type)
-        }
-    }
-
-    // The one statement of how a write lands. On what an earlier write left,
-    // and on what a name held. A definite write replaces; an indefinite one may
-    // not have happened, so it joins with what was there, and whether the name
-    // was written at all stays the earlier fact. Every place a Flow meets an
-    // environment or another Flow reads these two, so the rule cannot drift one
-    // copy at a time.
-    private func merged(
-        _ held: (type: LoweredType, definite: Bool)?,
-        with later: (type: LoweredType, definite: Bool)
-    ) -> (type: LoweredType, definite: Bool) {
-        guard let held, !later.definite else { return later }
-
-        return (join(held.type, later.type), held.definite)
-    }
-
-    private func apply(_ flowed: Flow, to environment: inout [Name: Binding]) {
-        for (name, write) in flowed.written {
-            // A flow writes boxes, and a box that declared its type was
-            // checked where it was written, so a write into it changes
-            // nothing about what it holds.
-            guard case let .assigned(held)? = environment[name] else { continue }
-
-            environment[name] = .assigned(
-                write.definite
-                    ? write.type
-                    : join(held, write.type)
             )
         }
     }
@@ -1511,7 +1365,7 @@ struct TypeChecker {
     ) async throws -> Inspection {
         switch expression {
         case let .literal(value):
-            return Inspection(rewritten: expression, reading: type(of: value, in: context.loweredTypes))
+            return Inspection(rewritten: expression, reading: LoweredType(of: value, in: context.loweredTypes))
 
         // Nothing comes back from here, so there is no value to have a type.
         // `never` fits wherever it is written, and what evaluating the carried
@@ -1536,7 +1390,7 @@ struct TypeChecker {
                 return Inspection(
                     rewritten: expression,
                     reading: .never,
-                    flow: leaving(answering(Flow(), carrying: nil))
+                    flow: answering(Flow(), carrying: nil).leaving()
                 )
             }
 
@@ -1550,7 +1404,7 @@ struct TypeChecker {
                     : expression,
                 calls: carried.calls,
                 reading: .never,
-                flow: leaving(answering(carried.flow, carrying: carried))
+                flow: answering(carried.flow, carrying: carried).leaving()
             )
 
         // A path names something that has to exist just as a selector does, so
@@ -1588,7 +1442,7 @@ struct TypeChecker {
                 do {
                     let value = try await folding.read(settled, at: place)
 
-                    return Inspection(rewritten: .literal(value), reading: type(of: value, in: context.loweredTypes))
+                    return Inspection(rewritten: .literal(value), reading: LoweredType(of: value, in: context.loweredTypes))
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
                 }
@@ -1610,10 +1464,10 @@ struct TypeChecker {
                     ask: ask
                 )
 
-                apply(inner.flow, to: &environment)
-                flowed = sequenced(flowed, then: inner.flow)
+                inner.flow.apply(to: &environment)
+                flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                element = join(element, inner.reading)
+                element = element?.joined(inner.reading) ?? inner.reading
                 rewritten.append(inner.rewritten)
             }
 
@@ -1758,8 +1612,8 @@ struct TypeChecker {
                     ask: ask
                 )
 
-                apply(inner.flow, to: &environment)
-                flowed = sequenced(flowed, then: inner.flow)
+                inner.flow.apply(to: &environment)
+                flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
                 fields[name] = inner.reading
                 rewritten[name] = inner.rewritten
@@ -1793,7 +1647,7 @@ struct TypeChecker {
                 let inner = try await inspected(
                     block: written,
                     at: place.part(.closure),
-                    in: environment.merging(self.environment(of: procedure.signature, in: context.loweredTypes)) {
+                    in: environment.merging(procedure.signature.environment(in: context.loweredTypes)) {
                         _, new in new
                     },
                     with: context.bounding(procedure.signature.parameterBounds.table),
@@ -2180,7 +2034,7 @@ struct TypeChecker {
                         : expression,
                     calls: head.calls + taken.calls,
                     reading: .null,
-                    flow: sequenced(head.flow, then: either(taken.flow, or: Flow()))
+                    flow: head.flow.followed(by: taken.flow.joined(with: Flow()))
                 )
             }
 
@@ -2198,7 +2052,7 @@ struct TypeChecker {
                     : expression,
                 calls: head.calls + taken.calls + declined.calls,
                 reading: taken.reading == .never && declined.reading == .never ? .never : .null,
-                flow: sequenced(head.flow, then: either(taken.flow, or: declined.flow))
+                flow: head.flow.followed(by: taken.flow.joined(with: declined.flow))
             )
 
         // A loop answers its body's declared result, and null when it has none.
@@ -2272,9 +2126,9 @@ struct TypeChecker {
 
                 for (name, written) in rounds.environment {
                     if rounds.locals.contains(name) {
-                        exit[name] = written.map { type in join(.null, type) }
+                        exit[name] = written.map { type in LoweredType.null.joined(type) }
                     } else if case let .assigned(entry)? = seeded[name] {
-                        exit[name] = .assigned(join(entry, written.type))
+                        exit[name] = .assigned(entry.joined(written.type))
                     }
                 }
 
@@ -2291,11 +2145,10 @@ struct TypeChecker {
                     : expression,
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
                 reading: tail?.reading ?? .null,
-                flow: sequenced(
-                    head.flow,
-                    then: tail.map { tail in
-                        sequenced(absorbed(rounds.flow), then: tail.flow)
-                    } ?? absorbed(rounds.flow)
+                flow: head.flow.followed(
+                    by: tail.map { tail in
+                        rounds.flow.absorbed().followed(by: tail.flow)
+                    } ?? rounds.flow.absorbed()
                 )
             )
 
@@ -2343,11 +2196,8 @@ struct TypeChecker {
                     ? .attempt(attempted.block, rescue: rescued.block, failure: failure)
                     : expression,
                 calls: attempted.calls + rescued.calls,
-                reading: join(attempted.reading, rescued.reading),
-                flow: either(
-                    absorbed(attempted.flow),
-                    or: absorbed(rescued.flow)
-                )
+                reading: attempted.reading.joined(rescued.reading),
+                flow: attempted.flow.absorbed().joined(with: rescued.flow.absorbed())
             )
         }
     }
@@ -2403,7 +2253,7 @@ struct TypeChecker {
 
             tail = read
             reading = read.reading
-            flow = sequenced(body.flow, then: read.flow)
+            flow = body.flow.followed(by: read.flow)
         } else {
             tail = nil
             reading = .null
@@ -2460,14 +2310,14 @@ struct TypeChecker {
             // anywhere inside this statement may hold something else by the
             // time the next one reads it, and bubbles outward, except through
             // the names this body declared itself.
-            apply(inner.flow, to: &environment)
+            inner.flow.apply(to: &environment)
 
             for (name, write) in inner.flow.written where !locals.contains(name) {
-                flowed.written[name] = merged(flowed.written[name], with: write)
+                flowed.land(write, on: name)
             }
 
             for (name, type) in inner.flow.escaped where !locals.contains(name) {
-                flowed.escaped[name] = join(flowed.escaped[name], type)
+                flowed.escape(type, on: name)
             }
 
             flowed.answered += inner.flow.answered
@@ -2477,7 +2327,7 @@ struct TypeChecker {
             // predicate says so, and everything the fact decides reads it here:
             // judging refuses a name on the statement (a binding that cannot
             // happen) and anything written after it, which would never run.
-            // What the syntactic leaves get at reading, a call gets here, where
+            // What the syntactic leaves get at the load, a call gets here, where
             // the signature is known.
             if inner.flow.leaves || inner.reading == .never {
                 if statement.binding != nil {
@@ -2503,13 +2353,9 @@ struct TypeChecker {
                     calls,
                     environment,
                     .never,
-                    leaving(flowed),
+                    flowed.leaving(),
                     locals
                 )
-            }
-
-            if statement.binding?.declared != nil, statement.expression.namesItsOwn {
-                try refuse(Expression.declarationOnABoundName, at: here, when: ask)
             }
 
             switch statement.binding {
@@ -2550,7 +2396,7 @@ struct TypeChecker {
                         environment[id] = .assigned(inner.reading)
 
                         if !locals.contains(id) {
-                            flowed.written[id] = merged(flowed.written[id], with: (inner.reading, true))
+                            flowed.land((inner.reading, true), on: id)
                         }
                     } else {
                         try refuseUnfit(
@@ -2564,7 +2410,7 @@ struct TypeChecker {
                         )
 
                         if !locals.contains(id), let current = environment[id]?.type {
-                            flowed.written[id] = merged(flowed.written[id], with: (current, true))
+                            flowed.land((current, true), on: id)
                         }
                     }
 
@@ -2588,9 +2434,8 @@ struct TypeChecker {
 
     // What never finishes binds nothing, so a name on it promises a binding
     // that cannot happen. Asked exactly where the sequence rule finds a
-    // statement that ends the body, so the two facts cannot part. The reader
-    // catches the types it can see, and the build catches the procedures only it
-    // can see. One rule, two stages.
+    // statement that ends the body, so the two facts cannot part. The load
+    // refuses the leaves it can see, and the build the calls only it can see.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(
             "never finishes,"
@@ -2598,128 +2443,6 @@ struct TypeChecker {
             at: place,
             when: ask
         )
-    }
-
-    // A way out took this flow with it: what it wrote is not the body's to hand
-    // on (no run comes back) but it is not gone either, because the writes are
-    // in the boxes and a loop or an attempt may absorb the leave. They move
-    // aside as escaped, indefinite because how far the way got is the run's
-    // fact, and a flow that leaves hands nothing on plainly.
-    private func leaving(_ flowed: Flow) -> Flow {
-        var left = flowed
-
-        left.leaves = true
-
-        for (name, write) in left.written {
-            left.escaped[name] = join(left.escaped[name], write.type)
-        }
-
-        left.written = [:]
-
-        return left
-    }
-
-    // The construct the ways out stop at. A `break` ends only its loop and the
-    // flow after it goes on, so what escaped on the way is back in play, and
-    // nothing a construct absorbed is certain: the round may not have run, the
-    // body may have stopped anywhere, so absorbing is unconfirming, in this one
-    // sentence rather than at every caller. A leave that reaches further (a
-    // `return`) is over-counted here, which only widens a join; reading the
-    // reach would narrow it, and nothing unsound rides on not doing so.
-    private func absorbed(_ flowed: Flow) -> Flow {
-        var stopped = indefinite(flowed)
-
-        stopped.leaves = false
-
-        for (name, type) in stopped.escaped {
-            stopped.written[name] = merged(stopped.written[name], with: (type, false))
-        }
-
-        stopped.escaped = [:]
-
-        return stopped
-    }
-
-    // One thing ran after another: each later write lands by the one landing
-    // rule (a definite one wins the name, an indefinite one joins) what escaped
-    // keeps riding for the construct that absorbs it, and a sequence whose tail
-    // leaves leaves, everything written on the way going with it.
-    private func sequenced(_ first: Flow, then second: Flow) -> Flow {
-        guard !first.leaves else { return first }
-
-        var flowed = first
-
-        for (name, later) in second.written {
-            flowed.written[name] = merged(flowed.written[name], with: later)
-        }
-
-        for (name, type) in second.escaped {
-            flowed.escaped[name] = join(flowed.escaped[name], type)
-        }
-
-        flowed.answered += second.answered
-
-        return second.leaves ? leaving(flowed) : flowed
-    }
-
-    // One of two ways ran. A name both wrote holds either; a name one wrote may
-    // not have been written at all, so nothing about it is definite. A way that
-    // leaves hands on nothing (the ways that finish are the only ways a reading
-    // after can stand on) but what it wrote rides along as escaped, for the
-    // construct that absorbs the leave.
-    private func either(_ taken: Flow, or declined: Flow) -> Flow {
-        var flowed = Flow()
-
-        for side in [taken.escaped, declined.escaped] {
-            for (name, type) in side {
-                flowed.escaped[name] = join(flowed.escaped[name], type)
-            }
-        }
-
-        flowed.answered = taken.answered + declined.answered
-
-        switch (taken.leaves, declined.leaves) {
-        // A leaving flow holds its writes as escaped alone, gathered above.
-        case (true, true):
-            flowed.leaves = true
-
-        case (true, false):
-            flowed.written = declined.written
-
-        case (false, true):
-            flowed.written = taken.written
-
-        case (false, false):
-            for name in Set(taken.written.keys).union(declined.written.keys) {
-                switch (taken.written[name], declined.written[name]) {
-                case let (mine?, theirs?):
-                    flowed.written[name] = (
-                        join(mine.type, theirs.type),
-                        mine.definite && theirs.definite
-                    )
-
-                case let (mine?, nil):
-                    flowed.written[name] = (mine.type, false)
-
-                case let (nil, theirs?):
-                    flowed.written[name] = (theirs.type, false)
-
-                case (nil, nil):
-                    break
-                }
-            }
-        }
-
-        return flowed
-    }
-
-    // The writes of a body that may not have run, or not run to its end.
-    private func indefinite(_ flowed: Flow) -> Flow {
-        var indefinite = flowed
-
-        indefinite.written = flowed.written.mapValues { write in (write.type, false) }
-
-        return indefinite
     }
 
     // The environment a loop's insides read: the enclosing names plus the
@@ -2745,7 +2468,7 @@ struct TypeChecker {
     ) -> [Name: Binding] {
         var caught = environment
 
-        apply(absorbed(flow), to: &caught)
+        flow.absorbed().apply(to: &caught)
 
         if let failure {
             caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
@@ -2776,10 +2499,10 @@ struct TypeChecker {
         while true {
             var next = entry
 
-            apply(absorbed(flow), to: &next)
+            flow.absorbed().apply(to: &next)
 
             guard next != seeded else { return (seeded, last, true) }
-            guard steps < 3 * max(1, absorbed(flow).written.count) + 1 else { break }
+            guard steps < 3 * max(1, flow.absorbed().written.count) + 1 else { break }
 
             steps += 1
             seeded = next
@@ -2788,7 +2511,7 @@ struct TypeChecker {
 
         var widened = entry
 
-        for name in absorbed(flow).written.keys {
+        for name in flow.absorbed().written.keys {
             widened[name] = .assigned(.any)
         }
 
@@ -2797,66 +2520,6 @@ struct TypeChecker {
         let (settled, _) = try await read(widened)
 
         return (widened, settled, false)
-    }
-
-    // Two readings of one slot. Where they disagree the slot holds neither,
-    // which is what `any` says. A join that guessed would be a refusal an
-    // author cannot act on.
-    //
-    // A reading that leaves is not one of the two. It contributes no value, so
-    // it cannot disagree with the reading that stays, and the slot holds what
-    // the other one said.
-    private func join(_ left: LoweredType?, _ right: LoweredType) -> LoweredType {
-        guard let left else { return right }
-        guard left != .never else { return right }
-        guard right != .never else { return left }
-
-        // Null beside a value is absence beside presence, and a slot that may
-        // hold either is what `T?` says. A nullable side joins by what it
-        // holds, so the one fact (null may be here) is said once.
-        if left == .null { return nullableReading(of: right) }
-        if right == .null { return nullableReading(of: left) }
-
-        if case let .nullable(mine) = left {
-            return nullableReading(of: join(mine, right))
-        }
-
-        if case let .nullable(theirs) = right {
-            return nullableReading(of: join(left, theirs))
-        }
-
-        // Two procedures join to a procedure rather than to `any`, keeping the
-        // constness both of them have. Collapsing here would let one body that
-        // runs, in a list of them, pass a slot that asked for none, because
-        // `any` is accepted everywhere.
-        if
-            case let .procedure(mine, myAnswer, wanted, wantedIsolation) = left,
-            case let .procedure(theirs, theirAnswer, offered, offeredIsolation) = right
-        {
-            let agreed = left.sameProcedure(as: right)
-
-            return .procedure(
-                parameters: agreed ? mine : nil,
-                returns: agreed ? myAnswer : nil,
-                constness: wanted == .const && offered == .const ? .const : .unstated,
-                isolation: wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
-            )
-        }
-
-        guard left != right else { return left }
-
-        // Unequal spellings may still be one type: the equations (a range is an
-        // int with a condition, bytes are `array<byte>`) are read through their
-        // normal forms before the join gives up, and two arrays join by their
-        // elements so the equation holds inside one.
-        let mine = left.unrefined
-        let theirs = right.unrefined
-
-        if case let .array(myElement) = mine, case let .array(theirElement) = theirs {
-            return .array(join(myElement, theirElement))
-        }
-
-        return mine == theirs ? mine : .any
     }
 
     // The rules a call handing variables in place is held to: the argument is

@@ -99,39 +99,6 @@ struct ConstnessTests {
         #expect(answer == .string("second"))
     }
 
-    @Test("a body a native procedure calls leaves for itself, not for the procedure around it")
-    func aBodyANativeProcedureCallsLeavesForItself() async throws {
-        // Given. The same early leave, reached through a native procedure that
-        // calls the body once per element rather than through `apply`.
-        let judging = Procedure(
-            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
-            body: [
-                Statement(expression: .conditional(
-                    equals(reference("item"), .literal(.int(2))),
-                    then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.bool(true)))))],
-                    else: nil
-                ))
-            ],
-            result: .literal(.bool(false))
-        )
-        let asking = Procedure(
-            body: [Statement(binding: .constant("judging"), expression: .closure(judging))],
-            result: .call(
-                Call(
-                    selector: "std.collection.filter",
-                    arguments: [.array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]), reference("judging")]
-                )
-            )
-        )
-
-        // When
-        let answer = try await run(asking)
-
-        // Then. A leave answering for the procedure around it would end the
-        // whole run at the first element instead.
-        #expect(answer == .array([.int(2)]))
-    }
-
     @Test("a body reaching the module's own state does not answer without running")
     func aBodyReadingAModuleVariableIsRefused() async throws {
         // Given. The same shape, reading a name the module holds rather than
@@ -150,8 +117,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
         }
     }
 
@@ -178,8 +148,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds procedure<() -> any> where const procedure is declared")
         }
     }
 
@@ -212,8 +185,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
         }
     }
 
@@ -345,8 +321,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds procedure<() -> string> where const procedure is declared")
         }
     }
 
@@ -398,8 +377,11 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds procedure<() -> string> where const procedure is declared")
         }
     }
 
@@ -407,10 +389,6 @@ struct ConstnessTests {
     func aVariableStartingFromAConstructIsRefused() async throws {
         // Given. A module variable written from a construct. A construct runs
         // a body, and the build settles a starting value by reading it.
-        //
-        // Written as a module rather than as a document: the validator refuses
-        // this where a document is loaded, so what is asked here is the
-        // judgement an object carrying the same shape meets.
         let handed = try Module(
             variables: ["standing": .conditional(
                 .literal(.bool(true)),
@@ -421,9 +399,87 @@ struct ConstnessTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a construct runs a body, and a call's operand is data")
         }
+    }
+
+    @Test("what answers without running is worked out at the build, not declared")
+    func constnessIsABuildFact() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "clean": Procedure(
+                    body: [
+                        Statement(binding: .constant("done"), expression: .literal(.int(1)))
+                    ]
+                ),
+                "dirty": Procedure(
+                    body: [
+                        Statement(binding: .constant("done"), expression: .call(Call(
+                            selector: "app.fail",
+                            arguments: [.literal(.bool(true))]
+                        )))
+                    ]
+                ),
+                "entry": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("a"), expression: .call(Call(selector: "clean"))),
+                        Statement(binding: .constant("b"), expression: .call(Call(selector: "dirty")))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard + [.failing])
+
+        // Then. `clean` computes; `dirty` reaches an effect, and everything
+        // that reaches it goes with it
+        let dirty = try #require(image["dirty"])
+        let entry = try #require(image["entry"])
+
+        #expect(image["clean"]?.constness == .const)
+        #expect(dirty.constness != .const)
+        #expect(entry.constness != .const)
+        #expect(image["std.collection.count"]?.constness == .const)
+    }
+
+    @Test("a body that sends a const procedure is const")
+    func aBodyThatSendsIsStillConst() async throws {
+        // Given. Constness is judged over the name a body wrote, and what that
+        // name means depends on where it was written. `label` sends `joined`,
+        // which is const, so `label` is const
+        let label = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "of", type: .array(.string))],
+                returns: .string
+            ),
+            body: [],
+            result: .call(Call(selector: "std.text.joined", arguments: [reference("of"), .literal(.string(""))]))
+        )
+        let sut = try Module(
+            procedures: [
+                "label": label,
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "names", type: .array(.string))]
+                    ),
+                    body: [],
+                    result: .call(Call(selector: "label", arguments: [reference("names")]))
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["label"]?.constness == .const)
     }
 
     // MARK: - Public

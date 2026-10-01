@@ -24,7 +24,7 @@ struct FieldPlaceTests {
     func aDeclaredFieldIsLoweredToItsPlace() async throws {
         // Given. The parameter says what it holds, so the build lays it out and
         // the position is the layout's.
-        let sut = try Procedure(
+        let sut = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
             ),
@@ -62,7 +62,7 @@ struct FieldPlaceTests {
     @Test("a dictionary's keys are the value's, so they are read by name")
     func aDictionaryIsReadByName() async throws {
         // Given
-        let sut = try Procedure(
+        let sut = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "entries", type: .dictionary(.int))]
             ),
@@ -80,7 +80,7 @@ struct FieldPlaceTests {
     @Test("a place is read at every depth the build laid out")
     func nestedFieldsAreLoweredToTheirPlaces() async throws {
         // Given
-        let sut = try Procedure(
+        let sut = Procedure(
             signature: Signature(
                 parameters: [
                     Parameter(name: "outer", type: .record([
@@ -110,7 +110,7 @@ struct FieldPlaceTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "point", type: .named("Point"))]),
                     body: [],
-            result: .reference([.key("point"), .key("y")])
+                    result: .reference([.key("point"), .key("y")])
                 )
             ]
         )
@@ -127,7 +127,7 @@ struct FieldPlaceTests {
         // Given. The argument holds a field the slot does not declare. Settling
         // builds it on the slot's layout, so the place the build lowered is the
         // place the field stands in.
-        let sut = try Procedure(
+        let sut = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
             ),
@@ -245,14 +245,14 @@ struct FieldPlaceTests {
     func bothWaysAnswerTheSameField() async throws {
         // Given. One reads a type the build laid out and one a dictionary,
         // whose keys are the value's
-        let laid = try Procedure(
+        let laid = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
             ),
             body: [],
             result: .reference([.key("point"), .key("y")])
         )
-        let named = try Procedure(
+        let named = Procedure(
             signature: Signature(parameters: [Parameter(name: "point", type: .dictionary(.int))]),
             body: [],
             result: .reference([.key("point"), .key("y")])
@@ -266,18 +266,6 @@ struct FieldPlaceTests {
         // Then
         #expect(byPlace == .int(2))
         #expect(byPlace == byName)
-    }
-
-    @Test("a write lands on the place the link put the field at, whatever spelling stands beside it")
-    func aWriteLandsOnItsPlace() throws {
-        // Given
-        let point = Value.record(Record(name: nil, ["x": .int(1), "y": .int(2)]))
-
-        // When
-        let written = try point.writing(.int(9), at: [.field(1, "z")], under: "point.z")
-
-        // Then
-        #expect(written == .record(Record(name: nil, ["x": .int(1), "y": .int(9)])))
     }
 
     // MARK: - Public

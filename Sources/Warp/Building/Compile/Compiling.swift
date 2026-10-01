@@ -45,10 +45,6 @@ struct Compiling {
     // the run will read.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
-    // Which row each document's numbers stand for, answered when the document
-    // is laid down.
-    private var named: [Int: [Int?]] = [:]
-
     // The rows folding runs against, held apart from the lowering: a row is
     // written in when the phase that lowered it ends, so what a body folds
     // through is what stood settled before its phase began rather than
@@ -62,12 +58,8 @@ struct Compiling {
         Carried(
             table: lowering.table,
             rows: lowering.rows,
-            owned: lowering.owned,
             concealed: lowering.concealed,
-            named: named,
-            numbering: lowering.numbering,
-            closureRows: lowering.closureRows,
-            variables: lowering.variables,
+            documents: lowering.documents,
             answers: answers
         )
     }
@@ -114,7 +106,6 @@ struct Compiling {
             loweredTypes: types.loweredTypes
         )
         self.answers = carried.answers
-        self.named = carried.named
 
         // Every body laid down is lowered already, so all of them are
         // something the next document may fold through.
@@ -138,13 +129,14 @@ struct Compiling {
         rows: [Linked],
         answering read: [Name: LoweredType]
     ) {
-        hold(
-            origin,
+        let held = lowering.hold(
             standing: Array(rows[document.standing]),
             closures: Array(rows[document.lifted]),
             numbering: document.numbering,
             variables: document.variables.map(\.name)
         )
+
+        assert(held.origin == origin, "a document is laid at the origin it is held at")
 
         // What the build read off a body stands by the row it was read off.
         let own = lowering.own(origin)
@@ -156,34 +148,6 @@ struct Compiling {
         }
     }
 
-    // One document laid down: its declarations take the rows after the ones
-    // already here, and its numbering says what the bodies it lowers are
-    // written with. Which rows those are is answered here rather than looked
-    // up again, since laying them down is what decided it.
-    @discardableResult
-    mutating func hold(
-        _ origin: Int,
-        standing block: [Linked],
-        closures lifted: [Linked] = [],
-        numbering: Numbering,
-        variables ordered: [Name]
-    ) -> Range<Int> {
-        lowering.hold(
-            origin,
-            standing: block,
-            closures: lifted,
-            numbering: numbering,
-            variables: ordered
-        )
-    }
-
-    // Which row each number this document gave stands for. A number of its own
-    // reaches a name it declared or one behind it, so the answer never moves
-    // after this.
-    mutating func answering(_ origin: Int) {
-        named[origin] = lowering.numbering[origin]?.answers(rows: lowering.rows, own: lowering.own(origin)) ?? []
-    }
-
     // The same for every document laid down, said once they all stand. This
     // reads the rows whole and the documents arrive in the order the caller
     // handed them over, so one of them may import a procedure another laid after it
@@ -192,12 +156,12 @@ struct Compiling {
     // A number none of them reaches is a document laid without what it sends,
     // which is refused here rather than left to read as a number with no row
     // where a body of it is run.
-    mutating func answering() throws {
+    mutating func resolveEvery() throws {
         for origin in documents.indices {
-            answering(origin)
+            lowering.resolve(origin)
 
-            for (number, row) in (named[origin] ?? []).enumerated() where row == nil {
-                guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
+            for (number, row) in (lowering.documents[origin].named ?? []).enumerated() where row == nil {
+                guard case let .unfound(.sent(declared)) = lowering.documents[origin].numbering.row(
                     number,
                     rows: lowering.rows,
                     own: lowering.own(origin),
@@ -225,9 +189,9 @@ struct Compiling {
     }
 
     // A type the build read off a body rather than out of a signature, held to
-    // the document that wrote the body: the rows it stands on are numbered
-    // beside the ones that document's bodies stand on.
-    // A body's answer stands by its row, which this document holds by now.
+    // the document that wrote the body: it stands by the body's row, and the
+    // rows it stands on are numbered beside the ones that document's bodies
+    // stand on.
     mutating func read(_ answer: LoweredType, as declared: Name, of origin: Int) {
         if let row = lowering.own(origin)[declared] {
             answers[row] = answer
@@ -238,13 +202,8 @@ struct Compiling {
 
     // A body lowered into its row. Noted as well as written, because what
     // folding runs is a table of its own and this is what is copied into it.
-    mutating func settle(
-        _ row: Int,
-        body block: Block,
-        constants: [Name: (value: Value, type: LoweredType)],
-        at place: Place
-    ) throws {
-        try lowering.settle(row, body: block, constants: constants, at: place)
+    mutating func settle(_ row: Int, body block: Block, at place: Place) throws {
+        try lowering.settle(row, body: block, at: place)
 
         loweredRows.append(row)
     }
@@ -252,44 +211,35 @@ struct Compiling {
     // The stand-ins, while the procedures themselves settle: a procedure folding through
     // a procedure would be a cycle, and which procedures are already lowered is a fact
     // of name order rather than of the text.
-    func folding() -> Answered {
-        Answered.documents(
+    func folding() -> ResolvedTable {
+        ResolvedTable.documents(
             foldingRows,
             rows: lowering.rows,
             naming: naming,
-            numbering: lowering.numbering,
-            named: named,
-            closures: lowering.closureRows
+            documents: lowering.documents
         )
     }
 
-    // Every closure a laid document's values hold answered with the row it
-    // stands at here, through the door the link answers them by. A document
+    // Every closure a laid document's values hold resolved to the row it
+    // stands at here, through the door the link resolves them by. A document
     // read out of an object holds its closures by spelling alone, and one
     // compiled in memory holds them standing as the rows of the compile that
     // folded them, which is not this one; a fold through either hands them
-    // on, so every one is answered here before anything folds. The numbers
+    // on, so every one is resolved here before anything folds. The numbers
     // their code carries read against this table as they are.
-    mutating func answerHeld() throws {
-        let numbering = try naming.indices.map { origin -> Numbering in
-            guard let held = lowering.numbering[origin] else {
-                throw BuildError.unjudged("a document laid down without its numbering", at: Place(in: documents[origin]))
-            }
-
-            return held
-        }
-        let answering = ClosureAnswering(
+    mutating func resolveHeldClosures() throws {
+        let resolver = ClosureResolver(
             spelled: ClosureRows(
                 naming: naming,
-                numbering: numbering,
-                closures: naming.indices.map { origin in lowering.closureRows[origin] ?? [] },
+                numbering: lowering.documents.map(\.numbering),
+                closures: lowering.documents.map(\.closureRows),
                 documents: documents
             ),
             table: lowering.table,
             documents: documents
         )
 
-        lowering.replace(table: try lowering.table.indices.map { row in try answering.row(at: row) })
+        lowering.replace(table: try lowering.table.indices.map { row in try resolver.row(at: row) })
     }
 
     // What has been lowered since the last phase, written in.
@@ -308,17 +258,26 @@ struct Compiling {
     // the declarations it may name: its own by its block, private ones
     // included, and every other document's by the spelling the link holds.
     func context(reading variables: Set<Name>, of origin: Int) -> TypingContext {
+        context(reading: variables, owning: lowering.own(origin))
+    }
+
+    // The same for a document whose rows are not held yet: what the documents
+    // behind it declare, and nothing of its own.
+    func context(reading variables: Set<Name>) -> TypingContext {
+        context(reading: variables, owning: [:])
+    }
+
+    // MARK: - Private
+    private func context(reading variables: Set<Name>, owning own: [Name: Int]) -> TypingContext {
         TypingContext(
             types: types,
             linked: lowering.table,
             rows: lowering.rows,
-            own: lowering.own(origin),
+            own: own,
             concealed: lowering.concealed,
             answers: answers,
             contractProcedures: contractProcedures,
             variables: variables
         )
     }
-
-    // MARK: - Private
 }

@@ -9,10 +9,8 @@ import Foundation
 
 // Checks that every name a procedure reads is one it can see, before it runs.
 //
-// The walk is structural, and it stays structural through call: a message
-// carries expressions whose insides this can read, so what exists inside a
-// caller's body is read here rather than asked of whatever answers the
-// selector. Which means validation never consults the procedure table. A document is
+// The walk is structural: a call's arguments are expressions whose insides
+// this reads, so validation never consults the procedure table. A document is
 // checked against itself, before anything is resolved.
 public struct Validator: Sendable {
     // MARK: - Property
@@ -21,17 +19,10 @@ public struct Validator: Sendable {
     }
 
     // MARK: - Public
-    // The door for a caller holding statements it assembled itself, without a
-    // document: the same gate the load path passes, against the heads visible
-    // where the body will run.
-    public func validate(body: Body, visible: Set<Name>) throws {
+    // Statements assembled without a document: the same gate the load path
+    // passes, against the heads visible where the body will run.
+    func validate(body: Body, visible: Set<Name>) throws {
         try validate(body, visible: visible, at: .given("lowered"))
-    }
-
-    // A single expression, checked where a caller is about to evaluate one it
-    // assembled itself.
-    public func validate(_ expression: Expression, visible: Set<Name>) throws {
-        try validate(expression, visible: visible, at: .given("expression"))
     }
 
     // Every declaration a module makes, in name order so the first refusal is
@@ -46,11 +37,11 @@ public struct Validator: Sendable {
         // A constant sees no scope, so it may name another constant and nothing
         // else. Which is also why it is checked here rather than per procedure:
         // what it can see is a fact about the module.
-        for (name, expression) in module.constants.sorted(by: { $0.key < $1.key }) {
+        for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try validate(
                 expression,
                 visible: constants,
-                scope: .procedure(constants: constants),
+                scope: .procedure(bound: constants),
                 at: .constant(name.spelling, in: .of(module))
             )
         }
@@ -58,7 +49,7 @@ public struct Validator: Sendable {
         // A variable's start is written like a constant and sees what a
         // constant sees: the constants beside it, and no variable. A variable
         // holds nothing until the run starts.
-        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
+        for (name, variable) in module.variables.sorted(by: { one, other in one.key < other.key }) {
             guard !constants.contains(name) else {
                 throw ValidationError(
                     "'\(name)' is declared as a constant and as a variable, and"
@@ -70,7 +61,7 @@ public struct Validator: Sendable {
             try validate(
                 variable.start,
                 visible: constants,
-                scope: .procedure(constants: constants),
+                scope: .procedure(bound: constants),
                 at: .variable(name.spelling, in: .of(module))
             )
         }
@@ -94,9 +85,7 @@ public struct Validator: Sendable {
             )
         }
 
-        for name in module.procedures.keys.sorted() {
-            guard let procedure = module.procedures[name] else { continue }
-
+        for (name, procedure) in module.procedures.sorted(by: { one, other in one.key < other.key }) {
             try validate(
                 procedure,
                 constants: constants,
@@ -163,7 +152,7 @@ public struct Validator: Sendable {
     private func hosted(_ module: Module) throws {
         guard module.identity == nil else { return }
 
-        for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key })
+        for (name, procedure) in module.procedures.sorted(by: { one, other in one.key < other.key })
         where procedure.implementation.native != nil && !procedure.access.reachesOtherDocuments {
             throw ValidationError(
                 "this procedure is private and answered by the host in a module that is no document,"
@@ -202,7 +191,7 @@ public struct Validator: Sendable {
             visible: bound.union(parameters),
             variables: variables.subtracting(parameters).union(handed),
             declared: parameters,
-            scope: .procedure(constants: bound),
+            scope: .procedure(bound: bound),
             at: place
         )
     }
@@ -293,10 +282,10 @@ public struct Validator: Sendable {
 
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
-                    try introduced(name, beside: scope.constants, at: here)
+                    try introduced(name, beside: scope.bound, at: here)
 
                     guard !declared.contains(name) else {
-                        throw ValidationError("duplicate statement id '\(name)'", at: here)
+                        throw ValidationError("two statements here are named '\(name)'", at: here)
                     }
 
                     declared.insert(name)
@@ -346,13 +335,13 @@ public struct Validator: Sendable {
             )
 
             switch statement.binding {
-            case let .constant(id, _)?:
-                visible.insert(id)
-                variables.remove(id)
+            case let .constant(name, _)?:
+                visible.insert(name)
+                variables.remove(name)
 
-            case let .variable(id, _)?:
-                visible.insert(id)
-                variables.insert(id)
+            case let .variable(name, _)?:
+                visible.insert(name)
+                variables.insert(name)
 
             case .assignment?, nil:
                 break
@@ -392,14 +381,14 @@ public struct Validator: Sendable {
             }
 
         case let .record(record):
-            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
+            for (name, field) in record.sorted(by: { one, other in one.key < other.key }) {
                 let here = place.part(.fields).key(name.spelling)
 
                 try refuseAnswerless(field, at: here)
                 try validate(field, visible: visible, variables: variables, scope: scope, at: here)
             }
 
-        // A cast names a type and reads a value as it. The type is the link's
+        // A cast names a type and reads a value as it. The type is the build's
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
         case let .cast(value, _, optional):
@@ -442,12 +431,12 @@ public struct Validator: Sendable {
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
             for (position, parameter) in procedure.signature.names.enumerated() {
-                try introduced(parameter, beside: scope.constants, at: inside.part(.parameters).index(position))
+                try introduced(parameter, beside: scope.bound, at: inside.part(.parameters).index(position))
             }
 
             try reads(procedure, at: place)
 
-        guard let block = procedure.block else { return }
+            guard let block = procedure.block else { return }
 
             try validate(
                 block,
@@ -518,7 +507,7 @@ public struct Validator: Sendable {
         // lets `while` read how many rounds have passed.
         case let .loop(condition, body, round):
             if let round {
-                try introduced(round, beside: scope.constants, at: place)
+                try introduced(round, beside: scope.bound, at: place)
             }
 
             let inner = visible.union(round.map { round in [round] } ?? [])
@@ -542,7 +531,7 @@ public struct Validator: Sendable {
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
             if let failure {
-                try introduced(failure, beside: scope.constants, at: place)
+                try introduced(failure, beside: scope.bound, at: place)
             }
 
             try validate(
@@ -689,9 +678,11 @@ public struct Validator: Sendable {
         guard let target = leave.target else { return }
 
         guard scope.rounds.contains(target) else {
+            let around = scope.rounds.reversed().map { round in round?.spelling ?? "a nameless one" }
+
             throw ValidationError(
                 "names '\(target)', which is not a loop around it."
-                    + " The ones here are \(scope.rounds.reversed().map { round in round?.spelling ?? "a nameless one" }.joined(separator: ", "));"
+                    + " The ones here are \(around.joined(separator: ", "));"
                     + " the nearest is \(nearest.map { nearest in "'\(nearest)'" } ?? "nameless")",
                 at: place
             )
@@ -727,19 +718,19 @@ public struct Validator: Sendable {
         }
     }
 
-    // A name a body introduces: a parameter, a statement's id, or the one a
+    // A name a body introduces: a parameter, a statement's name, or the one a
     // construct hands its body. Every such name passes here, so the module's
-    // bound names are checked at whatever depth the name appears. A sub scope
-    // is where a reader is least able to see that the spelling was taken.
+    // bound names are checked at whatever depth the name appears.
     //
-    // Linking folds a constant wherever its name is read, so a name introduced
-    // under that spelling would never be the one that answers.
+    // A module's constant is folded wherever its name is read and its variable
+    // is read through the module's box, so a name introduced under either
+    // spelling would never be the one that answers.
     private func introduced(
         _ name: Name,
-        beside constants: Set<Name>,
+        beside bound: Set<Name>,
         at place: Place
     ) throws {
-        guard constants.contains(name) else { return }
+        guard bound.contains(name) else { return }
 
         throw ValidationError(
             "'\(name)' collides with a name the module bound, which it would"

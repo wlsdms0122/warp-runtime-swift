@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A record literal as the run makes it: the layout the link made for it, and
+// A record literal as the run makes it: the layout the build made for it, and
 // the code that fills each of its places. One field per place, checked where
 // the pair is made, so the run reads the two together and never has to ask
 // whether they still line up.

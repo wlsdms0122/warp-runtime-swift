@@ -47,7 +47,7 @@ struct LoweringTests {
         // it was after the block
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
@@ -80,12 +80,10 @@ struct LoweringTests {
     @Test("a closure's own declaration shadows what it captured")
     func aClosureReadsTheNearestName() async throws {
         // Given. The closure declares `x` over the body's `x`; the nearest
-        // declaration is the one read, and the body's stays what it was. A
-        // module's name may not be declared over, so the order between a
-        // captured name and a module variable is never observed.
+        // declaration is the one read, and the body's stays what it was.
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
@@ -114,7 +112,7 @@ struct LoweringTests {
         // Given. Three names in scope, one read
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("a"), expression: .literal(.int(1))),
@@ -161,7 +159,7 @@ struct LoweringTests {
                 )
             ],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "key", type: .string)]),
                     body: [Statement(binding: .constant("found"), expression: .reference([.key("digits"), .indexRef([.key("key")])]))],
@@ -214,7 +212,7 @@ struct LoweringTests {
         ))
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("told"), expression: loop(
@@ -255,7 +253,7 @@ struct LoweringTests {
         // is not the order the body reads them in
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [],
                     result: .call(Call(
@@ -303,11 +301,11 @@ struct LoweringTests {
     @Test("a body reading a module variable does not answer without running")
     func aBodyReadingAVariableIsNotConst() async throws {
         // Given. The variable's value is the run's, so folding the procedure at the
-        // link would fix a value nothing at the run could change
+        // build would fix a value nothing at the run could change
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [
-                "entry": Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.tally": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
@@ -320,7 +318,9 @@ struct LoweringTests {
         let image = try await builder.build([module] + Module.standard)
 
         // Then
-        #expect(image["app.tally"]?.constness != .const)
+        let tally = try #require(image["app.tally"])
+
+        #expect(tally.constness != .const)
     }
 
     @Test("a name is what it names, wherever a variable is handed in place")
@@ -331,7 +331,7 @@ struct LoweringTests {
         let sut = try Module(
             types: ["Count": .int],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
                     result: .call(Call(selector: "app.bump", arguments: [.reference([.key("n")])]))
@@ -361,7 +361,7 @@ struct LoweringTests {
         let sut = try Module(
             types: ["Count": .int],
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("body"), expression: .closure(
@@ -408,7 +408,7 @@ struct LoweringTests {
             try Module(
                 types: ["Tag": .record(["a": .int])],
                 procedures: [
-                    "entry": Procedure(
+                    entryName: Procedure(
                         access: .public,
                         body: [Statement(binding: .variable("held"), expression: held)],
                         result: .call(Call(
@@ -433,8 +433,11 @@ struct LoweringTests {
 
         // When / Then. The unnamed record is refused, and the same record held
         // as a `Tag` stands
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'app.tag' with of, which holds { a: int } where inout Tag is declared")
         }
 
         let image = try await builder.build(
@@ -444,8 +447,8 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .bool(true))
     }
 
-    @Test("a constant folding through a written procedure is refused whichever is declared first")
-    func aConstantFoldingThroughAProcedureIsRefusedInAnyOrder() async throws {
+    @Test("a constant folding through a procedure its own document writes is refused")
+    func aConstantFoldingThroughItsOwnProcedureIsRefused() async throws {
         // Given. `J` settles by calling `app.alpha`, a written procedure; while the
         // constants settle every written body stands as its refusal, so the
         // order is not the text's
@@ -455,7 +458,7 @@ struct LoweringTests {
                 "J": .call(Call(selector: "app.alpha", arguments: [reference("K")]))
             ],
             procedures: [
-                "entry": Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "app.alpha": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
@@ -478,7 +481,7 @@ struct LoweringTests {
         // and reads what the hold holds now
         let module = try Module(
             procedures: [
-                "entry": Procedure(
+                entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))

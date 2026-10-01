@@ -35,10 +35,6 @@ public struct Draft: Sendable {
         // signature of its own.
         let mentions: Set<Name>
 
-        // What this declares, by the name a link resolves to it.
-        let declaredProcedures: Set<Name>
-        let declaredTypes: Set<Name>
-
         // The two as one list of spellings, which is what a document's
         // `imports` holds.
         var uses: Set<Name> { sends.union(mentions) }
@@ -112,6 +108,21 @@ public struct Draft: Sendable {
         read().uses
     }
 
+    // What this declares in the procedure namespace. A contract's procedure is
+    // one of them, by the spelling a call writes to reach it.
+    var declaredProcedures: Set<Name> {
+        Set(procedures.keys).union(contracts.flatMap { contract, procedures in
+            procedures.keys.map { procedure in ContractProcedure.spelling(of: contract, procedure: procedure) }
+        })
+    }
+
+    // What this declares in the type namespace. Types, constraints and
+    // contracts share it: a link refuses a name standing for a type and a
+    // membership at once.
+    var declaredTypes: Set<Name> {
+        Set(types.keys).union(constraints.keys).union(contracts.keys)
+    }
+
     // MARK: - Initializer
     public init(
         description: String? = nil,
@@ -154,48 +165,6 @@ public struct Draft: Sendable {
         return held
     }
 
-    // What this declares in the procedure namespace, each under the place it was
-    // written at. A contract's procedure is one of them, by the spelling a call
-    // writes to reach it, and its place is the two steps the document nests it
-    // in rather than the joined name in one.
-    func procedures(in document: Place.Document) -> [(name: Name, place: Place)] {
-        procedures.keys.map { name in
-            (name, Place.procedure(name.spelling, in: document))
-        }
-            + contracts.flatMap { contract, procedures in
-                procedures.keys.map { procedure in
-                    (
-                        Name(normal: "\(contract.spelling).\(procedure.spelling)"),
-                        Place.contract(contract.spelling, in: document)
-                            .appending(.key(procedure.spelling))
-                    )
-                }
-            }
-    }
-
-    // What this declares in the type namespace, the same way. Types,
-    // constraints and contracts share it: a link refuses a name standing for a type
-    // and a membership at once.
-    func types(in document: Place.Document) -> [(name: Name, place: Place)] {
-        types.keys.map { name in
-            (name, Place.type(name.spelling, in: document))
-        }
-            + constraints.keys.map { name in
-                (name, Place.constraint(name.spelling, in: document))
-            }
-            + contracts.keys.map { name in
-                (name, Place.contract(name.spelling, in: document))
-            }
-    }
-
-    // The two together, by the reference a link resolves to each. Read off the
-    // lists above rather than gathered again, so what a document declares is
-    // said in one place whichever side asks.
-    func declarations(in document: Place.Document) -> [(reference: Reference, place: Place)] {
-        procedures(in: document).map { declared in (.procedure(declared.name), declared.place) }
-            + types(in: document).map { declared in (.type(declared.name), declared.place) }
-    }
-
     // What this document says it leans on and how many closures it wrote,
     // read in one walk over its text.
     //
@@ -204,9 +173,6 @@ public struct Draft: Sendable {
     // once and read by every link it stands in, and this is where that reading
     // happens.
     func read() -> Reading {
-        let declaredProcedures = Set(procedures(in: .assembled).map(\.name))
-        let declaredTypes = Set(types(in: .assembled).map(\.name))
-
         // A native procedure's sends are its own declaration rather than something
         // read off a body, since a Swift body is not text this could read. A
         // list that missed them would understate what the module does, which
@@ -298,8 +264,6 @@ public struct Draft: Sendable {
         return Reading(
             sends: sent.subtracting(declaredProcedures),
             mentions: named.subtracting(declaredTypes),
-            declaredProcedures: declaredProcedures,
-            declaredTypes: declaredTypes,
             closures: counts
         )
     }

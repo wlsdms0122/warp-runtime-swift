@@ -24,6 +24,7 @@ struct ModifierNotationTests {
         ("borrowing Handle", .borrowing(.named("Handle")))
     ])
     func everyMarkStandsInFrontOfTheWholeType(written: String, expected: TypeExpression) throws {
+        // When / Then
         #expect(try TypeReader.parse(written) == expected)
     }
 
@@ -51,7 +52,7 @@ struct ModifierNotationTests {
             ])
         )
 
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]]]]
@@ -65,8 +66,8 @@ struct ModifierNotationTests {
         arguments: SlotMark.allCases, SlotMark.allCases
     )
     func aMarkIsNotWrittenInsideAMark(mark: SlotMark, inside: SlotMark) throws {
-        // Given. What the reading refuses the writing refuses too, in both the
-        // forms a marked type is written in
+        // When / Then. What the reading refuses the writing refuses too, in
+        // both the forms a marked type is written in
         #expect(throws: WritingError.self) {
             try Writer().value(of: mark.marking(inside.marking(.named("Handle"))))
         }
@@ -81,6 +82,7 @@ struct ModifierNotationTests {
         arguments: SlotMark.allCases, SlotMark.allCases
     )
     func aMarkInsideAMarkIsRefused(mark: SlotMark, inside: SlotMark) throws {
+        // When / Then
         #expect(throws: TypeFormError.self) {
             try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle")
         }
@@ -100,7 +102,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": [
@@ -137,7 +139,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
@@ -158,7 +160,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try await Loader().load([
+        let read = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
@@ -186,8 +188,10 @@ struct ModifierNotationTests {
 
     @Test("a plain name is written as itself and read back as itself")
     func aPlainNameRoundTrips() throws {
+        // Given
         let type = TypeExpression.named("app.Task")
 
+        // When / Then
         #expect(try Writer().value(of: type) == .string("app.Task"))
         #expect(try TypeReader.parse("app.Task") == type)
     }
@@ -198,8 +202,10 @@ struct ModifierNotationTests {
         ("isolated const procedure", .procedure(nil, .const, .isolated), "const isolated procedure")
     ])
     func isolationIsReadEitherWay(written: String, expected: TypeExpression, canonical: String) throws {
+        // When
         let parsed = try TypeReader.parse(written)
 
+        // Then
         #expect(parsed == expected)
         #expect(try Writer().value(of: parsed) == .string(canonical))
     }
@@ -212,7 +218,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let module = try await Loader().load([
+        let module = try Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
@@ -228,6 +234,7 @@ struct ModifierNotationTests {
         "consuming consuming Handle", "consuming borrowing Handle", "borrowing inout Handle"
     ])
     func aModifierWrittenTwiceIsRefused(written: String) {
+        // When / Then
         #expect(throws: TypeFormError.self) {
             try TypeReader.parse(written)
         }

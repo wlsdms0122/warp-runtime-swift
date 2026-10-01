@@ -26,12 +26,12 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // are.
     public let trace: Trace
 
-    public var environment: (any Environment)? { executor.environment }
+    public var environment: (any Environment)? { evaluator.environment }
 
     // The variables handed in place, by parameter position.
     private let holds: [(position: Int, handle: Handle)]
 
-    private let executor: Executor
+    private let evaluator: Evaluator
 
     public var selector: Name { callee.label }
 
@@ -45,13 +45,13 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
         trace: Trace,
-        executor: Executor
+        evaluator: Evaluator
     ) {
         self.callee = callee
         self.settled = settled
         self.holds = holds
         self.trace = trace
-        self.executor = executor
+        self.evaluator = evaluator
     }
 
     // MARK: - Public
@@ -85,9 +85,8 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         try hold.write(value, at: [])
     }
 
-    // Nil for an argument that is absent or null. Null spells as `null`, and a
-    // caller asking for a string wants what was said rather than that word:
-    // "unset" and "set to nothing" are one instruction here.
+    // Nil for an argument that is null. Null spells as `null`, and a caller
+    // asking for a string wants what was said rather than that word.
     public func string(_ key: P.Parameters) -> String? {
         switch self[key] {
         case .null:
@@ -117,7 +116,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
             throw ExecutionError("'\(selector)' sends '\(key.selector)', and the link resolved no row for it")
         }
 
-        return try await executor.send(
+        return try await evaluator.send(
             callee.sends[key.position],
             from: callee.origin,
             handing: arguments,
@@ -135,7 +134,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
-        try await executor.call(
+        try await evaluator.call(
             closure,
             handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace

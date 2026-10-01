@@ -19,14 +19,13 @@ struct Symbol: Sendable {
     // Which document this was written in.
     let document: Place.Document
 
-    // Where this declaration's rows stand in the link, written when the link
-    // lays them. Until then it is where the module sits in the list this was
-    // read out of, which is what groups these back by module.
+    // Where the document's rows stand among the documents this compile lays
+    // down.
     let origin: Int
 
     // Where the caller put that module in the list it handed over. What a
     // sentence names, since a caller reading a refusal counts its own list
-    // rather than the order the link worked out.
+    // rather than the order the build worked out.
     let handed: Int
 
     let procedure: Procedure
@@ -34,7 +33,7 @@ struct Symbol: Sendable {
     // Whether this takes a spelling another document may name.
     var supplies: Bool { procedure.access.reachesOtherDocuments }
 
-    // Where this declaration's procedures are, in the document that wrote it.
+    // Where this declaration is written, in the document that wrote it.
     var place: Place { .procedure(declared.spelling, in: document) }
 
     // What a sentence calls this declaration when it names one among several.

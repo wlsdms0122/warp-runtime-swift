@@ -10,17 +10,9 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// What a declaration answers when nobody wrote it down.
-//
-// An unwritten `returns` used to read as `any`, which cost a call site nothing
-// while `any` was accepted everywhere. Making `any` opaque turned it into a
-// bill: a dot on what such a call answers was refused, and the author was
-// asked to write down a type the body already states.
-//
-// So the body is read, in the call graph's order. What the author wrote stays
-// what the image carries (this is the build's own reading, not a promise anybody
-// made) and where the reading would have to come from itself, it says `any`
-// rather than guessing.
+// What a declaration answers when nobody wrote it down. The body is read, in
+// the call graph's order, and where the reading would have to come from itself
+// it says `any`.
 @Suite("An answer nobody wrote is read off the body")
 struct AnsweringTests {
     // MARK: - Property
@@ -43,8 +35,7 @@ struct AnsweringTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "counts"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "counts")))
                     ],
                     result: .reference([.key("said"), .key("total")])
                 )
@@ -56,7 +47,7 @@ struct AnsweringTests {
     }
 
     @Test("an answer read off one body reaches the next")
-    func ananswerTravelsTheCallGraph() async throws {
+    func anAnswerTravelsTheCallGraph() async throws {
         // Given. Three declarations, none of which says what it answers. The
         // order is the call graph's, so each is read after the one its answer
         // comes from.
@@ -70,8 +61,7 @@ struct AnsweringTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "middle"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "middle")))
                     ],
                     result: .reference([.key("said"), .key("total")])
                 )
@@ -123,8 +113,7 @@ struct AnsweringTests {
                             Statement(binding: .constant("said"), expression: .call(Call(
                                 selector: "counts",
                                 arguments: [.literal(.bool(true))]
-                            ))
-                            )
+                            )))
                         ],
                         result: .reference([.key("said"), .key("total")])
                     )
@@ -156,8 +145,7 @@ struct AnsweringTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
-                        )
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "ping")))
                     ],
                     result: .literal(.null)
                 )
@@ -166,10 +154,12 @@ struct AnsweringTests {
 
         // When / Then. Nothing is claimed, so nothing is refused
         _ = try await builder.build([sut] + Module.standard)
+    }
 
-        // And a dot on it refuses, because `any` is what saying nothing looks
-        // like at a call site. Where the same type with the cycle broken
-        // reads the record `pong` answers.
+    @Test("a dot on an answer that would come from itself refuses, and stands once the cycle is broken")
+    func aDotOnACycleAnswerRefuses() async throws {
+        // Given. `any` is what saying nothing looks like at a call site. With
+        // the cycle broken, the same dot reads the record `pong` answers
         func reading(cycling: Bool) async throws -> Module {
             try Module(
                 procedures: [
@@ -183,8 +173,7 @@ struct AnsweringTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
-                            )
+                            Statement(binding: .constant("said"), expression: .call(Call(selector: "ping")))
                         ],
                         result: .reference([.key("said"), .key("total")])
                     )
@@ -192,8 +181,11 @@ struct AnsweringTests {
             )
         }
 
-        await #expect(throws: BuildError.self) {
+        // When / Then
+        await #expect {
             try await builder.build([reading(cycling: true)] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("said.total reads a dot on any, which declares nothing")
         }
 
         _ = try await builder.build([reading(cycling: false)] + Module.standard)
@@ -223,8 +215,7 @@ struct AnsweringTests {
                             Statement(binding: .constant("said"), expression: .call(Call(
                                 selector: "peek",
                                 arguments: [.record(["inner": .literal(.int(1))])]
-                            ))
-                            )
+                            )))
                         ],
                         result: .reference(path)
                     )
@@ -279,6 +270,82 @@ struct AnsweringTests {
 
         // Then
         #expect(image[entryName]!.signature.returns == nil)
+    }
+
+    @Test("what no body settles is not something the build can be wrong about")
+    func anAnswerNothingSettlesIsNotJudged() async throws {
+        // Given. `held` comes back from a call that declares no answer, and
+        // whose body answers what that same call answers. An answer worked out
+        // from its own is not one the text states, so nothing is known about it
+        // and nothing is refused. That is the bound on the promise: inference
+        // answers where the text settles and `any` everywhere else.
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("held")])]
+                        )))
+                    ]
+                ),
+                "opaque": Procedure(
+                    body: [],
+                    result: .call(Call(selector: "opaque"))
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try await builder.build([sut])
+    }
+
+    @Test("a body that settles an answer is held to it, declared or not")
+    func anAnswerReadOffABodyIsJudged() async throws {
+        // Given. The same type, with a body whose answer the text does settle:
+        // a body with no result hands back null, and null is not a whole
+        // number. What the declaration says stays what it says; what the build
+        // reads a call as is what the body hands back.
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "base", type: .int)]),
+                    body: [Statement(binding: .constant("echo"), expression: .reference([.key("base")]))]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("held")])]
+                        )))
+                    ]
+                ),
+                "opaque": Procedure(
+                    body: [Statement(binding: .constant("made"), expression: .literal(.string("whatever")))]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("holds null where int is declared")
+        }
     }
 
     // MARK: - Public

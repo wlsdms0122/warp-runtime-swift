@@ -20,14 +20,6 @@ enum Reference: Hashable, Sendable, Comparable {
     case type(Name)
 
     // MARK: - Property
-    // What a sentence calls this kind where it names one.
-    var noun: String {
-        switch self {
-        case .procedure: "procedure"
-        case .type: "type"
-        }
-    }
-
     // The name itself, for the tables and sentences that want it without the
     // kind.
     var name: Name {
@@ -38,9 +30,9 @@ enum Reference: Hashable, Sendable, Comparable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // Procedures before types, and each in name order. A catalog reports the
-    // first collision it walks into, so this is the order an author meets
-    // them in.
+    // Procedures before types, and each in name order. The module graph walks
+    // a module's needs in this order, so which ring it refuses is a fact of
+    // the modules.
     static func < (lhs: Reference, rhs: Reference) -> Bool {
         switch (lhs, rhs) {
         case let (.procedure(left), .procedure(right)), let (.type(left), .type(right)):

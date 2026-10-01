@@ -21,22 +21,13 @@ struct Carried: Sendable {
     let table: [Linked]
     let rows: [Name: Int]
 
-    // Each document's own declarations by row, and the spellings the private
-    // ones wear, which no table of the link's names holds and a refusal reads.
-    let owned: [Int: [Name: Int]]
+    // The spellings the private declarations wear, which no table of the
+    // link's names holds and a refusal reads.
     let concealed: Set<Name>
 
-    // Which row each number a document gave reaches.
-    let named: [Int: [Int?]]
+    // Each document as it was held, by origin.
+    let documents: [Lowering.Document]
 
-    // Where each document's calls are numbered from, which rows its closures
-    // took, and its variables in the order a run makes their boxes.
-    let numbering: [Int: Numbering]
-    let closureRows: [Int: [Int]]
-    let variables: [Int: [Name: Int]]
-
-    // What the documents proved about their own bodies, and what the build
-    // read off one whose declaration wrote no `returns`.
     // What the build read off a body whose declaration wrote no `returns`,
     // by row. Everything else the build derived of a declaration stands on
     // its row.
@@ -46,12 +37,8 @@ struct Carried: Sendable {
     static let none = Carried(
         table: [],
         rows: [:],
-        owned: [:],
         concealed: [],
-        named: [:],
-        numbering: [:],
-        closureRows: [:],
-        variables: [:],
+        documents: [],
         answers: [:]
     )
 

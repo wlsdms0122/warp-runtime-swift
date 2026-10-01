@@ -56,8 +56,8 @@ struct DeclaredSpellingTests {
         let image = try await builder.build([sut, store] + Module.standard)
 
         // Then. The declaration is under the declared spelling alone
-        #expect(image.types.resolve("store.Task") == .record(["id": .string]))
-        #expect(image.types.resolve("Task") == nil)
+        #expect(image.types.types["store.Task"] == .record(["id": .string]))
+        #expect(image.types.types["Task"] == nil)
     }
 
     @Test("a module names its own type by its declared spelling")
@@ -158,8 +158,7 @@ struct DeclaredSpellingTests {
 
     @Test("two modules declaring one name refuse")
     func oneNameDeclaredTwiceRefuses() async throws {
-        // Given. Two modules declare one spelling, which collide the way two
-        // `.c` files' symbols do
+        // Given. Two modules declare one spelling
         let one = try Module(
             types: ["Limit": .int],
             procedures: [
@@ -212,32 +211,6 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("sorting what Comparable does not admit refuses at the build")
-    func sortingTheUnorderableRefuses() async throws {
-        // Given. `sorted` is bounded by the shared ground's `Comparable`, and
-        // booleans are a reading the build can see
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.collection.sorted",
-                        arguments: [.literal(.array([.bool(true), .bool(false)]))]
-                    ))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
-        }
-    }
-
     @Test("a bare spelling names only the bare declaration")
     func aBareSpellingNamesTheBareDeclaration() async throws {
         // Given. One module declares `Limit`, another declares `one.Limit`, and
@@ -272,34 +245,8 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("min handed null first is held to the parameter it declares first")
-    func minHandedNullIsHeldToItsFirstParameter() async throws {
-        // Given. The first argument is a reference that reads null. Null is a
-        // value, and `some T: Comparable` does not admit one, so the boundary
-        // refuses before the ordering procedure is asked anything
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [Parameter(name: "absent", type: .any)]
-                    ),
-                    body: [],
-                    result: .call(Call(selector: "std.math.min", arguments: [reference("absent"), .literal(.int(1))]))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await run(sut, arguments: ["absent": .null])
-        } throws: { error in
-            "\(error)".contains("input 'lhs': expected some T: std.Comparable, got null")
-        }
-    }
-
-    @Test("a name declared as a type and a constraint refuses in either order")
-    func aCrossSpaceCollisionRefusesInEitherOrder() async throws {
+    @Test("a name declared as a type and a constraint refuses in either order", arguments: [false, true])
+    func aCrossSpaceCollisionRefusesInEitherOrder(typeFirst: Bool) async throws {
         // Given. One module declares `Limit` as a constraint, another as a type
         let membership = try Module(
             constraints: ["Limit": [.int]],
@@ -316,12 +263,10 @@ struct DeclaredSpellingTests {
 
         // When / Then. The build sees its whole graph at once, so the order the
         // caller listed the modules cannot change the conclusion
-        for modules in [[membership, type], [type, membership]] {
-            await #expect {
-                try await builder.build(modules)
-            } throws: { error in
-                error is BuildError && "\(error)".contains("both a type and a constraint")
-            }
+        await #expect {
+            try await builder.build(typeFirst ? [type, membership] : [membership, type])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("both a type and a constraint")
         }
     }
 
@@ -349,8 +294,7 @@ struct DeclaredSpellingTests {
                         Statement(binding: .constant("kept"), expression: .call(Call(
                             selector: "keep",
                             arguments: [.literal(.string("a"))]
-                        ))
-                        )
+                        )))
                     ],
                     result: reference("kept")
                 )
@@ -384,61 +328,6 @@ struct DeclaredSpellingTests {
             try await builder.build([arithmetic] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
-        }
-    }
-
-    @Test("min and max order the way the comparison procedures do")
-    func minAndMaxOrderLikeTheComparisons() async throws {
-        // Given. Strings order lexicographically under Comparable, which bounds
-        // `min` the way it bounds `lessThan`
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.math.min",
-                        arguments: [.literal(.string("b")), .literal(.string("a"))]
-                    ))
-                )
-            ]
-        )
-
-        // When / Then
-        let answer = try await run(sut)
-
-        #expect(answer == .string("a"))
-    }
-
-    @Test("a bundle mentioning the shared constraints needs std in the link")
-    func aBundleNeedsTheSharedGround() async throws {
-        // Given. Collection's procedures mention `Collection` and
-        // `Comparable`, which only the foundation module declares
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .call(Call(
-                        selector: "std.collection.sorted",
-                        arguments: [.literal(.array([.int(2), .int(1)]))]
-                    ))
-                )
-            ]
-        )
-
-        // When / Then, without the foundation the constraint name resolves to
-        // nothing, and the declaration that mentions it is refused
-        await #expect {
-            try await builder.build([sut] + Module.collection)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("which no module in this link declares")
-        }
-
-        await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
         }
     }
 

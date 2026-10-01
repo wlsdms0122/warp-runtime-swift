@@ -18,15 +18,15 @@ import Foundation
 //   reference . A name to resolve in the consuming scope
 //   array     . Elements are expressions
 //   record    . Fields are expressions
-//   call      . A selector and its arguments by position
+//   call      . The procedure it names and its arguments by position
 //
 // The control constructs carry a `Block` and, where a name has to exist inside that
 // block, the name itself, so an expression means the same thing wherever it
-// appears, instead of borrowing the id of whatever bound it.
+// appears, instead of borrowing the name of whatever bound it.
 //
 // `call` is the one open case. A procedure, a bundled procedure and a caller's own
-// all lower to it, because they differ only in where the selector is found, and
-// finding it is the link's job, not the grammar's.
+// all lower to it, because they differ only in where the name is found, and
+// finding it is the build's job, not the grammar's.
 //
 // There is no operator here. Equality, negation and the connectives are procedures
 // like any other, so the grammar says what a program *is* and never what one
@@ -44,17 +44,15 @@ public indirect enum Expression: Sendable {
     // scope it was written in, which is the whole of what makes it a closure.
     case closure(Procedure)
 
-    // Calling a value rather than a name. `call` asks a table and a call graph
-    // what a selector means, and the builder settles that before any run; this
-    // asks the value in hand, and only a run can. Two spellings because they are
-    // two questions: fusing them would mean a local name could quietly stand in
-    // for a linked one, and linking would stop being a promise.
+    // Calling a value rather than a name. `call` names a declaration the build
+    // finds; this calls the value in hand, which the build judges by the
+    // procedure type its reading carries.
     case apply(Expression, arguments: [Expression])
 
     // Reading a value as a type the text names. `any` declares nothing, so a
-    // dot on one is refused at the link. This is the door: the author says what
-    // they expect, the link judges every dot after it against that, and the run
-    // asks the arriving value the one question the link could not.
+    // dot on one is refused at the build. This is the door: the author says what
+    // they expect, the build judges every dot after it against that, and the run
+    // asks the arriving value the one question the build could not.
     //
     // The `?` axis is `?.`'s, on a cast: a plain one refuses at the run what
     // did not arrive as the named type, and an optional one reads that
@@ -68,11 +66,6 @@ public indirect enum Expression: Sendable {
     // value leaves through `return`. A condition chooses a way through the body,
     // not a value.
     case conditional(Expression, then: Body, else: Body?)
-    // Repetition carries no budget of its own. Bounding a loop is the author's
-    // to write (a counter and `std.control.abort` say it exactly) and stopping
-    // one is the receiver's cancellation; a kernel budget would promise neither
-    // side anything it can rely on.
-    //
     // The round is the statement's name, and a loop written nameless binds
     // none; the same for an attempt's failure.
     case loop(while: Expression, body: Block, round: Name?)
@@ -170,8 +163,8 @@ public indirect enum Expression: Sendable {
     }
 
     // The sentences the construct rule refuses with, stated once beside the
-    // predicate that decides them. The check wraps them as validation refusals
-    // and the link as link refusals, so the two stages cannot say different
+    // predicate that decides them. The load wraps them as validation refusals
+    // and the build as build refusals, so the two stages cannot say different
     // things.
     public static let constructInOperand =
         "a construct runs a body, and a call's operand is data."
@@ -216,11 +209,11 @@ public indirect enum Expression: Sendable {
 
     // Whether every way through this expression leaves. Structural and
     // conservative: a loop may run no round and an attempt's rescue may finish
-    // normally, so neither counts; a call is judged at the link, where its
-    // signature is known. The link's type walk reads the same fact over the
+    // normally, so neither counts; a call is judged at the build, where its
+    // signature is known. The build's type walk reads the same fact over the
     // full program, symbols included. This is the symbol-free half of that
-    // judgment, and what it buys is the stage: a document is refused before
-    // anything is linked.
+    // judgment, and what it buys is the stage: a document is refused at the
+    // load.
     public var alwaysLeaves: Bool {
         switch self {
         case .leave:

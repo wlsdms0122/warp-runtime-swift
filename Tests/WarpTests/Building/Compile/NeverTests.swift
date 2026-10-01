@@ -12,7 +12,6 @@ import Testing
 // A statement typed `never` does not finish, so it binds nothing and nothing
 // after it runs. The syntactic leaves are refused where they are read; a call
 // is the build's to refuse, because only the build knows what the procedure declares.
-// One rule, two places, each catching what only it can see.
 @Suite("What never finishes binds nothing")
 struct NeverTests {
     // MARK: - Property
@@ -20,21 +19,7 @@ struct NeverTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a block's leave judgment is true of the block alone")
-    func alwaysLeavesIsTrueOfTheBlockAlone() {
-        // Given. A block no validator has seen: the property answers from the
-        // block itself, so a leaving body counts whatever the result declares,
-        // and wherever in the body the leave sits
-        let leave = Expression.leave(Leave(reach: .procedure, value: .literal(.int(1))))
-
-        #expect(Block(body: [Statement(expression: leave)], result: .literal(.int(2))).alwaysLeaves)
-        #expect(Block(
-            body: [Statement(expression: leave), Statement(binding: .constant("after"), expression: .literal(.int(3)))]
-        ).alwaysLeaves)
-        #expect(!Block(body: [], result: .literal(.int(1))).alwaysLeaves)
-    }
-
-    @Test("a statement after a call that never finishes is refused at link")
+    @Test("a statement after a call that never finishes is refused at the build")
     func nothingRunsAfterANeverCall() async throws {
         // Given. `std.control.abort` declares never, so the statement after it
         // would never run, and a name written there would never bind
@@ -111,8 +96,7 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("kept")])]
-                        ))
-                        )
+                        )))
                     ],
                     result: reference("kept")
                 ),
@@ -123,7 +107,7 @@ struct NeverTests {
             ]
         )
 
-        // When / Then. Links, and the run answers the 0-round value
+        // When / Then. Builds, and the run answers the 0-round value
         #expect(try await run([sut]) == .int(1))
     }
 
@@ -140,8 +124,7 @@ struct NeverTests {
                 result: .block(
                     Block(
                         body: [
-                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s"))
-                            )
+                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s")))
                         ],
                         result: reference("y")
                     )
@@ -160,19 +143,18 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("y")])]
-                        ))
-                        )
+                        )))
                     ],
                     result: reference("y")
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
                     body: []
                 )
             ]
         )
 
-        // When / Then. Links, and the run answers what the result wrote
+        // When / Then. Builds, and the run answers what the result wrote
         #expect(try await run([sut]) == .string("s"))
 
         // And the write is definite (every exit made it) so `y` reads as
@@ -187,8 +169,7 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("y")])]
-                        ))
-                        )
+                        )))
                     ]
                 ),
                 "wants": Procedure(
@@ -236,8 +217,7 @@ struct NeverTests {
         // body finishes or leaves
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])
-                ),
+                Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])),
                 Statement(
                     expression: .leave(
                         Leave(
@@ -303,8 +283,7 @@ struct NeverTests {
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
                             arguments: [.reference([.key("kept")])]
-                        ))
-                        )
+                        )))
                     ]
                 ),
                 "wants": Procedure(
@@ -322,7 +301,7 @@ struct NeverTests {
         }
     }
 
-    @Test("a result after a statement that never finishes is refused at link")
+    @Test("a result after a statement that never finishes is refused at the build")
     func aResultAfterNeverIsRefused() async throws {
         // Given. The result runs after the body, so it is "after" the same way
         // a trailing statement is; the type reading already knows it (a block
@@ -344,110 +323,6 @@ struct NeverTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("never finishes before it")
-        }
-    }
-
-    @Test("a statement after a conditional both of whose arms leave is refused")
-    func nothingRunsAfterABranchThatAlwaysLeaves() {
-        // Given. Neither arm finishes, so the conditional never does, and the
-        // statement after it is unreachable whichever way the condition answers
-        let conditional = Warp.Expression.conditional(
-            .literal(.bool(true)),
-            then: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
-            ],
-            else: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(2)))))
-            ]
-        )
-
-        // When / Then
-        #expect(!validates(body: [
-            Statement(expression: conditional),
-            Statement(binding: .constant("after"), expression: .literal(.int(3)))
-        ]))
-    }
-
-    @Test("a name on a conditional both of whose arms leave is refused")
-    func aNamedBranchThatAlwaysLeavesIsRefused() {
-        // Given. The name could only ever bind what an arm answers, and both
-        // arms answer by leaving instead
-        let conditional = Warp.Expression.conditional(
-            .literal(.bool(true)),
-            then: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
-            ],
-            else: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(2)))))
-            ]
-        )
-
-        // When / Then
-        #expect(!validates(body: [Statement(binding: .constant("gone"), expression: conditional)]))
-    }
-
-    @Test("an arm that leaves inside a block is still a leaving arm")
-    func anArmLeavingInsideAGroupCounts() {
-        // Given. The rule reaches through structure because the fact does: a
-        // block whose body leaves never finishes, and an arm that ends in one
-        // ends every way through the arm
-        let conditional = Warp.Expression.conditional(
-            .literal(.bool(true)),
-            then: [
-                Statement(
-                    expression: .block(
-                        Block(body: [
-                            Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
-                        ])
-                    )
-                )
-            ],
-            else: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(2)))))
-            ]
-        )
-
-        // When / Then
-        #expect(!validates(body: [
-            Statement(expression: conditional),
-            Statement(binding: .constant("after"), expression: .literal(.int(3)))
-        ]))
-    }
-
-    @Test("a conditional that can decline still lets what follows run")
-    func aDecliningBranchIsNotALeave() {
-        // Given, with no else, the conditional finishes whenever the condition
-        // declines, so the statement after it is reachable
-        let conditional = Warp.Expression.conditional(
-            .literal(.bool(false)),
-            then: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
-            ],
-            else: nil
-        )
-
-        // When / Then
-        #expect(validates(body: [
-            Statement(expression: conditional),
-            Statement(binding: .constant("after"), expression: .literal(.int(3)))
-        ]))
-    }
-
-    @Test("a result after a leaving statement is refused at the check")
-    func aResultAfterLeavingIsRefused() {
-        // Given. The syntactic half of the same rule, held where leaves are
-        let sut = Procedure(
-            body: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
-            ],
-            result: .literal(.int(2))
-        )
-
-        // When / Then
-        #expect {
-            try Validator().validate(sut)
-        } throws: { error in
-            "\(error)".contains("never be reached")
         }
     }
 

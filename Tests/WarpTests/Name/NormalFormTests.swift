@@ -28,6 +28,7 @@ struct NormalFormTests {
     // MARK: - Test
     @Test("a spelling outside normal form C is not a name")
     func aDenormalSpellingIsRefused() throws {
+        // When / Then
         #expect(throws: NameRefused.self) {
             try Name(denormal)
         }
@@ -36,65 +37,32 @@ struct NormalFormTests {
 
     @Test("nothing written is no name")
     func anEmptySpellingIsRefused() {
-        // A name is what a declaration is called and what a reference writes,
-        // and neither is written by writing nothing.
+        // Given. A name is what a declaration is called and what a reference
+        // writes, and neither is written by writing nothing.
         let nothing = ""
 
+        // When / Then
         #expect(throws: NameRefused.self) {
             try Name(nothing)
         }
     }
 
-    @Test("names are equal by their bytes, not by canonical equivalence")
-    func namesAreEqualByBytes() throws {
-        // Swift calls the two spellings one string. A name is not a string.
-        #expect(normal == denormal)
-        #expect(try Name(normal) != Name("cafe"))
-        #expect(try Name(normal) == Name(normal))
-    }
-
     @Test("names are ordered by their bytes")
-    func namesAreOrderedByBytes() async throws {
-        // The order a canonical writing puts fields in, and the order a
-        // reader holds a document's keys to.
-        await #expect(try Name("Z") < Name("a"))
-        await #expect(try Name("a") < Name("ab"))
-        await #expect(try !(Name("b") < Name("ab")))
+    func namesAreOrderedByBytes() throws {
+        // When / Then. The order a canonical writing puts fields in, and the
+        // order a reader holds a document's keys to.
+        #expect(try Name("Z") < Name("a"))
+        #expect(try Name("a") < Name("ab"))
+        #expect(try !(Name("b") < Name("ab")))
     }
 
-    @Test("a dotted name is unqualified to its last segment")
-    func aDottedNameIsUnqualified() async throws {
-        await #expect(try Name("std.logic.equal").unqualified == Name("equal"))
-        await #expect(try Name("equal").unqualified == Name("equal"))
-    }
-
-    // Names are read as bytes everywhere else, and this is the one reading
-    // where the two answers differ: a dot the scalar after it combines with is
-    // one character with it, and still two bytes.
-    @Test("a name is unqualified by its bytes, not by how they group")
-    func aDottedNameIsUnqualifiedByBytes() throws {
-        let combining = try Name("a.\u{0301}b")
-
-        #expect(combining.unqualified == Name("\u{0301}b"))
-        #expect(combining.spelling.count == 3)
-    }
-
-    @Test("a type's name is identifiers joined by dots, and never a scalar's keyword")
-    func aTypesNameIsDeclarable() async throws {
-        await #expect(try Name("std.logic.Answer").isDeclarable)
-        await #expect(try !Name("std..Answer").isDeclarable)
-        await #expect(try !Name("a name").isDeclarable)
-        await #expect(try !Name("true").isDeclarable)
-    }
-
-    @Test("a name a program writes as a value carries the rule with it")
-    func aRecordHoldsNames() throws {
-        // A record's keys and its own name are names, so the record cannot be
-        // the place a denormal spelling gets in.
-        let record = Record(name: try Name(normal), [try Name(normal): .int(1)])
-
-        #expect(record.name?.spelling == normal)
-        #expect(record[try Name(normal)] == .int(1))
+    @Test("a type's name is identifiers joined by dots, and never a scalar's keyword", arguments: [
+        ("Account", true), ("bank.Account", true), ("_x1", true),
+        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
+    ])
+    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
+        // When / Then
+        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
     }
 
     // MARK: - Public

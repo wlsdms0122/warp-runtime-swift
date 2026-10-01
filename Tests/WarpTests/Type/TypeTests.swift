@@ -9,22 +9,11 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A declaration says more about a list than that it is one. What composing types
-// buys is that the refusal happens at the boundary, naming the element that
-// disagreed, instead of somewhere inside the body.
 @Suite("A type is an expression")
 struct TypeTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a name is identifiers joined by dots, and never a scalar's keyword", arguments: [
-        ("Account", true), ("bank.Account", true), ("_x1", true),
-        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
-    ])
-    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
-    }
-
     @Test("an array declares what it holds")
     func arrayDeclaresItsElement() throws {
         // Given
@@ -118,7 +107,7 @@ struct TypeTests {
 
     @Test("a type may name itself")
     func namedTypeMayRecur() throws {
-        // Given. Kept rather than expanded at link, which is what makes a
+        // Given. Kept rather than expanded at the build, which is what makes a
         // self-naming type a type and not a regress
         let types = TypeTable(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])]
@@ -155,20 +144,23 @@ struct TypeTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("names type 'Nowhere', which no module in this link declares")
         }
     }
 
     @Test("a type reads back in the spelling it was declared with")
     func typesRenderAsWritten() {
+        // When / Then
         #expect(TypeExpression.array(.string).rendered == "array<string>")
         #expect(TypeExpression.dictionary(.named("Task")).rendered == "dictionary<Task>")
         #expect(TypeExpression.array(.array(.int)).rendered == "array<array<int>>")
         #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: string, b: int }")
     }
 
-    @Test("a call handed to a parameter it cannot fit is refused at link")
+    @Test("a call handed to a parameter it cannot fit is refused at the build")
     func mismatchedCallIsABuildError() async {
         // Given. Nothing runs here. Both sides are declarations, and a
         // declaration is text, so this is the half of checking the builder can
@@ -179,23 +171,25 @@ struct TypeTests {
             result: .literal(.int(1))
         )
         let wants = Procedure(
-            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: []
         )
         let entry = Procedure(
             body: [
                 Statement(binding: .constant("said"), expression: .call(
-                        Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
-                    )
-                )
+                    Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
+                ))
             ]
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])]
             )
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
         }
     }
 
@@ -207,15 +201,14 @@ struct TypeTests {
         // a declared answer earns is earned here.
         let counts = Procedure(body: [], result: .literal(.int(1)))
         let wants = Procedure(
-            signature: Signature(parameters: [Parameter(name: "procedure", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: []
         )
         let entry = Procedure(
             body: [
                 Statement(binding: .constant("said"), expression: .call(
-                        Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
-                    )
-                )
+                    Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
+                ))
             ]
         )
 
@@ -255,7 +248,111 @@ struct TypeTests {
     @Test("a record slot does not take a bare dictionary")
     func aRecordDoesNotTakeADictionary() {
         // Given. A record names fields it requires; a dictionary promises none
+
+        // When / Then
         #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
+    }
+
+    @Test("a nullable slot takes its value, null, and nothing else")
+    func aNullableSlotSettles() throws {
+        // Given
+        let declared = TypeExpression.nullable(.int)
+
+        // When / Then
+        #expect(try declared.settling(.int(3), at: "limit") == .int(3))
+        #expect(try declared.settling(.null, at: "limit") == .null)
+        #expect {
+            try declared.settling(.string("x"), at: "limit")
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("expected int, got string")
+        }
+    }
+
+    @Test("what may be null does not stand where null was never declared")
+    func aNullableReadingNeedsANullableSlot() throws {
+        // When / Then. The declared half fits its own slot, and the nullable
+        // does not. In either wrapping.
+        #expect(TypeExpression.nullable(.int).accepts(.int))
+        #expect(TypeExpression.nullable(.int).accepts(.null))
+        #expect(TypeExpression.nullable(.int).accepts(.nullable(.int)))
+        #expect(!TypeExpression.int.accepts(.nullable(.int)))
+        #expect(!TypeExpression.nullable(.int).accepts(.string))
+        #expect(!TypeExpression.nullable(.int).accepts(.nullable(.string)))
+    }
+
+    @Test("a nullable type spells itself in refusals")
+    func aNullableRenders() {
+        // When / Then
+        #expect(TypeExpression.nullable(.int).rendered == "int?")
+        #expect(TypeExpression.nullable(.array(.string)).rendered == "array<string>?")
+    }
+
+    @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
+    func anAssembledClosureClaimsNothing() throws {
+        // Given. Assembled against the table it is judged against, so what is
+        // being asked is the claim and not which link made the row
+        let types = TypeTable()
+        let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
+
+        // When / Then
+        #expect(throws: ArgumentError.self) {
+            try TypeExpression.procedure(nil, .unstated, .isolated)
+                .settling(.procedure(closure), at: "piece", in: types)
+        }
+        #expect(throws: Never.self) {
+            try TypeExpression.procedure(nil)
+                .settling(.procedure(closure), at: "piece", in: types)
+        }
+    }
+
+    @Test("a recursive type compared with itself agrees instead of recursing")
+    func aRecursiveTypeAcceptsItself() async throws {
+        // Given. A type that names itself walks back into the comparison it is
+        // inside; meeting the pair again is agreement, not a regress
+        let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
+
+        // When / Then
+        #expect(TypeExpression.named("Node").accepts(.named("Node"), in: types))
+
+        let sut = try Module(
+            types: ["Node": .record(["value": .int, "next": .nullable(.named("Node"))])],
+            procedures: [
+                "read": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "node", type: .named("Node"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([.key("node"), .key("value")])
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "node", type: .named("Node"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .call(Call(selector: "read", arguments: [reference("node")]))
+                )
+            ]
+        )
+
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+    }
+
+    @Test("a dictionary slot takes a record and answers one whose names are data")
+    func aRecordSettlesIntoADictionaryAsData() throws {
+        // Given. A name is proved where a slot declares one, and a `dictionary`
+        // slot declares none
+        let named = Value.record(Record(name: "bank.Account", ["balance": .int(1)]))
+
+        // When
+        let settled = try TypeExpression.dictionary(.any).settling(named, at: "held")
+
+        // Then
+        #expect(settled == .dictionary(["balance": .int(1)]))
     }
 
     // MARK: - Public

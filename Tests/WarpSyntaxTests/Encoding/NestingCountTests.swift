@@ -20,12 +20,14 @@ struct NestingCountTests {
     // MARK: - Test
     @Test("the value model counts the empty container at the bottom")
     func theValueModelCountsTheEmptyContainer() {
+        // When / Then
         #expect(Self.nested(Envelope.nesting).nesting == Envelope.nesting)
         #expect(Self.nested(Envelope.nesting + 1).deepest.count == Envelope.nesting)
     }
 
     @Test("the binary writer admits the bound and refuses one past it")
     func theBinaryWriterHoldsTheBound() throws {
+        // When / Then
         _ = try BinaryEncoding().data(from: Self.nested(Envelope.nesting))
         #expect {
             try BinaryEncoding().data(from: Self.nested(Envelope.nesting + 1))
@@ -36,6 +38,7 @@ struct NestingCountTests {
 
     @Test("the binary reader admits the bound and refuses one past it")
     func theBinaryReaderHoldsTheBound() throws {
+        // When / Then
         #expect(try BinaryEncoding().value(from: Self.bytes(Envelope.nesting)) == Self.nested(Envelope.nesting))
         #expect {
             try BinaryEncoding().value(from: Self.bytes(Envelope.nesting + 1))
@@ -46,6 +49,7 @@ struct NestingCountTests {
 
     @Test("the text writer admits the bound and refuses one past it")
     func theTextWriterHoldsTheBound() throws {
+        // When / Then
         _ = try TextEncoding().text(from: Self.nested(Envelope.nesting))
         #expect {
             try TextEncoding().text(from: Self.nested(Envelope.nesting + 1))
@@ -56,6 +60,7 @@ struct NestingCountTests {
 
     @Test("the text reader admits the bound and refuses one past it")
     func theTextReaderHoldsTheBound() throws {
+        // When / Then
         #expect(try TextEncoding().value(from: Self.text(Envelope.nesting)) == Self.nested(Envelope.nesting))
         #expect {
             try TextEncoding().value(from: Self.text(Envelope.nesting + 1))

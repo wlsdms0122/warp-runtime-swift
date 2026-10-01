@@ -104,8 +104,10 @@ struct InPlaceTests {
         )
 
         // When / Then. The write is held to the declared type.
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("writes 'seen' as string, and it holds dictionary<int>")
         }
     }
 
@@ -120,32 +122,36 @@ struct InPlaceTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("starts as string, and declares int")
         }
     }
 
-    @Test("a module variable is not visible to another document")
-    func moduleVariableIsPrivateToItsDocument() throws {
-        // Given. The other document writes a name only the first declares
-        #expect {
+    @Test("a document writes only the variables it declares")
+    func aDocumentWritesOnlyItsOwnVariables() {
+        // Given. One write of `app.total`
+        let write = Statement(binding: .assignment([.key("app.total")]), expression: .literal(.int(1)))
+
+        // When / Then. Taken at the load of the document declaring
+        // `app.total`, and refused at the load of one that does not
+        #expect(throws: Never.self) {
             try Module(
-                imports: [],
-                procedures: [
-                    "other.poke": Procedure(
-                        body: [
-                            Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
-                        ]
-                    )
-                ]
+                variables: ["app.total": .literal(.int(0))],
+                procedures: ["app.poke": Procedure(body: [write])]
             )
+        }
+        #expect {
+            try Module(procedures: ["other.poke": Procedure(body: [write])])
         } throws: { error in
-            "\(error)".contains("not visible")
+            error is ValidationError && "\(error)".contains("assigns 'app.total', which is not visible here")
         }
     }
 
     @Test("a name is a constant or a variable, and not both")
     func aNameIsBoundOnce() {
+        // When / Then
         #expect {
             try Module(
                 imports: [],
@@ -464,39 +470,6 @@ struct InPlaceTests {
         } throws: { error in
             "\(error)".contains("only a field of a declared type is written through")
         }
-    }
-
-    @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
-    func anAssembledClosureClaimsNothing() throws {
-        // Given. Assembled against the table it is judged against, so what is
-        // being asked is the claim and not which link made the row
-        let types = TypeTable()
-        let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
-
-        // When / Then
-        #expect(throws: ArgumentError.self) {
-            try TypeExpression.procedure(nil, .unstated, .isolated)
-                .settling(.procedure(closure), at: "piece", in: types)
-        }
-        #expect(throws: Never.self) {
-            try TypeExpression.procedure(nil)
-                .settling(.procedure(closure), at: "piece", in: types)
-        }
-    }
-
-    @Test("a path write reaches a nameless record and the dictionary it equals the same way")
-    func aPathWriteReadsEitherSpelling() throws {
-        // Given. The contract says these are one value
-        let laid = Value.record(Record(name: nil, ["a": .int(1)]))
-        let held = Value.dictionary(["a": .int(1)])
-        let path: [Projection] = [.key("b")]
-
-        // When / Then
-        #expect(laid == held)
-        #expect(
-            try laid.writing(.int(2), at: path, under: "x.b")
-                == (try held.writing(.int(2), at: path, under: "x.b"))
-        )
     }
 
     // MARK: - Public

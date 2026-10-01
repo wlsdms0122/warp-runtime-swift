@@ -51,7 +51,7 @@ struct ObjectMutantTests {
             supplying: supplying
         )
 
-        guard own.count == 1, let written = own[0].written else {
+        guard own.count == 1, let written = try? own[0].object() else {
             Issue.record("\(sut.name): a document of the specification's is one an object can hold")
 
             return

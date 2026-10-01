@@ -8,7 +8,7 @@
 import Foundation
 
 // One step of a path with every index read, which is what a hold keeps and a
-// write walks: a record's field by the place the link put it at, a
+// write walks: a record's field by the place the build put it at, a
 // dictionary's entry by name, an array's element by position. The spelling
 // beside a field is what a sentence calls it.
 enum Projection: Sendable {

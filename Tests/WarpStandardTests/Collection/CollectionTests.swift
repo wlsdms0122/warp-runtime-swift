@@ -306,9 +306,9 @@ struct CollectionTests {
 
     @Test("what orders with nothing is not sorted around")
     func aFractionThatIsNotANumberRefusesToSort() async {
-        // Given. NaN answers no comparison, so any placement of it would be an
-        // order sorted could not answer for; refused, the way a mixed array is,
-        // rather than placed arbitrarily
+        // When / Then. NaN answers no comparison, so any placement of it would
+        // be an order sorted could not answer for; refused, the way a mixed
+        // array is, rather than placed arbitrarily
         await #expect {
             try await run(
                 Procedure(
@@ -324,6 +324,49 @@ struct CollectionTests {
             )
         } throws: { error in
             "\(error)".contains("which have no order")
+        }
+    }
+
+    @Test("the collection vocabulary applies to bytes directly")
+    func collectionProceduresReadBytes() async throws {
+        // Given. Each procedure declares an array first, and bytes are one
+        let asks: [(Warp.Expression, Value)] = [
+            (
+                .call(Call(selector: "std.collection.count", arguments: [reference("data")])),
+                .int(2)
+            ),
+            (
+                .call(Call(selector: "std.collection.first", arguments: [reference("data")])),
+                .int(104)
+            ),
+            (
+                .call(Call(selector: "std.collection.reversed", arguments: [reference("data")])),
+                // The argument's own elements, in the other order, so the
+                // spelling they arrived in is the spelling they leave in.
+                .bytes([105, 104])
+            ),
+            (
+                .call(Call(selector: "std.collection.contains", arguments: [reference("data"), .literal(.int(105))])),
+                .bool(true)
+            )
+        ]
+
+        for (expression, answer) in asks {
+            let sut = try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(
+                            parameters: [Parameter(name: "data", type: .bytes)]
+                        ),
+                        body: [],
+                        result: expression
+                    )
+                ]
+            )
+
+            // When / Then
+            #expect(try await run(sut, arguments: ["data": .bytes([104, 105])]) == answer)
         }
     }
 

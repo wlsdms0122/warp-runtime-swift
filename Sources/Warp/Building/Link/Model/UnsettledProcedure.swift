@@ -7,8 +7,8 @@
 
 import Foundation
 
-// The stand-in for a written body in the tables the link's own settling reads.
-// A native procedure answers at the link; a written body is itself still being
+// The stand-in for a written body in the tables a compile folds against. A
+// native procedure answers at the build; a written body is itself still being
 // resolved beside the constants it may read, so a constant that ran one would
 // be a cycle with no start. The fact lives in the table (the procedure is there,
 // judged and named, and answers with the refusal) rather than in a flag every

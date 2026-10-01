@@ -18,10 +18,10 @@ struct SignatureTests {
     // MARK: - Test
     @Test("a parameter written without a type declares nothing, and takes anything")
     func untypedParameterDeclaresNothing() async throws {
-        // Given. `any` would say every type is welcome; this says nothing at
-        // all, and the two are not the same declaration even though neither is
-        // checked
-        let sut = try await Loader.testing.loadDocument([
+        // Given / When. `any` would say every type is welcome; this says nothing
+        // at all, and the two are not the same declaration even though neither
+        // is checked
+        let sut = try Loader.testing.loadDocument([
             "procedures": [
                 "keep": [
                     "parameters": [["name": "labelled", "type": "any"], ["name": "subject"]],
@@ -36,7 +36,7 @@ struct SignatureTests {
         #expect(signature.parameter(named: "subject")?.type == nil)
         #expect(signature.parameter(named: "labelled")?.type == .any)
 
-        // Neither checks, so both take a type nothing was said about.
+        // And. Neither checks, so both take a type nothing was said about.
         let settled = try settled(signature, given: ["subject": .int(1), "labelled": .int(2)])
 
         #expect(settled["subject"] == .int(1))
@@ -45,8 +45,8 @@ struct SignatureTests {
 
     @Test("a procedure written without a return type declares nothing")
     func untypedReturnDeclaresNothing() async throws {
-        // Given
-        let sut = try await Loader.testing.loadDocument([
+        // Given / When
+        let sut = try Loader.testing.loadDocument([
             "procedures": [
                 "quiet": ["body": [["let": "done", "value": "end"]]],
                 "loud": ["returns": "any", "body": [["let": "done", "value": "end"]]]
@@ -127,7 +127,7 @@ struct SignatureTests {
     @Test("no inputs declaration is still a closed contract, and strays are rejected")
     func strayInputRejectedOnEmptySignature() async throws {
         // Given. Absent `inputs:` is an empty signature, not an absent contract
-        let spec = try await Loader.testing.loadProcedure(["body": [["let": "noop", "value": "ok"]]])
+        let spec = try Loader.testing.loadProcedure(["body": [["let": "noop", "value": "ok"]]])
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -138,7 +138,7 @@ struct SignatureTests {
     @Test("every parameter is given, and one declaring null takes null")
     func everyParameterIsGiven() async throws {
         // Given
-        let sut = try #require(try await Loader.testing.loadProcedure([
+        let sut = try #require(try Loader.testing.loadProcedure([
             "parameters": [["name": "dir", "type": "string?"], ["name": "file", "type": "string"]],
             "body": [["let": "seen", "value": ["ref": "dir"]]]
         ]).procedures[entryName]?.signature)

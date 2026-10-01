@@ -17,14 +17,8 @@ import Foundation
 // its body against the types the link laid down. A cache keyed by the document
 // alone would hand back an object that is true against something else.
 //
-// A type of its own rather than an `Identity` under another name, so neither
-// can be handed to the other's door. They answer different questions, and a
-// cache that took one for the other would refuse nothing and be wrong quietly.
-//
 // Deriving one is `WarpSyntax`'s, for the reason deriving an identity is: the
-// answer is about bytes, and an object already has exactly one writing of
-// them. This type is here so that an object can carry one without the
-// language learning how bytes are written.
+// answer is about bytes.
 public struct Fingerprint: ContentAddress, Comparable {
     // MARK: - Property
     public let bytes: [UInt8]

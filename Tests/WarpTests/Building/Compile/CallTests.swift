@@ -13,7 +13,7 @@ import WarpStandard
 // A procedure, a library procedure and a caller reaching outside are one expression, and
 // the only difference is where the selector was found. These ask the language
 // that directly, without a notation in between to spell the three differently.
-@Suite
+@Suite("A call")
 struct CallTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -21,7 +21,7 @@ struct CallTests {
     @Test("a library procedure, a native procedure and a procedure are sent the same way")
     func threeKindsOfProcedureAreOneExpression() async throws {
         // Given
-                let echo = Procedure(
+        let echo = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "text", type: .string)],
                 returns: .record(["said": .string])
@@ -31,17 +31,14 @@ struct CallTests {
         )
         let sut: Body = [
             Statement(binding: .constant("counted"), expression: .call(
-                    Call(selector: "std.collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
-                )
-            ),
+                Call(selector: "std.collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
+            )),
             Statement(binding: .constant("shouted"), expression: .call(
-                    Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
-                )
-            ),
+                Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
+            )),
             Statement(binding: .constant("echoed"), expression: .call(
-                    Call(selector: "echo", arguments: [.literal(.string("back"))])
-                )
-            )
+                Call(selector: "echo", arguments: [.literal(.string("back"))])
+            ))
         ]
 
         // When
@@ -72,19 +69,21 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await answer(
                 of: [Statement(binding: .constant("probe"), expression: sut)],
                 result: reference("probe")
             )
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'collection' holds int, which 'std.Collection' does not admit")
         }
     }
 
-    @Test("two declarations of one spelling are refused at link")
+    @Test("two declarations of one spelling are refused at the build")
     func oneNameIsDeclaredOnce() async throws {
-        // Given / When / Then, which one runs must never be a link-order
-        // accident, and an implementation is not a spelling: a body and a
-        // native answering one name collide the same way two bodies would
+        // Given. Which one runs must never be an accident of the link's order,
+        // and an implementation is not a spelling: a body and a native
+        // answering one name collide the same way two bodies would
         let rival = try Module(
             procedures: [
                 "std.collection.count": Procedure(
@@ -94,17 +93,19 @@ struct CallTests {
             ]
         )
 
-        await #expect(throws: BuildError.self) {
+        // When / Then
+        await #expect {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard
             )
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'std.collection.count' is declared more than once in this link")
         }
     }
 
-    @Test("a native procedure is linked against its signature like a procedure is")
+    @Test("a call to a native procedure is judged against its signature like any call")
     func hostProcedureIsCheckedAgainstItsSignature() async throws {
-        // Given. One argument more than the procedure declares. This was
-        // unreachable while an effect was an opaque Swift value.
+        // Given. One argument more than the procedure declares.
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(
@@ -121,8 +122,10 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'app.shout' 2 arguments, and it takes 1")
         }
     }
 
@@ -131,14 +134,15 @@ struct CallTests {
         // Given
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("shouted"), expression: .call(Call(selector: "app.shout"))
-                )
+                Statement(binding: .constant("shouted"), expression: .call(Call(selector: "app.shout")))
             ]
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'app.shout' 0 arguments, and it takes 1")
         }
     }
 
@@ -149,15 +153,16 @@ struct CallTests {
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(
-                        Call(selector: "app.shout", arguments: [.literal(.int(7))])
-                    )
-                )
+                    Call(selector: "app.shout", arguments: [.literal(.int(7))])
+                ))
             ]
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'app.shout': input 'text': expected string, got int")
         }
     }
 
@@ -170,8 +175,10 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'nowhere', which no module in this link declares")
         }
     }
 
@@ -196,7 +203,7 @@ struct CallTests {
     }
 
     @Test("a typo in an arm today's arguments never take is still refused")
-    func unreachedArmIsStillLinked() async throws {
+    func unreachedArmIsStillResolved() async throws {
         // Given. The warrant is compilation, not loading: a run with expensive
         // effects should not discover a typo halfway through
         let sut = Procedure(
@@ -205,8 +212,7 @@ struct CallTests {
                     expression: .conditional(
                         .literal(.bool(false)),
                         then: [
-                            Statement(binding: .constant("gone"), expression: .call(Call(selector: "nowhere"))
-                            )
+                            Statement(binding: .constant("gone"), expression: .call(Call(selector: "nowhere")))
                         ],
                         else: nil
                     )
@@ -215,41 +221,41 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: BuildError.self) {
+        await #expect {
             try await run(sut)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'nowhere', which no module in this link declares")
         }
     }
 
-    @Test("a procedure calling itself links once instead of forever")
-    func recursiveProcedureLinksOnce() async throws {
+    @Test("a procedure calling itself builds once instead of forever")
+    func recursiveProcedureBuildsOnce() async throws {
         // Given
         let countdown = Procedure(
-                signature: Signature(
-                    parameters: [Parameter(name: "n", type: .int)],
-                    returns: .record(["done": .bool])
-                ),
-                body: [
-                    Statement(
-                        expression: .conditional(
-                            differs(reference("n"), .literal(.int(0))),
-                            then: [
-                                Statement(binding: .constant("recur"), expression: .call(
-                                        Call(selector: "countdown", arguments: [.literal(.int(0))])
-                                    )
-                                )
-                            ],
-                            else: nil
-                        )
+            signature: Signature(
+                parameters: [Parameter(name: "n", type: .int)],
+                returns: .record(["done": .bool])
+            ),
+            body: [
+                Statement(
+                    expression: .conditional(
+                        differs(reference("n"), .literal(.int(0))),
+                        then: [
+                            Statement(binding: .constant("recur"), expression: .call(
+                                Call(selector: "countdown", arguments: [.literal(.int(0))])
+                            ))
+                        ],
+                        else: nil
                     )
-                ],
+                )
+            ],
             result: .record(["done": .literal(.bool(true))])
         )
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("run"), expression: .call(
-                        Call(selector: "countdown", arguments: [.literal(.int(1))])
-                    )
-                )
+                    Call(selector: "countdown", arguments: [.literal(.int(1))])
+                ))
             ],
             result: .record(["done": reference("run", "done")])
         )
@@ -259,6 +265,143 @@ struct CallTests {
 
         // Then
         #expect(outputs["done"] == .bool(true))
+    }
+
+    @Test("an argument past the callee's parameters is refused")
+    func argumentPastTheParametersIsRefused() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
+                                        .literal(.int(1)),
+                                        .literal(.int(2))
+                                    ]))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'callee' 2 arguments, and it takes 1")
+        }
+    }
+
+    @Test("a required argument nobody passes is refused")
+    func missingRequiredArgumentIsRefused() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'callee' 0 arguments, and it takes 1")
+        }
+    }
+
+    @Test("an argument named rather than written is judged by what the name holds")
+    func referenceArgumentIsJudged() async throws {
+        // Given. The type is wrong, and both sides said so in their own text:
+        // `text` was declared a string and `base` is declared an int
+        let sut = try Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "base", type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                    ]
+                ),
+                "caller": Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "text", type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(binding: .constant("call"), expression: .call(Call(
+                            selector: "callee",
+                            arguments: [.reference([.key("text")])]
+                        )))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut])
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("sending 'callee' with base, which holds string where int is declared")
+        }
+    }
+
+    @Test("more arguments than a procedure takes are refused")
+    func moreArgumentsThanParametersAreRefused() async throws {
+        // Given. `absolute` takes one parameter and the call writes two. The
+        // second would stand at no position, neither read nor run, so the build
+        // refuses the call
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .call(Call(
+                        selector: "std.math.absolute",
+                        arguments: [.literal(.int(1)), .literal(.string("x"))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sending 'std.math.absolute' 2 arguments, and it takes 1")
+        }
     }
 
     // MARK: - Public
