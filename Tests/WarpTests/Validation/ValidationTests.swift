@@ -182,6 +182,29 @@ struct ValidationTests {
         }
     }
 
+    @Test("nor a variable's spelling inside a closure a constant holds")
+    func aVariablesNameIsNotIntroducedInsideAConstantsClosure() {
+        // Given. A constant cannot read `count`, and its closure still may not
+        // introduce the spelling
+        let closure = Procedure(
+            signature: Signature(returns: .int),
+            body: [Statement(binding: .constant("count"), expression: .literal(.int(1)))],
+            result: reference("count")
+        )
+
+        // When / Then
+        #expect {
+            try Module(
+                constants: ["apply": .closure(closure)],
+                variables: ["count": .literal(.int(0))],
+                procedures: [entryName: Procedure(access: .public, body: [])]
+            )
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'count' collides with a name the module bound, which it would take the place of")
+        }
+    }
+
     @Test("a constant sees the constants declared beside it and nothing else")
     func aConstantReadsOnlyItsSiblings() throws {
         // Given / When. A chain and not a cycle. `aaa` reads `bbb`, declared

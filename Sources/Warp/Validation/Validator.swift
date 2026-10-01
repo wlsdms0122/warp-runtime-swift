@@ -33,6 +33,7 @@ public struct Validator: Sendable {
 
         let constants = Set(module.constants.keys)
         let variables = Set(module.variables.keys)
+        let bound = constants.union(variables)
 
         // A constant sees no scope, so it may name another constant and nothing
         // else. Which is also why it is checked here rather than per procedure:
@@ -41,7 +42,7 @@ public struct Validator: Sendable {
             try validate(
                 expression,
                 visible: constants,
-                scope: .procedure(bound: constants),
+                scope: .procedure(bound: bound),
                 at: .constant(name.spelling, in: .of(module))
             )
         }
@@ -61,7 +62,7 @@ public struct Validator: Sendable {
             try validate(
                 variable.start,
                 visible: constants,
-                scope: .procedure(bound: constants),
+                scope: .procedure(bound: bound),
                 at: .variable(name.spelling, in: .of(module))
             )
         }
