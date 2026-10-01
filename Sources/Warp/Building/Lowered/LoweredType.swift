@@ -2053,7 +2053,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // The widening is binary64's own rounding, and every int has
         // a fraction near it: the conversion cannot fail, only round.
-        case (.double, .int(let integer)):
+        case let (.double, .int(integer)):
             return .double(Double(integer))
 
         default:
