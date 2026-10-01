@@ -62,7 +62,7 @@ struct ModuleNotationTests {
 
     @Test("a document carries no name of its own")
     func aDocumentIsNotNamed() {
-        // Given: a declaration is named by its key, and a document is what
+        // Given. A declaration is named by its key, and a document is what
         // it declares. A key naming the document is a key nothing reads.
         let fixture: Value = [
             "name": "deploy",

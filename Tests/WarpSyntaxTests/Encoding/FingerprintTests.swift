@@ -64,11 +64,11 @@ struct FingerprintTests {
     // MARK: - Test
     @Test("is the same twice for the same document behind the same object")
     func isTheSameTwice() async throws {
-        // Given / When.
+        // Given / When
         let first = try await fingerprint(of: program, against: answering(.int(1)))
         let second = try await fingerprint(of: program, against: answering(.int(1)))
 
-        // Then.
+        // Then
         #expect(first == second)
     }
 
@@ -86,7 +86,7 @@ struct FingerprintTests {
 
     @Test("moves when the document moves")
     func movesWithTheDocument() async throws {
-        // Given.
+        // Given
         let other = try Module(
             procedures: [
                 "app.main": Procedure(
@@ -97,7 +97,7 @@ struct FingerprintTests {
             ]
         )
 
-        // When / Then.
+        // When / Then
         #expect(
             try await fingerprint(of: program, against: answering(.int(1)))
                 != fingerprint(of: other, against: answering(.int(1)))
@@ -113,7 +113,7 @@ struct FingerprintTests {
         let first = try await fingerprint(of: program, against: native(returning: .int))
         let second = try await fingerprint(of: program, against: native(returning: .any))
 
-        // Then.
+        // Then
         #expect(first != second)
     }
 
@@ -126,7 +126,7 @@ struct FingerprintTests {
         let first = try await fingerprint(of: program, against: native(returning: .int, answering: .int(1)))
         let second = try await fingerprint(of: program, against: native(returning: .int, answering: .int(2)))
 
-        // Then.
+        // Then
         #expect(first == second)
     }
 

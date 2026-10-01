@@ -52,7 +52,7 @@ struct ObjectReadingTests {
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -75,7 +75,7 @@ struct ObjectReadingTests {
 
         parts = parts.writing("types", with: .array(types + [first]))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -88,7 +88,7 @@ struct ObjectReadingTests {
         // Given. A real object with one of its parts taken off.
         let parts = try await parts()
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts.removing("constants")), of: nil)
         } throws: { error in
@@ -142,7 +142,7 @@ struct ObjectReadingTests {
         numbering[0] = .array(types + [first])
         parts = parts.writing("typeNumbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -188,7 +188,7 @@ struct ObjectReadingTests {
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -249,7 +249,7 @@ struct ObjectReadingTests {
         answers[0] = .array(entry)
         parts = parts.writing("answers", with: .array(answers))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -362,7 +362,7 @@ struct ObjectReadingTests {
         declared[0] = .array(row)
         parts = parts.writing("rows", with: .array(declared))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -394,7 +394,7 @@ struct ObjectReadingTests {
 
         parts = parts.writing("types", with: .array(types.reversed()))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -444,7 +444,7 @@ struct ObjectReadingTests {
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -561,7 +561,7 @@ struct ObjectReadingTests {
         claims[0] = .array(entry)
         parts = parts.writing("claims", with: .array(claims))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -610,7 +610,7 @@ struct ObjectReadingTests {
         numbering[1] = .array(closing.reversed())
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -658,7 +658,7 @@ struct ObjectReadingTests {
         numbering[0] = .array(sent.reversed())
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -704,7 +704,7 @@ struct ObjectReadingTests {
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -748,7 +748,7 @@ struct ObjectReadingTests {
         numbering[1] = .array([.array([entry[0], .int(4)])])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -793,7 +793,7 @@ struct ObjectReadingTests {
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -848,7 +848,7 @@ struct ObjectReadingTests {
         // order would let two writings say one object.
         let parts = try await parts().writing("dependencies", with: .array([.bytes([0x02]), .bytes([0x01])]))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -863,7 +863,7 @@ struct ObjectReadingTests {
         // a set, and a set written down twice is a writing no set makes.
         let parts = try await parts().writing("dependencies", with: .array([.bytes([0x01]), .bytes([0x01])]))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -908,7 +908,7 @@ struct ObjectReadingTests {
         numbering[1] = .array(counts + [.array([ObjectWriter().declaration(.procedure("app.other")), .int(0)])])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in

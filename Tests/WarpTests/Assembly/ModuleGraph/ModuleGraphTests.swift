@@ -47,7 +47,7 @@ struct ModuleGraphTests {
             ]
         )
 
-        // When.
+        // When
         let graph = try ModuleGraph([caller, library])
 
         // Then. What is needed stands first.
@@ -100,7 +100,7 @@ struct ModuleGraphTests {
             ]
         )
 
-        // When / Then.
+        // When / Then
         #expect {
             try ModuleGraph([one, two])
         } throws: { error in
@@ -127,7 +127,7 @@ struct ModuleGraphTests {
             ]
         )
 
-        // When / Then.
+        // When / Then
         #expect(try ModuleGraph([alone]).modules.count == 1)
     }
 

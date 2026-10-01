@@ -76,14 +76,14 @@ struct ObjectDependencyTests {
         // Given. The document it calls, compiled and worked out.
         let behind = try await builder.compile([used])
 
-        // When.
+        // When
         let compiled = try await builder.compile(
             [program],
             against: behind,
             supplying: Supplying([used, program])
         )
 
-        // Then.
+        // Then
         #expect(compiled[0].dependencies == behind.compactMap(\.fingerprint))
     }
 
@@ -92,7 +92,7 @@ struct ObjectDependencyTests {
         // Given. Both laid down, and only one of them named.
         let behind = try await builder.compile([used, unrelated])
 
-        // When.
+        // When
         let compiled = try await builder.compile(
             [program],
             against: behind,
@@ -114,7 +114,7 @@ struct ObjectDependencyTests {
 
         #expect(behind[0].fingerprint == nil)
 
-        // When.
+        // When
         let compiled = try await unknowing.compile(
             [program],
             against: behind,
@@ -143,7 +143,7 @@ struct ObjectDependencyTests {
             ]
         )
 
-        // When.
+        // When
         let asLowered = try await written(calling: "box.peek", behind: lowered)
         let asAnswered = try await written(calling: "box.peek", behind: answered)
 

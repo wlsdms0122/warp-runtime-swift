@@ -124,7 +124,7 @@ struct BakedTests {
             ]
         )
 
-        // When.
+        // When
         let baked = try await builder.compile(Module.standard)
         let compiled = try await builder.compile(
             [reaching, try adding(1, called: "app.add1")],
@@ -133,7 +133,7 @@ struct BakedTests {
         )
         let image = try builder.link(baked + compiled, supplying: Supplying(Module.standard))
 
-        // Then.
+        // Then
         #expect(try await Executor().run(image, entry: "app.twice", arguments: ["value": .int(40)]) == .int(42))
     }
 
@@ -152,7 +152,7 @@ struct BakedTests {
             ]
         )
 
-        // When / Then.
+        // When / Then
         await #expect {
             try await builder.compile(
                 [arriving],
@@ -440,7 +440,7 @@ struct BakedTests {
             ]
         )
 
-        // When / Then.
+        // When / Then
         await #expect {
             try await builder.compile([arriving], against: baked, supplying: .none)
         } throws: { error in

@@ -80,7 +80,7 @@ struct TextEncodingTests {
 
     @Test("a number has one spelling, and the grammar holds it")
     func aSecondNumberSpellingIsRefused() {
-        // Given: each of these parses to a number the writer spells another
+        // Given. Each of these parses to a number the writer spells another
         // way. Layout is free. What a number is written as is not.
         for text in [
             "warpt 1\n1.50\n",  // a longer fraction
@@ -97,7 +97,7 @@ struct TextEncodingTests {
 
     @Test("layout is the writer's and not the reader's: any layout reads to the one value")
     func anyLayoutReadsToTheOneValue() throws {
-        // Given: the writer's text, and the same document laid out inline,
+        // Given. The writer's text, and the same document laid out inline,
         // over-indented, and without the final newline
         let document = Value.dictionary(["a": .int(1), "b": .string("A")])
         let canonical = try TextEncoding().text(from: document)
@@ -276,7 +276,7 @@ struct TextEncodingTests {
 
     @Test("an escape for a character that has a shorter spelling is refused")
     func aLongEscapeIsRefused() throws {
-        // Given: a letter written raw, a newline with its own escape, and
+        // Given. A letter written raw, a newline with its own escape, and
         // uppercase hex for a control character
         for text in [
             "warpt 1\n\"\\u0041\"\n",
