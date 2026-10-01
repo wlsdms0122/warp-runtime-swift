@@ -203,7 +203,7 @@ public struct StatementReader: Decodable {
         in decoder: Decoder,
         registry: ConstructRegistry,
         boundTo name: String?
-    ) throws -> Expression {
+    ) throws -> Warp.Expression {
         if
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,

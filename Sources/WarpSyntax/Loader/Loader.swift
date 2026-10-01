@@ -206,7 +206,7 @@ public struct Loader: Sendable {
         try read(StatementReader.self, from: value, in: .assembled, from: notation).statement
     }
 
-    public func expression(from value: Value, in notation: Notation = .canonical) throws -> Expression {
+    public func expression(from value: Value, in notation: Notation = .canonical) throws -> Warp.Expression {
         try read(ExpressionReader.self, from: value, in: .assembled, from: notation).expression
     }
 

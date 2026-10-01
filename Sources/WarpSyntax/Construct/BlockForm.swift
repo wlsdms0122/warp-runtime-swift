@@ -22,7 +22,7 @@ public struct BlockForm: ConstructForm {
     }
 
     // MARK: - Public
-    public func expression(boundTo name: String?) -> Expression {
+    public func expression(boundTo name: String?) -> Warp.Expression {
         .block(block)
     }
 
