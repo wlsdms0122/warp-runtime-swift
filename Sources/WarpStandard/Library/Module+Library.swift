@@ -40,7 +40,7 @@ extension Module {
     // and the bundles it declares for stand above it: `std.logic` walks, so it
     // sends `std.collection.count`, and a collection procedure comparing two
     // elements sends `std.logic.equal`. Apart, `equal` stands first with
-    // nothing to wait for and the ring never forms.
+    // nothing to wait for and the cycle never forms.
     static func bundled(_ bundle: Module, with written: String) -> [Module] {
         guard let document = library[written] else { return [bundle] }
 

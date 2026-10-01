@@ -504,7 +504,7 @@ public struct Builder: Sendable {
     // No spelling another document may name declared by two of these. Refused
     // before the order is worked out: the order reads a name as whichever
     // document declared it, and where two declare one name that reading can
-    // put a document in its own reach and call the pair a ring.
+    // put a document in its own reach and call the pair a cycle.
     private func refuseDoubled(_ modules: [Module], after held: Int) throws {
         var claimed: [Name: Placed<Procedure>] = [:]
 

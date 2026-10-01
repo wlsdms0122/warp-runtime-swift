@@ -192,7 +192,7 @@ struct FoldingReachTests {
         )
 
         // When / Then. That body is being resolved beside the constants it
-        // may read, so running it would be a circle with no start.
+        // may read, so running it would be a cycle with no start.
         await #expect {
             try await builder.build(Module.standard + [document])
         } throws: { error in

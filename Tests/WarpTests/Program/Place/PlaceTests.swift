@@ -602,7 +602,7 @@ struct PlaceTests {
         #expect(error?.message.contains("01") == true)
     }
 
-    @Test("constants that name each other are placed at one of the ring, and the same one")
+    @Test("constants that name each other are placed at one of the cycle, and the same one")
     func aConstantCycleIsPlacedInSortedOrder() async throws {
         // Given. A cycle has no first member, so which of them an author is
         // sent to is chosen rather than found. Read off a dictionary it would
@@ -624,12 +624,12 @@ struct PlaceTests {
         #expect(error?.message.contains("alpha, zebra") == true)
     }
 
-    @Test("a constant merely blocked by a ring is neither placed nor accused")
+    @Test("a constant merely blocked by a cycle is neither placed nor accused")
     func aConstantWaitingOnARingIsNotOnIt() async throws {
-        // Given. `aardvark` names one of a ring, so it never settles either and
-        // is still waiting when the ring is refused. It is sorted first, which
+        // Given. `aardvark` names one of a cycle, so it never settles either and
+        // is still waiting when the cycle is refused. It is sorted first, which
         // is how it becomes the place if what is waiting is mistaken for what
-        // is wrong, and changing it would leave the ring exactly as it is.
+        // is wrong, and changing it would leave the cycle exactly as it is.
         let sut = try Module(
             constants: [
                 "aardvark": reference("zebra"),

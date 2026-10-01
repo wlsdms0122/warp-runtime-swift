@@ -17,7 +17,7 @@ import Foundation
 // resolves closures alike without hearing of it.
 //
 // Rows are resolved once each, whichever asks first, and a row asked for
-// again while its own resolving is underway is a ring of rows holding
+// again while its own resolving is underway is a cycle of rows holding
 // closures of one another through the values in their bodies, which no
 // build lowers. A class, since the rows resolved are remembered across the
 // askings that share one.
@@ -57,7 +57,7 @@ final class ClosureResolver {
 
         guard !underway[row] else {
             throw BuildError.unjudged(
-                "a closure closing a ring of rows through the values they hold",
+                "a closure closing a cycle of rows through the values they hold",
                 at: .procedure(table[row].label.spelling, in: documents[table[row].origin])
             )
         }

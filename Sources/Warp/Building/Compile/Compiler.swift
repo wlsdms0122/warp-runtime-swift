@@ -161,7 +161,7 @@ struct Compiler {
 
         // The facts nobody declared. All three are fixed points over what a
         // body reaches, so a document's answer is settled once the documents
-        // it reaches have theirs, and the standing refused a ring where that
+        // it reaches have theirs, and the standing refused a cycle where that
         // is not so. Read over every declaration the document holds.
         //
         // What this document declares, by the spelling a call in it writes.

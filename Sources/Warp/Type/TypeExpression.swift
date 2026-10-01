@@ -1048,7 +1048,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // The same question, answering nil where the walk only ever came back to a
-    // membership it was already inside. A ring says nothing new, so a ring of
+    // membership it was already inside. A cycle says nothing new, so a cycle of
     // nothing else says nothing at all, and folding that to "not one" is done
     // at the one door above rather than partway down: fold it inside the
     // recursion and the answer starts depending on how many wrappers a member
