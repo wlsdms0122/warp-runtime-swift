@@ -256,8 +256,9 @@ struct Lowering {
 
         // MARK: - Initializer
         // MARK: - Public
-        // The same context lowering a closure's body on its own slots.
-        func holding(_ slots: SlotAllocator) -> Context {
+        // The same context with other slots, the way a closure's body is
+        // lowered on slots of its own.
+        func with(slots: SlotAllocator) -> Context {
             Context(slots: slots, writer: writer, inPlace: inPlace)
         }
 
@@ -792,7 +793,7 @@ struct Lowering {
             inner.hold(allocated, slot.type)
         }
 
-        let body = try lower(block, in: innerScope, on: context.holding(inner), at: place.child(.closure))
+        let body = try lower(block, in: innerScope, on: context.with(slots: inner), at: place.child(.closure))
 
         // Taken before the body is lowered would number a closure before
         // the ones it holds; taken after numbers the innermost first. The

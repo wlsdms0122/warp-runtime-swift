@@ -678,54 +678,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // Whether a slot declaring this asks for procedures that answer without
-    // running, holding one, or an array or a dictionary of them. A name
-    // standing in such a slot may be applied where a body must answer without
-    // running: what fills it passed that judgement where it was handed over.
-    var isConstProcedure: Bool {
-        switch self {
-        case .procedure(_, .const, _):
-            return true
-
-        case let .array(element), let .dictionary(element):
-            return element.isConstProcedure
-
-        default:
-            return false
-        }
-    }
-
-    // The positions a procedure a slot declaring this holds takes in place,
-    // holding one, or an array or a dictionary of them. Empty where the slot
-    // says nothing of the procedure's parameters.
-    var inPlacePositions: Set<Int> {
-        switch self {
-        case let .procedure(type?, _, _):
-            return type.inPlacePositions
-
-        case let .array(element), let .dictionary(element):
-            return element.inPlacePositions
-
-        default:
-            return []
-        }
-    }
-
-    // The same, for the other claim a slot may make about a procedure it
-    // holds.
-    var isIsolatedProcedure: Bool {
-        switch self {
-        case .procedure(_, _, .isolated):
-            return true
-
-        case let .array(element), let .dictionary(element):
-            return element.isIsolatedProcedure
-
-        default:
-            return false
-        }
-    }
-
     // Whether this type proves nothing about the value it holds. The three
     // that stop a walk, named once because they are one question asked twice. A
     // dot needs a type the types prove, and a cast is the door onto one: what

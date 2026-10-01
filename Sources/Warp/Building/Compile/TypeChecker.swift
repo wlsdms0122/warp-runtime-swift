@@ -577,14 +577,14 @@ struct TypeChecker {
             return .refusal(named.joined(separator: ", "))
         }
 
-        let bounds = declared.parameterBounding
+        let bounding = declared.parameterBounding
 
-        if let refusal = bounds.refusal {
+        if let refusal = bounding.refusal {
             return .refusal(refusal)
         }
 
         if let refusal = constraintRefusal(
-            mentions: bounds.table,
+            mentions: bounding.table,
             readings: substitution.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
@@ -1472,7 +1472,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                inPlace = try inPlace.absorbing(inner.inPlace)
+                try inPlace.absorb(inner.inPlace)
                 element = element?.joined(inner.reading) ?? inner.reading
                 rewritten.append(inner.rewritten)
             }
@@ -1624,7 +1624,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                inPlace = try inPlace.absorbing(inner.inPlace)
+                try inPlace.absorb(inner.inPlace)
                 fields[name] = inner.reading
                 rewritten[name] = inner.rewritten
             }
@@ -1734,7 +1734,7 @@ struct TypeChecker {
 
                 return bound.type
             }.filter { _, held in
-                held.isConstProcedure || held.isIsolatedProcedure
+                held.isConstProcedure(in: context.loweredTypes) || held.isIsolatedProcedure(in: context.loweredTypes)
             }
 
             let const = body.map { block in
@@ -1743,10 +1743,13 @@ struct TypeChecker {
                     declaring: procedure.signature.ownedParameters,
                     given: context.isConst,
                     reading: reading,
-                    applying: procedure.signature.constProcedures.merging(
-                        captured.filter { _, held in held.isConstProcedure }.mapValues(\.inPlacePositions)
+                    applying: procedure.signature.constProcedures(in: context.loweredTypes).merging(
+                        captured
+                            .filter { _, held in held.isConstProcedure(in: context.loweredTypes) }
+                            .mapValues { held in held.inPlacePositions(in: context.loweredTypes) }
                     ) { own, _ in own },
-                    taking: context.signature(of:)
+                    taking: context.signature(of:),
+                    in: context.loweredTypes
                 )
             } ?? false
             let isolated = body.map { block in
@@ -1754,10 +1757,13 @@ struct TypeChecker {
                     block,
                     declaring: declared,
                     given: context.isIsolated,
-                    applying: procedure.signature.isolatedProcedures.merging(
-                        captured.filter { _, held in held.isIsolatedProcedure }.mapValues(\.inPlacePositions)
+                    applying: procedure.signature.isolatedProcedures(in: context.loweredTypes).merging(
+                        captured
+                            .filter { _, held in held.isIsolatedProcedure(in: context.loweredTypes) }
+                            .mapValues { held in held.inPlacePositions(in: context.loweredTypes) }
                     ) { own, _ in own },
-                    taking: context.signature(of:)
+                    taking: context.signature(of:),
+                    in: context.loweredTypes
                 )
             } ?? false
 
@@ -1852,7 +1858,7 @@ struct TypeChecker {
                 rewritten.append(inner.rewritten)
                 readings.append(inner.reading)
                 calls += inner.calls
-                inPlace = try inPlace.absorbing(inner.inPlace)
+                try inPlace.absorb(inner.inPlace)
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -1869,7 +1875,7 @@ struct TypeChecker {
                     throw BuildError(
                         "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
                             + " with \(arguments.count) arguments, and it takes \(parameters.count)",
-                        at: place.part(.arguments)
+                        at: place.child(.arguments)
                     )
                 }
 
@@ -1912,7 +1918,7 @@ struct TypeChecker {
                 answers = .any
             }
 
-            inPlace = try inPlace.absorbing(InPlaceTable([place: handed]))
+            try inPlace.record(handed, at: place)
 
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
@@ -1998,7 +2004,7 @@ struct TypeChecker {
                 arguments.append(inner.rewritten)
                 sent.append(inner.reading)
                 calls += inner.calls
-                inPlace = try inPlace.absorbing(inner.inPlace)
+                try inPlace.absorb(inner.inPlace)
             }
 
             try handedInPlace(
@@ -2188,7 +2194,7 @@ struct TypeChecker {
                     )
                     : expression,
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
-                inPlace: try head.inPlace.absorbing(rounds.inPlace, tail?.inPlace ?? InPlaceTable()),
+                inPlace: try head.inPlace.absorbing(rounds.inPlace, tail?.inPlace),
                 reading: tail?.reading ?? .null,
                 flow: head.flow.followed(
                     by: tail.map { tail in
@@ -2313,7 +2319,7 @@ struct TypeChecker {
                 ? Block(body: body.body, result: tail?.rewritten ?? block.result)
                 : block,
             body.calls + (tail?.calls ?? []),
-            try body.inPlace.absorbing(tail?.inPlace ?? InPlaceTable()),
+            try body.inPlace.absorbing(tail?.inPlace),
             reading,
             flow
         )
@@ -2353,7 +2359,7 @@ struct TypeChecker {
                 Statement(binding: statement.binding, expression: inner.rewritten)
             )
             calls += inner.calls
-            inPlace = try inPlace.absorbing(inner.inPlace)
+            try inPlace.absorb(inner.inPlace)
 
             // A write outlives the block it was written in, so a name written
             // anywhere inside this statement may hold something else by the
@@ -2714,7 +2720,7 @@ struct TypeChecker {
         let loweredTypes = context.loweredTypes
 
         if let refusal = declared.refusal(handing: call.arguments.count) {
-            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
+            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.child(.arguments))
         }
 
         // A declaration with a type parameter in it is checked with the
@@ -2794,7 +2800,7 @@ struct TypeChecker {
             } catch {
                 throw BuildError(
                     "sending '\(call.selector)': \(error)",
-                    at: site.place.part(.arguments)
+                    at: site.place.child(.arguments)
                 )
             }
         }

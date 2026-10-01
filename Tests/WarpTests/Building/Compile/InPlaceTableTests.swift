@@ -14,30 +14,69 @@ struct InPlaceTableTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
+    @Test("calls recorded at different places are each held")
+    func recordingKeepsEveryPlace() throws {
+        // Given
+        let first = Place.procedure("entry", in: .assembled).child(.argument(0))
+        let second = Place.procedure("entry", in: .assembled).child(.argument(1))
+        var sut = InPlaceTable()
+
+        // When
+        try sut.record([0], at: first)
+        try sut.record([], at: second)
+
+        // Then
+        #expect(sut[first] == [0])
+        #expect(sut[second] == [])
+    }
+
+    @Test("a second call recorded at one place is refused rather than one kept")
+    func recordingOnePlaceTwiceRefuses() throws {
+        // Given
+        let place = Place.procedure("entry", in: .assembled).child(.argument(0))
+        var sut = InPlaceTable()
+
+        try sut.record([0], at: place)
+
+        // When / Then
+        #expect(throws: BuildError.self) {
+            try sut.record([], at: place)
+        }
+        #expect(sut[place] == [0])
+    }
+
     @Test("two tables naming calls at different places hold both")
     func absorbingKeepsEveryPlace() throws {
         // Given
         let first = Place.procedure("entry", in: .assembled).child(.argument(0))
         let second = Place.procedure("entry", in: .assembled).child(.argument(1))
-        let sut = InPlaceTable([first: [0]])
+        var sut = InPlaceTable()
+        var other = InPlaceTable()
+
+        try sut.record([0], at: first)
+        try other.record([], at: second)
 
         // When
-        let absorbed = try sut.absorbing(InPlaceTable([second: []]))
+        try sut.absorb(other)
 
         // Then
-        #expect(absorbed[first] == [0])
-        #expect(absorbed[second] == [])
+        #expect(sut[first] == [0])
+        #expect(sut[second] == [])
     }
 
-    @Test("two calls at one place are refused rather than one kept")
-    func absorbingOnePlaceTwiceRefuses() {
+    @Test("absorbing a call at a place already held is refused")
+    func absorbingOnePlaceTwiceRefuses() throws {
         // Given
         let place = Place.procedure("entry", in: .assembled).child(.argument(0))
-        let sut = InPlaceTable([place: [0]])
+        var sut = InPlaceTable()
+        var other = InPlaceTable()
+
+        try sut.record([0], at: place)
+        try other.record([], at: place)
 
         // When / Then
         #expect(throws: BuildError.self) {
-            try sut.absorbing(InPlaceTable([place: []]))
+            try sut.absorb(other)
         }
     }
 

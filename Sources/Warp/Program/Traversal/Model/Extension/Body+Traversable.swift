@@ -16,13 +16,11 @@ extension Body: Traversable {
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Node)] {
         statements.enumerated().flatMap { position, statement in
-            let here = stepping(trail, Place.Step.statement(statement.name?.spelling, at: position))
+            let steps = statement.steps(at: position)
+            let here = steps.dropLast().reduce(trail, stepping)
 
             return [(here, Node.statement(statement))]
-                + statement.expression.walked(
-                    at: stepping(here, .construct(statement.expression.construct)),
-                    stepping: stepping
-                )
+                + statement.expression.walked(at: steps.reduce(trail, stepping), stepping: stepping)
         }
     }
 }

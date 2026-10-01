@@ -192,8 +192,15 @@ struct Compiler {
         let answersWithoutRunning: @Sendable (Name) -> Bool = { selector in behind.isConst(selector) }
         let touchesNothingShared: @Sendable (Name) -> Bool = { selector in behind.isIsolated(selector) }
 
-        Derivation().const(among: holding, settling: &const, reading: reading, taking: taking, beyond: answersWithoutRunning)
-        Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared)
+        Derivation().const(
+            among: holding,
+            settling: &const,
+            reading: reading,
+            taking: taking,
+            beyond: answersWithoutRunning,
+            in: loweredTypes
+        )
+        Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared, in: loweredTypes)
         Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))

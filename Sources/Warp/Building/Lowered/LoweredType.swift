@@ -232,48 +232,28 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // What a slot said about the procedures it holds. A body applying a name a
-    // slot declared this way is judged on the slot's word, since the slot is what
-    // says which values may arrive there. An array or a dictionary of them says it
-    // about every element.
-    var isConstProcedure: Bool {
-        switch self {
-        case .procedure(_, _, .const, _):
-            return true
+    // slot declared this way is judged on the slot's word, since the slot is
+    // what says which values may arrive there. An array or a dictionary of
+    // them says it about every element, and a name says what the type it
+    // stands for says.
+    func isConstProcedure(in table: LoweredTypeTable) -> Bool {
+        guard case .procedure(_, _, .const, _)? = procedureHeld(in: table) else { return false }
 
-        case let .array(element), let .dictionary(element):
-            return element.isConstProcedure
-
-        default:
-            return false
-        }
+        return true
     }
 
-    var isIsolatedProcedure: Bool {
-        switch self {
-        case .procedure(_, _, _, .isolated):
-            return true
+    func isIsolatedProcedure(in table: LoweredTypeTable) -> Bool {
+        guard case .procedure(_, _, _, .isolated)? = procedureHeld(in: table) else { return false }
 
-        case let .array(element), let .dictionary(element):
-            return element.isIsolatedProcedure
-
-        default:
-            return false
-        }
+        return true
     }
 
     // The positions a procedure a slot holding this holds takes in place.
     // Empty where the slot says nothing of the procedure's parameters.
-    var inPlacePositions: Set<Int> {
-        switch self {
-        case let .procedure(parameters?, _, _, _):
-            return Set(parameters.indices.filter { position in parameters[position].isInout })
+    func inPlacePositions(in table: LoweredTypeTable) -> Set<Int> {
+        guard case let .procedure(parameters?, _, _, _)? = procedureHeld(in: table) else { return [] }
 
-        case let .array(element), let .dictionary(element):
-            return element.inPlacePositions
-
-        default:
-            return []
-        }
+        return Set(parameters.indices.filter { position in parameters[position].isInout })
     }
 
     // Whether a value this holds may carry a procedure that takes a parameter
@@ -1552,6 +1532,26 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // The procedure type a slot holding this holds: one written here, or the
+    // element of an array or a dictionary of them, through the names standing
+    // for one. Nil where the slot holds none.
+    private func procedureHeld(in table: LoweredTypeTable, walked: Set<Int> = []) -> LoweredType? {
+        switch self {
+        case .procedure:
+            return self
+
+        case let .array(element), let .dictionary(element):
+            return element.procedureHeld(in: table, walked: walked)
+
+        case let .named(row):
+            guard !walked.contains(row) else { return nil }
+
+            return table.loweredTypes[row].procedureHeld(in: table, walked: walked.union([row]))
+
+        default:
+            return nil
+        }
+    }
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
     // expanded every row at every depth would chase one forever.
