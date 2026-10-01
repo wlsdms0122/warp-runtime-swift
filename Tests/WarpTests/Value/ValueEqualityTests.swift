@@ -25,6 +25,16 @@ struct ValueEqualityTests {
         #expect(sut != .array([procedure]))
     }
 
+    @Test("a fraction that is not a number is equal to nothing, itself included")
+    func notANumberIsNotEqualToItself() {
+        // Given
+        let sut = Value.double(.nan)
+
+        // When / Then
+        #expect(sut != sut)
+        #expect(Value.array([sut]) != .array([sut]))
+    }
+
     @Test("a procedure is never equal to a procedure")
     func proceduresHaveNoEquality() throws {
         // Given / When. There is no honest answer, so the language does not
