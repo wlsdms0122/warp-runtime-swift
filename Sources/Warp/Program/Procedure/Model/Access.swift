@@ -26,7 +26,7 @@ public enum Access: String, Sendable, Equatable, CaseIterable {
 
     // Whether the caller that assembled the link may name this, which is what
     // a run starting from it does.
-    public var reachesCaller: Bool { self == .public }
+    public var reachesHost: Bool { self == .public }
 
     // MARK: - Initializer
     // MARK: - Public

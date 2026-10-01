@@ -56,7 +56,7 @@ public struct Executor: Sendable {
 
         // A run starts from outside the link, and only a public declaration
         // is named from there.
-        guard entry.access.reachesCaller else {
+        guard entry.access.reachesHost else {
             throw ExecutionError(
                 "entry '\(entry.label)' is \(entry.access.rawValue), and a run starts"
                     + " only from a public declaration"
