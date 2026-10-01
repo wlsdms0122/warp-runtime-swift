@@ -97,7 +97,7 @@ public struct ModuleGraph: Sendable {
             if settled[position] { return }
 
             guard !walking[position] else {
-                let ring = route.drop { step in step.position != position }.map { step in
+                let cycle = route.drop { step in step.position != position }.map { step in
                     let document = Place.Document.of(modules[step.position]).spelled(at: held + step.position)
 
                     return "\(document) needs '\(step.name)'"
@@ -105,7 +105,7 @@ public struct ModuleGraph: Sendable {
 
                 throw ModuleGraphError(
                     "these modules need each other, so there is no order to compile them in:"
-                        + " \(ring.joined(separator: ", then "))."
+                        + " \(cycle.joined(separator: ", then "))."
                         + " A module is compiled against what it needs, so what it needs stands first",
                     at: Place(in: .of(modules[position]))
                 )
