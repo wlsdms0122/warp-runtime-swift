@@ -97,7 +97,10 @@ public indirect enum Expression: Sendable {
         // The value a call of a value calls.
         case callee
 
-        // An argument of a call or of a call of a value, at its position.
+        // What a call or a call of a value is written with, as a whole.
+        case arguments
+
+        // One argument of a call or of a call of a value, at its position.
         case argument(Int)
 
         case condition(of: Place.ConditionHolder)
@@ -117,7 +120,8 @@ public indirect enum Expression: Sendable {
             case .closure: [.part(.closure)]
             case let .subject(optional): [.part(.subject(optional: optional))]
             case .callee: [.part(.callee)]
-            case let .argument(position): [.part(.arguments), .index(position)]
+            case .arguments: [.part(.arguments)]
+            case let .argument(position): Self.arguments.steps + [.index(position)]
             case let .condition(holder): [.part(.condition(of: holder))]
             case .then: [.part(.then)]
             case .otherwise: [.part(.otherwise)]

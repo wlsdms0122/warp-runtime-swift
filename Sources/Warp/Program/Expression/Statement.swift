@@ -107,5 +107,13 @@ public struct Statement: Sendable {
     }
 
     // MARK: - Public
+    // The steps from a body's place to what this statement writes: the
+    // statement, by its name or, nameless, its position, and then the
+    // construct it writes. The statement itself stands one step short of
+    // what it writes. Every walk takes them from here.
+    public func steps(at position: Int) -> [Place.Step] {
+        [Place.Step.statement(name?.spelling, at: position), .construct(expression.construct)]
+    }
+
     // MARK: - Private
 }

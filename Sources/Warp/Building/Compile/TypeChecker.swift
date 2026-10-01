@@ -1869,7 +1869,7 @@ struct TypeChecker {
                     throw BuildError(
                         "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
                             + " with \(arguments.count) arguments, and it takes \(parameters.count)",
-                        at: place.part(.arguments)
+                        at: place.child(.arguments)
                     )
                 }
 
@@ -2714,7 +2714,7 @@ struct TypeChecker {
         let loweredTypes = context.loweredTypes
 
         if let refusal = declared.refusal(handing: call.arguments.count) {
-            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.part(.arguments))
+            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.child(.arguments))
         }
 
         // A declaration with a type parameter in it is checked with the
@@ -2794,7 +2794,7 @@ struct TypeChecker {
             } catch {
                 throw BuildError(
                     "sending '\(call.selector)': \(error)",
-                    at: site.place.part(.arguments)
+                    at: site.place.child(.arguments)
                 )
             }
         }
