@@ -135,8 +135,7 @@ struct InPlaceTests {
         let write = Statement(binding: .assignment([.key("app.total")]), expression: .literal(.int(1)))
 
         // When / Then. Taken at the load of the document declaring
-        // `app.total`, and refused at the load of one that does not, though
-        // it imports the name
+        // `app.total`, and refused at the load of one that does not
         #expect(throws: Never.self) {
             try Module(
                 variables: ["app.total": .literal(.int(0))],
@@ -144,7 +143,7 @@ struct InPlaceTests {
             )
         }
         #expect {
-            try Module(imports: ["app.total"], procedures: ["other.poke": Procedure(body: [write])])
+            try Module(procedures: ["other.poke": Procedure(body: [write])])
         } throws: { error in
             error is ValidationError && "\(error)".contains("assigns 'app.total', which is not visible here")
         }
