@@ -310,8 +310,7 @@ struct ValidationTests {
 
     @Test("a parameter is a name the body may read and may not introduce again")
     func parametersAreVisibleAndDeclared() throws {
-        // Given. The signature and the body are one scope, so a name is
-        // introduced once
+        // Given. A parameter's spelling is taken for the whole body
         let readsIt = Procedure(
             signature: Signature(parameters: [Parameter(name: "name", type: .string)]),
             body: [Statement(binding: .constant("greeting"), expression: reference("name"))]
@@ -327,7 +326,7 @@ struct ValidationTests {
         #expect {
             try Validator().validate(redeclaresIt)
         } throws: { error in
-            error is ValidationError && "\(error)".contains("two statements here are named 'name'")
+            error is ValidationError && "\(error)".contains("'name' is a parameter of the procedure")
         }
     }
 

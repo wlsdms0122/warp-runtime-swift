@@ -101,9 +101,8 @@ public struct Validator: Sendable {
     }
 
     // A parameter is a name the body can read, so it is visible from the first
-    // statement, and declared, so a statement cannot introduce it again. The
-    // body and the signature are one scope, and a name is introduced once in a
-    // scope.
+    // statement, and no name the body introduces, at any depth, takes its
+    // spelling.
     public func validate(
         _ procedure: Procedure,
         constants: Set<Name> = [],
@@ -172,7 +171,7 @@ public struct Validator: Sendable {
         let bound = constants.union(variables)
 
         for (position, parameter) in procedure.signature.names.enumerated() {
-            try introduced(parameter, beside: bound, at: place.part(.parameters).index(position))
+            try introduced(parameter, in: .procedure(bound: bound), at: place.part(.parameters).index(position))
         }
 
         try reads(procedure, at: place)
@@ -190,8 +189,7 @@ public struct Validator: Sendable {
             block,
             visible: bound.union(parameters),
             variables: variables.subtracting(parameters).union(handed),
-            declared: parameters,
-            scope: .procedure(bound: bound),
+            scope: .procedure(bound: bound, parameters: parameters),
             at: place
         )
     }
@@ -243,13 +241,12 @@ public struct Validator: Sendable {
         _ body: Body,
         visible startVisible: Set<Name>,
         variables startVariables: Set<Name> = [],
-        declared startDeclared: Set<Name> = [],
         scope: Scope = .procedure,
         at place: Place
     ) throws -> (visible: Set<Name>, variables: Set<Name>) {
         var visible = startVisible
         var variables = startVariables
-        var declared = startDeclared
+        var declared: Set<Name> = []
 
         for (position, statement) in body.statements.enumerated() {
             // A statement is its name and the construct it writes under. Both,
@@ -282,7 +279,7 @@ public struct Validator: Sendable {
 
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
-                    try introduced(name, beside: scope.bound, at: here)
+                    try introduced(name, in: scope, at: here)
 
                     guard !declared.contains(name) else {
                         throw ValidationError("two statements here are named '\(name)'", at: here)
@@ -421,9 +418,8 @@ public struct Validator: Sendable {
             )
 
         // A closure sees where it was written plus what it declares, which is
-        // the capture read statically. Its parameters are declared here for the
-        // same reason a procedure's are: the signature and the body are one
-        // scope.
+        // the capture read statically. Its parameters hold for its body the way
+        // a procedure's do, and it is written inside the parameters around it.
         case let .closure(procedure):
             let inside = place.part(.closure)
             let parameters = Set(procedure.signature.names)
@@ -431,7 +427,7 @@ public struct Validator: Sendable {
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
             for (position, parameter) in procedure.signature.names.enumerated() {
-                try introduced(parameter, beside: scope.bound, at: inside.part(.parameters).index(position))
+                try introduced(parameter, in: scope, at: inside.part(.parameters).index(position))
             }
 
             try reads(procedure, at: place)
@@ -442,8 +438,7 @@ public struct Validator: Sendable {
                 block,
                 visible: visible.union(parameters),
                 variables: variables.subtracting(parameters),
-                declared: parameters,
-                scope: scope.enclosed,
+                scope: scope.enclosed(taking: parameters),
                 at: inside
             )
 
@@ -507,7 +502,7 @@ public struct Validator: Sendable {
         // lets `while` read how many rounds have passed.
         case let .loop(condition, body, round):
             if let round {
-                try introduced(round, beside: scope.bound, at: place)
+                try introduced(round, in: scope, at: place)
             }
 
             let inner = visible.union(round.map { round in [round] } ?? [])
@@ -531,7 +526,7 @@ public struct Validator: Sendable {
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
             if let failure {
-                try introduced(failure, beside: scope.bound, at: place)
+                try introduced(failure, in: scope, at: place)
             }
 
             try validate(
@@ -605,7 +600,6 @@ public struct Validator: Sendable {
         _ block: Block,
         visible: Set<Name>,
         variables: Set<Name> = [],
-        declared: Set<Name> = [],
         scope: Scope = .procedure,
         at place: Place
     ) throws {
@@ -613,7 +607,6 @@ public struct Validator: Sendable {
             block.body,
             visible: visible,
             variables: variables,
-            declared: declared,
             scope: scope,
             at: place.part(.body)
         )
@@ -720,22 +713,31 @@ public struct Validator: Sendable {
 
     // A name a body introduces: a parameter, a statement's name, or the one a
     // construct hands its body. Every such name passes here, so the module's
-    // bound names are checked at whatever depth the name appears.
+    // bound names and the parameters around it are checked at whatever depth
+    // the name appears.
     //
     // A module's constant is folded wherever its name is read and its variable
     // is read through the module's box, so a name introduced under either
     // spelling would never be the one that answers.
     private func introduced(
         _ name: Name,
-        beside bound: Set<Name>,
+        in scope: Scope,
         at place: Place
     ) throws {
-        guard bound.contains(name) else { return }
+        if scope.bound.contains(name) {
+            throw ValidationError(
+                "'\(name)' collides with a name the module bound, which it would"
+                    + " take the place of",
+                at: place
+            )
+        }
 
-        throw ValidationError(
-            "'\(name)' collides with a name the module bound, which it would"
-                + " take the place of",
-            at: place
-        )
+        if scope.parameters.contains(name) {
+            throw ValidationError(
+                "'\(name)' is a parameter of the procedure this is written in,"
+                    + " and a name inside it does not take a parameter's spelling",
+                at: place
+            )
+        }
     }
 }
