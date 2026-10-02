@@ -321,7 +321,7 @@ enum ObjectCoverageFixture {
                         names: (0 ..< 12).map { at in Name(normal: "s\(at)") }
                     )
                 )
-                : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: 2)])
+                : .native(sending: [Native.Send(position: 0, selector: "a.twelve", handing: 2)])
         )
     }
 }

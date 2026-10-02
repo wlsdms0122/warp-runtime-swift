@@ -258,7 +258,8 @@ public struct Compiled: Sendable, Declaring {
             try row.judge(
                 standingIn: frame(ofClosure:),
                 reaching: reaches(_:),
-                holding: variables.count
+                holding: variables.count,
+                numberedBy: numbering
             )
         }
     }
