@@ -51,12 +51,12 @@ struct Flow {
     // was there, and whether the name was written at all stays the earlier
     // fact.
     mutating func land(_ later: (type: LoweredType, definite: Bool), on name: Name) {
-        guard let held = written[name], !later.definite else {
+        guard let before = written[name], !later.definite else {
             written[name] = later
             return
         }
 
-        written[name] = (held.type.joined(later.type), held.definite)
+        written[name] = (before.type.joined(later.type), before.definite)
     }
 
     // A box taken here, held to what it read as.
@@ -82,9 +82,9 @@ struct Flow {
     // was taken as from then on.
     func apply(to environment: inout [Name: Binding]) {
         for (name, write) in written {
-            guard let held = environment[name], held.holding == .assigned else { continue }
+            guard let current = environment[name], current.holding == .assigned else { continue }
 
-            environment[name] = Binding(.assigned, write.definite ? write.type : held.type.joined(write.type))
+            environment[name] = Binding(.assigned, write.definite ? write.type : current.type.joined(write.type))
         }
 
         for (name, type) in held {

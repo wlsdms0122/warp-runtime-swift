@@ -1638,9 +1638,9 @@ struct TypeChecker {
             var flow = Flow()
 
             for name in captured(by: block) {
-                guard let binding = outside[name], binding.isBox else { continue }
+                guard let taken = outside[name]?.takenType else { continue }
 
-                flow.hold(binding.heldType ?? binding.type, on: name)
+                flow.hold(taken, on: name)
             }
 
             if case let .judging(_, _, fulfillment) = ask {
@@ -2602,11 +2602,10 @@ struct TypeChecker {
             guard
                 case let .reference(path) = arguments[position],
                 let head = path.head,
-                let binding = environment[head],
-                binding.isBox
+                let taken = environment[head]?.takenType
             else { continue }
 
-            flow.hold(binding.heldType ?? binding.type, on: head)
+            flow.hold(taken, on: head)
         }
 
         return flow

@@ -74,6 +74,15 @@ struct Binding: Equatable, Sendable {
         }
     }
 
+    // The type a box is held to once a closure or a call takes it: the one
+    // its writes are already held to, else what it reads as. Nil for a name
+    // no write lands on, which nothing takes.
+    var takenType: LoweredType? {
+        guard isBox else { return nil }
+
+        return heldType ?? type
+    }
+
     // Whether a write may land on the name at all.
     var isBox: Bool {
         if case .fixed = holding { return false }
