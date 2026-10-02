@@ -300,9 +300,10 @@ struct Lowering {
     // Each document's constants, settled, with what each reads as.
     private var constants: [Int: [Name: (value: Value, type: LoweredType)]] = [:]
 
-    // The spellings of the private declarations held so far, for the refusal
-    // alone: not in `rows`, since nothing outside their documents names them,
-    // and read only after a row lookup has failed, to say why it did.
+    // The spellings of the private declarations held, and of the ones a
+    // compile is about to hold, for the refusal alone: not in `rows`, since
+    // nothing outside their documents names them, and read only after a row
+    // lookup has failed, to say why it did.
     private(set) var concealed: Set<Name> = []
 
     // How many closures each declaration has been lowered so far, by the
@@ -325,15 +326,17 @@ struct Lowering {
     // The documents already laid down, read against the table this compile is
     // asking with. Where a row stands and what number reaches it are the
     // documents' own and move for nothing laid after them, so only the rows
-    // are read again.
+    // are read again. `concealed` holds theirs and the ones the compile will
+    // hold.
     init(
         _ carried: Carried,
+        concealing concealed: Set<Name>,
         contractProcedures: [Name: LoweredContractProcedure],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
-        self.concealed = carried.concealed
+        self.concealed = concealed
         self.documents = carried.documents
         self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes

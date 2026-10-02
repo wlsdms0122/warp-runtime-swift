@@ -83,7 +83,8 @@ struct Compiling {
     }
 
     // The documents already laid down, read against the table this compile is
-    // asking with.
+    // asking with, beside the private spellings of every document the compile
+    // lays down after them.
     //
     // Nothing here is worked out again. `Carried` is what those documents
     // left and holds nothing read against a table, so the only thing this
@@ -91,6 +92,7 @@ struct Compiling {
     // out and what it is still owed.
     init(
         _ carried: Carried,
+        concealing concealed: Set<Name>,
         types: TypeTable,
         contractProcedures: [Name: LoweredContractProcedure],
         naming documents: [Place.Document],
@@ -102,6 +104,7 @@ struct Compiling {
         self.naming = naming
         self.lowering = Lowering(
             carried,
+            concealing: concealed,
             contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )

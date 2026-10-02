@@ -637,7 +637,8 @@ struct ProcedureSendsTests {
         // Given. A document declares `app.hidden` privately, and a procedure the
         // host brings declares it sends that spelling.
         let document = try Module(procedures: [
-            "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7)))
+            "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
+            "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
         ])
 
         // When / Then
