@@ -2100,7 +2100,9 @@ struct TypeChecker {
                 calls: head.calls + taken.calls + declined.calls,
                 judgements: head.judgements.absorbing(taken.judgements, declined.judgements),
                 reading: taken.reading == .never && declined.reading == .never ? .never : .null,
-                flow: head.flow.followed(by: taken.flow.joined(with: declined.flow))
+                flow: head.flow.followed(
+                    by: try met(taken.flow, declined.flow, at: place, in: context.loweredTypes, when: ask)
+                )
             )
 
         // A loop answers its body's declared result, and null when it has none.
@@ -2247,7 +2249,13 @@ struct TypeChecker {
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
                 reading: attempted.reading.joined(rescued.reading),
-                flow: attempted.flow.absorbed().joined(with: rescued.flow.absorbed())
+                flow: try met(
+                    attempted.flow.absorbed(),
+                    rescued.flow.absorbed(),
+                    at: place,
+                    in: context.loweredTypes,
+                    when: ask
+                )
             )
         }
     }
@@ -2611,6 +2619,31 @@ struct TypeChecker {
         let (settled, _) = try await read(widened)
 
         return (widened, settled, false)
+    }
+
+    // Two ways meeting: one of them ran. A box each way took is held to what
+    // that way took it as, so two that differ leave no type a write after
+    // they meet could fit, and that is refused here.
+    private func met(
+        _ one: Flow,
+        _ other: Flow,
+        at place: Place,
+        in table: LoweredTypeTable,
+        when ask: Ask
+    ) throws -> Flow {
+        for (name, mine) in one.held.sorted(by: { $0.key < $1.key }) {
+            guard let theirs = other.held[name], theirs != mine else { continue }
+
+            try refuse(
+                "takes '\(name)' as \(mine.rendered(in: table)) one way and as"
+                    + " \(theirs.rendered(in: table)) another, and no write after the two"
+                    + " meet could fit both",
+                at: place,
+                when: ask
+            )
+        }
+
+        return one.joined(with: other)
     }
 
     // What a call hands in place at these positions, each variable held from

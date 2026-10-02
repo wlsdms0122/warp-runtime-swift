@@ -41,7 +41,9 @@ struct Flow {
     // closure or a callee may read and write the box later as that type, so
     // from here on every write to it is held to that type, on whichever way
     // the box was taken. Taking a box already held says so again, so a round
-    // read where its earlier rounds held the box takes it the same way.
+    // read where its earlier rounds held the box takes it the same way. A
+    // hold is what every taker asks of the box, so it never widens: two ways
+    // that took one box as different types are refused where they meet.
     var held: [Name: LoweredType] = [:]
 
     // The names read here that the body this flow came out of did not
@@ -69,9 +71,10 @@ struct Flow {
         written[name] = (before.type.joined(later.type), before.definite)
     }
 
-    // A box taken here, held to what it read as.
+    // A box taken here, held to what it read as. One taken already stays
+    // held to what it was taken as first.
     mutating func hold(_ type: LoweredType, on name: Name) {
-        held[name] = held[name]?.joined(type) ?? type
+        held[name] = held[name] ?? type
     }
 
     // What an operand read and took, carried by what holds it. An operand
