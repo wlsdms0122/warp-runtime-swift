@@ -1543,11 +1543,9 @@ struct TypeChecker {
                 )
             }
 
-            // A cast that names a type the value did not arrive as fails; the
-            // optional spelling reads the mismatch as null.
             var flow = inner.flow
 
-            if !optional {
+            if failsHere(expression, given: context) {
                 flow.fail()
             }
 
@@ -1842,9 +1840,9 @@ struct TypeChecker {
                     ).flow)
                 }
 
-                // Which procedure a value is, is the run's answer, so the call
-                // may fail.
-                flow.fail()
+                if failsHere(expression, given: context) {
+                    flow.fail()
+                }
 
                 return Inspection(rewritten: expression, reading: answers, flow: flow)
             }
@@ -1911,7 +1909,10 @@ struct TypeChecker {
             }
 
             judgements.record(.apply(inPlace: handed), at: place)
-            flow.fail()
+
+            if failsHere(expression, given: context) {
+                flow.fail()
+            }
 
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
@@ -1935,9 +1936,7 @@ struct TypeChecker {
 
             // What the operands took is taken by the call, and so is what it
             // hands in place.
-            // A declaration that says nothing about what it may fail with may
-            // fail with anything.
-            let mayFail = context.failing(of: call.selector)?.failsNothing != true
+            let mayFail = failsHere(expression, given: context)
             let slots = context.slots(of: call.selector)
             var flow = heldInPlace(
                 call.arguments,
@@ -2459,15 +2458,15 @@ struct TypeChecker {
 
                 // Judging refused anything after this statement above, so
                 // what is handed back is exactly what was walked. A call that
-                // never comes back ends its way the only way one can, by
-                // failing.
+                // never comes back ends the way here; where it may fail, the
+                // call already sent the way to the attempt around it.
                 return (
                     ask.rewrites ? rewritten : body,
                     calls,
                     judgements,
                     environment,
                     .never,
-                    flowed.leaving(to: .failure),
+                    flowed.ended(),
                     locals
                 )
             }
@@ -2673,6 +2672,11 @@ struct TypeChecker {
 
             return one
         }
+    }
+
+    // Whether a run may fail at this node itself, by the one judgement of it.
+    private func failsHere(_ expression: Expression, given context: TypingContext) -> Bool {
+        !Derivation().failingHere(expression, given: context.failing(of:)).failsNothing
     }
 
     // What a call hands in place at these positions, each variable held from

@@ -147,6 +147,16 @@ struct Flow {
         }
     }
 
+    // The way that went on ends here and lands nowhere: what never comes back
+    // and does not fail.
+    func ended() -> Flow {
+        var ended = self
+
+        ended.going = nil
+
+        return ended
+    }
+
     // A way out took this flow with it: the way that went on left here, and
     // lands where the leave lands.
     func leaving(to reach: Reach) -> Flow {
