@@ -37,23 +37,10 @@ struct TypeChecker {
         case refusal(String)
     }
 
-    // Where a path walk ended: the path it judged, every segment as written,
-    // and what the whole of it holds, or the refusal. One value for the two
-    // answers, because they are read off one walk.
+    // Where a path walk ended: what the whole of the path holds, or the
+    // refusal. The segments stand as written either way.
     private enum PathReading {
-        case reads(Path, LoweredType)
-        case refused(String)
-    }
-
-    // The one machine that judges an index reference, wherever a walk meets
-    // one. The outer reading, a stopped walk's leftovers. The inner path is a
-    // path of its own; what it reads has to be able to be an index. `int` is
-    // one; `double` and a bounded parameter may hold a whole value the run accepts, so
-    // only the actual reading (the fold's, or the run's) refuses the fraction;
-    // what the walk could not read might be anything. Everything else provably
-    // is not, and a text-proven defect is refused here.
-    private enum IndexReading {
-        case judged(Path)
+        case reads(LoweredType)
         case refused(String)
     }
 
@@ -635,7 +622,6 @@ struct TypeChecker {
 
         var current = bound.type
 
-        var resolved: Path = [.key(head)]
         var walked: Path = [.key(head)]
 
         // Whether an optional segment read past a possible absence. The one
@@ -702,8 +688,8 @@ struct TypeChecker {
                     case let .refused(reason):
                         return .refused(reason)
 
-                    case let .reads(judged, _):
-                        return .reads(resolved.appending(contentsOf: judged.segments), reached)
+                    case .reads:
+                        return .reads(reached)
                     }
                 }
 
@@ -716,8 +702,8 @@ struct TypeChecker {
                     case let .refused(reason):
                         return .refused(reason)
 
-                    case let .reads(judged, _):
-                        return .reads(resolved.appending(contentsOf: judged.segments), .never)
+                    case .reads:
+                        return .reads(.never)
                     }
                 }
 
@@ -737,8 +723,8 @@ struct TypeChecker {
                     case let .refused(reason):
                         return .refused(reason)
 
-                    case let .reads(judged, _):
-                        return .reads(resolved.appending(contentsOf: judged.segments), .null)
+                    case .reads:
+                        return .reads(.null)
                     }
                 }
 
@@ -789,38 +775,29 @@ struct TypeChecker {
             // element is read, not what the elements are. The name is a path of
             // its own, judged like one, and the walk goes on with the element
             // type the way a literal index does.
-            case let (.indexRef(inner, optionally), .array(element)):
-                switch indexReference(inner, in: environment, with: context, at: place) {
-                case let .refused(reason):
-                    return .refused(reason)
-
-                case let .judged(innerResolved):
-                    if let refused = indexed(element) { return refused }
-
-                    resolved.append(.indexRef(innerResolved, optional: optionally))
+            case let (.indexRef(inner, _), .array(element)):
+                if let refusal = indexReference(inner, in: environment, with: context, at: place) {
+                    return .refused(refusal)
                 }
+
+                if let refused = indexed(element) { return refused }
 
             case let (.index, .array(element)):
                 if let refused = indexed(element) { return refused }
-
-                resolved.append(segment)
 
             // A dictionary's names are data, so a key the run settles reads an
             // entry the way a written key does. Absence follows the mark, the
             // rule every entry reading shares.
             case let (.indexRef(inner, optionally), .dictionary(entry)):
-                switch keyReference(inner, in: environment, with: context, at: place) {
-                case let .refused(reason):
-                    return .refused(reason)
-
-                case let .judged(innerResolved):
-                    if let refusal = needless(.entry) { return refusal }
-
-                    if optionally { optional = true }
-
-                    current = entry
-                    resolved.append(.indexRef(innerResolved, optional: optionally))
+                if let refusal = keyReference(inner, in: environment, with: context, at: place) {
+                    return .refused(refusal)
                 }
+
+                if let refusal = needless(.entry) { return refusal }
+
+                if optionally { optional = true }
+
+                current = entry
 
             case (.index, _), (.indexRef, _):
                 return .refused(
@@ -840,7 +817,6 @@ struct TypeChecker {
                 if segment.optional { optional = true }
 
                 current = entry
-                resolved.append(segment)
 
             // A dot on a record reads the field it declares. A field it does
             // not declare is a defect the text shows, refused here rather than
@@ -861,7 +837,6 @@ struct TypeChecker {
                 if let refusal = needless(.field(key)) { return refusal }
 
                 current = field.fieldUnwrapped
-                resolved.append(segment)
 
             // A type with no fields has no name here to read. The procedure by
             // this spelling is sent with a written call, which names the
@@ -875,7 +850,7 @@ struct TypeChecker {
             }
         }
 
-        return .reads(resolved, optional ? current.admittingNull : current)
+        return .reads(optional ? current.admittingNull : current)
     }
 
     // The inner index paths a fold can settle. `items[C]` reads its index from
@@ -933,8 +908,8 @@ struct TypeChecker {
             }
 
             if case let .indexRef(inner, _) = segment {
-                if case let .refused(reason) = indexReference(inner, in: environment, with: context, at: place) {
-                    return .refused(reason)
+                if let refusal = indexReference(inner, in: environment, with: context, at: place) {
+                    return .refused(refusal)
                 }
             }
 
@@ -1096,84 +1071,77 @@ struct TypeChecker {
         )
     }
 
-    // The segments a stopped walk hands back: as written, except that an index
-    // reference is a path of its own and is judged wherever the outer walk
-    // stops.
+    // The segments a stopped walk leaves stand as written, and an index
+    // reference among them is a path of its own, judged wherever the outer
+    // walk stops. What they reach is not read.
     private func asWritten(
         _ path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
     ) -> PathReading {
-        var judged: Path = []
-
         for segment in path.segments {
-            guard case let .indexRef(inner, optionally) = segment else {
-                judged.append(segment)
+            guard case let .indexRef(inner, _) = segment else { continue }
 
-                continue
-            }
-
-            switch indexReference(inner, in: environment, with: context, at: place) {
-            case let .refused(reason):
-                return .refused(reason)
-
-            case let .judged(innerResolved):
-                judged.append(.indexRef(innerResolved, optional: optionally))
+            if let refusal = indexReference(inner, in: environment, with: context, at: place) {
+                return .refused(refusal)
             }
         }
 
-        return .reads(judged, .any)
+        return .reads(.any)
     }
 
+    // The one machine that judges an index reference, wherever a walk meets
+    // one, answering the refusal or nil. The inner path is a path of its own;
+    // what it reads has to be able to be an index. `int` is one; `double` and
+    // a bounded parameter may hold a whole value the run accepts, so only the
+    // actual reading (the fold's, or the run's) refuses the fraction; what the
+    // walk could not read might be anything. Everything else provably is not,
+    // and a text-proven defect is refused here.
     private func indexReference(
         _ inner: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
-    ) -> IndexReading {
+    ) -> String? {
         switch reading(of: inner, in: environment, with: context, at: place) {
         case let .refused(reason):
-            return .refused(reason)
+            return reason
 
-        case let .reads(innerResolved, innerType):
+        case let .reads(innerType):
             switch context.resolve(innerType) {
             case .int, .ranged, .double, .any, .never, .parameter:
-                return .judged(innerResolved)
+                return nil
 
             default:
-                return .refused(
-                    "index reference \(inner.rendered) reads"
-                        + " \(innerType.rendered(in: context.loweredTypes)), expected int"
-                )
+                return "index reference \(inner.rendered) reads"
+                    + " \(innerType.rendered(in: context.loweredTypes)), expected int"
             }
         }
     }
 
-    // The one machine that judges a key the run settles. A dictionary's names
-    // are strings, so what stands between the brackets has to be able to be
-    // one; what the walk could not read might be anything, and everything else
-    // provably is not.
+    // The one machine that judges a key the run settles, answering the
+    // refusal or nil. A dictionary's names are strings, so what stands between
+    // the brackets has to be able to be one; what the walk could not read might
+    // be anything, and everything else provably is not.
     private func keyReference(
         _ inner: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
-    ) -> IndexReading {
+    ) -> String? {
         switch reading(of: inner, in: environment, with: context, at: place) {
         case let .refused(reason):
-            return .refused(reason)
+            return reason
 
-        case let .reads(innerResolved, innerType):
+        case let .reads(innerType):
             switch context.resolve(innerType) {
             case .string, .any, .never, .parameter:
-                return .judged(innerResolved)
+                return nil
 
             default:
-                return .refused(
-                    "key reference \(inner.rendered) reads"
-                        + " \(innerType.rendered(in: context.loweredTypes)), expected string"
-                )
+                return "key reference \(inner.rendered) reads"
+                    + " \(innerType.rendered(in: context.loweredTypes)), expected string"
             }
         }
     }
@@ -1377,13 +1345,9 @@ struct TypeChecker {
 
                 return Inspection(rewritten: expression, reading: .any, flow: reached)
 
-            case let .reads(resolved, read):
-                guard case let .judging(folding, _) = ask else {
+            case let .reads(read):
+                guard case let .judging(folding, _) = ask, let folding else {
                     return Inspection(rewritten: expression, reading: read, flow: reached)
-                }
-
-                guard let folding else {
-                    return Inspection(rewritten: .reference(resolved), reading: read, flow: reached)
                 }
 
                 // An inner index path may read a constant too. `items[C]` folds
@@ -1391,7 +1355,7 @@ struct TypeChecker {
                 // name survives into the image. One indexed by what only the run
                 // settles (`digits[ch]`) cannot fold: it stays a path, and the
                 // lowering binds the constant in the body for the run to read.
-                let settled = try await foldedIndexReferences(resolved, at: place, folding: folding)
+                let settled = try await foldedIndexReferences(path, at: place, folding: folding)
 
                 guard let head = folding.settled(settled) else {
                     return Inspection(rewritten: .reference(settled), reading: read, flow: reached)
