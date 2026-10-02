@@ -261,6 +261,60 @@ struct InferenceTests {
         #expect(try await run([sut]) == .string("s"))
     }
 
+    @Test("a loop's result reads a box its condition took as held")
+    func aLoopsResultReadsWhatItsConditionTook() async throws {
+        // Given. The condition hands `ready` a closure that takes `n`, and the
+        // result runs after the condition on every way out of the loop. The
+        // text notation writes no construct in a result, so this asks it of
+        // a module assembled in Swift
+        let loop = Warp.Expression.loop(
+            while: .call(Call(
+                selector: "ready",
+                arguments: [.closure(Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: reference("n")
+                ))]
+            )),
+            body: Block(
+                body: [],
+                result: .block(Block(
+                    body: [Statement(binding: .assignment([.key("n")]), expression: .literal(.string("s")))],
+                    result: .literal(.int(1))
+                ))
+            ),
+            round: nil
+        )
+
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .variable("n"), expression: .literal(.int(0))),
+                        Statement(expression: loop)
+                    ],
+                    result: .literal(.int(1))
+                ),
+                "ready": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "peek", type: .procedure(ProcedureType(returns: .int)))],
+                        returns: .bool
+                    ),
+                    body: [],
+                    result: .literal(.bool(true))
+                )
+            ]
+        )
+
+        // When / Then
+        let refusal = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard)
+        }
+
+        #expect(refusal?.message == "writes 'n' as string, and it holds int")
+    }
+
     @Test("a name bound to a call carries that call's declared answer")
     func boundCallCarriesItsAnswer() async throws {
         // Given

@@ -2232,26 +2232,23 @@ struct TypeChecker {
             )
 
             // The result runs once, at whichever exit the run takes (a
-            // condition that declines at the start, a round that finishes or
-            // breaks) and it reads in the join of those exits: the entry the
-            // rounds seeded, joined with the environment the statements leave.
-            // A name the body declared is the body's own, whatever the entry
-            // holds under that spelling, and is null at the 0-round exit (a
-            // name a scope does not hold reads as null) so it reads back
-            // nullable, the same join every some-ways write gets. Of the
-            // entry's names only a box the rounds retyped moves: one that
-            // declared its type held every write to it.
+            // condition that declines, after no round or after rounds that
+            // finished or continued, or a round that breaks), and it reads
+            // where the way the loop ends by leaves the names around it: the
+            // loop's entry, with what that way wrote and took. A name the body
+            // declared is the body's own, whatever the entry holds under that
+            // spelling, and is null at the exit after no round (a name a scope
+            // does not hold reads as null) so it reads back nullable, the same
+            // join every some-ways write gets.
             var tail: Inspection?
 
             if let result = body.result {
-                var exit = seeded
+                var exit = rounded(environment, as: round)
 
-                for (name, written) in rounds.environment {
-                    if rounds.locals.contains(name) {
-                        exit[name] = written.map { type in LoweredType.null.joined(type) }
-                    } else if let entry = seeded[name], entry.holding == .assigned {
-                        exit[name] = Binding(.assigned, entry.type.joined(written.type))
-                    }
+                ended.apply(to: &exit)
+
+                for (name, written) in rounds.environment where rounds.locals.contains(name) {
+                    exit[name] = written.map { type in LoweredType.null.joined(type) }
                 }
 
                 tail = try await inspected(result, at: place.child(.held).child(.result), in: exit, with: context, ask: ask)
