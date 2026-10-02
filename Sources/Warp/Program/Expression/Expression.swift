@@ -66,10 +66,11 @@ public indirect enum Expression: Sendable {
     // value leaves through `return`. A condition chooses a way through the body,
     // not a value.
     case conditional(Expression, then: Body, else: Body?)
-    // The round is the statement's name, and a loop written nameless binds
-    // none; the same for an attempt's failure.
-    case loop(while: Expression, body: Block, round: Name?)
-    case attempt(Block, rescue: Block, failure: Name?)
+    // The round is the name the statement this is the value of introduces,
+    // and a loop under no such name binds none; the same for an attempt's
+    // failure.
+    case loop(while: Expression, body: Block)
+    case attempt(Block, rescue: Block)
     case call(Call)
 
     // Carrying on somewhere further out than the next statement. The one case

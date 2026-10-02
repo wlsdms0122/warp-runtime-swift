@@ -183,12 +183,12 @@ struct Derivation {
                 .joined(self.failing(then, given: failing))
                 .joined(otherwise.map { arm in self.failing(arm, given: failing) } ?? .these([]))
 
-        case let .loop(condition, body, _):
+        case let .loop(condition, body):
             return read(condition).joined(self.failing(body, given: failing))
 
         // The rescue is what the body's failures become: they are caught here,
         // and what is left is whatever the rescue itself may fail with.
-        case let .attempt(_, rescue, _):
+        case let .attempt(_, rescue):
             return self.failing(rescue, given: failing)
 
         case let .leave(leave):
@@ -475,10 +475,10 @@ struct Derivation {
         case let .conditional(condition, then, otherwise):
             return holds(condition) && holds(then) && (otherwise.map(holds) ?? true)
 
-        case let .loop(condition, body, _):
+        case let .loop(condition, body):
             return holds(condition) && holds(body)
 
-        case let .attempt(body, rescue, _):
+        case let .attempt(body, rescue):
             return holds(body) && holds(rescue)
         }
     }

@@ -46,7 +46,6 @@ func walking(
                     expression: .reference(material.appending(contentsOf: [.indexRef([.key(round), .key("index")])]))
                 )
             ] + body.statements)
-        ),
-        round: round
+        )
     )
 }

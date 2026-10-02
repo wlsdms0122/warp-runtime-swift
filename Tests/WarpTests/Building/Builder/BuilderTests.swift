@@ -262,8 +262,7 @@ struct BuilderTests {
                                 Block(body: [mayFail()]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing")))
-                                ]),
-                                failure: "why"
+                                ])
                             )
                         )
                     ]

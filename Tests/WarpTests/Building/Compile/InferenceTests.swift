@@ -158,8 +158,7 @@ struct InferenceTests {
             body: Block(
                 body: [Statement(binding: .constant("tick"), expression: .literal(.int(7)))],
                 result: reference("tick")
-            ),
-            round: "walked"
+            )
         )
 
         let sut = try Module(
@@ -201,8 +200,7 @@ struct InferenceTests {
                                         Statement(binding: .constant("tick"), expression: .literal(.int(7)))
                                     ],
                                     result: reference("tick")
-                                ),
-                                round: "walked"
+                                )
                             )
                         )
                     ],
@@ -236,8 +234,7 @@ struct InferenceTests {
                         result: reference("y")
                     )
                 )
-            ),
-            round: "walked"
+            )
         )
 
         let sut = try Module(
@@ -282,8 +279,7 @@ struct InferenceTests {
                     body: [Statement(binding: .assignment([.key("n")]), expression: .literal(.string("s")))],
                     result: .literal(.int(1))
                 ))
-            ),
-            round: nil
+            )
         )
 
         let sut = try Module(
@@ -1539,8 +1535,7 @@ struct InferenceTests {
                                             else: nil
                                         )
                                     )
-                                ]),
-                                round: "spin"
+                                ])
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1640,8 +1635,7 @@ struct InferenceTests {
                                         selector: "wants",
                                         arguments: [.reference([.key("held")])]
                                     )))
-                                ], result: .literal(.string("rescued"))),
-                                failure: "why"
+                                ], result: .literal(.string("rescued")))
                             )
                         )
                     ]
@@ -1691,8 +1685,7 @@ struct InferenceTests {
                                         arguments: [.reference([.key("held")])]
                                     ))),
                                     Statement(binding: .assignment([.key("held")]), expression: .literal(.null))
-                                ]),
-                                round: "spin"
+                                ])
                             )
                         )
                     ]
@@ -1742,8 +1735,7 @@ struct InferenceTests {
                     } + [
                         Statement(binding: .constant("spin"), expression: .loop(
                                 while: .reference([.key("ready")]),
-                                body: Block(body: chain),
-                                round: "spin"
+                                body: Block(body: chain)
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1797,8 +1789,7 @@ struct InferenceTests {
                                 ]),
                                 rescue: Block(body: [
                                     Statement(binding: .assignment([.key("held")]), expression: .literal(.null))
-                                ], result: .literal(.string("rescued"))),
-                                failure: "why"
+                                ], result: .literal(.string("rescued")))
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1850,8 +1841,7 @@ struct InferenceTests {
                                 ]),
                                 rescue: Block(body: [
                                     Statement(binding: .assignment([.key("held")]), expression: .literal(.int(1)))
-                                ], result: .literal(.string("rescued"))),
-                                failure: "why"
+                                ], result: .literal(.string("rescued")))
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1940,8 +1930,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("many"), expression: .attempt(
                                 Block(body: [], result: aborting(literal("no"))),
-                                rescue: Block(body: [], result: .literal(.string("fallback"))),
-                                failure: "why"
+                                rescue: Block(body: [], result: .literal(.string("fallback")))
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(

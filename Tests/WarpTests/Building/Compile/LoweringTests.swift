@@ -195,14 +195,13 @@ struct LoweringTests {
     func aLoopKeepsOnlyWhereTheResultCouldTell() async throws {
         // Given. One loop whose result reads a body name; another whose result
         // reads nothing the body bound
-        func loop(_ body: Body, result: Warp.Expression?) -> Warp.Expression {
+        func loop(_ round: Name, _ body: Body, result: Warp.Expression?) -> Warp.Expression {
             .loop(
                 while: .call(Call(
                     selector: "std.math.lessThan",
-                    arguments: [.reference([.key("round"), .key("index")]), .literal(.int(1))]
+                    arguments: [.reference([.key(round), .key("index")]), .literal(.int(1))]
                 )),
-                body: Block(body: body, result: result),
-                round: "round"
+                body: Block(body: body, result: result)
             )
         }
 
@@ -217,12 +216,14 @@ struct LoweringTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("told"), expression: loop(
+                            "told",
                             [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
                             result: .reference([.key("seen")])
                         )),
                         Statement(binding: .constant("nested"), expression: loop(
+                            "nested",
                             [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
-                            result: .reference([.key("round"), .key("index")])
+                            result: .reference([.key("nested"), .key("index")])
                         ))
                     ],
                     result: .literal(.null)

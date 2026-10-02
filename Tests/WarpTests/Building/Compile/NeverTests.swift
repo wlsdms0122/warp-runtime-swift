@@ -83,8 +83,7 @@ struct NeverTests {
                     Statement(binding: .assignment([.key("x")]), expression: .literal(.string("s")))
                 ],
                 result: reference("x")
-            ),
-            round: "round"
+            )
         )
 
         let sut = try Module(
@@ -130,8 +129,7 @@ struct NeverTests {
                         result: reference("y")
                     )
                 )
-            ),
-            round: "round"
+            )
         )
 
         let sut = try Module(
@@ -248,8 +246,7 @@ struct NeverTests {
             body: Block(
                 body: [Statement(expression: aborting(literal("stops")))],
                 result: .literal(.string("done"))
-            ),
-            round: "round"
+            )
         )
 
         let sut = Procedure(
@@ -271,8 +268,7 @@ struct NeverTests {
             body: Block(
                 body: [Statement(expression: aborting(literal("stops")))],
                 result: .literal(.string("done"))
-            ),
-            round: "round"
+            )
         )
 
         let sut = try Module(

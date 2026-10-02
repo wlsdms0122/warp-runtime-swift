@@ -330,7 +330,7 @@ struct LinearityChecker {
                     return taken.merged(with: left)
                 }
 
-            case let .loop(condition, body, _):
+            case let .loop(condition, body):
                 let asked = try moving(condition, held: held, guarded: guarded)
                 var rounds = try through(body, held: asked, guarded: "inside a loop")
 
@@ -344,7 +344,7 @@ struct LinearityChecker {
             // happened is not something the text shows. What finishes is the
             // body's own end or the rescue's, so an attempt leaves where both
             // of them do, holding what either way took.
-            case let .attempt(body, rescue, _):
+            case let .attempt(body, rescue):
                 let attempted = try through(body, held: held, guarded: "inside an attempt")
                 var rescued = try through(rescue, held: held, guarded: "inside an attempt")
 
@@ -581,10 +581,10 @@ struct LinearityChecker {
             case let .block(block):
                 return block.result.map { result in handedOut(result, held: held) } ?? .nothing
 
-            case let .loop(_, body, _):
+            case let .loop(_, body):
                 return body.result.map { result in handedOut(result, held: held) } ?? .nothing
 
-            case let .attempt(block, rescue, _):
+            case let .attempt(block, rescue):
                 let attempted = block.result.map { result in handedOut(result, held: held) } ?? .nothing
 
                 guard case .nothing = attempted else { return attempted }

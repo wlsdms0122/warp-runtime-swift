@@ -42,8 +42,7 @@ struct ControlTests {
         // author being wrong, and an abort is the first kind
         let sut = Warp.Expression.attempt(
             Block(body: [Statement(expression: aborting(literal("stopped")))]),
-            rescue: Block(body: [], result: .literal(.string("caught"))),
-            failure: "failure"
+            rescue: Block(body: [], result: .literal(.string("caught")))
         )
 
         // When

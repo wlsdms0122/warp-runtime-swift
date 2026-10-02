@@ -594,7 +594,7 @@ struct Lowering {
 
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
-            let code = try lower(statement.expression, in: scope, on: context, at: here)
+            let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
             let binding: Instruction.Binding?
 
             switch statement.binding {
@@ -688,8 +688,12 @@ struct Lowering {
         }
     }
 
+    // `name` is what the statement this expression is the value of
+    // introduces, which a loop binds its round under and an attempt its
+    // failure.
     private mutating func lower(
         _ expression: Expression,
+        naming name: Name? = nil,
         in scope: SlotScope,
         on context: Context,
         at place: Place
@@ -732,11 +736,11 @@ struct Lowering {
         case let .conditional(condition, then, otherwise):
             return try lower(conditional: condition, then: then, else: otherwise, in: scope, on: context, at: place)
 
-        case let .loop(condition, body, round):
-            return try lower(loop: condition, body: body, round: round, in: scope, on: context, at: place)
+        case let .loop(condition, body):
+            return try lower(loop: condition, body: body, round: name, in: scope, on: context, at: place)
 
-        case let .attempt(block, rescue, failure):
-            return try lower(attempt: block, rescue: rescue, failure: failure, in: scope, on: context, at: place)
+        case let .attempt(block, rescue):
+            return try lower(attempt: block, rescue: rescue, failure: name, in: scope, on: context, at: place)
 
         case let .call(call):
             // A selector naming a contract's procedure names no row. Which row

@@ -229,7 +229,7 @@ public struct Writer: Sendable {
             return .dictionary(written)
         }
 
-        let (key, body) = try construct(of: statement.expression, named: statement.binding?.introduced)
+        let (key, body) = try construct(of: statement.expression)
 
         written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .dictionary([key: body])
 
@@ -335,10 +335,7 @@ public struct Writer: Sendable {
     // A construct key and what goes under it. The key comes from the registry
     // rather than from the form, because a notation may have respelled it or
     // given it up.
-    private func construct(
-        of expression: Warp.Expression,
-        named id: Name?
-    ) throws -> (Name, Value) {
+    private func construct(of expression: Warp.Expression) throws -> (Name, Value) {
         switch expression {
         // A call is a tag, read where a statement's value is the way it is
         // everywhere else, so no table respells it.
@@ -365,9 +362,7 @@ public struct Writer: Sendable {
 
             return (try spelling(ConditionalForm.self), .dictionary(written))
 
-        case let .loop(condition, body, round):
-            try named(round, matches: id, in: "loop", binding: "round")
-
+        case let .loop(condition, body):
             var written: [Name: Value] = [
                 LoopForm.CodingKeys.while.name: try value(of: condition)
             ]
@@ -394,9 +389,7 @@ public struct Writer: Sendable {
                 return (try spelling(ContinueForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
             }
 
-        case let .attempt(attempted, rescue, failure):
-            try named(failure, matches: id, in: "attempt", binding: "failure")
-
+        case let .attempt(attempted, rescue):
             var written = try fields(of: attempted, in: AttemptForm.self)
 
             written[AttemptForm.CodingKeys.rescue.name] = .dictionary(try fields(of: rescue, in: nil))
@@ -450,26 +443,6 @@ public struct Writer: Sendable {
         }
 
         return key
-    }
-
-    // A construct takes the name it binds from what the statement it is
-    // written as introduces, so one built with any other name has no document.
-    // It is reachable: a caller assembling the language's types directly is
-    // under no obligation to make the two agree, and finds out here rather
-    // than at a run that reads a name nothing bound.
-    private func named(
-        _ bound: Name?,
-        matches id: Name?,
-        in construct: String,
-        binding: String
-    ) throws {
-        guard bound != id else { return }
-
-        throw WritingError(
-            "a \(construct) binds its \(binding) under the name the statement it is"
-                + " written as introduces, and this one binds '\(bound?.spelling ?? "nothing")'"
-                + " inside \(id.map { name in "'\(name)'" } ?? "a statement that introduces none")"
-        )
     }
 
     private func key(of binding: Statement.Binding) -> Name {

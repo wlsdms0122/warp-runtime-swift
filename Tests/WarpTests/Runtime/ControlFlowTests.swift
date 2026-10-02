@@ -131,12 +131,11 @@ struct ControlFlowTests {
         // its own `x`, a string, and the result reads that one: null where no
         // round ran, and the body's otherwise
         let loop = Warp.Expression.loop(
-            while: differs(reference("round", "index"), .literal(.int(1))),
+            while: differs(reference("probe", "index"), .literal(.int(1))),
             body: Block(
                 body: [Statement(binding: .variable("x"), expression: .literal(.string("s")))],
                 result: reference("x")
-            ),
-            round: "round"
+            )
         )
         let sut = try Module(
             imports: ["std.logic.notEqual"],
@@ -167,9 +166,8 @@ struct ControlFlowTests {
     func loopReadsItsRoundIndex() async throws {
         // Given
         let sut = Warp.Expression.loop(
-            while: differs(reference("round", "index"), .literal(.int(3))),
-            body: Block(body: [Statement(binding: .constant("tick"), expression: reference("round", "index"))]),
-            round: "round"
+            while: differs(reference("probe", "index"), .literal(.int(3))),
+            body: Block(body: [Statement(binding: .constant("tick"), expression: reference("probe", "index"))])
         )
 
         // When
@@ -178,17 +176,9 @@ struct ControlFlowTests {
             result: reference("probe")
         )
 
-        // Then. The loop answers null without a declared result, and the round
-        // state is the loop's own: it is not visible after it
+        // Then. The loop answers null without a declared result, which is
+        // what its name reads after it
         #expect(answer == .null)
-        #expect(
-            !validates(
-                body: [
-                    Statement(binding: .constant("probe"), expression: sut),
-                    Statement(binding: .constant("rounds"), expression: reference("round", "index"))
-                ]
-            )
-        )
     }
 
     @Test("an author bounds a loop with the language it already has")
@@ -198,7 +188,7 @@ struct ControlFlowTests {
         // is a procedure's failure like any other
         let sut = Warp.Expression.loop(
             while: .call(
-                Call(selector: "std.math.lessThan", arguments: [reference("round", "index"), .literal(.int(3))])
+                Call(selector: "std.math.lessThan", arguments: [reference("probe", "index"), .literal(.int(3))])
             ),
             body: Block(body: [
                 Statement(
@@ -206,7 +196,7 @@ struct ControlFlowTests {
                         .call(
                             Call(
                                 selector: "std.logic.equal",
-                                arguments: [reference("round", "index"), .literal(.int(2))]
+                                arguments: [reference("probe", "index"), .literal(.int(2))]
                             )
                         ),
                         then: [
@@ -222,8 +212,7 @@ struct ControlFlowTests {
                         else: nil
                     )
                 )
-            ]),
-            round: "round"
+            ])
         )
 
         // When / Then
@@ -275,8 +264,7 @@ struct ControlFlowTests {
                     Call(selector: "app.fail", arguments: [.literal(.bool(false))])
                 ))
             ]),
-            rescue: Block(body: [], result: .literal(.string("recovered"))),
-            failure: "failure"
+            rescue: Block(body: [], result: .literal(.string("recovered")))
         )
 
         // When / Then

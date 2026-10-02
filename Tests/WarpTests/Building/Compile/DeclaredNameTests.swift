@@ -183,7 +183,7 @@ struct DeclaredNameTests {
         // Given. A loop binds the round under the statement's name
         let statement = Statement(
             binding: .constant("walk", declared: .int),
-            expression: .loop(while: .literal(.bool(false)), body: Block(body: []), round: "walk")
+            expression: .loop(while: .literal(.bool(false)), body: Block(body: []))
         )
 
         // When / Then. Refused where the module is made

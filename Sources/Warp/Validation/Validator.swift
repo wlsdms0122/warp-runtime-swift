@@ -316,6 +316,7 @@ public struct Validator: Sendable {
 
             try validate(
                 statement.expression,
+                naming: statement.binding?.introduced,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -339,8 +340,13 @@ public struct Validator: Sendable {
         return (visible, variables)
     }
 
+    // `name` is what the statement this expression is the value of
+    // introduces, which a loop binds its round under and an attempt its
+    // failure. The statement already held it to where a name may be
+    // introduced.
     private func validate(
         _ expression: Expression,
+        naming name: Name? = nil,
         visible: Set<Name>,
         variables: Set<Name> = [],
         scope: Scope = .procedure,
@@ -494,11 +500,8 @@ public struct Validator: Sendable {
 
         // The round state is bound before the condition is asked, which is what
         // lets `while` read how many rounds have passed.
-        case let .loop(condition, body, round):
-            if let round {
-                try introduced(round, in: scope, at: place)
-            }
-
+        case let .loop(condition, body):
+            let round = name
             let inner = visible.union(round.map { round in [round] } ?? [])
 
             try refuseConstructCondition(condition, at: place.child(.condition(of: .loop)))
@@ -518,10 +521,8 @@ public struct Validator: Sendable {
             )
 
         // While the rescue runs, the failure is a value under the declared name.
-        case let .attempt(block, rescue, failure):
-            if let failure {
-                try introduced(failure, in: scope, at: place)
-            }
+        case let .attempt(block, rescue):
+            let failure = name
 
             try validate(
                 block,

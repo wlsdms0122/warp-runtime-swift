@@ -45,13 +45,11 @@ struct TraversableTests {
             ),
             .loop(
                 while: marker("loop condition"),
-                body: Block(body: [Statement(expression: marker("loop body"))]),
-                round: "round"
+                body: Block(body: [Statement(expression: marker("loop body"))])
             ),
             .attempt(
                 Block(body: [Statement(expression: marker("attempt body"))]),
-                rescue: Block(body: [Statement(expression: marker("attempt rescue"))]),
-                failure: "failure"
+                rescue: Block(body: [Statement(expression: marker("attempt rescue"))])
             )
         ])
 
@@ -108,11 +106,10 @@ struct TraversableTests {
                 Statement(
                     expression: .loop(
                         while: name("going"),
-                        body: Block(body: [call, Statement(expression: .leave(Leave(reach: .construct)))], result: closure()),
-                        round: nil
+                        body: Block(body: [call, Statement(expression: .leave(Leave(reach: .construct)))], result: closure())
                     )
                 ),
-                Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]), failure: nil)),
+                Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]))),
                 Statement(binding: .constant("listed"), expression: .array([closure()])),
                 Statement(binding: .constant("fielded"), expression: .record(["held": closure()])),
                 Statement(binding: .constant("cast"), expression: .cast(closure(), as: .procedure(nil), optional: false)),
@@ -189,8 +186,7 @@ struct TraversableTests {
                 Block(body: []),
                 rescue: Block(
                     body: [Statement(expression: .cast(.literal(.int(2)), as: .string, optional: false))]
-                ),
-                failure: "failure"
+                )
             )
         )
 

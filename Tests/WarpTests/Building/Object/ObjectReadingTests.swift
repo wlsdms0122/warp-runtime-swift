@@ -522,17 +522,22 @@ struct ObjectReadingTests {
                 "app.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
-                    body: [],
+                    body: [Statement(binding: .variable("n"), expression: .literal(.int(0)))],
                     result: .loop(
                         while: .call(Call(
                             selector: "std.math.lessThan",
-                            arguments: [reference("round", "index"), .literal(.int(2))]
+                            arguments: [reference("n"), .literal(.int(2))]
                         )),
                         body: Block(
-                            body: [Statement(binding: .constant("k"), expression: reference("round", "index"))],
+                            body: [
+                                Statement(
+                                    binding: .assignment([.key("n")]),
+                                    expression: .call(Call(selector: "std.math.plus", arguments: [reference("n"), .literal(.int(1))]))
+                                ),
+                                Statement(binding: .constant("k"), expression: reference("n"))
+                            ],
                             result: reference("k")
-                        ),
-                        round: "round"
+                        )
                     )
                 )
             ]

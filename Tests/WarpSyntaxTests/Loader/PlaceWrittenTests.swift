@@ -129,8 +129,7 @@ struct PlaceWrittenTests {
                         body: [],
                         result: .loop(
                             while: .reference([.key("missing")]),
-                            body: Block(body: []),
-                            round: "spin"
+                            body: Block(body: [])
                         )
                     )
                 ]

@@ -1307,8 +1307,12 @@ struct TypeChecker {
 
     // The walk. Each subexpression is judged in the environment the ones
     // before it left behind, which is the environment the run gives it.
+    // `name` is what the statement this expression is the value of
+    // introduces, which a loop binds its round under and an attempt its
+    // failure.
     private func inspected(
         _ expression: Expression,
+        naming name: Name? = nil,
         at place: Place,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -2140,7 +2144,9 @@ struct TypeChecker {
         // would be widened to `any` behind the author's back. Judging says so
         // out loud, where a refusal can carry the reason; the probing ask stays
         // total and takes the widened answer.
-        case let .loop(condition, body, round):
+        case let .loop(condition, body):
+            let round = name
+
             // The fixpoint probes a round as it runs, the condition then the
             // statements. The rounds are what leave things for one another,
             // and the result never runs between rounds. The probe reads, so a
@@ -2248,8 +2254,7 @@ struct TypeChecker {
                 rewritten: ask.rewrites
                     ? .loop(
                         while: head.rewritten,
-                        body: Block(body: rounds.body, result: tail?.rewritten ?? body.result),
-                        round: round
+                        body: Block(body: rounds.body, result: tail?.rewritten ?? body.result)
                     )
                     : expression,
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
@@ -2269,7 +2274,9 @@ struct TypeChecker {
         // on either side is definite. A way that left the body by a leave
         // lands where the leave lands; what it did before a failure is on the
         // way that failed.
-        case let .attempt(block, rescue, failure):
+        case let .attempt(block, rescue):
+            let failure = name
+
             // What the rescue is there for. A body nothing can fail out of
             // leaves it a body no run reaches, and the author wrote it
             // expecting otherwise: what they are told is which failures the
@@ -2318,7 +2325,7 @@ struct TypeChecker {
 
             return Inspection(
                 rewritten: ask.rewrites
-                    ? .attempt(attempted.block, rescue: rescued.block, failure: failure)
+                    ? .attempt(attempted.block, rescue: rescued.block)
                     : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
@@ -2425,6 +2432,7 @@ struct TypeChecker {
 
             let inner = try await inspected(
                 statement.expression,
+                naming: statement.binding?.introduced,
                 at: here,
                 in: environment,
                 with: context,

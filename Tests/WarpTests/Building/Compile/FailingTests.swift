@@ -136,8 +136,7 @@ struct FailingTests {
                                 rescue: Block(
                                     body: [],
                                     result: .cast(reference("it"), as: .int, optional: false)
-                                ),
-                                failure: "tried"
+                                )
                             )
                         )
                     ],
@@ -165,8 +164,7 @@ struct FailingTests {
                             binding: .constant("tried"),
                             expression: .attempt(
                                 Block(body: [], result: .literal(.int(1))),
-                                rescue: Block(body: [], result: .literal(.int(2))),
-                                failure: "tried"
+                                rescue: Block(body: [], result: .literal(.int(2)))
                             )
                         )
                     ],
@@ -198,8 +196,7 @@ struct FailingTests {
                             binding: .constant("tried"),
                             expression: .attempt(
                                 Block(body: [], result: .apply(reference("piece"), arguments: [])),
-                                rescue: Block(body: [], result: .literal(.int(2))),
-                                failure: "tried"
+                                rescue: Block(body: [], result: .literal(.int(2)))
                             )
                         )
                     ],
