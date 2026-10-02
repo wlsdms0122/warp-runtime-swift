@@ -2152,25 +2152,37 @@ struct TypeChecker {
         // out loud, where a refusal can carry the reason; the probing ask stays
         // total and takes the widened answer.
         case let .loop(condition, body, round):
-            // The fixpoint probes the statements alone. The rounds are what
-            // leave things for one another, and the result never runs between
-            // rounds. The probe reads, so a probing asker takes the settled
-            // probe as its own walk; judging walks once more for the rewrite.
+            // The fixpoint probes a round as it runs, the condition then the
+            // statements. The rounds are what leave things for one another,
+            // and the result never runs between rounds. The probe reads, so a
+            // probing asker takes the settled probe of the statements as its
+            // own walk; judging walks once more for the rewrite.
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let climbing = meeting(at: place, in: context.loweredTypes, when: .probing)
             let (seeded, probed, converged) = try await settled(
                 from: rounded(environment, as: round),
                 start: { flow in try flow.start(of: round, meeting: climbing) }
             ) { entry -> (round: BodyWalk, flow: Flow) in
-                let walk = try await inspected(
-                    body.body,
-                    at: place.child(.held).child(.body),
+                let asked = try await inspected(
+                    condition,
+                    at: place.child(.condition(of: .loop)),
                     in: entry,
                     with: context,
                     ask: .probing
                 )
+                var asking = entry
 
-                return (walk, walk.flow)
+                asked.flow.apply(to: &asking)
+
+                let walk = try await inspected(
+                    body.body,
+                    at: place.child(.held).child(.body),
+                    in: asking,
+                    with: context,
+                    ask: .probing
+                )
+
+                return (walk, asked.flow.followed(by: walk.flow))
             }
 
             if !converged {
@@ -2194,8 +2206,13 @@ struct TypeChecker {
             try held(condition, asOperand: place.child(.condition(of: .loop)), given: context, when: ask)
             try held(head.reading, asCondition: place.child(.condition(of: .loop)), in: context, when: ask)
 
+            // The statements run where the condition left things.
+            var asked = seeded
+
+            head.flow.apply(to: &asked)
+
             let rounds = ask.rewrites
-                ? try await inspected(body.body, at: place.child(.held).child(.body), in: seeded, with: context, ask: ask)
+                ? try await inspected(body.body, at: place.child(.held).child(.body), in: asked, with: context, ask: ask)
                 : probed
 
             // A round as it runs: the condition, then the body. The loop
