@@ -2196,11 +2196,14 @@ struct TypeChecker {
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
                 judgements: head.judgements.absorbing(rounds.judgements, tail?.judgements),
                 reading: tail?.reading ?? .null,
+                // The round is the loop's own name, read in the condition,
+                // the body and the result alike.
                 flow: head.flow.followed(
                     by: tail.map { tail in
                         rounds.flow.absorbed().followed(by: tail.flow.outside(rounds.locals))
                     } ?? rounds.flow.absorbed()
                 )
+                .outside(Set([round].compactMap { $0 }))
             )
 
         // The body and the rescue are two ways through, not a sequence. A body
@@ -2249,9 +2252,11 @@ struct TypeChecker {
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
                 reading: attempted.reading.joined(rescued.reading),
+                // The failure is bound in the rescue alone. The body reads
+                // the names around the attempt.
                 flow: try met(
                     attempted.flow.absorbed(),
-                    rescued.flow.absorbed(),
+                    rescued.flow.absorbed().outside(Set([failure].compactMap { $0 })),
                     at: place,
                     in: context.loweredTypes,
                     when: ask
@@ -2385,14 +2390,7 @@ struct TypeChecker {
                 flowed.hold(type, on: name)
             }
 
-            // A loop's round and an attempt's failure are bound through the
-            // statement's name, so what reads them reads the construct's own.
-            let bindsThrough: Name? = switch statement.expression {
-            case .loop, .attempt: statement.binding?.introduced
-            default: nil
-            }
-
-            for name in inner.flow.read where !locals.contains(name) && name != bindsThrough {
+            for name in inner.flow.read where !locals.contains(name) {
                 flowed.read.insert(name)
             }
 
