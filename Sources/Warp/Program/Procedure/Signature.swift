@@ -154,15 +154,6 @@ public struct Signature: Sendable, Equatable {
         )
     }
 
-    // Why handing `count` arguments by position does not fit this
-    // declaration, or nil where it fits. A call hands exactly as many as the
-    // declaration takes.
-    func refusal(handing count: Int) -> String? {
-        guard count != parameters.count else { return nil }
-
-        return "\(count) arguments, and it takes \(parameters.count)"
-    }
-
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused, and so is one it declares that
     // was not given. The door a host outside the build comes through, since

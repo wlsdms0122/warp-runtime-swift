@@ -1808,6 +1808,12 @@ struct TypeChecker {
                 )
             }
 
+            let subject = "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
+
+            if case let .procedure(parameters?, _, _, _) = callee {
+                try refuseCount(handing: arguments.count, taking: parameters.count, as: subject, at: place)
+            }
+
             var rewritten: [Expression] = []
             var calls = called.calls
             var inPlace = called.inPlace
@@ -1844,7 +1850,7 @@ struct TypeChecker {
                     reading: readings,
                     against: parameters,
                     naming: nil,
-                    as: "calls a value of \(called.reading.rendered(in: context.loweredTypes))",
+                    as: subject,
                     in: context.loweredTypes,
                     writing: ask.fulfillment,
                     at: place
@@ -1929,6 +1935,13 @@ struct TypeChecker {
                     at: place
                 )
             }
+
+            try refuseCount(
+                handing: call.arguments.count,
+                taking: signature.parameters.count,
+                as: "sending '\(call.selector)'",
+                at: place
+            )
 
             var arguments: [Expression] = []
             var sent: [LoweredType] = []
@@ -2749,9 +2762,19 @@ struct TypeChecker {
         }
     }
 
+    // The entrance every judgement of a call by position stands behind: a
+    // call hands exactly as many arguments as its callee takes, so another
+    // count is refused before any position is read.
+    private func refuseCount(handing handed: Int, taking count: Int, as subject: String, at place: Place) throws {
+        guard handed != count else { return }
+
+        throw BuildError("\(subject) with \(handed) arguments, and it takes \(count)", at: place.child(.arguments))
+    }
+
     // Each argument held to what the callee takes at its position: the one
-    // judgement a call to a declaration and a call of a value share. The
-    // count; every composition a position mentions, held to its bounds, with
+    // judgement a call to a declaration and a call of a value share, behind
+    // the count the call's entrance refused. Every composition a position
+    // mentions, held to its bounds, with
     // what leans on a claim this table cannot settle written down for the
     // link; a constant, settled through the gate the run would hold it to,
     // since a kind that fits may still hold a value the slot refuses; and
@@ -2769,13 +2792,6 @@ struct TypeChecker {
         writing fulfillment: Fulfillment?,
         at place: Place
     ) throws {
-        guard arguments.count == types.count else {
-            throw BuildError(
-                "\(subject) with \(arguments.count) arguments, and it takes \(types.count)",
-                at: place.child(.arguments)
-            )
-        }
-
         for (position, (type, (argument, reading))) in zip(types, zip(arguments, readings)).enumerated() {
             let at = place.child(.argument(position))
             let slot = slots?[position]
