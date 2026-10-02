@@ -1705,6 +1705,7 @@ struct TypeChecker {
             // said about it, and its own parameters shadow any it captured.
             let bound = procedure.signature.environment(in: context.loweredTypes)
                 .merging(outside) { own, _ in own }
+                .compactMapValues(\.declaredType)
 
             let const = body.map { block in
                 Derivation().isConst(
@@ -2114,8 +2115,8 @@ struct TypeChecker {
                 for (name, written) in rounds.environment {
                     if rounds.locals.contains(name) {
                         exit[name] = written.map { type in LoweredType.null.joined(type) }
-                    } else if case let .assigned(entry)? = seeded[name] {
-                        exit[name] = .assigned(entry.joined(written.type))
+                    } else if let entry = seeded[name], entry.holding == .assigned {
+                        exit[name] = Binding(.assigned, entry.type.joined(written.type))
                     }
                 }
 
@@ -2351,18 +2352,35 @@ struct TypeChecker {
                 )
             }
 
-            switch statement.binding {
             // A name that says what it holds holds that. One that says
             // nothing holds what the build worked out from what it was given.
+            // What a slot declared it holds is the derivation's to say, by the
+            // rule its own walk binds a name by.
+            let declaredType = statement.binding.flatMap { binding in
+                Derivation().declaredType(
+                    of: binding,
+                    reading: statement.expression,
+                    given: { name in environment[name]?.declaredType },
+                    in: context.loweredTypes
+                )
+            }
+
+            switch statement.binding {
             case let .constant(id, declared)?:
                 locals.insert(id)
-                environment[id] = .fixed(try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask))
+                environment[id] = Binding(
+                    .fixed,
+                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask),
+                    declaredType: declaredType
+                )
 
             case let .variable(id, declared)?:
                 locals.insert(id)
-
-                let holds = try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
-                environment[id] = declared == nil ? .assigned(holds) : .declared(holds)
+                environment[id] = Binding(
+                    declared == nil ? .assigned : .declared,
+                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask),
+                    declaredType: declaredType
+                )
 
             // A write to a whole variable retypes it, the way a declaration
             // did, unless the box's type is fixed elsewhere, in which case what
@@ -2373,20 +2391,20 @@ struct TypeChecker {
                 guard let id = path.head else { break }
 
                 switch environment[id] {
-                case let .declared(fixed)?:
+                case let binding? where binding.holding == .declared:
                     try refuseUnfit(
                         inner.reading,
                         writtenTo: path,
-                        holding: fixed,
+                        holding: binding.type,
                         in: environment,
                         with: context,
                         at: here,
                         when: ask
                     )
 
-                case .assigned?:
+                case let binding? where binding.holding == .assigned:
                     if path.segments.count == 1 {
-                        environment[id] = .assigned(inner.reading)
+                        environment[id] = Binding(.assigned, inner.reading)
 
                         if !locals.contains(id) {
                             flowed.land((inner.reading, true), on: id)
@@ -2407,7 +2425,7 @@ struct TypeChecker {
                         }
                     }
 
-                case .fixed?, nil:
+                default:
                     try refuse(
                         "writes '\(id)', which is not a variable here",
                         at: here,
@@ -2447,7 +2465,7 @@ struct TypeChecker {
     ) -> [Name: Binding] {
         guard let round else { return environment }
 
-        return environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
+        return environment.merging([round: Binding(.fixed, Self.roundType)]) { _, new in new }
     }
 
     // The environment a rescue stands in: the entry, soaked with what the body
@@ -2464,7 +2482,7 @@ struct TypeChecker {
         flow.absorbed().apply(to: &caught)
 
         if let failure {
-            caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
+            caught[failure] = Binding(.fixed, FailurePayload.declared.lowered(in: context.loweredTypes))
         }
 
         return caught
@@ -2505,7 +2523,7 @@ struct TypeChecker {
         var widened = entry
 
         for name in flow.absorbed().written.keys {
-            widened[name] = .assigned(.any)
+            widened[name] = Binding(.assigned, .any)
         }
 
         // One more look in the widened environment, so what is handed back

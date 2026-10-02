@@ -44,6 +44,13 @@ struct Compiler {
         var constants: [Name: Value] = [:]
         var variables: [Name: Value] = [:]
 
+        // The variables that declared their type, by that type: a slot every
+        // body of the document reads, which a call of the value one holds
+        // leans on.
+        let declaredVariables = module.variables.compactMapValues { variable in
+            variable.declared?.lowered(in: loweredTypes)
+        }
+
         // The constants with what each reads as: what seeds the environment a
         // body is judged in, and what a body binds where it reads one at an
         // index the run settles.
@@ -70,14 +77,15 @@ struct Compiler {
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             signature.environment(in: loweredTypes)
-                .merging(typedConstants.mapValues { constant in .fixed(constant.type) }) { _, constant in
+                .merging(typedConstants.mapValues { constant in Binding(.fixed, constant.type) }) { _, constant in
                     constant
                 }
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
-                        held[entry.key] = .declared(
-                            module.variables[entry.key]?.declared?.lowered(in: loweredTypes)
-                                ?? LoweredType(of: entry.value, in: loweredTypes)
+                        held[entry.key] = Binding(
+                            .declared,
+                            declaredVariables[entry.key] ?? LoweredType(of: entry.value, in: loweredTypes),
+                            declaredType: declaredVariables[entry.key]
                         )
                     }
                 ) { _, variable in variable }
@@ -196,11 +204,19 @@ struct Compiler {
             among: holding,
             settling: &const,
             reading: reading,
+            beside: declaredVariables,
             taking: taking,
             beyond: answersWithoutRunning,
             in: loweredTypes
         )
-        Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared, in: loweredTypes)
+        Derivation().isolated(
+            among: holding,
+            settling: &isolated,
+            beside: declaredVariables,
+            taking: taking,
+            beyond: touchesNothingShared,
+            in: loweredTypes
+        )
         Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))
@@ -399,7 +415,7 @@ struct Compiler {
                 let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { value in Binding(.fixed, LoweredType(of: value, in: context.loweredTypes)) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -460,7 +476,7 @@ struct Compiler {
                 let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
                     in: variable.start,
                     at: place,
-                    in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { value in Binding(.fixed, LoweredType(of: value, in: context.loweredTypes)) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
