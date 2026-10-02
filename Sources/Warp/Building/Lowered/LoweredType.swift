@@ -676,7 +676,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // what its own declaration allows and the caller reading what its own
         // declaration promised.
         case let (.inout(inner), _):
-            return inner.same(other.slotUnwrapped, in: table, assuming: assuming)
+            return inner.compatible(with: other.slotUnwrapped, in: table, assuming: assuming)
 
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming)
@@ -852,23 +852,25 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether two types are one type, names resolved: a name that stands for
-    // a declared record is that record, and any other name is what it names.
+    // Whether two types are compatible: one type, names resolved, where a
+    // type parameter and a name the table does not answer match anything. A
+    // name that stands for a declared record is that record, and any other
+    // name is what it names.
     // `any` is no wildcard here: standing for anything is what `accepts`
     // reads, and a body free to write anything into a variable the caller
     // declared is the disagreement this refuses. A type parameter and a name
-    // the table does not answer stand for what this cannot know, so they
-    // match whatever they meet.
-    func same(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
+    // the table does not answer stand for what this cannot know, which is
+    // why they match.
+    func compatible(with other: LoweredType, in table: LoweredTypeTable) -> Bool {
         matches(other, in: table, open: true, assuming: [])
     }
 
-    func same(_ other: LoweredType, in table: LoweredTypeTable, assuming: [(LoweredType, LoweredType)]) -> Bool {
+    func compatible(with other: LoweredType, in table: LoweredTypeTable, assuming: [(LoweredType, LoweredType)]) -> Bool {
         matches(other, in: table, open: true, assuming: assuming)
     }
 
-    // Whether two types are one type exactly, names resolved the way `same`
-    // resolves them, with nothing standing for anything else: a type
+    // Whether two types are one type exactly, names resolved the way
+    // `compatible` resolves them, with nothing standing for anything else: a type
     // parameter is itself, and so is a name the table does not answer.
     func identical(to other: LoweredType, in table: LoweredTypeTable) -> Bool {
         matches(other, in: table, open: false, assuming: [])

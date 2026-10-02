@@ -340,7 +340,7 @@ struct ClaimChecker {
         }
 
         guard held.declared.lowered(in: table.loweredTypes)
-            .same(TypeExpression.named(type).lowered(in: table.loweredTypes), in: table.loweredTypes)
+            .compatible(with: TypeExpression.named(type).lowered(in: table.loweredTypes), in: table.loweredTypes)
         else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                     + " asks, and takes \(held.declared.rendered) first. A contract's"
@@ -360,7 +360,7 @@ struct ClaimChecker {
         // declaration's own.
         for (position, (parameter, filled)) in zip(asked.parameters, given.parameters).enumerated().dropFirst() {
             guard filled.declared.lowered(in: table.loweredTypes)
-                .same(parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
+                .compatible(with: parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
             else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and takes \(filled.declared.rendered)"
