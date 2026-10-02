@@ -977,8 +977,6 @@ struct ObjectReadingTests {
 
     // MARK: - Public
     // MARK: - Private
-    // The object as written, its parts under their keys, so a test mutates
-    // what it means to mutate.
     // A real object whose native row's first send is changed, and what it is
     // refused with where it is linked beside what it was compiled against,
     // and where it is laid down with no native code brought.
@@ -1027,6 +1025,8 @@ struct ObjectReadingTests {
         return (linked, laid)
     }
 
+    // The object as written, its parts under their keys, so a test mutates
+    // what it means to mutate.
     private func parts() async throws -> Value.Dictionary {
         try await parts(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],

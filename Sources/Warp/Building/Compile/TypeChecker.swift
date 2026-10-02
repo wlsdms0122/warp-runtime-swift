@@ -1764,9 +1764,9 @@ struct TypeChecker {
         // Which value is called is settled at the run, and what it answers is
         // the slot's to say under either ask: a procedure type that wrote
         // `returns` answers that, and one that wrote none opens to `any`. Its
-        // operands are data, held as operands below, and a variable handed in
-        // place is the slot's own type, so no write retypes anything and there
-        // is no flow to carry.
+        // operands are data, held as operands below, and write nothing. What
+        // the call carries out is the boxes it took: a variable it hands in
+        // place, and what a closure among its operands took.
         case let .apply(callee, arguments):
             // One by one, because a loop over the values alone reports the
             // third operand from the place the first was.
