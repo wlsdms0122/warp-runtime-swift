@@ -360,9 +360,8 @@ struct ClaimChecker {
             taken.binding(against: written, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
         }
 
-        for (position, (taken, handed)) in zip(takes, asks).enumerated() {
-            guard !taken.filling(bound).takes(handed, in: loweredTypes, rigid: true) else { continue }
-
+        for (position, (taken, handed)) in zip(takes, asks).enumerated()
+            where !taken.filling(bound).takes(handed, in: loweredTypes, rigid: true) {
             guard position > 0 else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                         + " asks, and takes \(given.parameters[0].declared.rendered) first. A contract's"
