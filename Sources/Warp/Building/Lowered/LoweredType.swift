@@ -677,6 +677,28 @@ indirect enum LoweredType: Sendable, Equatable {
                 }
             }
 
+        // A parameter no call fills is known by its own bounds alone, so a
+        // composition takes it only where those prove each of the
+        // composition's: a membership where a membership bounding the
+        // parameter has every member admitted, a contract where the bounds
+        // answer it. Before the general branch below, which takes what is not
+        // provably outside, and a value of this parameter is not judged again
+        // where it arrives.
+        case let (.composition(mine), .parameter(_, theirs)) where rigid:
+            let bounded = theirs.contains { bound in
+                if case .membership = bound { true } else { false }
+            }
+
+            return mine.allSatisfy { bound in
+                switch bound {
+                case let .membership(row):
+                    bounded && table.admits(constraint: row, reading: other, assuming: [], asking: assuming + [(self, other)])
+
+                case let .contract(name):
+                    if case .settled(true) = table.answering(contract: name, reading: other) { true } else { false }
+                }
+            }
+
         // A composition takes what is not provably outside any of its
         // bounds: a membership refuses what none of its members admit, a
         // contract refuses what the table settles as not answering. In the

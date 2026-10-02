@@ -96,6 +96,20 @@ struct LoweredTypeTests {
         #expect(!other.accepts(parameter, in: table, rigid: true))
     }
 
+    @Test("a membership takes a parameter no call fills only where the parameter's own bounds prove it")
+    func aRigidParameterStandsInAMembershipByItsBounds() {
+        // Given. `app.Ordered` admits int, double and string
+        let table = types.loweredTypes
+        let ordered = TypeExpression.composition(["app.Ordered"]).lowered(in: table)
+        let bounded = TypeExpression.parameter(name: "T", constraints: ["app.Ordered"]).lowered(in: table)
+        let unbounded = TypeExpression.parameter(name: "T").lowered(in: table)
+
+        // When / Then. A parameter bounded by it is one of its members, and
+        // one bounded by nothing may be anything
+        #expect(ordered.accepts(bounded, in: table, rigid: true))
+        #expect(!ordered.accepts(unbounded, in: table, rigid: true))
+    }
+
     @Test("a name lowers to its row, and the row of the record it names is the chain's end")
     func aNameLowersToARow() throws {
         // Given
