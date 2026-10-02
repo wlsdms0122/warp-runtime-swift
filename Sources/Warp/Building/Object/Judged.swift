@@ -292,12 +292,12 @@ struct Judged: Sendable {
 
             do {
                 sends = try numbering.sent(sending) { send in send.handing }
-            } catch let .misplaced(positions) as UnnumberedSend {
+            } catch let .misplaced(positions) as SendNumberingError {
                 throw ObjectRefused(
                     "'\(label)' sends procedures standing at \(positions), which is"
                         + " not one procedure to a place from the first"
                 )
-            } catch let .unnumbered(selector) as UnnumberedSend {
+            } catch let .unnumbered(selector) as SendNumberingError {
                 throw ObjectRefused("'\(label)' sends '\(selector)', which its document numbers nowhere")
             }
 
