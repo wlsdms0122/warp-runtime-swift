@@ -408,13 +408,12 @@ struct TypeChecker {
 
     // The one gate every gathered call passes, wherever its body sits, and
     // whether its selector names a declaration or a contract's procedure. The
-    // call carries the spelling the walk found for it, and is judged against
-    // the signature that spelling names.
+    // call is judged against the signature its selector names.
     func checked(_ calls: [CallSite], in context: TypingContext, writing fulfillment: Fulfillment) throws {
         for call in calls {
-            guard let signature = context.signature(of: call.callee) else {
+            guard let signature = context.signature(of: call.call.selector) else {
                 throw BuildError.unjudged(
-                    "a call to '\(call.callee)', which names no declaration",
+                    "a call to '\(call.call.selector)', which names no declaration",
                     at: call.place
                 )
             }
@@ -1962,7 +1961,6 @@ struct TypeChecker {
                     CallSite(
                         call: rewritten,
                         place: place,
-                        callee: call.selector,
                         readings: sent
                     )
                 ] + calls,

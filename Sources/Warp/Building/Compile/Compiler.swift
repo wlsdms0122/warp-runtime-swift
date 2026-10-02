@@ -91,10 +91,10 @@ struct Compiler {
         // One declaration resolves once, whichever table asks.
         var resolvedBodies: [Name: Procedure] = [:]
 
-        // A declaration, bound and dot-judged: selectors resolve to declared
-        // spellings, every dot in the body is spelled as what the types say it
-        // means, and a constant-headed path (judged first, like any path) folds
-        // to the value it is. The image holds only this form, so a run never
+        // A declaration, bound and dot-judged: every dot in the body is spelled
+        // as what the types say it means, every call is gathered, and a
+        // constant-headed path (judged first, like any path) folds to the
+        // value it is. The image holds only this form, so a run never
         // asks a value what a name does.
         //
         // Every call the body writes is checked here too, reached or not:
