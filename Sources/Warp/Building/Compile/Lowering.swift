@@ -459,7 +459,9 @@ struct Lowering {
 
     // Lowers one expression read against a frame of constants, as a constant's
     // own expression is. The frame starts as `names` in slot order and grows
-    // with what the expression declares; the frame says how large it is.
+    // with what the expression declares; the frame says how large it is. What
+    // it stood on is its document's, as a body's is, since a closure it holds
+    // is a row of that document.
     mutating func lower(
         _ expression: Expression,
         reading names: [Name],
@@ -481,6 +483,9 @@ struct Lowering {
             on: Context(slots: slots, writer: writer, judgements: judgements),
             at: place
         )
+
+        standing[origin, default: Standing()].types.formUnion(slots.types)
+        standing[origin, default: Standing()].memberships.formUnion(slots.memberships)
 
         return (code, slots.frame)
     }
