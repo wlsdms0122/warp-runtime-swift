@@ -270,8 +270,9 @@ struct Derivation {
     // what a call of the value the name holds leans on. A name that wrote its
     // type holds that. A fixed name read from another name follows the type
     // that one was declared, through a path the way `reached` walks it. A
-    // variable that wrote none is retyped by its writes, and anything else is
-    // a reading the build worked out, so neither holds one.
+    // variable that wrote none holds a type the build worked out, the one its
+    // writes left or the one a closure or a call took it as, and anything else
+    // is such a reading too, so neither holds one.
     func declaredType(
         of binding: Statement.Binding,
         reading expression: Expression,
