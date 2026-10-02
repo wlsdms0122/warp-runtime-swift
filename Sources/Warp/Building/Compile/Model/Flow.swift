@@ -44,6 +44,16 @@ struct Flow {
     // read where its earlier rounds held the box takes it the same way.
     var held: [Name: LoweredType] = [:]
 
+    // The names read here that the body this flow came out of did not
+    // declare. With what was written, what a closure takes from where it was
+    // written.
+    var read: Set<Name> = []
+
+    // Every name the flow reached from outside: read or written.
+    var reached: Set<Name> {
+        read.union(written.keys).union(escaped.keys)
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     // How a write lands on what an earlier write left. A definite write
@@ -64,11 +74,27 @@ struct Flow {
         held[name] = held[name]?.joined(type) ?? type
     }
 
-    // The boxes another flow took, taken here too.
-    mutating func hold(from other: Flow) {
-        for (name, type) in other.held {
+    // What an operand read and took, carried by what holds it. An operand
+    // writes nothing.
+    mutating func carry(_ operand: Flow) {
+        read.formUnion(operand.read)
+
+        for (name, type) in operand.held {
             hold(type, on: name)
         }
+    }
+
+    // The same flow seen from outside a body that declared these names: what
+    // it did to them is that body's own.
+    func outside(_ locals: Set<Name>) -> Flow {
+        var seen = self
+
+        seen.written = written.filter { name, _ in !locals.contains(name) }
+        seen.escaped = escaped.filter { name, _ in !locals.contains(name) }
+        seen.held = held.filter { name, _ in !locals.contains(name) }
+        seen.read = read.subtracting(locals)
+
+        return seen
     }
 
     // A write made on a way that left.
@@ -149,7 +175,7 @@ struct Flow {
             flowed.escape(type, on: name)
         }
 
-        flowed.hold(from: second)
+        flowed.carry(second)
         flowed.answered += second.answered
 
         return second.leaves ? flowed.leaving() : flowed
@@ -171,8 +197,8 @@ struct Flow {
 
         flowed.answered = answered + declined.answered
 
-        flowed.hold(from: self)
-        flowed.hold(from: declined)
+        flowed.carry(self)
+        flowed.carry(declined)
 
         switch (leaves, declined.leaves) {
         // A leaving flow holds its writes as escaped alone, gathered above.

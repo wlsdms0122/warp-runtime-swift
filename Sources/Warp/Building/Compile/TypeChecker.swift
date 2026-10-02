@@ -1377,19 +1377,21 @@ struct TypeChecker {
         // data the moment it is read, so under a folding scope it is judged
         // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
+            let reached = Flow(read: Set(path.expandingIndexReferences.compactMap(\.head)))
+
             switch reading(of: path, in: environment, with: context, at: place) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
 
-                return Inspection(rewritten: expression, reading: .any)
+                return Inspection(rewritten: expression, reading: .any, flow: reached)
 
             case let .reads(resolved, read):
                 guard case let .judging(folding, _, _) = ask else {
-                    return Inspection(rewritten: expression, reading: read)
+                    return Inspection(rewritten: expression, reading: read, flow: reached)
                 }
 
                 guard let folding else {
-                    return Inspection(rewritten: .reference(resolved), reading: read)
+                    return Inspection(rewritten: .reference(resolved), reading: read, flow: reached)
                 }
 
                 // An inner index path may read a constant too. `items[C]` folds
@@ -1400,7 +1402,7 @@ struct TypeChecker {
                 let settled = try await foldedIndexReferences(resolved, at: place, folding: folding)
 
                 guard let head = folding.settled(settled) else {
-                    return Inspection(rewritten: .reference(settled), reading: read)
+                    return Inspection(rewritten: .reference(settled), reading: read, flow: reached)
                 }
 
                 do {
@@ -1409,7 +1411,8 @@ struct TypeChecker {
                     return Inspection(
                         rewritten: .literal(value),
                         reading: LoweredType(of: value, in: context.loweredTypes)
-                            .refined(by: read, fixed: true, in: context.loweredTypes)
+                            .refined(by: read, fixed: true, in: context.loweredTypes),
+                        flow: reached
                     )
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
@@ -1633,27 +1636,31 @@ struct TypeChecker {
             let declared = Set(procedure.signature.names)
             let outside = environment.filter { name, _ in !declared.contains(name) }
 
-            // A box the closure takes is one it reads and writes when it is
-            // called, as the type it reads as here.
-            var flow = Flow()
+            // The body read under the ask this walk answers: what it reaches
+            // from outside is what the closure takes, which either ask needs.
+            let inner = try await inspected(
+                block: block,
+                at: place.child(.closure),
+                in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
+                    _, own in own
+                },
+                with: context.bounding(procedure.signature.parameterBounding.table),
+                ask: ask
+            )
 
-            for name in captured(by: block) {
+            // A box the closure takes is one it reads and writes when it is
+            // called, as the type it reads as here. What it reaches it hands
+            // on as read, for a closure around it.
+            let reached = inner.flow.reached.subtracting(declared)
+            var flow = Flow(read: reached)
+
+            for name in reached {
                 guard let taken = outside[name]?.takenType else { continue }
 
                 flow.hold(taken, on: name)
             }
 
             if case let .judging(_, _, fulfillment) = ask {
-                let inner = try await inspected(
-                    block: block,
-                    at: place.child(.closure),
-                    in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
-                        _, own in own
-                    },
-                    with: context.bounding(procedure.signature.parameterBounding.table),
-                    ask: ask
-                )
-
                 // What the closure writes into a name it captured has to fit
                 // what the name holds: the closure runs when it is called,
                 // and the body that declared the variable reads it as the
@@ -1810,11 +1817,11 @@ struct TypeChecker {
             // hands in place.
             var flow = heldInPlace(arguments, at: handed, in: environment)
 
-            flow.hold(from: called.flow)
+            flow.carry(called.flow)
 
             guard case let .judging(_, _, fulfillment) = ask else {
                 for (position, argument) in arguments.enumerated() {
-                    flow.hold(from: try await inspected(
+                    flow.carry(try await inspected(
                         argument,
                         at: place.child(.argument(position)),
                         in: environment,
@@ -1866,7 +1873,7 @@ struct TypeChecker {
                 readings.append(inner.reading)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
-                flow.hold(from: inner.flow)
+                flow.carry(inner.flow)
             }
 
             // The arguments are handed by position the way a call's are, and
@@ -1931,7 +1938,7 @@ struct TypeChecker {
                     )
 
                     readings.append(inner.reading)
-                    flow.hold(from: inner.flow)
+                    flow.carry(inner.flow)
                 }
 
                 return Inspection(
@@ -1995,7 +2002,7 @@ struct TypeChecker {
                 sent.append(inner.reading)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
-                flow.hold(from: inner.flow)
+                flow.carry(inner.flow)
             }
 
             try handedInPlace(
@@ -2189,7 +2196,7 @@ struct TypeChecker {
                 reading: tail?.reading ?? .null,
                 flow: head.flow.followed(
                     by: tail.map { tail in
-                        rounds.flow.absorbed().followed(by: tail.flow)
+                        rounds.flow.absorbed().followed(by: tail.flow.outside(rounds.locals))
                     } ?? rounds.flow.absorbed()
                 )
             )
@@ -2296,7 +2303,7 @@ struct TypeChecker {
 
             tail = read
             reading = read.reading
-            flow = body.flow.followed(by: read.flow)
+            flow = body.flow.followed(by: read.flow.outside(body.locals))
         } else {
             tail = nil
             reading = .null
@@ -2368,6 +2375,24 @@ struct TypeChecker {
 
             for (name, type) in inner.flow.held where !locals.contains(name) {
                 flowed.hold(type, on: name)
+            }
+
+            // A loop's round and an attempt's failure are bound through the
+            // statement's name, so what reads them reads the construct's own.
+            let bindsThrough: Name? = switch statement.expression {
+            case .loop, .attempt: statement.binding?.introduced
+            default: nil
+            }
+
+            for name in inner.flow.read where !locals.contains(name) && name != bindsThrough {
+                flowed.read.insert(name)
+            }
+
+            // A write reads the names its path indexes with.
+            if case let .assignment(path)? = statement.binding {
+                for name in path.expandingIndexReferences.compactMap(\.head) where !locals.contains(name) {
+                    flowed.read.insert(name)
+                }
             }
 
             flowed.answered += inner.flow.answered
@@ -2609,26 +2634,6 @@ struct TypeChecker {
         }
 
         return flow
-    }
-
-    // The names a closure's body reads or writes from where it was written,
-    // at whatever depth: the heads of the paths it reads and of the paths it
-    // sets.
-    private func captured(by block: Block) -> Set<Name> {
-        block.nodes.reduce(into: Set<Name>()) { names, node in
-            switch node {
-            case let .expression(.reference(path)):
-                names.formUnion(path.expandingIndexReferences.compactMap(\.head))
-
-            case let .statement(statement):
-                guard case let .assignment(path)? = statement.binding else { return }
-
-                names.formUnion(path.expandingIndexReferences.compactMap(\.head))
-
-            case .expression:
-                return
-            }
-        }
     }
 
     // The rules a call handing variables in place is held to, at each
