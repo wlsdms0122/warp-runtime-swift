@@ -813,7 +813,6 @@ struct ObjectReader {
             constness: try constness(cursor.next()),
             isolation: try isolation(cursor.next()),
             failing: try failing(cursor.next()),
-            sends: try cursor.field().list(sent),
             judging: try implementation(cursor.next())
         )
 
@@ -832,18 +831,6 @@ struct ObjectReader {
         case .native: read = .native(sending: try Field(cursor.next(), of: "sending").list(send))
         case nil: throw ObjectRefused("'implementation' answers in a way this reads none of")
         }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func sent(_ value: Value) throws -> Sent {
-        var cursor = try FieldCursor(value, of: "send")
-        let read = Sent(
-            row: try cursor.field().count(),
-            handing: try cursor.field().count()
-        )
 
         try cursor.end()
 

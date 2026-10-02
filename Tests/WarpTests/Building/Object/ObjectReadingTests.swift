@@ -22,6 +22,42 @@ struct ObjectReadingTests {
     private struct ObjectMissing: Error {
     }
 
+    // Doubling by sending the procedure that multiplies.
+    private struct TwiceQuery: Query {
+        enum Parameters: Int, ParameterSet {
+            case of
+
+            // MARK: - Property
+            var declared: Parameter { Parameter(name: "of", type: .int) }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        enum Imports: Int, ImportSet {
+            case times
+
+            // MARK: - Property
+            var selector: Name { "std.math.times" }
+
+            var handing: Int { 2 }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            try await question.send(.times, handing: [question[.of], .int(2)])
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // A stand-in for what a host works out from the bytes, which this
     // package does not write. What these ask is what a reading refuses, so any
@@ -31,6 +67,50 @@ struct ObjectReadingTests {
 
     // MARK: - Initializer
     // MARK: - Test
+    @Test("is refused where a native sends a spelling its numbering gives no number")
+    func aSendItsNumberingDoesNotNumber() async throws {
+        // Given. A real object whose native row sends a spelling other than the
+        // one its document numbered
+        let sut = try Module(procedures: [
+            "app.entry": Procedure(
+                access: .public,
+                signature: Signature(of: TwiceQuery.self, returns: .int),
+                implementation: .query(TwiceQuery())
+            )
+        ])
+        let compiled = try await builder.compile([sut] + Module.standard)
+
+        guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
+            case var .dictionary(parts) = try mine.object(),
+            case var .array(table) = parts["rows"],
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[6],
+            case var .array(sending) = implementation[1],
+            case var .array(send) = sending[0]
+        else {
+            Issue.record("an object writes a native's sends under its implementation")
+
+            return
+        }
+
+        send[1] = .string("std.math.minus")
+        sending[0] = .array(send)
+        implementation[1] = .array(sending)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts = parts.writing("rows", with: .array(table))
+
+        let read = try Compiled(written: .dictionary(parts), of: mine.identity)
+        let beside = compiled.filter { one in !one.declared.contains("app.entry") }
+
+        // When / Then. Refused where the send is numbered, as it is laid
+        #expect {
+            try builder.link(beside + [read], supplying: Supplying([sut] + Module.standard))
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere")
+        }
+    }
+
     @Test("is refused where a count is written below zero")
     func aCountBelowZero() async throws {
         // Given. A real object whose frame counts its slots below zero.
@@ -38,7 +118,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2]
         else {
             Issue.record("an object writes a row's frame beside its body")
@@ -48,7 +128,7 @@ struct ObjectReadingTests {
 
         frame[0] = .int(-1)
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -171,7 +251,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2],
             case let .int(size) = frame[0], size > 0,
             case let .array(parameters) = frame[1], parameters.isEmpty
@@ -184,7 +264,7 @@ struct ObjectReadingTests {
         frame[0] = .int(0)
         frame[4] = .array([])
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -265,7 +345,7 @@ struct ObjectReadingTests {
         // When / Then
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2],
             case let .array(names) = frame[4],
             !names.isEmpty
@@ -277,7 +357,7 @@ struct ObjectReadingTests {
 
         frame[4] = .array(names.dropLast())
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -312,7 +392,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(operation) = result[0],
@@ -329,7 +409,7 @@ struct ObjectReadingTests {
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -422,7 +502,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(literal) = result[0],
@@ -440,7 +520,7 @@ struct ObjectReadingTests {
         result[0] = .array(literal)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -483,7 +563,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(operation) = result[0],
@@ -500,7 +580,7 @@ struct ObjectReadingTests {
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 

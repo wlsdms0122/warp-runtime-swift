@@ -295,7 +295,6 @@ enum ObjectCoverageFixture {
             constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
-            sends: [],
             judging: .body(
                 LoweredBody(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
@@ -311,7 +310,6 @@ enum ObjectCoverageFixture {
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            sends: body ? [] : [Sent(row: 1, handing: 2)],
             judging: body
                 ? .body(
                     everyOperation,

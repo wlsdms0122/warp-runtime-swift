@@ -143,6 +143,7 @@ public struct Builder: Sendable {
                     in: lowered.types.loweredTypes,
                     of: origin,
                     closure: document.closure(ofRow: index),
+                    numbering: document.numbering,
                     supplied: natives,
                     at: document.document
                 )
