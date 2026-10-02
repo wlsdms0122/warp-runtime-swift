@@ -440,7 +440,11 @@ struct Compiler {
                         loweredTypes: context.loweredTypes
                     ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
 
-                    known[name] = (value, LoweredType(of: value, in: context.loweredTypes).refined(by: reading, in: context.loweredTypes))
+                    known[name] = (
+                        value,
+                        LoweredType(of: value, in: context.loweredTypes)
+                            .refined(by: reading, derived: true, in: context.loweredTypes)
+                    )
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -509,7 +513,8 @@ struct Compiler {
                 guard let declared = variable.declared else {
                     started[name] = (
                         settled,
-                        LoweredType(of: settled, in: context.loweredTypes).refined(by: reading, in: context.loweredTypes)
+                        LoweredType(of: settled, in: context.loweredTypes)
+                            .refined(by: reading, derived: false, in: context.loweredTypes)
                     )
                     return
                 }

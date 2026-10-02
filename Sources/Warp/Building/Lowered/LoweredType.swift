@@ -442,7 +442,10 @@ indirect enum LoweredType: Sendable, Equatable {
     // the value's expression was judged at in that position (an element, an
     // entry, a field). A procedure value says nothing about its signature, and
     // the expression that made it wrote one; everything else is the value's.
-    func refined(by judged: LoweredType, in table: LoweredTypeTable) -> LoweredType {
+    // The constness and isolation the build derived are facts of the one
+    // value judged, so they come along only where `derived` says the name
+    // keeps that value; a box a write may fill again takes the signature.
+    func refined(by judged: LoweredType, derived: Bool, in table: LoweredTypeTable) -> LoweredType {
         var written = judged.resolved(in: table)
 
         if case let .nullable(inner) = written {
@@ -450,14 +453,18 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         switch (self, written) {
-        case (.procedure(nil, nil, .unstated, .unstated), .procedure):
-            return written
+        case let (.procedure(nil, nil, .unstated, .unstated), .procedure(parameters, returns, constness, isolation)):
+            guard derived else {
+                return .procedure(parameters: parameters, returns: returns, constness: .unstated, isolation: .unstated)
+            }
+
+            return .procedure(parameters: parameters, returns: returns, constness: constness, isolation: isolation)
 
         case let (.array(element), .array(judgedElement)):
-            return .array(element.refined(by: judgedElement, in: table))
+            return .array(element.refined(by: judgedElement, derived: derived, in: table))
 
         case let (.dictionary(entry), .dictionary(judgedEntry)):
-            return .dictionary(entry.refined(by: judgedEntry, in: table))
+            return .dictionary(entry.refined(by: judgedEntry, derived: derived, in: table))
 
         case let (.record(record), .record(judgedRecord)):
             return .record(
@@ -465,7 +472,7 @@ indirect enum LoweredType: Sendable, Equatable {
                     layout: record.layout,
                     fields: record.named.map { name, field in
                         judgedRecord[name].map { judgedField in
-                            field.refined(by: judgedField.fieldUnwrapped, in: table)
+                            field.refined(by: judgedField.fieldUnwrapped, derived: derived, in: table)
                         } ?? field
                     }
                 )

@@ -1428,7 +1428,8 @@ struct TypeChecker {
 
                     return Inspection(
                         rewritten: .literal(value),
-                        reading: LoweredType(of: value, in: context.loweredTypes).refined(by: read, in: context.loweredTypes)
+                        reading: LoweredType(of: value, in: context.loweredTypes)
+                            .refined(by: read, derived: true, in: context.loweredTypes)
                     )
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
