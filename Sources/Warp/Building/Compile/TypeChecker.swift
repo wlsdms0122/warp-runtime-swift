@@ -2798,6 +2798,8 @@ struct TypeChecker {
             let named = slot.map { slot in "\(slot.name)" } ?? "argument \(position)"
             let quoted = slot.map { slot in "'\(slot.name)'" } ?? named
 
+            // A pair the link settles is written down at the call, which an
+            // object records; a refusal here stands at the argument.
             if let refusal = refusal(
                 holding: reading,
                 to: type,
@@ -2806,7 +2808,7 @@ struct TypeChecker {
                 fulfillment: fulfillment,
                 at: place
             ) {
-                throw BuildError("\(subject): \(refusal)", at: place)
+                throw BuildError("\(subject): \(refusal)", at: at)
             }
 
             if let constant = argument.constantValue {
