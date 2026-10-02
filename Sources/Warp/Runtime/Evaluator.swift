@@ -116,7 +116,7 @@ struct Evaluator: Sendable {
         )
     }
 
-    // The same send, where the sender answers without running. The link
+    // The same send, where the sender answers without running. The build
     // refused a query sending anything that runs, so what reaches here answers
     // as data.
     func send(

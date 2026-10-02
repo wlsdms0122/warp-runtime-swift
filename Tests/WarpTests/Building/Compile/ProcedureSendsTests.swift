@@ -628,7 +628,7 @@ struct ProcedureSendsTests {
             )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("'app.nowhere' is called here, and no module in this link declares it")
+                && "\(error)".contains("sends 'app.nowhere', which no module in this link declares")
         }
     }
 
@@ -637,8 +637,7 @@ struct ProcedureSendsTests {
         // Given. A document declares `app.hidden` privately, and a procedure the
         // host brings declares it sends that spelling.
         let document = try Module(procedures: [
-            "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
-            "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
+            "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7)))
         ])
 
         // When / Then
@@ -676,6 +675,51 @@ struct ProcedureSendsTests {
             error is BuildError
                 && "\(error)".contains("says it touches no name another body could touch at the same time, and sends 'app.ticket'")
         }
+    }
+
+    @Test("an isolated procedure compiled apart from the stateful one it sends is refused at the build")
+    func anIsolatedProcedureCompiledApartIsRefused() async throws {
+        // Given. `app.ticket` is compiled on its own
+        let ticketing = try await Builder().compile([.ticketing])
+
+        // When / Then. Compiled alone, `app.counted` sends a spelling nothing
+        // standing declares, and compiled against `app.ticket` it is held to
+        // what that procedure keeps
+        let alone = await #expect(throws: BuildError.self) {
+            let counted = try await Builder().compile([Self.claims])
+
+            _ = try Builder().link(counted + ticketing, supplying: Supplying([Self.claims, .ticketing]))
+        }
+        let against = await #expect(throws: BuildError.self) {
+            try await Builder().compile([Self.claims], against: ticketing, supplying: Supplying([.ticketing]))
+        }
+
+        #expect(alone?.message == "sends 'app.ticket', which no module in this link declares")
+        #expect(
+            against?.message.contains("says it touches no name another body could touch at the same time, and sends 'app.ticket'")
+                == true
+        )
+    }
+
+    @Test("a query compiled apart from the effect it sends is refused at the build")
+    func aQueryCompiledApartIsRefused() async throws {
+        // Given. `app.shout` is compiled on its own
+        let shouting = try await Builder().compile([.shouting])
+
+        // When / Then. Compiled alone, `app.shouting` sends a spelling nothing
+        // standing declares, and compiled against `app.shout` it is held to
+        // answering only by running
+        let alone = await #expect(throws: BuildError.self) {
+            let contradicting = try await Builder().compile([Self.contradicting])
+
+            _ = try Builder().link(contradicting + shouting, supplying: Supplying([Self.contradicting, .shouting]))
+        }
+        let against = await #expect(throws: BuildError.self) {
+            try await Builder().compile([Self.contradicting], against: shouting, supplying: Supplying([.shouting]))
+        }
+
+        #expect(alone?.message == "sends 'app.shout', which no module in this link declares")
+        #expect(against?.message.contains("answers without running and sends 'app.shout', which answers only by running") == true)
     }
 
     @Test("a procedure that says it touches shared state may send one that does")

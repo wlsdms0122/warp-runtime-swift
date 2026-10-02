@@ -238,6 +238,7 @@ struct Compiler {
             const: constant,
             isolated: untouched,
             taking: taking,
+            concealing: behind.concealed,
             in: loweredTypes
         )
 

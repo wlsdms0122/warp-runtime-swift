@@ -13,7 +13,8 @@ import Foundation
 // reads numbers where the procedure wrote spellings.
 //
 // Which row a number is stays the link's answer, the same as for a call a body
-// wrote. A spelling nothing declares is refused there.
+// wrote. A spelling nothing standing declares is refused here, the way a call
+// a body wrote is.
 //
 // Refused here are the two claims a procedure makes that sending can contradict. A
 // query is the claim that it answers without running, and running is not
@@ -36,10 +37,12 @@ struct Sending {
     // time.
     private let isolated: @Sendable (Name) -> Bool
 
-    // What a selector this document may send takes, where the build has the
-    // declaration in hand. Nil for a spelling nothing standing so far declares,
-    // which is only reachable for a send that hands nothing over.
+    // What a selector this document may send takes. Nil for a spelling
+    // nothing standing declares.
     private let taking: @Sendable (Name) -> Signature?
+
+    // The spellings only another document's private declarations wear.
+    private let concealed: Set<Name>
 
     // What the declared parameters are read as, so a count is held to them.
     private let loweredTypes: LoweredTypeTable
@@ -50,12 +53,14 @@ struct Sending {
         const: @escaping @Sendable (Name) -> Bool,
         isolated: @escaping @Sendable (Name) -> Bool,
         taking: @escaping @Sendable (Name) -> Signature?,
+        concealing concealed: Set<Name>,
         in loweredTypes: LoweredTypeTable
     ) {
         self.numbering = numbering
         self.const = const
         self.isolated = isolated
         self.taking = taking
+        self.concealed = concealed
         self.loweredTypes = loweredTypes
     }
 
@@ -90,13 +95,15 @@ struct Sending {
                 )
             }
 
-            // A spelling no declaration standing here answers for is the
-            // link's to refuse, as undeclared or as another document's
-            // private; what it does is judged only with the declaration in
-            // hand.
-            let declared = taking(send.selector) != nil
+            guard let signature = taking(send.selector) else {
+                guard !concealed.contains(send.selector) else {
+                    throw BuildError.concealed(send.selector, at: place)
+                }
 
-            guard !declared || !answersWithoutRunning || const(send.selector) else {
+                throw BuildError("sends '\(send.selector)', which no module in this link declares", at: place)
+            }
+
+            guard !answersWithoutRunning || const(send.selector) else {
                 throw BuildError(
                     "'\(label)' answers without running and sends '\(send.selector)',"
                         + " which answers only by running",
@@ -104,7 +111,7 @@ struct Sending {
                 )
             }
 
-            guard !declared || !touchesNothingShared || isolated(send.selector) else {
+            guard !touchesNothingShared || isolated(send.selector) else {
                 throw BuildError(
                     "'\(label)' says it touches no name another body could touch at"
                         + " the same time, and sends '\(send.selector)', which does",
@@ -112,28 +119,19 @@ struct Sending {
                 )
             }
 
-            return Sent(row: stands, handing: try handing(of: send, called: label, at: place))
+            return Sent(row: stands, handing: try handing(of: send, reaching: signature, called: label, at: place))
         }
     }
 
     // MARK: - Private
     // How many arguments a send hands over, held against the parameters it
-    // reaches by the same rule a call written in a body is held to. A
-    // spelling nothing standing here declares is the link's to refuse, and
-    // only a send handing nothing may reach one.
-    private func handing(of send: Native.Send, called label: Name, at place: Place) throws -> Int {
-        guard let signature = taking(send.selector) else {
-            guard send.handing == 0 else {
-                throw BuildError(
-                    "'\(label)' hands \(send.handing) to '\(send.selector)', and nothing"
-                        + " standing here declares what it takes",
-                    at: place
-                )
-            }
-
-            return 0
-        }
-
+    // reaches by the same rule a call written in a body is held to.
+    private func handing(
+        of send: Native.Send,
+        reaching signature: Signature,
+        called label: Name,
+        at place: Place
+    ) throws -> Int {
         guard send.handing == signature.parameters.count else {
             throw BuildError(
                 "'\(label)' sends '\(send.selector)' \(send.handing) arguments, and it takes"
