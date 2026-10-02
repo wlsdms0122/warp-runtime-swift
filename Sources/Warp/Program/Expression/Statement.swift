@@ -66,18 +66,6 @@ public struct Statement: Sendable {
             }
         }
 
-        // The text a document writes under the naming key: the name, or the
-        // path as one string.
-        public var spelled: String {
-            switch self {
-            case let .constant(name, _), let .variable(name, _):
-                return name.spelling
-
-            case let .assignment(path):
-                return path.rendered
-            }
-        }
-
         public var isConstant: Bool {
             if case .constant = self { return true }
             return false

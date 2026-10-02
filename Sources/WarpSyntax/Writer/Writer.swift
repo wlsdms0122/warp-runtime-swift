@@ -229,7 +229,7 @@ public struct Writer: Sendable {
             return .dictionary(written)
         }
 
-        let (key, body) = try construct(of: statement.expression, named: statement.binding?.spelled)
+        let (key, body) = try construct(of: statement.expression, named: statement.binding?.introduced)
 
         written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .dictionary([key: body])
 
@@ -337,7 +337,7 @@ public struct Writer: Sendable {
     // given it up.
     private func construct(
         of expression: Warp.Expression,
-        named id: String?
+        named id: Name?
     ) throws -> (Name, Value) {
         switch expression {
         // A call is a tag, read where a statement's value is the way it is
@@ -452,23 +452,23 @@ public struct Writer: Sendable {
         return key
     }
 
-    // A construct takes the name it binds from the statement it is written as,
-    // so one built with any other name has no document. It is reachable: a
-    // caller assembling the language's types directly is under no obligation to
-    // make the two agree, and finds out here rather than at a run that reads a
-    // name nothing bound.
+    // A construct takes the name it binds from what the statement it is
+    // written as introduces, so one built with any other name has no document.
+    // It is reachable: a caller assembling the language's types directly is
+    // under no obligation to make the two agree, and finds out here rather
+    // than at a run that reads a name nothing bound.
     private func named(
         _ bound: Name?,
-        matches id: String?,
+        matches id: Name?,
         in construct: String,
         binding: String
     ) throws {
-        guard bound?.spelling != id else { return }
+        guard bound != id else { return }
 
         throw WritingError(
-            "a \(construct) binds its \(binding) under the name of the statement it is"
-                + " written as, and this one binds '\(bound?.spelling ?? "nothing")'"
-                + " inside '\(id ?? "a nameless statement")'"
+            "a \(construct) binds its \(binding) under the name the statement it is"
+                + " written as introduces, and this one binds '\(bound?.spelling ?? "nothing")'"
+                + " inside \(id.map { name in "'\(name)'" } ?? "a statement that introduces none")"
         )
     }
 

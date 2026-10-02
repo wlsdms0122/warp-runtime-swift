@@ -75,8 +75,7 @@ struct TypingContext: Sendable {
         declared(selector)?.signature ?? contractProcedures[selector]?.signature
     }
 
-    // The row a selector names. A walk that meets a call finds it here, once,
-    // and hands the spelling on with the call so nothing finds it again.
+    // The row a selector names.
     func declared(_ selector: Name) -> Linked? {
         row(of: selector).map { row in linked[row] }
     }

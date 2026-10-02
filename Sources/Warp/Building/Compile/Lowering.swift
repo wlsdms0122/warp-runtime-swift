@@ -245,21 +245,21 @@ struct Lowering {
 
     // What lowering one body reads beside the names in scope: the slots it
     // allocates, the declaration its closures are numbered under, and what
-    // the build found each call of a value in it hands in place. One per body:
-    // a closure is lowered on slots of its own and shares the other two with
-    // the body it was written in.
+    // the type check judged at each place in it. One per body: a closure is
+    // lowered on slots of its own and shares the other two with the body it
+    // was written in.
     private struct Context {
         // MARK: - Property
         let slots: SlotAllocator
         let writer: Closure.Declaration
-        let inPlace: InPlaceTable
+        let judgements: JudgementTable
 
         // MARK: - Initializer
         // MARK: - Public
         // The same context with other slots, the way a closure's body is
         // lowered on slots of its own.
         func with(slots: SlotAllocator) -> Context {
-            Context(slots: slots, writer: writer, inPlace: inPlace)
+            Context(slots: slots, writer: writer, judgements: judgements)
         }
 
         // MARK: - Private
@@ -300,10 +300,11 @@ struct Lowering {
     // Each document's constants, settled, with what each reads as.
     private var constants: [Int: [Name: (value: Value, type: LoweredType)]] = [:]
 
-    // The spellings of the private declarations held so far, for the refusal
-    // alone: not in `rows`, since nothing outside their documents names them,
-    // and read only after a row lookup has failed, to say why it did.
-    private(set) var concealed: Set<Name> = []
+    // The spellings only a private declaration wears, of every document this
+    // lowering holds, for the refusal alone: not in `rows`, since nothing
+    // outside their documents names them, and read only after a row lookup
+    // has failed, to say why it did.
+    let concealed: Set<Name>
 
     // How many closures each declaration has been lowered so far, by the
     // document that declared it. A closure's number is its declaration's start
@@ -314,10 +315,12 @@ struct Lowering {
     // MARK: - Initializer
     init(
         table: [Linked] = [],
+        concealing concealed: Set<Name> = [],
         contractProcedures: [Name: LoweredContractProcedure] = [:],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = table
+        self.concealed = concealed
         self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
     }
@@ -328,12 +331,13 @@ struct Lowering {
     // are read again.
     init(
         _ carried: Carried,
+        concealing concealed: Set<Name>,
         contractProcedures: [Name: LoweredContractProcedure],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
-        self.concealed = carried.concealed
+        self.concealed = concealed
         self.documents = carried.documents
         self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
@@ -365,11 +369,7 @@ struct Lowering {
         for (offset, row) in block.enumerated() {
             own[row.label] = start + offset
 
-            guard row.access.reachesOtherDocuments else {
-                concealed.insert(row.label)
-
-                continue
-            }
+            guard row.access.reachesOtherDocuments else { continue }
 
             rows[row.label] = start + offset
         }
@@ -422,10 +422,9 @@ struct Lowering {
         constants[origin] = settled
     }
 
-    // Lowers a declaration's body into its row. `inPlace` is what the build
-    // found each call of a value in it hands in place, by where the call
-    // stands.
-    mutating func settle(_ row: Int, body block: Block, inPlace: InPlaceTable, at place: Place) throws {
+    // Lowers a declaration's body into its row. `judgements` is what the type
+    // check judged at each place in it.
+    mutating func settle(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
         let declared = table[row]
         let slots = SlotAllocator(
             origin: declared.origin,
@@ -443,7 +442,7 @@ struct Lowering {
         let body = try lower(
             block,
             in: scope,
-            on: Context(slots: slots, writer: .procedure(declared.label), inPlace: inPlace),
+            on: Context(slots: slots, writer: .procedure(declared.label), judgements: judgements),
             at: place
         )
 
@@ -460,13 +459,15 @@ struct Lowering {
 
     // Lowers one expression read against a frame of constants, as a constant's
     // own expression is. The frame starts as `names` in slot order and grows
-    // with what the expression declares; the frame says how large it is.
+    // with what the expression declares; the frame says how large it is. What
+    // it stood on is its document's, as a body's is, since a closure it holds
+    // is a row of that document.
     mutating func lower(
         _ expression: Expression,
         reading names: [Name],
         origin: Int,
         writer: Closure.Declaration,
-        inPlace: InPlaceTable,
+        judgements: JudgementTable,
         at place: Place
     ) throws -> (Operation, Frame) {
         let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
@@ -476,7 +477,15 @@ struct Lowering {
             scope.slots[name] = slots.allocate(name)
         }
 
-        let code = try lower(expression, in: scope, on: Context(slots: slots, writer: writer, inPlace: inPlace), at: place)
+        let code = try lower(
+            expression,
+            in: scope,
+            on: Context(slots: slots, writer: writer, judgements: judgements),
+            at: place
+        )
+
+        standing[origin, default: Standing()].types.formUnion(slots.types)
+        standing[origin, default: Standing()].memberships.formUnion(slots.memberships)
 
         return (code, slots.frame)
     }
@@ -772,8 +781,13 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard let block = procedure.block else {
-            throw BuildError.unjudged("a closure with no body", at: place)
+        // The type check judges every closure literal it rewrote with its
+        // judged body, so a literal it judged is a body.
+        guard
+            case let .closure(constness, isolation, failing)? = context.judgements[place.child(.closure)],
+            case let .body(block) = procedure.implementation
+        else {
+            throw BuildError.unjudged("a closure literal", at: place)
         }
 
         // A closure reaches a constant the way it reaches a module variable,
@@ -819,9 +833,9 @@ struct Lowering {
                 origin: context.slots.origin,
                 signature: procedure.signature,
                 access: .private,
-                constness: procedure.constness,
-                isolation: procedure.isolation,
-                failing: procedure.failing,
+                constness: constness,
+                isolation: isolation,
+                failing: failing,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),
@@ -850,7 +864,7 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard let handed = context.inPlace[place] else {
+        guard case let .apply(handed)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 

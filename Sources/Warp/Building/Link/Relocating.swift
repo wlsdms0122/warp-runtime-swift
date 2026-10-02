@@ -125,6 +125,7 @@ final class Relocating {
                     in: loweredTypes,
                     of: row.origin,
                     closure: row.closure,
+                    numbering: assembled.numbering[row.origin],
                     supplied: supplied,
                     at: assembled.documents[row.origin]
                 )

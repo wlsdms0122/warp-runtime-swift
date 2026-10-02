@@ -129,6 +129,7 @@ public struct Builder: Sendable {
         let lowered = try ClaimChecker().lowered(declaring, in: namespace, among: signatures)
 
         var compiling = Compiling(
+            concealing: assembled.concealed,
             types: lowered.types,
             contractProcedures: lowered.contractProcedures,
             naming: compiled.map(\.document),
@@ -143,6 +144,7 @@ public struct Builder: Sendable {
                     in: lowered.types.loweredTypes,
                     of: origin,
                     closure: document.closure(ofRow: index),
+                    numbering: document.numbering,
                     supplied: natives,
                     at: document.document
                 )
@@ -279,6 +281,14 @@ public struct Builder: Sendable {
             }
         }
 
+        // The spellings only a private declaration wears, of every document
+        // this compile stands beside or lays down, known before any of them
+        // is compiled: why a spelling reaches nothing is a fact of the whole
+        // list, and the order the documents are compiled in has no say in it.
+        let concealed = laid.carried.concealed.union(holding.flatMap { symbols in
+            symbols.filter { symbol in !symbol.supplies }.map(\.declared)
+        })
+
         // The compile's ledger, woven into the table its rows are built from.
         // A body folded here runs against a table that cannot settle a
         // contract, and what it hands over is written here rather than passed
@@ -288,9 +298,7 @@ public struct Builder: Sendable {
             declaring,
             in: namespace,
             among: signatures,
-            concealed: laid.carried.concealed.union(holding.flatMap { symbols in
-                symbols.filter { symbol in !symbol.supplies }.map(\.declared)
-            }),
+            concealed: concealed,
             unsettled: fulfillment
         )
 
@@ -299,6 +307,7 @@ public struct Builder: Sendable {
         let tokens = laying.map { _ in Compiled.Token() }
         var compiling = Compiling(
             laid.carried,
+            concealing: concealed,
             types: lowered.types,
             contractProcedures: lowered.contractProcedures,
             naming: documents.map(\.document),

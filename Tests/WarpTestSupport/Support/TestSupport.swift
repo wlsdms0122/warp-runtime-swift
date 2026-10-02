@@ -148,12 +148,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
             arguments: [
                 .array(
                     conditions.map { condition in
-                        .closure(
-                            Procedure(
-                                implementation: .body(Block(body: [], result: condition)),
-                                constness: .const
-                            )
-                        )
+                        .closure(Procedure(implementation: .body(Block(body: [], result: condition))))
                     }
                 )
             ]

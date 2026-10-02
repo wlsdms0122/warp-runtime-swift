@@ -15,10 +15,6 @@ struct CallSite: Sendable {
     let call: Call
     let place: Place
 
-    // The spelling the selector resolved to, found by the walk that gathered
-    // this call, so nothing has to find it again.
-    let callee: Name
-
     // What each operand held where this was written. The walk's own answers,
     // carried so the check never walks a body a second time for them. A call's
     // arguments are mostly references, so without these the types a declaration
@@ -30,12 +26,10 @@ struct CallSite: Sendable {
     init(
         call: Call,
         place: Place,
-        callee: Name,
         readings: [LoweredType]
     ) {
         self.call = call
         self.place = place
-        self.callee = callee
         self.readings = readings
     }
 

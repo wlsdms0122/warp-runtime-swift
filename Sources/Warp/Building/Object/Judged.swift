@@ -45,12 +45,6 @@ struct Judged: Sendable {
     let isolation: Isolation
     let failing: Failing
 
-    // The sends this row's procedure declared, in the places the procedure names them
-    // at: the row each reaches, numbered by the document, and where what it
-    // hands over stands. Empty for a body, whose sends are calls its own code
-    // carries.
-    let sends: [Sent]
-
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -64,7 +58,6 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        sends: [Sent],
         implementation: Implementation
     ) {
         self.label = label
@@ -73,7 +66,6 @@ struct Judged: Sendable {
         self.constness = constness
         self.isolation = isolation
         self.failing = failing
-        self.sends = sends
         self.implementation = implementation
     }
 
@@ -86,7 +78,6 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        sends: [Sent],
         judging implementation: Implementation
     ) throws {
         try Self.judge(implementation, against: signature)
@@ -98,7 +89,6 @@ struct Judged: Sendable {
             constness: constness,
             isolation: isolation,
             failing: failing,
-            sends: sends,
             implementation: implementation
         )
     }
@@ -130,7 +120,6 @@ struct Judged: Sendable {
         self.constness = row.constness
         self.isolation = row.isolation
         self.failing = row.failing
-        self.sends = row.sends
         self.implementation = implementation
     }
 
@@ -201,15 +190,24 @@ struct Judged: Sendable {
     //
     // A native row is joined to the code the host brought under its spelling,
     // which is the one thing a document settled that the document does not
-    // hold.
+    // hold, and its sends are numbered by the document's numbering.
     func linked(
         in table: LoweredTypeTable,
         of origin: Int,
         closure: (by: Closure.Declaration, nth: Int)?,
+        numbering: Numbering,
         supplied: Supplying,
         at document: Place.Document
     ) throws -> Linked {
-        try linked(in: table, of: origin, closure: closure, supplied: supplied, at: document, standing: false)
+        try linked(
+            in: table,
+            of: origin,
+            closure: closure,
+            numbering: numbering,
+            supplied: supplied,
+            at: document,
+            standing: false
+        )
     }
 
     // The same, where a row the supply brings no code for stands as the
@@ -221,10 +219,19 @@ struct Judged: Sendable {
         in table: LoweredTypeTable,
         of origin: Int,
         closure: (by: Closure.Declaration, nth: Int)?,
+        numbering: Numbering,
         supplied: Supplying,
         at document: Place.Document
     ) throws -> Linked {
-        try linked(in: table, of: origin, closure: closure, supplied: supplied, at: document, standing: true)
+        try linked(
+            in: table,
+            of: origin,
+            closure: closure,
+            numbering: numbering,
+            supplied: supplied,
+            at: document,
+            standing: true
+        )
     }
 
     // MARK: - Private
@@ -268,15 +275,32 @@ struct Judged: Sendable {
         in table: LoweredTypeTable,
         of origin: Int,
         closure: (by: Closure.Declaration, nth: Int)?,
+        numbering: Numbering,
         supplied: Supplying,
         at document: Place.Document,
         standing: Bool
     ) throws -> Linked {
         switch implementation {
         case let .body(body, frame):
-            return row(.body(body, frame), of: origin, closure: closure, foldable: true, in: table)
+            return row(.body(body, frame), of: origin, closure: closure, foldable: true, sends: [], in: table)
 
         case let .native(sending):
+            // Each send reaches the number its document gave the spelling,
+            // which a link answers with a row the way it answers a call's
+            // number.
+            let sends: [Sent]
+
+            do {
+                sends = try numbering.sent(sending) { send in send.handing }
+            } catch let .misplaced(positions) as SendNumberingError {
+                throw ObjectRefused(
+                    "'\(label)' sends procedures standing at \(positions), which is"
+                        + " not one procedure to a place from the first"
+                )
+            } catch let .unnumbered(selector) as SendNumberingError {
+                throw ObjectRefused("'\(label)' sends '\(selector)', which its document numbers nowhere")
+            }
+
             guard let brought = supplied[label, at: document] else {
                 guard standing else { throw self.brought(nothing: document) }
 
@@ -291,6 +315,7 @@ struct Judged: Sendable {
                     .native(standIn),
                     of: origin,
                     foldable: true,
+                    sends: sends,
                     in: table
                 )
             }
@@ -310,7 +335,7 @@ struct Judged: Sendable {
                 throw self.brought(otherwise: brought, sending: sending, in: document)
             }
 
-            return row(.native(brought.native), of: origin, foldable: brought.builtin, in: table)
+            return row(.native(brought.native), of: origin, foldable: brought.builtin, sends: sends, in: table)
         }
     }
 
@@ -319,6 +344,7 @@ struct Judged: Sendable {
         of origin: Int,
         closure: (by: Closure.Declaration, nth: Int)? = nil,
         foldable: Bool,
+        sends: [Sent],
         in table: LoweredTypeTable
     ) -> Linked {
         Linked(

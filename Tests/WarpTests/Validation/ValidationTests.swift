@@ -15,6 +15,20 @@ import WarpTestSupport
 // rejects a particular text, but what the language considers visible where.
 @Suite("A document checked against itself")
 struct ValidationTests {
+    // A procedure the host answers, written where a closure literal stands.
+    private struct OneQuery: Query {
+        typealias Parameters = NoParameters
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            .int(1)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -701,6 +715,29 @@ struct ValidationTests {
         #expect(!validates(readsEnclosing))
         #expect(validates(readsItsOwn))
         #expect(!validates(readsNothingReal))
+    }
+
+    @Test("a closure literal is a body, and one written as the host's code is refused at the literal")
+    func aClosureLiteralOfTheHostsCodeIsRefused() {
+        // Given / When
+        let refusal = #expect(throws: ValidationError.self) {
+            try Module(procedures: [entryName: Procedure(
+                access: .public,
+                body: [
+                    Statement(
+                        binding: .constant("f"),
+                        expression: .closure(Procedure(implementation: .query(OneQuery())))
+                    )
+                ],
+                result: .apply(.reference([.key("f")]), arguments: [])
+            )])
+        }
+
+        // Then. At the literal, where the author wrote it
+        #expect(
+            refusal.map(String.init(describing:))
+                == "procedures.entry.body.f[0].closure: a closure is a body, and this one is the host's code"
+        )
     }
 
     @Test("a name on a conditional is refused")

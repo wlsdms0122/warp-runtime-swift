@@ -38,7 +38,7 @@ public struct ConditionalForm: ConstructForm {
     // MARK: - Public
     // A name on a conditional is `Validator`'s to refuse (`answersNothing`),
     // whichever notation spelled it.
-    public func expression(boundTo name: String?) -> Warp.Expression {
+    public func expression(boundTo name: Name?) -> Warp.Expression {
         .conditional(condition, then: then, else: otherwise)
     }
 

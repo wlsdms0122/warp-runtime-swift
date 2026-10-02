@@ -59,7 +59,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     }
 
     // Sending a procedure this procedure declared it sends, the way
-    // `Invocation.send` does. The link refused a query declaring it sends
+    // `Invocation.send` does. The build refused a query declaring it sends
     // anything that runs.
     public func send(
         _ key: P.Imports,

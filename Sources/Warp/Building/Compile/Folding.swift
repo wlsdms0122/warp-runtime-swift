@@ -50,7 +50,7 @@ struct Folding {
     func read(
         _ expression: Expression,
         as writer: Closure.Declaration,
-        inPlace: InPlaceTable,
+        judgements: JudgementTable,
         writing lowering: inout Lowering,
         at place: Place
     ) async throws -> Value {
@@ -59,7 +59,7 @@ struct Folding {
             reading: names,
             origin: origin,
             writer: writer,
-            inPlace: inPlace,
+            judgements: judgements,
             at: place
         )
 

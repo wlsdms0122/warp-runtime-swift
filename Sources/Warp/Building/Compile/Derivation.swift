@@ -157,32 +157,23 @@ struct Derivation {
             self.failing(inner, given: failing)
         }
 
-        switch expression {
-        case .literal, .reference, .closure:
-            return .these([])
+        let here = failingHere(expression, given: failing)
 
-        // A cast that names a type the value did not arrive as fails, and
-        // that is the one failure the runtime itself raises. The optional
-        // spelling reads the same mismatch as null instead, so it raises
-        // nothing.
-        case let .cast(value, _, optional):
-            return read(value).joined(optional ? .these([]) : .these([CastRefused.type]))
+        switch expression {
+        case .literal, .reference, .closure, .apply:
+            return here
+
+        case let .cast(value, _, _):
+            return read(value).joined(here)
 
         case let .array(array):
-            return array.reduce(Failing.these([])) { carried, element in carried.joined(read(element)) }
+            return array.reduce(here) { carried, element in carried.joined(read(element)) }
 
         case let .record(record):
-            return record.values.reduce(Failing.these([])) { carried, field in carried.joined(read(field)) }
-
-        // Which value is called is settled at run time, so what may come out
-        // of it is not knowable here.
-        case .apply:
-            return .unstated
+            return record.values.reduce(here) { carried, field in carried.joined(read(field)) }
 
         case let .call(call):
-            return call.arguments.reduce(failing(call.selector) ?? .unstated) { carried, argument in
-                carried.joined(read(argument))
-            }
+            return call.arguments.reduce(here) { carried, argument in carried.joined(read(argument)) }
 
         case let .block(block):
             return self.failing(block, given: failing)
@@ -202,6 +193,31 @@ struct Derivation {
 
         case let .leave(leave):
             return leave.value.map(read) ?? .these([])
+        }
+    }
+
+    // What may come out of this node itself, apart from the nodes it holds:
+    // the one judgement of where a run may fail, which `failing` gathers over
+    // a tree and the type check asks where a way may end by failing.
+    func failingHere(_ expression: Expression, given failing: (Name) -> Failing?) -> Failing {
+        switch expression {
+        // A cast that names a type the value did not arrive as fails, and
+        // that is the one failure the runtime itself raises. The optional
+        // spelling reads the same mismatch as null instead, so it raises
+        // nothing.
+        case let .cast(_, _, optional):
+            return optional ? .these([]) : .these([CastRefused.type])
+
+        // Which value is called is settled at run time, so what may come out
+        // of it is not knowable here.
+        case .apply:
+            return .unstated
+
+        case let .call(call):
+            return failing(call.selector) ?? .unstated
+
+        case .literal, .reference, .closure, .array, .record, .block, .conditional, .loop, .attempt, .leave:
+            return .these([])
         }
     }
 

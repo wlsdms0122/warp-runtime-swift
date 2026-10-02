@@ -28,14 +28,6 @@ public struct Procedure: Sendable {
     // as well. `internal` where the declaration said nothing.
     public let access: Access
 
-    // What the build derived about this body, where the build has seen it: a
-    // closure literal is rewritten by the build to carry them, and the closure
-    // value made from it carries them on into a slot that asks. A procedure a
-    // caller assembles claims nothing.
-    public let constness: Constness
-    public let isolation: Isolation
-    public let failing: Failing
-
     public var block: Block? { implementation.block }
     public var body: Body { block?.body ?? [] }
     public var result: Expression? { block?.result }
@@ -45,18 +37,12 @@ public struct Procedure: Sendable {
         description: String? = nil,
         access: Access = .internal,
         signature: Signature = Signature(),
-        implementation: Implementation,
-        constness: Constness = .unstated,
-        isolation: Isolation = .unstated,
-        failing: Failing = .unstated
+        implementation: Implementation
     ) {
         self.description = description
         self.access = access
         self.signature = signature
         self.implementation = implementation
-        self.constness = constness
-        self.isolation = isolation
-        self.failing = failing
     }
 
     // A procedure written in the language. The common case, and the one a
@@ -83,10 +69,7 @@ public struct Procedure: Sendable {
             description: description,
             access: access,
             signature: signature,
-            implementation: implementation,
-            constness: constness,
-            isolation: isolation,
-            failing: failing
+            implementation: implementation
         )
     }
 
@@ -95,10 +78,7 @@ public struct Procedure: Sendable {
             description: description,
             access: access,
             signature: signature,
-            implementation: implementation,
-            constness: constness,
-            isolation: isolation,
-            failing: failing
+            implementation: implementation
         )
     }
 

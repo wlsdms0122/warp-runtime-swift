@@ -646,7 +646,6 @@ struct ObjectWriter {
             constness(row.constness),
             isolation(row.isolation),
             failing(row.failing),
-            .array(row.sends.map(sent)),
             try implementation(row.implementation)
         ])
     }
@@ -661,10 +660,6 @@ struct ObjectWriter {
         case let .native(sending):
             return tagged(Tag.native, .array(sending.map(send)))
         }
-    }
-
-    private func sent(_ sent: Sent) -> Value {
-        .array([.int(sent.row), .int(sent.handing)])
     }
 
     private func send(_ send: Native.Send) -> Value {

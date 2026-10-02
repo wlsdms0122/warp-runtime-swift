@@ -253,6 +253,25 @@ struct Numbering: Sendable {
         called[selector]
     }
 
+    // A native's declared sends as the numbers this document gives them, in
+    // the places the native names them at, each handing over what `handing`
+    // says. A run reaches a send by its place, so the places are one send to a
+    // place from the first, and every spelling is one this document numbers;
+    // a native whose sends say otherwise is answered with `SendNumberingError`.
+    func sent(_ sending: [Native.Send], handing: (Native.Send) throws -> Int) throws -> [Sent] {
+        let ordered = sending.sorted { left, right in left.position < right.position }
+
+        guard ordered.map(\.position) == Array(ordered.indices) else {
+            throw SendNumberingError.misplaced(ordered.map(\.position))
+        }
+
+        return try ordered.map { send in
+            guard let number = call(send.selector) else { throw SendNumberingError.unnumbered(send.selector) }
+
+            return Sent(row: number, handing: try handing(send))
+        }
+    }
+
     // Where the nth closure a declaration wrote stands: the number its body
     // carries, and which of the document's closures that is. Nil where the
     // document was never read for that declaration's closures, which is a build
