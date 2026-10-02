@@ -26,6 +26,12 @@ struct Way {
 
     // MARK: - Initializer
     // MARK: - Public
+    // Ways of which one ran, met: each joined with the ones before it, or nil
+    // where there is none.
+    static func met(_ ways: [Way], meeting: Flow.Meeting) rethrows -> Way? {
+        try ways.reduce(nil as Way?) { met, way in try met.map { met in try met.joined(with: way, meeting: meeting) } ?? way }
+    }
+
     // How a write lands on what an earlier write left. A definite write
     // replaces; an indefinite one may not have happened, so it joins with what
     // was there, and whether the name was written at all stays the earlier

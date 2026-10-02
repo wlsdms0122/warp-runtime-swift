@@ -195,18 +195,14 @@ struct Flow {
     // none lands there, beside the flow without them. Where the construct goes
     // on from is the construct's to say.
     func gathered(where lands: (Reach) -> Bool, meeting: Meeting) rethrows -> (met: Way?, rest: Flow) {
+        let landing = left.keys.sorted().filter(lands)
         var rest = self
-        var met: Way?
 
-        for reach in left.keys.sorted() where lands(reach) {
-            for way in left[reach] ?? [] {
-                met = try met.map { met in try met.joined(with: way, meeting: meeting) } ?? way
-            }
-
+        for reach in landing {
             rest.left[reach] = nil
         }
 
-        return (met, rest)
+        return (try Way.met(landing.flatMap { reach in left[reach] ?? [] }, meeting: meeting), rest)
     }
 
     // What a round of the loop under this name starts from, where this flow
@@ -214,10 +210,8 @@ struct Flow {
     // where a round finished or continued, none of it certain.
     func start(of loop: Name?, meeting: Meeting) rethrows -> Way {
         let (continued, _) = try gathered(where: { reach in reach.endsRound(of: loop) }, meeting: meeting)
-        var start = Way()
-
-        for way in [going, continued].compactMap({ way in way }) {
-            start = try start.joined(with: way, meeting: meeting)
+        let start = try [going, continued].compactMap { way in way }.reduce(Way()) { start, way in
+            try start.joined(with: way, meeting: meeting)
         }
 
         return start.indefinite()

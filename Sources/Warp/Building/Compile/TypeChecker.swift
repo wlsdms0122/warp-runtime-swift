@@ -2226,9 +2226,10 @@ struct TypeChecker {
             let declined = head.flow.going.map { declined in start.followed(by: declined) }
             var ended = outward.preceded(by: start)
 
-            ended.going = try [declined, stopped.map { stopped in start.followed(by: stopped) }]
-                .compactMap { way in way }
-                .reduce(nil as Way?) { met, way in try met.map { met in try met.joined(with: way, meeting: meets) } ?? way }
+            ended.going = try Way.met(
+                [declined, stopped.map { stopped in start.followed(by: stopped) }].compactMap { way in way },
+                meeting: meets
+            )
 
             // The result runs once, at whichever exit the run takes (a
             // condition that declines at the start, a round that finishes or
