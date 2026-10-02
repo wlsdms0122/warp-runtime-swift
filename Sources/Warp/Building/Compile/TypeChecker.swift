@@ -1472,7 +1472,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
                 element = element?.joined(inner.reading) ?? inner.reading
                 rewritten.append(inner.rewritten)
             }
@@ -1624,7 +1624,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
                 fields[name] = inner.reading
                 rewritten[name] = inner.rewritten
             }
@@ -1840,7 +1840,7 @@ struct TypeChecker {
                 rewritten.append(inner.rewritten)
                 readings.append(inner.reading)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -1900,7 +1900,7 @@ struct TypeChecker {
                 answers = .any
             }
 
-            try inPlace.record(handed, at: place)
+            inPlace.record(handed, at: place)
 
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
@@ -1986,7 +1986,7 @@ struct TypeChecker {
                 arguments.append(inner.rewritten)
                 sent.append(inner.reading)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
             }
 
             try handedInPlace(
@@ -2063,7 +2063,7 @@ struct TypeChecker {
                         ? .conditional(head.rewritten, then: taken.body, else: nil)
                         : expression,
                     calls: head.calls + taken.calls,
-                    inPlace: try head.inPlace.absorbing(taken.inPlace),
+                    inPlace: head.inPlace.absorbing(taken.inPlace),
                     reading: .null,
                     flow: head.flow.followed(by: taken.flow.joined(with: Flow()))
                 )
@@ -2082,7 +2082,7 @@ struct TypeChecker {
                     ? .conditional(head.rewritten, then: taken.body, else: declined.body)
                     : expression,
                 calls: head.calls + taken.calls + declined.calls,
-                inPlace: try head.inPlace.absorbing(taken.inPlace, declined.inPlace),
+                inPlace: head.inPlace.absorbing(taken.inPlace, declined.inPlace),
                 reading: taken.reading == .never && declined.reading == .never ? .never : .null,
                 flow: head.flow.followed(by: taken.flow.joined(with: declined.flow))
             )
@@ -2176,7 +2176,7 @@ struct TypeChecker {
                     )
                     : expression,
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
-                inPlace: try head.inPlace.absorbing(rounds.inPlace, tail?.inPlace),
+                inPlace: head.inPlace.absorbing(rounds.inPlace, tail?.inPlace),
                 reading: tail?.reading ?? .null,
                 flow: head.flow.followed(
                     by: tail.map { tail in
@@ -2229,7 +2229,7 @@ struct TypeChecker {
                     ? .attempt(attempted.block, rescue: rescued.block, failure: failure)
                     : expression,
                 calls: attempted.calls + rescued.calls,
-                inPlace: try attempted.inPlace.absorbing(rescued.inPlace),
+                inPlace: attempted.inPlace.absorbing(rescued.inPlace),
                 reading: attempted.reading.joined(rescued.reading),
                 flow: attempted.flow.absorbed().joined(with: rescued.flow.absorbed())
             )
@@ -2301,7 +2301,7 @@ struct TypeChecker {
                 ? Block(body: body.body, result: tail?.rewritten ?? block.result)
                 : block,
             body.calls + (tail?.calls ?? []),
-            try body.inPlace.absorbing(tail?.inPlace),
+            body.inPlace.absorbing(tail?.inPlace),
             reading,
             flow
         )
@@ -2341,7 +2341,7 @@ struct TypeChecker {
                 Statement(binding: statement.binding, expression: inner.rewritten)
             )
             calls += inner.calls
-            try inPlace.absorb(inner.inPlace)
+            inPlace.absorb(inner.inPlace)
 
             // A write outlives the block it was written in, so a name written
             // anywhere inside this statement may hold something else by the
