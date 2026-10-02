@@ -2081,7 +2081,12 @@ struct TypeChecker {
                     calls: head.calls + taken.calls,
                     judgements: head.judgements.absorbing(taken.judgements),
                     reading: .null,
-                    flow: head.flow.followed(by: taken.flow.joined(with: Flow()))
+                    flow: head.flow.followed(
+                        by: try taken.flow.joined(
+                            with: Flow(),
+                            meeting: meeting(at: place, in: context.loweredTypes, when: ask)
+                        )
+                    )
                 )
             }
 
@@ -2101,7 +2106,10 @@ struct TypeChecker {
                 judgements: head.judgements.absorbing(taken.judgements, declined.judgements),
                 reading: taken.reading == .never && declined.reading == .never ? .never : .null,
                 flow: head.flow.followed(
-                    by: try met(taken.flow, declined.flow, at: place, in: context.loweredTypes, when: ask)
+                    by: try taken.flow.joined(
+                        with: declined.flow,
+                        meeting: meeting(at: place, in: context.loweredTypes, when: ask)
+                    )
                 )
             )
 
@@ -2120,8 +2128,10 @@ struct TypeChecker {
             // leave things for one another, and the result never runs between
             // rounds. The probe reads, so a probing asker takes the settled
             // probe as its own walk; judging walks once more for the rewrite.
+            let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let (seeded, probed, converged) = try await settled(
-                from: rounded(environment, as: round)
+                from: rounded(environment, as: round),
+                meeting: meeting(at: place, in: context.loweredTypes, when: .probing)
             ) { entry -> (round: BodyWalk, flow: Flow) in
                 let walk = try await inspected(
                     body.body,
@@ -2199,9 +2209,9 @@ struct TypeChecker {
                 // The round is the loop's own name, read in the condition,
                 // the body and the result alike.
                 flow: head.flow.followed(
-                    by: tail.map { tail in
-                        rounds.flow.absorbed().followed(by: tail.flow.outside(rounds.locals))
-                    } ?? rounds.flow.absorbed()
+                    by: try tail.map { tail in
+                        try rounds.flow.absorbed(meeting: meets).followed(by: tail.flow.outside(rounds.locals))
+                    } ?? rounds.flow.absorbed(meeting: meets)
                 )
                 .outside(Set([round].compactMap { $0 }))
             )
@@ -2237,10 +2247,11 @@ struct TypeChecker {
                 with: context,
                 ask: ask
             )
+            let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let rescued = try await inspected(
                 block: rescue,
                 at: place.child(.rescue),
-                in: caught(soaking: attempted.flow, failure: failure, in: environment, with: context),
+                in: try caught(soaking: attempted.flow, failure: failure, in: environment, with: context, meeting: meets),
                 with: context,
                 ask: ask
             )
@@ -2254,12 +2265,9 @@ struct TypeChecker {
                 reading: attempted.reading.joined(rescued.reading),
                 // The failure is bound in the rescue alone. The body reads
                 // the names around the attempt.
-                flow: try met(
-                    attempted.flow.absorbed(),
-                    rescued.flow.absorbed().outside(Set([failure].compactMap { $0 })),
-                    at: place,
-                    in: context.loweredTypes,
-                    when: ask
+                flow: try attempted.flow.absorbed(meeting: meets).joined(
+                    with: try rescued.flow.absorbed(meeting: meets).outside(Set([failure].compactMap { $0 })),
+                    meeting: meets
                 )
             )
         }
@@ -2561,11 +2569,12 @@ struct TypeChecker {
         soaking flow: Flow,
         failure: Name?,
         in environment: [Name: Binding],
-        with context: TypingContext
-    ) -> [Name: Binding] {
+        with context: TypingContext,
+        meeting: Flow.Meeting
+    ) rethrows -> [Name: Binding] {
         var caught = environment
 
-        flow.absorbed().apply(to: &caught)
+        try flow.absorbed(meeting: meeting).apply(to: &caught)
 
         if let failure {
             caught[failure] = Binding(.fixed(declared: nil), FailurePayload.declared.lowered(in: context.loweredTypes))
@@ -2587,6 +2596,7 @@ struct TypeChecker {
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
         from entry: [Name: Binding],
+        meeting: Flow.Meeting,
         read: ([Name: Binding]) async throws -> (round: Round, flow: Flow)
     ) async rethrows -> (environment: [Name: Binding], last: Round, converged: Bool) {
         var seeded = entry
@@ -2596,10 +2606,12 @@ struct TypeChecker {
         while true {
             var next = entry
 
-            flow.absorbed().apply(to: &next)
+            let absorbed = try flow.absorbed(meeting: meeting)
+
+            absorbed.apply(to: &next)
 
             guard next != seeded else { return (seeded, last, true) }
-            guard steps < 3 * max(1, flow.absorbed().written.count) + 1 else { break }
+            guard steps < 3 * max(1, absorbed.written.count) + 1 else { break }
 
             steps += 1
             seeded = next
@@ -2608,7 +2620,7 @@ struct TypeChecker {
 
         var widened = entry
 
-        for name in flow.absorbed().written.keys {
+        for name in try flow.absorbed(meeting: meeting).written.keys {
             widened[name] = Binding(.assigned, .any)
         }
 
@@ -2619,29 +2631,25 @@ struct TypeChecker {
         return (widened, settled, false)
     }
 
-    // Two ways meeting: one of them ran. A box each way took is held to what
-    // that way took it as, so two that differ leave no type a write after
-    // they meet could fit, and that is refused here.
-    private func met(
-        _ one: Flow,
-        _ other: Flow,
-        at place: Place,
-        in table: LoweredTypeTable,
-        when ask: Ask
-    ) throws -> Flow {
-        for (name, mine) in one.held.sorted(by: { $0.key < $1.key }) {
-            guard let theirs = other.held[name], theirs != mine else { continue }
+    // Where ways that each held one box meet. A write after the meeting has
+    // to fit what every way's taker asked, so the box is held to the narrower
+    // of the two types where one accepts the other. Where neither does, no
+    // write after could fit both, and that is refused here.
+    private func meeting(at place: Place, in table: LoweredTypeTable, when ask: Ask) -> Flow.Meeting {
+        { name, one, other in
+            if one.accepts(other, in: table) { return other }
+            if other.accepts(one, in: table) { return one }
 
             try refuse(
-                "takes '\(name)' as \(mine.rendered(in: table)) one way and as"
-                    + " \(theirs.rendered(in: table)) another, and no write after the two"
+                "takes '\(name)' as \(one.rendered(in: table)) one way and as"
+                    + " \(other.rendered(in: table)) another, and no write after the two"
                     + " meet could fit both",
                 at: place,
                 when: ask
             )
-        }
 
-        return one.joined(with: other)
+            return one
+        }
     }
 
     // What a call hands in place at these positions, each variable held from

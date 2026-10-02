@@ -15,6 +15,11 @@ import Foundation
 // indefinite one joins with what the name held. It gathers the boxes held
 // here the same way, which no later write retypes.
 struct Flow {
+    // Where ways that each held one box meet: what the box is held to after,
+    // given the name and the type each way held it to. Which type fits both is
+    // a judgement of types, and the walk that asks for a meeting makes it.
+    typealias Meeting = (Name, LoweredType, LoweredType) throws -> LoweredType
+
     // MARK: - Property
     var written: [Name: (type: LoweredType, definite: Bool)] = [:]
 
@@ -42,9 +47,15 @@ struct Flow {
     // from here on every write to it is held to that type, on whichever way
     // the box was taken. Taking a box already held says so again, so a round
     // read where its earlier rounds held the box takes it the same way. A
-    // hold is what every taker asks of the box, so it never widens: two ways
-    // that took one box as different types are refused where they meet.
+    // hold is what every taker asks of the box, so it never widens, and where
+    // two ways that held one box differently meet, the meeting says what it is
+    // held to after.
     var held: [Name: LoweredType] = [:]
+
+    // What was held on ways that left. No later write on those ways runs, so
+    // nothing here holds one, but the construct that absorbs the leave puts
+    // these back in play, the way it puts what escaped back.
+    var escapedHeld: [Name: LoweredType] = [:]
 
     // The names read here that the body this flow came out of did not
     // declare. With what was written, what a closure takes from where it was
@@ -95,6 +106,7 @@ struct Flow {
         seen.written = written.filter { name, _ in !locals.contains(name) }
         seen.escaped = escaped.filter { name, _ in !locals.contains(name) }
         seen.held = held.filter { name, _ in !locals.contains(name) }
+        seen.escapedHeld = escapedHeld.filter { name, _ in !locals.contains(name) }
         seen.read = read.subtracting(locals)
 
         return seen
@@ -127,7 +139,7 @@ struct Flow {
     // on (no run comes back) but it is not gone either, because the writes are
     // in the boxes and a loop or an attempt may absorb the leave. They move
     // aside as escaped, indefinite because how far the way got is the run's
-    // fact.
+    // fact, and so do the boxes it held.
     func leaving() -> Flow {
         var left = self
 
@@ -137,7 +149,12 @@ struct Flow {
             left.escape(write.type, on: name)
         }
 
+        for (name, type) in held {
+            left.escapedHeld[name] = left.escapedHeld[name] ?? type
+        }
+
         left.written = [:]
+        left.held = [:]
 
         return left
     }
@@ -146,8 +163,9 @@ struct Flow {
     // flow after it goes on, so what escaped on the way is back in play, and
     // nothing a construct absorbed is certain: the round may not have run, the
     // body may have stopped anywhere. A leave that reaches further (a
-    // `return`) is over-counted here, which only widens a join.
-    func absorbed() -> Flow {
+    // `return`) is over-counted here, which only widens a join and only
+    // narrows a hold. A box held on a way out meets the ways that went on.
+    func absorbed(meeting: Meeting) rethrows -> Flow {
         var stopped = indefinite()
 
         stopped.leaves = false
@@ -156,7 +174,12 @@ struct Flow {
             stopped.land((type, false), on: name)
         }
 
+        for (name, type) in stopped.escapedHeld.sorted(by: { $0.key < $1.key }) {
+            stopped.held[name] = try stopped.held[name].map { going in try meeting(name, going, type) } ?? type
+        }
+
         stopped.escaped = [:]
+        stopped.escapedHeld = [:]
 
         return stopped
     }
@@ -178,6 +201,10 @@ struct Flow {
             flowed.escape(type, on: name)
         }
 
+        for (name, type) in second.escapedHeld {
+            flowed.escapedHeld[name] = flowed.escapedHeld[name] ?? type
+        }
+
         flowed.carry(second)
         flowed.answered += second.answered
 
@@ -187,9 +214,10 @@ struct Flow {
     // One of two ways ran. A name both wrote holds either; a name one wrote may
     // not have been written at all, so nothing about it is definite. A way
     // that leaves hands on nothing (the ways that finish are the only ways a
-    // reading after can stand on) but what it wrote rides along as escaped,
-    // for the construct that absorbs the leave.
-    func joined(with declined: Flow) -> Flow {
+    // reading after can stand on) but what it wrote and held rides along as
+    // escaped, for the construct that absorbs the leave. A box both ways that
+    // go on held is held to what the meeting says.
+    func joined(with declined: Flow, meeting: Meeting) rethrows -> Flow {
         var flowed = Flow()
 
         for side in [escaped, declined.escaped] {
@@ -198,10 +226,19 @@ struct Flow {
             }
         }
 
-        flowed.answered = answered + declined.answered
+        for side in [escapedHeld, declined.escapedHeld] {
+            for (name, type) in side {
+                flowed.escapedHeld[name] = flowed.escapedHeld[name] ?? type
+            }
+        }
 
-        flowed.carry(self)
-        flowed.carry(declined)
+        flowed.answered = answered + declined.answered
+        flowed.read = read.union(declined.read)
+        flowed.held = held
+
+        for (name, theirs) in declined.held.sorted(by: { $0.key < $1.key }) {
+            flowed.held[name] = try held[name].map { mine in try meeting(name, mine, theirs) } ?? theirs
+        }
 
         switch (leaves, declined.leaves) {
         // A leaving flow holds its writes as escaped alone, gathered above.
