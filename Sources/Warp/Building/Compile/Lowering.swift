@@ -784,8 +784,11 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard let block = procedure.block,
-            case let .closure(constness, isolation, failing)? = context.judgements[place.child(.closure)]
+        // The type check judges every closure literal it rewrote with its
+        // judged body, so a literal it judged is a body.
+        guard
+            case let .closure(constness, isolation, failing)? = context.judgements[place.child(.closure)],
+            case let .body(block) = procedure.implementation
         else {
             throw BuildError.unjudged("a closure literal", at: place)
         }

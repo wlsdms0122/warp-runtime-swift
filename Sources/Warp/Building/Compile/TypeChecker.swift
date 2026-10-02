@@ -1610,6 +1610,13 @@ struct TypeChecker {
         // Constness is read the same way a declaration's is. From what the body
         // calls.
         case let .closure(written):
+            // The Validator refuses a closure literal that is not a body.
+            guard case let .body(block) = written.implementation else {
+                assertionFailure("a closure literal reached the type check without a body")
+
+                return Inspection(rewritten: expression, reading: .any)
+            }
+
             // A closure's `some T` is the name the procedure around it filled,
             // held to the bounds that procedure declared; its own signature
             // writes none.
@@ -1617,7 +1624,7 @@ struct TypeChecker {
             var rewritten = expression
             var calls: [CallSite] = []
             var judgements = JudgementTable()
-            var body = procedure.block
+            var body = block
 
             // What the closure takes from where it was written: every name
             // there but the ones it declares, which are its own whatever a
@@ -1630,15 +1637,15 @@ struct TypeChecker {
             // called, as the type it reads as here.
             var flow = Flow()
 
-            for name in procedure.block.map(captured(by:)) ?? [] {
+            for name in captured(by: block) {
                 guard let binding = outside[name], binding.isBox else { continue }
 
                 flow.hold(binding.heldType ?? binding.type, on: name)
             }
 
-            if case let .judging(_, _, fulfillment) = ask, let written = procedure.block {
+            if case let .judging(_, _, fulfillment) = ask {
                 let inner = try await inspected(
-                    block: written,
+                    block: block,
                     at: place.child(.closure),
                     in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
                         _, own in own
@@ -1702,29 +1709,25 @@ struct TypeChecker {
                 .merging(outside) { own, _ in own }
                 .compactMapValues(\.declaredType)
 
-            let const = body.map { block in
-                Derivation().isConst(
-                    block,
-                    declaring: procedure.signature.ownedParameters,
-                    given: context.isConst,
-                    reading: reading,
-                    bound: bound,
-                    taking: context.signature(of:),
-                    in: context.loweredTypes
-                )
-            } ?? false
-            let isolated = body.map { block in
-                Derivation().isIsolated(
-                    block,
-                    declaring: declared,
-                    given: context.isIsolated,
-                    bound: bound,
-                    taking: context.signature(of:),
-                    in: context.loweredTypes
-                )
-            } ?? false
+            let const = Derivation().isConst(
+                body,
+                declaring: procedure.signature.ownedParameters,
+                given: context.isConst,
+                reading: reading,
+                bound: bound,
+                taking: context.signature(of:),
+                in: context.loweredTypes
+            )
+            let isolated = Derivation().isIsolated(
+                body,
+                declaring: declared,
+                given: context.isIsolated,
+                bound: bound,
+                taking: context.signature(of:),
+                in: context.loweredTypes
+            )
 
-            if case .judging = ask, let body {
+            if case .judging = ask {
                 rewritten = .closure(
                     Procedure(
                         description: procedure.description,
