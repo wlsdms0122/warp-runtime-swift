@@ -68,11 +68,10 @@ struct TypeChecker {
     // a time, and so a body is read once, where a walk per question would
     // compound arm by arm into an exponential reading of nothing new.
     private enum Ask {
-        // Judging carries which module the body being judged was declared
-        // in, where it was declared in one (a constant's expression has no
-        // module to read its variables by), and where it writes down the
-        // pairs its calls lean on. Probing writes nothing.
-        case judging(folding: Folding?, origin: Int?, writing: Fulfillment)
+        // Judging carries what folds a constant-headed path, where there is
+        // one, and where it writes down the pairs its calls lean on. Probing
+        // writes nothing.
+        case judging(folding: Folding?, writing: Fulfillment)
         case probing
 
         // MARK: - Property
@@ -202,7 +201,6 @@ struct TypeChecker {
         answering returns: TypeExpression?,
         with context: TypingContext,
         folding: Folding?,
-        origin: Int? = nil,
         writing fulfillment: Fulfillment
     ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable) {
         let inner = try await inspected(
@@ -210,7 +208,7 @@ struct TypeChecker {
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, origin: origin, writing: fulfillment)
+            ask: .judging(folding: folding, writing: fulfillment)
         )
 
         try held(
@@ -241,7 +239,7 @@ struct TypeChecker {
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, origin: nil, writing: fulfillment)
+            ask: .judging(folding: folding, writing: fulfillment)
         )
 
         return (inner.rewritten, inner.calls, inner.judgements, inner.reading)
@@ -313,7 +311,7 @@ struct TypeChecker {
             expression,
             asOperand: place,
             given: context,
-            when: .judging(folding: nil, origin: nil, writing: fulfillment)
+            when: .judging(folding: nil, writing: fulfillment)
         )
     }
 
@@ -1376,7 +1374,7 @@ struct TypeChecker {
                 return Inspection(rewritten: expression, reading: .any, flow: reached)
 
             case let .reads(resolved, read):
-                guard case let .judging(folding, _, _) = ask else {
+                guard case let .judging(folding, _) = ask else {
                     return Inspection(rewritten: expression, reading: read, flow: reached)
                 }
 
@@ -1656,7 +1654,7 @@ struct TypeChecker {
                 flow.hold(taken, on: name)
             }
 
-            if case let .judging(_, _, fulfillment) = ask {
+            if case let .judging(_, fulfillment) = ask {
                 // What the closure writes into a name it captured has to fit
                 // what the name holds: the closure runs when it is called,
                 // and the body that declared the variable reads it as the
@@ -1704,11 +1702,10 @@ struct TypeChecker {
                 judgements = inner.judgements
             }
 
-            var reading: Set<Name> = []
-
-            if case .judging(_, _?, _) = ask {
-                reading = context.variables.subtracting(declared)
-            }
+            // A module variable the body reads strikes constness under either
+            // ask, so the probing walk and the judging one read one closure
+            // as one type.
+            let reading = context.variables.subtracting(declared)
 
             // A name this closure captured carries what the slot it came from
             // said about it, and its own parameters shadow any it captured.
@@ -1819,7 +1816,7 @@ struct TypeChecker {
 
             flow = flow.followed(by: called.flow)
 
-            guard case let .judging(_, _, fulfillment) = ask else {
+            guard case let .judging(_, fulfillment) = ask else {
                 for (position, argument) in arguments.enumerated() {
                     flow = flow.followed(by: try await inspected(
                         argument,
@@ -2822,7 +2819,7 @@ struct TypeChecker {
             return declared
         }
 
-        guard case let .judging(_, _, fulfillment) = ask else { return declared }
+        guard case let .judging(_, fulfillment) = ask else { return declared }
 
         if let refusal = refusal(
             holding: given,
@@ -2872,7 +2869,7 @@ struct TypeChecker {
             return
         }
 
-        guard case let .judging(_, _, fulfillment) = ask else { return }
+        guard case let .judging(_, fulfillment) = ask else { return }
 
         if let refusal = refusal(
             holding: written,

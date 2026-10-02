@@ -126,7 +126,6 @@ struct Compiler {
                     answering: declaration.signature.returns,
                     with: context().bounding(declaration.signature.parameterBounding.table),
                     folding: folding,
-                    origin: origin,
                     writing: fulfillment
                 )
 
