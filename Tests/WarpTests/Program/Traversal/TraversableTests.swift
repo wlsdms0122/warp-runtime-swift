@@ -75,7 +75,7 @@ struct TraversableTests {
         ])
     }
 
-    @Test("every place the type check records a call of a value at is one the walk reaches")
+    @Test("every place the type check records a judgement at is one the walk reaches, of the kind standing there")
     func everyCallOfAValueStandsWhereTheWalkReaches() async throws {
         // Given. A call of a value handing a variable in place, written in
         // every position a statement can stand in, and in closures held by
@@ -133,7 +133,7 @@ struct TraversableTests {
         )
 
         // When
-        let (_, _, inPlace, _) = try await TypeChecker().resolvedSites(
+        let (_, _, judgements) = try await TypeChecker().resolvedSites(
             in: sut,
             at: place,
             in: [:],
@@ -143,16 +143,35 @@ struct TraversableTests {
             writing: Fulfillment()
         )
 
-        // Then. The table holds one entry for each call the walk reaches,
-        // under the place the walk reaches it at
-        let reached = sut.subexpressions(at: place).compactMap { found -> Place? in
-            guard case .apply = found.1 else { return nil }
+        // Then. The table holds one entry for each call of a value and each
+        // closure literal the walk reaches, under the place the walk reaches
+        // it at, and of the kind that stands there
+        let found = sut.subexpressions(at: place)
+        let calls = found.filter { _, expression in
+            if case .apply = expression { return true }
 
-            return found.0
-        }
+            return false
+        }.map(\.0)
+        let closures = found.filter { _, expression in
+            if case .closure = expression { return true }
 
-        #expect(reached.count == 14)
-        #expect(Set(inPlace.positions.keys) == Set(reached))
+            return false
+        }.map(\.0)
+        let judgedCalls = judgements.judgements.filter { _, judgement in
+            if case .apply = judgement { return true }
+
+            return false
+        }.keys
+        let judgedClosures = judgements.judgements.filter { _, judgement in
+            if case .closure = judgement { return true }
+
+            return false
+        }.keys
+
+        #expect(calls.count == 14)
+        #expect(closures.count == 7)
+        #expect(Set(judgedCalls) == Set(calls))
+        #expect(Set(judgedClosures) == Set(closures))
     }
 
     @Test("a place names where a thing was found, and a closure names its own")

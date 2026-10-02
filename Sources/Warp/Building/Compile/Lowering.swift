@@ -244,23 +244,22 @@ struct Lowering {
     }
 
     // What lowering one body reads beside the names in scope: the slots it
-    // allocates, the declaration its closures are numbered under, what the
-    // build found each call of a value in it hands in place, and what it
-    // derived of each closure literal. One per body: a closure is lowered on
-    // slots of its own and shares the rest with the body it was written in.
+    // allocates, the declaration its closures are numbered under, and what
+    // the type check judged at each place in it. One per body: a closure is
+    // lowered on slots of its own and shares the other two with the body it
+    // was written in.
     private struct Context {
         // MARK: - Property
         let slots: SlotAllocator
         let writer: Closure.Declaration
-        let inPlace: InPlaceTable
-        let closures: ClosureTable
+        let judgements: JudgementTable
 
         // MARK: - Initializer
         // MARK: - Public
         // The same context with other slots, the way a closure's body is
         // lowered on slots of its own.
         func with(slots: SlotAllocator) -> Context {
-            Context(slots: slots, writer: writer, inPlace: inPlace, closures: closures)
+            Context(slots: slots, writer: writer, judgements: judgements)
         }
 
         // MARK: - Private
@@ -423,17 +422,9 @@ struct Lowering {
         constants[origin] = settled
     }
 
-    // Lowers a declaration's body into its row. `inPlace` is what the build
-    // found each call of a value in it hands in place, by where the call
-    // stands, and `closures` what it derived of each closure literal, by
-    // where the literal stands.
-    mutating func settle(
-        _ row: Int,
-        body block: Block,
-        inPlace: InPlaceTable,
-        closures: ClosureTable,
-        at place: Place
-    ) throws {
+    // Lowers a declaration's body into its row. `judgements` is what the type
+    // check judged at each place in it.
+    mutating func settle(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
         let declared = table[row]
         let slots = SlotAllocator(
             origin: declared.origin,
@@ -451,7 +442,7 @@ struct Lowering {
         let body = try lower(
             block,
             in: scope,
-            on: Context(slots: slots, writer: .procedure(declared.label), inPlace: inPlace, closures: closures),
+            on: Context(slots: slots, writer: .procedure(declared.label), judgements: judgements),
             at: place
         )
 
@@ -474,8 +465,7 @@ struct Lowering {
         reading names: [Name],
         origin: Int,
         writer: Closure.Declaration,
-        inPlace: InPlaceTable,
-        closures: ClosureTable,
+        judgements: JudgementTable,
         at place: Place
     ) throws -> (Operation, Frame) {
         let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
@@ -488,7 +478,7 @@ struct Lowering {
         let code = try lower(
             expression,
             in: scope,
-            on: Context(slots: slots, writer: writer, inPlace: inPlace, closures: closures),
+            on: Context(slots: slots, writer: writer, judgements: judgements),
             at: place
         )
 
@@ -786,7 +776,9 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard let block = procedure.block, let derived = context.closures[place] else {
+        guard let block = procedure.block,
+            case let .closure(constness, isolation, failing)? = context.judgements[place.child(.closure)]
+        else {
             throw BuildError.unjudged("a closure literal", at: place)
         }
 
@@ -833,9 +825,9 @@ struct Lowering {
                 origin: context.slots.origin,
                 signature: procedure.signature,
                 access: .private,
-                constness: derived.constness,
-                isolation: derived.isolation,
-                failing: derived.failing,
+                constness: constness,
+                isolation: isolation,
+                failing: failing,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),
@@ -864,7 +856,7 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard let handed = context.inPlace[place] else {
+        guard case let .apply(handed)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 

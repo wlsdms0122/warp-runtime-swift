@@ -104,12 +104,7 @@ struct Compiler {
 
             let declaration = symbol.procedure
 
-            var answer = (
-                procedure: declaration,
-                calls: [CallSite](),
-                inPlace: InPlaceTable(),
-                closures: ClosureTable()
-            )
+            var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable())
 
             if let block = declaration.block {
                 // A body not yet lowered stands as its refusal, so a procedure
@@ -124,7 +119,7 @@ struct Compiler {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered, inPlace, closures) = try await TypeChecker().resolvedSites(
+                let (rewritten, gathered, judgements) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
@@ -142,8 +137,7 @@ struct Compiler {
                         implementation: .body(rewritten)
                     ),
                     calls: gathered,
-                    inPlace: inPlace,
-                    closures: closures
+                    judgements: judgements
                 )
             }
 
@@ -165,13 +159,7 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(
-                    try row(of: symbol),
-                    body: rewritten,
-                    inPlace: answer.inPlace,
-                    closures: answer.closures,
-                    at: symbol.place
-                )
+                try compiling.settle(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
             }
 
             return answer.procedure
@@ -525,7 +513,7 @@ struct Compiler {
         leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) async throws -> (value: Value, reading: LoweredType) {
-        let (judged, calls, inPlace, closures, reading) = try await TypeChecker().resolvedSites(
+        let (judged, calls, judgements, reading) = try await TypeChecker().resolvedSites(
             in: expression,
             at: place,
             in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
@@ -543,7 +531,7 @@ struct Compiler {
                 origin: origin,
                 in: resolved,
                 loweredTypes: context.loweredTypes
-            ).read(judged, as: .binding(name), inPlace: inPlace, closures: closures, writing: &lowering, at: place)
+            ).read(judged, as: .binding(name), judgements: judgements, writing: &lowering, at: place)
 
             return (value, reading)
         } catch let refused as BuildError {
