@@ -31,9 +31,10 @@ struct Binding: Equatable, Sendable {
         // that declared one.
         case declared(LoweredType)
 
-        // A box every write is held to the type its start settled as, which
-        // nothing declared: a module variable that wrote no type.
-        case started
+        // A box every write is held to a type it read as, which no slot
+        // declared: a module variable that wrote no type, held to what its
+        // start settled as.
+        case held(LoweredType)
 
         // A box every write retypes.
         case assigned
@@ -54,7 +55,7 @@ struct Binding: Equatable, Sendable {
         case let .declared(declared):
             return declared
 
-        case .started, .assigned:
+        case .held, .assigned:
             return nil
         }
     }
@@ -63,10 +64,7 @@ struct Binding: Equatable, Sendable {
     // retypes it or none lands.
     var heldType: LoweredType? {
         switch holding {
-        case let .declared(declared):
-            return declared
-
-        case .started:
+        case let .declared(type), let .held(type):
             return type
 
         case .fixed, .assigned:

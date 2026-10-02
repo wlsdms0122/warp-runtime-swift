@@ -81,7 +81,7 @@ struct Compiler {
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
                         held[entry.key] = Binding(
-                            declaredVariables[entry.key].map(Binding.Holding.declared) ?? .started,
+                            declaredVariables[entry.key].map(Binding.Holding.declared) ?? .held(entry.value.type),
                             entry.value.type
                         )
                     }
