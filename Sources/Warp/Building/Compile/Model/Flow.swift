@@ -210,9 +210,7 @@ struct Flow {
     // where a round finished or continued, none of it certain.
     func start(of loop: Name?, meeting: Meeting) rethrows -> Way {
         let (continued, _) = try gathered(where: { reach in reach.endsRound(of: loop) }, meeting: meeting)
-        let start = try [going, continued].compactMap { way in way }.reduce(Way()) { start, way in
-            try start.joined(with: way, meeting: meeting)
-        }
+        let start = try Way.met([going, continued].compactMap { way in way }, meeting: meeting) ?? Way()
 
         return start.indefinite()
     }

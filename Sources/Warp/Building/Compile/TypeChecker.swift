@@ -2157,20 +2157,21 @@ struct TypeChecker {
             // and the result never runs between rounds. The probe reads, so a
             // probing asker takes the settled probe of the statements as its
             // own walk; judging walks once more for the rewrite.
+            let entry = rounded(environment, as: round)
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let climbing = meeting(at: place, in: context.loweredTypes, when: .probing)
             let (seeded, probed, converged) = try await settled(
-                from: rounded(environment, as: round),
+                from: entry,
                 start: { flow in try flow.start(of: round, meeting: climbing) }
-            ) { entry -> (round: BodyWalk, flow: Flow) in
+            ) { seeding -> (round: BodyWalk, flow: Flow) in
                 let asked = try await inspected(
                     condition,
                     at: place.child(.condition(of: .loop)),
-                    in: entry,
+                    in: seeding,
                     with: context,
                     ask: .probing
                 )
-                var asking = entry
+                var asking = seeding
 
                 asked.flow.apply(to: &asking)
 
@@ -2243,7 +2244,7 @@ struct TypeChecker {
             var tail: Inspection?
 
             if let result = body.result {
-                var exit = rounded(environment, as: round)
+                var exit = entry
 
                 ended.apply(to: &exit)
 

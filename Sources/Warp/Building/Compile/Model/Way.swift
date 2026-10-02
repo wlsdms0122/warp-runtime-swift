@@ -29,7 +29,13 @@ struct Way {
     // Ways of which one ran, met: each joined with the ones before it, or nil
     // where there is none.
     static func met(_ ways: [Way], meeting: Flow.Meeting) rethrows -> Way? {
-        try ways.reduce(nil as Way?) { met, way in try met.map { met in try met.joined(with: way, meeting: meeting) } ?? way }
+        guard var met = ways.first else { return nil }
+
+        for way in ways.dropFirst() {
+            met = try met.joined(with: way, meeting: meeting)
+        }
+
+        return met
     }
 
     // How a write lands on what an earlier write left. A definite write

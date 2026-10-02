@@ -852,10 +852,9 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether two types are compatible: one type, names resolved, where a
-    // type parameter and a name the table does not answer match anything. A
-    // name that stands for a declared record is that record, and any other
-    // name is what it names.
+    // Whether two types are compatible: one type, names resolved. A name that
+    // stands for a declared record is that record, and any other name is what
+    // it names.
     // `any` is no wildcard here: standing for anything is what `accepts`
     // reads, and a body free to write anything into a variable the caller
     // declared is the disagreement this refuses. A type parameter and a name
