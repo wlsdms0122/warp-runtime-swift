@@ -74,7 +74,8 @@ struct Way {
 
     // One of two ways ran. A name both wrote holds either; a name one wrote may
     // not have been written at all, so nothing about it is definite. A box
-    // both took is held to what the meeting says; one only one took is held.
+    // both took stays at the one type both held it to, which the meeting
+    // judges; one only one took is held.
     func joined(with other: Way, meeting: Flow.Meeting) rethrows -> Way {
         var flowed = Way()
 
@@ -97,7 +98,12 @@ struct Way {
         flowed.held = held
 
         for (name, theirs) in other.held.sorted(by: { $0.key < $1.key }) {
-            flowed.held[name] = try held[name].map { mine in try meeting(name, mine, theirs) } ?? theirs
+            guard let mine = held[name] else {
+                flowed.held[name] = theirs
+                continue
+            }
+
+            try meeting(name, mine, theirs)
         }
 
         return flowed

@@ -2697,7 +2697,7 @@ struct TypeChecker {
     // to one type, names resolved. Anything else is refused here.
     private func meeting(at place: Place, in table: LoweredTypeTable, when ask: Ask) -> Flow.Meeting {
         { name, one, other in
-            guard !one.identical(to: other, in: table) else { return one }
+            guard !one.identical(to: other, in: table) else { return }
 
             try refuse(
                 "takes '\(name)' as \(one.rendered(in: table)) one way and as"
@@ -2706,8 +2706,6 @@ struct TypeChecker {
                 at: place,
                 when: ask
             )
-
-            return one
         }
     }
 
