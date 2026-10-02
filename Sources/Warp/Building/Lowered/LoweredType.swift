@@ -438,6 +438,44 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // A settled value's type with each procedure it holds read by the type
+    // the value's expression was judged at in that position (an element, an
+    // entry, a field). A procedure value says nothing about its signature, and
+    // the expression that made it wrote one; everything else is the value's.
+    func refined(by judged: LoweredType, in table: LoweredTypeTable) -> LoweredType {
+        var written = judged.resolved(in: table)
+
+        if case let .nullable(inner) = written {
+            written = inner
+        }
+
+        switch (self, written) {
+        case (.procedure(nil, nil, .unstated, .unstated), .procedure):
+            return written
+
+        case let (.array(element), .array(judgedElement)):
+            return .array(element.refined(by: judgedElement, in: table))
+
+        case let (.dictionary(entry), .dictionary(judgedEntry)):
+            return .dictionary(entry.refined(by: judgedEntry, in: table))
+
+        case let (.record(record), .record(judgedRecord)):
+            return .record(
+                LoweredRecord(
+                    layout: record.layout,
+                    fields: record.named.map { name, field in
+                        judgedRecord[name].map { judgedField in
+                            field.refined(by: judgedField.fieldUnwrapped, in: table)
+                        } ?? field
+                    }
+                )
+            )
+
+        default:
+            return self
+        }
+    }
+
     // Two readings of one slot. Where they disagree the slot holds neither,
     // which is what `any` says. A join that guessed would be a refusal an
     // author cannot act on.

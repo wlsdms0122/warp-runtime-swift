@@ -241,8 +241,8 @@ struct TypeChecker {
         return (inner.block, inner.calls, inner.inPlace)
     }
 
-    // The expression form, with what the expression holds. A constant's body
-    // is one rather than a block, and the constant is read as that.
+    // The expression form, with what it was judged to hold. A constant's body
+    // is one rather than a block.
     func resolvedSites(
         in expression: Expression,
         at place: Place,
@@ -1424,7 +1424,12 @@ struct TypeChecker {
                 }
 
                 do {
-                    return Inspection(rewritten: .literal(try await folding.read(settled, at: place)), reading: read)
+                    let value = try await folding.read(settled, at: place)
+
+                    return Inspection(
+                        rewritten: .literal(value),
+                        reading: LoweredType(of: value, in: context.loweredTypes).refined(by: read, in: context.loweredTypes)
+                    )
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
                 }

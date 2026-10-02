@@ -42,7 +42,7 @@ struct Compiler {
 
         // What this document settled.
         var constants: [Name: Value] = [:]
-        var variables: [Name: Value] = [:]
+        var variables: [Name: (value: Value, type: LoweredType)] = [:]
 
         // The variables that declared their type, by that type: a slot every
         // body of the document reads, which a call of the value one holds
@@ -51,9 +51,9 @@ struct Compiler {
             variable.declared?.lowered(in: loweredTypes)
         }
 
-        // The constants with what each reads as, the type its expression was
-        // judged at: what seeds the environment a body is judged in, and what
-        // a body binds where it reads one at an index the run settles.
+        // The constants with what each reads as: what seeds the environment a
+        // body is judged in, and what a body binds where it reads one at an
+        // index the run settles.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
@@ -82,11 +82,7 @@ struct Compiler {
                 }
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
-                        held[entry.key] = Binding(
-                            .declared,
-                            declaredVariables[entry.key] ?? LoweredType(of: entry.value, in: loweredTypes),
-                            declaredType: declaredVariables[entry.key]
-                        )
+                        held[entry.key] = Binding(.declared, entry.value.type, declaredType: declaredVariables[entry.key])
                     }
                 ) { _, variable in variable }
         }
@@ -121,7 +117,7 @@ struct Compiler {
 
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
-                // type the constant's expression was judged at.
+                // type of the value it will fold to.
                 let (rewritten, gathered, inPlace) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
@@ -366,17 +362,17 @@ struct Compiler {
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            judging: boxes.map { name in (name: name, value: variables[name] ?? .null) },
+            judging: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
             dependencies: dependencies,
             token: token
         )
     }
 
     // MARK: - Private
-    // A document's constants, settled, each beside the type its expression was
-    // judged at. They are evaluated here because there is nothing about them
-    // left for a run to do: a constant sees no scope, so what it will be is
-    // knowable the moment the document is read.
+    // A document's constants, settled, each beside what it reads as. They are
+    // evaluated here because there is nothing about them left for a run to do:
+    // a constant sees no scope, so what it will be is knowable the moment the
+    // document is read.
     //
     // One may name another declared beside it, so they are settled in the order
     // they read each other and that order is worked out first. What is wrong
@@ -412,8 +408,7 @@ struct Compiler {
                 // A constant's dots are judged before it settles, the way a
                 // body's are: the settled neighbours' types are the
                 // environment, so an absent field or a needless `?.` refuses
-                // here by the one rule, and carries its own place. What it
-                // was judged to hold is the type it is read as.
+                // here by the one rule, and carries its own place.
                 let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
                     in: expression,
                     at: place,
@@ -442,7 +437,7 @@ struct Compiler {
                         loweredTypes: context.loweredTypes
                     ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
 
-                    known[name] = (value, reading)
+                    known[name] = (value, LoweredType(of: value, in: context.loweredTypes).refined(by: reading, in: context.loweredTypes))
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -459,7 +454,8 @@ struct Compiler {
     // and no variable; the starting value is a fact the link reads. A variable
     // that declares what it holds has its start settled into that, the way an
     // argument is settled into its slot, and holds that type; one that
-    // declares nothing holds the type of the settled value.
+    // declares nothing holds the type of the settled value, read the way a
+    // constant's is.
     private func variables(
         of module: Module,
         at origin: Int,
@@ -468,16 +464,16 @@ struct Compiler {
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
         in context: TypingContext
-    ) async throws -> [Name: Value] {
+    ) async throws -> [Name: (value: Value, type: LoweredType)] {
         guard !module.variables.isEmpty else { return [:] }
 
-        var started: [Name: Value] = [:]
+        var started: [Name: (value: Value, type: LoweredType)] = [:]
 
         for (name, variable) in module.variables.sorted { $0.key < $1.key } {
             let place = Place.variable(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
-                let (judged, calls, inPlace, _) = try await TypeChecker().resolvedSites(
+                let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
                     in: variable.start,
                     at: place,
                     in: known.mapValues { constant in Binding(.fixed, constant.type) },
@@ -508,7 +504,10 @@ struct Compiler {
                 }
 
                 guard let declared = variable.declared else {
-                    started[name] = settled
+                    started[name] = (
+                        settled,
+                        LoweredType(of: settled, in: context.loweredTypes).refined(by: reading, in: context.loweredTypes)
+                    )
                     return
                 }
 
@@ -519,7 +518,10 @@ struct Compiler {
                 }
 
                 do {
-                    started[name] = try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes)
+                    started[name] = (
+                        try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes),
+                        holding
+                    )
                 } catch {
                     throw BuildError(
                         "starts as \(LoweredType(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
