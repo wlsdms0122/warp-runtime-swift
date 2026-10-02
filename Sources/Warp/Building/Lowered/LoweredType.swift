@@ -792,11 +792,7 @@ indirect enum LoweredType: Sendable, Equatable {
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
             for (parameter, taken) in zip(required, given) {
-                guard taken.accepts(parameter, in: table, assuming: assuming, rigid: rigid) else { return false }
-
-                // A position taken in place takes a variable, and a slot
-                // handing a value there has none to give.
-                guard !taken.isInout || parameter.isInout else { return false }
+                guard taken.takes(parameter, in: table, assuming: assuming, rigid: rigid) else { return false }
             }
 
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assuming: assuming, rigid: rigid)
@@ -824,6 +820,23 @@ indirect enum LoweredType: Sendable, Equatable {
         default:
             return self == other
         }
+    }
+
+    // Whether a position taking this may stand where a position handing
+    // `handed` is: it accepts what is handed there, and a position taking a
+    // place is handed one. A position taking a value may stand where a place
+    // is handed, and reads what the place holds. Rigid as `accepts` is.
+    func takes(_ handed: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
+        takes(handed, in: table, assuming: [], rigid: rigid)
+    }
+
+    private func takes(
+        _ handed: LoweredType,
+        in table: LoweredTypeTable,
+        assuming: [(LoweredType, LoweredType)],
+        rigid: Bool
+    ) -> Bool {
+        accepts(handed, in: table, assuming: assuming, rigid: rigid) && (!isInout || handed.isInout)
     }
 
     // The same type with every row it holds walked through to what that row

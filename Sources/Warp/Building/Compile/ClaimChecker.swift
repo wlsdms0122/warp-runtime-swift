@@ -323,8 +323,8 @@ struct ClaimChecker {
     // A call written against the contract lands on whichever declaration
     // answers, with what the contract's signature let it hand, and takes
     // back what that declaration answers. So each of the declaration's
-    // parameters takes what the contract's takes at its position, the type
-    // first, and the contract's answer takes what the declaration answers.
+    // positions stands where the contract's hands, the type first, and the
+    // contract's answer takes what the declaration answers.
     // The contract's type parameters are its own and no call fills them
     // here; the declaration's own are filled by what the contract writes at
     // the same positions. The names are each declaration's own.
@@ -344,10 +344,10 @@ struct ClaimChecker {
     ) -> String? {
         let loweredTypes = table.loweredTypes
 
-        guard let held = given.parameters.first else {
+        guard given.parameters.count == asked.parameters.count else {
             return "is named for '\(type)' and the procedure '\(procedure)' that"
-                    + " '\(contract)' asks, and takes nothing. A contract's"
-                    + " procedure is answered about the value it takes first"
+                    + " '\(contract)' asks, and takes \(given.parameters.count)"
+                    + " parameters where the contract asks \(asked.parameters.count)"
         }
 
         let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
@@ -360,24 +360,18 @@ struct ClaimChecker {
             taken.binding(against: written, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
         }
 
-        guard takes[0].filling(bound).accepts(asks[0], in: loweredTypes, rigid: true) else {
-            return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and takes \(held.declared.rendered) first. A contract's"
-                    + " procedure takes the type that answers it first"
-        }
+        for (position, (taken, handed)) in zip(takes, asks).enumerated() {
+            guard !taken.filling(bound).takes(handed, in: loweredTypes, rigid: true) else { continue }
 
-        guard given.parameters.count == asked.parameters.count else {
-            return "is named for '\(type)' and the procedure '\(procedure)' that"
-                    + " '\(contract)' asks, and takes \(given.parameters.count)"
-                    + " parameters where the contract asks \(asked.parameters.count)"
-        }
-
-        for (position, (parameter, filled)) in zip(asked.parameters, given.parameters).enumerated().dropFirst() {
-            guard takes[position].filling(bound).accepts(asks[position], in: loweredTypes, rigid: true) else {
-                return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and takes \(filled.declared.rendered)"
-                        + " at \(position) where the contract writes \(parameter.declared.rendered)"
+            guard position > 0 else {
+                return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
+                        + " asks, and takes \(given.parameters[0].declared.rendered) first. A contract's"
+                        + " procedure takes the type that answers it first"
             }
+
+            return "is named for '\(type)' and the procedure '\(procedure)' that"
+                    + " '\(contract)' asks, and takes \(given.parameters[position].declared.rendered)"
+                    + " at \(position) where the contract writes \(asked.parameters[position].declared.rendered)"
         }
 
         guard let answer = asked.returns else { return nil }
