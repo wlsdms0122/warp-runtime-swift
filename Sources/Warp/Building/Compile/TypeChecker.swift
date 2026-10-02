@@ -170,7 +170,6 @@ struct TypeChecker {
         holding given: LoweredType,
         to declared: LoweredType,
         as label: String,
-        answering: Bool = false,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment?,
         at place: Place
@@ -180,13 +179,6 @@ struct TypeChecker {
         var holding: [Substitution.Held] = []
 
         declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
-
-        if answering, !disagreeing.isEmpty {
-            return disagreeing.keys.sorted().map { parameter in
-                "'\(parameter)' is answered as \(readings[parameter]?.rendered(in: table) ?? "?")"
-                    + " and as \(disagreeing[parameter]?.rendered(in: table) ?? "?")"
-            }.joined(separator: ", ")
-        }
 
         for held in holding {
             for bound in held.bounds {
@@ -491,13 +483,11 @@ struct TypeChecker {
 
         // A composition the declaration promises holds the answer to its
         // bounds the way a slot holds what arrives, wherever in the promise
-        // it stands, and a parameter the promise mentions twice is answered
-        // the same both times.
+        // it stands.
         if let refusal = refusal(
             holding: read,
             to: promised,
             as: "the answer holds",
-            answering: true,
             in: table,
             fulfillment: fulfillment,
             at: place

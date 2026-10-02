@@ -320,6 +320,15 @@ struct ClaimChecker {
     // misses is a reason the claim does not hold rather than the type quietly
     // standing outside. What has to change is this signature.
     //
+    // A call written against the contract lands on whichever declaration
+    // answers, with what the contract's signature let it hand, and takes
+    // back what that declaration answers. So each of the declaration's
+    // parameters takes what the contract's takes at its position, the type
+    // first, and the contract's answer takes what the declaration answers.
+    // The contract's type parameters are its own and no call fills them
+    // here; the declaration's own are filled by what the contract writes at
+    // the same positions. The names are each declaration's own.
+    //
     // A declaration that wrote no `returns` answers what the build read off
     // its body, which is `read`. A declaration being compiled now has no
     // reading yet, and the link holds it when every row has one.
@@ -333,15 +342,25 @@ struct ClaimChecker {
         at place: Place,
         in table: TypeTable
     ) -> String? {
+        let loweredTypes = table.loweredTypes
+
         guard let held = given.parameters.first else {
             return "is named for '\(type)' and the procedure '\(procedure)' that"
                     + " '\(contract)' asks, and takes nothing. A contract's"
                     + " procedure is answered about the value it takes first"
         }
 
-        guard held.declared.lowered(in: table.loweredTypes)
-            .compatible(with: TypeExpression.named(type).lowered(in: table.loweredTypes), in: table.loweredTypes)
-        else {
+        let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
+        let asks = [TypeExpression.named(type).lowered(in: loweredTypes)]
+            + asked.parameters.dropFirst().map { parameter in parameter.declared.lowered(in: loweredTypes) }
+        var bound: [Name: LoweredType] = [:]
+        var disagreeing: [Name: LoweredType] = [:]
+
+        for (taken, written) in zip(takes, asks) {
+            taken.binding(against: written, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
+        }
+
+        guard takes[0].filling(bound).accepts(asks[0], in: loweredTypes, rigid: true) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                     + " asks, and takes \(held.declared.rendered) first. A contract's"
                     + " procedure takes the type that answers it first"
@@ -353,15 +372,8 @@ struct ClaimChecker {
                     + " parameters where the contract asks \(asked.parameters.count)"
         }
 
-        // After the first, the witness takes what the contract asks at the
-        // same positions: a call written against the contract lands on
-        // whichever declaration answers, and the run hands the arguments to
-        // the same positions for every one of them. The names are each
-        // declaration's own.
         for (position, (parameter, filled)) in zip(asked.parameters, given.parameters).enumerated().dropFirst() {
-            guard filled.declared.lowered(in: table.loweredTypes)
-                .compatible(with: parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
-            else {
+            guard takes[position].filling(bound).accepts(asks[position], in: loweredTypes, rigid: true) else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and takes \(filled.declared.rendered)"
                         + " at \(position) where the contract writes \(parameter.declared.rendered)"
@@ -370,14 +382,13 @@ struct ClaimChecker {
 
         guard let answer = asked.returns else { return nil }
 
-        let promised = answer.lowered(in: table.loweredTypes)
-        let answered = given.returns?.lowered(in: table.loweredTypes)
-            ?? read
-            ?? TypeExpression.any.lowered(in: table.loweredTypes)
+        let promised = answer.lowered(in: loweredTypes)
+        let answered = (given.returns?.lowered(in: loweredTypes) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
+            .filling(bound)
 
-        guard promised.accepts(answered, in: table.loweredTypes) else {
+        guard promised.accepts(answered, in: loweredTypes, rigid: true) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: table.loweredTypes))"
+                    + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: loweredTypes))"
                     + " where the contract writes \(answer.rendered)"
         }
 
@@ -389,7 +400,7 @@ struct ClaimChecker {
             holding: answered,
             to: promised,
             as: "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)' asks, and answers",
-            in: table.loweredTypes,
+            in: loweredTypes,
             fulfillment: nil,
             at: place
         ) {

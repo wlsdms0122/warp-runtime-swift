@@ -358,8 +358,8 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a promise mentioning one parameter twice is answered the same both times")
-    func aPromiseReadTwoWaysRefuses() async throws {
+    @Test("a type parameter a promise names is answered by that parameter alone")
+    func aPromisedParameterIsAnsweredByItself() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -376,7 +376,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("is answered as int and as string")
+            error is BuildError && "\(error)".contains("answers { a: int, b: string }, and its declaration promises")
         }
     }
 
