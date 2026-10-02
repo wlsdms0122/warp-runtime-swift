@@ -2531,9 +2531,11 @@ struct TypeChecker {
 
             // A write to a whole variable retypes it, the way a declaration
             // did, unless the box's type is fixed elsewhere, in which case what
-            // is written has to fit. A write through a path is judged against
-            // the type the path reaches, and leaves the variable's type as it
-            // was.
+            // is written has to fit. A box a closure or a call took reads as
+            // the type it is held to after a whole write, since the taker may
+            // write any value of that type later. A write through a path is
+            // judged against the type the path reaches, and leaves the
+            // variable's type as it was.
             case let .assignment(path)?:
                 guard let id = path.head else { break }
 
@@ -2548,6 +2550,14 @@ struct TypeChecker {
                         at: here,
                         when: ask
                     )
+
+                    if case let .held(held) = binding.holding, path.segments.count == 1 {
+                        environment[id] = Binding(.held(held), held)
+
+                        if !locals.contains(id) {
+                            flowed.land((held, true), on: id)
+                        }
+                    }
 
                 case let binding? where binding.holding == .assigned:
                     if path.segments.count == 1 {
@@ -2644,8 +2654,9 @@ struct TypeChecker {
     // of writes settles one link per look, so the bound is the chain's own
     // size: the names the body writes, times the few steps the join ladder has.
     // Past it the readings are not climbing (they are cycling) and everything
-    // the body writes falls to `any`, over-wide and never wrong; the judging
-    // ask answers that state out loud, where it can refuse.
+    // the body writes falls to `any`, or to the type it is held to where
+    // something took it, over-wide and never wrong; the judging ask answers
+    // that state out loud, where it can refuse.
     private func settled<Round>(
         from entry: [Name: Binding],
         start starting: (Flow) throws -> Way,
@@ -2671,10 +2682,10 @@ struct TypeChecker {
         }
 
         var widened = entry
+        var widening = start
 
-        for name in start.written.keys {
-            widened[name] = Binding(.assigned, .any)
-        }
+        widening.written = start.written.mapValues { _ in (.any, true) }
+        widening.apply(to: &widened)
 
         // One more look in the widened environment, so what is handed back
         // was read where the caller will stand.
