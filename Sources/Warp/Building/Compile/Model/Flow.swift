@@ -127,24 +127,9 @@ struct Flow {
         return seen
     }
 
-    // The way that goes on, on what the names around the flow hold. A box
-    // that declared its type was checked where it was written, so a write into
-    // it changes nothing about what it holds. A box taken holds what it was
-    // taken as from then on.
+    // The way that goes on, on what the names around the flow hold.
     func apply(to environment: inout [Name: Binding]) {
-        guard let going else { return }
-
-        for (name, write) in going.written {
-            guard let current = environment[name], current.holding == .assigned else { continue }
-
-            environment[name] = Binding(.assigned, write.definite ? write.type : current.type.joined(write.type))
-        }
-
-        for (name, type) in going.held {
-            guard let current = environment[name], current.holding == .assigned else { continue }
-
-            environment[name] = Binding(.held(type), current.type)
-        }
+        going?.apply(to: &environment)
     }
 
     // The way that went on ends here and lands nowhere: what never comes back
@@ -171,25 +156,28 @@ struct Flow {
         return left
     }
 
-    // The construct the ways that land here stop at. They go on from it with
-    // the way that went on through it, each met with the others, and nothing
-    // about any of them is certain: the construct may not have run, or may have
-    // stopped anywhere. Ways that land further out stay aside.
-    func absorbed(where lands: (Reach) -> Bool, meeting: Meeting) rethrows -> Flow {
-        var stopped = self
-        var going = self.going ?? Way()
+    // The ways that land at a construct, met with each other, or nil where
+    // none lands there, beside the flow without them. Where the construct goes
+    // on from is the construct's to say.
+    func gathered(where lands: (Reach) -> Bool, meeting: Meeting) rethrows -> (met: Way?, rest: Flow) {
+        var rest = self
+        var met: Way?
 
-        for reach in left.keys where lands(reach) {
+        for reach in left.keys.sorted(by: { "\($0)" < "\($1)" }) where lands(reach) {
             for way in left[reach] ?? [] {
-                going = try going.joined(with: way, meeting: meeting)
+                met = try met.map { met in try met.joined(with: way, meeting: meeting) } ?? way
             }
 
-            stopped.left[reach] = nil
+            rest.left[reach] = nil
         }
 
-        stopped.going = going.indefinite()
+        return (met, rest)
+    }
 
-        return stopped
+    // The same flow after a way ran before it: every way through it went
+    // through that one first.
+    func preceded(by earlier: Way) -> Flow {
+        Flow(going: earlier).followed(by: self)
     }
 
     // One thing ran after another. The way that goes on goes through both; a

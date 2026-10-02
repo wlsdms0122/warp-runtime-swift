@@ -91,6 +91,24 @@ struct Way {
         return flowed
     }
 
+    // This way, on what the names around it hold. A box that declared its
+    // type was checked where it was written, so a write into it changes
+    // nothing about what it holds. A box taken holds what it was taken as
+    // from then on.
+    func apply(to environment: inout [Name: Binding]) {
+        for (name, write) in written {
+            guard let current = environment[name], current.holding == .assigned else { continue }
+
+            environment[name] = Binding(.assigned, write.definite ? write.type : current.type.joined(write.type))
+        }
+
+        for (name, type) in held {
+            guard let current = environment[name], current.holding == .assigned else { continue }
+
+            environment[name] = Binding(.held(type), current.type)
+        }
+    }
+
     // The same way where it may not have run, or not run to its end.
     func indefinite() -> Way {
         var indefinite = self

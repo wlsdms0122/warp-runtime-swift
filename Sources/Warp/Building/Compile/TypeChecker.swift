@@ -2157,10 +2157,10 @@ struct TypeChecker {
             // rounds. The probe reads, so a probing asker takes the settled
             // probe as its own walk; judging walks once more for the rewrite.
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
+            let climbing = meeting(at: place, in: context.loweredTypes, when: .probing)
             let (seeded, probed, converged) = try await settled(
                 from: rounded(environment, as: round),
-                landing: { reach in reach.endsRound(of: round) },
-                meeting: meeting(at: place, in: context.loweredTypes, when: .probing)
+                starting: { flow in try earlier(flow, of: round, meeting: climbing) }
             ) { entry -> (round: BodyWalk, flow: Flow) in
                 let walk = try await inspected(
                     body.body,
@@ -2198,9 +2198,14 @@ struct TypeChecker {
                 ? try await inspected(body.body, at: place.child(.held).child(.body), in: seeded, with: context, ask: ask)
                 : probed
 
-            // The rounds as the loop ends them: the ways a `break` or a
-            // `continue` of this loop took meet the rounds that ran through.
-            let ended = try rounds.flow.absorbed(where: { reach in reach.endsLoop(round) }, meeting: meets)
+            // The loop as it ends: it may run no round, or end after a round
+            // that finished, broke or continued. Every way it hands further
+            // out went through the rounds before the one it left from.
+            let before = try earlier(rounds.flow, of: round, meeting: meets)
+            let (stopped, outward) = try rounds.flow.gathered(where: { reach in reach.endsLoop(round) }, meeting: meets)
+            var ended = outward.preceded(by: before)
+
+            ended.going = try stopped.map { stopped in try before.joined(with: stopped, meeting: meets) } ?? before
 
             // The result runs once, at whichever exit the run takes (a
             // condition that declines at the start, a round that finishes or
@@ -2280,19 +2285,29 @@ struct TypeChecker {
                 with: context,
                 ask: ask
             )
-            // The body as the attempt ends it: the ways a failure took meet the
-            // way through, and the rescue reads where any of them stood.
-            let failed = try attempted.flow.absorbed(
-                where: { reach in reach == .failure },
-                meeting: meeting(at: place, in: context.loweredTypes, when: ask)
-            )
+            // The body runs. The ways a failure took meet, and the rescue
+            // starts where they stood; where no way fails, no run reaches the
+            // rescue.
+            let meets = meeting(at: place, in: context.loweredTypes, when: ask)
+            let (failed, past) = try attempted.flow.gathered(where: { reach in reach == .failure }, meeting: meets)
             let rescued = try await inspected(
                 block: rescue,
                 at: place.child(.rescue),
-                in: try caught(soaking: failed, failure: failure, in: environment, with: context),
+                in: caught(soaking: failed, failure: failure, in: environment, with: context),
                 with: context,
                 ask: ask
             )
+
+            // What goes on past the body joins what goes on past the rescue,
+            // and no write on either side is certain.
+            var flow = try failed.map { failed in
+                try past.joined(
+                    with: rescued.flow.outside(Set([failure].compactMap { $0 })).preceded(by: failed),
+                    meeting: meets
+                )
+            } ?? past
+
+            flow.going = flow.going?.indefinite()
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -2303,10 +2318,7 @@ struct TypeChecker {
                 reading: attempted.reading.joined(rescued.reading),
                 // The failure is bound in the rescue alone. The body reads
                 // the names around the attempt.
-                flow: try failed.joined(
-                    with: rescued.flow.outside(Set([failure].compactMap { $0 })),
-                    meeting: meeting(at: place, in: context.loweredTypes, when: ask)
-                )
+                flow: flow
             )
         }
     }
@@ -2585,18 +2597,18 @@ struct TypeChecker {
         return environment.merging([round: Binding(.fixed(declared: nil), Self.roundType)]) { _, new in new }
     }
 
-    // The environment a rescue stands in: the entry, soaked with what the body
-    // may have written before it failed (no write certain, none ruled out) plus
-    // the failure under its name, where the attempt binds one.
+    // The environment a rescue stands in: the entry, soaked with what the
+    // ways that failed did before they failed (no write certain, none ruled
+    // out) plus the failure under its name, where the attempt binds one.
     private func caught(
-        soaking flow: Flow,
+        soaking failed: Way?,
         failure: Name?,
         in environment: [Name: Binding],
         with context: TypingContext
     ) -> [Name: Binding] {
         var caught = environment
 
-        flow.apply(to: &caught)
+        failed?.indefinite().apply(to: &caught)
 
         if let failure {
             caught[failure] = Binding(.fixed(declared: nil), FailurePayload.declared.lowered(in: context.loweredTypes))
@@ -2618,23 +2630,22 @@ struct TypeChecker {
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
         from entry: [Name: Binding],
-        landing lands: (Flow.Reach) -> Bool,
-        meeting: Flow.Meeting,
+        starting start: (Flow) throws -> Way,
         read: ([Name: Binding]) async throws -> (round: Round, flow: Flow)
     ) async rethrows -> (environment: [Name: Binding], last: Round, converged: Bool) {
         var seeded = entry
         var (last, flow) = try await read(seeded)
-        var absorbed = Flow()
+        var starting = Way()
         var steps = 0
 
         while true {
             var next = entry
 
-            absorbed = try flow.absorbed(where: lands, meeting: meeting)
-            absorbed.apply(to: &next)
+            starting = try start(flow)
+            starting.apply(to: &next)
 
             guard next != seeded else { return (seeded, last, true) }
-            guard steps < 3 * max(1, absorbed.going?.written.count ?? 0) + 1 else { break }
+            guard steps < 3 * max(1, starting.written.count) + 1 else { break }
 
             steps += 1
             seeded = next
@@ -2643,7 +2654,7 @@ struct TypeChecker {
 
         var widened = entry
 
-        for name in (absorbed.going?.written ?? [:]).keys {
+        for name in starting.written.keys {
             widened[name] = Binding(.assigned, .any)
         }
 
@@ -2672,6 +2683,20 @@ struct TypeChecker {
 
             return one
         }
+    }
+
+    // What a round of a loop starts from, after none or more rounds before
+    // it: the entry, or where a round finished or continued, none of it
+    // certain.
+    private func earlier(_ rounds: Flow, of loop: Name?, meeting: Flow.Meeting) throws -> Way {
+        let (continued, _) = try rounds.gathered(where: { reach in reach.endsRound(of: loop) }, meeting: meeting)
+        var start = Way()
+
+        for way in [rounds.going, continued].compactMap({ way in way }) {
+            start = try start.joined(with: way, meeting: meeting)
+        }
+
+        return start.indefinite()
     }
 
     // Whether a run may fail at this node itself, by the one judgement of it.
