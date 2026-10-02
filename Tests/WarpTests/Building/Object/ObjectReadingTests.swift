@@ -69,46 +69,25 @@ struct ObjectReadingTests {
     // MARK: - Test
     @Test("is refused where a native sends a spelling its numbering gives no number")
     func aSendItsNumberingDoesNotNumber() async throws {
-        // Given. A real object whose native row sends a spelling other than the
-        // one its document numbered
-        let sut = try Module(procedures: [
-            "app.entry": Procedure(
-                access: .public,
-                signature: Signature(of: TwiceQuery.self, returns: .int),
-                implementation: .query(TwiceQuery())
-            )
-        ])
-        let compiled = try await builder.compile([sut] + Module.standard)
+        // Given / When. A real object whose native row sends a spelling other
+        // than the one its document numbered
+        let (linked, laid) = try await linking { send in send[1] = .string("std.math.minus") }
 
-        guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
-            case var .dictionary(parts) = try mine.object(),
-            case var .array(table) = parts["rows"],
-            case var .array(row) = table[0],
-            case var .array(implementation) = row[6],
-            case var .array(sending) = implementation[1],
-            case var .array(send) = sending[0]
-        else {
-            Issue.record("an object writes a native's sends under its implementation")
+        // Then. Refused where the send is numbered, as it is linked or laid
+        #expect(linked?.message.contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere") == true)
+        #expect(laid?.message.contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere") == true)
+    }
 
-            return
-        }
+    @Test("is refused where a native's sends stand apart")
+    func sendsStandingApart() async throws {
+        // Given / When. A real object whose native row's one send stands at
+        // the second place
+        let (linked, laid) = try await linking { send in send[0] = .int(1) }
 
-        send[1] = .string("std.math.minus")
-        sending[0] = .array(send)
-        implementation[1] = .array(sending)
-        row[6] = .array(implementation)
-        table[0] = .array(row)
-        parts = parts.writing("rows", with: .array(table))
-
-        let read = try Compiled(written: .dictionary(parts), of: mine.identity)
-        let beside = compiled.filter { one in !one.declared.contains("app.entry") }
-
-        // When / Then. Refused where the send is numbered, as it is laid
-        #expect {
-            try builder.link(beside + [read], supplying: Supplying([sut] + Module.standard))
-        } throws: { error in
-            error is ObjectRefused && "\(error)".contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere")
-        }
+        // Then. Both where the host brings the native's code and where a
+        // compile lays the object down with none
+        #expect(linked?.message.contains("'app.entry' sends procedures standing at [1]") == true)
+        #expect(laid?.message.contains("'app.entry' sends procedures standing at [1]") == true)
     }
 
     @Test("is refused where a count is written below zero")
@@ -1000,6 +979,54 @@ struct ObjectReadingTests {
     // MARK: - Private
     // The object as written, its parts under their keys, so a test mutates
     // what it means to mutate.
+    // A real object whose native row's first send is changed, and what it is
+    // refused with where it is linked beside what it was compiled against,
+    // and where it is laid down with no native code brought.
+    private func linking(
+        _ change: (inout [Value]) -> Void
+    ) async throws -> (linked: ObjectRefused?, laid: ObjectRefused?) {
+        let sut = try Module(procedures: [
+            "app.entry": Procedure(
+                access: .public,
+                signature: Signature(of: TwiceQuery.self, returns: .int),
+                implementation: .query(TwiceQuery())
+            )
+        ])
+        let compiled = try await builder.compile([sut] + Module.standard)
+
+        guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
+            case var .dictionary(parts) = try mine.object(),
+            case var .array(table) = parts["rows"],
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[6],
+            case var .array(sending) = implementation[1],
+            case var .array(send) = sending[0]
+        else {
+            Issue.record("an object writes a native's sends under its implementation")
+
+            return (nil, nil)
+        }
+
+        change(&send)
+        sending[0] = .array(send)
+        implementation[1] = .array(sending)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts = parts.writing("rows", with: .array(table))
+
+        let read = try Compiled(written: .dictionary(parts), of: mine.identity)
+        let beside = compiled.filter { one in !one.declared.contains("app.entry") }
+
+        let linked = #expect(throws: ObjectRefused.self) {
+            try builder.link(beside + [read], supplying: Supplying([sut] + Module.standard))
+        }
+        let laid = #expect(throws: ObjectRefused.self) {
+            try builder.lay(beside + [read], supplying: Supplying(Module.standard))
+        }
+
+        return (linked, laid)
+    }
+
     private func parts() async throws -> Value.Dictionary {
         try await parts(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],

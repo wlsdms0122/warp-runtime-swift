@@ -72,24 +72,7 @@ struct Sending {
         let answersWithoutRunning = implementation.isNativelyConst == true
         let touchesNothingShared = implementation.isNativelyIsolated == true
 
-        let ordered = sends.sorted { left, right in left.position < right.position }
-
-        guard ordered.map(\.position) == Array(ordered.indices) else {
-            throw BuildError(
-                "'\(label)' sends procedures standing at \(ordered.map(\.position)), which is"
-                    + " not one procedure to a place from the first",
-                at: place
-            )
-        }
-
-        return try ordered.map { send in
-            guard let stands = numbering.call(send.selector) else {
-                throw BuildError(
-                    "'\(label)' sends '\(send.selector)', and its document never asked for it",
-                    at: place
-                )
-            }
-
+        return try numbering.sent(sends, by: label) { send in
             guard let signature = taking(send.selector) else {
                 guard !concealed.contains(send.selector) else {
                     throw BuildError.concealed(send.selector, at: place)
@@ -114,7 +97,7 @@ struct Sending {
                 )
             }
 
-            return Sent(row: stands, handing: try handing(of: send, reaching: signature, called: label, at: place))
+            return try handing(of: send, reaching: signature, called: label, at: place)
         }
     }
 

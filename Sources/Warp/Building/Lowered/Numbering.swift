@@ -253,6 +253,35 @@ struct Numbering: Sendable {
         called[selector]
     }
 
+    // A native's declared sends as the numbers this document gives them, in
+    // the places the native names them at, each handing over what `handing`
+    // says. A run reaches a send by its place, so the places are one send to a
+    // place from the first, and a native whose sends stand otherwise, or send
+    // a spelling this document numbers nowhere, was not compiled against this
+    // numbering.
+    func sent(
+        _ sending: [Native.Send],
+        by label: Name,
+        handing: (Native.Send) throws -> Int
+    ) throws -> [Sent] {
+        let ordered = sending.sorted { left, right in left.position < right.position }
+
+        guard ordered.map(\.position) == Array(ordered.indices) else {
+            throw ObjectRefused(
+                "'\(label)' sends procedures standing at \(ordered.map(\.position)), which is"
+                    + " not one procedure to a place from the first"
+            )
+        }
+
+        return try ordered.map { send in
+            guard let number = call(send.selector) else {
+                throw ObjectRefused("'\(label)' sends '\(send.selector)', which its document numbers nowhere")
+            }
+
+            return Sent(row: number, handing: try handing(send))
+        }
+    }
+
     // Where the nth closure a declaration wrote stands: the number its body
     // carries, and which of the document's closures that is. Nil where the
     // document was never read for that declaration's closures, which is a build

@@ -285,16 +285,10 @@ struct Judged: Sendable {
             return row(.body(body, frame), of: origin, closure: closure, foldable: true, sends: [], in: table)
 
         case let .native(sending):
-            // Each send reaches the number its document gave the spelling, in
-            // the order the procedure names them, which a link answers with a
-            // row the way it answers a call's number.
-            let sends = try sending.map { send in
-                guard let number = numbering.call(send.selector) else {
-                    throw ObjectRefused("'\(label)' sends '\(send.selector)', which its document numbers nowhere")
-                }
-
-                return Sent(row: number, handing: send.handing)
-            }
+            // Each send reaches the number its document gave the spelling,
+            // which a link answers with a row the way it answers a call's
+            // number.
+            let sends = try numbering.sent(sending, by: label) { send in send.handing }
 
             guard let brought = supplied[label, at: document] else {
                 guard standing else { throw self.brought(nothing: document) }
