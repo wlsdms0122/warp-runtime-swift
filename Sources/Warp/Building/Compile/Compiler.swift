@@ -442,7 +442,7 @@ struct Compiler {
                     known[name] = (
                         value,
                         LoweredType(of: value, in: context.loweredTypes)
-                            .refined(by: reading, derived: true, in: context.loweredTypes)
+                            .refined(by: reading, fixed: true, in: context.loweredTypes)
                     )
                 } catch let refused as BuildError {
                     throw refused
@@ -514,7 +514,7 @@ struct Compiler {
                     started[name] = (
                         settled,
                         LoweredType(of: settled, in: context.loweredTypes)
-                            .refined(by: reading, derived: false, in: context.loweredTypes)
+                            .refined(by: reading, fixed: false, in: context.loweredTypes)
                     )
                     return
                 }
