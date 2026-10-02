@@ -1729,13 +1729,8 @@ struct TypeChecker {
             // may be retyped after the capture says nothing the closure can
             // hold on to; one that declared its type holds it through every
             // write.
-            let captured = outside.compactMapValues { bound -> LoweredType? in
-                if case .assigned = bound { return nil }
-
-                return bound.type
-            }
-            let holding = procedure.signature.parameterTypes(in: context.loweredTypes)
-                .merging(captured) { own, _ in own }
+            let bound = procedure.signature.environment(in: context.loweredTypes)
+                .merging(outside) { own, _ in own }
 
             let const = body.map { block in
                 Derivation().isConst(
@@ -1743,7 +1738,7 @@ struct TypeChecker {
                     declaring: procedure.signature.ownedParameters,
                     given: context.isConst,
                     reading: reading,
-                    holding: holding,
+                    bound: bound,
                     taking: context.signature(of:),
                     in: context.loweredTypes
                 )
@@ -1753,7 +1748,7 @@ struct TypeChecker {
                     block,
                     declaring: declared,
                     given: context.isIsolated,
-                    holding: holding,
+                    bound: bound,
                     taking: context.signature(of:),
                     in: context.loweredTypes
                 )
