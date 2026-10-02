@@ -914,6 +914,28 @@ struct WriterTests {
         }
     }
 
+    @Test("an attempt under a set binding the variable it writes has no document")
+    func aBindingUnderASetHasNoDocument() throws {
+        // Given. A `set` introduces no name, so an attempt written under one
+        // reads back binding no failure
+        let stop = Call(selector: "std.control.abort", arguments: [.literal(.string("stop"))])
+        let statement = Statement(
+            binding: .assignment([.key("kept")]),
+            expression: .attempt(
+                Block(body: [Statement(expression: .call(stop))]),
+                rescue: Block(body: [], result: .literal(.int(1))),
+                failure: "kept"
+            )
+        )
+
+        // When / Then
+        #expect {
+            try sut.value(of: statement)
+        } throws: { error in
+            "\(error)".contains("binds 'kept' inside a statement that introduces none")
+        }
+    }
+
     @Test("a procedure backed by native code has no document")
     func nativeCodeHasNoDocument() throws {
         // Given. What the host brings is declared in a module it assembles into

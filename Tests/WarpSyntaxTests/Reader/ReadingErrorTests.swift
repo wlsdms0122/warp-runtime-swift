@@ -289,6 +289,28 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.second.ref")
     }
 
+    @Test("a reading refusal under a set wears the name of the variable it writes")
+    func aReadingUnderASetWearsTheHead() throws {
+        // Given. A `set` is called by the head of its path, the name the build
+        // addresses the same statement by
+        let fixture: Value = [
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["body": [
+                ["var": "r", "value": ["record": ["a": 5]]],
+                ["set": "r.a", "value": ["ref": 5]]
+            ]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "procedures.entry.body.r[1].value.ref")
+    }
+
     @Test("a record with two things wrong refuses the same one every time")
     func aRecordRefusesInNameOrder() throws {
         // Given. One line, and the same line twice. A record read in the order

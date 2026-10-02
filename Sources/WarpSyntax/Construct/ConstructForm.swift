@@ -12,9 +12,9 @@ import Warp
 // nowhere else. The language's own constructs have no names, and this is the
 // one surface that says which key builds which.
 //
-// A form is asked for its expression with the name of the statement it stands
-// in, because two constructs bind that name inside their body: `loop` binds
-// the round, `attempt` binds the failure.
+// A form is asked for its expression with the name the statement it stands in
+// introduces, because two constructs bind that name inside their body: `loop`
+// binds the round, `attempt` binds the failure. A `set` introduces none.
 public protocol ConstructForm: Sendable, Decodable {
     // The spelling this form proposes. `ConstructRegistry` may register it
     // under another, so a form never learns which key actually reached it. A
@@ -37,17 +37,11 @@ public protocol ConstructForm: Sendable, Decodable {
     static func vocabulary(with notation: Notation) -> Set<Name>
 
     // Throws when the form cannot be the statement it was written as.
-    func expression(boundTo name: String?) throws -> Warp.Expression
+    func expression(boundTo name: Name?) throws -> Warp.Expression
 }
 
 public extension ConstructForm {
     static var requiresBody: Bool { false }
 
     static func vocabulary(with notation: Notation) -> Set<Name> { [] }
-
-    // The name a binding construct binds through. It is the statement's own,
-    // and a statement written nameless binds nothing through it.
-    func named(_ name: String?) throws -> Name? {
-        try name.map { name in try Name.read(name, at: []) }
-    }
 }

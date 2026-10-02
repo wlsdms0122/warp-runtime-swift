@@ -66,9 +66,9 @@ public struct StatementReader: Decodable {
         //
         // A walk into an array knows it descended by position and no more. This
         // is the reader that knows the position holds a statement, so the name
-        // an author knows it by is this one's to put on. It is read here off
-        // the naming key, the one way a name is read at all, rather than worked
-        // out from the data again once something has failed.
+        // an author knows it by is this one's to put on. It is the binding's
+        // name, read here off the naming key the one way a binding is read,
+        // rather than worked out from the data again once something has failed.
         let naming = try decoder.container(keyedBy: NamingKeys.self)
         let names = NamingKeys.allCases.filter { name in naming.contains(name) }
 
@@ -80,13 +80,16 @@ public struct StatementReader: Decodable {
         // The same read as the reading's, through the same door, and lenient
         // only in what it does with a failure: an address that refused on its
         // own would decide which refusal an author sees first, and that is the
-        // reading's to decide.
-        let written = names.count == 1 ? try? Self.name(names[0], in: naming) : nil
+        // reading's to decide. What the name declares it holds does not change
+        // the name.
+        let binding = names.count == 1
+            ? try? names[0].binding(Self.name(names[0], in: naming), declaring: nil)
+            : nil
 
         do {
             self.statement = try Self.read(from: decoder, naming: naming, names: names)
         } catch let refusal as ReadingError {
-            throw refusal.addressed(from: Self.address(of: written, in: decoder.steps))
+            throw refusal.addressed(from: Self.address(of: binding?.name, in: decoder.steps))
         }
     }
 
@@ -127,10 +130,10 @@ public struct StatementReader: Decodable {
     // This statement's own address, with the name on it. The position stays:
     // two statements of one name are told apart by it, and a `var` and the
     // `set` that writes it are exactly that.
-    private static func address(of name: String?, in steps: [Place.Step]) -> [Place.Step] {
+    private static func address(of name: Name?, in steps: [Place.Step]) -> [Place.Step] {
         guard case let .index(position)? = steps.last else { return steps }
 
-        return Array(steps.dropLast()) + [Place.Step.statement(name, at: position)]
+        return Array(steps.dropLast()) + [Place.Step.statement(name?.spelling, at: position)]
     }
 
     private static func read(
@@ -190,7 +193,7 @@ public struct StatementReader: Decodable {
         let expression = try Self.expression(
             in: try decoder.descending(to: valueKey),
             registry: registry,
-            boundTo: binding?.spelled
+            boundTo: binding?.introduced
         )
 
         return Statement(binding: binding, expression: expression)
@@ -198,11 +201,11 @@ public struct StatementReader: Decodable {
 
     // What stands under `value`: a construct, where the record's one key is a
     // construct's, and an expression otherwise. A construct that binds through
-    // the statement's name is handed that name.
+    // the statement's name is handed the name the statement introduces.
     private static func expression(
         in decoder: Decoder,
         registry: ConstructRegistry,
-        boundTo name: String?
+        boundTo name: Name?
     ) throws -> Warp.Expression {
         if
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),

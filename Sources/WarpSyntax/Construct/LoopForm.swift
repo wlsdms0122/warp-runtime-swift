@@ -42,10 +42,11 @@ public struct LoopForm: ConstructForm {
     }
 
     // MARK: - Public
-    // The round is bound under the statement's name, which a document reads
-    // as `{ ref "<name>.index" }`. A nameless loop binds none.
-    public func expression(boundTo name: String?) throws -> Warp.Expression {
-        .loop(while: condition, body: body, round: try named(name))
+    // The round is bound under the name the statement introduces, which a
+    // document reads as `{ ref "<name>.index" }`. A loop whose statement
+    // introduces none binds none.
+    public func expression(boundTo name: Name?) -> Warp.Expression {
+        .loop(while: condition, body: body, round: name)
     }
 
     // MARK: - Private
