@@ -307,10 +307,10 @@ struct TypeChecker {
         }
     }
 
-    // A constant settles at the build, so what it is written from is read
-    // rather than run. The same gate an operand passes, asked where a constant
-    // is settled, because those are the two places the build reads an
-    // expression instead of running it.
+    // A constant and a variable's start settle at the build, so what each is
+    // written from is read rather than run. The same gate an operand passes:
+    // an operand, a constant and a variable's start are where the build reads
+    // an expression instead of running it.
     func settles(
         _ expression: Expression,
         at place: Place,

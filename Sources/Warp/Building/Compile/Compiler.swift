@@ -408,48 +408,23 @@ struct Compiler {
             let place = Place.constant(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
-                // A constant's dots are judged before it settles, the way a
-                // body's are: the settled neighbours' types are the
-                // environment, so an absent field or a needless `?.` refuses
-                // here by the one rule, and carries its own place.
-                let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
-                    in: expression,
+                let (value, reading) = try await settled(
+                    expression,
+                    as: name,
                     at: place,
-                    in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
-                    with: context,
-                    folding: nil,
-                    writing: fulfillment
+                    beside: known,
+                    of: origin,
+                    folding: resolved,
+                    writing: &lowering,
+                    leaning: fulfillment,
+                    in: context
                 )
 
-                // A closure a constant holds runs later, so evaluating the
-                // constant proves nothing about the sends inside it. They pass
-                // the same gate every gathered call does.
-                try TypeChecker().checked(calls, in: context, writing: fulfillment)
-
-                // A constant settles at the build, so what it is written from
-                // is read rather than run. The same gate an operand passes,
-                // asked here because a constant is the one other place the
-                // build reads an expression instead of running it.
-                try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
-
-                do {
-                    let value = try await Folding(
-                        constants: known.mapValues(\.value),
-                        origin: origin,
-                        in: resolved,
-                        loweredTypes: context.loweredTypes
-                    ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
-
-                    known[name] = (
-                        value,
-                        LoweredType(of: value, in: context.loweredTypes)
-                            .refined(by: reading, fixed: true, in: context.loweredTypes)
-                    )
-                } catch let refused as BuildError {
-                    throw refused
-                } catch {
-                    throw BuildError("\(error)", at: place)
-                }
+                known[name] = (
+                    value,
+                    LoweredType(of: value, in: context.loweredTypes)
+                        .refined(by: reading, fixed: true, in: context.loweredTypes)
+                )
             }
         }
 
@@ -481,35 +456,17 @@ struct Compiler {
             let place = Place.variable(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
-                let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
-                    in: variable.start,
+                let (settled, reading) = try await self.settled(
+                    variable.start,
+                    as: name,
                     at: place,
-                    in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
-                    with: context,
-                    folding: nil,
-                    writing: fulfillment
+                    beside: known,
+                    of: origin,
+                    folding: resolved,
+                    writing: &lowering,
+                    leaning: fulfillment,
+                    in: context
                 )
-
-                try TypeChecker().checked(calls, in: context, writing: fulfillment)
-
-                // A variable's starting value settles at the build the way a
-                // constant's does, so it passes the same gate.
-                try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
-
-                let settled: Value
-
-                do {
-                    settled = try await Folding(
-                        constants: known.mapValues(\.value),
-                        origin: origin,
-                        in: resolved,
-                        loweredTypes: context.loweredTypes
-                    ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
-                } catch let refused as BuildError {
-                    throw refused
-                } catch {
-                    throw BuildError("\(error)", at: place)
-                }
 
                 guard let declared = variable.declared, let holding = declaredTypes[name] else {
                     started[name] = (
@@ -536,6 +493,53 @@ struct Compiler {
         }
 
         return started
+    }
+
+    // What a constant or a variable's start settles to, beside what it was
+    // judged to read. Its dots are judged before it settles, the way a body's
+    // are: the settled constants' types are the environment, so an absent
+    // field or a needless `?.` refuses here by the one rule, and carries its
+    // own place. A closure it holds runs later, so settling proves nothing
+    // about the sends inside it, and they pass the gate every gathered call
+    // does. What it is written from is read rather than run, so it passes the
+    // gate an operand does.
+    private func settled(
+        _ expression: Expression,
+        as name: Name,
+        at place: Place,
+        beside known: [Name: (value: Value, type: LoweredType)],
+        of origin: Int,
+        folding resolved: ResolvedTable,
+        writing lowering: inout Lowering,
+        leaning fulfillment: Fulfillment,
+        in context: TypingContext
+    ) async throws -> (value: Value, reading: LoweredType) {
+        let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
+            in: expression,
+            at: place,
+            in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
+            with: context,
+            folding: nil,
+            writing: fulfillment
+        )
+
+        try TypeChecker().checked(calls, in: context, writing: fulfillment)
+        try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
+
+        do {
+            let value = try await Folding(
+                constants: known.mapValues(\.value),
+                origin: origin,
+                in: resolved,
+                loweredTypes: context.loweredTypes
+            ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
+
+            return (value, reading)
+        } catch let refused as BuildError {
+            throw refused
+        } catch {
+            throw BuildError("\(error)", at: place)
+        }
     }
 
     // The types a document's variables declare, lowered once. One naming a
