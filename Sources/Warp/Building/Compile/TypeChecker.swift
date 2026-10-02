@@ -2018,9 +2018,11 @@ struct TypeChecker {
                 flow = flow.followed(by: inner.flow)
             }
 
+            let filled = substitution(over: slots, readings: sent, in: context.loweredTypes).readings
+
             try handedInPlace(
                 call.arguments,
-                to: context.slots(of: call.selector).map(\.type),
+                to: slots.map { slot in slot.type.filling(filled) },
                 in: environment,
                 with: context,
                 at: place,
@@ -2734,12 +2736,15 @@ struct TypeChecker {
 
     // The rules a call handing variables in place is held to, at each
     // position whose slot takes one: the argument is a path, the path's head
-    // is a variable here, and the path is one a write may take. A call to a
+    // is a variable here, the path is one a write may take, and a variable a
+    // closure or a call took goes to a slot of exactly the type it is held
+    // to, since the callee is one more taker of the box. A call to a
     // declaration and a call of a value both come here with the slots they
-    // hand to by position. That the variable is the slot's own type is the
-    // slot's acceptance, read where each call kind reads it. Two parameters
-    // handed paths under one head hold one box two ways, and every write
-    // lands in it as it is made, so nothing here keeps them apart.
+    // hand to by position, each type parameter filled. That the variable is
+    // the slot's own type is the slot's acceptance, read where each call kind
+    // reads it. Two parameters handed paths under one head hold one box two
+    // ways, and every write lands in it as it is made, so nothing here keeps
+    // them apart.
     private func handedInPlace(
         _ arguments: [Expression],
         to slots: [LoweredType],
@@ -2775,6 +2780,19 @@ struct TypeChecker {
 
             if case let .refused(reason) = writable(path, in: environment, with: context, at: at) {
                 try refuse("hands '\(path.rendered)' in place, and \(reason)", at: at, when: ask)
+            }
+
+            if
+                path.segments.count == 1,
+                case let .held(held)? = environment[head]?.holding,
+                !slot.slotUnwrapped.identical(to: held, in: context.loweredTypes)
+            {
+                try refuse(
+                    "hands '\(head)' in place as \(slot.slotUnwrapped.rendered(in: context.loweredTypes)),"
+                        + " and it is held as \(held.rendered(in: context.loweredTypes))",
+                    at: at,
+                    when: ask
+                )
             }
         }
     }
