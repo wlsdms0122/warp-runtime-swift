@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 @Suite("How a document spells a type")
 struct TypeNotationTests {
@@ -176,7 +177,7 @@ struct TypeNotationTests {
     }
 
     @Test("a signature bounds its type parameters once, in bounds")
-    func aBoundIsDeclaredInTheSignature() async throws {
+    func aBoundIsDeclaredInTheSignature() throws {
         // Given / When. The slots name the parameter, and the signature says
         // what the name admits
         let sut = try loader.loadProcedure([
@@ -201,7 +202,7 @@ struct TypeNotationTests {
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
-    func aBoundBelongsToTheSignature() async throws {
+    func aBoundBelongsToTheSignature() throws {
         // When / Then. The slot names the parameter and nothing else. The
         // constraint is declared once, in the signature's `bounds`.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
@@ -248,7 +249,7 @@ struct TypeNotationTests {
     }
 
     @Test("a bound reaches the parameters a nested signature mentions")
-    func aBoundReachesNestedMentions() async throws {
+    func aBoundReachesNestedMentions() throws {
         // Given / When. `some Element` sits under array<…> and inside a
         // procedure type's own slot; both are this signature's mentions of one
         // name
@@ -346,7 +347,7 @@ struct TypeNotationTests {
         #expect {
             try loader.load(
                 [
-                    "warp": .int(Envelope.version),
+                    "warp": .int(ModuleReader.version),
                     "imports": [],
                     "procedures": [
                         "entry": [

@@ -25,9 +25,9 @@ import Foundation
 // holding a program it assembled in Swift is owed. It wrote no document, so no
 // document's keys would lead it anywhere. A reading in a document's keys is
 // the reading side's, and a reading in lines and columns is the front end's.
-public struct Place: Sendable, Equatable {
+public struct Place: Sendable, Hashable {
     // Which document a place is an address in.
-    public struct Document: Sendable, Equatable {
+    public struct Document: Sendable, Hashable {
         // MARK: - Property
         // Which text this is. Nil where the program was never written down (a
         // caller that built it in memory) and that is the whole of what nil
@@ -41,7 +41,7 @@ public struct Place: Sendable, Equatable {
         public static let assembled = Document(identity: nil)
 
         // How the document reads on its own. An identity tells one document
-        // from every other in a link, since a link refuses the same one twice.
+        // from every other in a link, since the build refuses the same one twice.
         var rendered: String? {
             identity?.short
         }
@@ -57,8 +57,8 @@ public struct Place: Sendable, Equatable {
         }
 
         // What a sentence calls this document when it names one among several.
-        // Without an identity there is only where the caller put it: the
-        // caller counts its own modules, in the order it handed them over.
+        // Without an identity there is only where the host put it: the
+        // host counts its own modules, in the order it handed them over.
         func spelled(at origin: Int) -> String {
             rendered ?? "the module at \(origin) in this link"
         }
@@ -77,7 +77,7 @@ public struct Place: Sendable, Equatable {
     // One case per part and not per key. A conditional and a loop both hold a
     // condition; that a document writes the two under different keys is a fact
     // about the document.
-    public enum Part: Sendable, Equatable {
+    public enum Part: Sendable, Hashable {
         case procedures
         case constants
         case variables
@@ -152,7 +152,7 @@ public struct Place: Sendable, Equatable {
     // A construct that holds a condition. Two of them, and a third would be a
     // third here, which is the point: whoever spells a condition for a document
     // is asked about every one of these by name.
-    public enum ConditionHolder: Sendable, Equatable {
+    public enum ConditionHolder: Sendable, Hashable {
         case conditional
         case loop
     }
@@ -160,7 +160,7 @@ public struct Place: Sendable, Equatable {
     // What one step of a place is. The cases divide on who chose the words,
     // because that is the division a reader that maps a place back to a file
     // has to make.
-    public enum Step: Sendable, Equatable {
+    public enum Step: Sendable, Hashable {
         // A name the document itself writes: a procedure's, a field's, an
         // argument's. The author typed it, so it is carried as it was typed.
         case key(String)
@@ -328,9 +328,11 @@ public struct Place: Sendable, Equatable {
     // The part of a program something sits in.
     public func part(_ part: Part) -> Place { appending(.part(part)) }
 
-    // What a call is written with. Two steps and not one: a document nests them
-    // under a key of their own.
-    public func argument(_ position: Int) -> Place { part(.arguments).index(position) }
+    // Where a child of an expression standing here stands.
+    public func child(_ child: Expression.Child) -> Place { appending(child.steps) }
+
+    // Where a block standing here holds its body or its result.
+    public func child(_ child: Block.Child) -> Place { appending(child.steps) }
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
@@ -344,12 +346,15 @@ public struct Place: Sendable, Equatable {
     // A statement and the construct it writes, which is how every walk reaches
     // what one holds.
     public func statement(_ statement: Statement, at position: Int) -> Place {
-        self.statement(statement.name?.spelling, at: position)
-            .appending(.construct(statement.expression.construct))
+        appending(statement.steps(at: position))
     }
 
     public func appending(_ step: Step) -> Place {
-        Place(steps + [step], in: document)
+        appending([step])
+    }
+
+    public func appending(_ more: [Step]) -> Place {
+        Place(steps + more, in: document)
     }
 
     // MARK: - Private

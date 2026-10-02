@@ -18,7 +18,7 @@ struct OneSpellingTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a key written with what its absence means is refused, naming nothing as the one spelling")
-    func aDefaultWrittenOutIsRefused() async {
+    func aDefaultWrittenOutIsRefused() {
         // Given
         let document: Value = [
             "warp": 1,
@@ -38,7 +38,7 @@ struct OneSpellingTests {
     }
 
     @Test("a list written out of its order is refused, naming what the one spelling writes there")
-    func aListOutOfOrderIsRefused() async {
+    func aListOutOfOrderIsRefused() {
         // Given
         let document: Value = [
             "warp": 1,
@@ -64,7 +64,7 @@ struct OneSpellingTests {
     }
 
     @Test("a named record under the record tag is refused, since it is written as itself")
-    func aNamedRecordUnderTheTagIsRefused() async throws {
+    func aNamedRecordUnderTheTagIsRefused() throws {
         // Given
         let point = try Value.holding([(name: Name("x"), value: Value.int(1))], named: "Point")
         let document: Value = [
@@ -82,7 +82,7 @@ struct OneSpellingTests {
     }
 
     @Test("what a loader writes as canonical, the same loader reads back, whatever aliases it holds")
-    func anAliasIsAReadingConvenience() async throws {
+    func anAliasIsAReadingConvenience() throws {
         // Given. A table that reads `cond` as a conditional too
         let sut = Loader(registry: try ConstructRegistry.standard.registering(ConditionalForm.self, as: "cond"))
         let text: Value = [
@@ -102,7 +102,7 @@ struct OneSpellingTests {
     }
 
     @Test("a document is read by the standard table, whatever aliases a loader holds")
-    func aDocumentIsReadByTheStandardTable() async throws {
+    func aDocumentIsReadByTheStandardTable() throws {
         // Given. `cond` is this loader's reading convenience, and no document's
         let sut = Loader(registry: try ConstructRegistry.standard.registering(ConditionalForm.self, as: "cond"))
         let document: Value = [
@@ -121,7 +121,7 @@ struct OneSpellingTests {
     }
 
     @Test("a record type nested in another keeps its own refusal and place")
-    func aNestedRecordTypeKeepsItsRefusal() async {
+    func aNestedRecordTypeKeepsItsRefusal() {
         // Given. The inner record type written bare, the way a document never
         // writes one
         let document: Value = [
@@ -155,7 +155,7 @@ struct OneSpellingTests {
         (written: Value.dictionary(["record": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.result.record.a"),
         (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "int"])]), place: "procedures.entry.result.as?.of")
     ])
-    func aRefusalInsideATagIsPlacedUnderIt(written: Value, place: String) async {
+    func aRefusalInsideATagIsPlacedUnderIt(written: Value, place: String) {
         // Given
         let document: Value = [
             "warp": 1,

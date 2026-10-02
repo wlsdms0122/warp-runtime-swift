@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // A type or constraint name is the spelling it was declared under, dot and
 // all, and a mention is that spelling written out. These are the places that
@@ -262,7 +263,7 @@ struct DeclaredSpellingTests {
         )
 
         // When / Then. The build sees its whole graph at once, so the order the
-        // caller listed the modules cannot change the conclusion
+        // host listed the modules cannot change the conclusion
         await #expect {
             try await builder.build(typeFirst ? [type, membership] : [membership, type])
         } throws: { error in

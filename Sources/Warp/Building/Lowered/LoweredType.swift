@@ -58,7 +58,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // walked from it, so two walks landing on one field land on one type.
     // Nothing is proven about what it holds, so every judgment answers it the
     // way it answers `any`; it stands apart for the walk's own naming.
-    case reading(of: Name, path: Path)
+    case projection(of: Name, path: Path)
 
     // A name the table does not answer, and why. Nothing can be said about
     // it, so every judgment over readings lets it pass, and the value judge
@@ -122,7 +122,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
-            .named, .parameter, .composition, .reading, .undeclared:
+            .named, .parameter, .composition, .projection, .undeclared:
             return self
         }
     }
@@ -130,6 +130,13 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether a slot holding this may be written through.
     var isVariable: Bool {
         if case .variable = self { return true }
+
+        return false
+    }
+
+    // Whether a slot holding this takes a variable in place.
+    var isInout: Bool {
+        if case .inout = self { return true }
 
         return false
     }
@@ -143,7 +150,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .nullable,
-            .named, .parameter, .composition, .reading, .undeclared:
+            .named, .parameter, .composition, .projection, .undeclared:
             return self
         }
     }
@@ -179,7 +186,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether what this stands for is settled at the call.
     var decidedAtCall: Bool {
         switch self {
-        case .parameter, .reading:
+        case .parameter, .projection:
             return true
 
         default:
@@ -187,11 +194,11 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a judgment sees. A reading says a path was taken through a type
+    // What a judgment sees. A projection says a path was taken through a type
     // the call decides, which proves nothing about what it holds, and that is
     // what `any` says.
     var judged: LoweredType {
-        if case .reading = self { return .any }
+        if case .projection = self { return .any }
 
         return self
     }
@@ -224,32 +231,52 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a slot said about the procedures it holds. A body applying a name a
-    // slot declared this way is judged on the slot's word, since the slot is what
-    // says which values may arrive there. An array or a dictionary of them says it
-    // about every element.
-    var isConstProcedure: Bool {
-        switch self {
-        case .procedure(_, _, .const, _):
-            return true
+    // What a slot said about the procedure it holds. A body applying a name a
+    // slot declared this way is judged on the slot's word, since the slot is
+    // what says which values may arrive there. A name says what the type it
+    // stands for says.
+    func isConstProcedure(in table: LoweredTypeTable) -> Bool {
+        guard case .procedure(_, _, .const, _)? = procedureHeld(in: table) else { return false }
 
-        case let .array(element), let .dictionary(element):
-            return element.isConstProcedure
-
-        default:
-            return false
-        }
+        return true
     }
 
-    var isIsolatedProcedure: Bool {
+    func isIsolatedProcedure(in table: LoweredTypeTable) -> Bool {
+        guard case .procedure(_, _, _, .isolated)? = procedureHeld(in: table) else { return false }
+
+        return true
+    }
+
+    // The positions a procedure a slot holding this holds takes in place.
+    // Empty where the slot says nothing of the procedure's parameters.
+    func inPlacePositions(in table: LoweredTypeTable) -> Set<Int> {
+        guard case let .procedure(parameters?, _, _, _)? = procedureHeld(in: table) else { return [] }
+
+        return Set(parameters.indices.filter { position in parameters[position].isInout })
+    }
+
+    // Whether a value this holds may carry a procedure that takes a parameter
+    // in place: one written here, or one inside a `?`, an array, a dictionary,
+    // a record's field or the type a name declares. A procedure's own
+    // parameters and answer are that procedure's business and are not walked.
+    func carriesProcedureTakingInPlace(in table: LoweredTypeTable, walked: Set<Int> = []) -> Bool {
         switch self {
-        case .procedure(_, _, _, .isolated):
-            return true
+        case let .procedure(parameters, _, _, _):
+            return parameters?.contains { parameter in parameter.isInout } ?? false
 
-        case let .array(element), let .dictionary(element):
-            return element.isIsolatedProcedure
+        case let .nullable(inner), let .array(inner), let .dictionary(inner), let .variable(inner), let .inout(inner):
+            return inner.carriesProcedureTakingInPlace(in: table, walked: walked)
 
-        default:
+        case let .record(record):
+            return record.fields.contains { field in field.carriesProcedureTakingInPlace(in: table, walked: walked) }
+
+        case let .named(row):
+            guard !walked.contains(row) else { return false }
+
+            return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .parameter, .composition, .projection,
+            .undeclared:
             return false
         }
     }
@@ -324,18 +351,18 @@ indirect enum LoweredType: Sendable, Equatable {
     // type to read the segments against and no need for one of these.
     //
     // Asked of the type rather than assembled at the walk, because the root
-    // is the type's own fact: a parameter roots a reading at itself, and a
-    // reading already rooted extends the path it carries.
+    // is the type's own fact: a parameter roots a projection at itself, and a
+    // projection already rooted extends the path it carries.
     //
     // The marks come off on the way in: what a mark says is expected of the
     // value, and where the walk landed is the same field either way.
     func reaching(_ path: Path) -> LoweredType? {
         switch self {
         case let .parameter(name, _):
-            return .reading(of: name, path: path.unmarked)
+            return .projection(of: name, path: path.unmarked)
 
-        case let .reading(of, walked):
-            return .reading(of: of, path: walked.appending(contentsOf: path.unmarked.segments))
+        case let .projection(of, walked):
+            return .projection(of: of, path: walked.appending(contentsOf: path.unmarked.segments))
 
         default:
             return nil
@@ -365,6 +392,26 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return nil
+        }
+    }
+
+    // What a dot reading this name reaches: an entry, where this is a
+    // dictionary, whose names are data, or the field a record type declares
+    // under the name, as what the field holds. Nil where a dot reaches
+    // nothing the type declares.
+    func dotted(_ name: Name, in table: LoweredTypeTable) -> LoweredType? {
+        switch self {
+        case let .dictionary(entry):
+            return entry
+
+        case let .named(row):
+            return table.loweredTypes[row].dotted(name, in: table)
+
+        case let .variable(inner), let .inout(inner):
+            return inner.dotted(name, in: table)
+
+        default:
+            return place(of: name, in: table)?.type.fieldUnwrapped
         }
     }
 
@@ -588,7 +635,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming)
 
-        case (.any, _), (_, .any), (.reading, _), (_, .reading):
+        case (.any, _), (_, .any), (.projection, _), (_, .projection):
             return true
 
         case (.never, _):
@@ -661,6 +708,10 @@ indirect enum LoweredType: Sendable, Equatable {
             // required must accept everything it will get back.
             for (parameter, taken) in zip(required, given) {
                 guard taken.accepts(parameter, in: table, assuming: assuming) else { return false }
+
+                // A position taken in place takes a variable, and a slot
+                // handing a value there has none to give.
+                guard !taken.isInout || parameter.isInout else { return false }
             }
 
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assuming: assuming)
@@ -716,7 +767,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // is a fraction no fraction spells, so no call could ever match it.
     func spells(_ candidate: String, in table: LoweredTypeTable) -> Bool {
         switch self {
-        case .any, .reading, .string, .undeclared:
+        case .any, .projection, .string, .undeclared:
             return true
 
         case .int, .double:
@@ -1015,7 +1066,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // Nothing fills a walk through a parameter. It is named for a path only
         // the body that wrote it can read, and no call site says anything about
         // that. So the caller reads what a declaration saying nothing says.
-        case .reading:
+        case .projection:
             return .any
 
         case let .array(element):
@@ -1137,7 +1188,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .reading, .undeclared:
+            .ranged, .projection, .undeclared:
             return self
         }
     }
@@ -1159,7 +1210,7 @@ indirect enum LoweredType: Sendable, Equatable {
         assuming: [Int] = []
     ) throws -> Value {
         switch self {
-        case .any, .reading:
+        case .any, .projection:
             return value
 
         // Both ask the membership and neither settles: a value stands as what
@@ -1293,7 +1344,7 @@ indirect enum LoweredType: Sendable, Equatable {
         boundAssuming: [Int] = []
     ) -> Bool {
         switch self {
-        case .any, .reading, .int:
+        case .any, .projection, .int:
             return true
 
         case let .variable(inner), let .inout(inner), let .nullable(inner):
@@ -1380,7 +1431,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // Spelled as what it is: the type reached by that path. No document
         // writes this, so the spelling answers to the message alone, and an
         // author reading a refusal about `item.a` sees where it came from.
-        case let .reading(of, path):
+        case let .projection(of, path):
             return "some \(Path([.key(of)] + path.segments).rendered)"
 
         case .never:
@@ -1488,7 +1539,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.composition(mine), .composition(theirs)):
             return mine == theirs
 
-        case let (.reading(myRoot, myPath), .reading(theirRoot, theirPath)):
+        case let (.projection(myRoot, myPath), .projection(theirRoot, theirPath)):
             return myRoot == theirRoot && myPath == theirPath
 
         case let (.undeclared(mine, _), .undeclared(theirs, _)):
@@ -1500,6 +1551,26 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // The procedure type a slot holding this holds, through the names
+    // standing for one and the marks a slot writes, and nil where it holds
+    // none.
+    private func procedureHeld(in table: LoweredTypeTable, walked: Set<Int> = []) -> LoweredType? {
+        switch self {
+        case .procedure:
+            return self
+
+        case let .named(row):
+            guard !walked.contains(row) else { return nil }
+
+            return table.loweredTypes[row].procedureHeld(in: table, walked: walked.union([row]))
+
+        case let .variable(inner), let .inout(inner):
+            return inner.procedureHeld(in: table, walked: walked)
+
+        default:
+            return nil
+        }
+    }
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
     // expanded every row at every depth would chase one forever.
@@ -1631,7 +1702,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // about remembered, since a membership may name itself through a row.
     private func couldBeProcedure(in table: LoweredTypeTable, assuming: [Int]) -> Bool {
         switch self {
-        case .procedure, .any, .never, .reading, .undeclared:
+        case .procedure, .any, .never, .projection, .undeclared:
             return true
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
@@ -1720,7 +1791,7 @@ indirect enum LoweredType: Sendable, Equatable {
         assuming: [Int]
     ) throws -> Value {
         switch self {
-        case .any, .reading, .parameter, .composition:
+        case .any, .projection, .parameter, .composition:
             return try settling(value, at: path(), in: table, assuming: assuming)
 
         // A value arrived where nothing was supposed to, so the arrival is the
@@ -2053,7 +2124,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // The widening is binary64's own rounding, and every int has
         // a fraction near it: the conversion cannot fail, only round.
-        case (.double, .int(let integer)):
+        case let (.double, .int(integer)):
             return .double(Double(integer))
 
         default:

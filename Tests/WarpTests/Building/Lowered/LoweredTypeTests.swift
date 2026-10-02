@@ -33,7 +33,7 @@ struct LoweredTypeTests {
     // MARK: - Test
     @Test("a lowered type renders as the author wrote it")
     func aLoweredTypeRendersAsWritten() throws {
-        // Given: every declared type, and a few that name them
+        // Given. Every declared type, and a few that name them
         let table = types.loweredTypes
         let written: [TypeExpression] = Array(types.types.values) + [
             .array(.named("bank.Acct")),
@@ -87,31 +87,31 @@ struct LoweredTypeTests {
         let account = try #require(table.row(named: "bank.Account"))
         let byte = try #require(table.row(named: "app.Byte"))
 
-        // Then: the alias names the account's record, and a range names none
+        // Then. The alias names the account's record, and a range names none
         #expect(TypeExpression.named("bank.Acct").lowered(in: table) == .named(alias))
         #expect(table.recordRows[alias] == account)
         #expect(table.recordRows[account] == account)
         #expect(table.recordRows[byte] == nil)
     }
 
-    @Test("a walk's reading lowers to itself, and every judgment answers it as any")
-    func aReadingLowersToItself() throws {
+    @Test("a projection lowers to itself, and every judgment answers it as any")
+    func aProjectionLowersToItself() throws {
         // Given
         let table = types.loweredTypes
-        let reading = try TypeExpression.reading(of: "T", path: [.key("inner")]).lowered(in: table)
+        let projection = try TypeExpression.projection(of: "T", path: [.key("inner")]).lowered(in: table)
 
         // When / Then
-        #expect(reading == .reading(of: "T", path: [.key("inner")]))
-        #expect(try TypeExpression.array(.reading(of: "T", path: [])).lowered(in: table)
-            == .array(.reading(of: "T", path: [])))
-        #expect(LoweredType.int.accepts(reading, in: table))
-        #expect(reading.accepts(.int, in: table))
-        #expect(try reading.settling(.int(1), at: "", in: table) == .int(1))
+        #expect(projection == .projection(of: "T", path: [.key("inner")]))
+        #expect(try TypeExpression.array(.projection(of: "T", path: [])).lowered(in: table)
+            == .array(.projection(of: "T", path: [])))
+        #expect(LoweredType.int.accepts(projection, in: table))
+        #expect(projection.accepts(.int, in: table))
+        #expect(try projection.settling(.int(1), at: "", in: table) == .int(1))
     }
 
     @Test("a record settling into an alias slot takes the canonical name, and passes it again by comparison")
     func aRecordSettlesUnderTheCanonicalName() throws {
-        // Given: a slot spelled with the alias, a nameless record, and one
+        // Given. A slot spelled with the alias, a nameless record, and one
         // already named by the alias
         let table = types.loweredTypes
         let slot = TypeExpression.named("bank.Acct").lowered(in: table)
@@ -209,7 +209,7 @@ struct LoweredTypeTests {
 
     @Test("one undeclared name passes every reading and is refused where a value meets it")
     func anUndeclaredNameTouchesOnlyItsOwnJudgments() {
-        // Given: a table with one bad row beside a good one
+        // Given. A table with one bad row beside a good one
         let table = TypeTable(types: ["app.Bad": .named("app.Missing"), "app.Good": .nullable(.int)])
 
         // When / Then
@@ -229,7 +229,7 @@ struct LoweredTypeTests {
 
     @Test("a name that reaches itself under a wrapper is a cycle, and the value judge says so")
     func aCycleUnderAWrapperIsRefusedNotChased() {
-        // Given: a table built by hand, which the build's refusals never saw
+        // Given. A table built by hand, which the build's refusals never saw
         let table = TypeTable(
             types: [
                 "app.M": .nullable(.named("app.M")),
@@ -240,7 +240,7 @@ struct LoweredTypeTests {
             ]
         )
 
-        // When / Then: each cycle is refused where a value meets it, and a
+        // When / Then. Each cycle is refused where a value meets it, and a
         // chain that ends is walked to its end
         #expect {
             try TypeExpression.named("app.M").settling(.int(1), at: "input", in: table)
@@ -260,7 +260,7 @@ struct LoweredTypeTests {
 
     @Test("a procedure another link made is refused by a run, not read by its rows")
     func aProcedureFromAnotherLinkIsRefused() async throws {
-        // Given: a closure made by one image, handed to a run of another
+        // Given. A closure made by one image, handed to a run of another
         let maker = try Module(
             procedures: [
                 "entry": Procedure(
@@ -291,7 +291,7 @@ struct LoweredTypeTests {
 
     @Test("a procedure from a link that declared no types is refused too")
     func aProcedureFromATypelessLinkIsRefused() async throws {
-        // Given: neither link declares a type, so neither has a row a type
+        // Given. Neither link declares a type, so neither has a row a type
         // number could mean something in, and the rows a body does carry, the
         // procedures it sends to and the document its variables come from,
         // still mean something in one link alone.
@@ -325,7 +325,7 @@ struct LoweredTypeTests {
 
     @Test("a judgment says the rule, rather than naming a link nobody named")
     func aJudgmentWithNoLinkSaysTheRule() async throws {
-        // Given: a closure out of a run, judged with no declarations behind
+        // Given. A closure out of a run, judged with no declarations behind
         // the judgment. Which link this one came from is not knowable where
         // it is met, so naming one would be inventing it.
         let maker = try Module(

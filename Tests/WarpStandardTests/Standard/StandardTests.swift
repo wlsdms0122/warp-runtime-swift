@@ -9,8 +9,9 @@ import Foundation
 import Testing
 import Warp
 import WarpStandard
+import WarpTestSupport
 
-// The procedures that ship in bundles, and the fact that they are bundles: a caller
+// The procedures that ship in bundles, and the fact that they are bundles: a host
 // takes the ones its programs have use for, and a name from a bundle it left out
 // does not resolve.
 @Suite("The standard vocabulary")
@@ -36,11 +37,11 @@ struct StandardTests {
         // Given. What the bundles declare, and how the one list cuts them
         let shipped = Set(Module.standard.flatMap(\.procedures.keys))
 
-        // When / Then. A name in `builtin` that nothing declares is a list gone
+        // When / Then. A name in `builtinProcedures` that nothing declares is a list gone
         // stale
-        #expect(Module.builtin.subtracting(shipped).isEmpty)
-        #expect(Module.builtin.count == 25)
-        #expect(Module.builtin.union(Module.derived) == shipped)
+        #expect(Module.builtinProcedures.subtracting(shipped).isEmpty)
+        #expect(Module.builtinProcedures.count == 25)
+        #expect(Module.builtinProcedures.union(Module.derived) == shipped)
     }
 
     @Test("a procedure this package calls derived has a body here")

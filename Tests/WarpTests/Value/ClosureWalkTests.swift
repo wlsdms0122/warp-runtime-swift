@@ -5,8 +5,10 @@
 //  Created by JSilver on 9/17/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("A value names the closures it holds")
 struct ClosureWalkTests {

@@ -9,10 +9,11 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // How a document spells a binding. `id:`, `var:`, `set:`. What a binding
 // *means* is the language's, and `WarpTests` asks it there.
-@Suite
+@Suite("How a document spells a binding")
 struct VariableNotationTests {
     // MARK: - Property
     private let loader = Loader.testing

@@ -45,7 +45,7 @@ struct TypeTableTests {
         // Given
         let circular = TypeTable(types: ["app.A": .named("app.B"), "app.B": .named("app.A"), "app.C": .int])
 
-        // When / Then: the cycle is refused where it is met, and the row
+        // When / Then. The cycle is refused where it is met, and the row
         // beside it answers as itself
         #expect {
             try TypeExpression.named("app.A").settling(.int(1), at: "input", in: circular)

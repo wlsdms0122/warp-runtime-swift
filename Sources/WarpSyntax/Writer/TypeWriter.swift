@@ -62,7 +62,7 @@ struct TypeWriter {
     // bound differently is two claims about one thing: a signature the link
     // refuses has no document.
     func bounds(of signature: Signature) throws -> Value? {
-        let held = signature.parameterBounds
+        let held = signature.parameterBounding
 
         if let refusal = held.refusal {
             throw WritingError(refusal + ", so there is no `bounds` to write")
@@ -106,11 +106,11 @@ struct TypeWriter {
         case let .named(name):
             return .string(name.spelling)
 
-        // No document spells this. It is a type the link worked out from a
-        // body, and the link refuses one written into a declaration. Reaching
+        // No document spells this. It is a type the build worked out from a
+        // body, and the build refuses one written into a declaration. Reaching
         // here means a type got past that, so it is said rather than silently
         // written as something else.
-        case let .reading(of, path):
+        case let .projection(of, path):
             throw WritingError(
                 "`some \(Path([.key(of)] + path.segments).rendered)` is a type"
                     + " the build read out of a body,"
@@ -281,7 +281,7 @@ struct TypeWriter {
 
         // Neither carries a bound to strip: a composition is its bounds, and
         // a slot spells it whole.
-        case .reading, .composition:
+        case .projection, .composition:
             return type
 
         case let .array(element):

@@ -93,7 +93,7 @@ struct DeclarationChecker {
                 case .parameter, .any, .never, .composition: false
                 case .null, .bool, .int, .double, .string, .ranged, .array,
                     .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
-                    .borrowing, .nullable, .reading: true
+                    .borrowing, .nullable, .projection: true
                 }
 
                 guard concrete else {
@@ -143,6 +143,10 @@ struct DeclarationChecker {
         for module in modules {
             for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
+
+                if procedure.implementation.native != nil {
+                    try judge(hostAnswered: procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
+                }
 
                 // A closure literal carries a signature the way a declaration
                 // does, and unreached code still has to compile, so what the
@@ -260,6 +264,25 @@ struct DeclarationChecker {
         try judgeConstraints(signature.parameterOccurrences, at: place, in: table)
     }
 
+    // A procedure the host answers calls a procedure it was handed with
+    // values, so a parameter that may carry one taking a parameter in place
+    // asks for what it could never call. Judged on the type a name declares,
+    // wherever the parameter holds it.
+    private func judge(
+        hostAnswered signature: Signature,
+        at place: Place,
+        in table: TypeTable
+    ) throws {
+        for (position, parameter) in signature.parameters.enumerated()
+        where parameter.declared.lowered(in: table.loweredTypes).carriesProcedureTakingInPlace(in: table.loweredTypes) {
+            throw BuildError(
+                "takes '\(parameter.name)', which may hold a procedure taking a parameter in place,"
+                    + " and a procedure the host answers calls what it is handed with values",
+                at: place.part(.parameters).index(position)
+            )
+        }
+    }
+
     // Everything a cast's type is held to on its spelling alone: the names it
     // mentions resolve, and it names a type there is something to read. Both
     // are answered without knowing what the value reads as, so every cast is
@@ -358,7 +381,7 @@ struct DeclarationChecker {
         // Nobody promised it, and no document could have spelled it. It is
         // refused here rather than left to the reader, because a reader is one
         // way a declaration is built and a host assembling one is another.
-        case let .reading(of, path):
+        case let .projection(of, path):
             throw BuildError(
                 "writes `\(type.rendered)`, which is a type the build"
                     + " read out of a body. A declaration says what a call fills,"
@@ -674,7 +697,7 @@ struct DeclarationChecker {
             throw BuildError("`some \(misspelled)` names its bounds once each and in name order", at: place)
         }
 
-        let bounds = ParameterBounds(occurrences)
+        let bounds = ParameterBounding(occurrences)
 
         if let refusal = bounds.refusal {
             throw BuildError(refusal, at: place)

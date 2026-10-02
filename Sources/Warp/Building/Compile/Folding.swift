@@ -50,6 +50,7 @@ struct Folding {
     func read(
         _ expression: Expression,
         as writer: Closure.Declaration,
+        inPlace: InPlaceTable,
         writing lowering: inout Lowering,
         at place: Place
     ) async throws -> Value {
@@ -58,11 +59,12 @@ struct Folding {
             reading: names,
             origin: origin,
             writer: writer,
+            inPlace: inPlace,
             at: place
         )
 
         // The table as a fold reads it. Lowering holds the rows a run reads,
-        // and the two differ in one place: a procedure a caller brought
+        // and the two differ in one place: a procedure a host brought
         // answers a run and stands as its refusal here.
         return try await read(
             code,

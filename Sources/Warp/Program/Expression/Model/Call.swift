@@ -12,8 +12,8 @@ import Foundation
 //
 // The language has one calling type and leaves which declaration answers to
 // the build. A procedure a document declares, one a bundle declares and a
-// caller's own are three places a name can be found, not three kinds of
-// expression, so every one of them lowers to this and a caller adds a
+// host's own are three places a name can be found, not three kinds of
+// expression, so every one of them lowers to this and a host adds a
 // procedure without the grammar growing a case.
 //
 // The arguments stand at the positions of the parameters they fill, the first

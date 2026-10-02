@@ -9,8 +9,9 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
-@Suite
+@Suite("How a document spells an expression")
 struct ExpressionFormTests {
     // MARK: - Property
     private let loader = Loader.testing

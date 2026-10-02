@@ -19,7 +19,8 @@ import Foundation
 // query is the claim that it answers without running, and running is not
 // something a caller can catch; an isolated procedure is the claim that it touches no name
 // another body could touch at the same time, and neither is that. A procedure
-// making either claim while sending something that breaks it is refused.
+// making either claim while sending something that breaks it is refused. So is
+// a send reaching a parameter handed in place, since a send hands values.
 //
 // What it may fail with is not one of them. A Swift body can catch, so a procedure
 // declaring it fails nothing while sending something that fails is describing
@@ -136,6 +137,16 @@ struct Sending {
         if let refusal = signature.refusal(handing: send.handing) {
             throw BuildError(
                 "'\(label)' sends '\(send.selector)' \(refusal)",
+                at: place
+            )
+        }
+
+        // A send hands values, and a parameter handed in place takes a
+        // variable.
+        if let parameter = signature.inPlace {
+            throw BuildError(
+                "'\(label)' sends '\(send.selector)', which takes '\(parameter)' in place,"
+                    + " and a send hands values",
                 at: place
             )
         }

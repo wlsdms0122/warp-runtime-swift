@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // What a native procedure sending another procedure answers, and what the build refuses
 // before anything runs. A procedure declares the procedures it sends the way it declares
@@ -494,6 +495,16 @@ struct ProcedureSendsTests {
         ]
     )
 
+    private static let pickedInPlace = try! Module(
+        procedures: [
+            "app.pick": Procedure(
+                signature: Signature(parameters: [Parameter(name: "a", type: .inout(.int))], returns: .int),
+                body: [],
+                result: .reference([.key("a")])
+            )
+        ]
+    )
+
     private static let picking = try! Module(
         procedures: [
             "app.picking": Procedure(
@@ -624,7 +635,7 @@ struct ProcedureSendsTests {
     @Test("a procedure sending another document's private declaration is refused at the build")
     func aSendReachingAPrivateDeclarationIsRefused() async throws {
         // Given. A document declares `app.hidden` privately, and a procedure the
-        // caller brings declares it sends that spelling.
+        // host brings declares it sends that spelling.
         let document = try Module(procedures: [
             "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
             "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
@@ -687,7 +698,7 @@ struct ProcedureSendsTests {
 
     @Test("what a native procedure sends counts in the module's disclosure")
     func nativeSendsAreDisclosed() throws {
-        // Given / When / Then. The list is what a caller reads to decide what
+        // Given / When / Then. The list is what a host reads to decide what
         // to grant, so a procedure's own sends are in it
         #expect(Self.sending.imports == ["std.math.times", "app.shout"])
     }
@@ -771,6 +782,20 @@ struct ProcedureSendsTests {
         }
 
         #expect(refusal?.message.contains("sends 'app.pick' 1 arguments, and it takes 2") == true)
+    }
+
+    @Test("a procedure sending one that takes a parameter in place is refused at the build")
+    func aSendToAParameterInPlaceIsRefused() async {
+        // Given / When / Then. A send hands values, and `app.pick` here takes
+        // its one parameter in place
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build(
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])]
+                    + [Self.undercounting, Self.pickedInPlace]
+            )
+        }
+
+        #expect(refusal?.message.contains("sends 'app.pick', which takes 'a' in place, and a send hands values") == true)
     }
 
     @Test("a procedure handing more than it declared it hands is refused when it sends")

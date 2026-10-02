@@ -22,7 +22,7 @@ public struct ContinueForm: ConstructForm {
     }
 
     // MARK: - Public
-    public func expression(boundTo name: String?) -> Expression {
+    public func expression(boundTo name: String?) -> Warp.Expression {
         .leave(Leave(reach: .round, target: target))
     }
 

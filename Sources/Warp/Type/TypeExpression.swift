@@ -41,7 +41,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // A number the slot admits only inside the range. `int(0...255)`,
     // `double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
     // the value is a whole number or a fraction, and the bounds are judged
-    // where a value is settled, the way `enum` is. At the link for a constant,
+    // where a value is settled, the way `enum` is. At the build for a constant,
     // at the boundary for what only the run can see. A module gives one a name
     // the way it names any type: `byte = int(0...255)`.
     case ranged(Refinement)
@@ -169,7 +169,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // The path is segments and not their spelling for the same reason: `.a`
     // and `?.a` land on one field, and a spelling would make them two unknowns
     // that never meet.
-    case reading(of: Name, path: Path)
+    case projection(of: Name, path: Path)
 
     // The condition a refinement writes on a number.
     //
@@ -595,7 +595,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // Spelled as what it is. The type reached by that path. No document
         // writes this, so the spelling answers to the message alone: an author
         // reading a refusal about `item.a` should see where it came from.
-        case let .reading(of, path):
+        case let .projection(of, path):
             return "some \(Path([.key(of)] + path.segments).rendered)"
 
         case let .variable(inner):
@@ -670,40 +670,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // to judge on.
     var decidedAtCall: Bool {
         switch self {
-        case .parameter, .reading:
+        case .parameter, .projection:
             return true
-
-        default:
-            return false
-        }
-    }
-
-    // Whether a slot declaring this asks for procedures that answer without
-    // running, holding one or an array of them. A name standing in such a slot
-    // may be applied where a body must answer without running: what fills it
-    // passed that judgement where it was handed over.
-    var isConstProcedure: Bool {
-        switch self {
-        case .procedure(_, .const, _):
-            return true
-
-        case let .array(element):
-            return element.isConstProcedure
-
-        default:
-            return false
-        }
-    }
-
-    // The same, for the other claim a slot may make about a procedure it
-    // holds.
-    var isIsolatedProcedure: Bool {
-        switch self {
-        case .procedure(_, _, .isolated):
-            return true
-
-        case let .array(element):
-            return element.isIsolatedProcedure
 
         default:
             return false
@@ -792,7 +760,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .composition(names):
             Set(names)
 
-        case .reading:
+        case .projection:
             []
         }
     }
@@ -804,7 +772,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .parameter(name, constraints):
             return [ParameterOccurrence(name: name, constraints: constraints)]
 
-        case .reading, .composition:
+        case .projection, .composition:
             return []
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
@@ -831,7 +799,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         switch self {
         // Both are types a call decides, and the deep question is only
         // whether this declaration has to be filled at all.
-        case .parameter, .reading:
+        case .parameter, .projection:
             return true
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
@@ -865,7 +833,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
-            .nullable, .named, .parameter, .reading, .composition:
+            .nullable, .named, .parameter, .projection, .composition:
             return self
         }
     }
@@ -888,7 +856,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
-            .consuming, .borrowing, .nullable, .named, .parameter, .reading, .composition:
+            .consuming, .borrowing, .nullable, .named, .parameter, .projection, .composition:
             return self
         }
     }
@@ -928,7 +896,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .parameter(name, constraints):
             return .parameter(name: name, constraints: constraints.isEmpty ? bounds[name] ?? [] : constraints)
 
-        case .reading, .composition:
+        case .projection, .composition:
             return self
 
         case let .linear(inner):
@@ -1032,7 +1000,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // The same question, answering nil where the walk only ever came back to a
-    // membership it was already inside. A ring says nothing new, so a ring of
+    // membership it was already inside. A cycle says nothing new, so a cycle of
     // nothing else says nothing at all, and folding that to "not one" is done
     // at the one door above rather than partway down: fold it inside the
     // recursion and the answer starts depending on how many wrappers a member
@@ -1078,7 +1046,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // once is followed by the name that holds it, and a name does not go
         // into a type.
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .reading:
+            .ranged, .array, .dictionary, .record, .procedure, .projection:
             return false
         }
     }

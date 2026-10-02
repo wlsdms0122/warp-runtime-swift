@@ -733,7 +733,7 @@ struct LinearityChecker {
                     + " `returns`. What a declaration answers is read off its body"
                     + " where nobody wrote it, and the mark is not something a"
                     + " reading keeps",
-                at: place.part(.result)
+                at: place.child(.result)
             )
         }
     }

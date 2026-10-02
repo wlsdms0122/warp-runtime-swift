@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A contract: the procedures a value must answer. A document says which types
 // answer one, a signature bounds a type parameter by it, and a body calls the
@@ -184,7 +185,7 @@ struct ContractTests {
         // Then. Each refused where the argument is written, for what the author wrote
         #expect(outside?.message == "sending 'app.Sized.size': input 'n': 99 is outside int(0...10)")
         #expect(outside?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
-        #expect(inPlace?.message.hasPrefix("hands 'n' in place") == true)
+        #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
         #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
     }
 

@@ -5,6 +5,7 @@
 //  Created by JSilver on 9/16/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
 
@@ -30,7 +31,7 @@ struct ObjectDependencyTests {
     }
 
     // MARK: - Property
-    // A stand-in for what a caller works out from the bytes, which this package
+    // A stand-in for what a host works out from the bytes, which this package
     // does not write. Two objects that differ answer differently here, which
     // is all these ask of it.
     private let builder = Builder { value in Fingerprint(Array("\(value)".utf8)) }
@@ -76,14 +77,14 @@ struct ObjectDependencyTests {
         // Given. The document it calls, compiled and worked out.
         let behind = try await builder.compile([used])
 
-        // When.
+        // When
         let compiled = try await builder.compile(
             [program],
             against: behind,
             supplying: Supplying([used, program])
         )
 
-        // Then.
+        // Then
         #expect(compiled[0].dependencies == behind.compactMap(\.fingerprint))
     }
 
@@ -92,7 +93,7 @@ struct ObjectDependencyTests {
         // Given. Both laid down, and only one of them named.
         let behind = try await builder.compile([used, unrelated])
 
-        // When.
+        // When
         let compiled = try await builder.compile(
             [program],
             against: behind,
@@ -114,7 +115,7 @@ struct ObjectDependencyTests {
 
         #expect(behind[0].fingerprint == nil)
 
-        // When.
+        // When
         let compiled = try await unknowing.compile(
             [program],
             against: behind,
@@ -130,7 +131,7 @@ struct ObjectDependencyTests {
     @Test("tells a document written in Warp from one the host answers")
     func tellsTheTwoKindsApart() async throws {
         // Given. One declaration made twice: once as a body this language
-        // lowers, once as a procedure the host answers. A caller may build the
+        // lowers, once as a procedure the host answers. A host may build the
         // same thing either way.
         let lowered = try Module(
             procedures: [
@@ -143,7 +144,7 @@ struct ObjectDependencyTests {
             ]
         )
 
-        // When.
+        // When
         let asLowered = try await written(calling: "box.peek", behind: lowered)
         let asAnswered = try await written(calling: "box.peek", behind: answered)
 
@@ -152,20 +153,19 @@ struct ObjectDependencyTests {
         #expect(asLowered.behind != asAnswered.behind)
         #expect(asLowered.calling != asAnswered.calling)
 
-        // And what carries that into the caller is the record and nothing else.
+        // And what carries that into the host is the record and nothing else.
         // The call is the same call either way: a body reaches a row by number
-        // and the number does not move. So a caller that kept no record of what
+        // and the number does not move. So a host that kept no record of what
         // it leaned on would read one kind's object for the other's.
-        #expect(
-            try #require(besideDependencies(asLowered.calling)) == besideDependencies(asAnswered.calling),
-            "the caller told the two kinds apart by itself"
-        )
+        let callingLowered = try #require(besideDependencies(asLowered.calling))
+
+        #expect(callingLowered == besideDependencies(asAnswered.calling), "the host told the two kinds apart by itself")
     }
 
     // MARK: - Public
     // MARK: - Private
     // Everything an object says but what it leaned on.
-    private func besideDependencies(_ value: Value?) -> Value.Dictionary? {
+    private func besideDependencies(_ value: Value) -> Value.Dictionary? {
         guard case let .dictionary(parts) = value else { return nil }
 
         return parts.removing(ObjectLayout.Key.dependencies.name)

@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A document is checked against itself, before anything is resolved. The walk
 // is structural, which is what these ask: not whether a particular notation
@@ -22,7 +23,7 @@ struct ValidationTests {
         (claimed: ["std.collection.count", "std.math.plus"] as Set<Name>, refusal: "imports [\"std.math.plus\"], which it does not use")
     ])
     func aModuleIsHeldToItsImports(_ claimed: Set<Name>, refusal: String) {
-        // Given. A caller decides what to grant from this list and then links
+        // Given. A host decides what to grant from this list and then links
         // what it granted, so a list that says less than the program sends
         // links a procedure nobody allowed, and one that says more takes a grant the
         // program never uses
@@ -182,6 +183,29 @@ struct ValidationTests {
         }
     }
 
+    @Test("nor a variable's spelling inside a closure a constant holds")
+    func aVariablesNameIsNotIntroducedInsideAConstantsClosure() {
+        // Given. A constant cannot read `count`, and its closure still may not
+        // introduce the spelling
+        let closure = Procedure(
+            signature: Signature(returns: .int),
+            body: [Statement(binding: .constant("count"), expression: .literal(.int(1)))],
+            result: reference("count")
+        )
+
+        // When / Then
+        #expect {
+            try Module(
+                constants: ["apply": .closure(closure)],
+                variables: ["count": .literal(.int(0))],
+                procedures: [entryName: Procedure(access: .public, body: [])]
+            )
+        } throws: { error in
+            error is ValidationError
+                && "\(error)".contains("'count' collides with a name the module bound, which it would take the place of")
+        }
+    }
+
     @Test("a constant sees the constants declared beside it and nothing else")
     func aConstantReadsOnlyItsSiblings() throws {
         // Given / When. A chain and not a cycle. `aaa` reads `bbb`, declared
@@ -310,8 +334,7 @@ struct ValidationTests {
 
     @Test("a parameter is a name the body may read and may not introduce again")
     func parametersAreVisibleAndDeclared() throws {
-        // Given. The signature and the body are one scope, so a name is
-        // introduced once
+        // Given. A parameter's spelling is taken for the whole body
         let readsIt = Procedure(
             signature: Signature(parameters: [Parameter(name: "name", type: .string)]),
             body: [Statement(binding: .constant("greeting"), expression: reference("name"))]
@@ -327,7 +350,7 @@ struct ValidationTests {
         #expect {
             try Validator().validate(redeclaresIt)
         } throws: { error in
-            error is ValidationError && "\(error)".contains("two statements here are named 'name'")
+            error is ValidationError && "\(error)".contains("'name' is a parameter of the procedure")
         }
     }
 

@@ -24,7 +24,7 @@ import Foundation
 // block, the name itself, so an expression means the same thing wherever it
 // appears, instead of borrowing the name of whatever bound it.
 //
-// `call` is the one open case. A procedure, a bundled procedure and a caller's own
+// `call` is the one open case. A procedure, a bundled procedure and a host's own
 // all lower to it, because they differ only in where the name is found, and
 // finding it is the build's job, not the grammar's.
 //
@@ -77,6 +77,64 @@ public indirect enum Expression: Sendable {
     // so a body may not have anything after it.
     case leave(Leave)
 
+    // Where a child of an expression stands, by the part it plays, as the steps
+    // from the expression's own place to the child's. Every walk that names a
+    // child's place takes it from here, so a place one walk writes down is the
+    // place another looks up.
+    public enum Child: Sendable {
+        // An array's element at a position.
+        case element(Int)
+
+        // A record's field.
+        case field(Name)
+
+        // The block a closure literal carries.
+        case closure
+
+        // What a cast reads.
+        case subject(optional: Bool)
+
+        // The value a call of a value calls.
+        case callee
+
+        // What a call or a call of a value is written with, as a whole.
+        case arguments
+
+        // One argument of a call or of a call of a value, at its position.
+        case argument(Int)
+
+        case condition(of: Place.ConditionHolder)
+        case then
+        case otherwise
+        case rescue
+
+        // What stands at the expression's own place: the block of a block, a
+        // loop or an attempt, and the value a leave carries.
+        case held
+
+        // MARK: - Property
+        public var steps: [Place.Step] {
+            switch self {
+            case let .element(position): [.index(position)]
+            case let .field(name): [.part(.fields), .key(name.spelling)]
+            case .closure: [.part(.closure)]
+            case let .subject(optional): [.part(.subject(optional: optional))]
+            case .callee: [.part(.callee)]
+            case .arguments: [.part(.arguments)]
+            case let .argument(position): Self.arguments.steps + [.index(position)]
+            case let .condition(holder): [.part(.condition(of: holder))]
+            case .then: [.part(.then)]
+            case .otherwise: [.part(.otherwise)]
+            case .rescue: [.part(.rescue)]
+            case .held: []
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // The name of the construct this is, where it stands as a statement's.
     // Everything with no construct of its own answers `value`.
@@ -86,7 +144,7 @@ public indirect enum Expression: Sendable {
     // as far as an author following the names is concerned.
     //
     // It is what this implementation calls the type and **not** a key read
-    // off any document: a caller registers the forms it likes under the
+    // off any document: a host registers the forms it likes under the
     // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
     // two texts that arrive here as one type.
     public var construct: Construct {
@@ -163,9 +221,8 @@ public indirect enum Expression: Sendable {
     }
 
     // The sentences the construct rule refuses with, stated once beside the
-    // predicate that decides them. The load wraps them as validation refusals
-    // and the build as build refusals, so the two stages cannot say different
-    // things.
+    // predicate that decides them. The load and the build both refuse a
+    // construct in an operand, with `constructInOperand`.
     public static let constructInOperand =
         "a construct runs a body, and a call's operand is data."
             + " A body a procedure is to run travels as a closure"

@@ -5,6 +5,7 @@
 //  Created by JSilver on 9/10/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
 
@@ -273,7 +274,7 @@ struct UnheldClaimTests {
         // When / Then. Folding runs where the document is compiled, against
         // the claims of what stood before it, and the claim is not among them.
         // The pair is written down there and the list answers, so the order
-        // the caller listed them in decides nothing.
+        // the host listed them in decides nothing.
         let modules = [typed, asking, program, claims] + Module.standard
         var compiled: [Compiled] = []
 

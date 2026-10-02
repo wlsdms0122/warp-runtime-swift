@@ -8,7 +8,7 @@
 import Foundation
 
 // Who may name a declaration. Three scopes, from the document that declares it
-// out to the caller that assembles the link, and a declaration is named from
+// out to the host that assembles the link, and a declaration is named from
 // inside its scope and refused from outside it.
 public enum Access: String, Sendable, Equatable, CaseIterable {
     // The document that declares it, and nothing else.
@@ -17,16 +17,16 @@ public enum Access: String, Sendable, Equatable, CaseIterable {
     // Every document in the link. What a declaration is when it says nothing.
     case `internal`
 
-    // The link and the caller. The only kind a run may start from.
+    // The link and the host. The only kind a run may start from.
     case `public`
 
     // MARK: - Property
     // Whether a document other than the declaring one may name this.
     public var reachesOtherDocuments: Bool { self != .private }
 
-    // Whether the caller that assembled the link may name this, which is what
+    // Whether the host that assembled the link may name this, which is what
     // a run starting from it does.
-    public var reachesCaller: Bool { self == .public }
+    public var reachesHost: Bool { self == .public }
 
     // MARK: - Initializer
     // MARK: - Public

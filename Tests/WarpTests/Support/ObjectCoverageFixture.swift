@@ -10,7 +10,6 @@ import Foundation
 
 // An object holding one of every kind a writing can lay down.
 enum ObjectCoverageFixture {
-    // MARK: - Property
     static let everything: Compiled = {
         // Through the door a reading goes through, so the fixture cannot stand
         // up an object the reading would refuse.
@@ -109,7 +108,7 @@ enum ObjectCoverageFixture {
         "named": .named("a.one"),
         "parameter": .parameter(name: "T", constraints: ["a.four"]),
         "composition": .composition(["a.five", "a.four"]),
-        "reading": .reading(
+        "projection": .projection(
             of: "a.fifteen",
             path: [
                 .key("k", optional: true),
@@ -151,7 +150,7 @@ enum ObjectCoverageFixture {
         ("parameterMembership", .parameter(label: "T", bounds: [.membership(5)])),
         ("parameterContract", .parameter(label: "U", bounds: [.contract("a.five")])),
         ("parameterNone", .parameter(label: "V", bounds: [])),
-        ("reading", .reading(of: "a.sixteen", path: [.index(1, optional: true)])),
+        ("projection", .projection(of: "a.sixteen", path: [.index(1, optional: true)])),
         ("composition", .composition([.membership(7), .contract("a.five")])),
         ("undeclaredBound", .undeclared(label: "W", because: .noBoundNamed("a.thirteen"))),
         ("undeclaredType", .undeclared(label: "X", because: .noTypeNamed("a.fourteen"))),
@@ -207,7 +206,10 @@ enum ObjectCoverageFixture {
             Instruction(binding: nil, code: .closure(3, captures: [(4, 0), (5, 1)]), label: "closure"),
             Instruction(
                 binding: nil,
-                code: .apply(.local(Address(slot: 6, steps: [])), arguments: [.literal(.int(2))]),
+                code: .apply(
+                    .local(Address(slot: 6, steps: [])),
+                    arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))]
+                ),
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
@@ -283,8 +285,6 @@ enum ObjectCoverageFixture {
         calls: ["a.nineteen": callOperation]
     )
 
-    // MARK: - Initializer
-    // MARK: - Public
     // A row a closure literal was lifted into, whose frame holds what the
     // body that stood it up takes into it.
     static func lifted(label: Name) throws -> Judged {
@@ -326,6 +326,4 @@ enum ObjectCoverageFixture {
                 : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: 2)])
         )
     }
-
-    // MARK: - Private
 }

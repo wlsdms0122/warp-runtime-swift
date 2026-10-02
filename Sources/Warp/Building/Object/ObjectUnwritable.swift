@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Why no object was written for a compiled document. A caller keeping
+// Why no object was written for a compiled document. A host keeping
 // objects reads it where a document it expected to keep has none.
 public struct ObjectUnwritable: WarpError {
     // MARK: - Property

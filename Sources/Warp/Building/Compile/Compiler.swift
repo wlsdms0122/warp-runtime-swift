@@ -99,7 +99,7 @@ struct Compiler {
 
             let declaration = symbol.procedure
 
-            var answer = (procedure: declaration, calls: [CallSite]())
+            var answer = (procedure: declaration, calls: [CallSite](), inPlace: InPlaceTable())
 
             if let block = declaration.block {
                 // A body not yet lowered stands as its refusal, so a procedure
@@ -114,12 +114,12 @@ struct Compiler {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered) = try await TypeChecker().resolvedSites(
+                let (rewritten, gathered, inPlace) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
                     answering: declaration.signature.returns,
-                    with: context().bounding(declaration.signature.parameterBounds.table),
+                    with: context().bounding(declaration.signature.parameterBounding.table),
                     folding: folding,
                     origin: origin,
                     writing: fulfillment
@@ -131,7 +131,8 @@ struct Compiler {
                         signature: declaration.signature,
                         implementation: .body(rewritten)
                     ),
-                    calls: gathered
+                    calls: gathered,
+                    inPlace: inPlace
                 )
             }
 
@@ -153,7 +154,7 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, at: symbol.place)
+                try compiling.settle(try row(of: symbol), body: rewritten, inPlace: answer.inPlace, at: symbol.place)
             }
 
             return answer.procedure
@@ -161,7 +162,7 @@ struct Compiler {
 
         // The facts nobody declared. All three are fixed points over what a
         // body reaches, so a document's answer is settled once the documents
-        // it reaches have theirs, and the standing refused a ring where that
+        // it reaches have theirs, and the standing refused a cycle where that
         // is not so. Read over every declaration the document holds.
         //
         // What this document declares, by the spelling a call in it writes.
@@ -191,8 +192,15 @@ struct Compiler {
         let answersWithoutRunning: @Sendable (Name) -> Bool = { selector in behind.isConst(selector) }
         let touchesNothingShared: @Sendable (Name) -> Bool = { selector in behind.isIsolated(selector) }
 
-        Derivation().const(among: holding, settling: &const, reading: reading, taking: taking, beyond: answersWithoutRunning)
-        Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared)
+        Derivation().const(
+            among: holding,
+            settling: &const,
+            reading: reading,
+            taking: taking,
+            beyond: answersWithoutRunning,
+            in: loweredTypes
+        )
+        Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared, in: loweredTypes)
         Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))
@@ -206,7 +214,7 @@ struct Compiler {
         // Where this document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
         // document alone, so a body lowers to the same numbers whatever
-        // else the caller put in the link.
+        // else the host put in the link.
         let numbering = Numbering(
             sends: module.sends,
             declared: declared,
@@ -388,7 +396,7 @@ struct Compiler {
                 // body's are: the settled neighbours' types are the
                 // environment, so an absent field or a needless `?.` refuses
                 // here by the one rule, and carries its own place.
-                let (judged, calls) = try await TypeChecker().resolvedSites(
+                let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
                     in: expression,
                     at: place,
                     in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
@@ -414,7 +422,7 @@ struct Compiler {
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
-                    ).read(judged, as: .binding(name), writing: &lowering, at: place)
+                    ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -449,7 +457,7 @@ struct Compiler {
             let place = Place.variable(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
-                let (judged, calls) = try await TypeChecker().resolvedSites(
+                let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
                     in: variable.start,
                     at: place,
                     in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
@@ -472,7 +480,7 @@ struct Compiler {
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
-                    ).read(judged, as: .binding(name), writing: &lowering, at: place)
+                    ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -487,7 +495,7 @@ struct Compiler {
                 let holding = declared.lowered(in: context.loweredTypes)
 
                 if case let .undeclared(label, _) = holding {
-                    throw BuildError("declares type '\(label)', which nothing declares", at: place)
+                    throw BuildError("declares type '\(label)', which no module in this link declares", at: place)
                 }
 
                 do {

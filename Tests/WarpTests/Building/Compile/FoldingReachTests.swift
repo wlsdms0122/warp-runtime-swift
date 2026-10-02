@@ -5,9 +5,11 @@
 //  Created by JSilver on 9/17/26.
 //
 
+import Foundation
 import Testing
 @testable import Warp
 @testable import WarpStandard
+import WarpTestSupport
 
 @Suite("What a constant is allowed to settle from")
 struct FoldingReachTests {
@@ -47,9 +49,9 @@ struct FoldingReachTests {
         #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
     }
 
-    @Test("a constant refuses to settle from a procedure a caller brought")
-    func aConstantRefusesAProcedureACallerBrought() async throws {
-        // Given. A procedure whose code the caller supplied, answering without
+    @Test("a constant refuses to settle from a procedure the host brought")
+    func aConstantRefusesAProcedureTheHostBrought() async throws {
+        // Given. A procedure whose code the host supplied, answering without
         // running, and a constant written from it.
         let brought = try Module(
             procedures: [
@@ -70,7 +72,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.build(Module.standard + [brought, document])
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
         }
     }
 
@@ -108,7 +110,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.build(Module.standard + [brought, between, document])
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
         }
     }
 
@@ -192,7 +194,7 @@ struct FoldingReachTests {
         )
 
         // When / Then. That body is being resolved beside the constants it
-        // may read, so running it would be a circle with no start.
+        // may read, so running it would be a cycle with no start.
         await #expect {
             try await builder.build(Module.standard + [document])
         } throws: { error in
@@ -203,7 +205,7 @@ struct FoldingReachTests {
 
     @Test("a constant refuses one brought by a module compiled earlier")
     func aConstantRefusesOneBroughtByACompiledModule() async throws {
-        // Given. The brought procedure compiled on its own, the way a caller
+        // Given. The brought procedure compiled on its own, the way a host
         // that means to link many documents compiles a vocabulary once.
         let brought = try Module(
             procedures: [
@@ -226,7 +228,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.compile([document], against: baked, supplying: supplying)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure a caller brought")
+            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
         }
     }
 

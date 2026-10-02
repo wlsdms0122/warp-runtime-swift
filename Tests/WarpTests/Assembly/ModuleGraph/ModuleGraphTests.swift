@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // Standing a link's modules in the order each one's needs stand before it.
 //
@@ -46,7 +47,7 @@ struct ModuleGraphTests {
             ]
         )
 
-        // When.
+        // When
         let graph = try ModuleGraph([caller, library])
 
         // Then. What is needed stands first.
@@ -99,7 +100,7 @@ struct ModuleGraphTests {
             ]
         )
 
-        // When / Then.
+        // When / Then
         #expect {
             try ModuleGraph([one, two])
         } throws: { error in
@@ -110,7 +111,7 @@ struct ModuleGraphTests {
     @Test("a module that sends its own procedures stands on nothing")
     func aModuleAloneIsNotARing() throws {
         // Given. Two declarations of one module calling each other, which is
-        // recursion inside a module rather than a ring between modules.
+        // recursion inside a module rather than a cycle between modules.
         let alone = try Module(
             procedures: [
                 "solo.here": Procedure(
@@ -126,7 +127,7 @@ struct ModuleGraphTests {
             ]
         )
 
-        // When / Then.
+        // When / Then
         #expect(try ModuleGraph([alone]).modules.count == 1)
     }
 

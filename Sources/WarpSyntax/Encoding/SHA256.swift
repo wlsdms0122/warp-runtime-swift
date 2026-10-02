@@ -38,7 +38,8 @@ struct SHA256 {
     ]
 
     // MARK: - Initializer
-    init() { }
+    init() {
+    }
 
     // MARK: - Public
     func digest(of data: Data) -> [UInt8] {

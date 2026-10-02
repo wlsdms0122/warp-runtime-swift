@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-@Suite
+@Suite("What a load refuses before anything runs")
 struct LoadGateTests {
     // MARK: - Property
     private let loader = Loader.testing
@@ -136,9 +136,9 @@ struct LoadGateTests {
         }
     }
 
-    @Test("an empty index segment is rejected at parse")
+    @Test("an empty index segment is rejected at the load")
     func emptyIndexSegmentRejected() {
-        // Given. `[]` is an author mistake, rejected at parse instead of being
+        // Given. `[]` is an author mistake, rejected at the load instead of being
         // carried into the model
         let fixture: Value = [
             "parameters": [["name": "items", "type": "array<any>"]],
@@ -152,7 +152,7 @@ struct LoadGateTests {
     }
 
     @Test("a name a run supplies is declared like every other name")
-    func runValuesAreDeclared() async throws {
+    func runValuesAreDeclared() throws {
         // Given. There is one way a name gets into a body. A value a run
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [

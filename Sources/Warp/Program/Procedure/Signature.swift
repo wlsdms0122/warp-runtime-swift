@@ -36,21 +36,16 @@ public struct Signature: Sendable, Equatable {
         ProcedureType(parameters: parameters.map(\.declared), returns: returns)
     }
 
-    // The parameters asking for a procedure that answers without running. A
-    // body may apply a name standing in one and still answer without running.
-    var constProcedures: Set<Name> {
-        Set(parameters.compactMap { parameter in parameter.type?.isConstProcedure == true ? parameter.name : nil })
-    }
-
-    // The same, for the claim isolation reads.
-    var isolatedProcedures: Set<Name> {
-        Set(parameters.compactMap { parameter in parameter.type?.isIsolatedProcedure == true ? parameter.name : nil })
-    }
-
     // The parameters whose box is the body's own. One handed in place is the
     // caller's box, written through rather than held.
     var ownedParameters: Set<Name> {
         Set(parameters.compactMap { parameter in parameter.declared.isInout ? nil : parameter.name })
+    }
+
+    // The first parameter handed in place, which only a call a body writes
+    // can fill.
+    var inPlace: Name? {
+        parameters.first { parameter in parameter.declared.isInout }?.name
     }
 
     // Whether the declaration writes a type parameter anywhere.
@@ -69,7 +64,7 @@ public struct Signature: Sendable, Equatable {
     // set a bounded mention carries, or none where every mention is bare.
     // What a signature holds a name to is one set, so two mentions carrying
     // two sets are two claims about one name, and this says which name.
-    public var parameterBounds: ParameterBounds { type.parameterBounds }
+    public var parameterBounding: ParameterBounding { type.parameterBounding }
 
     // Every declared name this signature reaches, through what it takes and
     // what it answers.
@@ -104,10 +99,7 @@ public struct Signature: Sendable, Equatable {
         parameters.firstIndex { parameter in parameter.name == name }
     }
 
-    // The returned value, checked against what was declared. Run time rather
-    // than link time because what a body computes is not a thing the builder can
-    // read off the text, but a declaration that only ever describes is a
-    // declaration nothing keeps, so it is checked where the fact exists.
+    // The returned value, settled against what was declared.
     public func settling(returned value: Value, in types: TypeTable = .empty) throws -> Value {
         guard let returns else { return value }
 
@@ -173,11 +165,13 @@ public struct Signature: Sendable, Equatable {
 
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused, and so is one it declares that
-    // was not given. The door a caller outside the build comes through, since
-    // the build resolves names itself.
+    // was not given. The door a host outside the build comes through, since
+    // the build resolves names itself. `subject` is what a refusal names the
+    // procedure as.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
+        as subject: String,
         in table: LoweredTypeTable
     ) throws -> [Value?] {
         let undeclared = given.keys
@@ -186,12 +180,12 @@ public struct Signature: Sendable, Equatable {
 
         guard undeclared.isEmpty else {
             throw ArgumentError(
-                "parameters: not declared in the signature:"
-                    + " \(undeclared.map(\.spelling).joined(separator: ", "))"
+                "\(subject) declares no parameter"
+                    + " \(undeclared.map { name in "'\(name)'" }.joined(separator: ", "))"
             )
         }
 
-        return try settle(slots.map { slot in given[slot.name] }, over: slots, in: table)
+        return try settle(slots.map { slot in given[slot.name] }, over: slots, as: subject, in: table)
     }
 
     // Arguments handed by position, the way every call hands them: one for
@@ -199,11 +193,12 @@ public struct Signature: Sendable, Equatable {
     func settle(
         applied given: [Value],
         over slots: [Slot],
+        as subject: String,
         in table: LoweredTypeTable
     ) throws -> [Value] {
         guard given.count == slots.count else {
             throw ArgumentError(
-                "parameters: \(slots.count) declared, and \(given.count) given"
+                "\(subject) was given \(given.count) arguments, and it takes \(slots.count)"
             )
         }
 
@@ -221,11 +216,12 @@ public struct Signature: Sendable, Equatable {
         _ given: [Value?],
         over slots: [Slot],
         skipping: (Int) -> Bool = { _ in false },
+        as subject: String,
         in table: LoweredTypeTable
     ) throws -> [Value?] {
         guard given.count == slots.count else {
             throw ArgumentError(
-                "parameters: \(slots.count) declared, and \(given.count) given"
+                "\(subject) was given \(given.count) arguments, and it takes \(slots.count)"
             )
         }
 
@@ -234,12 +230,11 @@ public struct Signature: Sendable, Equatable {
         // falling silent.
         let missing = slots.indices
             .filter { position in !skipping(position) && given[position] == nil }
-            .map { position in slots[position].name.spelling }
+            .map { position in "'\(slots[position].name)'" }
 
         guard missing.isEmpty else {
             throw ArgumentError(
-                "parameters: required, and nothing was given for"
-                    + " \(missing.joined(separator: ", "))"
+                "\(subject) was given nothing for \(missing.joined(separator: ", "))"
             )
         }
 
@@ -255,4 +250,5 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
+
 }

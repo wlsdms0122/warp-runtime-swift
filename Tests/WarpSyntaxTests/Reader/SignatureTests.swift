@@ -10,14 +10,15 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
-@Suite
+@Suite("How a document spells a signature")
 struct SignatureTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
     @Test("a parameter written without a type declares nothing, and takes anything")
-    func untypedParameterDeclaresNothing() async throws {
+    func untypedParameterDeclaresNothing() throws {
         // Given / When. `any` would say every type is welcome; this says nothing
         // at all, and the two are not the same declaration even though neither
         // is checked
@@ -44,7 +45,7 @@ struct SignatureTests {
     }
 
     @Test("a procedure written without a return type declares nothing")
-    func untypedReturnDeclaresNothing() async throws {
+    func untypedReturnDeclaresNothing() throws {
         // Given / When
         let sut = try Loader.testing.loadDocument([
             "procedures": [
@@ -136,7 +137,7 @@ struct SignatureTests {
     }
 
     @Test("every parameter is given, and one declaring null takes null")
-    func everyParameterIsGiven() async throws {
+    func everyParameterIsGiven() throws {
         // Given
         let sut = try #require(try Loader.testing.loadProcedure([
             "parameters": [["name": "dir", "type": "string?"], ["name": "file", "type": "string"]],
@@ -148,7 +149,7 @@ struct SignatureTests {
         #expect {
             try settled(sut, given: ["file": "a"])
         } throws: { error in
-            "\(error)".contains("required, and nothing was given for dir")
+            "\(error)".contains("was given nothing for 'dir'")
         }
     }
 
@@ -157,7 +158,7 @@ struct SignatureTests {
     // The boundary over no table, answered by name.
     private func settled(_ signature: Signature, given: [Name: Value]) throws -> [Name: Value] {
         let slots = signature.lowered(in: .empty)
-        let settled = try signature.settle(given, over: slots, in: .empty)
+        let settled = try signature.settle(given, over: slots, as: "entry '\(entryName)'", in: .empty)
 
         return settled.enumerated().reduce(into: [Name: Value]()) { named, entry in
             guard let value = entry.element else { return }

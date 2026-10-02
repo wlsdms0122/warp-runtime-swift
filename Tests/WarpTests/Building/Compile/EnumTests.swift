@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 @Suite("The values a parameter's enum admits")
 struct EnumTests {
@@ -188,7 +189,7 @@ struct EnumTests {
     func anEnumOutsideTheRangeRefuses() async throws {
         // Given. No candidate is a value the range could hold, so the parameter
         // fits no call: the same judgment an empty enum gets
-        func module(candidates: [String]) async throws -> Module {
+        func module(candidates: [String]) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(

@@ -11,7 +11,7 @@ import Foundation
 // each other, which have no order to be compiled in.
 //
 // The place is the document the cycle was closed on, and the sentence names
-// every step of the ring.
+// every step of the cycle.
 public struct ModuleGraphError: WarpError {
     // MARK: - Property
     public let message: String

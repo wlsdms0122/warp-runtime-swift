@@ -67,7 +67,7 @@ struct IdentityTests {
 
     @Test("two documents that say different things are two identities")
     func differentDocumentsDiffer() throws {
-        // Given: two documents that declare different things.
+        // Given. Two documents that declare different things.
         let first = Value.dictionary([
             "warp": .int(1),
             "procedures": .dictionary(["charge": .dictionary(["body": .array([])])])

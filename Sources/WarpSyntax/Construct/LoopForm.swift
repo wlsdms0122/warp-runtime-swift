@@ -10,7 +10,7 @@ import Warp
 
 // Repetition governed by a condition: the body runs while `while` holds.
 // Nothing here bounds a body that never settles. An author bounds a loop with a
-// counter and a procedure, and a receiver stops one with cancellation.
+// counter and a procedure, and the host stops one by cancelling the run.
 public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case `while`
@@ -25,7 +25,7 @@ public struct LoopForm: ConstructForm {
     // in it is still written with an empty one.
     public static let requiresBody = true
 
-    private let condition: Expression
+    private let condition: Warp.Expression
     private let body: Block
 
     // MARK: - Initializer
@@ -44,7 +44,7 @@ public struct LoopForm: ConstructForm {
     // MARK: - Public
     // The round is bound under the statement's name, which a document reads
     // as `{ ref "<name>.index" }`. A nameless loop binds none.
-    public func expression(boundTo name: String?) throws -> Expression {
+    public func expression(boundTo name: String?) throws -> Warp.Expression {
         .loop(while: condition, body: body, round: try named(name))
     }
 

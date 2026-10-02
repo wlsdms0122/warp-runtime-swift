@@ -219,7 +219,7 @@ struct LeaveTests {
     }
 
     @Test("leaving is refused where there is nothing to leave")
-    func leavingNeedsSomethingToLeave() async {
+    func leavingNeedsSomethingToLeave() {
         // When / Then. A loop's name is not visible to a closure, because a
         // closure is a procedure and runs wherever it is called from
         #expect {

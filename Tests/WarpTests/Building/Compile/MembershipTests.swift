@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A declared membership standing as a type. `A or B` is written by declaring
 // the set and naming it, so a slot saying "either of these" says something the
@@ -104,7 +105,7 @@ struct MembershipTests {
     @Test("a cast to a member opens it, and a cast to an outsider refuses")
     func aCastTellsTheMembersApart() async throws {
         // Given
-        func module(reading type: TypeExpression) async throws -> Module {
+        func module(reading type: TypeExpression) throws -> Module {
             try Module(
                 constraints: ["app.Text": [.string, .array(.byteElement)]],
                 procedures: [

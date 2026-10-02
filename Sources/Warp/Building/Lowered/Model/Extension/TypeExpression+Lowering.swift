@@ -99,8 +99,8 @@ extension TypeExpression {
         case let .composition(names):
             return lowered(bounds: names, in: table, as: LoweredType.composition)
 
-        case let .reading(of, path):
-            return .reading(of: of, path: path)
+        case let .projection(of, path):
+            return .projection(of: of, path: path)
         }
     }
 

@@ -13,15 +13,22 @@ import Foundation
 struct Derivation {
     // What a body is walked for. Constness and isolation are read by one walk
     // and differ only in these: which callee holds the fact, which slot says a
-    // procedure it holds does, and which names a body loses it by reading.
+    // procedure it holds does, and which names a body loses it by reading. A
+    // slot is judged on the type it lowers to, in the table the walk reads.
     private struct Fact {
         // MARK: - Property
         let callee: (Name) -> Bool
-        let slot: (TypeExpression) -> Bool
+        let claim: (LoweredType) -> (LoweredTypeTable) -> Bool
         let unread: Set<Name>
+        let table: LoweredTypeTable
 
         // MARK: - Initializer
         // MARK: - Public
+        // Whether a slot of this type says the fact of the procedure it holds.
+        func isClaimed(by type: LoweredType) -> Bool {
+            claim(type)(table)
+        }
+
         // MARK: - Private
     }
 
@@ -40,7 +47,8 @@ struct Derivation {
         settling const: inout Set<Name>,
         reading variables: Set<Name>,
         taking asked: @escaping (Name) -> Signature?,
-        beyond: @escaping (Name) -> Bool
+        beyond: @escaping (Name) -> Bool,
+        in table: LoweredTypeTable
     ) {
         // A body may write what its signature owns: a parameter handed in
         // place is the caller's box, not the body's own.
@@ -49,10 +57,12 @@ struct Derivation {
             settling: &const,
             natively: { implementation in implementation.isNativelyConst != false },
             declaring: \.ownedParameters,
-            applying: \.constProcedures,
-            fact: { given in Fact(callee: given, slot: \.isConstProcedure, unread: variables) },
+            fact: { given in
+                Fact(callee: given, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table)
+            },
             taking: asked,
-            beyond: beyond
+            beyond: beyond,
+            in: table
         )
     }
 
@@ -63,17 +73,20 @@ struct Derivation {
         among symbols: [Symbol],
         settling isolated: inout Set<Name>,
         taking asked: @escaping (Name) -> Signature?,
-        beyond: @escaping (Name) -> Bool
+        beyond: @escaping (Name) -> Bool,
+        in table: LoweredTypeTable
     ) {
         strike(
             among: symbols,
             settling: &isolated,
             natively: { implementation in implementation.isNativelyIsolated != false },
             declaring: { signature in Set(signature.names) },
-            applying: \.isolatedProcedures,
-            fact: { given in Fact(callee: given, slot: \.isIsolatedProcedure, unread: []) },
+            fact: { given in
+                Fact(callee: given, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table)
+            },
             taking: asked,
-            beyond: beyond
+            beyond: beyond,
+            in: table
         )
     }
 
@@ -191,20 +204,23 @@ struct Derivation {
     // run. `reading` is the module's variables: a body reading one answers by
     // the run's state. `declaring` is the names the body may write; a write
     // landing anywhere else, or handing such a name in place to a call,
-    // reaches the run's state the same way.
+    // reaches the run's state the same way. `bound` is what each name in
+    // scope stands as, the way the type check binds it, which a call of a
+    // value is judged on.
     func isConst(
         _ block: Block,
         declaring names: Set<Name>,
         given const: @escaping (Name) -> Bool,
         reading variables: Set<Name>,
-        applying procedures: Set<Name>,
-        taking asked: (Name) -> Signature?
+        bound bindings: [Name: Binding],
+        taking asked: (Name) -> Signature?,
+        in table: LoweredTypeTable
     ) -> Bool {
         holds(
             block,
-            Fact(callee: const, slot: \.isConstProcedure, unread: variables),
+            Fact(callee: const, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table),
             declaring: names,
-            applying: procedures,
+            bound: bindings,
             taking: asked
         )
     }
@@ -216,14 +232,15 @@ struct Derivation {
         _ block: Block,
         declaring parameters: Set<Name>,
         given isolated: @escaping (Name) -> Bool,
-        applying procedures: Set<Name>,
-        taking asked: (Name) -> Signature?
+        bound bindings: [Name: Binding],
+        taking asked: (Name) -> Signature?,
+        in table: LoweredTypeTable
     ) -> Bool {
         holds(
             block,
-            Fact(callee: isolated, slot: \.isIsolatedProcedure, unread: []),
+            Fact(callee: isolated, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table),
             declaring: parameters,
-            applying: procedures,
+            bound: bindings,
             taking: asked
         )
     }
@@ -238,25 +255,25 @@ struct Derivation {
         settling holding: inout Set<Name>,
         natively: (Implementation) -> Bool,
         declaring: (Signature) -> Set<Name>,
-        applying: (Signature) -> Set<Name>,
         fact: (@escaping (Name) -> Bool) -> Fact,
         taking asked: (Name) -> Signature?,
-        beyond: @escaping (Name) -> Bool
+        beyond: @escaping (Name) -> Bool,
+        in loweredTypes: LoweredTypeTable
     ) {
         let own = Set(symbols.map(\.declared))
 
-        // The body beside the names it may write and the names its own
-        // declaration said hold a procedure with the fact, since applying one
-        // of those is what the body is judged on.
+        // The body beside the names it may write and what its own declaration
+        // binds each parameter as, since a call of a value is judged on what
+        // the slot it came out of says.
         let bodies = symbols.reduce(
-            into: [Name: (block: Block, declaring: Set<Name>, applying: Set<Name>)]()
+            into: [Name: (block: Block, declaring: Set<Name>, bound: [Name: Binding])]()
         ) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (
                 block,
                 declaring(symbol.procedure.signature),
-                applying(symbol.procedure.signature)
+                symbol.procedure.signature.environment(in: loweredTypes)
             )
         }
 
@@ -275,7 +292,7 @@ struct Derivation {
                         written.block,
                         walked,
                         declaring: written.declaring,
-                        applying: written.applying,
+                        bound: written.bound,
                         taking: asked
                     )
                     ? name
@@ -296,18 +313,18 @@ struct Derivation {
         _ block: Block,
         _ fact: Fact,
         declaring names: Set<Name>,
-        applying procedures: Set<Name>,
+        bound bindings: [Name: Binding],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         var declared = names
-        var procedures = procedures
+        var bindings = bindings
 
         for statement in block.body.statements {
             if case let .assignment(path)? = statement.binding, let head = path.head, !declared.contains(head) {
                 return false
             }
 
-            guard holds(statement.expression, fact, declaring: declared, applying: procedures, taking: asked) else {
+            guard holds(statement.expression, fact, declaring: declared, bound: bindings, taking: asked) else {
                 return false
             }
 
@@ -315,22 +332,30 @@ struct Derivation {
                 declared.insert(name)
             }
 
-            guard let introduced = statement.binding?.introduced else { continue }
+            // What the name stands as afterwards, the way the type check binds
+            // it: a constant is fixed at what it says it holds or at what the
+            // name it was read from holds, and a variable that declared its
+            // type is a box held to it. One that declared none is a box its
+            // writes retype, which says nothing a call can lean on. A later
+            // name of the same spelling is a different name, so the table is
+            // read forward.
+            switch statement.binding {
+            case let .constant(name, declared)?:
+                let held = declared?.lowered(in: fact.table)
+                    ?? reached(statement.expression, given: bindings, in: fact.table)
 
-            // A name says what it holds, and a later name of the same spelling
-            // is a different name, so the set is read forward.
-            if
-                statement.binding?.declared.map(fact.slot) == true
-                    || applies(statement.expression, given: procedures)
-            {
-                procedures.insert(introduced)
-            } else {
-                procedures.remove(introduced)
+                bindings[name] = held.map(Binding.fixed)
+
+            case let .variable(name, declared)?:
+                bindings[name] = declared.map { declared in .declared(declared.lowered(in: fact.table)) }
+
+            case .assignment?, nil:
+                break
             }
         }
 
         return block.result.map { result in
-            holds(result, fact, declaring: declared, applying: procedures, taking: asked)
+            holds(result, fact, declaring: declared, bound: bindings, taking: asked)
         } ?? true
     }
 
@@ -338,15 +363,15 @@ struct Derivation {
         _ expression: Expression,
         _ fact: Fact,
         declaring names: Set<Name>,
-        applying procedures: Set<Name>,
+        bound bindings: [Name: Binding],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         func holds(_ inner: Expression) -> Bool {
-            self.holds(inner, fact, declaring: names, applying: procedures, taking: asked)
+            self.holds(inner, fact, declaring: names, bound: bindings, taking: asked)
         }
 
         func holds(_ block: Block) -> Bool {
-            self.holds(block, fact, declaring: names, applying: procedures, taking: asked)
+            self.holds(block, fact, declaring: names, bound: bindings, taking: asked)
         }
 
         func holds(_ body: Body) -> Bool {
@@ -376,25 +401,30 @@ struct Derivation {
         case let .record(record):
             return record.values.allSatisfy(holds)
 
-        // A name handed in place is written by the callee, so the call writes
-        // it here: one the body does not own reaches the run's state.
         case let .call(call):
             guard fact.callee(call.selector) else { return false }
 
             if let signature = asked(call.selector) {
-                for (parameter, argument) in zip(signature.parameters, call.arguments) where parameter.declared.isInout {
-                    guard case let .reference(path) = argument, let head = path.head else { continue }
-
-                    guard names.contains(head) else { return false }
+                guard handsOwned(call.arguments, at: signature.type.inPlacePositions, declaring: names) else {
+                    return false
                 }
             }
 
             return call.arguments.allSatisfy(holds)
 
         // Which value is called is the run's answer, so what it reaches is
-        // said by the slot the value came out of and nowhere else.
+        // said by the slot the value came out of and nowhere else, and so are
+        // the positions it takes in place. Which value that is, is read the
+        // way any name is.
         case let .apply(callee, arguments):
-            return applies(callee, given: procedures) && arguments.allSatisfy(holds)
+            guard
+                holds(callee),
+                let reached = reached(callee, given: bindings, in: fact.table),
+                fact.isClaimed(by: reached)
+            else { return false }
+
+            return handsOwned(arguments, at: reached.inPlacePositions(in: fact.table), declaring: names)
+                && arguments.allSatisfy(holds)
 
         // Which part of a construct runs is decided inside the body, so a
         // construct holds the fact as far as the parts it holds.
@@ -412,15 +442,50 @@ struct Derivation {
         }
     }
 
-    // Whether what this reads came out of a slot that said the fact of its
-    // procedures. The head is the name the slot gave, and indexing past it
-    // keeps the claim, since a slot asking for an array of them says it about
-    // every element. Reading a field walks into a value the slot said nothing
-    // about, and so does anything that is not a name at all.
-    private func applies(_ expression: Expression, given procedures: Set<Name>) -> Bool {
-        guard case let .reference(path) = expression, let head = path.head else { return false }
+    // The type this reads, as the slot it came out of says it, and nil where
+    // it came out of none. The head is a name held to its type, a fixed name
+    // or a box that declared one, and the walk follows that type past it: an
+    // index reads an element of an array or a dictionary, and a dot reads an
+    // entry of a dictionary or a field a record type declares. An array or a
+    // dictionary of them says it about every element, and the value was
+    // settled against that type when it was handed over, so what the type
+    // says of the part is what the slot said. A box its writes retype says
+    // nothing, and anything that is not a name has no slot to say anything.
+    private func reached(
+        _ expression: Expression,
+        given bindings: [Name: Binding],
+        in table: LoweredTypeTable
+    ) -> LoweredType? {
+        guard case let .reference(path) = expression, let head = path.head else { return nil }
 
-        return procedures.contains(head)
-            && path.segments.dropFirst().allSatisfy { segment in segment.named == nil }
+        let held: LoweredType? = switch bindings[head] {
+        case let .fixed(type)?, let .declared(type)?: type
+        case .assigned?, nil: nil
+        }
+
+        return path.segments.dropFirst().reduce(held) { reached, segment in
+            switch segment {
+            case .index, .indexRef:
+                return reached?.element(in: table)
+
+            case let .key(name, _):
+                return reached?.dotted(name, in: table)
+            }
+        }
+    }
+
+    // Whether every name a call hands in place at these positions is one the
+    // body owns. A name handed in place is written by the callee, so the call
+    // writes it here, and one the body does not own reaches the run's state.
+    private func handsOwned(_ arguments: [Expression], at positions: Set<Int>, declaring names: Set<Name>) -> Bool {
+        positions.allSatisfy { position in
+            guard
+                arguments.indices.contains(position),
+                case let .reference(path) = arguments[position],
+                let head = path.head
+            else { return true }
+
+            return names.contains(head)
+        }
     }
 }

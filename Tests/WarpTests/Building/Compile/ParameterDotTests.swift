@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // A dot on a type parameter. The type is the call's fact, so the build leaves
 // the segments as written rather than judging on nothing.
@@ -292,7 +293,7 @@ struct ParameterDotTests {
     }
 
     @Test("a type read out of a body is not a declaration anybody can write")
-    func aReadingIsRefusedWhereADeclarationGoes() async throws {
+    func aProjectionIsRefusedWhereADeclarationGoes() async throws {
         // Given. A declaration assembled in the host claiming what only a walk
         // produces. No document spells one, and the build refuses it where it
         // was written rather than letting it stand: a declaration says what a
@@ -303,7 +304,7 @@ struct ParameterDotTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "of", type: .reading(of: "T", path: [.key("inner")]))
+                            Parameter(name: "of", type: .projection(of: "T", path: [.key("inner")]))
                         ]
                     ),
                     body: [],

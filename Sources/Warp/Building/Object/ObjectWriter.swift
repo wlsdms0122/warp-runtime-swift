@@ -20,7 +20,8 @@ import Foundation
 struct ObjectWriter {
     // MARK: - Property
     // MARK: - Initializer
-    init() { }
+    init() {
+    }
 
     // MARK: - Public
     // What a field that may hold nothing is laid down as: a list of none or
@@ -302,8 +303,8 @@ struct ObjectWriter {
         case let .parameter(spelling, constraints):
             return tagged(Tag.parameter, name(spelling), .array(constraints.sorted().map(name)))
 
-        case let .reading(of: read, path: path):
-            return tagged(Tag.reading, name(read), self.path(path))
+        case let .projection(of: read, path: path):
+            return tagged(Tag.projection, name(read), self.path(path))
 
         case let .composition(names):
             return tagged(Tag.composition, .array(names.sorted().map(name)))
@@ -604,8 +605,8 @@ struct ObjectWriter {
         case let .composition(bounds):
             return tagged(Tag.composition, .array(bounds.sorted().map(bound)))
 
-        case let .reading(of: read, path: path):
-            return tagged(Tag.reading, name(read), self.path(path))
+        case let .projection(of: read, path: path):
+            return tagged(Tag.projection, name(read), self.path(path))
 
         case let .undeclared(label, because):
             return tagged(Tag.undeclared, .string(label), undeclared(because))
@@ -759,9 +760,7 @@ struct ObjectWriter {
             return tagged(
                 Tag.apply,
                 try self.operation(callee),
-                .array(try arguments.map { (argument) throws(ObjectUnwritable) -> Value in
-                    try self.operation(argument)
-                })
+                .array(try arguments.map(argument))
             )
 
         case let .cast(read, as: type, optional: optional):

@@ -203,7 +203,7 @@ struct Fanout: Sendable {
     }
 
     // What a piece answers, through the environment's isolation boundary.
-    // Ambient state a caller carries on the task must not reach every piece at
+    // Ambient state a host carries on the task must not reach every piece at
     // once.
     private func answer<P: NativeProcedure>(
         _ piece: Piece,

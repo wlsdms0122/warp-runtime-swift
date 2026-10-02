@@ -9,9 +9,10 @@ import Foundation
 import Testing
 import Warp
 import WarpStandard
+import WarpTestSupport
 
 // Running at once is vocabulary, not grammar. `std.concurrent` takes isolated
-// closures, and a caller that leaves the bundle out of the link has granted no
+// closures, and a host that leaves the bundle out of the link has granted no
 // concurrency at all.
 @Suite("Running at once")
 struct ConcurrencyTests {

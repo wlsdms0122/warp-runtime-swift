@@ -82,7 +82,7 @@ enum ObjectLayout {
         case named
         case parameter
         case composition
-        case reading
+        case projection
     }
 
     enum RefinementTag: Int {
@@ -203,7 +203,7 @@ enum ObjectLayout {
         case named
         case parameter
         case composition
-        case reading
+        case projection
         case undeclared
     }
 

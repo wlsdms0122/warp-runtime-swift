@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // Where a refusal says the words are.
 //
@@ -30,7 +31,7 @@ struct PlaceTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
-    func aPlaceIsSpelledFromTheLanguagesNames() async {
+    func aPlaceIsSpelledFromTheLanguagesNames() {
         // Given / When. A slot a document calls something else. A loop's
         // condition is `while` in a document, and that key appears nowhere in
         // what a caller assembling this wrote.
@@ -48,7 +49,7 @@ struct PlaceTests {
     }
 
     @Test("what a call is written with is named by the position holding it")
-    func anArgumentIsNamedByItsPosition() async {
+    func anArgumentIsNamedByItsPosition() {
         // Given / When. An argument reported from the statement's own place
         // says a thing is wrong and does not say which of the several written
         // there.
@@ -63,7 +64,7 @@ struct PlaceTests {
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
-    func aStatementIsFoundByWhicheverItHas() async {
+    func aStatementIsFoundByWhicheverItHas() {
         // Given. A statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
         let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
@@ -104,7 +105,7 @@ struct PlaceTests {
     }
 
     @Test("the place is carried as data, and the sentence is only the reason")
-    func aPlaceIsNotProse() async throws {
+    func aPlaceIsNotProse() throws {
         // Given / When. A place written into the message is a place nothing can
         // read back. A front end holding the file this was authored in has to
         // walk the steps to point at the line, and a sentence has no steps.
@@ -322,7 +323,7 @@ struct PlaceTests {
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
-    func anAssembledProgramNamesNoDocument() async {
+    func anAssembledProgramNamesNoDocument() {
         // Given. The same program twice: once handed in as a caller assembling
         // one in memory holds it, and once read out of a document. There is no
         // text under the first, which is a different fact from a text that
@@ -414,7 +415,7 @@ struct PlaceTests {
     }
 
     @Test("a statement's construct is the language's name, and says so")
-    func aConstructIsNotClaimedAsTheDocumentsOwn() async throws {
+    func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
         // Given / When. One construct, two texts: `{ call: … }` and `{ value: {
         // call: … } }` are both a call by the time anything here sees one, so
         // the name for the construct is this implementation's rather than
@@ -441,7 +442,7 @@ struct PlaceTests {
     }
 
     @Test("what a return carries is checked, and placed where the return is")
-    func aReturnsValueIsWalked() async throws {
+    func aReturnsValueIsWalked() throws {
         // Given / When. The door a caller assembling a program itself passes.
         // What `return` carries is an operand like any other: a name it reads
         // has to be visible where it was written
@@ -506,9 +507,9 @@ struct PlaceTests {
 
     @Test("a name two documents declare is refused at the one that could not be added")
     func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() async throws {
-        // Given. A caller receiving a module from somewhere else appends it to
+        // Given. A host receiving a module from somewhere else appends it to
         // what it already holds and builds again. What that build refuses is a
-        // collision between two documents, and only the caller knows which file
+        // collision between two documents, and only the host knows which file
         // either arrived in. A refusal naming neither sends it opening all of
         // them.
         func declaring(_ procedure: Name, as identity: Identity) throws -> Module {
@@ -536,11 +537,11 @@ struct PlaceTests {
 
     @Test("the same document handed to one link twice is refused as that")
     func theSameDocumentHandedTwiceIsRefusedAsOneDocument() async throws {
-        // Given. A caller that appends what arrives without checking whether it
+        // Given. A host that appends what arrives without checking whether it
         // already holds it. An identity is derived from the text, so the two
         // are one document and every name in it collides with itself. Read as a
         // collision between two declarations, the sentence names the same
-        // document on both sides and tells the caller nothing it can act on.
+        // document on both sides and tells the host nothing it can act on.
         let module = try Module(
             procedures: ["pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
             identity: Identity([0x01])
@@ -602,7 +603,7 @@ struct PlaceTests {
         #expect(error?.message.contains("01") == true)
     }
 
-    @Test("constants that name each other are placed at one of the ring, and the same one")
+    @Test("constants that name each other are placed at one of the cycle, and the same one")
     func aConstantCycleIsPlacedInSortedOrder() async throws {
         // Given. A cycle has no first member, so which of them an author is
         // sent to is chosen rather than found. Read off a dictionary it would
@@ -624,12 +625,12 @@ struct PlaceTests {
         #expect(error?.message.contains("alpha, zebra") == true)
     }
 
-    @Test("a constant merely blocked by a ring is neither placed nor accused")
+    @Test("a constant merely blocked by a cycle is neither placed nor accused")
     func aConstantWaitingOnARingIsNotOnIt() async throws {
-        // Given. `aardvark` names one of a ring, so it never settles either and
-        // is still waiting when the ring is refused. It is sorted first, which
+        // Given. `aardvark` names one of a cycle, so it never settles either and
+        // is still waiting when the cycle is refused. It is sorted first, which
         // is how it becomes the place if what is waiting is mistaken for what
-        // is wrong, and changing it would leave the ring exactly as it is.
+        // is wrong, and changing it would leave the cycle exactly as it is.
         let sut = try Module(
             constants: [
                 "aardvark": reference("zebra"),
@@ -677,12 +678,12 @@ struct PlaceTests {
         #expect(error?.message.contains("delta") == false)
     }
 
-    @Test("two modules nobody wrote down are told apart by where the caller put them")
+    @Test("two modules nobody wrote down are told apart by where the host put them")
     func modulesWithNoDocumentAreToldApartByPosition() async throws {
-        // Given. A caller assembling modules itself. Neither was read from
+        // Given. A host assembling modules itself. Neither was read from
         // anything, so neither has an identity and both spell the same: the
         // sentence names two documents that read as one, and the place renders
-        // without a document at all. Where the caller put them is what is left.
+        // without a document at all. Where the host put them is what is left.
         func declaring() throws -> Module {
             try Module(procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))])
         }

@@ -84,10 +84,11 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         // The inner door: entries in the order a name puts them, under names
-        // none of which repeats. A layout carries both facts, so what stands
-        // on one comes through here rather than being sorted again. A value
-        // born outside a link has no layout behind it and comes through the
-        // door above.
+        // none of which repeats. A layout carries both facts, and so does an
+        // object's list of entries once its reading judged the order, so what
+        // stands on either comes through here rather than being sorted again.
+        // A value born outside a link has neither behind it and comes through
+        // the door above.
         init(ordered entries: [(name: Name, value: Value)]) {
             self.entries = entries
         }
@@ -398,7 +399,7 @@ public indirect enum Value: Sendable, Equatable {
 
     // A field of a record, and nil for anything else. Several answers travel as
     // one record because a procedure answers one value, so reading a field back
-    // out is the ordinary thing a caller does with what a run gave it.
+    // out is the ordinary thing a host does with what a run gave it.
     public subscript(field: Name) -> Value? {
         switch self {
         case let .record(record): record[field]

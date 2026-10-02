@@ -14,7 +14,8 @@ import Warp
 public struct PathParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
-    public init() { }
+    public init() {
+    }
 
     // MARK: - Public
     public func parse(_ text: String) throws -> Path {
@@ -202,7 +203,7 @@ public struct PathParser: Sendable {
     }
 
     // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an empty
-    // `[]` is an author mistake rejected at parse, not carried into the model.
+    // `[]` is an author mistake refused at the load, not carried into the model.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {
         var inner = String(bracketed.dropFirst().dropLast())
             .trimmingCharacters(in: .whitespaces)

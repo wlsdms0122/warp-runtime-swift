@@ -75,6 +75,86 @@ struct TraversableTests {
         ])
     }
 
+    @Test("every place the type check records a call of a value at is one the walk reaches")
+    func everyCallOfAValueStandsWhereTheWalkReaches() async throws {
+        // Given. A call of a value handing a variable in place, written in
+        // every position a statement can stand in, and in closures held by
+        // every operand that can hold one
+        func name(_ spelling: String) -> Warp.Expression { .reference([.key(Name(stringLiteral: spelling))]) }
+
+        let call = Statement(expression: .apply(name("bump"), arguments: [name("count")]))
+
+        func closure() -> Warp.Expression {
+            .closure(Procedure(body: [call], result: .literal(.null)))
+        }
+
+        let sut = Block(
+            body: [
+                Statement(binding: .variable("count"), expression: .literal(.int(0))),
+                Statement(binding: .variable("going"), expression: .literal(.bool(true))),
+                Statement(
+                    binding: .constant("bump"),
+                    expression: .closure(
+                        Procedure(
+                            signature: Signature(parameters: [Parameter(name: "held", type: .inout(.int))]),
+                            body: [],
+                            result: .literal(.null)
+                        )
+                    )
+                ),
+                call,
+                Statement(expression: .block(Block(body: [call], result: closure()))),
+                Statement(expression: .conditional(name("going"), then: [call], else: [call])),
+                Statement(
+                    expression: .loop(
+                        while: name("going"),
+                        body: Block(body: [call, Statement(expression: .leave(Leave(reach: .construct)))], result: closure()),
+                        round: nil
+                    )
+                ),
+                Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]), failure: nil)),
+                Statement(binding: .constant("listed"), expression: .array([closure()])),
+                Statement(binding: .constant("fielded"), expression: .record(["held": closure()])),
+                Statement(binding: .constant("cast"), expression: .cast(closure(), as: .procedure(nil), optional: false)),
+                Statement(expression: .apply(name("bump"), arguments: [name("count")]))
+            ],
+            result: closure()
+        )
+        let place = Place.procedure("entry", in: .assembled)
+        let context = TypingContext(
+            types: TypeTable(),
+            linked: [],
+            rows: [:],
+            own: [:],
+            concealed: [],
+            answers: [:],
+            contractProcedures: [:],
+            variables: []
+        )
+
+        // When
+        let (_, _, inPlace) = try await TypeChecker().resolvedSites(
+            in: sut,
+            at: place,
+            in: [:],
+            answering: nil,
+            with: context,
+            folding: nil,
+            writing: Fulfillment()
+        )
+
+        // Then. The table holds one entry for each call the walk reaches,
+        // under the place the walk reaches it at
+        let reached = sut.subexpressions(at: place).compactMap { found -> Place? in
+            guard case .apply = found.1 else { return nil }
+
+            return found.0
+        }
+
+        #expect(reached.count == 14)
+        #expect(Set(inPlace.positions.keys) == Set(reached))
+    }
+
     @Test("a place names where a thing was found, and a closure names its own")
     func aPlaceNamesWhereAThingWasFound() {
         // Given. The location a report quotes. A closure literal and the body

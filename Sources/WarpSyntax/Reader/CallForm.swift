@@ -18,8 +18,8 @@ import Warp
 // business.
 //
 // It is a tag rather than the bare name a procedure is written under,
-// because a tag is read at decode time and which procedures exist is not
-// known until the link.
+// because a tag is read at the load and which procedures exist is not known
+// until the build.
 //
 // A body a procedure is to run travels as a closure argument like any other value. A
 // call carries no body of its own kind. One channel, one rule: what crosses
@@ -31,7 +31,7 @@ public struct CallForm: Decodable, Sendable {
     }
 
     // MARK: - Property
-    public let expression: Expression
+    public let expression: Warp.Expression
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {

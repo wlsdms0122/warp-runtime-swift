@@ -10,10 +10,11 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 import WarpStandard
+import WarpTestSupport
 
-@Suite
+@Suite("A condition a document writes")
 struct ConditionTests {
-    // A condition read by a run against the standard vocabulary as a caller
+    // A condition read by a run against the standard vocabulary as a host
     // gets it, so the procedures written in Warp answer here the way the
     // native ones do. The bindings are handed over as arguments.
     private struct Scope {

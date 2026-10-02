@@ -9,19 +9,21 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // What a reading of an object refuses.
 //
 // An object is this runtime's own writing, so what is asked here is what
-// happens when the bytes are not that. Each test bends one field of a real
+// happens when the bytes are not that. Each test mutates one field of a real
 // object, because a writing built by hand would prove only that the reading
 // refuses something it was never handed.
 @Suite("An object whose writing is not one")
 struct ObjectReadingTests {
-    private struct ObjectMissing: Error { }
+    private struct ObjectMissing: Error {
+    }
 
     // MARK: - Property
-    // A stand-in for what a caller works out from the bytes, which this
+    // A stand-in for what a host works out from the bytes, which this
     // package does not write. What these ask is what a reading refuses, so any
     // answer stands as long as an object compiled against another one can be
     // written down at all.
@@ -50,7 +52,7 @@ struct ObjectReadingTests {
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -73,7 +75,7 @@ struct ObjectReadingTests {
 
         parts = parts.writing("types", with: .array(types + [first]))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -86,7 +88,7 @@ struct ObjectReadingTests {
         // Given. A real object with one of its parts taken off.
         let parts = try await parts()
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts.removing("constants")), of: nil)
         } throws: { error in
@@ -140,7 +142,7 @@ struct ObjectReadingTests {
         numbering[0] = .array(types + [first])
         parts = parts.writing("typeNumbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -186,7 +188,7 @@ struct ObjectReadingTests {
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -247,7 +249,7 @@ struct ObjectReadingTests {
         answers[0] = .array(entry)
         parts = parts.writing("answers", with: .array(answers))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -360,7 +362,7 @@ struct ObjectReadingTests {
         declared[0] = .array(row)
         parts = parts.writing("rows", with: .array(declared))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -392,11 +394,61 @@ struct ObjectReadingTests {
 
         parts = parts.writing("types", with: .array(types.reversed()))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
             error is ObjectRefused && "\(error)".contains("'types' writes its names out of order, or one of them twice")
+        }
+    }
+
+    @Test("is refused where a dictionary value's entries stand out of order")
+    func aDictionaryOutOfOrder() async throws {
+        // Given. A real object whose body answers a dictionary literal, its
+        // entries turned around. A reading that sorted them would read two
+        // writings as one object.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .any),
+                    body: [],
+                    result: .literal(.dictionary(["a": .int(1), "b": .int(2)]))
+                )
+            ]
+        )
+
+        var parts = try await parts(of: sut)
+
+        guard case var .array(table) = parts["rows"],
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[7],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(literal) = result[0],
+            case var .array(value) = literal[1],
+            case let .array(entries) = value[1],
+            entries.count == 2
+        else {
+            Issue.record("an object writes a literal dictionary as its entries")
+
+            return
+        }
+
+        value[1] = .array(entries.reversed())
+        literal[1] = .array(value)
+        result[0] = .array(literal)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[7] = .array(implementation)
+        table[0] = .array(row)
+        parts = parts.writing("rows", with: .array(table))
+
+        // When / Then
+        #expect {
+            try Compiled(written: .dictionary(parts), of: nil)
+        } throws: { error in
+            error is ObjectRefused && "\(error)".contains("'value' writes its names out of order, or one of them twice")
         }
     }
 
@@ -509,7 +561,7 @@ struct ObjectReadingTests {
         claims[0] = .array(entry)
         parts = parts.writing("claims", with: .array(claims))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -558,7 +610,7 @@ struct ObjectReadingTests {
         numbering[1] = .array(closing.reversed())
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -606,7 +658,7 @@ struct ObjectReadingTests {
         numbering[0] = .array(sent.reversed())
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -652,7 +704,7 @@ struct ObjectReadingTests {
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -696,7 +748,7 @@ struct ObjectReadingTests {
         numbering[1] = .array([.array([entry[0], .int(4)])])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -741,7 +793,7 @@ struct ObjectReadingTests {
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -796,7 +848,7 @@ struct ObjectReadingTests {
         // order would let two writings say one object.
         let parts = try await parts().writing("dependencies", with: .array([.bytes([0x02]), .bytes([0x01])]))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -811,7 +863,7 @@ struct ObjectReadingTests {
         // a set, and a set written down twice is a writing no set makes.
         let parts = try await parts().writing("dependencies", with: .array([.bytes([0x01]), .bytes([0x01])]))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -856,7 +908,7 @@ struct ObjectReadingTests {
         numbering[1] = .array(counts + [.array([ObjectWriter().declaration(.procedure("app.other")), .int(0)])])
         parts = parts.writing("numbering", with: .array(numbering))
 
-        // When / Then.
+        // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
@@ -866,8 +918,8 @@ struct ObjectReadingTests {
 
     // MARK: - Public
     // MARK: - Private
-    // The object as written, its parts under their keys, so a test bends
-    // what it means to bend.
+    // The object as written, its parts under their keys, so a test mutates
+    // what it means to mutate.
     private func parts() async throws -> Value.Dictionary {
         try await parts(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],

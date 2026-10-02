@@ -21,7 +21,7 @@ import Foundation
 public struct Leave: Sendable {
     // How far out. `procedure` answers, and the other two are about a loop:
     // `construct` ends it, `round` ends the round it is in.
-    public enum Reach: Sendable, Equatable {
+    public enum Reach: Sendable, Hashable {
         case procedure
         case construct
         case round

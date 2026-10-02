@@ -14,6 +14,26 @@ import Foundation
 // changes what the block is worth and the author who appended it wrote nothing
 // that says so. Naming the answer costs one line and says which line it is.
 public struct Block: Sendable {
+    // Where a block's body and its result stand, as the steps from the
+    // block's own place. Every walk takes them from here, the way it takes an
+    // expression's children from `Expression.Child`.
+    public enum Child: Sendable {
+        case body
+        case result
+
+        // MARK: - Property
+        public var steps: [Place.Step] {
+            switch self {
+            case .body: [.part(.body)]
+            case .result: [.part(.result)]
+            }
+        }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     public let body: Body
     public let result: Expression?

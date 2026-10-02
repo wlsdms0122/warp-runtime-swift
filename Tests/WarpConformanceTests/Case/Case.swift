@@ -52,7 +52,7 @@ struct Case: Sendable, CustomStringConvertible {
         let expectation: Outcome
 
         // The identity the case reads the object under, where the case says
-        // one; the object's own where it says none. A caller keeps an object
+        // one; the object's own where it says none. A host keeps an object
         // under a document and hands that back, and a case that hands back
         // another asks whether the reading notices.
         let document: Identity?
@@ -125,27 +125,12 @@ struct Case: Sendable, CustomStringConvertible {
         // build that much. Nil where the case asks for none.
         let vocabulary: Vocabulary?
 
-        // The documents laid beside the program, each written as a document
-        // is. A rule about two documents is asked with the program and one of
+        // The documents laid beside the program, read the way the program is.
+        // A rule about two documents is asked with the program and one of
         // these. Empty where the case lays none.
-        let documents: [Value]
+        let beside: [Module]
 
         let expectation: Expectation
-
-        // The documents the case laid beside its program, read the way the
-        // program is. One that does not read is the case's own fault, since the
-        // question was about the program.
-        var beside: [Module] {
-            get throws {
-                try documents.map { document in
-                    do {
-                        return try Loader().load(document, identity: try Identity.of(document))
-                    } catch {
-                        throw ConformanceError("a document laid beside the program does not read: \(error)")
-                    }
-                }
-            }
-        }
 
         // The vocabulary the case asked the runner for, as a module standing in
         // front of the case's own document so that what the host brings is there
@@ -202,28 +187,29 @@ struct Case: Sendable, CustomStringConvertible {
             Procedure(
                 access: read.access,
                 signature: read.signature,
-                implementation: door(one, reading: try places(read.signature.parameters.count))
+                implementation: door(one, reading: try places(read.signature.parameters.map(\.name)))
             )
         }
 
         // Which of the fixed place sets this declaration reads its arguments
-        // through. A case declares `first` and `second` and nothing else, so the
-        // arity picks one.
-        private func places(_ count: Int) throws -> any ParameterSet.Type {
-            switch count {
-            case 0:
+        // through. A case declares `first` and `second`, in that order, and
+        // nothing else, so the names pick one.
+        private func places(_ declared: [Name]) throws -> any ParameterSet.Type {
+            switch declared {
+            case []:
                 return NoParameters.self
 
-            case 1:
+            case ["first"]:
                 return OneName.self
 
-            case 2:
-                return TwoNames.self
+            case ["first", "second"]:
+                return AnyPair.self
 
             default:
                 throw ConformanceError(
-                    "a procedure a case asks for declares \(count) names, and the places"
-                        + " a case may name are `first` and `second`"
+                    "a procedure a case asks for declares"
+                        + " \(declared.map(\.spelling).joined(separator: ", ")), and the places"
+                        + " a case may name are `first` and `second`, in that order"
                 )
             }
         }
@@ -316,9 +302,7 @@ struct Case: Sendable, CustomStringConvertible {
 
     // MARK: - Property
     // Which types a runner has to understand to ask these questions. It moves
-    // for the same reason `warp` does and on its own schedule. The day a case
-    // may say something new is not the day a document may. Every change
-    // before the first release folds into this one.
+    // for the same reason `warp` does and on its own schedule.
     static let version = 1
 
     static let versionKey: Name = "test"
@@ -375,10 +359,10 @@ struct Case: Sendable, CustomStringConvertible {
         self.name = name
         self.note = note
 
-        // One of `answers`, `reads`, `spells` or `refuses`, and exactly one. The slot
-        // groups them so that this is a question about one record instead of
-        // a rule about sibling keys, but a record is not a choice, so the
-        // count is still counted here. A case edited from one to the other
+        // One of `answers`, `reads`, `spells`, `builds` or `refuses`, and
+        // exactly one. The slot groups them so that this is a question about
+        // one record instead of a rule about sibling keys, but a record is not
+        // a choice, so the count is still counted here. A case edited from one to the other
         // and left holding both would otherwise start asking a different
         // question than it reads as, and nobody would be told.
         guard
@@ -398,6 +382,8 @@ struct Case: Sendable, CustomStringConvertible {
         // linked and run, so it answers or is refused.
         switch (written["program"], written["bytes"], written["text"], written["object"]) {
         case let (document?, nil, nil, nil):
+            try Self.reads(written, ["program", "arguments", "vocabulary", "documents"], about: "a program")
+
             let expectation: Expectation
 
             switch held {
@@ -422,7 +408,7 @@ struct Case: Sendable, CustomStringConvertible {
                     document: document,
                     arguments: try Self.given(written["arguments"], of: name),
                     vocabulary: try Self.supplied(in: written["vocabulary"]),
-                    documents: try Self.beside(written["documents"]),
+                    beside: try Self.beside(written["documents"]),
                     expectation: expectation
                 )
             )
@@ -445,12 +431,9 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the text a case asks about is written as a string, or as bytes")
 
         // An object leans on what is written inside it, so it asks the runner
-        // to bring nothing, and a case writing `vocabulary` asked a question
-        // the runner would not ask.
+        // to bring nothing and lay nothing beside it.
         case let (nil, nil, nil, object?):
-            guard written["vocabulary"] == nil else {
-                throw ConformanceError("a case about an object writes `vocabulary`, which only a program is brought")
-            }
+            try Self.reads(written, ["object", "arguments", "document"], about: "an object")
 
             let expectation: Object.Outcome
 
@@ -528,8 +511,10 @@ struct Case: Sendable, CustomStringConvertible {
 
     // MARK: - Private
     // The documents a case lays beside its program. A list of records, each a
-    // document; anything else is a case no two runners would read alike.
-    private static func beside(_ written: Value?) throws -> [Value] {
+    // document that reads; anything else is a case no two runners would read
+    // alike. One that does not read is the case's own fault, since the
+    // question was about the program.
+    private static func beside(_ written: Value?) throws -> [Module] {
         guard let written else { return [] }
 
         guard case let .array(documents) = written, documents.allSatisfy({ document in
@@ -540,7 +525,13 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the documents a case lays beside its program are a list of documents")
         }
 
-        return documents
+        return try documents.map { document in
+            do {
+                return try Loader().load(document, identity: try Identity.of(document))
+            } catch {
+                throw ConformanceError("a document laid beside the program does not read: \(error)")
+            }
+        }
     }
 
     private static func stage(_ expected: Value) throws -> Stage {
@@ -551,13 +542,25 @@ struct Case: Sendable, CustomStringConvertible {
         return stage
     }
 
-    // An encoding is read and nothing is run, so nothing is given and nothing
-    // is brought. A case writing either asked something the runner would not
-    // ask, and it is refused rather than left unasked.
-    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
-        if let key = (["arguments", "vocabulary"] as [Name]).first(where: { key in written[key] != nil }) {
-            throw ConformanceError("a case about an encoding writes `\(key)`, which only a program is given")
+    // An encoding is read and nothing is run, so nothing is given, brought,
+    // laid beside it or read under an identity. A case writing any of those
+    // asked something the runner would not ask, and it is refused rather than
+    // left unasked.
+    // A case holds what every case writes and the keys its subject reads, and
+    // nothing else: a key outside them, a misspelled one included, is a
+    // question the runner would not ask.
+    private static func reads(_ written: Value, _ subject: Set<Name>, about named: String) throws {
+        guard case let .dictionary(fields) = written else { return }
+
+        let every: Set<Name> = [versionKey, "name", "note", "expect"]
+
+        if let (key, _) = fields.entries.first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
+            throw ConformanceError("a case about \(named) writes `\(key)`, which it does not read")
         }
+    }
+
+    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
+        try reads(written, ["bytes", "text"], about: "an encoding")
 
         // The binary encoding is canonical, so bytes that read as a value
         // write back as themselves, and a case about them says so.
