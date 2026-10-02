@@ -237,6 +237,7 @@ struct TypeChecker {
     ) async throws -> (Expression, [CallSite], JudgementTable, LoweredType) {
         let inner = try await inspected(
             expression,
+            naming: nil,
             at: place,
             in: environment,
             with: context,
@@ -1312,7 +1313,7 @@ struct TypeChecker {
     // failure.
     private func inspected(
         _ expression: Expression,
-        naming name: Name? = nil,
+        naming name: Name?,
         at place: Place,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -1349,7 +1350,7 @@ struct TypeChecker {
                 )
             }
 
-            let carried = try await inspected(value, at: place.child(.held), in: environment, with: context, ask: ask)
+            let carried = try await inspected(value, naming: nil, at: place.child(.held), in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -1421,6 +1422,7 @@ struct TypeChecker {
             for (position, member) in array.enumerated() {
                 let inner = try await inspected(
                     member,
+                    naming: nil,
                     at: place.child(.element(position)),
                     in: environment,
                     with: context,
@@ -1455,6 +1457,7 @@ struct TypeChecker {
         case let .cast(value, type, optional):
             let inner = try await inspected(
                 value,
+                naming: nil,
                 at: place.child(.subject(optional: optional)),
                 in: environment,
                 with: context,
@@ -1579,6 +1582,7 @@ struct TypeChecker {
             for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try await inspected(
                     field,
+                    naming: nil,
                     at: place.child(.field(name)),
                     in: environment,
                     with: context,
@@ -1787,6 +1791,7 @@ struct TypeChecker {
 
             let called = try await inspected(
                 callee,
+                naming: nil,
                 at: place.child(.callee),
                 in: environment,
                 with: context,
@@ -1823,6 +1828,7 @@ struct TypeChecker {
                 for (position, argument) in arguments.enumerated() {
                     flow = flow.followed(by: try await inspected(
                         argument,
+                        naming: nil,
                         at: place.child(.argument(position)),
                         in: environment,
                         with: context,
@@ -1867,6 +1873,7 @@ struct TypeChecker {
             for (position, argument) in arguments.enumerated() {
                 let inner = try await inspected(
                     argument,
+                    naming: nil,
                     at: place.child(.argument(position)),
                     in: environment,
                     with: context,
@@ -1940,6 +1947,7 @@ struct TypeChecker {
                 for (position, argument) in call.arguments.enumerated() {
                     let inner = try await inspected(
                         argument,
+                        naming: nil,
                         at: place.child(.argument(position)),
                         in: environment,
                         with: context,
@@ -2005,6 +2013,7 @@ struct TypeChecker {
             for (position, argument) in call.arguments.enumerated() {
                 let inner = try await inspected(
                     argument,
+                    naming: nil,
                     at: place.child(.argument(position)),
                     in: environment,
                     with: context,
@@ -2079,6 +2088,7 @@ struct TypeChecker {
             // environment the conditional stands in.
             let head = try await inspected(
                 condition,
+                naming: nil,
                 at: place.child(.condition(of: .conditional)),
                 in: environment,
                 with: context,
@@ -2160,6 +2170,7 @@ struct TypeChecker {
             ) { seeding -> (round: BodyWalk, flow: Flow) in
                 let asked = try await inspected(
                     condition,
+                    naming: nil,
                     at: place.child(.condition(of: .loop)),
                     in: seeding,
                     with: context,
@@ -2192,6 +2203,7 @@ struct TypeChecker {
 
             let head = try await inspected(
                 condition,
+                naming: nil,
                 at: place.child(.condition(of: .loop)),
                 in: seeded,
                 with: context,
@@ -2246,7 +2258,7 @@ struct TypeChecker {
                     exit[name] = written.map { type in LoweredType.null.joined(type) }
                 }
 
-                tail = try await inspected(result, at: place.child(.held).child(.result), in: exit, with: context, ask: ask)
+                tail = try await inspected(result, naming: nil, at: place.child(.held).child(.result), in: exit, with: context, ask: ask)
             }
 
             return Inspection(
@@ -2379,6 +2391,7 @@ struct TypeChecker {
         } else if let result = block.result {
             let read = try await inspected(
                 result,
+                naming: nil,
                 at: place.child(.result),
                 in: body.environment,
                 with: context,
