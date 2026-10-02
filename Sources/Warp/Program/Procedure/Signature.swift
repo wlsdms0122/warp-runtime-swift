@@ -36,7 +36,6 @@ public struct Signature: Sendable, Equatable {
         ProcedureType(parameters: parameters.map(\.declared), returns: returns)
     }
 
-
     // The parameters whose box is the body's own. One handed in place is the
     // caller's box, written through rather than held.
     var ownedParameters: Set<Name> {

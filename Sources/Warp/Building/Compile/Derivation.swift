@@ -18,7 +18,7 @@ struct Derivation {
     private struct Fact {
         // MARK: - Property
         let callee: (Name) -> Bool
-        let slot: (LoweredType) -> (LoweredTypeTable) -> Bool
+        let claim: (LoweredType) -> (LoweredTypeTable) -> Bool
         let unread: Set<Name>
         let table: LoweredTypeTable
 
@@ -26,7 +26,7 @@ struct Derivation {
         // MARK: - Public
         // Whether a slot of this type says the fact of the procedure it holds.
         func isClaimed(by type: LoweredType) -> Bool {
-            slot(type)(table)
+            claim(type)(table)
         }
 
         // MARK: - Private
@@ -58,7 +58,7 @@ struct Derivation {
             natively: { implementation in implementation.isNativelyConst != false },
             declaring: \.ownedParameters,
             fact: { given in
-                Fact(callee: given, slot: LoweredType.isConstProcedure(in:), unread: variables, table: table)
+                Fact(callee: given, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table)
             },
             taking: asked,
             beyond: beyond,
@@ -82,7 +82,7 @@ struct Derivation {
             natively: { implementation in implementation.isNativelyIsolated != false },
             declaring: { signature in Set(signature.names) },
             fact: { given in
-                Fact(callee: given, slot: LoweredType.isIsolatedProcedure(in:), unread: [], table: table)
+                Fact(callee: given, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table)
             },
             taking: asked,
             beyond: beyond,
@@ -218,7 +218,7 @@ struct Derivation {
     ) -> Bool {
         holds(
             block,
-            Fact(callee: const, slot: LoweredType.isConstProcedure(in:), unread: variables, table: table),
+            Fact(callee: const, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table),
             declaring: names,
             bound: bindings,
             taking: asked
@@ -238,7 +238,7 @@ struct Derivation {
     ) -> Bool {
         holds(
             block,
-            Fact(callee: isolated, slot: LoweredType.isIsolatedProcedure(in:), unread: [], table: table),
+            Fact(callee: isolated, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table),
             declaring: parameters,
             bound: bindings,
             taking: asked

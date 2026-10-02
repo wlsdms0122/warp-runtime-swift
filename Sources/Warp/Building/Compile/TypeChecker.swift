@@ -1723,12 +1723,7 @@ struct TypeChecker {
             }
 
             // A name this closure captured carries what the slot it came from
-            // said about it. The claim is the slot's, so it stands wherever the
-            // name is read, and a closure that applies a captured one is judged
-            // on that word exactly as the body around it would be. A box that
-            // may be retyped after the capture says nothing the closure can
-            // hold on to; one that declared its type holds it through every
-            // write.
+            // said about it, and its own parameters shadow any it captured.
             let bound = procedure.signature.environment(in: context.loweredTypes)
                 .merging(outside) { own, _ in own }
 
