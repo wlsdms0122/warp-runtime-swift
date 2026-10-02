@@ -36,13 +36,6 @@ public struct Signature: Sendable, Equatable {
         ProcedureType(parameters: parameters.map(\.declared), returns: returns)
     }
 
-    // Each parameter by its name, as the type it lowers to: what the slot
-    // says the name holds, which a path from it walks.
-    func parameterTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
-        lowered(in: table).reduce(into: [Name: LoweredType]()) { held, slot in
-            held[slot.name] = slot.type
-        }
-    }
 
     // The parameters whose box is the body's own. One handed in place is the
     // caller's box, written through rather than held.

@@ -231,10 +231,9 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a slot said about the procedures it holds. A body applying a name a
+    // What a slot said about the procedure it holds. A body applying a name a
     // slot declared this way is judged on the slot's word, since the slot is
-    // what says which values may arrive there. An array or a dictionary of
-    // them says it about every element, and a name says what the type it
+    // what says which values may arrive there. A name says what the type it
     // stands for says.
     func isConstProcedure(in table: LoweredTypeTable) -> Bool {
         guard case .procedure(_, _, .const, _)? = procedureHeld(in: table) else { return false }
@@ -1552,21 +1551,21 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Private
-    // The procedure type a slot holding this holds: one written here, or the
-    // element of an array or a dictionary of them, through the names standing
-    // for one. Nil where the slot holds none.
+    // The procedure type a slot holding this holds, through the names
+    // standing for one and the marks a slot writes, and nil where it holds
+    // none.
     private func procedureHeld(in table: LoweredTypeTable, walked: Set<Int> = []) -> LoweredType? {
         switch self {
         case .procedure:
             return self
 
-        case let .array(element), let .dictionary(element):
-            return element.procedureHeld(in: table, walked: walked)
-
         case let .named(row):
             guard !walked.contains(row) else { return nil }
 
             return table.loweredTypes[row].procedureHeld(in: table, walked: walked.union([row]))
+
+        case let .variable(inner), let .inout(inner):
+            return inner.procedureHeld(in: table, walked: walked)
 
         default:
             return nil
