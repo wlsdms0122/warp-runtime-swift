@@ -1626,6 +1626,16 @@ struct TypeChecker {
             let declared = Set(procedure.signature.names)
             let outside = environment.filter { name, _ in !declared.contains(name) }
 
+            // A box the closure takes is one it reads and writes when it is
+            // called, as the type it reads as here.
+            var flow = Flow()
+
+            for name in procedure.block.map(captured(by:)) ?? [] {
+                guard let binding = outside[name], binding.isBox else { continue }
+
+                flow.hold(binding.heldType ?? binding.type, on: name)
+            }
+
             if case let .judging(_, _, fulfillment) = ask, let written = procedure.block {
                 let inner = try await inspected(
                     block: written,
@@ -1744,7 +1754,8 @@ struct TypeChecker {
                     const ? .const : .unstated,
                     isolated ? .isolated : .unstated
                 )
-                .lowered(in: context.loweredTypes)
+                .lowered(in: context.loweredTypes),
+                flow: flow
             )
 
         // Which value is called is settled at the run, and what it answers is
@@ -1783,8 +1794,33 @@ struct TypeChecker {
                 answers = .any
             }
 
+            // The positions the call hands a variable in place: the ones the
+            // slot's type marks `inout`, where the build reads its parameters,
+            // and none where it does not.
+            var handed: [Int] = []
+
+            if case let .procedure(parameters?, _, _, _) = callee {
+                handed = parameters.indices.filter { position in parameters[position].isInout }
+            }
+
+            // What the operands took is taken by the call, and so is what it
+            // hands in place.
+            var flow = heldInPlace(arguments, at: handed, in: environment)
+
+            flow.hold(from: called.flow)
+
             guard case let .judging(_, _, fulfillment) = ask else {
-                return Inspection(rewritten: expression, reading: answers)
+                for (position, argument) in arguments.enumerated() {
+                    flow.hold(from: try await inspected(
+                        argument,
+                        at: place.child(.argument(position)),
+                        in: environment,
+                        with: context,
+                        ask: ask
+                    ).flow)
+                }
+
+                return Inspection(rewritten: expression, reading: answers, flow: flow)
             }
 
             // Null is not called through, the way it is not read through.
@@ -1827,12 +1863,8 @@ struct TypeChecker {
                 readings.append(inner.reading)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
+                flow.hold(from: inner.flow)
             }
-
-            // The positions the call hands a variable in place: the ones the
-            // slot's type marks `inout`, where the build reads its parameters,
-            // and none where it does not.
-            var handed: [Int] = []
 
             // The arguments are handed by position the way a call's are, and
             // held to what the slot's type takes by the judgement a call to a
@@ -1850,8 +1882,6 @@ struct TypeChecker {
                     writing: fulfillment,
                     at: place
                 )
-
-                handed = parameters.indices.filter { position in parameters[position].isInout }
             }
 
             judgements.record(.apply(inPlace: handed), at: place)
@@ -1860,7 +1890,8 @@ struct TypeChecker {
                 rewritten: .apply(called.rewritten, arguments: rewritten),
                 calls: calls,
                 judgements: judgements,
-                reading: answers
+                reading: answers,
+                flow: flow
             )
 
         // A call answers what its callee declared, which is the fact this whole
@@ -1875,17 +1906,29 @@ struct TypeChecker {
         case let .call(call):
             let signature = context.signature(of: call.selector)
 
+            // What the operands took is taken by the call, and so is what it
+            // hands in place.
+            let slots = context.slots(of: call.selector)
+            var flow = heldInPlace(
+                call.arguments,
+                at: slots.indices.filter { position in slots[position].type.isInout },
+                in: environment
+            )
+
             guard case .judging = ask else {
                 var readings: [LoweredType] = []
 
                 for (position, argument) in call.arguments.enumerated() {
-                    readings.append(try await inspected(
+                    let inner = try await inspected(
                         argument,
                         at: place.child(.argument(position)),
                         in: environment,
                         with: context,
                         ask: ask
-                    ).reading)
+                    )
+
+                    readings.append(inner.reading)
+                    flow.hold(from: inner.flow)
                 }
 
                 return Inspection(
@@ -1896,7 +1939,8 @@ struct TypeChecker {
                         answering: context.answer(of: call.selector),
                         readings: readings,
                         in: context.loweredTypes
-                    )
+                    ),
+                    flow: flow
                 )
             }
 
@@ -1948,6 +1992,7 @@ struct TypeChecker {
                 sent.append(inner.reading)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
+                flow.hold(from: inner.flow)
             }
 
             try handedInPlace(
@@ -1977,7 +2022,8 @@ struct TypeChecker {
                     answering: context.answer(of: call.selector),
                     readings: sent,
                     in: context.loweredTypes
-                )
+                ),
+                flow: flow
             )
 
         case let .block(block):
@@ -2317,6 +2363,10 @@ struct TypeChecker {
                 flowed.escape(type, on: name)
             }
 
+            for (name, type) in inner.flow.held where !locals.contains(name) {
+                flowed.hold(type, on: name)
+            }
+
             flowed.answered += inner.flow.answered
 
             // A statement no run comes back from ends the ways through this
@@ -2533,6 +2583,50 @@ struct TypeChecker {
         let (settled, _) = try await read(widened)
 
         return (widened, settled, false)
+    }
+
+    // What a call hands in place at these positions, each variable held from
+    // here on to what it reads as here: the callee holds the box as that type
+    // while it runs, and a closure it makes may keep the box after it.
+    private func heldInPlace(
+        _ arguments: [Expression],
+        at positions: [Int],
+        in environment: [Name: Binding]
+    ) -> Flow {
+        var flow = Flow()
+
+        for position in positions where arguments.indices.contains(position) {
+            guard
+                case let .reference(path) = arguments[position],
+                let head = path.head,
+                let binding = environment[head],
+                binding.isBox
+            else { continue }
+
+            flow.hold(binding.heldType ?? binding.type, on: head)
+        }
+
+        return flow
+    }
+
+    // The names a closure's body reads or writes from where it was written,
+    // at whatever depth: the heads of the paths it reads and of the paths it
+    // sets.
+    private func captured(by block: Block) -> Set<Name> {
+        block.nodes.reduce(into: Set<Name>()) { names, node in
+            switch node {
+            case let .expression(.reference(path)):
+                names.formUnion(path.expandingIndexReferences.compactMap(\.head))
+
+            case let .statement(statement):
+                guard case let .assignment(path)? = statement.binding else { return }
+
+                names.formUnion(path.expandingIndexReferences.compactMap(\.head))
+
+            case .expression:
+                return
+            }
+        }
     }
 
     // The rules a call handing variables in place is held to, at each

@@ -12,7 +12,8 @@ import Foundation
 // a write is to a box the enclosing body holds. A flow gathers those writes
 // with the one distinction the reading after needs: whether every finishing
 // way through made the write. A definite write retypes the name; an
-// indefinite one joins with what the name held.
+// indefinite one joins with what the name held. It gathers the boxes held
+// here the same way, which no later write retypes.
 struct Flow {
     // MARK: - Property
     var written: [Name: (type: LoweredType, definite: Bool)] = [:]
@@ -35,6 +36,14 @@ struct Flow {
     // that disagree join to `any`, and `any` fits everything.
     var answered: [(reading: LoweredType, value: Value?, place: Place)] = []
 
+    // The boxes a closure captured or a call handed in place here, each with
+    // the type it read as there, or the type it was already held to. A
+    // closure or a callee may read and write the box later as that type, so
+    // from here on every write to it is held to that type, on whichever way
+    // the box was taken. Taking a box already held says so again, so a round
+    // read where its earlier rounds held the box takes it the same way.
+    var held: [Name: LoweredType] = [:]
+
     // MARK: - Initializer
     // MARK: - Public
     // How a write lands on what an earlier write left. A definite write
@@ -50,6 +59,18 @@ struct Flow {
         written[name] = (held.type.joined(later.type), held.definite)
     }
 
+    // A box taken here, held to what it read as.
+    mutating func hold(_ type: LoweredType, on name: Name) {
+        held[name] = held[name]?.joined(type) ?? type
+    }
+
+    // The boxes another flow took, taken here too.
+    mutating func hold(from other: Flow) {
+        for (name, type) in other.held {
+            hold(type, on: name)
+        }
+    }
+
     // A write made on a way that left.
     mutating func escape(_ type: LoweredType, on name: Name) {
         escaped[name] = escaped[name]?.joined(type) ?? type
@@ -57,12 +78,19 @@ struct Flow {
 
     // The same landing rule, on what the names around the flow hold. A box
     // that declared its type was checked where it was written, so a write into
-    // it changes nothing about what it holds.
+    // it changes nothing about what it holds. A box taken here holds what it
+    // was taken as from then on.
     func apply(to environment: inout [Name: Binding]) {
         for (name, write) in written {
             guard let held = environment[name], held.holding == .assigned else { continue }
 
             environment[name] = Binding(.assigned, write.definite ? write.type : held.type.joined(write.type))
+        }
+
+        for (name, type) in held {
+            guard let current = environment[name], current.holding == .assigned else { continue }
+
+            environment[name] = Binding(.held(type), current.type)
         }
     }
 
@@ -121,6 +149,7 @@ struct Flow {
             flowed.escape(type, on: name)
         }
 
+        flowed.hold(from: second)
         flowed.answered += second.answered
 
         return second.leaves ? flowed.leaving() : flowed
@@ -141,6 +170,9 @@ struct Flow {
         }
 
         flowed.answered = answered + declined.answered
+
+        flowed.hold(from: self)
+        flowed.hold(from: declined)
 
         switch (leaves, declined.leaves) {
         // A leaving flow holds its writes as escaped alone, gathered above.

@@ -10,7 +10,8 @@ import Foundation
 // What a name in scope is bound as, which is what a reading of the name and a
 // write to it are judged against. A parameter and a constant are fixed names.
 // A variable is a box: one that declared its type holds that type through
-// every write, and one that did not holds what its last write put in it.
+// every write, and one that did not holds what its last write put in it until
+// a closure or a call takes it.
 //
 // How the name is held says what a slot declared it holds, where one did,
 // which is what a call of the value the name holds leans on. A type the build
@@ -33,7 +34,8 @@ struct Binding: Equatable, Sendable {
 
         // A box every write is held to a type it read as, which no slot
         // declared: a module variable that wrote no type, held to what its
-        // start settled as.
+        // start settled as, and a variable a closure captured or a call
+        // handed in place, held to what it read as there.
         case held(LoweredType)
 
         // A box every write retypes.
