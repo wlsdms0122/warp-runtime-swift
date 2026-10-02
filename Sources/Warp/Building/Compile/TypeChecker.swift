@@ -2198,14 +2198,20 @@ struct TypeChecker {
                 ? try await inspected(body.body, at: place.child(.held).child(.body), in: seeded, with: context, ask: ask)
                 : probed
 
-            // The loop as it ends: it may run no round, or end after a round
-            // that finished, broke or continued. Every way it hands further
-            // out went through the rounds before the one it left from.
-            let start = try rounds.flow.start(of: round, meeting: meets)
-            let (stopped, outward) = try rounds.flow.gathered(where: { reach in reach.endsLoop(round) }, meeting: meets)
+            // A round as it runs: the condition, then the body. The loop
+            // runs it from where none or more rounds before left things, so
+            // every way a round hands further out went through that start. It
+            // ends where the condition declines there, or where a round of it
+            // broke or continued.
+            let turn = head.flow.followed(by: rounds.flow)
+            let start = try turn.start(of: round, meeting: meets)
+            let (stopped, outward) = try turn.gathered(where: { reach in reach.endsLoop(round) }, meeting: meets)
+            let declined = head.flow.going.map { declined in start.followed(by: declined) }
             var ended = outward.preceded(by: start)
 
-            ended.going = try stopped.map { stopped in try start.joined(with: stopped, meeting: meets) } ?? start
+            ended.going = try [declined, stopped.map { stopped in start.followed(by: stopped) }]
+                .compactMap { way in way }
+                .reduce(nil as Way?) { met, way in try met.map { met in try met.joined(with: way, meeting: meets) } ?? way }
 
             // The result runs once, at whichever exit the run takes (a
             // condition that declines at the start, a round that finishes or
@@ -2246,12 +2252,8 @@ struct TypeChecker {
                 reading: tail?.reading ?? .null,
                 // The round is the loop's own name, read in the condition,
                 // the body and the result alike.
-                flow: head.flow.followed(
-                    by: try tail.map { tail in
-                        try ended.followed(by: tail.flow.outside(rounds.locals))
-                    } ?? ended
-                )
-                .outside(Set([round].compactMap { $0 }))
+                flow: (tail.map { tail in ended.followed(by: tail.flow.outside(rounds.locals)) } ?? ended)
+                    .outside(Set([round].compactMap { $0 }))
             )
 
         // The body and the rescue are two ways through, not a sequence. A body
