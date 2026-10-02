@@ -411,7 +411,12 @@ public struct Validator: Sendable {
         // A closure sees where it was written plus what it declares, which is
         // the capture read statically. Its parameters hold for its body the way
         // a procedure's do, and it is written inside the parameters around it.
+        // It is a body written where it stands, so it is never the host's code.
         case let .closure(procedure):
+            guard let block = procedure.block else {
+                throw ValidationError("a closure is a body, and this one is the host's code", at: place)
+            }
+
             let inside = place.child(.closure)
             let parameters = Set(procedure.signature.names)
 
@@ -420,10 +425,6 @@ public struct Validator: Sendable {
             for (position, parameter) in procedure.signature.names.enumerated() {
                 try introduced(parameter, in: scope, at: inside.part(.parameters).index(position))
             }
-
-            try reads(procedure, at: place)
-
-            guard let block = procedure.block else { return }
 
             // A parameter it takes in place is a variable in its body, the way
             // a declaration's is.

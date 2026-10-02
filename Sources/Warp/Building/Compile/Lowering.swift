@@ -244,22 +244,23 @@ struct Lowering {
     }
 
     // What lowering one body reads beside the names in scope: the slots it
-    // allocates, the declaration its closures are numbered under, and what
-    // the build found each call of a value in it hands in place. One per body:
-    // a closure is lowered on slots of its own and shares the other two with
-    // the body it was written in.
+    // allocates, the declaration its closures are numbered under, what the
+    // build found each call of a value in it hands in place, and what it
+    // derived of each closure literal. One per body: a closure is lowered on
+    // slots of its own and shares the rest with the body it was written in.
     private struct Context {
         // MARK: - Property
         let slots: SlotAllocator
         let writer: Closure.Declaration
         let inPlace: InPlaceTable
+        let closures: ClosureTable
 
         // MARK: - Initializer
         // MARK: - Public
         // The same context with other slots, the way a closure's body is
         // lowered on slots of its own.
         func with(slots: SlotAllocator) -> Context {
-            Context(slots: slots, writer: writer, inPlace: inPlace)
+            Context(slots: slots, writer: writer, inPlace: inPlace, closures: closures)
         }
 
         // MARK: - Private
@@ -424,8 +425,15 @@ struct Lowering {
 
     // Lowers a declaration's body into its row. `inPlace` is what the build
     // found each call of a value in it hands in place, by where the call
-    // stands.
-    mutating func settle(_ row: Int, body block: Block, inPlace: InPlaceTable, at place: Place) throws {
+    // stands, and `closures` what it derived of each closure literal, by
+    // where the literal stands.
+    mutating func settle(
+        _ row: Int,
+        body block: Block,
+        inPlace: InPlaceTable,
+        closures: ClosureTable,
+        at place: Place
+    ) throws {
         let declared = table[row]
         let slots = SlotAllocator(
             origin: declared.origin,
@@ -443,7 +451,7 @@ struct Lowering {
         let body = try lower(
             block,
             in: scope,
-            on: Context(slots: slots, writer: .procedure(declared.label), inPlace: inPlace),
+            on: Context(slots: slots, writer: .procedure(declared.label), inPlace: inPlace, closures: closures),
             at: place
         )
 
@@ -467,6 +475,7 @@ struct Lowering {
         origin: Int,
         writer: Closure.Declaration,
         inPlace: InPlaceTable,
+        closures: ClosureTable,
         at place: Place
     ) throws -> (Operation, Frame) {
         let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
@@ -476,7 +485,12 @@ struct Lowering {
             scope.slots[name] = slots.allocate(name)
         }
 
-        let code = try lower(expression, in: scope, on: Context(slots: slots, writer: writer, inPlace: inPlace), at: place)
+        let code = try lower(
+            expression,
+            in: scope,
+            on: Context(slots: slots, writer: writer, inPlace: inPlace, closures: closures),
+            at: place
+        )
 
         return (code, slots.frame)
     }
@@ -772,8 +786,8 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard let block = procedure.block else {
-            throw BuildError.unjudged("a closure with no body", at: place)
+        guard let block = procedure.block, let derived = context.closures[place] else {
+            throw BuildError.unjudged("a closure literal", at: place)
         }
 
         // A closure reaches a constant the way it reaches a module variable,
@@ -819,9 +833,9 @@ struct Lowering {
                 origin: context.slots.origin,
                 signature: procedure.signature,
                 access: .private,
-                constness: procedure.constness,
-                isolation: procedure.isolation,
-                failing: procedure.failing,
+                constness: derived.constness,
+                isolation: derived.isolation,
+                failing: derived.failing,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),

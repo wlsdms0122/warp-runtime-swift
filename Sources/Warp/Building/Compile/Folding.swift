@@ -51,6 +51,7 @@ struct Folding {
         _ expression: Expression,
         as writer: Closure.Declaration,
         inPlace: InPlaceTable,
+        closures: ClosureTable,
         writing lowering: inout Lowering,
         at place: Place
     ) async throws -> Value {
@@ -60,6 +61,7 @@ struct Folding {
             origin: origin,
             writer: writer,
             inPlace: inPlace,
+            closures: closures,
             at: place
         )
 

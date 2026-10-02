@@ -96,14 +96,16 @@ struct TypeChecker {
 
     // One walk's answers: the expression with every dot's meaning written
     // in, the sends gathered on the way, the positions each call of a value
-    // in it hands in place by where the call stands, what the whole of it
-    // holds, and what it wrote to the names around it. The probing ask hands
+    // in it hands in place by where the call stands, what the build derived
+    // of each closure literal in it by where the literal stands, what the
+    // whole of it holds, and what it wrote to the names around it. The probing ask hands
     // the expression back as written and gathers nothing.
     private struct Inspection {
         // MARK: - Property
         var rewritten: Expression
         var calls: [CallSite] = []
         var inPlace = InPlaceTable()
+        var closures = ClosureTable()
         var reading: LoweredType
         var flow = Flow()
 
@@ -118,6 +120,7 @@ struct TypeChecker {
         body: Body,
         calls: [CallSite],
         inPlace: InPlaceTable,
+        closures: ClosureTable,
         environment: [Name: Binding],
         reading: LoweredType,
         flow: Flow,
@@ -212,7 +215,7 @@ struct TypeChecker {
         folding: Folding?,
         origin: Int? = nil,
         writing fulfillment: Fulfillment
-    ) async throws -> (block: Block, calls: [CallSite], inPlace: InPlaceTable) {
+    ) async throws -> (block: Block, calls: [CallSite], inPlace: InPlaceTable, closures: ClosureTable) {
         let inner = try await inspected(
             block: block,
             at: place,
@@ -231,7 +234,7 @@ struct TypeChecker {
             fulfillment: fulfillment
         )
 
-        return (inner.block, inner.calls, inner.inPlace)
+        return (inner.block, inner.calls, inner.inPlace, inner.closures)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -243,7 +246,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (Expression, [CallSite], InPlaceTable, LoweredType) {
+    ) async throws -> (Expression, [CallSite], InPlaceTable, ClosureTable, LoweredType) {
         let inner = try await inspected(
             expression,
             at: place,
@@ -252,7 +255,7 @@ struct TypeChecker {
             ask: .judging(folding: folding, origin: nil, writing: fulfillment)
         )
 
-        return (inner.rewritten, inner.calls, inner.inPlace, inner.reading)
+        return (inner.rewritten, inner.calls, inner.inPlace, inner.closures, inner.reading)
     }
 
     // Why a reading is provably outside one bound, or nothing where it is
@@ -1367,6 +1370,7 @@ struct TypeChecker {
                     : expression,
                 calls: carried.calls,
                 inPlace: carried.inPlace,
+                closures: carried.closures,
                 reading: .never,
                 flow: answering(carried.flow, carrying: carried).leaving()
             )
@@ -1421,6 +1425,7 @@ struct TypeChecker {
             var rewritten: [Expression] = []
             var calls: [CallSite] = []
             var inPlace = InPlaceTable()
+            var closures = ClosureTable()
             var flowed = Flow()
             var element: LoweredType?
 
@@ -1437,6 +1442,7 @@ struct TypeChecker {
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
                 inPlace.absorb(inner.inPlace)
+                closures.absorb(inner.closures)
                 element = element?.joined(inner.reading) ?? inner.reading
                 rewritten.append(inner.rewritten)
             }
@@ -1445,6 +1451,7 @@ struct TypeChecker {
                 rewritten: ask.rewrites ? .array(rewritten) : expression,
                 calls: calls,
                 inPlace: inPlace,
+                closures: closures,
                 reading: .array(element ?? .any),
                 flow: flowed
             )
@@ -1553,6 +1560,7 @@ struct TypeChecker {
                     : expression,
                 calls: inner.calls,
                 inPlace: inner.inPlace,
+                closures: inner.closures,
                 // The author's spelling here too, and for the same reason it
                 // stands in what is written back: a refusal on the next
                 // statement quotes this reading, and quoting a type nobody
@@ -1573,6 +1581,7 @@ struct TypeChecker {
             var rewritten: [Name: Expression] = [:]
             var calls: [CallSite] = []
             var inPlace = InPlaceTable()
+            var closures = ClosureTable()
             var flowed = Flow()
             var fields: [Name: LoweredType] = [:]
 
@@ -1589,6 +1598,7 @@ struct TypeChecker {
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
                 inPlace.absorb(inner.inPlace)
+                closures.absorb(inner.closures)
                 fields[name] = inner.reading
                 rewritten[name] = inner.rewritten
             }
@@ -1597,6 +1607,7 @@ struct TypeChecker {
                 rewritten: ask.rewrites ? .record(rewritten) : expression,
                 calls: calls,
                 inPlace: inPlace,
+                closures: closures,
                 reading: .record(fields),
                 flow: flowed
             )
@@ -1617,6 +1628,7 @@ struct TypeChecker {
             var rewritten = expression
             var calls: [CallSite] = []
             var inPlace = InPlaceTable()
+            var closures = ClosureTable()
             var body = procedure.block
 
             // What the closure takes from where it was written: every name
@@ -1678,6 +1690,7 @@ struct TypeChecker {
                 body = inner.block
                 calls = inner.calls
                 inPlace = inner.inPlace
+                closures = inner.closures
             }
 
             var reading: Set<Name> = []
@@ -1719,11 +1732,17 @@ struct TypeChecker {
                     Procedure(
                         description: procedure.description,
                         signature: procedure.signature,
-                        implementation: .body(body),
+                        implementation: .body(body)
+                    )
+                )
+
+                closures.record(
+                    ClosureTable.Derived(
                         constness: const ? .const : .unstated,
                         isolation: isolated ? .isolated : .unstated,
                         failing: Derivation().failing(body, given: context.failing(of:))
-                    )
+                    ),
+                    at: place
                 )
             } else if procedure.signature != written.signature {
                 rewritten = .closure(procedure)
@@ -1733,6 +1752,7 @@ struct TypeChecker {
                 rewritten: rewritten,
                 calls: calls,
                 inPlace: inPlace,
+                closures: closures,
                 reading: TypeExpression.procedure(
                     procedure.signature.type,
                     const ? .const : .unstated,
@@ -1806,6 +1826,7 @@ struct TypeChecker {
             var rewritten: [Expression] = []
             var calls = called.calls
             var inPlace = called.inPlace
+            var closures = called.closures
             var readings: [LoweredType] = []
 
             for (position, argument) in arguments.enumerated() {
@@ -1821,6 +1842,7 @@ struct TypeChecker {
                 readings.append(inner.reading)
                 calls += inner.calls
                 inPlace.absorb(inner.inPlace)
+                closures.absorb(inner.closures)
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -1854,6 +1876,7 @@ struct TypeChecker {
                 rewritten: .apply(called.rewritten, arguments: rewritten),
                 calls: calls,
                 inPlace: inPlace,
+                closures: closures,
                 reading: answers
             )
 
@@ -1928,6 +1951,7 @@ struct TypeChecker {
             var sent: [LoweredType] = []
             var calls: [CallSite] = []
             var inPlace = InPlaceTable()
+            var closures = ClosureTable()
 
             for (position, argument) in call.arguments.enumerated() {
                 let inner = try await inspected(
@@ -1942,6 +1966,7 @@ struct TypeChecker {
                 sent.append(inner.reading)
                 calls += inner.calls
                 inPlace.absorb(inner.inPlace)
+                closures.absorb(inner.closures)
             }
 
             try handedInPlace(
@@ -1965,6 +1990,7 @@ struct TypeChecker {
                     )
                 ] + calls,
                 inPlace: inPlace,
+                closures: closures,
                 reading: answered(
                     by: signature,
                     over: context.slots(of: call.selector),
@@ -1981,6 +2007,7 @@ struct TypeChecker {
                 rewritten: ask.rewrites ? .block(inner.block) : expression,
                 calls: inner.calls,
                 inPlace: inner.inPlace,
+                closures: inner.closures,
                 reading: inner.reading,
                 flow: inner.flow
             )
@@ -2018,6 +2045,7 @@ struct TypeChecker {
                         : expression,
                     calls: head.calls + taken.calls,
                     inPlace: head.inPlace.absorbing(taken.inPlace),
+                    closures: head.closures.absorbing(taken.closures),
                     reading: .null,
                     flow: head.flow.followed(by: taken.flow.joined(with: Flow()))
                 )
@@ -2037,6 +2065,7 @@ struct TypeChecker {
                     : expression,
                 calls: head.calls + taken.calls + declined.calls,
                 inPlace: head.inPlace.absorbing(taken.inPlace, declined.inPlace),
+                closures: head.closures.absorbing(taken.closures, declined.closures),
                 reading: taken.reading == .never && declined.reading == .never ? .never : .null,
                 flow: head.flow.followed(by: taken.flow.joined(with: declined.flow))
             )
@@ -2131,6 +2160,7 @@ struct TypeChecker {
                     : expression,
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
                 inPlace: head.inPlace.absorbing(rounds.inPlace, tail?.inPlace),
+                closures: head.closures.absorbing(rounds.closures, tail?.closures),
                 reading: tail?.reading ?? .null,
                 flow: head.flow.followed(
                     by: tail.map { tail in
@@ -2184,6 +2214,7 @@ struct TypeChecker {
                     : expression,
                 calls: attempted.calls + rescued.calls,
                 inPlace: attempted.inPlace.absorbing(rescued.inPlace),
+                closures: attempted.closures.absorbing(rescued.closures),
                 reading: attempted.reading.joined(rescued.reading),
                 flow: attempted.flow.absorbed().joined(with: rescued.flow.absorbed())
             )
@@ -2199,7 +2230,14 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
-    ) async throws -> (block: Block, calls: [CallSite], inPlace: InPlaceTable, reading: LoweredType, flow: Flow) {
+    ) async throws -> (
+        block: Block,
+        calls: [CallSite],
+        inPlace: InPlaceTable,
+        closures: ClosureTable,
+        reading: LoweredType,
+        flow: Flow
+    ) {
         let body = try await inspected(
             block.body,
             at: place.child(.body),
@@ -2256,6 +2294,7 @@ struct TypeChecker {
                 : block,
             body.calls + (tail?.calls ?? []),
             body.inPlace.absorbing(tail?.inPlace),
+            body.closures.absorbing(tail?.closures),
             reading,
             flow
         )
@@ -2279,6 +2318,7 @@ struct TypeChecker {
         var rewritten: Body = []
         var calls: [CallSite] = []
         var inPlace = InPlaceTable()
+        var closures = ClosureTable()
 
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
@@ -2296,6 +2336,7 @@ struct TypeChecker {
             )
             calls += inner.calls
             inPlace.absorb(inner.inPlace)
+            closures.absorb(inner.closures)
 
             // A write outlives the block it was written in, so a name written
             // anywhere inside this statement may hold something else by the
@@ -2343,6 +2384,7 @@ struct TypeChecker {
                     ask.rewrites ? rewritten : body,
                     calls,
                     inPlace,
+                    closures,
                     environment,
                     .never,
                     flowed.leaving(),
@@ -2436,7 +2478,7 @@ struct TypeChecker {
             }
         }
 
-        return (ask.rewrites ? rewritten : body, calls, inPlace, environment, .null, flowed, locals)
+        return (ask.rewrites ? rewritten : body, calls, inPlace, closures, environment, .null, flowed, locals)
     }
 
     // What never finishes binds nothing, so a name on it promises a binding

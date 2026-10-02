@@ -133,7 +133,7 @@ struct TraversableTests {
         )
 
         // When
-        let (_, _, inPlace) = try await TypeChecker().resolvedSites(
+        let (_, _, inPlace, _) = try await TypeChecker().resolvedSites(
             in: sut,
             at: place,
             in: [:],
