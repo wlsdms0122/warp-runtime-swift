@@ -1076,8 +1076,17 @@ indirect enum LoweredType: Sendable, Equatable {
                 field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
             }
 
+        // A slot's marks say something about the slot and nothing about the
+        // value, so both sides are read without them.
         case let (.variable(mine), _), let (.inout(mine), _):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
+            mine.binding(
+                against: given.slotUnwrapped,
+                into: &bound,
+                disagreeing: &disagreeing,
+                holding: &holding,
+                in: table,
+                assuming: assuming
+            )
 
         case let (_, .variable(theirs)), let (_, .inout(theirs)):
             binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
