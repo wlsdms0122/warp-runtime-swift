@@ -852,22 +852,43 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether two types are one type, names resolved. `any` is no wildcard
-    // here and neither is a type parameter: standing for anything is what
-    // `accepts` reads, and a body free to write anything into a variable the
-    // caller declared is the disagreement this refuses.
+    // Whether two types are one type, names resolved: a name that stands for
+    // a declared record is that record, and any other name is what it names.
+    // `any` is no wildcard here: standing for anything is what `accepts`
+    // reads, and a body free to write anything into a variable the caller
+    // declared is the disagreement this refuses. A type parameter and a name
+    // the table does not answer stand for what this cannot know, so they
+    // match whatever they meet.
     func same(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        same(other, in: table, assuming: [])
+        matches(other, in: table, open: true, assuming: [])
     }
 
     func same(_ other: LoweredType, in table: LoweredTypeTable, assuming: [(LoweredType, LoweredType)]) -> Bool {
+        matches(other, in: table, open: true, assuming: assuming)
+    }
+
+    // Whether two types are one type exactly, names resolved the way `same`
+    // resolves them, with nothing standing for anything else: a type
+    // parameter is itself, and so is a name the table does not answer.
+    func identical(to other: LoweredType, in table: LoweredTypeTable) -> Bool {
+        matches(other, in: table, open: false, assuming: [])
+    }
+
+    // The walk both answer, `open` saying whether a type parameter and a
+    // name the table does not answer match anything.
+    private func matches(
+        _ other: LoweredType,
+        in table: LoweredTypeTable,
+        open: Bool,
+        assuming: [(LoweredType, LoweredType)]
+    ) -> Bool {
         if assuming.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
 
         let walked = assuming + [(self, other)]
 
         switch (self, other) {
         case (.undeclared, _), (_, .undeclared), (.parameter, _), (_, .parameter):
-            return true
+            return open ? true : self == other
 
         // A record under a name is that name, so two names are two types
         // however alike, unless both name one declared record. Every other
@@ -881,27 +902,27 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return table.recordRows[mine] == nil
                 && table.recordRows[theirs] == nil
-                && table.loweredTypes[mine].same(table.loweredTypes[theirs], in: table, assuming: walked)
+                && table.loweredTypes[mine].matches(table.loweredTypes[theirs], in: table, open: open, assuming: walked)
 
         case let (.named(mine), _):
             return table.recordRows[mine] == nil
-                && table.loweredTypes[mine].same(other, in: table, assuming: walked)
+                && table.loweredTypes[mine].matches(other, in: table, open: open, assuming: walked)
 
         case let (_, .named(theirs)):
             return table.recordRows[theirs] == nil
-                && same(table.loweredTypes[theirs], in: table, assuming: walked)
+                && matches(table.loweredTypes[theirs], in: table, open: open, assuming: walked)
 
         case let (.nullable(mine), .nullable(theirs)),
             let (.array(mine), .array(theirs)),
             let (.dictionary(mine), .dictionary(theirs)),
             let (.variable(mine), .variable(theirs)),
             let (.inout(mine), .inout(theirs)):
-            return mine.same(theirs, in: table, assuming: walked)
+            return mine.matches(theirs, in: table, open: open, assuming: walked)
 
         case let (.record(mine), .record(theirs)):
             return mine.layout == theirs.layout
                 && zip(mine.fields, theirs.fields).allSatisfy { one, other in
-                    one.same(other, in: table, assuming: walked)
+                    one.matches(other, in: table, open: open, assuming: walked)
                 }
 
         case let (.procedure(mine, myAnswer, myConstness, myIsolation),
@@ -913,7 +934,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 break
 
             case let (myAnswer?, theirAnswer?):
-                guard myAnswer.same(theirAnswer, in: table, assuming: walked) else { return false }
+                guard myAnswer.matches(theirAnswer, in: table, open: open, assuming: walked) else { return false }
 
             default:
                 return false
@@ -926,7 +947,7 @@ indirect enum LoweredType: Sendable, Equatable {
             case let (mine?, theirs?):
                 return mine.count == theirs.count
                     && zip(mine, theirs).allSatisfy { one, other in
-                        one.same(other, in: table, assuming: walked)
+                        one.matches(other, in: table, open: open, assuming: walked)
                     }
 
             default:
