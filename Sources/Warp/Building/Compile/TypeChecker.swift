@@ -1353,7 +1353,7 @@ struct TypeChecker {
                 return Inspection(
                     rewritten: expression,
                     reading: .never,
-                    flow: answering(Flow(), carrying: nil).leaving()
+                    flow: answering(Flow(), carrying: nil).leaving(to: Flow.Reach(leave))
                 )
             }
 
@@ -1368,7 +1368,7 @@ struct TypeChecker {
                 calls: carried.calls,
                 judgements: carried.judgements,
                 reading: .never,
-                flow: answering(carried.flow, carrying: carried).leaving()
+                flow: answering(carried.flow, carrying: carried).leaving(to: Flow.Reach(leave))
             )
 
         // A path names something that has to exist just as a selector does, so
@@ -1543,6 +1543,14 @@ struct TypeChecker {
                 )
             }
 
+            // A cast that names a type the value did not arrive as fails; the
+            // optional spelling reads the mismatch as null.
+            var flow = inner.flow
+
+            if !optional {
+                flow.fail()
+            }
+
             return Inspection(
                 // The author's spelling stands. `settled` is what the judgment
                 // needed (a name walked through to the type it declares) and
@@ -1566,7 +1574,7 @@ struct TypeChecker {
                 // the same type read as two different ones depending on
                 // whether the author wrote the name or what it stands for.
                 reading: handed,
-                flow: inner.flow
+                flow: flow
             )
 
         // In name order. The order the run evaluates fields in, so what one
@@ -1665,20 +1673,24 @@ struct TypeChecker {
                 // what the name holds: the closure runs when it is called,
                 // and the body that declared the variable reads it as the
                 // type it gave it. A write here retypes nothing outside.
-                for (name, write) in inner.flow.written.sorted(by: { $0.key < $1.key }) {
+                let writes = inner.flow.ways.flatMap { way in
+                    way.written.map { name, write in (name: name, type: write.type) }
+                }
+
+                for (name, wrote) in writes.sorted(by: { $0.name < $1.name }) {
                     guard let held = outside[name]?.type else { continue }
 
-                    guard held.accepts(write.type, in: context.loweredTypes) else {
+                    guard held.accepts(wrote, in: context.loweredTypes) else {
                         throw BuildError(
                             "writes '\(name)', which it captured, as"
-                                + " \(write.type.rendered(in: context.loweredTypes)). The body it captured"
+                                + " \(wrote.rendered(in: context.loweredTypes)). The body it captured"
                                 + " from holds it as \(held.rendered(in: context.loweredTypes))",
                             at: place.child(.closure)
                         )
                     }
 
                     if let refusal = refusal(
-                        holding: write.type,
+                        holding: wrote,
                         to: held,
                         as: "writes '\(name)', which it captured, as",
                         in: context.loweredTypes,
@@ -1817,11 +1829,11 @@ struct TypeChecker {
             // hands in place.
             var flow = heldInPlace(arguments, at: handed, in: environment)
 
-            flow.carry(called.flow)
+            flow = flow.followed(by: called.flow)
 
             guard case let .judging(_, _, fulfillment) = ask else {
                 for (position, argument) in arguments.enumerated() {
-                    flow.carry(try await inspected(
+                    flow = flow.followed(by: try await inspected(
                         argument,
                         at: place.child(.argument(position)),
                         in: environment,
@@ -1829,6 +1841,10 @@ struct TypeChecker {
                         ask: ask
                     ).flow)
                 }
+
+                // Which procedure a value is, is the run's answer, so the call
+                // may fail.
+                flow.fail()
 
                 return Inspection(rewritten: expression, reading: answers, flow: flow)
             }
@@ -1873,7 +1889,7 @@ struct TypeChecker {
                 readings.append(inner.reading)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
-                flow.carry(inner.flow)
+                flow = flow.followed(by: inner.flow)
             }
 
             // The arguments are handed by position the way a call's are, and
@@ -1895,6 +1911,7 @@ struct TypeChecker {
             }
 
             judgements.record(.apply(inPlace: handed), at: place)
+            flow.fail()
 
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
@@ -1918,6 +1935,9 @@ struct TypeChecker {
 
             // What the operands took is taken by the call, and so is what it
             // hands in place.
+            // A declaration that says nothing about what it may fail with may
+            // fail with anything.
+            let mayFail = context.failing(of: call.selector)?.failsNothing != true
             let slots = context.slots(of: call.selector)
             var flow = heldInPlace(
                 call.arguments,
@@ -1938,7 +1958,11 @@ struct TypeChecker {
                     )
 
                     readings.append(inner.reading)
-                    flow.carry(inner.flow)
+                    flow = flow.followed(by: inner.flow)
+                }
+
+                if mayFail {
+                    flow.fail()
                 }
 
                 return Inspection(
@@ -2002,7 +2026,7 @@ struct TypeChecker {
                 sent.append(inner.reading)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
-                flow.carry(inner.flow)
+                flow = flow.followed(by: inner.flow)
             }
 
             try handedInPlace(
@@ -2015,6 +2039,10 @@ struct TypeChecker {
             )
 
             let rewritten = Call(selector: call.selector, arguments: arguments)
+
+            if mayFail {
+                flow.fail()
+            }
 
             return Inspection(
                 rewritten: .call(rewritten),
@@ -2115,10 +2143,11 @@ struct TypeChecker {
 
         // A loop answers its body's declared result, and null when it has none.
         // A round may run no time at all, so nothing a round writes is
-        // definite, and the leaves a round takes stop here, `break` and
-        // `continue` being the loop's own, so they are absorbed rather than
-        // handed on. A round also follows other rounds, so the condition and
-        // the body read the settled environment. The one the rounds' own writes
+        // definite. A `break` or a `continue` of this loop stops here, and the
+        // ways they took are absorbed rather than handed on; a `return`, or
+        // one naming a loop further out, goes on past it. A round also follows
+        // the rounds that finished or continued, so the condition and the body
+        // read the settled environment. The one the rounds' own writes
         // have already joined into. Readings that cycle instead of settling
         // would be widened to `any` behind the author's back. Judging says so
         // out loud, where a refusal can carry the reason; the probing ask stays
@@ -2131,6 +2160,7 @@ struct TypeChecker {
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let (seeded, probed, converged) = try await settled(
                 from: rounded(environment, as: round),
+                landing: { reach in reach.endsRound(of: round) },
                 meeting: meeting(at: place, in: context.loweredTypes, when: .probing)
             ) { entry -> (round: BodyWalk, flow: Flow) in
                 let walk = try await inspected(
@@ -2168,6 +2198,10 @@ struct TypeChecker {
             let rounds = ask.rewrites
                 ? try await inspected(body.body, at: place.child(.held).child(.body), in: seeded, with: context, ask: ask)
                 : probed
+
+            // The rounds as the loop ends them: the ways a `break` or a
+            // `continue` of this loop took meet the rounds that ran through.
+            let ended = try rounds.flow.absorbed(where: { reach in reach.endsLoop(round) }, meeting: meets)
 
             // The result runs once, at whichever exit the run takes (a
             // condition that declines at the start, a round that finishes or
@@ -2210,20 +2244,20 @@ struct TypeChecker {
                 // the body and the result alike.
                 flow: head.flow.followed(
                     by: try tail.map { tail in
-                        try rounds.flow.absorbed(meeting: meets).followed(by: tail.flow.outside(rounds.locals))
-                    } ?? rounds.flow.absorbed(meeting: meets)
+                        try ended.followed(by: tail.flow.outside(rounds.locals))
+                    } ?? ended
                 )
                 .outside(Set([round].compactMap { $0 }))
             )
 
         // The body and the rescue are two ways through, not a sequence. A body
         // that fails midway made some of its writes and the rescue runs then,
-        // so what either side wrote may be there, whichever way ran and however
-        // far it got. That is the environment the rescue reads as well as the
-        // one it writes. No write on either side is definite, and the leaving
-        // of either way says nothing about the whole: a body that always leaves
-        // can still fail before its leave, and the rescue may finish normally,
-        // so both sides' leaves are absorbed here, partial writes and all.
+        // so what the body did on its way through and on every way that failed
+        // may be there, whichever way ran and however far it got. That is the
+        // environment the rescue reads as well as the one it writes. No write
+        // on either side is definite. A way that left the body by a leave
+        // lands where the leave lands; what it did before a failure is on the
+        // way that failed.
         case let .attempt(block, rescue, failure):
             // What the rescue is there for. A body nothing can fail out of
             // leaves it a body no run reaches, and the author wrote it
@@ -2247,11 +2281,16 @@ struct TypeChecker {
                 with: context,
                 ask: ask
             )
-            let meets = meeting(at: place, in: context.loweredTypes, when: ask)
+            // The body as the attempt ends it: the ways a failure took meet the
+            // way through, and the rescue reads where any of them stood.
+            let failed = try attempted.flow.absorbed(
+                where: { reach in reach == .failure },
+                meeting: meeting(at: place, in: context.loweredTypes, when: ask)
+            )
             let rescued = try await inspected(
                 block: rescue,
                 at: place.child(.rescue),
-                in: try caught(soaking: attempted.flow, failure: failure, in: environment, with: context, meeting: meets),
+                in: try caught(soaking: failed, failure: failure, in: environment, with: context),
                 with: context,
                 ask: ask
             )
@@ -2265,9 +2304,9 @@ struct TypeChecker {
                 reading: attempted.reading.joined(rescued.reading),
                 // The failure is bound in the rescue alone. The body reads
                 // the names around the attempt.
-                flow: try attempted.flow.absorbed(meeting: meets).joined(
-                    with: try rescued.flow.absorbed(meeting: meets).outside(Set([failure].compactMap { $0 })),
-                    meeting: meets
+                flow: try failed.joined(
+                    with: rescued.flow.outside(Set([failure].compactMap { $0 })),
+                    meeting: meeting(at: place, in: context.loweredTypes, when: ask)
                 )
             )
         }
@@ -2385,22 +2424,7 @@ struct TypeChecker {
             // time the next one reads it, and bubbles outward, except through
             // the names this body declared itself.
             inner.flow.apply(to: &environment)
-
-            for (name, write) in inner.flow.written where !locals.contains(name) {
-                flowed.land(write, on: name)
-            }
-
-            for (name, type) in inner.flow.escaped where !locals.contains(name) {
-                flowed.escape(type, on: name)
-            }
-
-            for (name, type) in inner.flow.held where !locals.contains(name) {
-                flowed.hold(type, on: name)
-            }
-
-            for name in inner.flow.read where !locals.contains(name) {
-                flowed.read.insert(name)
-            }
+            flowed = flowed.followed(by: inner.flow.outside(locals))
 
             // A write reads the names its path indexes with.
             if case let .assignment(path)? = statement.binding {
@@ -2408,8 +2432,6 @@ struct TypeChecker {
                     flowed.read.insert(name)
                 }
             }
-
-            flowed.answered += inner.flow.answered
 
             // A statement no run comes back from ends the ways through this
             // body. What was written on the way to it leaves with it. One
@@ -2436,14 +2458,16 @@ struct TypeChecker {
                 }
 
                 // Judging refused anything after this statement above, so
-                // what is handed back is exactly what was walked.
+                // what is handed back is exactly what was walked. A call that
+                // never comes back ends its way the only way one can, by
+                // failing.
                 return (
                     ask.rewrites ? rewritten : body,
                     calls,
                     judgements,
                     environment,
                     .never,
-                    flowed.leaving(),
+                    flowed.leaving(to: .failure),
                     locals
                 )
             }
@@ -2569,12 +2593,11 @@ struct TypeChecker {
         soaking flow: Flow,
         failure: Name?,
         in environment: [Name: Binding],
-        with context: TypingContext,
-        meeting: Flow.Meeting
-    ) rethrows -> [Name: Binding] {
+        with context: TypingContext
+    ) -> [Name: Binding] {
         var caught = environment
 
-        try flow.absorbed(meeting: meeting).apply(to: &caught)
+        flow.apply(to: &caught)
 
         if let failure {
             caught[failure] = Binding(.fixed(declared: nil), FailurePayload.declared.lowered(in: context.loweredTypes))
@@ -2596,22 +2619,23 @@ struct TypeChecker {
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
         from entry: [Name: Binding],
+        landing lands: (Flow.Reach) -> Bool,
         meeting: Flow.Meeting,
         read: ([Name: Binding]) async throws -> (round: Round, flow: Flow)
     ) async rethrows -> (environment: [Name: Binding], last: Round, converged: Bool) {
         var seeded = entry
         var (last, flow) = try await read(seeded)
+        var absorbed = Flow()
         var steps = 0
 
         while true {
             var next = entry
 
-            let absorbed = try flow.absorbed(meeting: meeting)
-
+            absorbed = try flow.absorbed(where: lands, meeting: meeting)
             absorbed.apply(to: &next)
 
             guard next != seeded else { return (seeded, last, true) }
-            guard steps < 3 * max(1, absorbed.written.count) + 1 else { break }
+            guard steps < 3 * max(1, absorbed.going?.written.count ?? 0) + 1 else { break }
 
             steps += 1
             seeded = next
@@ -2620,7 +2644,7 @@ struct TypeChecker {
 
         var widened = entry
 
-        for name in try flow.absorbed(meeting: meeting).written.keys {
+        for name in (absorbed.going?.written ?? [:]).keys {
             widened[name] = Binding(.assigned, .any)
         }
 

@@ -7,32 +7,66 @@
 
 import Foundation
 
-// What ran inside an expression may have written the enclosing names. The one
-// thing a nested body does that the body around it has to know about, because
-// a write is to a box the enclosing body holds. A flow gathers those writes
-// with the one distinction the reading after needs: whether every finishing
-// way through made the write. A definite write retypes the name; an
-// indefinite one joins with what the name held. It gathers the boxes held
-// here the same way, which no later write retypes.
+// What ran inside an expression may have written the enclosing names or taken
+// their boxes. The one thing a nested body does that the body around it has to
+// know about, because a write is to a box the enclosing body holds. A flow
+// holds the way that goes on past the expression, and the ways that left it,
+// each kept by where its leave lands until the construct it lands at takes it
+// back.
 struct Flow {
     // Where ways that each held one box meet: what the box is held to after,
-    // given the name and the type each way held it to. Which type fits both is
-    // a judgement of types, and the walk that asks for a meeting makes it.
+    // given the name and the type each way held it to. Which type that is is a
+    // judgement of types, and the walk that asks for a meeting makes it.
     typealias Meeting = (Name, LoweredType, LoweredType) throws -> LoweredType
 
+    // Where a way that left lands: the procedure (`return`), the end of a
+    // loop (`break`), the end of a round (`continue`), each by the loop it
+    // names or nothing for the nearest, or the attempt around it (a failure).
+    enum Reach: Hashable {
+        case procedure
+        case loop(Name?)
+        case round(Name?)
+        case failure
+
+        // MARK: - Initializer
+        init(_ leave: Leave) {
+            switch leave.reach {
+            case .procedure: self = .procedure
+            case .construct: self = .loop(leave.target)
+            case .round: self = .round(leave.target)
+            }
+        }
+
+        // MARK: - Public
+        // Whether this ends a round of the loop under this name, which the
+        // next round starts from: a `continue` naming it, or naming none,
+        // which the nearest loop takes.
+        func endsRound(of loop: Name?) -> Bool {
+            guard case let .round(target) = self else { return false }
+
+            return target == nil || target == loop
+        }
+
+        // Whether this lands at the end of the loop under this name: a
+        // `break` naming it or none, and a round ended the same way, since
+        // the loop may end after it.
+        func endsLoop(_ loop: Name?) -> Bool {
+            guard case let .loop(target) = self else { return endsRound(of: loop) }
+
+            return target == nil || target == loop
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
-    var written: [Name: (type: LoweredType, definite: Bool)] = [:]
+    // The way that goes on past here, or nil where every way left.
+    var going: Way? = Way()
 
-    // What was written on ways that left. It flows past nothing here (no run
-    // comes back from a leave) but a `break` ends only its loop and an
-    // attempt's body only its attempt, so the construct that absorbs the leave
-    // puts these back in play. Nothing about an escaped write is ever certain,
-    // and the type says so by having no room for the claim. A flow that leaves
-    // holds everything it wrote here and nothing under `written`.
-    var escaped: [Name: LoweredType] = [:]
-
-    // Whether every way through leaves.
-    var leaves = false
+    // The ways that left, by where each lands. Each is the whole way from the
+    // start of the flow to its leave, so the construct a way lands at meets it
+    // with the ways that went on as they are.
+    var left: [Reach: [Way]] = [:]
 
     // What every `return` inside here carried out of the procedure, each with
     // the value it carried where that is a constant, and where it was written.
@@ -41,61 +75,44 @@ struct Flow {
     // that disagree join to `any`, and `any` fits everything.
     var answered: [(reading: LoweredType, value: Value?, place: Place)] = []
 
-    // The boxes a closure captured or a call handed in place here, each with
-    // the type it read as there, or the type it was already held to. A
-    // closure or a callee may read and write the box later as that type, so
-    // from here on every write to it is held to that type, on whichever way
-    // the box was taken. Taking a box already held says so again, so a round
-    // read where its earlier rounds held the box takes it the same way. A
-    // hold is what every taker asks of the box, so it never widens, and where
-    // two ways that held one box differently meet, the meeting says what it is
-    // held to after.
-    var held: [Name: LoweredType] = [:]
-
-    // What was held on ways that left. No later write on those ways runs, so
-    // nothing here holds one, but the construct that absorbs the leave puts
-    // these back in play, the way it puts what escaped back.
-    var escapedHeld: [Name: LoweredType] = [:]
-
     // The names read here that the body this flow came out of did not
     // declare. With what was written, what a closure takes from where it was
     // written.
     var read: Set<Name> = []
 
-    // Every name the flow reached from outside: read or written.
+    // Whether every way through leaves.
+    var leaves: Bool {
+        going == nil
+    }
+
+    // Every way, the one that goes on and the ones that left.
+    var ways: [Way] {
+        (going.map { going in [going] } ?? []) + left.values.flatMap { ways in ways }
+    }
+
+    // Every name the flow reached from outside: read or written, on any way.
     var reached: Set<Name> {
-        read.union(written.keys).union(escaped.keys)
+        ways.reduce(read) { reached, way in reached.union(way.written.keys) }
     }
 
     // MARK: - Initializer
     // MARK: - Public
-    // How a write lands on what an earlier write left. A definite write
-    // replaces; an indefinite one may not have happened, so it joins with what
-    // was there, and whether the name was written at all stays the earlier
-    // fact.
+    // A write on the way that goes on.
     mutating func land(_ later: (type: LoweredType, definite: Bool), on name: Name) {
-        guard let before = written[name], !later.definite else {
-            written[name] = later
-            return
-        }
-
-        written[name] = (before.type.joined(later.type), before.definite)
+        going?.land(later, on: name)
     }
 
-    // A box taken here, held to what it read as. One taken already stays
-    // held to what it was taken as first.
+    // A box taken on the way that goes on.
     mutating func hold(_ type: LoweredType, on name: Name) {
-        held[name] = held[name] ?? type
+        going?.hold(type, on: name)
     }
 
-    // What an operand read and took, carried by what holds it. An operand
-    // writes nothing.
-    mutating func carry(_ operand: Flow) {
-        read.formUnion(operand.read)
+    // The way that goes on may end here by a failure, which lands at the
+    // attempt around it with everything the way did so far.
+    mutating func fail() {
+        guard let going else { return }
 
-        for (name, type) in operand.held {
-            hold(type, on: name)
-        }
+        left[.failure, default: []].append(going)
     }
 
     // The same flow seen from outside a body that declared these names: what
@@ -103,182 +120,111 @@ struct Flow {
     func outside(_ locals: Set<Name>) -> Flow {
         var seen = self
 
-        seen.written = written.filter { name, _ in !locals.contains(name) }
-        seen.escaped = escaped.filter { name, _ in !locals.contains(name) }
-        seen.held = held.filter { name, _ in !locals.contains(name) }
-        seen.escapedHeld = escapedHeld.filter { name, _ in !locals.contains(name) }
+        seen.going = going?.outside(locals)
+        seen.left = left.mapValues { ways in ways.map { way in way.outside(locals) } }
         seen.read = read.subtracting(locals)
 
         return seen
     }
 
-    // A write made on a way that left.
-    mutating func escape(_ type: LoweredType, on name: Name) {
-        escaped[name] = escaped[name]?.joined(type) ?? type
-    }
-
-    // The same landing rule, on what the names around the flow hold. A box
+    // The way that goes on, on what the names around the flow hold. A box
     // that declared its type was checked where it was written, so a write into
-    // it changes nothing about what it holds. A box taken here holds what it
-    // was taken as from then on.
+    // it changes nothing about what it holds. A box taken holds what it was
+    // taken as from then on.
     func apply(to environment: inout [Name: Binding]) {
-        for (name, write) in written {
+        guard let going else { return }
+
+        for (name, write) in going.written {
             guard let current = environment[name], current.holding == .assigned else { continue }
 
             environment[name] = Binding(.assigned, write.definite ? write.type : current.type.joined(write.type))
         }
 
-        for (name, type) in held {
+        for (name, type) in going.held {
             guard let current = environment[name], current.holding == .assigned else { continue }
 
             environment[name] = Binding(.held(type), current.type)
         }
     }
 
-    // A way out took this flow with it: what it wrote is not the body's to hand
-    // on (no run comes back) but it is not gone either, because the writes are
-    // in the boxes and a loop or an attempt may absorb the leave. They move
-    // aside as escaped, indefinite because how far the way got is the run's
-    // fact, and so do the boxes it held.
-    func leaving() -> Flow {
+    // A way out took this flow with it: the way that went on left here, and
+    // lands where the leave lands.
+    func leaving(to reach: Reach) -> Flow {
         var left = self
 
-        left.leaves = true
-
-        for (name, write) in written {
-            left.escape(write.type, on: name)
+        if let going {
+            left.left[reach, default: []].append(going)
         }
 
-        for (name, type) in held {
-            left.escapedHeld[name] = left.escapedHeld[name] ?? type
-        }
-
-        left.written = [:]
-        left.held = [:]
+        left.going = nil
 
         return left
     }
 
-    // The construct the ways out stop at. A `break` ends only its loop and the
-    // flow after it goes on, so what escaped on the way is back in play, and
-    // nothing a construct absorbed is certain: the round may not have run, the
-    // body may have stopped anywhere. A leave that reaches further (a
-    // `return`) is over-counted here, which only widens a join and only
-    // narrows a hold. A box held on a way out meets the ways that went on.
-    func absorbed(meeting: Meeting) rethrows -> Flow {
-        var stopped = indefinite()
+    // The construct the ways that land here stop at. They go on from it with
+    // the way that went on through it, each met with the others, and nothing
+    // about any of them is certain: the construct may not have run, or may have
+    // stopped anywhere. Ways that land further out stay aside.
+    func absorbed(where lands: (Reach) -> Bool, meeting: Meeting) rethrows -> Flow {
+        var stopped = self
+        var going = self.going ?? Way()
 
-        stopped.leaves = false
+        for reach in left.keys where lands(reach) {
+            for way in left[reach] ?? [] {
+                going = try going.joined(with: way, meeting: meeting)
+            }
 
-        for (name, type) in stopped.escaped {
-            stopped.land((type, false), on: name)
+            stopped.left[reach] = nil
         }
 
-        for (name, type) in stopped.escapedHeld.sorted(by: { $0.key < $1.key }) {
-            stopped.held[name] = try stopped.held[name].map { going in try meeting(name, going, type) } ?? type
-        }
-
-        stopped.escaped = [:]
-        stopped.escapedHeld = [:]
+        stopped.going = going.indefinite()
 
         return stopped
     }
 
-    // One thing ran after another: each later write lands by the landing
-    // rule, what escaped keeps riding for the construct that absorbs it, and a
-    // sequence whose tail leaves leaves, everything written on the way going
-    // with it.
+    // One thing ran after another. The way that goes on goes through both; a
+    // way that left the second went through the first on its way out.
     func followed(by second: Flow) -> Flow {
-        guard !leaves else { return self }
+        guard let first = going else { return self }
 
         var flowed = self
 
-        for (name, later) in second.written {
-            flowed.land(later, on: name)
+        flowed.going = second.going.map { later in first.followed(by: later) }
+
+        for (reach, ways) in second.left {
+            flowed.left[reach, default: []] += ways.map { way in first.followed(by: way) }
         }
 
-        for (name, type) in second.escaped {
-            flowed.escape(type, on: name)
-        }
-
-        for (name, type) in second.escapedHeld {
-            flowed.escapedHeld[name] = flowed.escapedHeld[name] ?? type
-        }
-
-        flowed.carry(second)
         flowed.answered += second.answered
-
-        return second.leaves ? flowed.leaving() : flowed
-    }
-
-    // One of two ways ran. A name both wrote holds either; a name one wrote may
-    // not have been written at all, so nothing about it is definite. A way
-    // that leaves hands on nothing (the ways that finish are the only ways a
-    // reading after can stand on) but what it wrote and held rides along as
-    // escaped, for the construct that absorbs the leave. A box both ways that
-    // go on held is held to what the meeting says.
-    func joined(with declined: Flow, meeting: Meeting) rethrows -> Flow {
-        var flowed = Flow()
-
-        for side in [escaped, declined.escaped] {
-            for (name, type) in side {
-                flowed.escape(type, on: name)
-            }
-        }
-
-        for side in [escapedHeld, declined.escapedHeld] {
-            for (name, type) in side {
-                flowed.escapedHeld[name] = flowed.escapedHeld[name] ?? type
-            }
-        }
-
-        flowed.answered = answered + declined.answered
-        flowed.read = read.union(declined.read)
-        flowed.held = held
-
-        for (name, theirs) in declined.held.sorted(by: { $0.key < $1.key }) {
-            flowed.held[name] = try held[name].map { mine in try meeting(name, mine, theirs) } ?? theirs
-        }
-
-        switch (leaves, declined.leaves) {
-        // A leaving flow holds its writes as escaped alone, gathered above.
-        case (true, true):
-            flowed.leaves = true
-
-        case (true, false):
-            flowed.written = declined.written
-
-        case (false, true):
-            flowed.written = written
-
-        case (false, false):
-            for name in Set(written.keys).union(declined.written.keys) {
-                switch (written[name], declined.written[name]) {
-                case let (mine?, theirs?):
-                    flowed.written[name] = (mine.type.joined(theirs.type), mine.definite && theirs.definite)
-
-                case let (mine?, nil):
-                    flowed.written[name] = (mine.type, false)
-
-                case let (nil, theirs?):
-                    flowed.written[name] = (theirs.type, false)
-
-                case (nil, nil):
-                    break
-                }
-            }
-        }
+        flowed.read.formUnion(second.read)
 
         return flowed
     }
 
-    // The writes of a body that may not have run, or not run to its end.
-    func indefinite() -> Flow {
-        var indefinite = self
+    // One of two ways ran. The ways that go on meet; the ways that left stay
+    // apart, each by where it lands.
+    func joined(with declined: Flow, meeting: Meeting) rethrows -> Flow {
+        var flowed = Flow()
 
-        indefinite.written = written.mapValues { write in (write.type, false) }
+        switch (going, declined.going) {
+        case let (mine?, theirs?):
+            flowed.going = try mine.joined(with: theirs, meeting: meeting)
 
-        return indefinite
+        case let (mine?, nil):
+            flowed.going = mine
+
+        case let (nil, theirs?):
+            flowed.going = theirs
+
+        case (nil, nil):
+            flowed.going = nil
+        }
+
+        flowed.left = left.merging(declined.left) { mine, theirs in mine + theirs }
+        flowed.answered = answered + declined.answered
+        flowed.read = read.union(declined.read)
+
+        return flowed
     }
 
     // MARK: - Private
