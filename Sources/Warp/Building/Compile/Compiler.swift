@@ -236,7 +236,8 @@ struct Compiler {
             numbering: numbering,
             const: constant,
             isolated: untouched,
-            taking: taking,
+            taking: { selector in own[selector] ?? behind.declared(selector)?.signature },
+            contractProcedures: Set(behind.contractProcedures.keys),
             concealing: behind.concealed
         )
 

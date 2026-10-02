@@ -173,6 +173,33 @@ struct ProcedureSendsTests {
         // MARK: - Private
     }
 
+    // Sends a contract's procedure, which no declaration wears.
+    private struct TellingQuery: Query {
+        typealias Parameters = NoParameters
+
+        enum Imports: Int, ImportSet {
+            case describe
+
+            // MARK: - Property
+            var selector: Name { "app.Describable.describe" }
+
+            var handing: Int { 1 }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            try await question.send(.describe, handing: [["balance": .int(1)]])
+        }
+
+        // MARK: - Private
+    }
+
     // Claims it answers without running, and sends something that runs.
     private struct ShoutingQuery: Query {
         typealias Parameters = NoParameters
@@ -450,6 +477,38 @@ struct ProcedureSendsTests {
         ]
     )
 
+    private static let telling = try! Module(
+        procedures: [
+            "app.telling": Procedure(
+                signature: Signature(of: TellingQuery.self, returns: .string),
+                implementation: .query(TellingQuery())
+            )
+        ]
+    )
+
+    // A contract, a type answering it, and the declaration that answers.
+    private static let describing = try! Module(
+        types: ["bank.Account": .record(["balance": .int])],
+        contracts: [
+            "app.Describable": [
+                "describe": ContractProcedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string),
+                    constness: .const,
+                    isolation: .isolated
+                )
+            ]
+        ],
+        claims: ["bank.Account": ["app.Describable"]],
+        procedures: [
+            "bank.Account.describe": Procedure(
+                access: .public,
+                signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                body: [],
+                result: .literal(.string("an account"))
+            )
+        ]
+    )
+
     private static let contradicting = try! Module(
         procedures: [
             "app.shouting": Procedure(
@@ -629,6 +688,32 @@ struct ProcedureSendsTests {
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("sends 'app.nowhere', which no module in this link declares")
+        }
+    }
+
+    @Test("a procedure sending a contract's procedure is refused at the build")
+    func aSendNamingAContractsProcedureIsRefused() async throws {
+        // Given. `app.telling` sends `app.Describable.describe`, which the
+        // contract declares and no declaration wears
+        let describing = try await Builder().compile([Self.describing])
+
+        // When / Then. Built together, and compiled against the contract
+        let together = await #expect(throws: BuildError.self) {
+            try await Builder().build(
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), Self.describing, Self.telling]
+                    + Module.standard
+            )
+        }
+        let against = await #expect(throws: BuildError.self) {
+            try await Builder().compile([Self.telling], against: describing, supplying: Supplying([Self.telling]))
+        }
+
+        for refusal in [together, against] {
+            #expect(
+                refusal?.message == "sends 'app.Describable.describe', which is a contract's procedure. A send names"
+                    + " the declaration it reaches, and which declaration answers a contract's procedure is a"
+                    + " call's first argument to say"
+            )
         }
     }
 
