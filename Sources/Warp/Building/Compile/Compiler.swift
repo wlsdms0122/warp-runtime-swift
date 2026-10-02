@@ -250,8 +250,7 @@ struct Compiler {
             const: constant,
             isolated: untouched,
             taking: taking,
-            concealing: behind.concealed,
-            in: loweredTypes
+            concealing: behind.concealed
         )
 
         // This document's block of the table, in name order. What a

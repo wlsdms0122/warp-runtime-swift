@@ -44,24 +44,19 @@ struct Sending {
     // The spellings only another document's private declarations wear.
     private let concealed: Set<Name>
 
-    // What the declared parameters are read as, so a count is held to them.
-    private let loweredTypes: LoweredTypeTable
-
     // MARK: - Initializer
     init(
         numbering: Numbering,
         const: @escaping @Sendable (Name) -> Bool,
         isolated: @escaping @Sendable (Name) -> Bool,
         taking: @escaping @Sendable (Name) -> Signature?,
-        concealing concealed: Set<Name>,
-        in loweredTypes: LoweredTypeTable
+        concealing concealed: Set<Name>
     ) {
         self.numbering = numbering
         self.const = const
         self.isolated = isolated
         self.taking = taking
         self.concealed = concealed
-        self.loweredTypes = loweredTypes
     }
 
     // MARK: - Public
