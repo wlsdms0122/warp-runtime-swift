@@ -2655,19 +2655,18 @@ struct TypeChecker {
         return (widened, settled, false)
     }
 
-    // Where ways that each held one box meet. A write after the meeting has
-    // to fit what every way's taker asked, so the box is held to the narrower
-    // of the two types where one accepts the other. Where neither does, no
-    // write after could fit both, and that is refused here.
+    // Where ways that each held one box meet. A taker on either way was
+    // judged against the type its way held, and goes on writing that type
+    // after the meeting, so the two ways agree only where they held the box
+    // to one type. Anything else is refused here.
     private func meeting(at place: Place, in table: LoweredTypeTable, when ask: Ask) -> Flow.Meeting {
         { name, one, other in
-            if one.accepts(other, in: table) { return other }
-            if other.accepts(one, in: table) { return one }
+            guard one != other else { return one }
 
             try refuse(
                 "takes '\(name)' as \(one.rendered(in: table)) one way and as"
-                    + " \(other.rendered(in: table)) another, and no write after the two"
-                    + " meet could fit both",
+                    + " \(other.rendered(in: table)) another, and a taker on each way goes"
+                    + " on writing its own type after the two meet",
                 at: place,
                 when: ask
             )
