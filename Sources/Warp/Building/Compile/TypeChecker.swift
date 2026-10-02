@@ -2160,7 +2160,7 @@ struct TypeChecker {
             let climbing = meeting(at: place, in: context.loweredTypes, when: .probing)
             let (seeded, probed, converged) = try await settled(
                 from: rounded(environment, as: round),
-                starting: { flow in try earlier(flow, of: round, meeting: climbing) }
+                start: { flow in try flow.start(of: round, meeting: climbing) }
             ) { entry -> (round: BodyWalk, flow: Flow) in
                 let walk = try await inspected(
                     body.body,
@@ -2201,11 +2201,11 @@ struct TypeChecker {
             // The loop as it ends: it may run no round, or end after a round
             // that finished, broke or continued. Every way it hands further
             // out went through the rounds before the one it left from.
-            let before = try earlier(rounds.flow, of: round, meeting: meets)
+            let start = try rounds.flow.start(of: round, meeting: meets)
             let (stopped, outward) = try rounds.flow.gathered(where: { reach in reach.endsLoop(round) }, meeting: meets)
-            var ended = outward.preceded(by: before)
+            var ended = outward.preceded(by: start)
 
-            ended.going = try stopped.map { stopped in try before.joined(with: stopped, meeting: meets) } ?? before
+            ended.going = try stopped.map { stopped in try start.joined(with: stopped, meeting: meets) } ?? start
 
             // The result runs once, at whichever exit the run takes (a
             // condition that declines at the start, a round that finishes or
@@ -2630,22 +2630,22 @@ struct TypeChecker {
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
         from entry: [Name: Binding],
-        starting start: (Flow) throws -> Way,
+        start starting: (Flow) throws -> Way,
         read: ([Name: Binding]) async throws -> (round: Round, flow: Flow)
     ) async rethrows -> (environment: [Name: Binding], last: Round, converged: Bool) {
         var seeded = entry
         var (last, flow) = try await read(seeded)
-        var starting = Way()
+        var start = Way()
         var steps = 0
 
         while true {
             var next = entry
 
-            starting = try start(flow)
-            starting.apply(to: &next)
+            start = try starting(flow)
+            start.apply(to: &next)
 
             guard next != seeded else { return (seeded, last, true) }
-            guard steps < 3 * max(1, starting.written.count) + 1 else { break }
+            guard steps < 3 * max(1, start.written.count) + 1 else { break }
 
             steps += 1
             seeded = next
@@ -2654,7 +2654,7 @@ struct TypeChecker {
 
         var widened = entry
 
-        for name in starting.written.keys {
+        for name in start.written.keys {
             widened[name] = Binding(.assigned, .any)
         }
 
@@ -2683,20 +2683,6 @@ struct TypeChecker {
 
             return one
         }
-    }
-
-    // What a round of a loop starts from, after none or more rounds before
-    // it: the entry, or where a round finished or continued, none of it
-    // certain.
-    private func earlier(_ rounds: Flow, of loop: Name?, meeting: Flow.Meeting) throws -> Way {
-        let (continued, _) = try rounds.gathered(where: { reach in reach.endsRound(of: loop) }, meeting: meeting)
-        var start = Way()
-
-        for way in [rounds.going, continued].compactMap({ way in way }) {
-            start = try start.joined(with: way, meeting: meeting)
-        }
-
-        return start.indefinite()
     }
 
     // Whether a run may fail at this node itself, by the one judgement of it.

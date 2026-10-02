@@ -22,7 +22,9 @@ struct Flow {
     // Where a way that left lands: the procedure (`return`), the end of a
     // loop (`break`), the end of a round (`continue`), each by the loop it
     // names or nothing for the nearest, or the attempt around it (a failure).
-    enum Reach: Hashable {
+    // Ordered so ways landing at one construct meet in one order, and a
+    // refusal of their meeting names them the same way every build.
+    enum Reach: Hashable, Comparable {
         case procedure
         case loop(Name?)
         case round(Name?)
@@ -38,6 +40,21 @@ struct Flow {
         }
 
         // MARK: - Public
+        static func < (one: Reach, other: Reach) -> Bool {
+            guard one.rank == other.rank else { return one.rank < other.rank }
+
+            switch (one.target, other.target) {
+            case let (mine?, theirs?):
+                return mine < theirs
+
+            case (nil, _?):
+                return true
+
+            case (_, nil):
+                return false
+            }
+        }
+
         // Whether this ends a round of the loop under this name, which the
         // next round starts from: a `continue` naming it, or naming none,
         // which the nearest loop takes.
@@ -57,6 +74,24 @@ struct Flow {
         }
 
         // MARK: - Private
+        private var rank: Int {
+            switch self {
+            case .procedure: return 0
+            case .loop: return 1
+            case .round: return 2
+            case .failure: return 3
+            }
+        }
+
+        private var target: Name? {
+            switch self {
+            case let .loop(target), let .round(target):
+                return target
+
+            case .procedure, .failure:
+                return nil
+            }
+        }
     }
 
     // MARK: - Property
@@ -163,7 +198,7 @@ struct Flow {
         var rest = self
         var met: Way?
 
-        for reach in left.keys.sorted(by: { "\($0)" < "\($1)" }) where lands(reach) {
+        for reach in left.keys.sorted() where lands(reach) {
             for way in left[reach] ?? [] {
                 met = try met.map { met in try met.joined(with: way, meeting: meeting) } ?? way
             }
@@ -172,6 +207,20 @@ struct Flow {
         }
 
         return (met, rest)
+    }
+
+    // What a round of the loop under this name starts from, where this flow
+    // is one round of it, after none or more rounds before: the entry, or
+    // where a round finished or continued, none of it certain.
+    func start(of loop: Name?, meeting: Meeting) rethrows -> Way {
+        let (continued, _) = try gathered(where: { reach in reach.endsRound(of: loop) }, meeting: meeting)
+        var start = Way()
+
+        for way in [going, continued].compactMap({ way in way }) {
+            start = try start.joined(with: way, meeting: meeting)
+        }
+
+        return start.indefinite()
     }
 
     // The same flow after a way ran before it: every way through it went
