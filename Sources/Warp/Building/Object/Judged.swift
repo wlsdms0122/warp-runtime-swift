@@ -288,7 +288,18 @@ struct Judged: Sendable {
             // Each send reaches the number its document gave the spelling,
             // which a link answers with a row the way it answers a call's
             // number.
-            let sends = try numbering.sent(sending, by: label) { send in send.handing }
+            let sends: [Sent]
+
+            do {
+                sends = try numbering.sent(sending) { send in send.handing }
+            } catch let .misplaced(positions) as UnnumberedSend {
+                throw ObjectRefused(
+                    "'\(label)' sends procedures standing at \(positions), which is"
+                        + " not one procedure to a place from the first"
+                )
+            } catch let .unnumbered(selector) as UnnumberedSend {
+                throw ObjectRefused("'\(label)' sends '\(selector)', which its document numbers nowhere")
+            }
 
             guard let brought = supplied[label, at: document] else {
                 guard standing else { throw self.brought(nothing: document) }

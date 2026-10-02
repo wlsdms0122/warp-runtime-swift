@@ -72,32 +72,42 @@ struct Sending {
         let answersWithoutRunning = implementation.isNativelyConst == true
         let touchesNothingShared = implementation.isNativelyIsolated == true
 
-        return try numbering.sent(sends, by: label) { send in
-            guard let signature = taking(send.selector) else {
-                guard !concealed.contains(send.selector) else {
-                    throw BuildError.concealed(send.selector, at: place)
+        do {
+            return try numbering.sent(sends) { send in
+                guard let signature = taking(send.selector) else {
+                    guard !concealed.contains(send.selector) else {
+                        throw BuildError.concealed(send.selector, at: place)
+                    }
+
+                    throw BuildError("sends '\(send.selector)', which no module in this link declares", at: place)
                 }
 
-                throw BuildError("sends '\(send.selector)', which no module in this link declares", at: place)
-            }
+                guard !answersWithoutRunning || const(send.selector) else {
+                    throw BuildError(
+                        "'\(label)' answers without running and sends '\(send.selector)',"
+                            + " which answers only by running",
+                        at: place
+                    )
+                }
 
-            guard !answersWithoutRunning || const(send.selector) else {
-                throw BuildError(
-                    "'\(label)' answers without running and sends '\(send.selector)',"
-                        + " which answers only by running",
-                    at: place
-                )
-            }
+                guard !touchesNothingShared || isolated(send.selector) else {
+                    throw BuildError(
+                        "'\(label)' says it touches no name another body could touch at"
+                            + " the same time, and sends '\(send.selector)', which does",
+                        at: place
+                    )
+                }
 
-            guard !touchesNothingShared || isolated(send.selector) else {
-                throw BuildError(
-                    "'\(label)' says it touches no name another body could touch at"
-                        + " the same time, and sends '\(send.selector)', which does",
-                    at: place
-                )
+                return try handing(of: send, reaching: signature, called: label, at: place)
             }
-
-            return try handing(of: send, reaching: signature, called: label, at: place)
+        } catch let .misplaced(positions) as UnnumberedSend {
+            throw BuildError(
+                "'\(label)' sends procedures standing at \(positions), which is"
+                    + " not one procedure to a place from the first",
+                at: place
+            )
+        } catch let .unnumbered(selector) as UnnumberedSend {
+            throw BuildError("'\(label)' sends '\(selector)', and its document never asked for it", at: place)
         }
     }
 
