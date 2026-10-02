@@ -69,20 +69,13 @@ struct TypeChecker {
     // compound arm by arm into an exponential reading of nothing new.
     private enum Ask {
         // Judging carries which module the body being judged was declared
-        // in, where it was declared in one; a constant's expression has no
-        // module to read its variables by.
-        case judging(folding: Folding?, origin: Int? = nil, writing: Fulfillment? = nil)
+        // in, where it was declared in one (a constant's expression has no
+        // module to read its variables by), and where it writes down the
+        // pairs its calls lean on. Probing writes nothing.
+        case judging(folding: Folding?, origin: Int?, writing: Fulfillment)
         case probing
 
         // MARK: - Property
-        // Where a walk writes down the pairs its calls lean on. A walk that
-        // reads rather than judges has none, so a probe cannot write.
-        var fulfillment: Fulfillment? {
-            guard case let .judging(_, _, fulfillment) = self else { return nil }
-
-            return fulfillment
-        }
-
         // Whether this ask keeps what the walk rebuilds. Probing reads a body
         // out of place or more than once, so it hands the expression back as
         // written instead of paying for a copy nobody takes. In an expression
@@ -256,7 +249,7 @@ struct TypeChecker {
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, writing: fulfillment)
+            ask: .judging(folding: folding, origin: nil, writing: fulfillment)
         )
 
         return (inner.rewritten, inner.calls, inner.inPlace, inner.reading)
@@ -468,7 +461,7 @@ struct TypeChecker {
         to returns: TypeExpression?,
         at place: Place,
         in table: LoweredTypeTable,
-        fulfillment: Fulfillment?
+        fulfillment: Fulfillment
     ) throws {
         guard let returns else { return }
 
@@ -526,7 +519,7 @@ struct TypeChecker {
         mentions: [Name: [Name]],
         readings: [Name: LoweredType],
         in loweredTypes: LoweredTypeTable,
-        fulfillment: Fulfillment?,
+        fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
@@ -559,7 +552,7 @@ struct TypeChecker {
         answering: LoweredType?,
         readings sent: [LoweredType],
         in loweredTypes: LoweredTypeTable,
-        fulfillment: Fulfillment?,
+        fulfillment: Fulfillment,
         at place: Place
     ) -> Judgment {
         // A declaration with nothing to fill is read as the build lowered it.
@@ -644,13 +637,12 @@ struct TypeChecker {
         of path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
-        at place: Place,
-        writing fulfillment: Fulfillment?
+        at place: Place
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
 
         guard let head = path.head, let bound = environment[head] else {
-            return asWritten(path, in: environment, with: context, at: place, writing: fulfillment)
+            return asWritten(path, in: environment, with: context, at: place)
         }
 
         var current = bound.type
@@ -718,7 +710,7 @@ struct TypeChecker {
                 // step on the way (`held = of.inner`, then `held.count`) reads
                 // the same field.
                 if let reached = current.reaching(rest()) {
-                    switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
+                    switch asWritten(rest(), in: environment, with: context, at: place) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -732,7 +724,7 @@ struct TypeChecker {
                 // stops. That the reading is unreachable is the leaving rules'
                 // fact, said where they are said.
                 if current == .never {
-                    switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
+                    switch asWritten(rest(), in: environment, with: context, at: place) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -753,7 +745,7 @@ struct TypeChecker {
                         break
                     }
 
-                    switch asWritten(rest(), in: environment, with: context, at: place, writing: fulfillment) {
+                    switch asWritten(rest(), in: environment, with: context, at: place) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -810,7 +802,7 @@ struct TypeChecker {
             // its own, judged like one, and the walk goes on with the element
             // type the way a literal index does.
             case let (.indexRef(inner, optionally), .array(element)):
-                switch indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
+                switch indexReference(inner, in: environment, with: context, at: place) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -829,7 +821,7 @@ struct TypeChecker {
             // entry the way a written key does. Absence follows the mark, the
             // rule every entry reading shares.
             case let (.indexRef(inner, optionally), .dictionary(entry)):
-                switch keyReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
+                switch keyReference(inner, in: environment, with: context, at: place) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -924,8 +916,7 @@ struct TypeChecker {
         _ path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
-        at place: Place,
-        writing fulfillment: Fulfillment?
+        at place: Place
     ) -> Writable {
         guard let head = path.head, let box = environment[head] else {
             return .refused("writes '\(path.rendered)', and its head is not a name here")
@@ -954,7 +945,7 @@ struct TypeChecker {
             }
 
             if case let .indexRef(inner, _) = segment {
-                if case let .refused(reason) = indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
+                if case let .refused(reason) = indexReference(inner, in: environment, with: context, at: place) {
                     return .refused(reason)
                 }
             }
@@ -1078,7 +1069,7 @@ struct TypeChecker {
         result: Expression?,
         at place: Place,
         in table: LoweredTypeTable,
-        fulfillment: Fulfillment?
+        fulfillment: Fulfillment
     ) throws {
         for one in answered {
             try held(one.reading, valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
@@ -1124,8 +1115,7 @@ struct TypeChecker {
         _ path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
-        at place: Place,
-        writing fulfillment: Fulfillment?
+        at place: Place
     ) -> PathReading {
         var judged: Path = []
 
@@ -1136,7 +1126,7 @@ struct TypeChecker {
                 continue
             }
 
-            switch indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
+            switch indexReference(inner, in: environment, with: context, at: place) {
             case let .refused(reason):
                 return .refused(reason)
 
@@ -1152,10 +1142,9 @@ struct TypeChecker {
         _ inner: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
-        at place: Place,
-        writing fulfillment: Fulfillment?
+        at place: Place
     ) -> IndexReading {
-        switch reading(of: inner, in: environment, with: context, at: place, writing: fulfillment) {
+        switch reading(of: inner, in: environment, with: context, at: place) {
         case let .refused(reason):
             return .refused(reason)
 
@@ -1181,10 +1170,9 @@ struct TypeChecker {
         _ inner: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
-        at place: Place,
-        writing fulfillment: Fulfillment?
+        at place: Place
     ) -> IndexReading {
-        switch reading(of: inner, in: environment, with: context, at: place, writing: fulfillment) {
+        switch reading(of: inner, in: environment, with: context, at: place) {
         case let .refused(reason):
             return .refused(reason)
 
@@ -1390,7 +1378,7 @@ struct TypeChecker {
         // data the moment it is read, so under a folding scope it is judged
         // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
-            switch reading(of: path, in: environment, with: context, at: place, writing: ask.fulfillment) {
+            switch reading(of: path, in: environment, with: context, at: place) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
 
@@ -1639,7 +1627,7 @@ struct TypeChecker {
             let declared = Set(procedure.signature.names)
             let outside = environment.filter { name, _ in !declared.contains(name) }
 
-            if case .judging = ask, let written = procedure.block {
+            if case let .judging(_, _, fulfillment) = ask, let written = procedure.block {
                 let inner = try await inspected(
                     block: written,
                     at: place.child(.closure),
@@ -1671,7 +1659,7 @@ struct TypeChecker {
                         to: held,
                         as: "writes '\(name)', which it captured, as",
                         in: context.loweredTypes,
-                        fulfillment: ask.fulfillment,
+                        fulfillment: fulfillment,
                         at: place.child(.closure)
                     ) {
                         throw BuildError(refusal, at: place.child(.closure))
@@ -1685,7 +1673,7 @@ struct TypeChecker {
                     result: inner.block.result,
                     at: place.child(.closure),
                     in: context.loweredTypes,
-                    fulfillment: ask.fulfillment
+                    fulfillment: fulfillment
                 )
 
                 body = inner.block
@@ -1790,7 +1778,7 @@ struct TypeChecker {
                 answers = .any
             }
 
-            guard case .judging = ask else {
+            guard case let .judging(_, _, fulfillment) = ask else {
                 return Inspection(rewritten: expression, reading: answers)
             }
 
@@ -1854,7 +1842,7 @@ struct TypeChecker {
                     naming: nil,
                     as: subject,
                     in: context.loweredTypes,
-                    writing: ask.fulfillment,
+                    writing: fulfillment,
                     at: place
                 )
 
@@ -2584,7 +2572,7 @@ struct TypeChecker {
                 continue
             }
 
-            if case let .refused(reason) = writable(path, in: environment, with: context, at: at, writing: ask.fulfillment) {
+            if case let .refused(reason) = writable(path, in: environment, with: context, at: at) {
                 try refuse("hands '\(path.rendered)' in place, and \(reason)", at: at, when: ask)
             }
         }
@@ -2615,15 +2603,17 @@ struct TypeChecker {
             return declared
         }
 
+        guard case let .judging(_, _, fulfillment) = ask else { return declared }
+
         if let refusal = refusal(
             holding: given,
             to: declared,
             as: "holds",
             in: context.loweredTypes,
-            fulfillment: ask.fulfillment,
+            fulfillment: fulfillment,
             at: place
         ) {
-            try refuse(refusal, at: place, when: ask)
+            throw BuildError(refusal, at: place)
         }
 
         return declared
@@ -2643,7 +2633,7 @@ struct TypeChecker {
         if path.segments.count == 1, let fixed {
             slot = fixed
         } else {
-            switch writable(path, in: environment, with: context, at: place, writing: ask.fulfillment) {
+            switch writable(path, in: environment, with: context, at: place) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
                 return
@@ -2663,15 +2653,17 @@ struct TypeChecker {
             return
         }
 
+        guard case let .judging(_, _, fulfillment) = ask else { return }
+
         if let refusal = refusal(
             holding: written,
             to: slot,
             as: "writes '\(path.rendered)' as",
             in: context.loweredTypes,
-            fulfillment: ask.fulfillment,
+            fulfillment: fulfillment,
             at: place
         ) {
-            try refuse(refusal, at: place, when: ask)
+            throw BuildError(refusal, at: place)
         }
     }
 
@@ -2788,7 +2780,7 @@ struct TypeChecker {
         naming slots: [Slot]?,
         as subject: String,
         in loweredTypes: LoweredTypeTable,
-        writing fulfillment: Fulfillment?,
+        writing fulfillment: Fulfillment,
         at place: Place
     ) throws {
         try refuseCount(handing: arguments.count, taking: types.count, as: subject, at: place)
