@@ -37,6 +37,7 @@ public struct Validator: Sendable {
                 expression,
                 naming: nil,
                 visible: constants,
+                variables: [],
                 scope: .procedure(bound: bound),
                 at: .constant(name.spelling, in: .of(module))
             )
@@ -58,6 +59,7 @@ public struct Validator: Sendable {
                 variable.start,
                 naming: nil,
                 visible: constants,
+                variables: [],
                 scope: .procedure(bound: bound),
                 at: .variable(name.spelling, in: .of(module))
             )
@@ -233,8 +235,8 @@ public struct Validator: Sendable {
     private func validate(
         _ body: Body,
         visible startVisible: Set<Name>,
-        variables startVariables: Set<Name> = [],
-        scope: Scope = .procedure,
+        variables startVariables: Set<Name>,
+        scope: Scope,
         at place: Place
     ) throws -> (visible: Set<Name>, variables: Set<Name>) {
         var visible = startVisible
@@ -350,8 +352,8 @@ public struct Validator: Sendable {
         _ expression: Expression,
         naming name: Name?,
         visible: Set<Name>,
-        variables: Set<Name> = [],
-        scope: Scope = .procedure,
+        variables: Set<Name>,
+        scope: Scope,
         at place: Place
     ) throws {
         switch expression {
@@ -603,8 +605,8 @@ public struct Validator: Sendable {
     private func validate(
         _ block: Block,
         visible: Set<Name>,
-        variables: Set<Name> = [],
-        scope: Scope = .procedure,
+        variables: Set<Name>,
+        scope: Scope,
         at place: Place
     ) throws {
         let inner = try validate(
