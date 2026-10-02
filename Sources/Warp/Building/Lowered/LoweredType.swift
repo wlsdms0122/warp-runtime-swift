@@ -870,9 +870,14 @@ indirect enum LoweredType: Sendable, Equatable {
             return true
 
         // A record under a name is that name, so two names are two types
-        // however alike. Every other name is what it names.
+        // however alike, unless both name one declared record. Every other
+        // name is what it names.
         case let (.named(mine), .named(theirs)):
             guard mine != theirs else { return true }
+
+            if let myRecord = table.recordRows[mine], let theirRecord = table.recordRows[theirs] {
+                return myRecord == theirRecord
+            }
 
             return table.recordRows[mine] == nil
                 && table.recordRows[theirs] == nil

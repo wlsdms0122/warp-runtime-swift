@@ -2668,10 +2668,10 @@ struct TypeChecker {
     // Where ways that each held one box meet. A taker on either way was
     // judged against the type its way held, and goes on writing that type
     // after the meeting, so the two ways agree only where they held the box
-    // to one type. Anything else is refused here.
+    // to one type, names resolved. Anything else is refused here.
     private func meeting(at place: Place, in table: LoweredTypeTable, when ask: Ask) -> Flow.Meeting {
         { name, one, other in
-            guard one != other else { return one }
+            guard !one.same(other, in: table) else { return one }
 
             try refuse(
                 "takes '\(name)' as \(one.rendered(in: table)) one way and as"
