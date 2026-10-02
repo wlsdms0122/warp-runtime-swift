@@ -200,19 +200,17 @@ final class Relocating {
             place: .procedure(row.label.spelling, in: documents[row.origin]),
             typeRows: typeRows[row.origin]
         )
-        let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: context)) }
+        switch row.implementation {
+        case let .body(body, frame):
+            return Linked(row, implementation: .body(try filled(body, in: context), frame))
 
-        guard case let .body(body, frame) = row.implementation else {
-            guard sends != row.sends else { return row }
+        case let .native(native, sends):
+            let reached = try sends.map { sent in sent.reaching(try self.row(sent.row, in: context)) }
 
-            return Linked(row, implementation: row.implementation, sends: sends)
+            guard reached != sends else { return row }
+
+            return Linked(row, implementation: .native(native, sends: reached))
         }
-
-        return Linked(
-            row,
-            implementation: .body(try filled(body, in: context), frame),
-            sends: sends
-        )
     }
 
     // Which row of this link a document's number stands for. The reading is

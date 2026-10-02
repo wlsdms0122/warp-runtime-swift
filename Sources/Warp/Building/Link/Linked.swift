@@ -21,7 +21,11 @@ import Foundation
 public final class Linked: Sendable {
     enum Implementation: Sendable {
         case body(LoweredBody, Frame)
-        case native(Native)
+
+        // The sends the procedure declared, in the places it names them at:
+        // the row each reaches and where what it hands over stands. A body's
+        // sends are calls its own code carries.
+        case native(Native, sends: [Sent])
     }
 
     // MARK: - Property
@@ -70,11 +74,6 @@ public final class Linked: Sendable {
     // so a run that is handed one asks whether it was made by the same link.
     let table: LoweredTypeTable
 
-    // The sends this row's procedure declared, in the places the procedure names them
-    // at: the row each reaches and where what it hands over stands. Empty for a
-    // body, whose sends are calls its own code carries.
-    let sends: [Sent]
-
     let implementation: Implementation
 
     // Whether a fold may run this. A body is read from the text an object is
@@ -93,7 +92,15 @@ public final class Linked: Sendable {
     var folding: Linked {
         guard !foldable else { return self }
 
-        return Linked(self, implementation: .native(.query(UnfoldableProcedure(label))), sends: sends)
+        return Linked(self, implementation: .native(.query(UnfoldableProcedure(label)), sends: sends))
+    }
+
+    // The sends a native declared, which a call it makes reaches by place.
+    // A body names none.
+    var sends: [Sent] {
+        guard case let .native(_, sends) = implementation else { return [] }
+
+        return sends
     }
 
     // Whether this row is a written body.
@@ -114,7 +121,6 @@ public final class Linked: Sendable {
         failing: Failing,
         implementation: Implementation,
         foldable: Bool,
-        sends: [Sent] = [],
         closure: (by: Closure.Declaration, nth: Int)? = nil,
         in table: LoweredTypeTable
     ) {
@@ -132,7 +138,6 @@ public final class Linked: Sendable {
         self.returns = returns
         self.failing = failing
         self.table = table
-        self.sends = sends
         self.implementation = implementation
         self.foldable = foldable
     }
@@ -156,7 +161,6 @@ public final class Linked: Sendable {
         self.returns = row.returns
         self.failing = row.failing
         self.table = table
-        self.sends = row.sends
         self.implementation = row.implementation
         self.foldable = row.foldable
     }
@@ -165,7 +169,7 @@ public final class Linked: Sendable {
     // signature is the signature's, and neither lowering a body nor answering
     // the numbers in one touches the signature, so the slots are carried over
     // rather than worked out again.
-    init(_ row: Linked, implementation: Implementation, sends: [Sent]) {
+    init(_ row: Linked, implementation: Implementation) {
         self.label = row.label
         self.origin = row.origin
         self.closure = row.closure
@@ -177,7 +181,6 @@ public final class Linked: Sendable {
         self.returns = row.returns
         self.failing = row.failing
         self.table = row.table
-        self.sends = sends
         self.implementation = implementation
         self.foldable = row.foldable
     }
@@ -208,9 +211,8 @@ public final class Linked: Sendable {
             constness: const ? .const : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
-            implementation: .native(native ?? .query(UnsettledProcedure())),
+            implementation: .native(native ?? .query(UnsettledProcedure()), sends: sends),
             foldable: native == nil || builtin,
-            sends: sends,
             in: table
         )
     }
@@ -259,8 +261,7 @@ public final class Linked: Sendable {
 
         return Linked(
             self,
-            implementation: .body(try body.rewritten(operation: { operation in operation }, type: answer), frame),
-            sends: sends
+            implementation: .body(try body.rewritten(operation: { operation in operation }, type: answer), frame)
         )
     }
 
@@ -279,7 +280,7 @@ public final class Linked: Sendable {
 
             return reach
 
-        case .native:
+        case let .native(_, sends):
             return (sends.map(\.row), [])
         }
     }

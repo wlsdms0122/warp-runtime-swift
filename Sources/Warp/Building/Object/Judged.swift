@@ -104,7 +104,7 @@ struct Judged: Sendable {
         case let .body(body, frame):
             implementation = .body(body, frame)
 
-        case let .native(procedure):
+        case let .native(procedure, _):
             implementation = .native(sending: procedure.sending)
         }
 
@@ -282,7 +282,7 @@ struct Judged: Sendable {
     ) throws -> Linked {
         switch implementation {
         case let .body(body, frame):
-            return row(.body(body, frame), of: origin, closure: closure, foldable: true, sends: [], in: table)
+            return row(.body(body, frame), of: origin, closure: closure, foldable: true, in: table)
 
         case let .native(sending):
             // Each send reaches the number its document gave the spelling,
@@ -311,13 +311,7 @@ struct Judged: Sendable {
                     ? .query(UnbroughtQuery(label))
                     : .effect(UnbroughtEffect(label))
 
-                return row(
-                    .native(standIn),
-                    of: origin,
-                    foldable: true,
-                    sends: sends,
-                    in: table
-                )
+                return row(.native(standIn, sends: sends), of: origin, foldable: true, in: table)
             }
 
             // A procedure declares its own constness, isolation, failing and the
@@ -335,7 +329,7 @@ struct Judged: Sendable {
                 throw self.brought(otherwise: brought, sending: sending, in: document)
             }
 
-            return row(.native(brought.native), of: origin, foldable: brought.builtin, sends: sends, in: table)
+            return row(.native(brought.native, sends: sends), of: origin, foldable: brought.builtin, in: table)
         }
     }
 
@@ -344,7 +338,6 @@ struct Judged: Sendable {
         of origin: Int,
         closure: (by: Closure.Declaration, nth: Int)? = nil,
         foldable: Bool,
-        sends: [Sent],
         in table: LoweredTypeTable
     ) -> Linked {
         Linked(
@@ -357,7 +350,6 @@ struct Judged: Sendable {
             failing: failing,
             implementation: implementation,
             foldable: foldable,
-            sends: sends,
             closure: closure,
             in: table
         )

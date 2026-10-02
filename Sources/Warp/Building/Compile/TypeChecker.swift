@@ -2958,7 +2958,7 @@ struct TypeChecker {
             try query.validate(Question(arguments: constants))
         }
 
-        if case let .native(.query(query))? = context.declared(call.selector)?.implementation {
+        if case let .native(.query(query), _)? = context.declared(call.selector)?.implementation {
             var constants: [Name: Value] = [:]
 
             for (slot, argument) in zip(slots, call.arguments) {

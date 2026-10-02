@@ -449,7 +449,7 @@ struct Lowering {
         standing[declared.origin, default: Standing()].types.formUnion(slots.types)
         standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
 
-        table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame), sends: declared.sends)
+        table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
     }
 
     // A document's own declarations by row, as they were held.
