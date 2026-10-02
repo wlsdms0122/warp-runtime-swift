@@ -12,24 +12,30 @@ import Foundation
 // A variable is a box: one that declared its type holds that type through
 // every write, and one that did not holds what its last write put in it.
 //
-// Beside what the name reads as stands the type a slot declared it holds,
-// where one did, which is what a call of the value the name holds leans on.
-// A type the build worked out is a reading and declares nothing.
+// How the name is held says what a slot declared it holds, where one did,
+// which is what a call of the value the name holds leans on. A type the build
+// worked out is a reading and declares nothing.
 //
 // `Statement.Binding` is what a statement does to its name; this is what the
 // name stands as afterwards.
 struct Binding: Equatable, Sendable {
-    // How a write meets the name.
+    // How a write meets the name, and what a slot declared it holds.
     enum Holding: Equatable, Sendable {
-        // No write lands on it.
-        case fixed
+        // No write lands on it. A parameter, and a constant that declared its
+        // type or was read from a name a slot declared, hold what that slot
+        // declared.
+        case fixed(declared: LoweredType?)
 
-        // Every write is held to its type: a variable that declared one, a
-        // parameter handed in place, and a module variable, which holds the
-        // type it started as where it declared none.
-        case declared
+        // A box every write is held to the type a slot declared: a variable
+        // that wrote one, a parameter handed in place, and a module variable
+        // that declared one.
+        case declared(LoweredType)
 
-        // Every write retypes it.
+        // A box every write is held to the type its start settled as, which
+        // nothing declared: a module variable that wrote no type.
+        case started
+
+        // A box every write retypes.
         case assigned
     }
 
@@ -40,18 +46,45 @@ struct Binding: Equatable, Sendable {
     let type: LoweredType
 
     // The type a slot declared the name holds, or nil where none did.
-    let declaredType: LoweredType?
+    var declaredType: LoweredType? {
+        switch holding {
+        case let .fixed(declared):
+            return declared
+
+        case let .declared(declared):
+            return declared
+
+        case .started, .assigned:
+            return nil
+        }
+    }
+
+    // The type every write to the name is held to, or nil where a write
+    // retypes it or none lands.
+    var heldType: LoweredType? {
+        switch holding {
+        case let .declared(declared):
+            return declared
+
+        case .started:
+            return type
+
+        case .fixed, .assigned:
+            return nil
+        }
+    }
 
     // Whether a write may land on the name at all.
     var isBox: Bool {
-        holding != .fixed
+        if case .fixed = holding { return false }
+
+        return true
     }
 
     // MARK: - Initializer
-    init(_ holding: Holding, _ type: LoweredType, declaredType: LoweredType? = nil) {
+    init(_ holding: Holding, _ type: LoweredType) {
         self.holding = holding
         self.type = type
-        self.declaredType = declaredType
     }
 
     // A parameter as the body holds it: one handed in place is the caller's
@@ -60,12 +93,12 @@ struct Binding: Equatable, Sendable {
     init(parameter declared: LoweredType) {
         switch declared {
         case let .inout(inner):
-            self.init(.declared, inner.slotUnwrapped, declaredType: inner.slotUnwrapped)
+            self.init(.declared(inner.slotUnwrapped), inner.slotUnwrapped)
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .nullable,
             .named, .parameter, .composition, .projection, .undeclared:
-            self.init(.fixed, declared, declaredType: declared)
+            self.init(.fixed(declared: declared), declared)
         }
     }
 
@@ -73,7 +106,7 @@ struct Binding: Equatable, Sendable {
     // The same name held the same way, reading as what the transform makes
     // of what it read as.
     func map(_ transform: (LoweredType) -> LoweredType) -> Binding {
-        Binding(holding, transform(type), declaredType: declaredType)
+        Binding(holding, transform(type))
     }
 
     // MARK: - Private

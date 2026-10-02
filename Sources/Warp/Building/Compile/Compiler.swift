@@ -77,12 +77,15 @@ struct Compiler {
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             signature.environment(in: loweredTypes)
-                .merging(typedConstants.mapValues { constant in Binding(.fixed, constant.type) }) { _, constant in
+                .merging(typedConstants.mapValues { constant in Binding(.fixed(declared: nil), constant.type) }) { _, constant in
                     constant
                 }
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
-                        held[entry.key] = Binding(.declared, entry.value.type, declaredType: declaredVariables[entry.key])
+                        held[entry.key] = Binding(
+                            declaredVariables[entry.key].map(Binding.Holding.declared) ?? .started,
+                            entry.value.type
+                        )
                     }
                 ) { _, variable in variable }
         }
@@ -412,7 +415,7 @@ struct Compiler {
                 let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { constant in Binding(.fixed, constant.type) },
+                    in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -476,7 +479,7 @@ struct Compiler {
                 let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
                     in: variable.start,
                     at: place,
-                    in: known.mapValues { constant in Binding(.fixed, constant.type) },
+                    in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
                     with: context,
                     folding: nil,
                     writing: fulfillment

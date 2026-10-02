@@ -2373,17 +2373,15 @@ struct TypeChecker {
             case let .constant(id, declared)?:
                 locals.insert(id)
                 environment[id] = Binding(
-                    .fixed,
-                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask),
-                    declaredType: declaredType
+                    .fixed(declared: declaredType),
+                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
                 )
 
             case let .variable(id, declared)?:
                 locals.insert(id)
                 environment[id] = Binding(
-                    declared == nil ? .assigned : .declared,
-                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask),
-                    declaredType: declaredType
+                    declaredType.map(Binding.Holding.declared) ?? .assigned,
+                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
                 )
 
             // A write to a whole variable retypes it, the way a declaration
@@ -2395,11 +2393,11 @@ struct TypeChecker {
                 guard let id = path.head else { break }
 
                 switch environment[id] {
-                case let binding? where binding.holding == .declared:
+                case let binding? where binding.heldType != nil:
                     try refuseUnfit(
                         inner.reading,
                         writtenTo: path,
-                        holding: binding.type,
+                        holding: binding.heldType,
                         in: environment,
                         with: context,
                         at: here,
@@ -2469,7 +2467,7 @@ struct TypeChecker {
     ) -> [Name: Binding] {
         guard let round else { return environment }
 
-        return environment.merging([round: Binding(.fixed, Self.roundType)]) { _, new in new }
+        return environment.merging([round: Binding(.fixed(declared: nil), Self.roundType)]) { _, new in new }
     }
 
     // The environment a rescue stands in: the entry, soaked with what the body
@@ -2486,7 +2484,7 @@ struct TypeChecker {
         flow.absorbed().apply(to: &caught)
 
         if let failure {
-            caught[failure] = Binding(.fixed, FailurePayload.declared.lowered(in: context.loweredTypes))
+            caught[failure] = Binding(.fixed(declared: nil), FailurePayload.declared.lowered(in: context.loweredTypes))
         }
 
         return caught
