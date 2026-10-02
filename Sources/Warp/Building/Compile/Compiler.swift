@@ -51,9 +51,9 @@ struct Compiler {
             variable.declared?.lowered(in: loweredTypes)
         }
 
-        // The constants with what each reads as: what seeds the environment a
-        // body is judged in, and what a body binds where it reads one at an
-        // index the run settles.
+        // The constants with what each reads as, the type its expression was
+        // judged at: what seeds the environment a body is judged in, and what
+        // a body binds where it reads one at an index the run settles.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
@@ -121,7 +121,7 @@ struct Compiler {
 
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
-                // type of the value it will fold to.
+                // type the constant's expression was judged at.
                 let (rewritten, gathered, inPlace) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
@@ -283,7 +283,7 @@ struct Compiler {
         //
         // The context is read before the lowering is handed over, since one of
         // the tables a context stands on is the lowering this writes into.
-        constants = try await self.constants(
+        typedConstants = try await self.constants(
             of: module,
             at: origin,
             folding: compiling.folding(),
@@ -292,13 +292,13 @@ struct Compiler {
             in: context()
         )
 
-        typedConstants = constants.mapValues { value in (value: value, type: LoweredType(of: value, in: loweredTypes)) }
+        constants = typedConstants.mapValues(\.value)
         compiling.lowering.settle(constants: typedConstants, of: origin)
 
         variables = try await self.variables(
             of: module,
             at: origin,
-            beside: constants,
+            beside: typedConstants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
             leaning: fulfillment,
@@ -373,9 +373,10 @@ struct Compiler {
     }
 
     // MARK: - Private
-    // A document's constants, settled. They are evaluated here because there is
-    // nothing about them left for a run to do: a constant sees no scope, so what
-    // it will be is knowable the moment the document is read.
+    // A document's constants, settled, each beside the type its expression was
+    // judged at. They are evaluated here because there is nothing about them
+    // left for a run to do: a constant sees no scope, so what it will be is
+    // knowable the moment the document is read.
     //
     // One may name another declared beside it, so they are settled in the order
     // they read each other and that order is worked out first. What is wrong
@@ -388,7 +389,7 @@ struct Compiler {
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
         in context: TypingContext
-    ) async throws -> [Name: Value] {
+    ) async throws -> [Name: (value: Value, type: LoweredType)] {
         // Folding runs what it reads, and running reads rows. A lowered body
         // carries its document's own numbers, so the table handed here is one
         // that says which row each of those numbers stands for.
@@ -398,7 +399,7 @@ struct Compiler {
         // this writes into is one of the tables a context is read off.
         guard !module.constants.isEmpty else { return [:] }
 
-        var known: [Name: Value] = [:]
+        var known: [Name: (value: Value, type: LoweredType)] = [:]
 
         // Handed over with what each one reads, so nothing looks a name
         // back up in the table the order was read from. Everything this one
@@ -411,11 +412,12 @@ struct Compiler {
                 // A constant's dots are judged before it settles, the way a
                 // body's are: the settled neighbours' types are the
                 // environment, so an absent field or a needless `?.` refuses
-                // here by the one rule, and carries its own place.
-                let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
+                // here by the one rule, and carries its own place. What it
+                // was judged to hold is the type it is read as.
+                let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in Binding(.fixed, LoweredType(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { constant in Binding(.fixed, constant.type) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -433,12 +435,14 @@ struct Compiler {
                 try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
 
                 do {
-                    known[name] = try await Folding(
-                        constants: known,
+                    let value = try await Folding(
+                        constants: known.mapValues(\.value),
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
                     ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
+
+                    known[name] = (value, reading)
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -459,7 +463,7 @@ struct Compiler {
     private func variables(
         of module: Module,
         at origin: Int,
-        beside known: [Name: Value],
+        beside known: [Name: (value: Value, type: LoweredType)],
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
@@ -473,10 +477,10 @@ struct Compiler {
             let place = Place.variable(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
-                let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
+                let (judged, calls, inPlace, _) = try await TypeChecker().resolvedSites(
                     in: variable.start,
                     at: place,
-                    in: known.mapValues { value in Binding(.fixed, LoweredType(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { constant in Binding(.fixed, constant.type) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -492,7 +496,7 @@ struct Compiler {
 
                 do {
                     settled = try await Folding(
-                        constants: known,
+                        constants: known.mapValues(\.value),
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
