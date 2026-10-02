@@ -1755,22 +1755,20 @@ struct TypeChecker {
             )
 
         // Which value is called is settled at the run, and what it answers is
-        // the slot's to say: a procedure type that wrote `returns` answers
-        // that, and one that wrote none opens to `any`. Its operands are data,
-        // held as operands below, and a variable handed in place is the slot's
-        // own type, so no write retypes anything and there is no flow to
-        // carry.
+        // the slot's to say under either ask: a procedure type that wrote
+        // `returns` answers that, and one that wrote none opens to `any`. Its
+        // operands are data, held as operands below, and a variable handed in
+        // place is the slot's own type, so no write retypes anything and there
+        // is no flow to carry.
         case let .apply(callee, arguments):
-            guard case .judging = ask else {
-                return Inspection(rewritten: expression, reading: .any)
-            }
-
             // One by one, because a loop over the values alone reports the
             // third operand from the place the first was.
-            try held(callee, asOperand: place.child(.callee), given: context, when: ask)
+            if case .judging = ask {
+                try held(callee, asOperand: place.child(.callee), given: context, when: ask)
 
-            for (position, argument) in arguments.enumerated() {
-                try held(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
+                for (position, argument) in arguments.enumerated() {
+                    try held(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
+                }
             }
 
             let called = try await inspected(
@@ -1784,6 +1782,17 @@ struct TypeChecker {
             // Read once, and every judgment below asks this reading: whether
             // it could be called, what it takes and what it answers.
             let callee = called.reading.slotUnwrapped.resolved(in: context.loweredTypes)
+            let answers: LoweredType
+
+            if case let .procedure(_, returns?, _, _) = callee {
+                answers = returns
+            } else {
+                answers = .any
+            }
+
+            guard case .judging = ask else {
+                return Inspection(rewritten: expression, reading: answers)
+            }
 
             // Null is not called through, the way it is not read through.
             if case .nullable = callee {
@@ -1850,14 +1859,6 @@ struct TypeChecker {
                 )
 
                 handed = parameters.indices.filter { position in parameters[position].isInout }
-            }
-
-            let answers: LoweredType
-
-            if case let .procedure(_, returns?, _, _) = callee {
-                answers = returns
-            } else {
-                answers = .any
             }
 
             inPlace.record(handed, at: place)
