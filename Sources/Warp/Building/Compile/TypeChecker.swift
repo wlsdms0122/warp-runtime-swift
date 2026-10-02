@@ -37,10 +37,9 @@ struct TypeChecker {
         case refusal(String)
     }
 
-    // Where a path walk ended: the path with every dot's meaning written into
-    // it and what the whole of it holds, or the refusal. One value for the two
-    // answers, because they are read off one walk. A second walk for the
-    // rewrite would be a second copy of the rules.
+    // Where a path walk ended: the path it judged, every segment as written,
+    // and what the whole of it holds, or the refusal. One value for the two
+    // answers, because they are read off one walk.
     private enum PathReading {
         case reads(Path, LoweredType)
         case refused(String)
@@ -59,7 +58,8 @@ struct TypeChecker {
     }
 
     // The two asks the one walk answers. Judging is the compile's own pass (every
-    // dot rewritten, every call gathered, every refusal thrown) and it happens
+    // dot judged, every constant-headed path folded, every call gathered, every
+    // refusal thrown) and it happens
     // once per site. Probing answers the type and flow questions alone and
     // refuses nothing (what cannot be read is `any`) because its askers read a
     // body out of place or more than once: an operand typed where it stands, a
@@ -93,11 +93,12 @@ struct TypeChecker {
         // MARK: - Private
     }
 
-    // One walk's answers: the expression with every dot's meaning written
-    // in, the sends gathered on the way, what it judged of each call of a
-    // value and each closure literal in it by where each stands, what the
-    // whole of it holds, and what it wrote to the names around it. The probing
-    // ask hands the expression back as written and gathers nothing.
+    // One walk's answers: the expression as judging leaves it (constant-headed
+    // paths folded, a closure literal's signature bounded), the sends gathered
+    // on the way, what it judged of each call of a value and each closure
+    // literal in it by where each stands, what the whole of it holds, and what
+    // it wrote to the names around it. The probing ask hands the expression
+    // back as written and gathers nothing.
     private struct Inspection {
         // MARK: - Property
         var rewritten: Expression
@@ -601,9 +602,8 @@ struct TypeChecker {
 
     // Walking a path through types the way the resolver walks it through
     // values. Each dot is judged by the type the walk has reached: a type
-    // with fields reads one, a type without them sends a procedure, and the
-    // judgment is spelled into the answered path (`key` for a read, `procedure` for
-    // a call) so a run never asks the value.
+    // with fields reads one, and a type without them has no name there to
+    // read, which is refused. The segments stand as written.
     //
     // A field the type does not declare is refused, `?.` or not. The type
     // proved the absence, and a spelling that reads expected absence does not
@@ -1364,8 +1364,7 @@ struct TypeChecker {
             )
 
         // A path names something that has to exist just as a selector does, so
-        // judging refuses what does not resolve, and the judgment is the
-        // rewrite that fixes what each dot means. A constant-headed path is
+        // judging refuses what does not resolve. A constant-headed path is
         // data the moment it is read, so under a folding scope it is judged
         // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
