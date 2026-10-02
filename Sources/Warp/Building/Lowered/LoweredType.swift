@@ -396,22 +396,23 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a dot reads on this: an entry, where this is a dictionary, whose
-    // names are data. Nil on anything else, where a dot reads a field or
-    // nothing.
-    func entry(in table: LoweredTypeTable) -> LoweredType? {
+    // What a dot reading this name reaches: an entry, where this is a
+    // dictionary, whose names are data, or the field a record type declares
+    // under the name, as what the field holds. Nil where a dot reaches
+    // nothing the type declares.
+    func dotted(_ name: Name, in table: LoweredTypeTable) -> LoweredType? {
         switch self {
         case let .dictionary(entry):
             return entry
 
         case let .named(row):
-            return table.loweredTypes[row].entry(in: table)
+            return table.loweredTypes[row].dotted(name, in: table)
 
         case let .variable(inner), let .inout(inner):
-            return inner.entry(in: table)
+            return inner.dotted(name, in: table)
 
         default:
-            return nil
+            return place(of: name, in: table)?.type.fieldUnwrapped
         }
     }
 

@@ -1733,9 +1733,9 @@ struct TypeChecker {
                 if case .assigned = bound { return nil }
 
                 return bound.type
-            }.filter { _, held in
-                held.isConstProcedure(in: context.loweredTypes) || held.isIsolatedProcedure(in: context.loweredTypes)
             }
+            let holding = procedure.signature.parameterTypes(in: context.loweredTypes)
+                .merging(captured) { own, _ in own }
 
             let const = body.map { block in
                 Derivation().isConst(
@@ -1743,10 +1743,7 @@ struct TypeChecker {
                     declaring: procedure.signature.ownedParameters,
                     given: context.isConst,
                     reading: reading,
-                    applying: procedure.signature.constProcedures(in: context.loweredTypes).merging(
-                        captured
-                            .filter { _, held in held.isConstProcedure(in: context.loweredTypes) }
-                    ) { own, _ in own },
+                    holding: holding,
                     taking: context.signature(of:),
                     in: context.loweredTypes
                 )
@@ -1756,10 +1753,7 @@ struct TypeChecker {
                     block,
                     declaring: declared,
                     given: context.isIsolated,
-                    applying: procedure.signature.isolatedProcedures(in: context.loweredTypes).merging(
-                        captured
-                            .filter { _, held in held.isIsolatedProcedure(in: context.loweredTypes) }
-                    ) { own, _ in own },
+                    holding: holding,
                     taking: context.signature(of:),
                     in: context.loweredTypes
                 )

@@ -36,17 +36,12 @@ public struct Signature: Sendable, Equatable {
         ProcedureType(parameters: parameters.map(\.declared), returns: returns)
     }
 
-    // The parameters asking for a procedure that answers without running,
-    // each with the type it lowers to, which is what a path from it walks. A
-    // body may apply a name standing in one and still answer without running.
-    // Judged on the type a parameter lowers to, the way every slot is.
-    func constProcedures(in table: LoweredTypeTable) -> [Name: LoweredType] {
-        procedures(asking: { type in type.isConstProcedure(in: table) }, in: table)
-    }
-
-    // The same, for the claim isolation reads.
-    func isolatedProcedures(in table: LoweredTypeTable) -> [Name: LoweredType] {
-        procedures(asking: { type in type.isIsolatedProcedure(in: table) }, in: table)
+    // Each parameter by its name, as the type it lowers to: what the slot
+    // says the name holds, which a path from it walks.
+    func parameterTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
+        lowered(in: table).reduce(into: [Name: LoweredType]()) { held, slot in
+            held[slot.name] = slot.type
+        }
     }
 
     // The parameters whose box is the body's own. One handed in place is the
@@ -263,11 +258,5 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
-    private func procedures(asking claim: (LoweredType) -> Bool, in table: LoweredTypeTable) -> [Name: LoweredType] {
-        lowered(in: table).reduce(into: [Name: LoweredType]()) { held, slot in
-            guard claim(slot.type) else { return }
 
-            held[slot.name] = slot.type
-        }
-    }
 }
