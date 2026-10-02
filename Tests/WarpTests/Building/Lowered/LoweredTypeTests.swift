@@ -76,6 +76,26 @@ struct LoweredTypeTests {
         #expect(read([.int, narrow]) == .int)
     }
 
+    @Test("a parameter no call fills stands where a slot takes it by its structure, and nowhere else")
+    func aRigidParameterStandsByStructure() {
+        // Given. A parameter its own declaration reads, which no call fills.
+        // `T?` is not written in a document, and a reading may still be one
+        let table = types.loweredTypes
+        let parameter = TypeExpression.parameter(name: "T").lowered(in: table)
+        let other = TypeExpression.parameter(name: "U").lowered(in: table)
+
+        // When / Then. A slot taking anything, its nullable, and an array of
+        // that take it
+        #expect(LoweredType.any.accepts(parameter, in: table, rigid: true))
+        #expect(LoweredType.nullable(parameter).accepts(parameter, in: table, rigid: true))
+        #expect(LoweredType.array(.nullable(parameter)).accepts(.array(parameter), in: table, rigid: true))
+
+        // Then. A type it may not be, and another parameter, do not
+        #expect(!LoweredType.int.accepts(parameter, in: table, rigid: true))
+        #expect(!LoweredType.nullable(.int).accepts(parameter, in: table, rigid: true))
+        #expect(!other.accepts(parameter, in: table, rigid: true))
+    }
+
     @Test("a name lowers to its row, and the row of the record it names is the chain's end")
     func aNameLowersToARow() throws {
         // Given

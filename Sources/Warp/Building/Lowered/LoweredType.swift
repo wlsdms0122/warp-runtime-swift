@@ -652,12 +652,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // know, so a slot of it takes only that same parameter. A call fills
         // the parameters of what it calls before it asks this. In the other
         // direction a parameter stands for some type, and a value of it is
-        // settled where it arrives, unless no call fills it.
+        // settled where it arrives, unless no call fills it: then only a slot
+        // taking it by its structure does, which the branches below answer.
         case let (.parameter(mine, _), .parameter(theirs, _)):
             return mine == theirs
 
-        case (_, .parameter):
-            return !rigid
+        case (_, .parameter) where !rigid:
+            return true
 
         case let (.parameter, .variable(inner)), let (.parameter, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming, rigid: rigid)
@@ -816,6 +817,12 @@ indirect enum LoweredType: Sendable, Equatable {
         // anything.
         case (.double, .int):
             return true
+
+        // A parameter no call fills, which no branch above took by its
+        // structure (`any`, a composition, a nullable or a name around it).
+        // Last, because a refusal any earlier would answer for those too.
+        case (_, .parameter):
+            return false
 
         default:
             return self == other
