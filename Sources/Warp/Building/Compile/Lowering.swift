@@ -300,11 +300,11 @@ struct Lowering {
     // Each document's constants, settled, with what each reads as.
     private var constants: [Int: [Name: (value: Value, type: LoweredType)]] = [:]
 
-    // The spellings of the private declarations held, and of the ones a
-    // compile is about to hold, for the refusal alone: not in `rows`, since
-    // nothing outside their documents names them, and read only after a row
-    // lookup has failed, to say why it did.
-    private(set) var concealed: Set<Name> = []
+    // The spellings only a private declaration wears, of every document this
+    // lowering holds, for the refusal alone: not in `rows`, since nothing
+    // outside their documents names them, and read only after a row lookup
+    // has failed, to say why it did.
+    let concealed: Set<Name>
 
     // How many closures each declaration has been lowered so far, by the
     // document that declared it. A closure's number is its declaration's start
@@ -315,10 +315,12 @@ struct Lowering {
     // MARK: - Initializer
     init(
         table: [Linked] = [],
+        concealing concealed: Set<Name> = [],
         contractProcedures: [Name: LoweredContractProcedure] = [:],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = table
+        self.concealed = concealed
         self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
     }
@@ -326,8 +328,7 @@ struct Lowering {
     // The documents already laid down, read against the table this compile is
     // asking with. Where a row stands and what number reaches it are the
     // documents' own and move for nothing laid after them, so only the rows
-    // are read again. `concealed` holds theirs and the ones the compile will
-    // hold.
+    // are read again.
     init(
         _ carried: Carried,
         concealing concealed: Set<Name>,
@@ -368,11 +369,7 @@ struct Lowering {
         for (offset, row) in block.enumerated() {
             own[row.label] = start + offset
 
-            guard row.access.reachesOtherDocuments else {
-                concealed.insert(row.label)
-
-                continue
-            }
+            guard row.access.reachesOtherDocuments else { continue }
 
             rows[row.label] = start + offset
         }

@@ -65,8 +65,10 @@ struct Compiling {
     }
 
     // MARK: - Initializer
-    // Nothing laid down yet.
+    // Nothing laid down yet, beside the private spellings of every document
+    // about to be laid down.
     init(
+        concealing concealed: Set<Name>,
         types: TypeTable,
         contractProcedures: [Name: LoweredContractProcedure],
         naming documents: [Place.Document],
@@ -77,6 +79,7 @@ struct Compiling {
         self.documents = documents
         self.naming = naming
         self.lowering = Lowering(
+            concealing: concealed,
             contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )

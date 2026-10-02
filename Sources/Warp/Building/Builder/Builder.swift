@@ -129,6 +129,7 @@ public struct Builder: Sendable {
         let lowered = try ClaimChecker().lowered(declaring, in: namespace, among: signatures)
 
         var compiling = Compiling(
+            concealing: assembled.concealed,
             types: lowered.types,
             contractProcedures: lowered.contractProcedures,
             naming: compiled.map(\.document),
