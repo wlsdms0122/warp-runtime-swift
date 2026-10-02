@@ -611,16 +611,9 @@ struct TypeChecker {
     ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var held: [Substitution.Held] = []
 
         for (slot, reading) in zip(slots, sent) {
-            slot.type.binding(
-                against: reading,
-                into: &bound,
-                disagreeing: &disagreeing,
-                holding: &held,
-                in: loweredTypes
-            )
+            slot.type.binding(against: reading, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
         }
 
         return Substitution(readings: bound, disagreeing: disagreeing)

@@ -61,10 +61,9 @@ struct LoweredTypeTests {
         func read(_ readings: [LoweredType]) -> LoweredType? {
             var bound: [Name: LoweredType] = [:]
             var disagreeing: [Name: LoweredType] = [:]
-            var holding: [Substitution.Held] = []
 
             for reading in readings {
-                parameter.binding(against: reading, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table)
+                parameter.binding(against: reading, into: &bound, disagreeing: &disagreeing, in: table)
             }
 
             return bound["T"]
