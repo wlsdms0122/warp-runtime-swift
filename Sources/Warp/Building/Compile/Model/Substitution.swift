@@ -34,11 +34,6 @@ struct Substitution: Sendable {
     // lets a refusal name them.
     let disagreeing: [Name: LoweredType]
 
-    // What arrived wherever a slot declared a composition, by slot. Nothing
-    // fills a composition and no name ties it to another slot, so it is
-    // judged where it stands rather than read.
-    let holding: [(slot: Name, held: Held)]
-
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private

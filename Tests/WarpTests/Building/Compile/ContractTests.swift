@@ -134,7 +134,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("sending 'app.Describable.describe' 2 arguments, and it takes 1")
+            "\(error)".contains("sending 'app.Describable.describe' with 2 arguments, and it takes 1")
         }
     }
 

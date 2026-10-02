@@ -28,10 +28,10 @@ import Foundation
 // the type the walk reached, and a dot on a type that declares no such field
 // is refused rather than left for the run.
 struct TypeChecker {
-    // The judgment every call shares. What the readings
-    // put in the declaration's type parameters is read once: a parameter read
-    // two ways is refused rather than folded, a bounded one is judged against
-    // its membership, and the declaration comes back with the readings filled.
+    // What a call put in a generic declaration's type parameters, read once:
+    // a parameter read two ways is refused rather than folded, a bounded one
+    // is judged against its membership, and the declaration comes back with
+    // the readings filled.
     private enum Judgment {
         case fits(slots: [Slot], returns: LoweredType?)
         case refusal(String)
@@ -556,17 +556,17 @@ struct TypeChecker {
         _ declared: Signature,
         over slots: [Slot],
         answering: LoweredType?,
-        filledWith substitution: Substitution,
+        readings sent: [LoweredType],
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment?,
         at place: Place
     ) -> Judgment {
-        // A declaration with nothing to fill and nothing to hold is read as
-        // the build lowered it. Lowering it again per call site is the same
-        // answer paid for again, and this is the site every call goes through.
-        guard declared.isGeneric || !substitution.holding.isEmpty else {
-            return .fits(slots: slots, returns: answering)
-        }
+        // A declaration with nothing to fill is read as the build lowered it.
+        // Lowering it again per call site is the same answer paid for again,
+        // and this is the site every call goes through.
+        guard declared.isGeneric else { return .fits(slots: slots, returns: answering) }
+
+        let substitution = substitution(over: slots, readings: sent, in: loweredTypes)
 
         guard substitution.disagreeing.isEmpty else {
             let named = substitution.disagreeing.keys.sorted().map { parameter in
@@ -593,23 +593,6 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        for (slot, held) in substitution.holding {
-            for bound in held.bounds {
-                if let refusal = refusal(
-                    of: held.reading,
-                    holdingTo: bound,
-                    as: "'\(slot)' holds",
-                    in: loweredTypes,
-                    fulfillment: fulfillment,
-                    at: place
-                ) {
-                    return .refusal(refusal)
-                }
-            }
-        }
-
-        guard declared.isGeneric else { return .fits(slots: slots, returns: answering) }
-
         return .fits(
             slots: declared.lowered(in: loweredTypes, filling: substitution.readings),
             returns: answering?.filling(substitution.readings)
@@ -627,11 +610,9 @@ struct TypeChecker {
     ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var holding: [(slot: Name, held: Substitution.Held)] = []
+        var held: [Substitution.Held] = []
 
         for (slot, reading) in zip(slots, sent) {
-            var held: [Substitution.Held] = []
-
             slot.type.binding(
                 against: reading,
                 into: &bound,
@@ -639,11 +620,9 @@ struct TypeChecker {
                 holding: &held,
                 in: loweredTypes
             )
-
-            holding += held.map { held in (slot: slot.name, held: held) }
         }
 
-        return Substitution(readings: bound, disagreeing: disagreeing, holding: holding)
+        return Substitution(readings: bound, disagreeing: disagreeing)
     }
 
     // Walking a path through types the way the resolver walks it through
@@ -1848,48 +1827,24 @@ struct TypeChecker {
             // and none where it does not.
             var handed: [Int] = []
 
-            // The arguments are handed by position the way a call's are, so
-            // a count the slot's type does not take is one no run could take,
-            // and an argument the slot's type refuses is refused here the way
-            // a call's is.
+            // The arguments are handed by position the way a call's are, and
+            // held to what the slot's type takes by the judgement a call to a
+            // declaration is held by.
             if case let .procedure(parameters?, _, _, _) = callee {
-                guard arguments.count == parameters.count else {
-                    throw BuildError(
-                        "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
-                            + " with \(arguments.count) arguments, and it takes \(parameters.count)",
-                        at: place.child(.arguments)
-                    )
-                }
-
                 try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
 
+                try check(
+                    rewritten,
+                    reading: readings,
+                    against: parameters,
+                    naming: nil,
+                    as: "calls a value of \(called.reading.rendered(in: context.loweredTypes))",
+                    in: context.loweredTypes,
+                    writing: ask.fulfillment,
+                    at: place
+                )
+
                 handed = parameters.indices.filter { position in parameters[position].isInout }
-
-                for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
-                where !parameter.accepts(reading, in: context.loweredTypes) {
-                    throw BuildError(
-                        "calls a value with \(reading.rendered(in: context.loweredTypes))"
-                            + " where it takes \(parameter.rendered(in: context.loweredTypes))",
-                        at: place.child(.argument(position))
-                    )
-                }
-
-                // A constant is settled here, through the gate the run would
-                // hold it to, since a kind that fits may still hold a value
-                // the slot's type refuses.
-                for (position, (parameter, argument)) in zip(parameters, arguments).enumerated() {
-                    guard let constant = argument.constantValue else { continue }
-
-                    do {
-                        _ = try parameter.slotUnwrapped.checking(
-                            constant,
-                            at: "argument \(position)",
-                            in: context.loweredTypes
-                        )
-                    } catch {
-                        throw BuildError("calls a value: \(error)", at: place.child(.argument(position)))
-                    }
-                }
             }
 
             let answers: LoweredType
@@ -2701,10 +2656,6 @@ struct TypeChecker {
         let call = site.call
         let loweredTypes = context.loweredTypes
 
-        if let refusal = declared.refusal(handing: call.arguments.count) {
-            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.child(.arguments))
-        }
-
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
         // refuse whatever arrived. The judgment (a parameter read two ways has
@@ -2715,19 +2666,13 @@ struct TypeChecker {
         // sides and on the way out is a whole number and a whole number
         // answering a whole number, and a whole number and a fraction refused,
         // without a way to declare a name twice.
-        let declaredSlots = context.slots(of: call.selector)
-
         let slots: [Slot]
 
         switch judged(
             declared,
-            over: declaredSlots,
+            over: context.slots(of: call.selector),
             answering: context.answer(of: call.selector),
-            filledWith: substitution(
-                over: declaredSlots,
-                readings: site.readings,
-                in: loweredTypes
-            ),
+            readings: site.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
             at: site.place
@@ -2742,21 +2687,16 @@ struct TypeChecker {
             slots = filled
         }
 
-        // An argument that needs a scope cannot be judged here. Only the ones
-        // that already are what they will be, each through the gate the run
-        // would hold it to.
-        for (position, (slot, argument)) in zip(slots, call.arguments).enumerated() {
-            guard let constant = argument.constantValue else { continue }
-
-            do {
-                _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
-            } catch {
-                throw BuildError(
-                    "sending '\(call.selector)': \(error)",
-                    at: site.place.child(.argument(position))
-                )
-            }
-        }
+        try check(
+            call.arguments,
+            reading: site.readings,
+            against: slots.map(\.type),
+            naming: slots,
+            as: "sending '\(call.selector)'",
+            in: loweredTypes,
+            writing: fulfillment,
+            at: site.place
+        )
 
         // A procedure may judge its own constant arguments before any run. A type
         // cannot say that a string a host parses is well formed, and the
@@ -2786,21 +2726,71 @@ struct TypeChecker {
                 )
             }
         }
+    }
 
-        // What an argument holds is read from the body it was written in, so a
-        // name bound to a call carries that call's declared answer. This is what
-        // makes declaring an answer worth anything before a run: both sides are
-        // declarations, and a declaration is text. The site carries the walk's
-        // readings, so nothing is walked again for the asking.
-        for (position, (slot, written)) in zip(slots, site.readings).enumerated() {
-            guard !slot.type.accepts(written, in: loweredTypes) else { continue }
-
+    // Each argument held to what the callee takes at its position: the one
+    // judgement a call to a declaration and a call of a value share. The
+    // count; every composition a position mentions, held to its bounds, with
+    // what leans on a claim this table cannot settle written down for the
+    // link; a constant, settled through the gate the run would hold it to,
+    // since a kind that fits may still hold a value the slot refuses; and
+    // what each position takes. What an argument holds is read from the body
+    // it was written in, so a name bound to a call carries that call's
+    // declared answer. A declaration's slots name each position and list what
+    // a constant there may be; a value's type writes the positions alone.
+    private func check(
+        _ arguments: [Expression],
+        reading readings: [LoweredType],
+        against types: [LoweredType],
+        naming slots: [Slot]?,
+        as subject: String,
+        in loweredTypes: LoweredTypeTable,
+        writing fulfillment: Fulfillment?,
+        at place: Place
+    ) throws {
+        guard arguments.count == types.count else {
             throw BuildError(
-                "sending '\(call.selector)' with \(slot.name),"
-                    + " which holds \(written.rendered(in: loweredTypes))"
-                    + " where \(slot.type.rendered(in: loweredTypes)) is declared",
-                at: site.place.child(.argument(position))
+                "\(subject) with \(arguments.count) arguments, and it takes \(types.count)",
+                at: place.child(.arguments)
             )
+        }
+
+        for (position, (type, (argument, reading))) in zip(types, zip(arguments, readings)).enumerated() {
+            let at = place.child(.argument(position))
+            let slot = slots?[position]
+            let named = slot.map { slot in "\(slot.name)" } ?? "argument \(position)"
+            let quoted = slot.map { slot in "'\(slot.name)'" } ?? named
+
+            if let refusal = refusal(
+                holding: reading,
+                to: type,
+                as: "\(quoted) holds",
+                in: loweredTypes,
+                fulfillment: fulfillment,
+                at: place
+            ) {
+                throw BuildError("\(subject): \(refusal)", at: place)
+            }
+
+            if let constant = argument.constantValue {
+                do {
+                    if let slot {
+                        _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
+                    } else {
+                        _ = try type.slotUnwrapped.checking(constant, at: named, in: loweredTypes)
+                    }
+                } catch {
+                    throw BuildError("\(subject): \(error)", at: at)
+                }
+            }
+
+            guard type.accepts(reading, in: loweredTypes) else {
+                throw BuildError(
+                    "\(subject) with \(named), which holds \(reading.rendered(in: loweredTypes))"
+                        + " where \(type.rendered(in: loweredTypes)) is declared",
+                    at: at
+                )
+            }
         }
     }
 }

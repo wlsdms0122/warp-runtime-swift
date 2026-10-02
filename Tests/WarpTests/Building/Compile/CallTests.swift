@@ -126,7 +126,7 @@ struct CallTests {
         await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'app.shout' 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'app.shout' with 2 arguments, and it takes 1")
         }
     }
 
@@ -143,7 +143,7 @@ struct CallTests {
         await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'app.shout' 0 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'app.shout' with 0 arguments, and it takes 1")
         }
     }
 
@@ -300,7 +300,7 @@ struct CallTests {
         await #expect {
             try await Builder().build([sut])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'callee' 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'callee' with 2 arguments, and it takes 1")
         }
     }
 
@@ -332,7 +332,7 @@ struct CallTests {
         await #expect {
             try await Builder().build([sut])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'callee' 0 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'callee' with 0 arguments, and it takes 1")
         }
     }
 
@@ -401,7 +401,7 @@ struct CallTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'std.math.absolute' 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'std.math.absolute' with 2 arguments, and it takes 1")
         }
     }
 
