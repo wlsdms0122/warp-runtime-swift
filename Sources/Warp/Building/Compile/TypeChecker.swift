@@ -28,10 +28,10 @@ import Foundation
 // the type the walk reached, and a dot on a type that declares no such field
 // is refused rather than left for the run.
 struct TypeChecker {
-    // The judgment every call shares. What the readings
-    // put in the declaration's type parameters is read once: a parameter read
-    // two ways is refused rather than folded, a bounded one is judged against
-    // its membership, and the declaration comes back with the readings filled.
+    // What a call put in a generic declaration's type parameters, read once:
+    // a parameter read two ways is refused rather than folded, a bounded one
+    // is judged against its membership, and the declaration comes back with
+    // the readings filled.
     private enum Judgment {
         case fits(slots: [Slot], returns: LoweredType?)
         case refusal(String)
@@ -241,7 +241,8 @@ struct TypeChecker {
         return (inner.block, inner.calls, inner.inPlace)
     }
 
-    // The expression form. A constant's body is one rather than a block.
+    // The expression form, with what it was judged to hold. A constant's body
+    // is one rather than a block.
     func resolvedSites(
         in expression: Expression,
         at place: Place,
@@ -249,7 +250,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (Expression, [CallSite], InPlaceTable) {
+    ) async throws -> (Expression, [CallSite], InPlaceTable, LoweredType) {
         let inner = try await inspected(
             expression,
             at: place,
@@ -258,7 +259,7 @@ struct TypeChecker {
             ask: .judging(folding: folding, writing: fulfillment)
         )
 
-        return (inner.rewritten, inner.calls, inner.inPlace)
+        return (inner.rewritten, inner.calls, inner.inPlace, inner.reading)
     }
 
     // Why a reading is provably outside one bound, or nothing where it is
@@ -556,17 +557,17 @@ struct TypeChecker {
         _ declared: Signature,
         over slots: [Slot],
         answering: LoweredType?,
-        filledWith substitution: Substitution,
+        readings sent: [LoweredType],
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment?,
         at place: Place
     ) -> Judgment {
-        // A declaration with nothing to fill and nothing to hold is read as
-        // the build lowered it. Lowering it again per call site is the same
-        // answer paid for again, and this is the site every call goes through.
-        guard declared.isGeneric || !substitution.holding.isEmpty else {
-            return .fits(slots: slots, returns: answering)
-        }
+        // A declaration with nothing to fill is read as the build lowered it.
+        // Lowering it again per call site is the same answer paid for again,
+        // and this is the site every call goes through.
+        guard declared.isGeneric else { return .fits(slots: slots, returns: answering) }
+
+        let substitution = substitution(over: slots, readings: sent, in: loweredTypes)
 
         guard substitution.disagreeing.isEmpty else {
             let named = substitution.disagreeing.keys.sorted().map { parameter in
@@ -593,23 +594,6 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        for (slot, held) in substitution.holding {
-            for bound in held.bounds {
-                if let refusal = refusal(
-                    of: held.reading,
-                    holdingTo: bound,
-                    as: "'\(slot)' holds",
-                    in: loweredTypes,
-                    fulfillment: fulfillment,
-                    at: place
-                ) {
-                    return .refusal(refusal)
-                }
-            }
-        }
-
-        guard declared.isGeneric else { return .fits(slots: slots, returns: answering) }
-
         return .fits(
             slots: declared.lowered(in: loweredTypes, filling: substitution.readings),
             returns: answering?.filling(substitution.readings)
@@ -627,23 +611,12 @@ struct TypeChecker {
     ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var holding: [(slot: Name, held: Substitution.Held)] = []
 
         for (slot, reading) in zip(slots, sent) {
-            var held: [Substitution.Held] = []
-
-            slot.type.binding(
-                against: reading,
-                into: &bound,
-                disagreeing: &disagreeing,
-                holding: &held,
-                in: loweredTypes
-            )
-
-            holding += held.map { held in (slot: slot.name, held: held) }
+            slot.type.binding(against: reading, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
         }
 
-        return Substitution(readings: bound, disagreeing: disagreeing, holding: holding)
+        return Substitution(readings: bound, disagreeing: disagreeing)
     }
 
     // Walking a path through types the way the resolver walks it through
@@ -1446,7 +1419,11 @@ struct TypeChecker {
                 do {
                     let value = try await folding.read(settled, at: place)
 
-                    return Inspection(rewritten: .literal(value), reading: LoweredType(of: value, in: context.loweredTypes))
+                    return Inspection(
+                        rewritten: .literal(value),
+                        reading: LoweredType(of: value, in: context.loweredTypes)
+                            .refined(by: read, fixed: true, in: context.loweredTypes)
+                    )
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
                 }
@@ -1472,7 +1449,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
                 element = element?.joined(inner.reading) ?? inner.reading
                 rewritten.append(inner.rewritten)
             }
@@ -1624,7 +1601,7 @@ struct TypeChecker {
                 inner.flow.apply(to: &environment)
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
                 fields[name] = inner.reading
                 rewritten[name] = inner.rewritten
             }
@@ -1726,6 +1703,7 @@ struct TypeChecker {
             // said about it, and its own parameters shadow any it captured.
             let bound = procedure.signature.environment(in: context.loweredTypes)
                 .merging(outside) { own, _ in own }
+                .compactMapValues(\.declaredType)
 
             let const = body.map { block in
                 Derivation().isConst(
@@ -1823,6 +1801,12 @@ struct TypeChecker {
                 )
             }
 
+            let subject = "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
+
+            if case let .procedure(parameters?, _, _, _) = callee {
+                try refuseCount(handing: arguments.count, taking: parameters.count, as: subject, at: place)
+            }
+
             var rewritten: [Expression] = []
             var calls = called.calls
             var inPlace = called.inPlace
@@ -1840,7 +1824,7 @@ struct TypeChecker {
                 rewritten.append(inner.rewritten)
                 readings.append(inner.reading)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -1848,48 +1832,24 @@ struct TypeChecker {
             // and none where it does not.
             var handed: [Int] = []
 
-            // The arguments are handed by position the way a call's are, so
-            // a count the slot's type does not take is one no run could take,
-            // and an argument the slot's type refuses is refused here the way
-            // a call's is.
+            // The arguments are handed by position the way a call's are, and
+            // held to what the slot's type takes by the judgement a call to a
+            // declaration is held by.
             if case let .procedure(parameters?, _, _, _) = callee {
-                guard arguments.count == parameters.count else {
-                    throw BuildError(
-                        "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
-                            + " with \(arguments.count) arguments, and it takes \(parameters.count)",
-                        at: place.child(.arguments)
-                    )
-                }
-
                 try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
 
+                try check(
+                    rewritten,
+                    reading: readings,
+                    against: parameters,
+                    naming: nil,
+                    as: subject,
+                    in: context.loweredTypes,
+                    writing: ask.fulfillment,
+                    at: place
+                )
+
                 handed = parameters.indices.filter { position in parameters[position].isInout }
-
-                for (position, (parameter, reading)) in zip(parameters, readings).enumerated()
-                where !parameter.accepts(reading, in: context.loweredTypes) {
-                    throw BuildError(
-                        "calls a value with \(reading.rendered(in: context.loweredTypes))"
-                            + " where it takes \(parameter.rendered(in: context.loweredTypes))",
-                        at: place.child(.argument(position))
-                    )
-                }
-
-                // A constant is settled here, through the gate the run would
-                // hold it to, since a kind that fits may still hold a value
-                // the slot's type refuses.
-                for (position, (parameter, argument)) in zip(parameters, arguments).enumerated() {
-                    guard let constant = argument.constantValue else { continue }
-
-                    do {
-                        _ = try parameter.slotUnwrapped.checking(
-                            constant,
-                            at: "argument \(position)",
-                            in: context.loweredTypes
-                        )
-                    } catch {
-                        throw BuildError("calls a value: \(error)", at: place.child(.argument(position)))
-                    }
-                }
             }
 
             let answers: LoweredType
@@ -1900,7 +1860,7 @@ struct TypeChecker {
                 answers = .any
             }
 
-            try inPlace.record(handed, at: place)
+            inPlace.record(handed, at: place)
 
             return Inspection(
                 rewritten: .apply(called.rewritten, arguments: rewritten),
@@ -1969,6 +1929,13 @@ struct TypeChecker {
                 )
             }
 
+            try refuseCount(
+                handing: call.arguments.count,
+                taking: signature.parameters.count,
+                as: "sending '\(call.selector)'",
+                at: place
+            )
+
             var arguments: [Expression] = []
             var sent: [LoweredType] = []
             var calls: [CallSite] = []
@@ -1986,7 +1953,7 @@ struct TypeChecker {
                 arguments.append(inner.rewritten)
                 sent.append(inner.reading)
                 calls += inner.calls
-                try inPlace.absorb(inner.inPlace)
+                inPlace.absorb(inner.inPlace)
             }
 
             try handedInPlace(
@@ -2063,7 +2030,7 @@ struct TypeChecker {
                         ? .conditional(head.rewritten, then: taken.body, else: nil)
                         : expression,
                     calls: head.calls + taken.calls,
-                    inPlace: try head.inPlace.absorbing(taken.inPlace),
+                    inPlace: head.inPlace.absorbing(taken.inPlace),
                     reading: .null,
                     flow: head.flow.followed(by: taken.flow.joined(with: Flow()))
                 )
@@ -2082,7 +2049,7 @@ struct TypeChecker {
                     ? .conditional(head.rewritten, then: taken.body, else: declined.body)
                     : expression,
                 calls: head.calls + taken.calls + declined.calls,
-                inPlace: try head.inPlace.absorbing(taken.inPlace, declined.inPlace),
+                inPlace: head.inPlace.absorbing(taken.inPlace, declined.inPlace),
                 reading: taken.reading == .never && declined.reading == .never ? .never : .null,
                 flow: head.flow.followed(by: taken.flow.joined(with: declined.flow))
             )
@@ -2159,8 +2126,8 @@ struct TypeChecker {
                 for (name, written) in rounds.environment {
                     if rounds.locals.contains(name) {
                         exit[name] = written.map { type in LoweredType.null.joined(type) }
-                    } else if case let .assigned(entry)? = seeded[name] {
-                        exit[name] = .assigned(entry.joined(written.type))
+                    } else if let entry = seeded[name], entry.holding == .assigned {
+                        exit[name] = Binding(.assigned, entry.type.joined(written.type))
                     }
                 }
 
@@ -2176,7 +2143,7 @@ struct TypeChecker {
                     )
                     : expression,
                 calls: head.calls + rounds.calls + (tail?.calls ?? []),
-                inPlace: try head.inPlace.absorbing(rounds.inPlace, tail?.inPlace),
+                inPlace: head.inPlace.absorbing(rounds.inPlace, tail?.inPlace),
                 reading: tail?.reading ?? .null,
                 flow: head.flow.followed(
                     by: tail.map { tail in
@@ -2229,7 +2196,7 @@ struct TypeChecker {
                     ? .attempt(attempted.block, rescue: rescued.block, failure: failure)
                     : expression,
                 calls: attempted.calls + rescued.calls,
-                inPlace: try attempted.inPlace.absorbing(rescued.inPlace),
+                inPlace: attempted.inPlace.absorbing(rescued.inPlace),
                 reading: attempted.reading.joined(rescued.reading),
                 flow: attempted.flow.absorbed().joined(with: rescued.flow.absorbed())
             )
@@ -2301,7 +2268,7 @@ struct TypeChecker {
                 ? Block(body: body.body, result: tail?.rewritten ?? block.result)
                 : block,
             body.calls + (tail?.calls ?? []),
-            try body.inPlace.absorbing(tail?.inPlace),
+            body.inPlace.absorbing(tail?.inPlace),
             reading,
             flow
         )
@@ -2341,7 +2308,7 @@ struct TypeChecker {
                 Statement(binding: statement.binding, expression: inner.rewritten)
             )
             calls += inner.calls
-            try inPlace.absorb(inner.inPlace)
+            inPlace.absorb(inner.inPlace)
 
             // A write outlives the block it was written in, so a name written
             // anywhere inside this statement may hold something else by the
@@ -2396,18 +2363,33 @@ struct TypeChecker {
                 )
             }
 
-            switch statement.binding {
             // A name that says what it holds holds that. One that says
             // nothing holds what the build worked out from what it was given.
+            // What a slot declared it holds is the derivation's to say, by the
+            // rule its own walk binds a name by.
+            let declaredType = statement.binding.flatMap { binding in
+                Derivation().declaredType(
+                    of: binding,
+                    reading: statement.expression,
+                    given: { name in environment[name]?.declaredType },
+                    in: context.loweredTypes
+                )
+            }
+
+            switch statement.binding {
             case let .constant(id, declared)?:
                 locals.insert(id)
-                environment[id] = .fixed(try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask))
+                environment[id] = Binding(
+                    .fixed(declared: declaredType),
+                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
+                )
 
             case let .variable(id, declared)?:
                 locals.insert(id)
-
-                let holds = try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
-                environment[id] = declared == nil ? .assigned(holds) : .declared(holds)
+                environment[id] = Binding(
+                    declaredType.map(Binding.Holding.declared) ?? .assigned,
+                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
+                )
 
             // A write to a whole variable retypes it, the way a declaration
             // did, unless the box's type is fixed elsewhere, in which case what
@@ -2418,20 +2400,20 @@ struct TypeChecker {
                 guard let id = path.head else { break }
 
                 switch environment[id] {
-                case let .declared(fixed)?:
+                case let binding? where binding.heldType != nil:
                     try refuseUnfit(
                         inner.reading,
                         writtenTo: path,
-                        holding: fixed,
+                        holding: binding.heldType,
                         in: environment,
                         with: context,
                         at: here,
                         when: ask
                     )
 
-                case .assigned?:
+                case let binding? where binding.holding == .assigned:
                     if path.segments.count == 1 {
-                        environment[id] = .assigned(inner.reading)
+                        environment[id] = Binding(.assigned, inner.reading)
 
                         if !locals.contains(id) {
                             flowed.land((inner.reading, true), on: id)
@@ -2452,7 +2434,7 @@ struct TypeChecker {
                         }
                     }
 
-                case .fixed?, nil:
+                default:
                     try refuse(
                         "writes '\(id)', which is not a variable here",
                         at: here,
@@ -2492,7 +2474,7 @@ struct TypeChecker {
     ) -> [Name: Binding] {
         guard let round else { return environment }
 
-        return environment.merging([round: .fixed(Self.roundType)]) { _, new in new }
+        return environment.merging([round: Binding(.fixed(declared: nil), Self.roundType)]) { _, new in new }
     }
 
     // The environment a rescue stands in: the entry, soaked with what the body
@@ -2509,7 +2491,7 @@ struct TypeChecker {
         flow.absorbed().apply(to: &caught)
 
         if let failure {
-            caught[failure] = .fixed(FailurePayload.declared.lowered(in: context.loweredTypes))
+            caught[failure] = Binding(.fixed(declared: nil), FailurePayload.declared.lowered(in: context.loweredTypes))
         }
 
         return caught
@@ -2550,7 +2532,7 @@ struct TypeChecker {
         var widened = entry
 
         for name in flow.absorbed().written.keys {
-            widened[name] = .assigned(.any)
+            widened[name] = Binding(.assigned, .any)
         }
 
         // One more look in the widened environment, so what is handed back
@@ -2700,10 +2682,10 @@ struct TypeChecker {
     ) throws {
         let call = site.call
         let loweredTypes = context.loweredTypes
+        let subject = "sending '\(call.selector)'"
 
-        if let refusal = declared.refusal(handing: call.arguments.count) {
-            throw BuildError("sending '\(call.selector)' \(refusal)", at: site.place.child(.arguments))
-        }
+        // Filling the type parameters reads the arguments by position too.
+        try refuseCount(handing: call.arguments.count, taking: declared.parameters.count, as: subject, at: site.place)
 
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
@@ -2715,19 +2697,13 @@ struct TypeChecker {
         // sides and on the way out is a whole number and a whole number
         // answering a whole number, and a whole number and a fraction refused,
         // without a way to declare a name twice.
-        let declaredSlots = context.slots(of: call.selector)
-
         let slots: [Slot]
 
         switch judged(
             declared,
-            over: declaredSlots,
+            over: context.slots(of: call.selector),
             answering: context.answer(of: call.selector),
-            filledWith: substitution(
-                over: declaredSlots,
-                readings: site.readings,
-                in: loweredTypes
-            ),
+            readings: site.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
             at: site.place
@@ -2742,21 +2718,16 @@ struct TypeChecker {
             slots = filled
         }
 
-        // An argument that needs a scope cannot be judged here. Only the ones
-        // that already are what they will be, each through the gate the run
-        // would hold it to.
-        for (position, (slot, argument)) in zip(slots, call.arguments).enumerated() {
-            guard let constant = argument.constantValue else { continue }
-
-            do {
-                _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
-            } catch {
-                throw BuildError(
-                    "sending '\(call.selector)': \(error)",
-                    at: site.place.child(.argument(position))
-                )
-            }
-        }
+        try check(
+            call.arguments,
+            reading: site.readings,
+            against: slots.map(\.type),
+            naming: slots,
+            as: subject,
+            in: loweredTypes,
+            writing: fulfillment,
+            at: site.place
+        )
 
         // A procedure may judge its own constant arguments before any run. A type
         // cannot say that a string a host parses is well formed, and the
@@ -2786,21 +2757,79 @@ struct TypeChecker {
                 )
             }
         }
+    }
 
-        // What an argument holds is read from the body it was written in, so a
-        // name bound to a call carries that call's declared answer. This is what
-        // makes declaring an answer worth anything before a run: both sides are
-        // declarations, and a declaration is text. The site carries the walk's
-        // readings, so nothing is walked again for the asking.
-        for (position, (slot, written)) in zip(slots, site.readings).enumerated() {
-            guard !slot.type.accepts(written, in: loweredTypes) else { continue }
+    // A call hands exactly as many arguments as its callee takes, so another
+    // count is refused before any position is read. Every judgement of a
+    // call by position stands behind it: the shared one asks it at its own
+    // entrance, and a walk asks it where the call stands, ahead of what it
+    // reads in place there, so the count is what an author is told first.
+    private func refuseCount(handing handed: Int, taking count: Int, as subject: String, at place: Place) throws {
+        guard handed != count else { return }
 
-            throw BuildError(
-                "sending '\(call.selector)' with \(slot.name),"
-                    + " which holds \(written.rendered(in: loweredTypes))"
-                    + " where \(slot.type.rendered(in: loweredTypes)) is declared",
-                at: site.place.child(.argument(position))
-            )
+        throw BuildError("\(subject) with \(handed) arguments, and it takes \(count)", at: place.child(.arguments))
+    }
+
+    // Each argument held to what the callee takes at its position: the one
+    // judgement a call to a declaration and a call of a value share. The
+    // count; every composition a position mentions, held to its bounds, with
+    // what leans on a claim this table cannot settle written down for the
+    // link; a constant, settled through the gate the run would hold it to,
+    // since a kind that fits may still hold a value the slot refuses; and
+    // what each position takes. What an argument holds is read from the body
+    // it was written in, so a name bound to a call carries that call's
+    // declared answer. A declaration's slots name each position and list what
+    // a constant there may be; a value's type writes the positions alone.
+    private func check(
+        _ arguments: [Expression],
+        reading readings: [LoweredType],
+        against types: [LoweredType],
+        naming slots: [Slot]?,
+        as subject: String,
+        in loweredTypes: LoweredTypeTable,
+        writing fulfillment: Fulfillment?,
+        at place: Place
+    ) throws {
+        try refuseCount(handing: arguments.count, taking: types.count, as: subject, at: place)
+
+        for (position, (type, (argument, reading))) in zip(types, zip(arguments, readings)).enumerated() {
+            let at = place.child(.argument(position))
+            let slot = slots?[position]
+            let named = slot.map { slot in "\(slot.name)" } ?? "argument \(position)"
+            let quoted = slot.map { slot in "'\(slot.name)'" } ?? named
+
+            // A pair the link settles is written down at the call, which an
+            // object records; a refusal here stands at the argument.
+            if let refusal = refusal(
+                holding: reading,
+                to: type,
+                as: "\(quoted) holds",
+                in: loweredTypes,
+                fulfillment: fulfillment,
+                at: place
+            ) {
+                throw BuildError("\(subject): \(refusal)", at: at)
+            }
+
+            if let constant = argument.constantValue {
+                do {
+                    if let slot {
+                        _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
+                    } else {
+                        _ = try type.slotUnwrapped.checking(constant, at: named, in: loweredTypes)
+                    }
+                } catch {
+                    throw BuildError("\(subject): \(error)", at: at)
+                }
+            }
+
+            guard type.accepts(reading, in: loweredTypes) else {
+                throw BuildError(
+                    "\(subject) with \(named), which holds \(reading.rendered(in: loweredTypes))"
+                        + " where \(type.rendered(in: loweredTypes)) is declared",
+                    at: at
+                )
+            }
         }
     }
 }

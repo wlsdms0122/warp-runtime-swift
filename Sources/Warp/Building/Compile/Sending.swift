@@ -134,9 +134,10 @@ struct Sending {
             return 0
         }
 
-        if let refusal = signature.refusal(handing: send.handing) {
+        guard send.handing == signature.parameters.count else {
             throw BuildError(
-                "'\(label)' sends '\(send.selector)' \(refusal)",
+                "'\(label)' sends '\(send.selector)' \(send.handing) arguments, and it takes"
+                    + " \(signature.parameters.count)",
                 at: place
             )
         }

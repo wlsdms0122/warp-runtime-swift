@@ -438,6 +438,52 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // A settled value's type with each procedure it holds read by the type
+    // the value's expression was judged at in that position (an element, an
+    // entry, a field). A procedure value says nothing about its signature, and
+    // the expression that made it wrote one; everything else is the value's.
+    // The constness and isolation the build derived are facts of the one
+    // value judged, so they come along only where the name holding it is
+    // `fixed` and keeps that value; a box a write may fill again takes the
+    // signature.
+    func refined(by judged: LoweredType, fixed: Bool, in table: LoweredTypeTable) -> LoweredType {
+        var written = judged.resolved(in: table)
+
+        if case let .nullable(inner) = written {
+            written = inner
+        }
+
+        switch (self, written) {
+        case let (.procedure(nil, nil, .unstated, .unstated), .procedure(parameters, returns, constness, isolation)):
+            guard fixed else {
+                return .procedure(parameters: parameters, returns: returns, constness: .unstated, isolation: .unstated)
+            }
+
+            return .procedure(parameters: parameters, returns: returns, constness: constness, isolation: isolation)
+
+        case let (.array(element), .array(judgedElement)):
+            return .array(element.refined(by: judgedElement, fixed: fixed, in: table))
+
+        case let (.dictionary(entry), .dictionary(judgedEntry)):
+            return .dictionary(entry.refined(by: judgedEntry, fixed: fixed, in: table))
+
+        case let (.record(record), .record(judgedRecord)):
+            return .record(
+                LoweredRecord(
+                    layout: record.layout,
+                    fields: record.named.map { name, field in
+                        judgedRecord[name].map { judgedField in
+                            field.refined(by: judgedField.fieldUnwrapped, fixed: fixed, in: table)
+                        } ?? field
+                    }
+                )
+            )
+
+        default:
+            return self
+        }
+    }
+
     // Two readings of one slot. Where they disagree the slot holds neither,
     // which is what `any` says. A join that guessed would be a refusal an
     // author cannot act on.
@@ -1053,6 +1099,18 @@ indirect enum LoweredType: Sendable, Equatable {
         default:
             return
         }
+    }
+
+    // The same walk read for the type parameters alone.
+    func binding(
+        against given: LoweredType,
+        into bound: inout [Name: LoweredType],
+        disagreeing: inout [Name: LoweredType],
+        in table: LoweredTypeTable
+    ) {
+        var unread: [Substitution.Held] = []
+
+        binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &unread, in: table)
     }
 
     // This type with every parameter replaced by what it was read as. A

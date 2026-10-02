@@ -192,7 +192,7 @@ struct NullableTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'labelled' 1 arguments, and it takes 2")
+            error is BuildError && "\(error)".contains("sending 'labelled' with 1 arguments, and it takes 2")
         }
     }
 

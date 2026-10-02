@@ -41,11 +41,13 @@ struct Derivation {
     // it, and this call only ever adds its own.
     //
     // `beyond` answers for a selector this document does not declare: the
-    // row it names in the link, which carries its constness.
+    // row it names in the link, which carries its constness. `beside` is the
+    // module's variables by the type each declared, which every body reads.
     func const(
         among symbols: [Symbol],
         settling const: inout Set<Name>,
         reading variables: Set<Name>,
+        beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool,
         in table: LoweredTypeTable
@@ -60,6 +62,7 @@ struct Derivation {
             fact: { given in
                 Fact(callee: given, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table)
             },
+            beside: declared,
             taking: asked,
             beyond: beyond,
             in: table
@@ -72,6 +75,7 @@ struct Derivation {
     func isolated(
         among symbols: [Symbol],
         settling isolated: inout Set<Name>,
+        beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool,
         in table: LoweredTypeTable
@@ -84,6 +88,7 @@ struct Derivation {
             fact: { given in
                 Fact(callee: given, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table)
             },
+            beside: declared,
             taking: asked,
             beyond: beyond,
             in: table
@@ -204,15 +209,15 @@ struct Derivation {
     // run. `reading` is the module's variables: a body reading one answers by
     // the run's state. `declaring` is the names the body may write; a write
     // landing anywhere else, or handing such a name in place to a call,
-    // reaches the run's state the same way. `bound` is what each name in
-    // scope stands as, the way the type check binds it, which a call of a
-    // value is judged on.
+    // reaches the run's state the same way. `bound` is the type a slot
+    // declared each name in scope holds, which a call of a value is judged
+    // on.
     func isConst(
         _ block: Block,
         declaring names: Set<Name>,
         given const: @escaping (Name) -> Bool,
         reading variables: Set<Name>,
-        bound bindings: [Name: Binding],
+        bound declared: [Name: LoweredType],
         taking asked: (Name) -> Signature?,
         in table: LoweredTypeTable
     ) -> Bool {
@@ -220,7 +225,7 @@ struct Derivation {
             block,
             Fact(callee: const, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table),
             declaring: names,
-            bound: bindings,
+            bound: declared,
             taking: asked
         )
     }
@@ -232,7 +237,7 @@ struct Derivation {
         _ block: Block,
         declaring parameters: Set<Name>,
         given isolated: @escaping (Name) -> Bool,
-        bound bindings: [Name: Binding],
+        bound declared: [Name: LoweredType],
         taking asked: (Name) -> Signature?,
         in table: LoweredTypeTable
     ) -> Bool {
@@ -240,9 +245,33 @@ struct Derivation {
             block,
             Fact(callee: isolated, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table),
             declaring: parameters,
-            bound: bindings,
+            bound: declared,
             taking: asked
         )
+    }
+
+    // The type a slot declared the name a statement binds holds, which is
+    // what a call of the value the name holds leans on. A name that wrote its
+    // type holds that. A fixed name read from another name follows the type
+    // that one was declared, through a path the way `reached` walks it. A
+    // variable that wrote none is retyped by its writes, and anything else is
+    // a reading the build worked out, so neither holds one.
+    func declaredType(
+        of binding: Statement.Binding,
+        reading expression: Expression,
+        given declared: (Name) -> LoweredType?,
+        in table: LoweredTypeTable
+    ) -> LoweredType? {
+        switch binding {
+        case let .constant(_, written):
+            return written?.lowered(in: table) ?? reached(expression, given: declared, in: table)
+
+        case let .variable(_, written):
+            return written?.lowered(in: table)
+
+        case .assignment:
+            return nil
+        }
     }
 
     // MARK: - Private
@@ -256,24 +285,28 @@ struct Derivation {
         natively: (Implementation) -> Bool,
         declaring: (Signature) -> Set<Name>,
         fact: (@escaping (Name) -> Bool) -> Fact,
+        beside variables: [Name: LoweredType],
         taking asked: (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool,
         in loweredTypes: LoweredTypeTable
     ) {
         let own = Set(symbols.map(\.declared))
 
-        // The body beside the names it may write and what its own declaration
-        // binds each parameter as, since a call of a value is judged on what
+        // The body beside the names it may write and the type a slot declared
+        // each name before its first statement holds: the module's variables
+        // and its own parameters, since a call of a value is judged on what
         // the slot it came out of says.
         let bodies = symbols.reduce(
-            into: [Name: (block: Block, declaring: Set<Name>, bound: [Name: Binding])]()
+            into: [Name: (block: Block, declaring: Set<Name>, bound: [Name: LoweredType])]()
         ) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (
                 block,
                 declaring(symbol.procedure.signature),
-                symbol.procedure.signature.environment(in: loweredTypes)
+                variables.merging(
+                    symbol.procedure.signature.environment(in: loweredTypes).compactMapValues(\.declaredType)
+                ) { _, parameter in parameter }
             )
         }
 
@@ -313,18 +346,18 @@ struct Derivation {
         _ block: Block,
         _ fact: Fact,
         declaring names: Set<Name>,
-        bound bindings: [Name: Binding],
+        bound declaredTypes: [Name: LoweredType],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         var declared = names
-        var bindings = bindings
+        var declaredTypes = declaredTypes
 
         for statement in block.body.statements {
             if case let .assignment(path)? = statement.binding, let head = path.head, !declared.contains(head) {
                 return false
             }
 
-            guard holds(statement.expression, fact, declaring: declared, bound: bindings, taking: asked) else {
+            guard holds(statement.expression, fact, declaring: declared, bound: declaredTypes, taking: asked) else {
                 return false
             }
 
@@ -332,30 +365,22 @@ struct Derivation {
                 declared.insert(name)
             }
 
-            // What the name stands as afterwards, the way the type check binds
-            // it: a constant is fixed at what it says it holds or at what the
-            // name it was read from holds, and a variable that declared its
-            // type is a box held to it. One that declared none is a box its
-            // writes retype, which says nothing a call can lean on. A later
-            // name of the same spelling is a different name, so the table is
-            // read forward.
-            switch statement.binding {
-            case let .constant(name, declared)?:
-                let held = declared?.lowered(in: fact.table)
-                    ?? reached(statement.expression, given: bindings, in: fact.table)
+            // A later name of the same spelling is a different name, so the
+            // table is read forward.
+            if let binding = statement.binding, let name = binding.introduced {
+                let held = declaredType(
+                    of: binding,
+                    reading: statement.expression,
+                    given: { name in declaredTypes[name] },
+                    in: fact.table
+                )
 
-                bindings[name] = held.map(Binding.fixed)
-
-            case let .variable(name, declared)?:
-                bindings[name] = declared.map { declared in .declared(declared.lowered(in: fact.table)) }
-
-            case .assignment?, nil:
-                break
+                declaredTypes[name] = held
             }
         }
 
         return block.result.map { result in
-            holds(result, fact, declaring: declared, bound: bindings, taking: asked)
+            holds(result, fact, declaring: declared, bound: declaredTypes, taking: asked)
         } ?? true
     }
 
@@ -363,15 +388,15 @@ struct Derivation {
         _ expression: Expression,
         _ fact: Fact,
         declaring names: Set<Name>,
-        bound bindings: [Name: Binding],
+        bound declared: [Name: LoweredType],
         taking asked: (Name) -> Signature?
     ) -> Bool {
         func holds(_ inner: Expression) -> Bool {
-            self.holds(inner, fact, declaring: names, bound: bindings, taking: asked)
+            self.holds(inner, fact, declaring: names, bound: declared, taking: asked)
         }
 
         func holds(_ block: Block) -> Bool {
-            self.holds(block, fact, declaring: names, bound: bindings, taking: asked)
+            self.holds(block, fact, declaring: names, bound: declared, taking: asked)
         }
 
         func holds(_ body: Body) -> Bool {
@@ -419,7 +444,7 @@ struct Derivation {
         case let .apply(callee, arguments):
             guard
                 holds(callee),
-                let reached = reached(callee, given: bindings, in: fact.table),
+                let reached = reached(callee, given: { name in declared[name] }, in: fact.table),
                 fact.isClaimed(by: reached)
             else { return false }
 
@@ -443,27 +468,22 @@ struct Derivation {
     }
 
     // The type this reads, as the slot it came out of says it, and nil where
-    // it came out of none. The head is a name held to its type, a fixed name
-    // or a box that declared one, and the walk follows that type past it: an
-    // index reads an element of an array or a dictionary, and a dot reads an
-    // entry of a dictionary or a field a record type declares. An array or a
-    // dictionary of them says it about every element, and the value was
-    // settled against that type when it was handed over, so what the type
-    // says of the part is what the slot said. A box its writes retype says
-    // nothing, and anything that is not a name has no slot to say anything.
+    // it came out of none. The head is a name a slot declared, and the walk
+    // follows that type past it: an index reads an element of an array or a
+    // dictionary, and a dot reads an entry of a dictionary or a field a record
+    // type declares. An array or a dictionary of them says it about every
+    // element, and the value was settled against that type when it was handed
+    // over, so what the type says of the part is what the slot said. A name no
+    // slot declared says nothing, and anything that is not a name has no slot
+    // to say anything.
     private func reached(
         _ expression: Expression,
-        given bindings: [Name: Binding],
+        given declared: (Name) -> LoweredType?,
         in table: LoweredTypeTable
     ) -> LoweredType? {
         guard case let .reference(path) = expression, let head = path.head else { return nil }
 
-        let held: LoweredType? = switch bindings[head] {
-        case let .fixed(type)?, let .declared(type)?: type
-        case .assigned?, nil: nil
-        }
-
-        return path.segments.dropFirst().reduce(held) { reached, segment in
+        return path.segments.dropFirst().reduce(declared(head)) { reached, segment in
             switch segment {
             case .index, .indexRef:
                 return reached?.element(in: table)

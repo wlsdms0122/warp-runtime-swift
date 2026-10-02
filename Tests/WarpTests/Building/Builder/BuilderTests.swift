@@ -512,7 +512,7 @@ struct BuilderTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' with 2 arguments, and it takes 1")
         }
     }
 
@@ -546,7 +546,7 @@ struct BuilderTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' with 2 arguments, and it takes 1")
         }
     }
 

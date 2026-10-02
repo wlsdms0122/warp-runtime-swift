@@ -42,7 +42,12 @@ struct Compiler {
 
         // What this document settled.
         var constants: [Name: Value] = [:]
-        var variables: [Name: Value] = [:]
+        var variables: [Name: (value: Value, type: LoweredType)] = [:]
+
+        // The variables that declared their type, by that type: a slot every
+        // body of the document reads, which a call of the value one holds
+        // leans on, and what each start settles into.
+        let declaredVariables = try declaredTypes(of: module, in: loweredTypes)
 
         // The constants with what each reads as: what seeds the environment a
         // body is judged in, and what a body binds where it reads one at an
@@ -70,14 +75,14 @@ struct Compiler {
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             signature.environment(in: loweredTypes)
-                .merging(typedConstants.mapValues { constant in .fixed(constant.type) }) { _, constant in
+                .merging(typedConstants.mapValues { constant in Binding(.fixed(declared: nil), constant.type) }) { _, constant in
                     constant
                 }
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
-                        held[entry.key] = .declared(
-                            module.variables[entry.key]?.declared?.lowered(in: loweredTypes)
-                                ?? LoweredType(of: entry.value, in: loweredTypes)
+                        held[entry.key] = Binding(
+                            declaredVariables[entry.key].map(Binding.Holding.declared) ?? .started,
+                            entry.value.type
                         )
                     }
                 ) { _, variable in variable }
@@ -196,11 +201,19 @@ struct Compiler {
             among: holding,
             settling: &const,
             reading: reading,
+            beside: declaredVariables,
             taking: taking,
             beyond: answersWithoutRunning,
             in: loweredTypes
         )
-        Derivation().isolated(among: holding, settling: &isolated, taking: taking, beyond: touchesNothingShared, in: loweredTypes)
+        Derivation().isolated(
+            among: holding,
+            settling: &isolated,
+            beside: declaredVariables,
+            taking: taking,
+            beyond: touchesNothingShared,
+            in: loweredTypes
+        )
         Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))
@@ -267,7 +280,7 @@ struct Compiler {
         //
         // The context is read before the lowering is handed over, since one of
         // the tables a context stands on is the lowering this writes into.
-        constants = try await self.constants(
+        typedConstants = try await self.constants(
             of: module,
             at: origin,
             folding: compiling.folding(),
@@ -276,13 +289,14 @@ struct Compiler {
             in: context()
         )
 
-        typedConstants = constants.mapValues { value in (value: value, type: LoweredType(of: value, in: loweredTypes)) }
+        constants = typedConstants.mapValues(\.value)
         compiling.lowering.settle(constants: typedConstants, of: origin)
 
         variables = try await self.variables(
             of: module,
             at: origin,
-            beside: constants,
+            declaring: declaredVariables,
+            beside: typedConstants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
             leaning: fulfillment,
@@ -350,16 +364,17 @@ struct Compiler {
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            judging: boxes.map { name in (name: name, value: variables[name] ?? .null) },
+            judging: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
             dependencies: dependencies,
             token: token
         )
     }
 
     // MARK: - Private
-    // A document's constants, settled. They are evaluated here because there is
-    // nothing about them left for a run to do: a constant sees no scope, so what
-    // it will be is knowable the moment the document is read.
+    // A document's constants, settled, each beside what it reads as. They are
+    // evaluated here because there is nothing about them left for a run to do:
+    // a constant sees no scope, so what it will be is knowable the moment the
+    // document is read.
     //
     // One may name another declared beside it, so they are settled in the order
     // they read each other and that order is worked out first. What is wrong
@@ -372,7 +387,7 @@ struct Compiler {
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
         in context: TypingContext
-    ) async throws -> [Name: Value] {
+    ) async throws -> [Name: (value: Value, type: LoweredType)] {
         // Folding runs what it reads, and running reads rows. A lowered body
         // carries its document's own numbers, so the table handed here is one
         // that says which row each of those numbers stands for.
@@ -382,7 +397,7 @@ struct Compiler {
         // this writes into is one of the tables a context is read off.
         guard !module.constants.isEmpty else { return [:] }
 
-        var known: [Name: Value] = [:]
+        var known: [Name: (value: Value, type: LoweredType)] = [:]
 
         // Handed over with what each one reads, so nothing looks a name
         // back up in the table the order was read from. Everything this one
@@ -396,10 +411,10 @@ struct Compiler {
                 // body's are: the settled neighbours' types are the
                 // environment, so an absent field or a needless `?.` refuses
                 // here by the one rule, and carries its own place.
-                let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
+                let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -417,12 +432,18 @@ struct Compiler {
                 try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
 
                 do {
-                    known[name] = try await Folding(
-                        constants: known,
+                    let value = try await Folding(
+                        constants: known.mapValues(\.value),
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
                     ).read(judged, as: .binding(name), inPlace: inPlace, writing: &lowering, at: place)
+
+                    known[name] = (
+                        value,
+                        LoweredType(of: value, in: context.loweredTypes)
+                            .refined(by: reading, fixed: true, in: context.loweredTypes)
+                    )
                 } catch let refused as BuildError {
                     throw refused
                 } catch {
@@ -439,28 +460,30 @@ struct Compiler {
     // and no variable; the starting value is a fact the link reads. A variable
     // that declares what it holds has its start settled into that, the way an
     // argument is settled into its slot, and holds that type; one that
-    // declares nothing holds the type of the settled value.
+    // declares nothing holds the type of the settled value, read the way a
+    // constant's is.
     private func variables(
         of module: Module,
         at origin: Int,
-        beside known: [Name: Value],
+        declaring declaredTypes: [Name: LoweredType],
+        beside known: [Name: (value: Value, type: LoweredType)],
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
         in context: TypingContext
-    ) async throws -> [Name: Value] {
+    ) async throws -> [Name: (value: Value, type: LoweredType)] {
         guard !module.variables.isEmpty else { return [:] }
 
-        var started: [Name: Value] = [:]
+        var started: [Name: (value: Value, type: LoweredType)] = [:]
 
         for (name, variable) in module.variables.sorted { $0.key < $1.key } {
             let place = Place.variable(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
-                let (judged, calls, inPlace) = try await TypeChecker().resolvedSites(
+                let (judged, calls, inPlace, reading) = try await TypeChecker().resolvedSites(
                     in: variable.start,
                     at: place,
-                    in: known.mapValues { value in .fixed(LoweredType(of: value, in: context.loweredTypes)) },
+                    in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -476,7 +499,7 @@ struct Compiler {
 
                 do {
                     settled = try await Folding(
-                        constants: known,
+                        constants: known.mapValues(\.value),
                         origin: origin,
                         in: resolved,
                         loweredTypes: context.loweredTypes
@@ -487,19 +510,20 @@ struct Compiler {
                     throw BuildError("\(error)", at: place)
                 }
 
-                guard let declared = variable.declared else {
-                    started[name] = settled
+                guard let declared = variable.declared, let holding = declaredTypes[name] else {
+                    started[name] = (
+                        settled,
+                        LoweredType(of: settled, in: context.loweredTypes)
+                            .refined(by: reading, fixed: false, in: context.loweredTypes)
+                    )
                     return
                 }
 
-                let holding = declared.lowered(in: context.loweredTypes)
-
-                if case let .undeclared(label, _) = holding {
-                    throw BuildError("declares type '\(label)', which no module in this link declares", at: place)
-                }
-
                 do {
-                    started[name] = try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes)
+                    started[name] = (
+                        try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes),
+                        holding
+                    )
                 } catch {
                     throw BuildError(
                         "starts as \(LoweredType(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
@@ -511,6 +535,27 @@ struct Compiler {
         }
 
         return started
+    }
+
+    // The types a document's variables declare, lowered once. One naming a
+    // type no module in this link declares is refused at its variable.
+    private func declaredTypes(of module: Module, in table: LoweredTypeTable) throws -> [Name: LoweredType] {
+        var declared: [Name: LoweredType] = [:]
+
+        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
+            guard let holding = variable.declared?.lowered(in: table) else { continue }
+
+            if case let .undeclared(label, _) = holding {
+                throw BuildError(
+                    "declares type '\(label)', which no module in this link declares",
+                    at: .variable(name.spelling, in: .of(module))
+                )
+            }
+
+            declared[name] = holding
+        }
+
+        return declared
     }
 
     // The order a module's constants settle in: what a constant reads comes

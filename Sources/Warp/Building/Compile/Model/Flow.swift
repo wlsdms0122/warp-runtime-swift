@@ -60,9 +60,9 @@ struct Flow {
     // it changes nothing about what it holds.
     func apply(to environment: inout [Name: Binding]) {
         for (name, write) in written {
-            guard case let .assigned(held)? = environment[name] else { continue }
+            guard let held = environment[name], held.holding == .assigned else { continue }
 
-            environment[name] = .assigned(write.definite ? write.type : held.joined(write.type))
+            environment[name] = Binding(.assigned, write.definite ? write.type : held.type.joined(write.type))
         }
     }
 

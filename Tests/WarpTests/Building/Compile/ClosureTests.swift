@@ -96,6 +96,41 @@ struct ClosureTests {
         }
     }
 
+    @Test("a value taking a parameter in place, applied short, is refused by the count")
+    func anApplicationShortOfAnInPlaceParameterSaysTheCount() async throws {
+        // Given. `bump` takes a variable in place and an int, and is handed
+        // one argument, which is no variable
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("bump"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: [
+                                        Parameter(name: "c", type: .inout(.int)),
+                                        Parameter(name: "d", type: .int)
+                                    ]),
+                                    body: []
+                                )
+                            )
+                        ),
+                        Statement(expression: .apply(reference("bump"), arguments: [.literal(.int(1))]))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("with 1 arguments, and it takes 2")
+        }
+    }
+
     @Test("a closure captures the scope it was written in, not the one it runs in")
     func closureCapturesLexically() async throws {
         // Given. `made` is written where `outer` says "written", and `running`
