@@ -982,8 +982,19 @@ struct ObjectReader {
             )
 
         case .checked:
+            let judged = try operation(cursor.next())
+
+            // What is judged where it stands is a call, of any of the three kinds.
+            switch judged {
+            case .call, .dispatch, .apply:
+                break
+
+            default:
+                throw ObjectRefused("a judgement where a call stands wraps what is no call")
+            }
+
             read = .checked(
-                try operation(cursor.next()),
+                judged,
                 against: try cursor.field().maybe(lowered),
                 handedBack: try Field(cursor.next(), of: "handed back").list { written in
                     var back = try FieldCursor(written, of: "handed back")

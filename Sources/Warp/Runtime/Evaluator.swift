@@ -421,10 +421,6 @@ struct Evaluator: Sendable {
     ) async throws -> Value {
         let callee = linked[try row(call.procedure, from: activation.origin)]
 
-        // A row taking by value what a contract hands in place writes nothing
-        // back, so only what it holds in place is judged.
-        let handedBack = handedBack.filter { back in call.handed.contains { held in held.position == back.position } }
-
         switch callee.implementation {
         case .native(.query, _):
             // A variable handed in place is read as what it holds now and
@@ -522,10 +518,10 @@ struct Evaluator: Sendable {
         }
 
         // A closure that wrote a type at a slot settles every write to it,
-        // so only one taking the variable in place at a type parameter hands
-        // back what is judged.
+        // so only one naming a type parameter there hands back what is
+        // judged.
         let judged = handedBack.filter { back in
-            handed.contains { held in held.position == back.position } && linked.slots[back.position].type.namesParameter
+            !linked.slots.indices.contains(back.position) || linked.slots[back.position].type.namesParameter
         }
 
         return try await answer(judging: judged, through: holds) {
@@ -781,12 +777,20 @@ struct Evaluator: Sendable {
         case let .dispatch(dispatch):
             let (call, first) = try await picked(dispatch, in: &activation, at: trace)
 
-            answered = try await self.call(call, first: first, judging: handedBack, in: &activation, at: trace)
+            // A row taking by value what the contract hands in place writes
+            // nothing back, so only what the picked row holds is judged.
+            let judged = handedBack.filter { back in call.handed.contains { held in held.position == back.position } }
+
+            answered = try await self.call(call, first: first, judging: judged, in: &activation, at: trace)
 
         case let .apply(callee, arguments):
             answered = try await apply(callee, arguments: arguments, judging: handedBack, in: &activation, at: trace)
 
         default:
+            guard handedBack.isEmpty else {
+                throw ExecutionError("an operation hands back in place what only a call can hand back")
+            }
+
             answered = try await evaluate(read, in: &activation, at: trace)
         }
 
