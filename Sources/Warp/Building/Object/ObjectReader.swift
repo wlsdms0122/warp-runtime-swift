@@ -984,27 +984,49 @@ struct ObjectReader {
         case .checked:
             let judged = try operation(cursor.next())
 
-            // What is judged where it stands is a call, of any of the three kinds.
+            // What is judged where it stands is a call, of any of the three
+            // kinds, and what it hands back stands at the positions it hands
+            // a variable in place, each once, in order.
+            let inPlace: [Int]
+
             switch judged {
-            case .call, .dispatch, .apply:
-                break
+            case let .call(call):
+                inPlace = call.handed.map(\.position)
+
+            case let .dispatch(dispatch):
+                inPlace = dispatch.arguments.indices.compactMap { index in
+                    guard case .reference = dispatch.arguments[index] else { return nil }
+
+                    return index + 1
+                }
+
+            case let .apply(_, arguments):
+                inPlace = arguments.indices.compactMap { index in
+                    guard case .reference = arguments[index] else { return nil }
+
+                    return index
+                }
 
             default:
                 throw ObjectRefused("a judgement where a call stands wraps what is no call")
             }
 
-            read = .checked(
-                judged,
-                against: try cursor.field().maybe(lowered),
-                handedBack: try Field(cursor.next(), of: "handed back").list { written in
-                    var back = try FieldCursor(written, of: "handed back")
-                    let taken = HandedBack(position: try back.field().count(), against: try lowered(back.next()))
+            let against = try cursor.field().maybe(lowered)
+            let handedBack = try Field(cursor.next(), of: "handed back").list { written in
+                var back = try FieldCursor(written, of: "handed back")
+                let taken = HandedBack(position: try back.field().count(), against: try lowered(back.next()))
 
-                    try back.end()
+                try back.end()
 
-                    return taken
-                }
-            )
+                return taken
+            }
+            let positions = handedBack.map(\.position)
+
+            guard zip(positions, positions.dropFirst()).allSatisfy({ $0 < $1 }), positions.allSatisfy(inPlace.contains) else {
+                throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
+            }
+
+            read = .checked(judged, against: against, handedBack: handedBack)
 
         case .block: read = .block(try body(cursor.next()))
         case .conditional:
