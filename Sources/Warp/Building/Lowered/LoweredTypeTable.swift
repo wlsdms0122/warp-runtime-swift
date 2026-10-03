@@ -405,6 +405,14 @@ final class LoweredTypeTable: Sendable {
         case .any, .projection, .undeclared, .never:
             return .settled(true)
 
+        // A contract is answered by a type, and null wears none, so what may
+        // be null answers no contract, a name for such a type included.
+        case .nullable:
+            return .settled(false)
+
+        case let .named(row) where LoweredType.named(row).declaresNull(in: self):
+            return .settled(false)
+
         // A name answers as the record it names, since a value settled under
         // it wears that record's name. Where nothing is judged on arrival, it
         // is held to what the documents say about it.
@@ -429,12 +437,7 @@ final class LoweredTypeTable: Sendable {
         case let .composition(bounds):
             return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid) ?? .settled(!rigid)
 
-        // Where nothing is judged on arrival, what may be null answers no
-        // contract.
-        case .nullable where rigid:
-            return .settled(false)
-
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
+        case let .variable(inner), let .inout(inner):
             return answering(contract: name, reading: inner, assuming: assuming, rigid: rigid)
 
         default:
