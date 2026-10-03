@@ -1899,7 +1899,7 @@ struct TypeChecker {
                 )
             }
 
-            judgements.record(.apply(inPlace: handed, checking: judgedAgainst(answers, answeredBy: nil)), at: place)
+            judgements.record(.apply(inPlace: handed, against: judgedAgainst(answers, answeredBy: nil)), at: place)
 
             if failsHere(expression, given: context) {
                 flow.fail()
@@ -2041,8 +2041,8 @@ struct TypeChecker {
                 in: context.loweredTypes
             )
 
-            if let checking = judgedAgainst(reading, sending: call.selector, given: context) {
-                judgements.record(.call(checking: checking), at: place)
+            if let against = judgedAgainst(reading, sending: call.selector, given: context) {
+                judgements.record(.call(against: against), at: place)
             }
 
             if mayFail {

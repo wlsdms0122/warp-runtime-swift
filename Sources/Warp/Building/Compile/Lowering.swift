@@ -758,9 +758,9 @@ struct Lowering {
                 .call(try lower(call, in: scope, on: context, at: place))
             }
 
-            guard case let .call(checking)? = context.judgements[place] else { return lowered }
+            guard case let .call(against)? = context.judgements[place] else { return lowered }
 
-            return checked(lowered, against: checking, on: context)
+            return checked(lowered, against: against, on: context)
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -878,7 +878,7 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed, checking)? = context.judgements[place] else {
+        guard case let .apply(handed, against)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
@@ -901,17 +901,17 @@ struct Lowering {
             }
         )
 
-        guard let checking else { return applied }
+        guard let against else { return applied }
 
-        return checked(applied, against: checking, on: context)
+        return checked(applied, against: against, on: context)
     }
 
     // A call's answer judged where the call stands, against what the build
     // read it as. The type is one a body stands on, so it is numbered.
-    private func checked(_ call: Operation, against checking: LoweredType, on context: Context) -> Operation {
-        context.slots.note(checking)
+    private func checked(_ call: Operation, against: LoweredType, on context: Context) -> Operation {
+        context.slots.note(against)
 
-        return .checked(call, against: checking)
+        return .checked(call, against: against)
     }
 
     private mutating func lower(
