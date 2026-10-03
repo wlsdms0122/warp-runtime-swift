@@ -100,13 +100,26 @@ struct AnswerProofTests {
         #expect(image["app.b"]?.answersAsDeclared == true)
     }
 
-    @Test("a cycle through a body answering `any` falls")
-    func aCycleThroughAnUnprovenOneFalls() async throws {
-        // Given. `app.b` leans on `app.a` and answers a value of `any` for its own `some T`
+    @Test("a cycle leaning on a body answering `any` falls whole")
+    func aCycleLeaningOnAnUnprovenOneFalls() async throws {
+        // Given. `app.a` and `app.b` lean on each other, and `app.b` also on `app.c`, the only one answering a value of `any` for its own `some T`
         let sut = try Module(
             procedures: [
-                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
+                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")])]))),
                 "app.b": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [
+                        Statement(
+                            binding: .constant("back"),
+                            expression: .call(Call(selector: "app.a", arguments: [.reference([.key("x")])]))
+                        )
+                    ],
+                    result: .call(Call(selector: "app.c", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                ),
+                "app.c": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -114,12 +127,7 @@ struct AnswerProofTests {
                         ],
                         returns: .parameter(name: "T")
                     ),
-                    body: [
-                        Statement(
-                            binding: .constant("echo"),
-                            expression: .call(Call(selector: "app.a", arguments: [.reference([.key("x")])]))
-                        )
-                    ],
+                    body: [],
                     result: .reference([.key("junk")])
                 )
             ]
@@ -129,8 +137,9 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.c"]?.answersAsDeclared == false)
         #expect(image["app.b"]?.answersAsDeclared == false)
+        #expect(image["app.a"]?.answersAsDeclared == false)
     }
 
     @Test("a fall carries back along the bodies leaning on it")
