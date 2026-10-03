@@ -279,6 +279,23 @@ final class LoweredTypeTable: Sendable {
                 }
             }
 
+        // A reading that may be null is a member where null is one and what it
+        // is besides is too, since its value is one or the other. A name that
+        // stands for no record is read as what it stands for.
+        case let .nullable(inner):
+            return admits(constraint: row, reading: .null, assuming: assuming, asking: pairs, rigid: rigid, orNull: false)
+                && admits(constraint: row, reading: inner, assuming: assuming, asking: pairs, rigid: rigid, orNull: false)
+
+        case .named where reading.throughAliases(in: self) != reading:
+            return admits(
+                constraint: row,
+                reading: reading.throughAliases(in: self),
+                assuming: assuming,
+                asking: pairs,
+                rigid: rigid,
+                orNull: false
+            )
+
         // Nothing can be said about a reading the table does not answer, so
         // it passes here and is refused where the name is met.
         case .undeclared:
@@ -453,9 +470,13 @@ final class LoweredTypeTable: Sendable {
         case _ where !orNull && reading.declaresNull(in: self):
             return .settled(false)
 
-        // A name answers as the record it names, since a value settled under
-        // it wears that record's name. Where nothing is judged on arrival, it
-        // is held to what the documents say about it.
+        // A name for a record answers as that record, since a value settled
+        // under it wears the record's name; where nothing is judged on
+        // arrival, it is held to what the documents say about it. Any other
+        // name answers as what it stands for, since a value of it wears none.
+        case let .named(row) where recordRows[row] == nil:
+            return answering(contract: name, reading: loweredTypes[row], assuming: assuming, rigid: rigid, orNull: orNull)
+
         case let .named(row) where rigid:
             return .settled(settles(contract: name, arrived: labels[recordRows[row] ?? row]) != false)
 

@@ -63,6 +63,12 @@ public final class Linked: Sendable {
     // rescues, or declared by the native procedure.
     public let failing: Failing
 
+    // Whether what this answers is, at every type parameter its declaration
+    // answers, that parameter and nothing a call has to judge again where it
+    // reads the answer filled. Read off the body's answers; a native's is its
+    // host's word, taken as said.
+    let answersAsDeclared: Bool
+
     // The parameters as the run settles them, in the same order, and what
     // the answer settles against. The declaration's lowering, born here
     // from the signature beside it.
@@ -119,6 +125,7 @@ public final class Linked: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
+        answersAsDeclared: Bool,
         implementation: Implementation,
         foldable: Bool,
         closure: (by: Closure.Declaration, nth: Int)? = nil,
@@ -137,6 +144,7 @@ public final class Linked: Sendable {
         self.slots = slots
         self.returns = returns
         self.failing = failing
+        self.answersAsDeclared = answersAsDeclared
         self.table = table
         self.implementation = implementation
         self.foldable = foldable
@@ -160,6 +168,7 @@ public final class Linked: Sendable {
         self.slots = row.slots
         self.returns = row.returns
         self.failing = row.failing
+        self.answersAsDeclared = row.answersAsDeclared
         self.table = table
         self.implementation = row.implementation
         self.foldable = row.foldable
@@ -169,7 +178,12 @@ public final class Linked: Sendable {
     // signature is the signature's, and neither lowering a body nor answering
     // the numbers in one touches the signature, so the slots are carried over
     // rather than worked out again.
-    init(_ row: Linked, implementation: Implementation) {
+    convenience init(_ row: Linked, implementation: Implementation) {
+        self.init(row, implementation: implementation, answersAsDeclared: row.answersAsDeclared)
+    }
+
+    // The same, with what the body lowered into it proved about its answers.
+    init(_ row: Linked, implementation: Implementation, answersAsDeclared: Bool) {
         self.label = row.label
         self.origin = row.origin
         self.closure = row.closure
@@ -180,6 +194,7 @@ public final class Linked: Sendable {
         self.slots = row.slots
         self.returns = row.returns
         self.failing = row.failing
+        self.answersAsDeclared = answersAsDeclared
         self.table = row.table
         self.implementation = implementation
         self.foldable = row.foldable
@@ -211,6 +226,7 @@ public final class Linked: Sendable {
             constness: const ? .const : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
+            answersAsDeclared: native != nil,
             implementation: .native(native ?? .query(UnsettledProcedure()), sends: sends),
             foldable: native == nil || builtin,
             in: table

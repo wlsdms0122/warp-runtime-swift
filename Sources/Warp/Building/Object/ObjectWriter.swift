@@ -646,6 +646,7 @@ struct ObjectWriter {
             constness(row.constness),
             isolation(row.isolation),
             failing(row.failing),
+            .bool(row.answersAsDeclared),
             try implementation(row.implementation)
         ])
     }

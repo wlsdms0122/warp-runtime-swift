@@ -8,7 +8,8 @@
 import Foundation
 
 // What the type check judged about one expression that its text does not
-// write, for lowering to read where it lowers that expression.
+// write, for lowering to read where it lowers that expression and for the
+// answer proof to read over the body.
 enum Judgement: Sendable {
     // A call of a value: the positions it hands a variable in place, the
     // ones the slot's type marks `inout`, and what its answer is judged

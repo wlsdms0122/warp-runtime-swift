@@ -452,6 +452,11 @@ struct Lowering {
         table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
     }
 
+    // A lowered row with what its document settled it proves of its answers.
+    mutating func record(_ row: Int, answersAsDeclared: Bool) {
+        table[row] = Linked(table[row], implementation: table[row].implementation, answersAsDeclared: answersAsDeclared)
+    }
+
     // A document's own declarations by row, as they were held.
     func own(_ origin: Int) -> [Name: Int] {
         documents[origin].owned
@@ -850,6 +855,7 @@ struct Lowering {
                 constness: constness,
                 isolation: isolation,
                 failing: failing,
+                answersAsDeclared: false,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),

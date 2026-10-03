@@ -161,7 +161,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable) {
+    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: AnswerProof) {
         let inner = try await inspected(
             block: block,
             at: place,
@@ -180,7 +180,15 @@ struct TypeChecker {
             fulfillment: fulfillment
         )
 
-        return (inner.block, inner.calls, inner.judgements)
+        let proof = proof(
+            of: [inner.reading] + inner.flow.answered.map(\.reading),
+            to: returns,
+            calling: inner.calls,
+            judged: inner.judgements,
+            given: context
+        )
+
+        return (inner.block, inner.calls, inner.judgements, proof)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -479,6 +487,59 @@ struct TypeChecker {
         }
     }
 
+    // What a body proves of its answers by itself, and which of its own
+    // document's declarations the rest leans on. A declaration whose answer
+    // names no type parameter is settled to what it wrote where it answers,
+    // and one that wrote nothing answers what was read off it, so each
+    // proves it outright. Otherwise every answer has to be, at each type
+    // parameter, that parameter, with no reading of `any` and no member
+    // value; and a call whose answer names a type parameter and is judged
+    // where it stands hands back what proves nothing, unless it reaches a
+    // declaration of this document, whose proof is the document's to settle.
+    private func proof(
+        of readings: [LoweredType],
+        to returns: TypeExpression?,
+        calling calls: [CallSite],
+        judged judgements: JudgementTable,
+        given context: TypingContext
+    ) -> AnswerProof {
+        let loweredTypes = context.loweredTypes
+
+        guard let declared = returns?.lowered(in: loweredTypes), declared.namesParameter else {
+            return .holds(leaning: [])
+        }
+
+        let readsInPlace = readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
+        let appliesOpen = judgements.judgements.values.contains { judgement in
+            guard case let .apply(_, against?) = judgement else { return false }
+
+            return against.namesParameter
+        }
+
+        guard readsInPlace, !appliesOpen else { return .broken }
+
+        // Read over what was judged, so a judgement whose call is not found
+        // proves nothing rather than going unread.
+        let selectors = Dictionary(calls.map { site in (site.place, site.call.selector) }) { first, _ in first }
+        var leaning: Set<Name> = []
+
+        for (place, judgement) in judgements.judgements {
+            guard case let .call(against) = judgement, against.namesParameter else { continue }
+
+            guard
+                let selector = selectors[place],
+                context.own[selector] != nil,
+                context.contractProcedures[selector] == nil
+            else {
+                return .broken
+            }
+
+            leaning.insert(selector)
+        }
+
+        return .holds(leaning: leaning)
+    }
+
     // Whether a write fits the slot it lands in, in the box `binding` holds.
     // A body declares no type parameter of its own, so a declared box whose
     // slot names one is a parameter handed in place, which `takesInPlace`
@@ -503,21 +564,25 @@ struct TypeChecker {
         case .any, .never:
             return nil
 
+        // Equal as types only where the callee's answer names no type
+        // parameter: one that does settles against its own parameter, which a
+        // call's reading spells alike and is not.
         default:
-            return reading == callee ? nil : reading
+            return reading == callee && callee?.namesParameter == false ? nil : reading
         }
     }
 
     // The same, for a call to a selector. A contract's procedure is answered
     // by whichever row the run picks, and what that row settles is not known
-    // here. A native another document holds answers by its host's code, and
-    // what it declared is taken as said, as its other claims are.
+    // here. A row that proved it answers as declared, a native's by its
+    // host's word, answers what the call reads. A body of this document has
+    // proved nothing while its document is read, since its proof is settled
+    // over the whole document after, so the judgement stands and the link
+    // leaves it out.
     private func judgedAgainst(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
         guard context.contractProcedures[selector] == nil else { return judgedAgainst(reading, answeredBy: nil) }
 
-        if context.own[selector] == nil, case .native? = context.declared(selector)?.implementation {
-            return nil
-        }
+        if let row = context.declared(selector), row.answersAsDeclared { return nil }
 
         return judgedAgainst(reading, answeredBy: context.answer(of: selector))
     }
@@ -2557,10 +2622,18 @@ struct TypeChecker {
             case let .assignment(path)?:
                 guard let id = path.head else { break }
 
+                // An empty list holds no element, so where it is written it is
+                // a list of whatever the slot's elements are.
+                let written: LoweredType = if case let .array(elements) = statement.expression, elements.isEmpty {
+                    .array(.never)
+                } else {
+                    inner.reading
+                }
+
                 switch environment[id] {
                 case let binding? where binding.heldType != nil:
                     try refuseUnfit(
-                        inner.reading,
+                        written,
                         writtenTo: path,
                         holding: binding.heldType,
                         in: environment,
@@ -2586,7 +2659,7 @@ struct TypeChecker {
                         }
                     } else {
                         try refuseUnfit(
-                            inner.reading,
+                            written,
                             writtenTo: path,
                             holding: nil,
                             in: environment,
