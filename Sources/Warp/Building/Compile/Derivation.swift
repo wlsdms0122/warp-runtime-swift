@@ -306,7 +306,7 @@ struct Derivation {
 
         var proven = Set(leanings.keys)
 
-        while let fallen = proven.first(where: { name in !leanings[name, default: []].isSubset(of: proven) }) {
+        while let fallen = leanings.first(where: { name, leaning in proven.contains(name) && !leaning.isSubset(of: proven) })?.key {
             proven.remove(fallen)
         }
 
