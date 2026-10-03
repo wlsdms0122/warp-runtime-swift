@@ -765,7 +765,7 @@ struct Lowering {
 
             guard case let .call(against, judged)? = context.judgements[place] else { return lowered }
 
-            return checked(lowered, against: against, handedBack: handedBack(judged), on: context)
+            return checked(lowered, against: against, handedBack: judged, on: context)
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -909,13 +909,7 @@ struct Lowering {
 
         guard against != nil || !judged.isEmpty else { return applied }
 
-        return checked(applied, against: against, handedBack: handedBack(judged), on: context)
-    }
-
-    // What a call hands back in place and is judged on once it is over, in
-    // position order.
-    private func handedBack(_ judged: [Int: LoweredType]) -> [HandedBack] {
-        judged.sorted { $0.key < $1.key }.map { position, against in HandedBack(position: position, against: against) }
+        return checked(applied, against: against, handedBack: judged, on: context)
     }
 
     // A call's answer judged where the call stands, against what the build

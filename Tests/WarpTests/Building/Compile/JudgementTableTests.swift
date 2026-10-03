@@ -22,7 +22,7 @@ struct JudgementTableTests {
         var sut = JudgementTable()
 
         // When
-        sut.record(.apply(inPlace: [0], against: nil, handedBack: [:]), at: first)
+        sut.record(.apply(inPlace: [0], against: nil, handedBack: []), at: first)
         sut.record(.closure(constness: .const, isolation: .unstated, failing: .unstated), at: second)
 
         // Then
@@ -38,8 +38,8 @@ struct JudgementTableTests {
         var sut = JudgementTable()
         var other = JudgementTable()
 
-        sut.record(.apply(inPlace: [0], against: nil, handedBack: [:]), at: first)
-        other.record(.apply(inPlace: [], against: .int, handedBack: [:]), at: second)
+        sut.record(.apply(inPlace: [0], against: nil, handedBack: []), at: first)
+        other.record(.apply(inPlace: [], against: .int, handedBack: []), at: second)
 
         // When
         sut.absorb(other)

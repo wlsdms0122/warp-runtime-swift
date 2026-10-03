@@ -45,7 +45,8 @@ indirect enum Operation: Sendable {
     // inside, and a binding or a parameter that declares a type settles the
     // value where it lands. Nil where only what the call handed back in place
     // is judged. Each variable it handed back is judged once the call is over,
-    // whether it answered or failed.
+    // whether it answered or failed. The build makes one only where there is
+    // something to judge, and only around a call.
     case checked(Operation, against: LoweredType?, handedBack: [HandedBack])
 
     case block(LoweredBody)

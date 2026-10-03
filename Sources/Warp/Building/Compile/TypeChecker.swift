@@ -525,7 +525,7 @@ struct TypeChecker {
         let appliesOpen = judgements.judgements.values.contains { judgement in
             guard case let .apply(_, against, handedBack) = judgement else { return false }
 
-            return against?.namesParameter == true || handedBack.values.contains(where: \.namesParameter)
+            return against?.namesParameter == true || handedBack.contains(where: { back in back.against.namesParameter })
         }
 
         guard !appliesOpen else { return .broken }
@@ -538,7 +538,7 @@ struct TypeChecker {
         for (place, judgement) in judgements.judgements {
             guard
                 case let .call(against, handedBack) = judgement,
-                against?.namesParameter == true || handedBack.values.contains(where: \.namesParameter)
+                against?.namesParameter == true || handedBack.contains(where: { back in back.against.namesParameter })
             else {
                 continue
             }
@@ -615,8 +615,8 @@ struct TypeChecker {
         filling filled: [Name: LoweredType],
         sending selector: Name,
         given context: TypingContext
-    ) -> [Int: LoweredType] {
-        var judged: [Int: LoweredType] = [:]
+    ) -> [HandedBack] {
+        var judged: [HandedBack] = []
 
         // The slots first: most take nothing in place, and asking them costs
         // less than finding the row.
@@ -630,10 +630,10 @@ struct TypeChecker {
                 continue
             }
 
-            judged[position] = against
+            judged.append(HandedBack(position: position, against: against))
         }
 
-        guard !judged.isEmpty, !handsBackAsDeclared(selector, given: context) else { return [:] }
+        guard !judged.isEmpty, !handsBackAsDeclared(selector, given: context) else { return [] }
 
         return judged
     }
@@ -642,10 +642,10 @@ struct TypeChecker {
     // judged against once the call is over, what the slot's type holds it as.
     // No row of a closure value proves anything, so each is judged wherever
     // the closure the run reaches names a type parameter there.
-    private func handedBack(at handed: [Int], of callee: LoweredType) -> [Int: LoweredType] {
-        guard case let .procedure(parameters?, _, _, _) = callee else { return [:] }
+    private func handedBack(at handed: [Int], of callee: LoweredType) -> [HandedBack] {
+        guard case let .procedure(parameters?, _, _, _) = callee else { return [] }
 
-        var judged: [Int: LoweredType] = [:]
+        var judged: [HandedBack] = []
 
         for position in handed {
             guard
@@ -655,7 +655,7 @@ struct TypeChecker {
                 continue
             }
 
-            judged[position] = against
+            judged.append(HandedBack(position: position, against: against))
         }
 
         return judged
