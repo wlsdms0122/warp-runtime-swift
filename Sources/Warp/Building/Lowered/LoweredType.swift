@@ -1138,8 +1138,9 @@ indirect enum LoweredType: Sendable, Equatable {
         let theirs = given.throughAliases(in: table)
 
         switch (mine, theirs) {
-        case let (.ranged(range), _) where takesGiven && given.accepts(self, in: table, rigid: true),
-             let (_, .ranged(range)) where takesGiven && given.accepts(self, in: table, rigid: true):
+        // The looser of the two is a range: its kind holds both, whichever
+        // kind the other is a range of.
+        case let (.ranged(range), _) where takesGiven, let (_, .ranged(range)) where !takesGiven:
             return range.lowered
 
         case let (.array(element), .array(other)):
@@ -1148,10 +1149,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.dictionary(element), .dictionary(other)):
             return .dictionary(element.joined(with: other, in: table) ?? (takesGiven ? element : other))
 
-        case let (.dictionary(element), other), let (other, .dictionary(element)):
-            guard let record = other.record(in: table) else { return looser }
+        case let (.dictionary(element), other) where other.record(in: table) != nil,
+             let (other, .dictionary(element)) where other.record(in: table) != nil:
+            let fields = other.record(in: table)?.fields ?? []
 
-            return .dictionary(record.fields.reduce(element) { joined, field in joined.joined(with: field, in: table) ?? joined })
+            return .dictionary(fields.reduce(element) { joined, field in joined.joined(with: field, in: table) ?? joined })
 
         case let (.nullable(inner), .nullable(other)):
             return .nullable(inner.joined(with: other, in: table) ?? (takesGiven ? inner : other))
