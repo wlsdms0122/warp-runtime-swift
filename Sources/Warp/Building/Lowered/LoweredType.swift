@@ -866,9 +866,12 @@ indirect enum LoweredType: Sendable, Equatable {
     // caller reads its box as what filled each type parameter here, and
     // nothing settles a write into it, so where this writes a parameter only
     // that parameter lands. Around one, a nullable, a list or a dictionary
-    // takes what it takes anywhere; a type holding one some other way is
-    // written only as itself.
+    // takes what it takes anywhere, a record as a dictionary included; a type
+    // holding one some other way is written only as itself. A type naming
+    // none takes what it accepts.
     func takesInPlace(_ written: LoweredType, in table: LoweredTypeTable) -> Bool {
+        guard namesParameter else { return accepts(written, in: table) }
+
         switch (self, written) {
         case (_, .never):
             return true
@@ -887,11 +890,15 @@ indirect enum LoweredType: Sendable, Equatable {
             let (.dictionary(mine), .dictionary(theirs)):
             return mine.takesInPlace(theirs, in: table)
 
+        // A record whose every field the entry takes is such a dictionary.
+        case let (.dictionary(mine), .record(theirs)):
+            return theirs.fields.allSatisfy { field in mine.takesInPlace(field, in: table) }
+
         case let (.nullable(mine), _):
             return mine.takesInPlace(written, in: table)
 
         default:
-            return namesParameter ? identical(to: written, in: table) : accepts(written, in: table)
+            return identical(to: written, in: table)
         }
     }
 
