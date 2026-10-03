@@ -236,6 +236,17 @@ struct ClaimChecker {
             return .waits("\(claim.spelled) says " + reason)
         }
 
+        // A value wears the name of the record it is and no other, so a claim
+        // about a name that is not itself a record, an alias included, is one
+        // no run could read.
+        guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
+            throw BuildError(
+                "'\(type)' is not itself a record, and a value of it wears no name of its own for a run"
+                    + " to read. A claim is about a declared record, under the name it was declared",
+                at: claim.place
+            )
+        }
+
         // A value written `linear` is followed by the name that holds it, and
         // a contract standing where a type is written holds a value under no
         // name of its own.

@@ -453,9 +453,13 @@ final class LoweredTypeTable: Sendable {
         case _ where !orNull && reading.declaresNull(in: self):
             return .settled(false)
 
-        // A name answers as the record it names, since a value settled under
-        // it wears that record's name. Where nothing is judged on arrival, it
-        // is held to what the documents say about it.
+        // A name for a record answers as that record, since a value settled
+        // under it wears the record's name; where nothing is judged on
+        // arrival, it is held to what the documents say about it. Any other
+        // name answers as what it stands for, since a value of it wears none.
+        case let .named(row) where recordRows[row] == nil:
+            return answering(contract: name, reading: loweredTypes[row], assuming: assuming, rigid: rigid, orNull: orNull)
+
         case let .named(row) where rigid:
             return .settled(settles(contract: name, arrived: labels[recordRows[row] ?? row]) != false)
 
