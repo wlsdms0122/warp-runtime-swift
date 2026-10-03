@@ -519,12 +519,18 @@ struct TypeChecker {
         var alone = readsInPlace && !appliesOpen
         var leaning: Set<Name> = []
 
-        for site in calls {
-            guard case let .call(against)? = judgements[site.place], against.namesParameter else { continue }
+        // Read over what was judged, so a judgement whose call is not found
+        // proves nothing rather than going unread.
+        let selectors = Dictionary(calls.map { site in (site.place, site.call.selector) }) { first, _ in first }
 
-            let selector = site.call.selector
+        for (place, judgement) in judgements.judgements {
+            guard case let .call(against) = judgement, against.namesParameter else { continue }
 
-            guard context.own[selector] != nil, context.contractProcedures[selector] == nil else {
+            guard
+                let selector = selectors[place],
+                context.own[selector] != nil,
+                context.contractProcedures[selector] == nil
+            else {
                 alone = false
                 continue
             }
