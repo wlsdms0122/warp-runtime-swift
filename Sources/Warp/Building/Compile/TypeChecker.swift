@@ -422,7 +422,15 @@ struct TypeChecker {
 
         for held in holding {
             for bound in held.bounds {
-                if let refusal = refusal(of: held.reading, holdingTo: bound, as: label, in: table, fulfillment: fulfillment, at: place) {
+                if let refusal = refusal(
+                    of: held.reading,
+                    holdingTo: bound,
+                    orNull: held.orNull,
+                    as: label,
+                    in: table,
+                    fulfillment: fulfillment,
+                    at: place
+                ) {
                     return refusal
                 }
             }
@@ -438,6 +446,7 @@ struct TypeChecker {
     private func refusal(
         of reading: LoweredType,
         holdingTo bound: LoweredType.Bound,
+        orNull: Bool,
         as label: String,
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment,
@@ -445,7 +454,7 @@ struct TypeChecker {
     ) -> String? {
         switch bound {
         case let .contract(name):
-            switch loweredTypes.answering(contract: name, reading: reading) {
+            switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
             // What leans on a claim is written down for the link to settle.
             case let .leansOn(types):
                 for type in types {
@@ -463,7 +472,7 @@ struct TypeChecker {
             }
 
         case let .membership(row):
-            guard !loweredTypes.admits(constraint: row, reading: reading, assuming: [], rigid: false) else { return nil }
+            guard !loweredTypes.admits(constraint: row, reading: reading, assuming: [], rigid: false, orNull: orNull) else { return nil }
 
             return "\(label) \(reading.rendered(in: loweredTypes)),"
                 + " which '\(loweredTypes.constraintLabels[row])' does not admit"
@@ -539,6 +548,7 @@ struct TypeChecker {
                 if let refusal = refusal(
                     of: reading,
                     holdingTo: bound,
+                    orNull: false,
                     as: "'\(parameter)' is read as",
                     in: loweredTypes,
                     fulfillment: fulfillment,

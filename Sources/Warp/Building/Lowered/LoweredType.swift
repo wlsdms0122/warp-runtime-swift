@@ -723,7 +723,8 @@ indirect enum LoweredType: Sendable, Equatable {
                         reading: other,
                         assuming: [],
                         asking: assuming + [(self, other)],
-                        rigid: rigid
+                        rigid: rigid,
+                        orNull: false
                     )
 
                 case let .contract(name):
@@ -1115,7 +1116,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A composition has no name to be read under: what arrived is held
         // to its bounds where it arrived, wherever in the slot that was.
         case let (.composition(bounds), _):
-            holding.append(Substitution.Held(reading: given, bounds: bounds))
+            holding.append(Substitution.Held(reading: given, bounds: bounds, orNull: false))
 
         case let (.parameter(name, _), _):
             guard let already = bound[name] else {
@@ -1193,36 +1194,11 @@ indirect enum LoweredType: Sendable, Equatable {
                 assuming: assuming
             )
 
-        // A value of a membership is one of its members, so a composition or
-        // null holds each member the way it holds a value of that member, a
-        // nullable one included. A member that is itself a composition is
-        // held as it stands.
-        case let (.nullable(.composition(slot)), .composition(bounds)),
-            let (.nullable(.composition(slot)), .parameter(_, bounds)):
-            let members = bounds.flatMap { bound -> [LoweredType] in
-                guard case let .membership(row) = bound else { return [] }
-
-                return table.constraints[row]
-            }
-
-            guard !members.isEmpty else {
-                LoweredType.composition(slot).binding(
-                    against: given,
-                    into: &bound,
-                    disagreeing: &disagreeing,
-                    holding: &holding,
-                    in: table,
-                    assuming: assuming
-                )
-
-                return
-            }
-
-            for member in members {
-                let holder: LoweredType = if case .composition = member { .composition(slot) } else { self }
-
-                holder.binding(against: member, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
-            }
+        // A composition or null holds what arrived as it stands, the table
+        // answering whether it is null or held to the bounds, a membership
+        // member by member.
+        case let (.nullable(.composition(slot)), .composition), let (.nullable(.composition(slot)), .parameter):
+            holding.append(Substitution.Held(reading: given, bounds: slot, orNull: true))
 
         case let (.nullable(mine), _) where !given.slotUnwrapped.declaresNull(in: table):
             mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
