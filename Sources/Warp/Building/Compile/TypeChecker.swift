@@ -509,12 +509,14 @@ struct TypeChecker {
             return AnswerProof(alone: true, leaning: [])
         }
 
-        var alone = readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
-            && !judgements.judgements.values.contains { judgement in
-                guard case let .apply(_, against?) = judgement else { return false }
+        let readsInPlace = readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
+        let appliesOpen = judgements.judgements.values.contains { judgement in
+            guard case let .apply(_, against?) = judgement else { return false }
 
-                return against.namesParameter
-            }
+            return against.namesParameter
+        }
+
+        var alone = readsInPlace && !appliesOpen
         var leaning: Set<Name> = []
 
         for site in calls {
