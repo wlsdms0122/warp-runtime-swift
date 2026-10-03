@@ -902,6 +902,14 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.nullable(mine), _):
             return mine.takesInPlace(written, in: table)
 
+        // A procedure's positions and answer are written as themselves, and a
+        // value saying it is const or isolated fits a slot that does not ask.
+        case let (.procedure(parameters, returns, constness, isolation), .procedure(_, _, given, held)):
+            guard constness != .const || given == .const, isolation != .isolated || held == .isolated else { return false }
+
+            return LoweredType.procedure(parameters: parameters, returns: returns, constness: given, isolation: held)
+                .identical(to: written, in: table)
+
         default:
             return identical(to: written, in: table)
         }

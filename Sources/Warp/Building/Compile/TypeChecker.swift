@@ -2557,10 +2557,18 @@ struct TypeChecker {
             case let .assignment(path)?:
                 guard let id = path.head else { break }
 
+                // An empty list holds no element, so where it is written it is
+                // a list of whatever the slot's elements are.
+                let written: LoweredType = if case let .array(elements) = statement.expression, elements.isEmpty {
+                    .array(.never)
+                } else {
+                    inner.reading
+                }
+
                 switch environment[id] {
                 case let binding? where binding.heldType != nil:
                     try refuseUnfit(
-                        inner.reading,
+                        written,
                         writtenTo: path,
                         holding: binding.heldType,
                         in: environment,
@@ -2586,7 +2594,7 @@ struct TypeChecker {
                         }
                     } else {
                         try refuseUnfit(
-                            inner.reading,
+                            written,
                             writtenTo: path,
                             holding: nil,
                             in: environment,
