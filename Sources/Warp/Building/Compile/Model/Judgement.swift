@@ -12,9 +12,13 @@ import Foundation
 // answer proof to read over the body.
 enum Judgement: Sendable {
     // A call of a value: the positions it hands a variable in place, the
-    // ones the slot's type marks `inout`, and what its answer is judged
-    // against where the slot's type writes `returns`.
-    case apply(inPlace: [Int], against: LoweredType?)
+    // ones the slot's type marks `inout`, what its answer is judged against
+    // where the slot's type writes `returns`, and what each variable handed
+    // in place is judged against once the call is over, by position. The
+    // run judges a variable only where the closure it reaches names a type
+    // parameter at that slot, since a closure written with a type there
+    // settles every write to it.
+    case apply(inPlace: [Int], against: LoweredType?, handedBack: [Int: LoweredType])
 
     // A call whose callee settles a wider answer than the call reads, or
     // hands back in place what it holds as its own type parameter: what the

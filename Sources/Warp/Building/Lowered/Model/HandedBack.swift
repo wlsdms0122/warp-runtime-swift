@@ -7,12 +7,13 @@
 
 import Foundation
 
-// A variable a call handed in place at a slot naming a type parameter, judged
-// once the call is over against what the caller holds it as. The callee
-// wrote it as its own parameter, which says nothing of what filled it.
+// A variable a call handed in place at a slot naming a type parameter, by
+// the position it was handed at, judged once the call is over against what
+// the caller holds it as. The callee wrote it as its own parameter, which
+// says nothing of what filled it.
 struct HandedBack: Sendable {
     // MARK: - Property
-    let address: Address
+    let position: Int
     let against: LoweredType
 
     // MARK: - Initializer

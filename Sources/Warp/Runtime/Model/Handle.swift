@@ -33,6 +33,11 @@ struct Handle: Sendable {
     }
 
     // MARK: - Public
+    // The variable and the path below it, as a refusal names them.
+    var spelled: String {
+        rendered(path)
+    }
+
     // What the path holds. The build judged the path against the box's
     // declared type, so a part not there now is a box whose scope
     // changed under the hold.

@@ -767,7 +767,7 @@ struct ObjectWriter {
                 Tag.checked,
                 try self.operation(read),
                 ObjectWriter.maybe(type, lowered),
-                .array(handedBack.map { back in .array([address(back.address), lowered(back.against)]) })
+                .array(handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
             )
 
         case let .block(body):

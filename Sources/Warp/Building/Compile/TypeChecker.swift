@@ -523,9 +523,9 @@ struct TypeChecker {
         }
 
         let appliesOpen = judgements.judgements.values.contains { judgement in
-            guard case let .apply(_, against?) = judgement else { return false }
+            guard case let .apply(_, against, handedBack) = judgement else { return false }
 
-            return against.namesParameter
+            return against?.namesParameter == true || handedBack.values.contains(where: \.namesParameter)
         }
 
         guard !appliesOpen else { return .broken }
@@ -618,6 +618,8 @@ struct TypeChecker {
     ) -> [Int: LoweredType] {
         var judged: [Int: LoweredType] = [:]
 
+        // The slots first: most take nothing in place, and asking them costs
+        // less than finding the row.
         for (position, slot) in slots.enumerated() {
             guard
                 case let .inout(held) = slot.type,
@@ -632,6 +634,29 @@ struct TypeChecker {
         }
 
         guard !judged.isEmpty, !handsBackAsDeclared(selector, given: context) else { return [:] }
+
+        return judged
+    }
+
+    // The same, for a call of a value: what each variable handed in place is
+    // judged against once the call is over, what the slot's type holds it as.
+    // No row of a closure value proves anything, so each is judged wherever
+    // the closure the run reaches names a type parameter there.
+    private func handedBack(at handed: [Int], of callee: LoweredType) -> [Int: LoweredType] {
+        guard case let .procedure(parameters?, _, _, _) = callee else { return [:] }
+
+        var judged: [Int: LoweredType] = [:]
+
+        for position in handed {
+            guard
+                case let .inout(held) = parameters[position],
+                let against = judgedAgainst(held, answeredBy: nil)
+            else {
+                continue
+            }
+
+            judged[position] = against
+        }
 
         return judged
     }
@@ -2033,7 +2058,14 @@ struct TypeChecker {
                 )
             }
 
-            judgements.record(.apply(inPlace: handed, against: judgedAgainst(answers, answeredBy: nil)), at: place)
+            judgements.record(
+                .apply(
+                    inPlace: handed,
+                    against: judgedAgainst(answers, answeredBy: nil),
+                    handedBack: handedBack(at: handed, of: callee)
+                ),
+                at: place
+            )
 
             if failsHere(expression, given: context) {
                 flow.fail()

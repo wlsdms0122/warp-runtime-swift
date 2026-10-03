@@ -987,7 +987,7 @@ struct ObjectReader {
                 against: try cursor.field().maybe(lowered),
                 handedBack: try Field(cursor.next(), of: "handed back").list { written in
                     var back = try FieldCursor(written, of: "handed back")
-                    let taken = HandedBack(address: try address(back.next()), against: try lowered(back.next()))
+                    let taken = HandedBack(position: try back.field().count(), against: try lowered(back.next()))
 
                     try back.end()
 

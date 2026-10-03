@@ -179,7 +179,7 @@ indirect enum Operation: Sendable {
             inside = .checked(
                 try read.rewritten(operation: operation, type: type),
                 against: try against.map(type),
-                handedBack: try handedBack.map { back in HandedBack(address: back.address, against: try type(back.against)) }
+                handedBack: try handedBack.map { back in HandedBack(position: back.position, against: try type(back.against)) }
             )
 
         case let .block(body):
