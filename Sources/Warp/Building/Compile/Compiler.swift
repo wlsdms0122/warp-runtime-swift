@@ -345,12 +345,12 @@ struct Compiler {
             }
         }
 
-        // Which bodies answer as they declare, settled over all of them at
+        // Which bodies hand back as they declare, settled over all of them at
         // once, so the order they were read in says nothing.
-        let proven = Derivation().answersAsDeclared(proofs)
+        let proven = Derivation().handsBackAsDeclared(proofs)
 
         for symbol in holding where symbol.procedure.block != nil {
-            compiling.record(try row(of: symbol), answersAsDeclared: proven.contains(symbol.declared))
+            compiling.record(try row(of: symbol), handsBackAsDeclared: proven.contains(symbol.declared))
         }
 
         // The types its bodies stand on, written as this document's own

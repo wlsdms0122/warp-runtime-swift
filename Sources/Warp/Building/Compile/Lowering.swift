@@ -453,8 +453,8 @@ struct Lowering {
     }
 
     // A lowered row with what its document settled it proves of its answers.
-    mutating func record(_ row: Int, answersAsDeclared: Bool) {
-        table[row] = Linked(table[row], implementation: table[row].implementation, answersAsDeclared: answersAsDeclared)
+    mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
+        table[row] = Linked(table[row], implementation: table[row].implementation, handsBackAsDeclared: handsBackAsDeclared)
     }
 
     // A document's own declarations by row, as they were held.
@@ -855,7 +855,7 @@ struct Lowering {
                 constness: constness,
                 isolation: isolation,
                 failing: failing,
-                answersAsDeclared: false,
+                handsBackAsDeclared: false,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),

@@ -47,7 +47,7 @@ struct Judged: Sendable {
 
     // Whether its answers are, at every type parameter its declaration
     // answers, that parameter: what a call need not judge again.
-    let answersAsDeclared: Bool
+    let handsBackAsDeclared: Bool
 
     let implementation: Implementation
 
@@ -62,7 +62,7 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        answersAsDeclared: Bool,
+        handsBackAsDeclared: Bool,
         implementation: Implementation
     ) {
         self.label = label
@@ -71,7 +71,7 @@ struct Judged: Sendable {
         self.constness = constness
         self.isolation = isolation
         self.failing = failing
-        self.answersAsDeclared = answersAsDeclared
+        self.handsBackAsDeclared = handsBackAsDeclared
         self.implementation = implementation
     }
 
@@ -84,7 +84,7 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        answersAsDeclared: Bool,
+        handsBackAsDeclared: Bool,
         judging implementation: Implementation
     ) throws {
         try Self.judge(implementation, against: signature)
@@ -96,7 +96,7 @@ struct Judged: Sendable {
             constness: constness,
             isolation: isolation,
             failing: failing,
-            answersAsDeclared: answersAsDeclared,
+            handsBackAsDeclared: handsBackAsDeclared,
             implementation: implementation
         )
     }
@@ -128,7 +128,7 @@ struct Judged: Sendable {
         self.constness = row.constness
         self.isolation = row.isolation
         self.failing = row.failing
-        self.answersAsDeclared = row.answersAsDeclared
+        self.handsBackAsDeclared = row.handsBackAsDeclared
         self.implementation = implementation
     }
 
@@ -375,7 +375,7 @@ struct Judged: Sendable {
             constness: constness,
             isolation: isolation,
             failing: failing,
-            answersAsDeclared: answersAsDeclared,
+            handsBackAsDeclared: handsBackAsDeclared,
             implementation: implementation,
             foldable: foldable,
             closure: closure,

@@ -591,7 +591,7 @@ struct TypeChecker {
 
     // The same, for a call to a selector. A contract's procedure is answered
     // by whichever row the run picks, and what that row settles is not known
-    // here. A row that proved it answers as declared, a native's by its
+    // here. A row that proved it hands back as declared, a native's by its
     // host's word, answers what the call reads. A body of this document has
     // proved nothing while its document is read, since its proof is settled
     // over the whole document after, so the judgement stands and the link
@@ -668,7 +668,7 @@ struct TypeChecker {
     private func handsBackAsDeclared(_ selector: Name, given context: TypingContext) -> Bool {
         guard context.contractProcedures[selector] == nil else { return false }
 
-        return context.declared(selector)?.answersAsDeclared == true
+        return context.declared(selector)?.handsBackAsDeclared == true
     }
 
     // The one membership judgment a call is held to, over the whole

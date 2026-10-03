@@ -813,7 +813,7 @@ struct ObjectReader {
             constness: try constness(cursor.next()),
             isolation: try isolation(cursor.next()),
             failing: try failing(cursor.next()),
-            answersAsDeclared: try cursor.field().flag(),
+            handsBackAsDeclared: try cursor.field().flag(),
             judging: try implementation(cursor.next())
         )
 

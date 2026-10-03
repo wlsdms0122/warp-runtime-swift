@@ -279,10 +279,10 @@ final class Relocating {
 
         // What a call answers and hands back needs no judgement where it
         // stands once the rows that may answer are known to answer what the
-        // call reads: a row its own document proved answers as declared, or,
+        // call reads: a row its own document proved hands back as declared, or,
         // through a contract, rows that each settle exactly that type where
         // they answer and hand nothing back to judge.
-        case let .checked(.call(call), _, _) where table[call.procedure].answersAsDeclared:
+        case let .checked(.call(call), _, _) where table[call.procedure].handsBackAsDeclared:
             return .call(call)
 
         case let .checked(.dispatch(dispatch), against?, handedBack) where handedBack.isEmpty && dispatch.calls.values.allSatisfy({ call in

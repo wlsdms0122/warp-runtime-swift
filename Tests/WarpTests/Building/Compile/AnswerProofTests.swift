@@ -34,8 +34,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.a"]?.answersAsDeclared == true)
-        #expect(image["app.z"]?.answersAsDeclared == true)
+        #expect(image["app.a"]?.handsBackAsDeclared == true)
+        #expect(image["app.z"]?.handsBackAsDeclared == true)
     }
 
     @Test("a body answering what one answering `any` answers is not proven")
@@ -62,8 +62,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.z"]?.answersAsDeclared == false)
-        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.z"]?.handsBackAsDeclared == false)
+        #expect(image["app.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a body leaning on itself keeps what nothing else took away")
@@ -79,7 +79,7 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.r"]?.answersAsDeclared == true)
+        #expect(image["app.r"]?.handsBackAsDeclared == true)
     }
 
     @Test("two bodies leaning on each other keep what nothing else took away")
@@ -96,8 +96,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.a"]?.answersAsDeclared == true)
-        #expect(image["app.b"]?.answersAsDeclared == true)
+        #expect(image["app.a"]?.handsBackAsDeclared == true)
+        #expect(image["app.b"]?.handsBackAsDeclared == true)
     }
 
     @Test("a cycle leaning on a body answering `any` falls whole")
@@ -137,9 +137,9 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.c"]?.answersAsDeclared == false)
-        #expect(image["app.b"]?.answersAsDeclared == false)
-        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.c"]?.handsBackAsDeclared == false)
+        #expect(image["app.b"]?.handsBackAsDeclared == false)
+        #expect(image["app.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a fall carries back along the bodies leaning on it")
@@ -167,9 +167,9 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then. `app.a` falls only once `app.b` has
-        #expect(image["app.c"]?.answersAsDeclared == false)
-        #expect(image["app.b"]?.answersAsDeclared == false)
-        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.c"]?.handsBackAsDeclared == false)
+        #expect(image["app.b"]?.handsBackAsDeclared == false)
+        #expect(image["app.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a body that wrote no answer proves what was read off it")
@@ -205,8 +205,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.g"]?.answersAsDeclared == false)
-        #expect(image["app.h"]?.answersAsDeclared == true)
+        #expect(image["app.g"]?.handsBackAsDeclared == false)
+        #expect(image["app.h"]?.handsBackAsDeclared == true)
     }
 
     @Test("a body handed a variable in place at a type parameter proves what it writes there")
@@ -271,8 +271,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.put"]?.answersAsDeclared == false)
-        #expect(image["app.keep"]?.answersAsDeclared == true)
+        #expect(image["app.put"]?.handsBackAsDeclared == false)
+        #expect(image["app.keep"]?.handsBackAsDeclared == true)
     }
 
     // MARK: - Public
