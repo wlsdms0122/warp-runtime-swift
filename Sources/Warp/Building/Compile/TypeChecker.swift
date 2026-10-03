@@ -491,7 +491,7 @@ struct TypeChecker {
     // call reads it as, unless the callee already settles exactly that, or
     // the call reads `any` or nothing. `answeredBy` is what the callee
     // settles, nil where the callee is not known here.
-    private func checking(_ reading: LoweredType, answeredBy callee: LoweredType?) -> LoweredType? {
+    private func judgedAgainst(_ reading: LoweredType, answeredBy callee: LoweredType?) -> LoweredType? {
         switch reading {
         case .any, .never:
             return nil
@@ -505,14 +505,14 @@ struct TypeChecker {
     // by whichever row the run picks, and what that row settles is not known
     // here. A native another document holds answers by its host's code, and
     // what it declared is taken as said, as its other claims are.
-    private func checking(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
-        guard context.contractProcedures[selector] == nil else { return checking(reading, answeredBy: nil) }
+    private func judgedAgainst(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
+        guard context.contractProcedures[selector] == nil else { return judgedAgainst(reading, answeredBy: nil) }
 
         if context.own[selector] == nil, case .native? = context.declared(selector)?.implementation {
             return nil
         }
 
-        return checking(reading, answeredBy: context.answer(of: selector))
+        return judgedAgainst(reading, answeredBy: context.answer(of: selector))
     }
 
     // The one membership judgment a call is held to, over the whole
@@ -1901,7 +1901,7 @@ struct TypeChecker {
                 )
             }
 
-            judgements.record(.apply(inPlace: handed, checking: checking(answers, answeredBy: nil)), at: place)
+            judgements.record(.apply(inPlace: handed, checking: judgedAgainst(answers, answeredBy: nil)), at: place)
 
             if failsHere(expression, given: context) {
                 flow.fail()
@@ -2043,7 +2043,7 @@ struct TypeChecker {
                 in: context.loweredTypes
             )
 
-            if let checking = checking(reading, sending: call.selector, given: context) {
+            if let checking = judgedAgainst(reading, sending: call.selector, given: context) {
                 judgements.record(.call(checking: checking), at: place)
             }
 
