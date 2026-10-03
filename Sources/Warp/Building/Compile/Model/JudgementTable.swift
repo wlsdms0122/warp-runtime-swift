@@ -9,7 +9,8 @@ import Foundation
 
 // What the type check judged at each place that lowering reads back, by the
 // place it stands at. The type check writes it beside the calls it gathers,
-// and lowering reads it where it lowers what stands there. A place stands for
+// reads it over a body for the answer proof, and lowering reads it where it
+// lowers what stands there. A place stands for
 // one expression, so it holds one judgement.
 struct JudgementTable: Sendable {
     // MARK: - Property

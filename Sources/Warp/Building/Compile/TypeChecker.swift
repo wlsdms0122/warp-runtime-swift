@@ -183,6 +183,7 @@ struct TypeChecker {
         let proof = proof(
             of: [inner.reading] + inner.flow.answered.map(\.reading),
             to: returns,
+            calling: inner.calls,
             judged: inner.judgements,
             given: context
         )
@@ -498,6 +499,7 @@ struct TypeChecker {
     private func proof(
         of readings: [LoweredType],
         to returns: TypeExpression?,
+        calling calls: [CallSite],
         judged judgements: JudgementTable,
         given context: TypingContext
     ) -> AnswerProof {
@@ -508,24 +510,24 @@ struct TypeChecker {
         }
 
         var alone = readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
+            && !judgements.judgements.values.contains { judgement in
+                guard case let .apply(_, against?) = judgement else { return false }
+
+                return against.namesParameter
+            }
         var leaning: Set<Name> = []
 
-        for judgement in judgements.judgements.values {
-            switch judgement {
-            case let .apply(_, against?) where against.namesParameter:
+        for site in calls {
+            guard case let .call(against)? = judgements[site.place], against.namesParameter else { continue }
+
+            let selector = site.call.selector
+
+            guard context.own[selector] != nil, context.contractProcedures[selector] == nil else {
                 alone = false
-
-            case let .call(selector, against) where against.namesParameter:
-                guard context.own[selector] != nil, context.contractProcedures[selector] == nil else {
-                    alone = false
-                    continue
-                }
-
-                leaning.insert(selector)
-
-            case .apply, .call, .closure:
                 continue
             }
+
+            leaning.insert(selector)
         }
 
         return AnswerProof(alone: alone, leaning: leaning)
@@ -2108,7 +2110,7 @@ struct TypeChecker {
             )
 
             if let against = judgedAgainst(reading, sending: call.selector, given: context) {
-                judgements.record(.call(selector: call.selector, against: against), at: place)
+                judgements.record(.call(against: against), at: place)
             }
 
             if mayFail {
