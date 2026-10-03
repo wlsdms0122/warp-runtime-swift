@@ -598,24 +598,21 @@ indirect enum LoweredType: Sendable, Equatable {
         accepts(other, in: table, assuming: [], rigid: false)
     }
 
+    // The same question where `other` is a declaration's own, and no call
+    // fills the type parameters it names: each is one type this knows
+    // nothing about, so only that same parameter, or a slot its bounds prove
+    // it fits by structure, takes it. What a declaration answering for
+    // another is held to.
+    func accepts(_ other: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
+        accepts(other, in: table, assuming: [], rigid: rigid)
+    }
+
     // The same question, carrying which pairs are already being asked. A
     // named type may reach itself through a type, so comparing one
     // structurally walks back to the comparison it is inside, and a
     // recursive type agrees with itself precisely when assuming it does
     // uncovers no disagreement. Only the two `named` doors record the pair.
-    func accepts(_ other: LoweredType, in table: LoweredTypeTable, assuming: [(LoweredType, LoweredType)]) -> Bool {
-        accepts(other, in: table, assuming: assuming, rigid: false)
-    }
-
-    // The same question where `other` is a declaration's own, and no call
-    // fills the type parameters it names: each is one type this knows
-    // nothing about, so only that same parameter, or a slot taking anything,
-    // takes it. What a declaration answering for another is held to.
-    func accepts(_ other: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
-        accepts(other, in: table, assuming: [], rigid: rigid)
-    }
-
-    private func accepts(
+    func accepts(
         _ other: LoweredType,
         in table: LoweredTypeTable,
         assuming: [(LoweredType, LoweredType)],
@@ -677,43 +674,26 @@ indirect enum LoweredType: Sendable, Equatable {
                 }
             }
 
-        // A parameter no call fills is known by its own bounds alone, so a
-        // composition takes it only where those prove each of the
-        // composition's: a membership where a membership bounding the
-        // parameter has every member admitted, a contract where the bounds
-        // answer it. Before the general branch below, which takes what is not
-        // provably outside, and a value of this parameter is not judged again
-        // where it arrives.
-        case let (.composition(mine), .parameter(_, theirs)) where rigid:
-            let bounded = theirs.contains { bound in
-                if case .membership = bound { true } else { false }
-            }
-
-            return mine.allSatisfy { bound in
-                switch bound {
-                case let .membership(row):
-                    bounded && table.admits(constraint: row, reading: other, assuming: [], asking: assuming + [(self, other)])
-
-                case let .contract(name):
-                    if case .settled(true) = table.answering(contract: name, reading: other) { true } else { false }
-                }
-            }
-
-        // A composition takes what is not provably outside any of its
-        // bounds: a membership refuses what none of its members admit, a
-        // contract refuses what the table settles as not answering. In the
-        // other direction a composition stands for some type nothing here
-        // lists.
+        // A composition takes what each of its bounds takes: a membership
+        // what its members admit, a contract what answers it, each asked of
+        // the table with the same rigidity. In the other direction a
+        // composition stands for some type nothing here lists.
         case let (.composition(bounds), _):
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
             return bounds.allSatisfy { bound in
                 switch bound {
                 case let .membership(row):
-                    table.admits(constraint: row, reading: other, assuming: [], asking: assuming + [(self, other)])
+                    table.admits(
+                        constraint: row,
+                        reading: other,
+                        assuming: [],
+                        asking: assuming + [(self, other)],
+                        rigid: rigid
+                    )
 
                 case let .contract(name):
-                    if case .settled(false) = table.answering(contract: name, reading: other) { false } else { true }
+                    table.satisfies(contract: name, reading: other, rigid: rigid)
                 }
             }
 
