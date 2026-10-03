@@ -82,6 +82,24 @@ struct AnswerProofTests {
         #expect(image["app.r"]?.answersAsDeclared == true)
     }
 
+    @Test("two bodies leaning on each other keep what nothing else took away")
+    func twoBodiesLeaningOnEachOtherAreProven() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")])]))),
+                "app.b": generic(result: .call(Call(selector: "app.a", arguments: [.reference([.key("x")])])))
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.a"]?.answersAsDeclared == true)
+        #expect(image["app.b"]?.answersAsDeclared == true)
+    }
+
     // MARK: - Public
     // MARK: - Private
     // A declaration taking and answering its own `some T`.
