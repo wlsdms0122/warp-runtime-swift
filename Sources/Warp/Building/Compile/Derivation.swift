@@ -183,12 +183,12 @@ struct Derivation {
                 .joined(self.failing(then, given: failing))
                 .joined(otherwise.map { arm in self.failing(arm, given: failing) } ?? .these([]))
 
-        case let .loop(condition, body, _):
+        case let .loop(condition, body):
             return read(condition).joined(self.failing(body, given: failing))
 
         // The rescue is what the body's failures become: they are caught here,
         // and what is left is whatever the rescue itself may fail with.
-        case let .attempt(_, rescue, _):
+        case let .attempt(_, rescue):
             return self.failing(rescue, given: failing)
 
         case let .leave(leave):
@@ -270,8 +270,9 @@ struct Derivation {
     // what a call of the value the name holds leans on. A name that wrote its
     // type holds that. A fixed name read from another name follows the type
     // that one was declared, through a path the way `reached` walks it. A
-    // variable that wrote none is retyped by its writes, and anything else is
-    // a reading the build worked out, so neither holds one.
+    // variable that wrote none holds a type the build worked out, the one its
+    // writes left or the one a closure or a call took it as, and anything else
+    // is such a reading too, so neither holds one.
     func declaredType(
         of binding: Statement.Binding,
         reading expression: Expression,
@@ -475,10 +476,10 @@ struct Derivation {
         case let .conditional(condition, then, otherwise):
             return holds(condition) && holds(then) && (otherwise.map(holds) ?? true)
 
-        case let .loop(condition, body, _):
+        case let .loop(condition, body):
             return holds(condition) && holds(body)
 
-        case let .attempt(body, rescue, _):
+        case let .attempt(body, rescue):
             return holds(body) && holds(rescue)
         }
     }

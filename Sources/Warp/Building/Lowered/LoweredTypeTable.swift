@@ -201,7 +201,15 @@ final class LoweredTypeTable: Sendable {
     // provably outside is refused, and a reading nothing can be said about
     // passes here and is judged again where the value arrives.
     func answering(contract name: Name, reading: LoweredType) -> Answering {
-        answering(contract: name, reading: reading, assuming: [])
+        answering(contract: name, reading: reading, assuming: [], rigid: false)
+    }
+
+    // Whether a reading stands where a contract bounds a slot. One-sided as
+    // `answering` is, unless `rigid`: then nothing is judged where the value
+    // arrives, so a named type is held to what the documents say and a
+    // reading nothing can be said about refuses.
+    func satisfies(contract name: Name, reading: LoweredType, rigid: Bool) -> Bool {
+        if case .settled(false) = answering(contract: name, reading: reading, assuming: [], rigid: rigid) { false } else { true }
     }
 
     // Whether a value is a member of a constraint. A member speaks through
@@ -220,7 +228,10 @@ final class LoweredTypeTable: Sendable {
     // Whether a reading could be a member of a constraint. Membership is
     // one-sided the way every judgment before the run is: only what is
     // provably outside is refused, and a reading nothing can be said about
-    // passes here and is judged again where the value arrives.
+    // passes here and is judged again where the value arrives. `rigid` turns
+    // it the other way for a parameter no call fills, as `accepts` does: such
+    // a parameter is known by its bounds alone and no value of it is judged
+    // where it arrives, so it is a member only where its bounds prove it.
     //
     // A constrained reading is judged by its own membership rather than by
     // its name: it stands for some member of its constraint, so it fits
@@ -229,7 +240,8 @@ final class LoweredTypeTable: Sendable {
         constraint row: Int,
         reading: LoweredType,
         assuming: [Int],
-        asking pairs: [(LoweredType, LoweredType)] = []
+        asking pairs: [(LoweredType, LoweredType)] = [],
+        rigid: Bool
     ) -> Bool {
         switch reading {
         case .any, .projection:
@@ -238,8 +250,15 @@ final class LoweredTypeTable: Sendable {
         // A parameter bounded by a membership stands for some member of it, so
         // it fits where every one of those would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is provable
-        // and it passes the way an unbounded one does.
+        // and it passes the way an unbounded one does, unless `rigid`. A
+        // membership already being asked answers yes.
         case let .parameter(_, bounds), let .composition(bounds):
+            let bounded = bounds.contains { bound in
+                if case .membership = bound { true } else { false }
+            }
+
+            guard bounded || !rigid else { return false }
+
             let memberships = bounds.compactMap { bound -> Int? in
                 guard case let .membership(constraint) = bound, !assuming.contains(constraint) else { return nil }
 
@@ -250,7 +269,7 @@ final class LoweredTypeTable: Sendable {
 
             return memberships.contains { constraint in
                 constraints[constraint].allSatisfy { member in
-                    admits(constraint: row, reading: member, assuming: assuming + [constraint], asking: pairs)
+                    admits(constraint: row, reading: member, assuming: assuming + [constraint], asking: pairs, rigid: rigid)
                 }
             }
 
@@ -263,7 +282,7 @@ final class LoweredTypeTable: Sendable {
         // the reading again through a name, and the walk that asked first
         // is the one that answers.
         default:
-            return constraints[row].contains { member in member.accepts(reading, in: self, assuming: pairs) }
+            return constraints[row].contains { member in member.accepts(reading, in: self, assuming: pairs, rigid: rigid) }
         }
     }
 
@@ -380,10 +399,15 @@ final class LoweredTypeTable: Sendable {
     }
 
     // MARK: - Private
-    private func answering(contract name: Name, reading: LoweredType, assuming: [Int]) -> Answering {
+    private func answering(contract name: Name, reading: LoweredType, assuming: [Int], rigid: Bool) -> Answering {
         switch reading {
         case .any, .projection, .undeclared, .never:
             return .settled(true)
+
+        // Where nothing is judged on arrival, a name is held to what the
+        // documents say about it.
+        case let .named(row) where rigid:
+            return .settled(settles(contract: name, arrived: labels[row]) != false)
 
         case let .named(row):
             return .leansOn([labels[row]])
@@ -395,15 +419,21 @@ final class LoweredTypeTable: Sendable {
         // A parameter bounded by nothing that answers is refused, since a
         // slot says what a call may fill it with; a composition bounded by
         // contracts alone stands for a type nothing here lists, so nothing
-        // is provable and it passes to be judged where the value arrives.
+        // is provable and it passes to be judged where the value arrives,
+        // unless `rigid`.
         case let .parameter(_, bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming) ?? .settled(false)
+            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid) ?? .settled(false)
 
         case let .composition(bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming) ?? .settled(true)
+            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid) ?? .settled(!rigid)
+
+        // Where nothing is judged on arrival, what may be null answers no
+        // contract.
+        case .nullable where rigid:
+            return .settled(false)
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return answering(contract: name, reading: inner, assuming: assuming)
+            return answering(contract: name, reading: inner, assuming: assuming, rigid: rigid)
 
         default:
             return .settled(false)
@@ -416,7 +446,12 @@ final class LoweredTypeTable: Sendable {
     // apart, since a value is a member of each of them: one that settles the
     // contract settles it for all, and what leans on claims is leaned on only
     // where no membership settles it.
-    private func answering(contract name: Name, boundedBy bounds: [LoweredType.Bound], assuming: [Int]) -> Answering? {
+    private func answering(
+        contract name: Name,
+        boundedBy bounds: [LoweredType.Bound],
+        assuming: [Int],
+        rigid: Bool
+    ) -> Answering? {
         guard !bounds.contains(.contract(name)) else { return .settled(true) }
 
         var answers: [Answering] = []
@@ -425,7 +460,7 @@ final class LoweredTypeTable: Sendable {
             guard case let .membership(row) = bound, !assuming.contains(row) else { continue }
 
             answers.append(constraints[row].reduce(.settled(true)) { answered, member in
-                answered.joined(answering(contract: name, reading: member, assuming: assuming + [row]))
+                answered.joined(answering(contract: name, reading: member, assuming: assuming + [row], rigid: rigid))
             })
         }
 

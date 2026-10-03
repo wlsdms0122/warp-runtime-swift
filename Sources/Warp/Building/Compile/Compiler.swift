@@ -91,11 +91,11 @@ struct Compiler {
         // One declaration resolves once, whichever table asks.
         var resolvedBodies: [Name: Procedure] = [:]
 
-        // A declaration, bound and dot-judged: every dot in the body is spelled
-        // as what the types say it means, every call is gathered, and a
+        // A declaration, bound and dot-judged: every dot in the body is judged
+        // against the type it reaches, every call is gathered, a
         // constant-headed path (judged first, like any path) folds to the
-        // value it is. The image holds only this form, so a run never
-        // asks a value what a name does.
+        // value it is, and a closure literal's signature is bounded by the
+        // declaration's. The image holds only this form.
         //
         // Every call the body writes is checked here too, reached or not:
         // callee declared, arguments taken.
@@ -126,7 +126,6 @@ struct Compiler {
                     answering: declaration.signature.returns,
                     with: context().bounding(declaration.signature.parameterBounding.table),
                     folding: folding,
-                    origin: origin,
                     writing: fulfillment
                 )
 
@@ -237,7 +236,8 @@ struct Compiler {
             numbering: numbering,
             const: constant,
             isolated: untouched,
-            taking: taking,
+            taking: { selector in own[selector] ?? behind.declared(selector)?.signature },
+            contractProcedures: Set(behind.contractProcedures.keys),
             concealing: behind.concealed
         )
 

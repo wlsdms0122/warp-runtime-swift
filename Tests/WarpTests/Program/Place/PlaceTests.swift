@@ -38,8 +38,7 @@ struct PlaceTests {
         let spin = place(
             refusing: Statement(binding: .constant("spin"), expression: .loop(
                     while: .block(Block(body: [], result: .literal(.bool(true)))),
-                    body: Block(body: []),
-                    round: "spin"
+                    body: Block(body: [])
                 )
             )
         )
@@ -244,8 +243,7 @@ struct PlaceTests {
                                     Statement(binding: .constant("sent"), expression: .call(
                                         Call(selector: selector, arguments: [argument])
                                     ))
-                                ]),
-                                failure: "guarded"
+                                ])
                             )
                         )
                     ]),

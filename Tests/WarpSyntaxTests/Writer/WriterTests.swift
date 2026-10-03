@@ -883,59 +883,6 @@ struct WriterTests {
         #expect(parameters == [.dictionary(["name": .string("item"), "type": .string("some T")])])
     }
 
-    @Test("a construct binding a name its statement did not give has no document")
-    func aMisnamedBindingHasNoDocument() throws {
-        // Given. A document cannot write this, because the name a loop binds is
-        // the name of the statement it is written as. A caller building the
-        // language's types directly is under no such obligation, so this is
-        // reachable and says so rather than writing a document that would load
-        // into something else.
-        let module = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("walked"), expression: .loop(
-                                while: .literal(.bool(false)),
-                                body: Block(body: [Statement(binding: .constant("step"), expression: .literal(.int(1)))]),
-                                round: "somethingElse"
-                            )
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try sut.value(of: module)
-        } throws: { error in
-            "\(error)".contains("binds 'somethingElse' inside 'walked'")
-        }
-    }
-
-    @Test("an attempt under a set binding the variable it writes has no document")
-    func aBindingUnderASetHasNoDocument() throws {
-        // Given. A `set` introduces no name, so an attempt written under one
-        // reads back binding no failure
-        let stop = Call(selector: "std.control.abort", arguments: [.literal(.string("stop"))])
-        let statement = Statement(
-            binding: .assignment([.key("kept")]),
-            expression: .attempt(
-                Block(body: [Statement(expression: .call(stop))]),
-                rescue: Block(body: [], result: .literal(.int(1))),
-                failure: "kept"
-            )
-        )
-
-        // When / Then
-        #expect {
-            try sut.value(of: statement)
-        } throws: { error in
-            "\(error)".contains("binds 'kept' inside a statement that introduces none")
-        }
-    }
-
     @Test("a procedure backed by native code has no document")
     func nativeCodeHasNoDocument() throws {
         // Given. What the host brings is declared in a module it assembles into

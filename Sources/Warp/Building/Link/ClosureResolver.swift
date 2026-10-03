@@ -121,8 +121,7 @@ final class ClosureResolver {
             implementation: .body(
                 try resolved(body, at: .procedure(row.label.spelling, in: documents[row.origin])),
                 frame
-            ),
-            sends: row.sends
+            )
         )
     }
 

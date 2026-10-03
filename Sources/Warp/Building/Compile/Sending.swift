@@ -14,7 +14,9 @@ import Foundation
 //
 // Which row a number is stays the link's answer, the same as for a call a body
 // wrote. A spelling nothing standing declares is refused here, the way a call
-// a body wrote is.
+// a body wrote is. So is a contract's procedure: a send names the declaration
+// it reaches, and which declaration answers a contract's procedure is a
+// call's first argument to say.
 //
 // Refused here are the two claims a procedure makes that sending can contradict. A
 // query is the claim that it answers without running, and running is not
@@ -37,9 +39,12 @@ struct Sending {
     // time.
     private let isolated: @Sendable (Name) -> Bool
 
-    // What a selector this document may send takes. Nil for a spelling
-    // nothing standing declares.
+    // What a declaration this document may send takes. Nil for a spelling
+    // no declaration standing wears.
     private let taking: @Sendable (Name) -> Signature?
+
+    // The spellings of the contracts' procedures, which no declaration wears.
+    private let contractProcedures: Set<Name>
 
     // The spellings only another document's private declarations wear.
     private let concealed: Set<Name>
@@ -50,12 +55,14 @@ struct Sending {
         const: @escaping @Sendable (Name) -> Bool,
         isolated: @escaping @Sendable (Name) -> Bool,
         taking: @escaping @Sendable (Name) -> Signature?,
+        contractProcedures: Set<Name>,
         concealing concealed: Set<Name>
     ) {
         self.numbering = numbering
         self.const = const
         self.isolated = isolated
         self.taking = taking
+        self.contractProcedures = contractProcedures
         self.concealed = concealed
     }
 
@@ -75,6 +82,15 @@ struct Sending {
         do {
             return try numbering.sent(sends) { send in
                 guard let signature = taking(send.selector) else {
+                    guard !contractProcedures.contains(send.selector) else {
+                        throw BuildError(
+                            "sends '\(send.selector)', which is a contract's procedure. A send names"
+                                + " the declaration it reaches, and which declaration answers a"
+                                + " contract's procedure is a call's first argument to say",
+                            at: place
+                        )
+                    }
+
                     guard !concealed.contains(send.selector) else {
                         throw BuildError.concealed(send.selector, at: place)
                     }

@@ -67,8 +67,7 @@ struct ConstnessTests {
                     while: .literal(.bool(true)),
                     body: Block(body: [
                         Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.string("counted")))))
-                    ]),
-                    round: "round"
+                    ])
                 ))
             ],
             result: .literal(.string("never reached"))

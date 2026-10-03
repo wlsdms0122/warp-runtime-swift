@@ -240,8 +240,7 @@ struct InPlaceTests {
                                         )
                                     ]
                                 ),
-                                rescue: Block(body: [Statement(binding: .constant("seen"), expression: .literal(.int(1)))]),
-                                failure: "tried"
+                                rescue: Block(body: [Statement(binding: .constant("seen"), expression: .literal(.int(1)))])
                             )
                         )
                     ],

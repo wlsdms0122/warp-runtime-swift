@@ -47,8 +47,7 @@ struct ContractCallKeepsTests {
                     ))
                 ],
                 result: .call(Call(selector: through, arguments: [reference("it"), reference("k")]))
-            ),
-            round: "round"
+            )
         )
 
         let sut = try Module(
@@ -74,8 +73,8 @@ struct ContractCallKeepsTests {
                         ],
                         returns: .nullable(.int)
                     ),
-                    body: [],
-                    result: loop
+                    body: [Statement(binding: .constant("round"), expression: loop)],
+                    result: reference("round")
                 ),
                 "bank.Box.show": Procedure(
                     signature: Signature(

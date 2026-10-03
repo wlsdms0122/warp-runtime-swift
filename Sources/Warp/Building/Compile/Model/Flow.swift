@@ -14,10 +14,11 @@ import Foundation
 // each kept by where its leave lands until the construct it lands at takes it
 // back.
 struct Flow {
-    // Where ways that each held one box meet: what the box is held to after,
-    // given the name and the type each way held it to. Which type that is is a
-    // judgement of types, and the walk that asks for a meeting makes it.
-    typealias Meeting = (Name, LoweredType, LoweredType) throws -> LoweredType
+    // Where ways that each held one box meet: whether the two may meet, given
+    // the name and the type each way held it to. They meet only at one type,
+    // which the box stays held to. Whether two types are one is a judgement of
+    // types, and the walk that asks for a meeting makes it.
+    typealias Meeting = (Name, LoweredType, LoweredType) throws -> Void
 
     // Where a way that left lands: the procedure (`return`), the end of a
     // loop (`break`), the end of a round (`continue`), each by the loop it

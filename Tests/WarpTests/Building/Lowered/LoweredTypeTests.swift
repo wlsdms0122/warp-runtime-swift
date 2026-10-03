@@ -25,7 +25,10 @@ struct LoweredTypeTests {
             "app.Maybe": .nullable(.int)
         ],
         constraints: [
-            "app.Ordered": [.int, .double, .string]
+            "app.Ordered": [.int, .double, .string],
+            "app.Numbers": [.int, .double],
+            "app.Lists": [.array(.int), .array(.double)],
+            "app.NumberLists": [.array(.named("app.Numbers"))]
         ]
     )
 
@@ -74,6 +77,57 @@ struct LoweredTypeTests {
         #expect(read([wide, narrow]) == .int)
         #expect(read([narrow, .int]) == .int)
         #expect(read([.int, narrow]) == .int)
+    }
+
+    @Test("a parameter no call fills stands where a slot takes it by its structure, and nowhere else")
+    func aRigidParameterStandsByStructure() {
+        // Given. A parameter its own declaration reads, which no call fills.
+        // `T?` is not written in a document, and a reading may still be one
+        let table = types.loweredTypes
+        let parameter = TypeExpression.parameter(name: "T").lowered(in: table)
+        let other = TypeExpression.parameter(name: "U").lowered(in: table)
+
+        // When / Then. A slot taking anything, its nullable, and an array of
+        // that take it
+        #expect(LoweredType.any.accepts(parameter, in: table, rigid: true))
+        #expect(LoweredType.nullable(parameter).accepts(parameter, in: table, rigid: true))
+        #expect(LoweredType.array(.nullable(parameter)).accepts(.array(parameter), in: table, rigid: true))
+
+        // Then. A type it may not be, and another parameter, do not
+        #expect(!LoweredType.int.accepts(parameter, in: table, rigid: true))
+        #expect(!LoweredType.nullable(.int).accepts(parameter, in: table, rigid: true))
+        #expect(!other.accepts(parameter, in: table, rigid: true))
+    }
+
+    @Test("a membership takes a parameter no call fills only where the parameter's own bounds prove it")
+    func aRigidParameterStandsInAMembershipByItsBounds() {
+        // Given. `app.Ordered` admits int, double and string
+        let table = types.loweredTypes
+        let ordered = TypeExpression.composition(["app.Ordered"]).lowered(in: table)
+        let bounded = TypeExpression.parameter(name: "T", constraints: ["app.Ordered"]).lowered(in: table)
+        let unbounded = TypeExpression.parameter(name: "T").lowered(in: table)
+
+        // When / Then. A parameter bounded by it is one of its members, and
+        // one bounded by nothing may be anything
+        #expect(ordered.accepts(bounded, in: table, rigid: true))
+        #expect(!ordered.accepts(unbounded, in: table, rigid: true))
+    }
+
+    @Test("a membership takes a list of a parameter no call fills only where the parameter's bounds prove each element")
+    func aRigidParameterInsideAListStandsByItsBounds() {
+        // Given. `app.Lists` admits lists of ints and of doubles, and
+        // `app.NumberLists` lists of `app.Numbers`
+        let table = types.loweredTypes
+        let lists = TypeExpression.composition(["app.Lists"]).lowered(in: table)
+        let numberLists = TypeExpression.composition(["app.NumberLists"]).lowered(in: table)
+        let unbounded = LoweredType.array(TypeExpression.parameter(name: "T").lowered(in: table))
+        let bounded = LoweredType.array(TypeExpression.parameter(name: "T", constraints: ["app.Numbers"]).lowered(in: table))
+
+        // When / Then. A list of what may be anything is no member, and a
+        // list of a parameter every member of whose bound is admitted is
+        #expect(!lists.accepts(unbounded, in: table, rigid: true))
+        #expect(!numberLists.accepts(unbounded, in: table, rigid: true))
+        #expect(numberLists.accepts(bounded, in: table, rigid: true))
     }
 
     @Test("a name lowers to its row, and the row of the record it names is the chain's end")

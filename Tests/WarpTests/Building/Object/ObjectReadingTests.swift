@@ -71,23 +71,20 @@ struct ObjectReadingTests {
     func aSendItsNumberingDoesNotNumber() async throws {
         // Given / When. A real object whose native row sends a spelling other
         // than the one its document numbered
-        let (linked, laid) = try await linking { send in send[1] = .string("std.math.minus") }
+        let refusal = try await reading { send in send[1] = .string("std.math.minus") }
 
-        // Then. Refused where the send is numbered, as it is linked or laid
-        #expect(linked?.message.contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere") == true)
-        #expect(laid?.message.contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere") == true)
+        // Then. Refused where the object is read, before any link
+        #expect(refusal?.message.contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere") == true)
     }
 
     @Test("is refused where a native's sends stand apart")
     func sendsStandingApart() async throws {
         // Given / When. A real object whose native row's one send stands at
         // the second place
-        let (linked, laid) = try await linking { send in send[0] = .int(1) }
+        let refusal = try await reading { send in send[0] = .int(1) }
 
-        // Then. Both where the host brings the native's code and where a
-        // compile lays the object down with none
-        #expect(linked?.message.contains("'app.entry' sends procedures standing at [1]") == true)
-        #expect(laid?.message.contains("'app.entry' sends procedures standing at [1]") == true)
+        // Then. Refused where the object is read, before any link
+        #expect(refusal?.message.contains("'app.entry' sends procedures standing at [1]") == true)
     }
 
     @Test("is refused where a count is written below zero")
@@ -522,17 +519,22 @@ struct ObjectReadingTests {
                 "app.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
-                    body: [],
+                    body: [Statement(binding: .variable("n"), expression: .literal(.int(0)))],
                     result: .loop(
                         while: .call(Call(
                             selector: "std.math.lessThan",
-                            arguments: [reference("round", "index"), .literal(.int(2))]
+                            arguments: [reference("n"), .literal(.int(2))]
                         )),
                         body: Block(
-                            body: [Statement(binding: .constant("k"), expression: reference("round", "index"))],
+                            body: [
+                                Statement(
+                                    binding: .assignment([.key("n")]),
+                                    expression: .call(Call(selector: "std.math.plus", arguments: [reference("n"), .literal(.int(1))]))
+                                ),
+                                Statement(binding: .constant("k"), expression: reference("n"))
+                            ],
                             result: reference("k")
-                        ),
-                        round: "round"
+                        )
                     )
                 )
             ]
@@ -978,11 +980,8 @@ struct ObjectReadingTests {
     // MARK: - Public
     // MARK: - Private
     // A real object whose native row's first send is changed, and what it is
-    // refused with where it is linked beside what it was compiled against,
-    // and where it is laid down with no native code brought.
-    private func linking(
-        _ change: (inout [Value]) -> Void
-    ) async throws -> (linked: ObjectRefused?, laid: ObjectRefused?) {
+    // refused with where it is read.
+    private func reading(_ change: (inout [Value]) -> Void) async throws -> ObjectRefused? {
         let sut = try Module(procedures: [
             "app.entry": Procedure(
                 access: .public,
@@ -1002,7 +1001,7 @@ struct ObjectReadingTests {
         else {
             Issue.record("an object writes a native's sends under its implementation")
 
-            return (nil, nil)
+            return nil
         }
 
         change(&send)
@@ -1012,17 +1011,9 @@ struct ObjectReadingTests {
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
-        let read = try Compiled(written: .dictionary(parts), of: mine.identity)
-        let beside = compiled.filter { one in !one.declared.contains("app.entry") }
-
-        let linked = #expect(throws: ObjectRefused.self) {
-            try builder.link(beside + [read], supplying: Supplying([sut] + Module.standard))
+        return #expect(throws: ObjectRefused.self) {
+            try Compiled(written: .dictionary(parts), of: mine.identity)
         }
-        let laid = #expect(throws: ObjectRefused.self) {
-            try builder.lay(beside + [read], supplying: Supplying(Module.standard))
-        }
-
-        return (linked, laid)
     }
 
     // The object as written, its parts under their keys, so a test mutates

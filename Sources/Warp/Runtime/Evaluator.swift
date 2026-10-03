@@ -418,7 +418,7 @@ struct Evaluator: Sendable {
         let callee = linked[try row(call.procedure, from: activation.origin)]
 
         switch callee.implementation {
-        case .native(.query):
+        case .native(.query, _):
             // A variable handed in place is read as what it holds now and
             // settled the way any argument is, since nothing here writes it.
             var values = try await given(call.arguments, first: first, in: &activation, at: trace)
@@ -429,7 +429,7 @@ struct Evaluator: Sendable {
 
             return try await answer(callee, with: try settled(callee, given: values), at: trace)
 
-        case let .native(.effect(effect)):
+        case let .native(.effect(effect), _):
             let holds = try holds(call.handed, of: callee, in: activation)
             let settled = try settled(
                 callee,
@@ -582,7 +582,7 @@ struct Evaluator: Sendable {
         settled: Settled,
         at trace: Trace
     ) async throws -> Value {
-        guard case let .native(.effect(effect)) = callee.implementation else {
+        guard case let .native(.effect(effect), _) = callee.implementation else {
             return try await answer(callee, with: settled, at: trace)
         }
 
@@ -816,7 +816,7 @@ struct Evaluator: Sendable {
         at trace: Trace
     ) async throws -> Value {
         switch callee.implementation {
-        case let .native(.query(query)):
+        case let .native(.query(query), _):
             return try await evaluate(query, of: callee, settled: arguments)
 
         case let .body(body, frame):
@@ -829,7 +829,7 @@ struct Evaluator: Sendable {
                 at: trace
             )
 
-        case .native(.effect):
+        case .native(.effect, _):
             throw ExecutionError(
                 "this answers only by running, so it cannot be read as data here"
             )

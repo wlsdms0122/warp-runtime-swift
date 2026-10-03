@@ -98,12 +98,11 @@ struct VariableTests {
         let sut: Body = [
             Statement(binding: .variable("latest"), expression: .literal(.int(0))),
             Statement(binding: .constant("gate"), expression: .loop(
-                    while: differs(reference("round", "index"), .literal(.int(3))),
+                    while: differs(reference("gate", "index"), .literal(.int(3))),
                     body: Block(body: [
-                        Statement(binding: .constant("transient"), expression: reference("round", "index")),
+                        Statement(binding: .constant("transient"), expression: reference("gate", "index")),
                         Statement(binding: .assignment([.key("latest")]), expression: reference("transient"))
-                    ]),
-                    round: "round"
+                    ])
                 )
             )
         ]

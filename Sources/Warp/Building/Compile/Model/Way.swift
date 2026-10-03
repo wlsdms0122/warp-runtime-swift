@@ -74,7 +74,8 @@ struct Way {
 
     // One of two ways ran. A name both wrote holds either; a name one wrote may
     // not have been written at all, so nothing about it is definite. A box
-    // both took is held to what the meeting says; one only one took is held.
+    // both took stays at the one type both held it to, which the meeting
+    // judges; one only one took is held.
     func joined(with other: Way, meeting: Flow.Meeting) rethrows -> Way {
         var flowed = Way()
 
@@ -97,7 +98,12 @@ struct Way {
         flowed.held = held
 
         for (name, theirs) in other.held.sorted(by: { $0.key < $1.key }) {
-            flowed.held[name] = try held[name].map { mine in try meeting(name, mine, theirs) } ?? theirs
+            guard let mine = held[name] else {
+                flowed.held[name] = theirs
+                continue
+            }
+
+            try meeting(name, mine, theirs)
         }
 
         return flowed
@@ -106,12 +112,21 @@ struct Way {
     // This way, on what the names around it hold. A box that declared its
     // type was checked where it was written, so a write into it changes
     // nothing about what it holds. A box taken holds what it was taken as
-    // from then on.
+    // from then on, and a write into it leaves it reading that type.
     func apply(to environment: inout [Name: Binding]) {
         for (name, write) in written {
-            guard let current = environment[name], current.holding == .assigned else { continue }
+            guard let current = environment[name] else { continue }
 
-            environment[name] = Binding(.assigned, write.definite ? write.type : current.type.joined(write.type))
+            switch current.holding {
+            case .assigned:
+                environment[name] = Binding(.assigned, write.definite ? write.type : current.type.joined(write.type))
+
+            case let .held(type):
+                environment[name] = Binding(current.holding, write.definite ? type : current.type.joined(type))
+
+            case .fixed, .declared:
+                continue
+            }
         }
 
         for (name, type) in held {

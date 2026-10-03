@@ -59,11 +59,11 @@ extension Expression: Traversable {
                 + then.walked(at: stepped(here, to: .then, by: stepping), stepping: stepping)
                 + (otherwise?.walked(at: stepped(here, to: .otherwise, by: stepping), stepping: stepping) ?? [])
 
-        case let .loop(condition, body, _):
+        case let .loop(condition, body):
             inner(condition, as: .condition(of: .loop))
                 + body.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)
 
-        case let .attempt(attempted, rescue, _):
+        case let .attempt(attempted, rescue):
             attempted.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)
                 + rescue.walked(at: stepped(here, to: .rescue, by: stepping), stepping: stepping)
         }

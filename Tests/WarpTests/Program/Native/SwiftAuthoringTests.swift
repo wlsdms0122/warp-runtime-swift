@@ -77,8 +77,7 @@ struct SwiftAuthoringTests {
                         body: Block(
                             body: [Statement(binding: .constant("tick"), expression: index)],
                             result: index
-                        ),
-                        round: "counted"
+                        )
                     )
                 ),
                 Statement(binding: .variable("verdict"), expression: .literal(.string("counted otherwise"))),

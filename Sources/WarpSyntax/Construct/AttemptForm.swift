@@ -46,7 +46,7 @@ public struct AttemptForm: ConstructForm {
 
     // MARK: - Public
     public func expression(boundTo name: Name?) -> Warp.Expression {
-        .attempt(attempted, rescue: rescue, failure: name)
+        .attempt(attempted, rescue: rescue)
     }
 
     // MARK: - Private

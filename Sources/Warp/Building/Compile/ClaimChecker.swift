@@ -283,7 +283,6 @@ struct ClaimChecker {
                 answering: type,
                 of: contract,
                 procedure: procedure,
-                at: claim.place,
                 in: table
             ) {
                 return .waits("\(witness.spelled) declares '\(spelling)', which " + reason)
@@ -320,6 +319,17 @@ struct ClaimChecker {
     // misses is a reason the claim does not hold rather than the type quietly
     // standing outside. What has to change is this signature.
     //
+    // A call written against the contract lands on whichever declaration
+    // answers, with what the contract's signature let it hand, and takes
+    // back what that declaration answers. So each of the declaration's
+    // positions stands where the contract's hands, the type first, and the
+    // contract's answer takes what the declaration answers. The contract's
+    // type parameters are its own and no call fills them here, so each is
+    // judged rigidly, and a contract its signature names is held to what the
+    // documents say answers it; the declaration's own are filled by what the
+    // contract writes at the same positions. The names are each
+    // declaration's own.
+    //
     // A declaration that wrote no `returns` answers what the build read off
     // its body, which is `read`. A declaration being compiled now has no
     // reading yet, and the link holds it when every row has one.
@@ -330,22 +340,9 @@ struct ClaimChecker {
         answering type: Name,
         of contract: Name,
         procedure: Name,
-        at place: Place,
         in table: TypeTable
     ) -> String? {
-        guard let held = given.parameters.first else {
-            return "is named for '\(type)' and the procedure '\(procedure)' that"
-                    + " '\(contract)' asks, and takes nothing. A contract's"
-                    + " procedure is answered about the value it takes first"
-        }
-
-        guard held.declared.lowered(in: table.loweredTypes)
-            .compatible(with: TypeExpression.named(type).lowered(in: table.loweredTypes), in: table.loweredTypes)
-        else {
-            return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and takes \(held.declared.rendered) first. A contract's"
-                    + " procedure takes the type that answers it first"
-        }
+        let loweredTypes = table.loweredTypes
 
         guard given.parameters.count == asked.parameters.count else {
             return "is named for '\(type)' and the procedure '\(procedure)' that"
@@ -353,47 +350,39 @@ struct ClaimChecker {
                     + " parameters where the contract asks \(asked.parameters.count)"
         }
 
-        // After the first, the witness takes what the contract asks at the
-        // same positions: a call written against the contract lands on
-        // whichever declaration answers, and the run hands the arguments to
-        // the same positions for every one of them. The names are each
-        // declaration's own.
-        for (position, (parameter, filled)) in zip(asked.parameters, given.parameters).enumerated().dropFirst() {
-            guard filled.declared.lowered(in: table.loweredTypes)
-                .compatible(with: parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
-            else {
-                return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and takes \(filled.declared.rendered)"
-                        + " at \(position) where the contract writes \(parameter.declared.rendered)"
+        let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
+        let asks = [TypeExpression.named(type).lowered(in: loweredTypes)]
+            + asked.parameters.dropFirst().map { parameter in parameter.declared.lowered(in: loweredTypes) }
+        var bound: [Name: LoweredType] = [:]
+        var disagreeing: [Name: LoweredType] = [:]
+
+        for (taken, written) in zip(takes, asks) {
+            taken.binding(against: written, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
+        }
+
+        for (position, (taken, handed)) in zip(takes, asks).enumerated()
+            where !taken.filling(bound).takes(handed, in: loweredTypes, rigid: true) {
+            guard position > 0 else {
+                return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
+                        + " asks, and takes \(given.parameters[0].declared.rendered) first. A contract's"
+                        + " procedure takes the type that answers it first"
             }
+
+            return "is named for '\(type)' and the procedure '\(procedure)' that"
+                    + " '\(contract)' asks, and takes \(given.parameters[position].declared.rendered)"
+                    + " at \(position) where the contract writes \(asked.parameters[position].declared.rendered)"
         }
 
         guard let answer = asked.returns else { return nil }
 
-        let promised = answer.lowered(in: table.loweredTypes)
-        let answered = given.returns?.lowered(in: table.loweredTypes)
-            ?? read
-            ?? TypeExpression.any.lowered(in: table.loweredTypes)
+        let promised = answer.lowered(in: loweredTypes)
+        let answered = (given.returns?.lowered(in: loweredTypes) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
+            .filling(bound)
 
-        guard promised.accepts(answered, in: table.loweredTypes) else {
+        guard promised.accepts(answered, in: loweredTypes, rigid: true) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: table.loweredTypes))"
+                    + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: loweredTypes))"
                     + " where the contract writes \(answer.rendered)"
-        }
-
-        // A composition the answer is held to, wherever in the promise it
-        // stands, is held the way a slot holds what arrives. Nothing is
-        // written down: a witness reads what the documents say, and where
-        // they are all in what they say is settled.
-        if let refusal = TypeChecker().refusal(
-            holding: answered,
-            to: promised,
-            as: "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)' asks, and answers",
-            in: table.loweredTypes,
-            fulfillment: nil,
-            at: place
-        ) {
-            return refusal
         }
 
         return nil

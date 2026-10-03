@@ -104,7 +104,7 @@ struct Judged: Sendable {
         case let .body(body, frame):
             implementation = .body(body, frame)
 
-        case let .native(procedure):
+        case let .native(procedure, _):
             implementation = .native(sending: procedure.sending)
         }
 
@@ -133,12 +133,27 @@ struct Judged: Sendable {
     // the boxes a document holds and the frames its closures stand in. A list
     // written short is an array read past its end rather than a row that
     // answers wrongly.
+    //
+    // A native's sends are its document's to number, so they are judged here
+    // against that numbering and every link reads them as numbered.
     func judge(
         standingIn frames: (Int) -> Frame?,
         reaching given: (Int) -> Int?,
-        holding variables: Int
+        holding variables: Int,
+        numberedBy numbering: Numbering
     ) throws {
-        guard case let .body(body, frame) = implementation else { return }
+        let body: LoweredBody
+        let frame: Frame
+
+        switch implementation {
+        case let .body(written, standing):
+            body = written
+            frame = standing
+
+        case let .native(sending):
+            _ = try sent(sending, numberedBy: numbering)
+            return
+        }
 
         let standing = body.standing
 
@@ -235,6 +250,20 @@ struct Judged: Sendable {
     }
 
     // MARK: - Private
+    // Where a native's sends stand in its document's numbering.
+    private func sent(_ sending: [Native.Send], numberedBy numbering: Numbering) throws -> [Sent] {
+        do {
+            return try numbering.sent(sending) { send in send.handing }
+        } catch let .misplaced(positions) as SendNumberingError {
+            throw ObjectRefused(
+                "'\(label)' sends procedures standing at \(positions), which is"
+                    + " not one procedure to a place from the first"
+            )
+        } catch let .unnumbered(selector) as SendNumberingError {
+            throw ObjectRefused("'\(label)' sends '\(selector)', which its document numbers nowhere")
+        }
+    }
+
     // How a body, its frame and the declaration stand to each other. A frame
     // is reached by position everywhere a run touches it, so a list written
     // short is an array read past its end rather than a row that answers
@@ -282,24 +311,13 @@ struct Judged: Sendable {
     ) throws -> Linked {
         switch implementation {
         case let .body(body, frame):
-            return row(.body(body, frame), of: origin, closure: closure, foldable: true, sends: [], in: table)
+            return row(.body(body, frame), of: origin, closure: closure, foldable: true, in: table)
 
         case let .native(sending):
             // Each send reaches the number its document gave the spelling,
             // which a link answers with a row the way it answers a call's
             // number.
-            let sends: [Sent]
-
-            do {
-                sends = try numbering.sent(sending) { send in send.handing }
-            } catch let .misplaced(positions) as SendNumberingError {
-                throw ObjectRefused(
-                    "'\(label)' sends procedures standing at \(positions), which is"
-                        + " not one procedure to a place from the first"
-                )
-            } catch let .unnumbered(selector) as SendNumberingError {
-                throw ObjectRefused("'\(label)' sends '\(selector)', which its document numbers nowhere")
-            }
+            let sends = try sent(sending, numberedBy: numbering)
 
             guard let brought = supplied[label, at: document] else {
                 guard standing else { throw self.brought(nothing: document) }
@@ -311,13 +329,7 @@ struct Judged: Sendable {
                     ? .query(UnbroughtQuery(label))
                     : .effect(UnbroughtEffect(label))
 
-                return row(
-                    .native(standIn),
-                    of: origin,
-                    foldable: true,
-                    sends: sends,
-                    in: table
-                )
+                return row(.native(standIn, sends: sends), of: origin, foldable: true, in: table)
             }
 
             // A procedure declares its own constness, isolation, failing and the
@@ -335,7 +347,7 @@ struct Judged: Sendable {
                 throw self.brought(otherwise: brought, sending: sending, in: document)
             }
 
-            return row(.native(brought.native), of: origin, foldable: brought.builtin, sends: sends, in: table)
+            return row(.native(brought.native, sends: sends), of: origin, foldable: brought.builtin, in: table)
         }
     }
 
@@ -344,7 +356,6 @@ struct Judged: Sendable {
         of origin: Int,
         closure: (by: Closure.Declaration, nth: Int)? = nil,
         foldable: Bool,
-        sends: [Sent],
         in table: LoweredTypeTable
     ) -> Linked {
         Linked(
@@ -357,7 +368,6 @@ struct Judged: Sendable {
             failing: failing,
             implementation: implementation,
             foldable: foldable,
-            sends: sends,
             closure: closure,
             in: table
         )

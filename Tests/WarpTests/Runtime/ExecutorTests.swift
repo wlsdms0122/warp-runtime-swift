@@ -64,7 +64,7 @@ struct ExecutorTests {
                                             Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
                                         result: .reference([.key("recovery")])
-                                    ), failure: "fragile")
+                                    ))
                         )
                     ],
                     result: .record([
@@ -103,7 +103,7 @@ struct ExecutorTests {
                                             )
                                         ],
                                         result: .reference([.key("reason")])
-                                    ), failure: "fragile")
+                                    ))
                         )
                     ],
                     result: .record([
@@ -167,7 +167,7 @@ struct ExecutorTests {
                                         )
                                     ]), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                    ]), failure: "fragile")
+                                    ]))
                         )
                     ]
                 )
@@ -202,7 +202,7 @@ struct ExecutorTests {
                                         Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)]))
                                     ]), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                    ]), failure: "fragile")
+                                    ]))
                         )
                     ],
                     result: .record([
@@ -278,7 +278,7 @@ struct ExecutorTests {
                                         )
                                     ], result: reference("spelled")), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                    ]), failure: "fragile")
+                                    ]))
                         )
                     ],
                     result: .record([
@@ -346,7 +346,7 @@ struct ExecutorTests {
                                             Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
                                         result: .reference([.key("recovery")])
-                                    ), failure: "bail")
+                                    ))
                         )
                     ],
                     result: .record([

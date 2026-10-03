@@ -135,8 +135,7 @@ struct ObservationTests {
                                 ),
                                 body: Block(body: [
                                     Statement(binding: .constant("step"), expression: reference("round", "index"))
-                                ]),
-                                round: "round"
+                                ])
                             )
                         )
                     ]
@@ -360,8 +359,7 @@ struct ObservationTests {
                                 while: .literal(.bool(true)),
                                 body: Block(body: [
                                     Statement(expression: .leave(Leave(reach: .construct)))
-                                ]),
-                                round: "walk"
+                                ])
                             )
                         )
                     ],
@@ -402,8 +400,7 @@ struct ObservationTests {
                                         ))
                                     ]
                                 ),
-                                rescue: Block(body: [], result: .literal(.string("caught"))),
-                                failure: "fragile"
+                                rescue: Block(body: [], result: .literal(.string("caught")))
                             )
                         )
                     ],

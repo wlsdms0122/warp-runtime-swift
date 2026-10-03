@@ -46,7 +46,7 @@ public struct LoopForm: ConstructForm {
     // document reads as `{ ref "<name>.index" }`. A loop whose statement
     // introduces none binds none.
     public func expression(boundTo name: Name?) -> Warp.Expression {
-        .loop(while: condition, body: body, round: name)
+        .loop(while: condition, body: body)
     }
 
     // MARK: - Private

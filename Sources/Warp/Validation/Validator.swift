@@ -35,7 +35,9 @@ public struct Validator: Sendable {
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try validate(
                 expression,
+                naming: nil,
                 visible: constants,
+                variables: [],
                 scope: .procedure(bound: bound),
                 at: .constant(name.spelling, in: .of(module))
             )
@@ -55,7 +57,9 @@ public struct Validator: Sendable {
 
             try validate(
                 variable.start,
+                naming: nil,
                 visible: constants,
+                variables: [],
                 scope: .procedure(bound: bound),
                 at: .variable(name.spelling, in: .of(module))
             )
@@ -231,8 +235,8 @@ public struct Validator: Sendable {
     private func validate(
         _ body: Body,
         visible startVisible: Set<Name>,
-        variables startVariables: Set<Name> = [],
-        scope: Scope = .procedure,
+        variables startVariables: Set<Name>,
+        scope: Scope,
         at place: Place
     ) throws -> (visible: Set<Name>, variables: Set<Name>) {
         var visible = startVisible
@@ -316,6 +320,7 @@ public struct Validator: Sendable {
 
             try validate(
                 statement.expression,
+                naming: statement.binding?.introduced,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -339,11 +344,16 @@ public struct Validator: Sendable {
         return (visible, variables)
     }
 
+    // `name` is what the statement this expression is the value of
+    // introduces, which a loop binds its round under and an attempt its
+    // failure. The statement already held it to where a name may be
+    // introduced.
     private func validate(
         _ expression: Expression,
+        naming name: Name?,
         visible: Set<Name>,
-        variables: Set<Name> = [],
-        scope: Scope = .procedure,
+        variables: Set<Name>,
+        scope: Scope,
         at place: Place
     ) throws {
         switch expression {
@@ -365,7 +375,7 @@ public struct Validator: Sendable {
                 let here = place.child(.element(position))
 
                 try refuseAnswerless(element, at: here)
-                try validate(element, visible: visible, variables: variables, scope: scope, at: here)
+                try validate(element, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
             }
 
         case let .record(record):
@@ -373,7 +383,7 @@ public struct Validator: Sendable {
                 let here = place.child(.field(name))
 
                 try refuseAnswerless(field, at: here)
-                try validate(field, visible: visible, variables: variables, scope: scope, at: here)
+                try validate(field, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
             }
 
         // A cast names a type and reads a value as it. The type is the build's
@@ -383,6 +393,7 @@ public struct Validator: Sendable {
             try refuseAnswerless(value, at: place.child(.subject(optional: optional)))
             try validate(
                 value,
+                naming: nil,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -402,6 +413,7 @@ public struct Validator: Sendable {
             try refuseAnswerless(value, at: place.child(.held))
             try validate(
                 value,
+                naming: nil,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -440,6 +452,7 @@ public struct Validator: Sendable {
             try refuseConstruct(callee, at: place.child(.callee))
             try validate(
                 callee,
+                naming: nil,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -452,6 +465,7 @@ public struct Validator: Sendable {
                 try refuseConstruct(argument, at: here)
                 try validate(
                     argument,
+                    naming: nil,
                     visible: visible,
                     variables: variables,
                     scope: scope,
@@ -469,6 +483,7 @@ public struct Validator: Sendable {
             )
             try validate(
                 condition,
+                naming: nil,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -494,16 +509,14 @@ public struct Validator: Sendable {
 
         // The round state is bound before the condition is asked, which is what
         // lets `while` read how many rounds have passed.
-        case let .loop(condition, body, round):
-            if let round {
-                try introduced(round, in: scope, at: place)
-            }
-
+        case let .loop(condition, body):
+            let round = name
             let inner = visible.union(round.map { round in [round] } ?? [])
 
             try refuseConstructCondition(condition, at: place.child(.condition(of: .loop)))
             try validate(
                 condition,
+                naming: nil,
                 visible: inner,
                 variables: variables,
                 scope: scope,
@@ -518,10 +531,8 @@ public struct Validator: Sendable {
             )
 
         // While the rescue runs, the failure is a value under the declared name.
-        case let .attempt(block, rescue, failure):
-            if let failure {
-                try introduced(failure, in: scope, at: place)
-            }
+        case let .attempt(block, rescue):
+            let failure = name
 
             try validate(
                 block,
@@ -553,6 +564,7 @@ public struct Validator: Sendable {
                 try refuseConstruct(argument, at: here)
                 try validate(
                     argument,
+                    naming: nil,
                     visible: visible,
                     variables: variables,
                     scope: scope,
@@ -593,8 +605,8 @@ public struct Validator: Sendable {
     private func validate(
         _ block: Block,
         visible: Set<Name>,
-        variables: Set<Name> = [],
-        scope: Scope = .procedure,
+        variables: Set<Name>,
+        scope: Scope,
         at place: Place
     ) throws {
         let inner = try validate(
@@ -624,6 +636,7 @@ public struct Validator: Sendable {
 
             try validate(
                 result,
+                naming: nil,
                 visible: inner.visible,
                 variables: inner.variables,
                 scope: scope,

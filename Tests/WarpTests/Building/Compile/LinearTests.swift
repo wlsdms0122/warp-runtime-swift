@@ -139,8 +139,7 @@ struct LinearTests {
                                     expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))
                                 )
                             ]
-                        ),
-                        round: "spin"
+                        )
                     )
                 )
             ],
@@ -897,8 +896,7 @@ struct LinearTests {
                                 ),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("seen"), expression: .literal(.int(1)))
-                                ]),
-                                failure: "why"
+                                ])
                             )
                         )
                     ],
@@ -1080,8 +1078,7 @@ struct LinearTests {
                             body: [
                                 Statement(binding: .none, expression: .leave(Leave(reach: .construct)))
                             ]
-                        ),
-                        round: "round"
+                        )
                     )
                 ),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -1229,8 +1226,7 @@ struct LinearTests {
                                     )
                                 )
                             ]
-                        ),
-                        round: "round"
+                        )
                     )
                 )
             ],
@@ -1278,8 +1274,7 @@ struct LinearTests {
                                                     expression: .literal(.int(1))
                                                 )
                                             ]
-                                    ),
-                                    failure: "why"
+                                    )
                                 )
                             )
                         ],
@@ -1374,8 +1369,7 @@ struct LinearTests {
             result: .array([
                 .attempt(
                     Block(body: [mayFail()], result: .call(Call(selector: "app.open"))),
-                    rescue: Block(body: [], result: .call(Call(selector: "app.open"))),
-                    failure: "tried"
+                    rescue: Block(body: [], result: .call(Call(selector: "app.open")))
                 )
             ])
         )
@@ -1470,8 +1464,7 @@ struct LinearTests {
                                     )
                                 )
                             ]
-                        ),
-                        round: "round"
+                        )
                     )
                 ),
                 Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
@@ -1513,8 +1506,7 @@ struct LinearTests {
                                             )
                                         )
                                     ]
-                                ),
-                                round: "round"
+                                )
                             )
                         )
                     ],

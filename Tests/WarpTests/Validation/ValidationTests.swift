@@ -125,16 +125,15 @@ struct ValidationTests {
 
     @Test("nor by the name a construct hands its body")
     func aBoundNameIsNotWhatAConstructHandsItsBody() {
-        // Given. The same rule where the name is the language's to introduce
-        // rather than a statement's: a loop's round and the failure an
-        // attempt rescues.
+        // Given. The same rule where the name is what a loop's round and the
+        // failure an attempt rescues are bound under.
         func module(running expression: Warp.Expression) throws -> Module {
             try Module(
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        body: [Statement(binding: .constant("got"), expression: expression)],
+                        body: [Statement(binding: .constant("limit"), expression: expression)],
                         result: reference("limit")
                     )
                 ]
@@ -145,13 +144,13 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body, round: "limit")))
+            try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body)))
         } throws: { error in
             error is ValidationError
                 && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
         }
         #expect {
-            try Validator().validate(module(running: .attempt(body, rescue: body, failure: "limit")))
+            try Validator().validate(module(running: .attempt(body, rescue: body)))
         } throws: { error in
             error is ValidationError
                 && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
@@ -288,8 +287,7 @@ struct ValidationTests {
                 Statement(
                     expression: .loop(
                         while: construct,
-                        body: Block(body: [], result: nil),
-                        round: "round"
+                        body: Block(body: [], result: nil)
                     )
                 )
             ])

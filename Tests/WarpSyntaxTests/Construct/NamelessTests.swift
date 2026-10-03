@@ -154,21 +154,20 @@ struct NamelessTests {
             ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
         ]])
 
-        // Then. Each reads with no round and no failure to bind
+        // Then. Each reads under a statement introducing no name, so there is
+        // no round and no failure to bind
         guard case let .body(block) = module.procedures[entryName]?.implementation else {
             Issue.record("expected a body")
             return
         }
 
-        guard case let .loop(_, _, round) = block.body.statements[0].expression,
-              case let .attempt(_, _, failure) = block.body.statements[1].expression else {
+        guard case .loop = block.body.statements[0].expression,
+              case .attempt = block.body.statements[1].expression else {
             Issue.record("expected a loop and an attempt")
             return
         }
 
         #expect(block.body.statements.allSatisfy { statement in statement.binding == nil })
-        #expect(round == nil)
-        #expect(failure == nil)
     }
 
     @Test("a naming key holding null is a broken name, not a nameless statement")
