@@ -705,10 +705,15 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.variable(inner), _):
             return inner.accepts(other, in: table, assuming: assuming, rigid: rigid)
 
-        // A composition or null takes null, and otherwise what its bounds
-        // take, asked of the table knowing the slot takes null as well.
-        case let (.nullable(.composition(bounds)), _):
+        // A composition takes what each of its bounds takes: a membership
+        // what its members admit, a contract what answers it, each asked of
+        // the table with the same rigidity, and, where the slot takes null as
+        // well, knowing it does. In the other direction a composition stands
+        // for some type nothing here lists.
+        case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+
+            let orNull = if case .nullable = self { true } else { false }
 
             return bounds.allSatisfy { bound in
                 switch bound {
@@ -719,40 +724,16 @@ indirect enum LoweredType: Sendable, Equatable {
                         assuming: [],
                         asking: assuming + [(self, other)],
                         rigid: rigid,
-                        orNull: true
+                        orNull: orNull
                     )
 
                 case let .contract(name):
-                    table.satisfies(contract: name, reading: other, rigid: rigid, orNull: true)
+                    table.satisfies(contract: name, reading: other, rigid: rigid, orNull: orNull)
                 }
             }
 
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
             return mine.accepts(other, in: table, assuming: assuming, rigid: rigid)
-
-        // A composition takes what each of its bounds takes: a membership
-        // what its members admit, a contract what answers it, each asked of
-        // the table with the same rigidity. In the other direction a
-        // composition stands for some type nothing here lists.
-        case let (.composition(bounds), _):
-            guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
-
-            return bounds.allSatisfy { bound in
-                switch bound {
-                case let .membership(row):
-                    table.admits(
-                        constraint: row,
-                        reading: other,
-                        assuming: [],
-                        asking: assuming + [(self, other)],
-                        rigid: rigid,
-                        orNull: false
-                    )
-
-                case let .contract(name):
-                    table.satisfies(contract: name, reading: other, rigid: rigid, orNull: false)
-                }
-            }
 
         // In the other direction a value of a composition is one of every
         // membership's members and nothing says which, so it stands where

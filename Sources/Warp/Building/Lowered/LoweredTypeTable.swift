@@ -241,20 +241,25 @@ final class LoweredTypeTable: Sendable {
     // as well, so a reading that may be null is held by what it is besides.
     func admits(
         constraint row: Int,
-        reading: LoweredType,
+        reading given: LoweredType,
         assuming: [Int],
         asking pairs: [(LoweredType, LoweredType)] = [],
         rigid: Bool,
         orNull: Bool
     ) -> Bool {
+        let reading: LoweredType
+
+        if orNull {
+            guard let rest = besidesNull(given) else { return true }
+
+            reading = rest
+        } else {
+            reading = given
+        }
+
         switch reading {
         case .any, .projection:
             return true
-
-        case _ where orNull && besidesNull(reading) != reading:
-            guard let rest = besidesNull(reading) else { return true }
-
-            return admits(constraint: row, reading: rest, assuming: assuming, asking: pairs, rigid: rigid, orNull: orNull)
 
         // A parameter bounded by a membership stands for some member of it, so
         // it fits where every one of those would. One bounded by contracts
@@ -409,10 +414,14 @@ final class LoweredTypeTable: Sendable {
 
     // MARK: - Private
     // What a slot taking null as well holds a reading to besides null, or
-    // nil where null is all it is. A membership with a member that may be
-    // null stands as it is, and is asked member by member.
+    // nil where null is all it is, a slot's own marks taken off on the way.
+    // A membership with a member that may be null stands as it is, and is
+    // asked member by member.
     private func besidesNull(_ reading: LoweredType) -> LoweredType? {
         switch reading {
+        case let .variable(inner), let .inout(inner):
+            return besidesNull(inner)
+
         case .null:
             return nil
 
@@ -429,25 +438,30 @@ final class LoweredTypeTable: Sendable {
 
     private func answering(
         contract name: Name,
-        reading: LoweredType,
+        reading given: LoweredType,
         assuming: [Int],
         rigid: Bool,
         orNull: Bool
     ) -> Answering {
+        let reading: LoweredType
+
+        if orNull {
+            guard let rest = besidesNull(given) else { return .settled(true) }
+
+            reading = rest
+        } else {
+            reading = given
+        }
+
         switch reading {
         case .any, .projection, .undeclared, .never:
             return .settled(true)
 
         // A contract is answered by a type, and null wears none, so what may
         // be null answers no contract, a name for such a type included,
-        // unless the slot takes null as well: then null is taken and the rest
-        // answers. A membership with a member that may be null is asked member
-        // by member below.
-        case _ where orNull && besidesNull(reading) != reading:
-            guard let rest = besidesNull(reading) else { return .settled(true) }
-
-            return answering(contract: name, reading: rest, assuming: assuming, rigid: rigid, orNull: orNull)
-
+        // unless the slot takes null as well: then null was taken above and
+        // the rest answers. A membership with a member that may be null is
+        // asked member by member below.
         case _ where !orNull && reading.declaresNull(in: self):
             return .settled(false)
 
