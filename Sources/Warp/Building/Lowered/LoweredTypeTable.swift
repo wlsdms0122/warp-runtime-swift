@@ -279,6 +279,23 @@ final class LoweredTypeTable: Sendable {
                 }
             }
 
+        // A reading that may be null is a member where null is one and what it
+        // is besides is too, since its value is one or the other. A name that
+        // stands for no record is read as what it stands for.
+        case let .nullable(inner):
+            return admits(constraint: row, reading: .null, assuming: assuming, asking: pairs, rigid: rigid, orNull: false)
+                && admits(constraint: row, reading: inner, assuming: assuming, asking: pairs, rigid: rigid, orNull: false)
+
+        case .named where reading.throughAliases(in: self) != reading:
+            return admits(
+                constraint: row,
+                reading: reading.throughAliases(in: self),
+                assuming: assuming,
+                asking: pairs,
+                rigid: rigid,
+                orNull: false
+            )
+
         // Nothing can be said about a reading the table does not answer, so
         // it passes here and is refused where the name is met.
         case .undeclared:
