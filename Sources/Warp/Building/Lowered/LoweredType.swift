@@ -636,6 +636,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case (_, .never):
             return true
 
+        // A slot of `any` takes everything, whatever stands for it.
+        case (.any, _), (.projection, _):
+            return true
+
         // A slot handed a variable in place is the two sides being one type,
         // not one that fits the other. The body writes through the caller's box
         // and the caller reads back what the body wrote, so a type that merely
@@ -701,7 +705,8 @@ indirect enum LoweredType: Sendable, Equatable {
         // membership's members and nothing says which, so it stands where
         // every member of some membership would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is
-        // provable and it passes to be judged where it arrives.
+        // provable and it passes to be judged where it arrives, unless
+        // `rigid`.
         case let (_, .composition(bounds)):
             let memberships = bounds.compactMap { bound -> Int? in
                 guard case let .membership(row) = bound else { return nil }
@@ -709,7 +714,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 return row
             }
 
-            guard !memberships.isEmpty else { return true }
+            guard !memberships.isEmpty else { return !rigid }
 
             return memberships.contains { row in
                 table.constraints[row].allSatisfy { member in accepts(member, in: table, assuming: assuming, rigid: rigid) }
@@ -723,7 +728,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming, rigid: rigid)
 
-        case (.any, _), (_, .any), (.projection, _), (_, .projection):
+        case (_, .any), (_, .projection):
             return true
 
         case (.never, _):
