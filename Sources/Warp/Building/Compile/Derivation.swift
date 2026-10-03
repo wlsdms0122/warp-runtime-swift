@@ -297,7 +297,7 @@ struct Derivation {
     // greatest such set, so a declaration leaning on itself, or two on each
     // other, keep what nothing else took away. A name nothing proved is let
     // go by whatever leans on it.
-    func handsBackAsDeclared(_ proofs: [Name: AnswerProof]) -> Set<Name> {
+    func handsBackAsDeclared(_ proofs: [Name: HandBackProof]) -> Set<Name> {
         var leanings: [Name: Set<Name>] = [:]
 
         for case let (name, .holds(leaning)) in proofs {

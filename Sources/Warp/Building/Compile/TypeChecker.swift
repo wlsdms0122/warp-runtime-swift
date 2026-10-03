@@ -162,7 +162,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: AnswerProof) {
+    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: HandBackProof) {
         let inner = try await inspected(
             block: block,
             at: place,
@@ -506,7 +506,7 @@ struct TypeChecker {
         calling calls: [CallSite],
         judged judgements: JudgementTable,
         given context: TypingContext
-    ) -> AnswerProof {
+    ) -> HandBackProof {
         let loweredTypes = context.loweredTypes
         let answer = context.answer(of: selector)
         let answersOpen = answer?.namesParameter == true

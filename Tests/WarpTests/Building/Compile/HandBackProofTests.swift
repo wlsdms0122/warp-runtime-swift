@@ -1,5 +1,5 @@
 //
-//  AnswerProofTests.swift
+//  HandBackProofTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 10/3/26.
@@ -15,8 +15,8 @@ import WarpTestSupport
 // document, the way its constness is: a body proves it alone or leans on
 // the declarations it calls, and which it leans on is read once every body
 // is read, whatever order they were read in.
-@Suite("What a body proves of its answers")
-struct AnswerProofTests {
+@Suite("What a body proves of what it hands back")
+struct HandBackProofTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
