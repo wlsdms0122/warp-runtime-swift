@@ -172,6 +172,109 @@ struct AnswerProofTests {
         #expect(image["app.a"]?.answersAsDeclared == false)
     }
 
+    @Test("a body that wrote no answer proves what was read off it")
+    func anUnsaidBodyProvesWhatWasReadOffIt() async throws {
+        // Given. `app.g` writes no `returns`, and what was read off it is its `some T`, carried from `app.f`, which answers a value of `any`
+        let sut = try Module(
+            procedures: [
+                "app.f": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [],
+                    result: .reference([.key("junk")])
+                ),
+                "app.g": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "x", type: .parameter(name: "T"))]),
+                    body: [],
+                    result: .call(Call(selector: "app.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                ),
+                "app.h": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "x", type: .parameter(name: "T"))]),
+                    body: [],
+                    result: .reference([.key("x")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.g"]?.answersAsDeclared == false)
+        #expect(image["app.h"]?.answersAsDeclared == true)
+    }
+
+    @Test("a body handed a variable in place at a type parameter proves what it writes there")
+    func aBodyHandedAVariableInPlaceProvesWhatItWrites() async throws {
+        // Given. `app.put` answers a whole number, and writes what `app.f` answers into the list it was handed in place
+        let sut = try Module(
+            imports: ["std.collection.append"],
+            procedures: [
+                "app.f": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [],
+                    result: .reference([.key("junk")])
+                ),
+                "app.put": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "xs", type: .inout(.array(.parameter(name: "T"))))
+                        ],
+                        returns: .int
+                    ),
+                    body: [
+                        Statement(
+                            expression: .call(
+                                Call(
+                                    selector: "std.collection.append",
+                                    arguments: [
+                                        .reference([.key("xs")]),
+                                        .call(Call(selector: "app.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                                    ]
+                                )
+                            )
+                        )
+                    ],
+                    result: .literal(.int(0))
+                ),
+                "app.keep": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "xs", type: .inout(.array(.parameter(name: "T"))))
+                        ],
+                        returns: .int
+                    ),
+                    body: [
+                        Statement(
+                            expression: .call(Call(selector: "std.collection.append", arguments: [.reference([.key("xs")]), .reference([.key("x")])]))
+                        )
+                    ],
+                    result: .literal(.int(0))
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.put"]?.answersAsDeclared == false)
+        #expect(image["app.keep"]?.answersAsDeclared == true)
+    }
+
     // MARK: - Public
     // MARK: - Private
     // A declaration taking and answering its own `some T`.
