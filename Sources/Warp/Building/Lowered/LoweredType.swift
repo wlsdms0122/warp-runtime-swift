@@ -674,6 +674,17 @@ indirect enum LoweredType: Sendable, Equatable {
                 }
             }
 
+        // A slot's own wrapping comes off before what stands for it is taken
+        // apart, since a name or a composition there is what a contract
+        // reads. `var` is a fact about a slot; a nullable slot takes what
+        // its declared half takes from what cannot be null, and what can is
+        // answered below.
+        case let (.variable(inner), _):
+            return inner.accepts(other, in: table, assuming: assuming, rigid: rigid)
+
+        case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
+            return mine.accepts(other, in: table, assuming: assuming, rigid: rigid)
+
         // A composition takes what each of its bounds takes: a membership
         // what its members admit, a contract what answers it, each asked of
         // the table with the same rigidity. In the other direction a
@@ -717,11 +728,6 @@ indirect enum LoweredType: Sendable, Equatable {
             return memberships.contains { row in
                 table.constraints[row].allSatisfy { member in accepts(member, in: table, assuming: assuming, rigid: rigid) }
             }
-
-        // `var` is a fact about a slot, and fitting is asked of the inner
-        // type.
-        case let (.variable(inner), _):
-            return inner.accepts(other, in: table, assuming: assuming, rigid: rigid)
 
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming, rigid: rigid)
@@ -1104,6 +1110,23 @@ indirect enum LoweredType: Sendable, Equatable {
             // parameter that is two things.
             disagreeing[name] = given
 
+        // A slot's own wrapping comes off before what arrived is walked
+        // through, so a name arriving is held to a composition as the name.
+        // A slot's marks say nothing about the value; a nullable slot reads
+        // what cannot be null by its declared half, and what can below.
+        case let (.variable(mine), _), let (.inout(mine), _):
+            mine.binding(
+                against: given.slotUnwrapped,
+                into: &bound,
+                disagreeing: &disagreeing,
+                holding: &holding,
+                in: table,
+                assuming: assuming
+            )
+
+        case let (.nullable(mine), _) where !given.slotUnwrapped.declaresNull(in: table):
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
+
         // A name on either side is walked through to the type it declares,
         // once, since a type may name itself. Behind a parameter, so that a
         // parameter reads a name as the name and not as what it declares.
@@ -1153,18 +1176,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
                 field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
             }
-
-        // A slot's marks say something about the slot and nothing about the
-        // value, so both sides are read without them.
-        case let (.variable(mine), _), let (.inout(mine), _):
-            mine.binding(
-                against: given.slotUnwrapped,
-                into: &bound,
-                disagreeing: &disagreeing,
-                holding: &holding,
-                in: table,
-                assuming: assuming
-            )
 
         case let (_, .variable(theirs)), let (_, .inout(theirs)):
             binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
