@@ -94,7 +94,7 @@ struct Compiler {
         // What each body proved of its answers by itself, and which of this
         // document's declarations the rest leans on: settled over the whole
         // document once every body is read.
-        var proofs: [Name: (alone: Bool, leaning: Set<Name>)] = [:]
+        var proofs: [Name: AnswerProof] = [:]
 
         // A declaration, bound and dot-judged: every dot in the body is judged
         // against the type it reaches, every call is gathered, a
@@ -349,7 +349,7 @@ struct Compiler {
         let proven = Derivation().answersAsDeclared(proofs)
 
         for symbol in holding where symbol.procedure.block != nil {
-            compiling.prove(try row(of: symbol), answersAsDeclared: proven.contains(symbol.declared))
+            compiling.record(try row(of: symbol), answersAsDeclared: proven.contains(symbol.declared))
         }
 
         // The types its bodies stand on, written as this document's own

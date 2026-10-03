@@ -161,7 +161,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: (alone: Bool, leaning: Set<Name>)) {
+    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: AnswerProof) {
         let inner = try await inspected(
             block: block,
             at: place,
@@ -183,7 +183,6 @@ struct TypeChecker {
         let proof = proof(
             of: [inner.reading] + inner.flow.answered.map(\.reading),
             to: returns,
-            calling: inner.calls,
             judged: inner.judgements,
             given: context
         )
@@ -499,29 +498,25 @@ struct TypeChecker {
     private func proof(
         of readings: [LoweredType],
         to returns: TypeExpression?,
-        calling calls: [CallSite],
         judged judgements: JudgementTable,
         given context: TypingContext
-    ) -> (alone: Bool, leaning: Set<Name>) {
+    ) -> AnswerProof {
         let loweredTypes = context.loweredTypes
 
-        guard let declared = returns?.lowered(in: loweredTypes), declared.namesParameter else { return (true, []) }
+        guard let declared = returns?.lowered(in: loweredTypes), declared.namesParameter else {
+            return AnswerProof(alone: true, leaning: [])
+        }
 
-        let selectors = Dictionary(calls.map { site in (site.place, site.call.selector) }) { first, _ in first }
         var alone = readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
         var leaning: Set<Name> = []
 
-        for (place, judgement) in judgements.judgements {
+        for judgement in judgements.judgements.values {
             switch judgement {
             case let .apply(_, against?) where against.namesParameter:
                 alone = false
 
-            case let .call(against) where against.namesParameter:
-                guard
-                    let selector = selectors[place],
-                    context.own[selector] != nil,
-                    context.contractProcedures[selector] == nil
-                else {
+            case let .call(selector, against) where against.namesParameter:
+                guard context.own[selector] != nil, context.contractProcedures[selector] == nil else {
                     alone = false
                     continue
                 }
@@ -533,7 +528,7 @@ struct TypeChecker {
             }
         }
 
-        return (alone, leaning)
+        return AnswerProof(alone: alone, leaning: leaning)
     }
 
     // Whether a write fits the slot it lands in, in the box `binding` holds.
@@ -572,14 +567,13 @@ struct TypeChecker {
     // by whichever row the run picks, and what that row settles is not known
     // here. A row that proved it answers as declared, a native's by its
     // host's word, answers what the call reads. A body of this document has
-    // proved nothing yet, since its proof is settled over the whole
-    // document, so the judgement stands and the link leaves it out.
+    // proved nothing while its document is read, since its proof is settled
+    // over the whole document after, so the judgement stands and the link
+    // leaves it out.
     private func judgedAgainst(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
         guard context.contractProcedures[selector] == nil else { return judgedAgainst(reading, answeredBy: nil) }
 
-        if let row = context.declared(selector), row.answersAsDeclared, context.own[selector] == nil || !row.isWritten {
-            return nil
-        }
+        if let row = context.declared(selector), row.answersAsDeclared { return nil }
 
         return judgedAgainst(reading, answeredBy: context.answer(of: selector))
     }
@@ -2114,7 +2108,7 @@ struct TypeChecker {
             )
 
             if let against = judgedAgainst(reading, sending: call.selector, given: context) {
-                judgements.record(.call(against: against), at: place)
+                judgements.record(.call(selector: call.selector, against: against), at: place)
             }
 
             if mayFail {

@@ -453,7 +453,7 @@ struct Lowering {
     }
 
     // A lowered row with what its document settled it proves of its answers.
-    mutating func prove(_ row: Int, answersAsDeclared: Bool) {
+    mutating func record(_ row: Int, answersAsDeclared: Bool) {
         table[row] = Linked(table[row], implementation: table[row].implementation, answersAsDeclared: answersAsDeclared)
     }
 
@@ -763,7 +763,7 @@ struct Lowering {
                 .call(try lower(call, in: scope, on: context, at: place))
             }
 
-            guard case let .call(against)? = context.judgements[place] else { return lowered }
+            guard case let .call(_, against)? = context.judgements[place] else { return lowered }
 
             return checked(lowered, against: against, on: context)
 

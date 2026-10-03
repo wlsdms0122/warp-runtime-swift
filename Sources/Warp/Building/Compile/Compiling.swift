@@ -216,8 +216,8 @@ struct Compiling {
 
     // What a lowered body was settled, over the whole document, to prove of
     // its answers.
-    mutating func prove(_ row: Int, answersAsDeclared: Bool) {
-        lowering.prove(row, answersAsDeclared: answersAsDeclared)
+    mutating func record(_ row: Int, answersAsDeclared: Bool) {
+        lowering.record(row, answersAsDeclared: answersAsDeclared)
     }
 
     // The stand-ins, while the procedures themselves settle: a procedure folding through

@@ -297,7 +297,7 @@ struct Derivation {
     // greatest such set, so a declaration leaning on itself, or two on each
     // other, keep what nothing else took away. A name nothing proved is let
     // go by whatever leans on it.
-    func answersAsDeclared(_ proofs: [Name: (alone: Bool, leaning: Set<Name>)]) -> Set<Name> {
+    func answersAsDeclared(_ proofs: [Name: AnswerProof]) -> Set<Name> {
         var proven = Set(proofs.filter { _, proof in proof.alone }.keys)
 
         while let fallen = proven.first(where: { name in !(proofs[name]?.leaning ?? []).isSubset(of: proven) }) {
