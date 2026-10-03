@@ -1871,6 +1871,29 @@ indirect enum LoweredType: Sendable, Equatable {
         return merged(with: given, takingGiven: accepts(given, in: table, rigid: true), in: table)
     }
 
+    // Every type parameter this names, by label, with the bounds it is held
+    // to.
+    private var boundedParameters: [Name: [Bound]] {
+        switch self {
+        case let .parameter(label, bounds):
+            return [label: bounds]
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.boundedParameters
+
+        case let .record(record):
+            return record.fields.reduce(into: [:]) { found, field in found.merge(field.boundedParameters) { first, _ in first } }
+
+        case let .procedure(parameters, returns, _, _):
+            return ((parameters ?? []) + [returns].compactMap { $0 }).reduce(into: [:]) { found, part in
+                found.merge(part.boundedParameters) { first, _ in first }
+            }
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+            return [:]
+        }
+    }
+
     // The record this stands for: a nameless one as it is, a declared one
     // as its row lays it out.
     private func record(in table: LoweredTypeTable) -> LoweredRecord? {
@@ -2445,8 +2468,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // a call fills it at the build. One the procedure's own signature
         // names is one a closure took from the generic body that made it,
         // filled by that body's call, which the run does not know; it is read
-        // as what the slot asks there, and what arrives at the closure is
-        // judged against its bounds where it arrives.
+        // as what the slot asks there, held to its bounds.
         let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
@@ -2458,7 +2480,11 @@ indirect enum LoweredType: Sendable, Equatable {
 
         given.binding(against: asked, into: &taken, disagreeing: &disagreeing, in: table)
 
-        guard asked.accepts(given.filling(taken), in: table) else {
+        let bounded = given.boundedParameters.allSatisfy { label, bounds in
+            taken[label].map { filled in LoweredType.composition(bounds).accepts(filled.slotUnwrapped, in: table) } ?? true
+        }
+
+        guard bounded, asked.accepts(given.filling(taken), in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )
