@@ -2487,13 +2487,15 @@ indirect enum LoweredType: Sendable, Equatable {
         let asked = slot.filling(bound)
         var taken: [Name: LoweredType] = [:]
 
-        given.binding(against: asked, into: &taken, disagreeing: &disagreeing, in: table)
+        if given.namesParameter {
+            given.binding(against: asked, into: &taken, disagreeing: &disagreeing, in: table)
+        }
 
-        let bounded = given.boundedParameters.allSatisfy { label, bounds in
+        let bounded = taken.isEmpty || given.boundedParameters.allSatisfy { label, bounds in
             taken[label].map { filled in LoweredType.composition(bounds).accepts(filled.slotUnwrapped, in: table) } ?? true
         }
 
-        guard bounded, asked.accepts(given.filling(taken), in: table) else {
+        guard bounded, asked.accepts(taken.isEmpty ? given : given.filling(taken), in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )
