@@ -9,8 +9,9 @@ import Foundation
 
 // What a call is judged on where it stands: its answer against what the
 // call reads it as, where the callee settles a wider one, and each variable
-// it handed back in place against what the caller holds it as. One of the
-// two is there; a call with neither is judged on nothing and stands bare.
+// it handed back in place against what the caller holds it as. At least
+// one of the two is there; a call with neither is judged on nothing and
+// stands bare.
 struct CallJudgement: Sendable {
     // MARK: - Property
     let against: LoweredType?
