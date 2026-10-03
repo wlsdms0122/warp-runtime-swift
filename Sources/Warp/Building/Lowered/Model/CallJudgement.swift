@@ -35,13 +35,14 @@ struct CallJudgement: Sendable {
     // The same judgement with every type written another way.
     func rewritten(type: (LoweredType) throws -> LoweredType) rethrows -> CallJudgement {
         CallJudgement(
-            judging: try against.map(type),
+            rewriting: try against.map(type),
             handedBack: try handedBack.map { back in HandedBack(position: back.position, against: try type(back.against)) }
         )
     }
 
     // MARK: - Private
-    private init(judging against: LoweredType?, handedBack: [HandedBack]) {
+    // Rewriting the types keeps what there is to judge, so it is never empty.
+    private init(rewriting against: LoweredType?, handedBack: [HandedBack]) {
         self.against = against
         self.handedBack = handedBack
     }
