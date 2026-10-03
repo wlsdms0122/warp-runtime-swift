@@ -751,17 +751,14 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return accepts(table.loweredTypes[row], in: table, assuming: assuming + [(self, other)], rigid: rigid)
 
-        // A nullable slot takes null, the declared half, and anything
-        // nullable whose declared half it takes. What may be null does not
-        // stand where null was never declared.
+        // A nullable slot takes null, and anything nullable whose declared
+        // half it takes; what cannot be null was taken above. What may be
+        // null does not stand where null was never declared.
         case (.nullable, .null):
             return true
 
         case let (.nullable(mine), .nullable(theirs)):
             return mine.accepts(theirs, in: table, assuming: assuming, rigid: rigid)
-
-        case let (.nullable(mine), _):
-            return mine.accepts(other, in: table, assuming: assuming, rigid: rigid)
 
         case let (.array(mine), .array(theirs)):
             return mine.accepts(theirs, in: table, assuming: assuming, rigid: rigid)
@@ -1150,11 +1147,9 @@ indirect enum LoweredType: Sendable, Equatable {
                 assuming: assuming + [row]
             )
 
-        // A parameter inside a nullable slot is read from the declared half.
-        // Null carries no reading, and a nullable arrival reads by its own
-        // declared half for the same reason.
         // A nullable slot takes null whole: it carries no reading and leaves
-        // nothing to hold.
+        // nothing to hold. A nullable arrival reads by its own declared half,
+        // and anything else that may be null by the slot's.
         case (.nullable, .null):
             return
 
