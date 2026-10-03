@@ -282,11 +282,13 @@ final class Relocating {
         // call reads: a row its own document proved hands back as declared, or,
         // through a contract, rows that each settle exactly that type where
         // they answer and hand nothing back to judge.
-        case let .checked(.call(call), _, _) where table[call.procedure].handsBackAsDeclared:
+        case let .checked(.call(call), _) where table[call.procedure].handsBackAsDeclared:
             return .call(call)
 
-        case let .checked(.dispatch(dispatch), against?, handedBack) where handedBack.isEmpty && dispatch.calls.values.allSatisfy({ call in
-            table[call.procedure].returns.map { returns in returns.identical(to: against, in: table[call.procedure].table) } ?? false
+        case let .checked(.dispatch(dispatch), judging) where judging.handedBack.isEmpty && dispatch.calls.values.allSatisfy({ call in
+            guard let against = judging.against, let returns = table[call.procedure].returns else { return false }
+
+            return returns.identical(to: against, in: table[call.procedure].table)
         }):
             return .dispatch(dispatch)
 

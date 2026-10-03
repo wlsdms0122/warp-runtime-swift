@@ -519,9 +519,9 @@ struct TypeChecker {
         }
 
         let appliesOpen = judgements.judgements.values.contains { judgement in
-            guard case let .apply(_, against, handedBack) = judgement else { return false }
+            guard case let .apply(_, judging?) = judgement else { return false }
 
-            return against?.namesParameter == true || handedBack.contains(where: { back in back.against.namesParameter })
+            return judging.namesParameter
         }
 
         guard !appliesOpen else { return .broken }
@@ -532,12 +532,7 @@ struct TypeChecker {
         var leaning: Set<Name> = []
 
         for (place, judgement) in judgements.judgements {
-            guard
-                case let .call(against, handedBack) = judgement,
-                against?.namesParameter == true || handedBack.contains(where: { back in back.against.namesParameter })
-            else {
-                continue
-            }
+            guard case let .call(judging) = judgement, judging.namesParameter else { continue }
 
             guard
                 let selector = selectors[place],
@@ -2056,8 +2051,10 @@ struct TypeChecker {
             judgements.record(
                 .apply(
                     inPlace: handed,
-                    against: judgedAgainst(answers, answeredBy: nil),
-                    handedBack: handedBack(at: handed, of: callee)
+                    judging: CallJudgement(
+                        against: judgedAgainst(answers, answeredBy: nil),
+                        handedBack: handedBack(at: handed, of: callee)
+                    )
                 ),
                 at: place
             )
@@ -2202,11 +2199,11 @@ struct TypeChecker {
                 in: context.loweredTypes
             )
 
-            let against = judgedAgainst(reading, sending: call.selector, given: context)
-            let handedBack = handedBack(over: slots, filling: filled, sending: call.selector, given: context)
-
-            if against != nil || !handedBack.isEmpty {
-                judgements.record(.call(against: against, handedBack: handedBack), at: place)
+            if let judging = CallJudgement(
+                against: judgedAgainst(reading, sending: call.selector, given: context),
+                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context)
+            ) {
+                judgements.record(.call(judging), at: place)
             }
 
             if mayFail {

@@ -689,7 +689,7 @@ struct Lowering {
 
         // The answer is judged where the call reads it and handed on as the
         // callee shaped it, so it stands as the call it wraps does.
-        case let .checked(read, _, _):
+        case let .checked(read, _):
             return standing(read, on: slots)
 
         case let .cast(_, type, optional):
@@ -764,9 +764,9 @@ struct Lowering {
                 .call(try lower(call, in: scope, on: context, at: place))
             }
 
-            guard case let .call(against, judged)? = context.judgements[place] else { return lowered }
+            guard case let .call(judging)? = context.judgements[place] else { return lowered }
 
-            return checked(lowered, against: against, handedBack: judged, on: context)
+            return checked(lowered, judging: judging, on: context)
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -885,7 +885,7 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed, against, judged)? = context.judgements[place] else {
+        guard case let .apply(handed, judging)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
@@ -908,27 +908,22 @@ struct Lowering {
             }
         )
 
-        guard against != nil || !judged.isEmpty else { return applied }
+        guard let judging else { return applied }
 
-        return checked(applied, against: against, handedBack: judged, on: context)
+        return checked(applied, judging: judging, on: context)
     }
 
     // A call's answer judged where the call stands, against what the build
     // read it as, and what it handed back in place against what the caller
     // holds it as. The types are ones a body stands on, so they are numbered.
-    private func checked(
-        _ call: Operation,
-        against: LoweredType?,
-        handedBack: [HandedBack],
-        on context: Context
-    ) -> Operation {
-        context.slots.note(against)
+    private func checked(_ call: Operation, judging: CallJudgement, on context: Context) -> Operation {
+        context.slots.note(judging.against)
 
-        for back in handedBack {
+        for back in judging.handedBack {
             context.slots.note(back.against)
         }
 
-        return .checked(call, against: against, handedBack: handedBack)
+        return .checked(call, judging)
     }
 
     private mutating func lower(

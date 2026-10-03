@@ -356,8 +356,8 @@ struct Evaluator: Sendable {
                 in: loweredTypes
             )
 
-        case let .checked(read, against, handedBack):
-            return try await checked(read, against: against, handedBack: handedBack, in: &activation, at: trace)
+        case let .checked(read, judging):
+            return try await checked(read, judging: judging, in: &activation, at: trace)
 
         case let .call(call):
             return try await self.call(call, in: &activation, at: trace)
@@ -782,11 +782,11 @@ struct Evaluator: Sendable {
     // handing nothing back is judged on its answer alone.
     private func checked(
         _ read: Operation,
-        against: LoweredType?,
-        handedBack: [HandedBack],
+        judging: CallJudgement,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
+        let handedBack = judging.handedBack
         let answered: Value
 
         if handedBack.isEmpty {
@@ -809,7 +809,7 @@ struct Evaluator: Sendable {
             }
         }
 
-        try against?.admitting(answered, at: "answer", in: loweredTypes)
+        try judging.against?.admitting(answered, at: "answer", in: loweredTypes)
 
         return answered
     }

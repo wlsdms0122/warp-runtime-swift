@@ -565,7 +565,7 @@ struct InPlaceTests {
         // The call stands judged on what it hands back in place
         guard
             case let .body(body, _) = entry.implementation,
-            case let .checked(.apply(_, arguments), _, _)? = body.instructions.last?.code
+            case let .checked(.apply(_, arguments), _)? = body.instructions.last?.code
         else {
             Issue.record("the entry's last statement is a call of a value")
             return

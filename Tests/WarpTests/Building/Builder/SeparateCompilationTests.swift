@@ -884,7 +884,7 @@ struct SeparateCompilationTests {
     // The call through a contract a row's result holds, under the check its
     // answer takes where the call stands.
     private func dispatch(in body: LoweredBody) throws -> DispatchOperation {
-        let result: Warp.Operation? = if case let .checked(read, _, _)? = body.result { read } else { body.result }
+        let result: Warp.Operation? = if case let .checked(read, _)? = body.result { read } else { body.result }
 
         guard case let .dispatch(dispatch)? = result else {
             throw Unheld(description: "'app.tell' holds no call through a contract")

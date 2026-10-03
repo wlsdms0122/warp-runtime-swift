@@ -762,12 +762,12 @@ struct ObjectWriter {
         case let .cast(read, as: type, optional: optional):
             return tagged(Tag.cast, try self.operation(read), lowered(type), .bool(optional))
 
-        case let .checked(read, against: type, handedBack: handedBack):
+        case let .checked(read, judging):
             return tagged(
                 Tag.checked,
                 try self.operation(read),
-                ObjectWriter.maybe(type, lowered),
-                .array(handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
+                ObjectWriter.maybe(judging.against, lowered),
+                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
             )
 
         case let .block(body):
