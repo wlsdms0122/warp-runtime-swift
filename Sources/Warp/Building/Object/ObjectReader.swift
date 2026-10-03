@@ -1006,6 +1006,10 @@ struct ObjectReader {
                 throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
             }
 
+            guard against != nil || !handedBack.isEmpty else {
+                throw ObjectRefused("a judgement where a call stands judges nothing")
+            }
+
             read = .checked(judged, against: against, handedBack: handedBack)
 
         case .block: read = .block(try body(cursor.next()))
