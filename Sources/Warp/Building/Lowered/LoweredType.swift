@@ -587,8 +587,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // a value of a type. The build
     // asks them of readings; the run asks the first of a closure value that
     // reached a procedure slot through `any`. A name the table does not answer
-    // passes every one of them: nothing is knowable about it here, and the
-    // value judge refuses it where a value arrives.
+    // passes the others and is itself to the second: nothing is knowable
+    // about it here, and the value judge refuses it where a value arrives.
     //
     // Whether a value of `other` may stand where this is declared.
     // Structural, and one-directional: `any` on the left accepts anything

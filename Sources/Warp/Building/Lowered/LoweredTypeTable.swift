@@ -19,7 +19,8 @@ final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
     // type alone settles is settled here; a named type settles nothing,
     // since which types answer a contract is read off the claims of the whole
-    // list, so the name comes back and the asker writes it down.
+    // list, so the name comes back and the asker writes it down. Asked
+    // rigidly, the documents settle it.
     enum Answering {
         case settled(Bool)
         case leansOn([Name])
@@ -206,8 +207,8 @@ final class LoweredTypeTable: Sendable {
 
     // Whether a reading stands where a contract bounds a slot. One-sided as
     // `answering` is, unless `rigid`: then nothing is judged where the value
-    // arrives, so a named type is held to what the documents say and a
-    // reading nothing can be said about refuses.
+    // arrives, so a named type is held to what the documents say, and a
+    // parameter or a composition to what its bounds prove.
     func satisfies(contract name: Name, reading: LoweredType, rigid: Bool) -> Bool {
         if case .settled(false) = answering(contract: name, reading: reading, assuming: [], rigid: rigid) { false } else { true }
     }
