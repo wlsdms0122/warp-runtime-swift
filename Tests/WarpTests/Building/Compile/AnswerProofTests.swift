@@ -100,6 +100,39 @@ struct AnswerProofTests {
         #expect(image["app.b"]?.answersAsDeclared == true)
     }
 
+    @Test("two bodies leaning on each other fall together when one answers `any`")
+    func twoBodiesLeaningOnEachOtherFallTogether() async throws {
+        // Given. `app.b` leans on `app.a` and answers a value of `any` for its own `some T`
+        let sut = try Module(
+            procedures: [
+                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
+                "app.b": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [
+                        Statement(
+                            binding: .constant("echo"),
+                            expression: .call(Call(selector: "app.a", arguments: [.reference([.key("x")])]))
+                        )
+                    ],
+                    result: .reference([.key("junk")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.b"]?.answersAsDeclared == false)
+    }
+
     // MARK: - Public
     // MARK: - Private
     // A declaration taking and answering its own `some T`.
