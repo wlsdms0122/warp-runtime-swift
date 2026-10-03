@@ -405,13 +405,14 @@ final class LoweredTypeTable: Sendable {
         case .any, .projection, .undeclared, .never:
             return .settled(true)
 
-        // Where nothing is judged on arrival, a name is held to what the
-        // documents say about it.
+        // A name answers as the record it names, since a value settled under
+        // it wears that record's name. Where nothing is judged on arrival, it
+        // is held to what the documents say about it.
         case let .named(row) where rigid:
-            return .settled(settles(contract: name, arrived: labels[row]) != false)
+            return .settled(settles(contract: name, arrived: labels[recordRows[row] ?? row]) != false)
 
         case let .named(row):
-            return .leansOn([labels[row]])
+            return .leansOn([labels[recordRows[row] ?? row]])
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of. A composition bounded by the
