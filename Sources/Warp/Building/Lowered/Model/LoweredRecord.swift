@@ -53,16 +53,5 @@ struct LoweredRecord: Sendable, Equatable {
         layout.position(of: field).map { place in fields[place] }
     }
 
-    // This record and a nameless one of the same fields as the nameless one,
-    // each field the two readings joined. Nil where their fields differ.
-    func joined(with nameless: LoweredRecord, in table: LoweredTypeTable) -> LoweredRecord? {
-        guard layout.fields == nameless.layout.fields else { return nil }
-
-        return LoweredRecord(
-            layout: nameless.layout,
-            fields: zip(fields, nameless.fields).map { field, given in field.joined(with: given, in: table) ?? field }
-        )
-    }
-
     // MARK: - Private
 }

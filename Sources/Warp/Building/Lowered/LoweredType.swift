@@ -1133,46 +1133,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         guard takesGiven || given.accepts(self, in: table, rigid: true) else { return nil }
 
-        let looser = takesGiven ? self : given
-        let mine = throughAliases(in: table)
-        let theirs = given.throughAliases(in: table)
-
-        switch (mine, theirs) {
-        // The looser of the two is a range: its kind holds both, whichever
-        // kind the other is a range of.
-        case let (.ranged(range), _) where takesGiven, let (_, .ranged(range)) where !takesGiven:
-            return range.lowered
-
-        case let (.array(element), .array(other)):
-            return .array(element.joined(with: other, in: table) ?? (takesGiven ? element : other))
-
-        case let (.dictionary(element), .dictionary(other)):
-            return .dictionary(element.joined(with: other, in: table) ?? (takesGiven ? element : other))
-
-        case let (.dictionary(element), other) where other.record(in: table) != nil,
-             let (other, .dictionary(element)) where other.record(in: table) != nil:
-            let fields = other.record(in: table)?.fields ?? []
-
-            return .dictionary(fields.reduce(element) { joined, field in joined.joined(with: field, in: table) ?? joined })
-
-        case let (.nullable(inner), .nullable(other)):
-            return .nullable(inner.joined(with: other, in: table) ?? (takesGiven ? inner : other))
-
-        case let (.nullable(inner), other) where takesGiven && other != .null:
-            return .nullable(inner.joined(with: other, in: table) ?? inner)
-
-        case let (other, .nullable(inner)) where !takesGiven && other != .null:
-            return .nullable(other.joined(with: inner, in: table) ?? inner)
-
-        case let (.named, .record(nameless)), let (.record, .record(nameless)):
-            return mine.record(in: table)?.joined(with: nameless, in: table).map(LoweredType.record) ?? looser
-
-        case let (.record(nameless), .named):
-            return theirs.record(in: table)?.joined(with: nameless, in: table).map(LoweredType.record) ?? looser
-
-        default:
-            return looser
-        }
+        return merged(with: given, takingGiven: takesGiven, in: table)
     }
 
     // What the type parameters in this declaration stand for, given what
@@ -1846,6 +1807,70 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // The join of two readings where one takes the other, `takingGiven`
+    // saying which, walked in step. Each position below is asked the same.
+    private func merged(with given: LoweredType, takingGiven takesGiven: Bool, in table: LoweredTypeTable) -> LoweredType {
+        let looser = takesGiven ? self : given
+
+        switch (throughAliases(in: table), given.throughAliases(in: table)) {
+        // The looser of the two is a range: its kind holds both, whichever
+        // kind the other is a range of.
+        case let (.ranged(range), _) where takesGiven, let (_, .ranged(range)) where !takesGiven:
+            return range.lowered
+
+        case let (.array(element), .array(other)):
+            return .array(element.merged(with: other, in: table))
+
+        case let (.dictionary(element), .dictionary(other)):
+            return .dictionary(element.merged(with: other, in: table))
+
+        case let (.dictionary(element), other) where other.record(in: table) != nil,
+             let (other, .dictionary(element)) where other.record(in: table) != nil:
+            let fields = other.record(in: table)?.fields ?? []
+
+            return .dictionary(fields.reduce(element) { merged, field in merged.merged(with: field, in: table) })
+
+        case let (.nullable(inner), .nullable(other)):
+            return .nullable(inner.merged(with: other, in: table))
+
+        case let (.nullable(inner), other) where takesGiven && other != .null:
+            return .nullable(inner.merged(with: other, in: table))
+
+        case let (other, .nullable(inner)) where !takesGiven && other != .null:
+            return .nullable(other.merged(with: inner, in: table))
+
+        // A record and a nameless one of the same fields: the nameless one,
+        // its fields merged.
+        case let (mine, .record(nameless)) where mine.record(in: table)?.layout.fields == nameless.layout.fields:
+            return .record(LoweredType.nameless(nameless, merging: mine.record(in: table)?.fields ?? [], in: table))
+
+        case let (.record(nameless), theirs) where theirs.record(in: table)?.layout.fields == nameless.layout.fields:
+            return .record(LoweredType.nameless(nameless, merging: theirs.record(in: table)?.fields ?? [], in: table))
+
+        default:
+            return looser
+        }
+    }
+
+    // A nameless record with each field merged with the one at its place.
+    private static func nameless(
+        _ record: LoweredRecord,
+        merging fields: [LoweredType],
+        in table: LoweredTypeTable
+    ) -> LoweredRecord {
+        LoweredRecord(
+            layout: record.layout,
+            fields: zip(fields, record.fields).map { field, given in field.merged(with: given, in: table) }
+        )
+    }
+
+    // The same at a position below, asking there which takes the other.
+    private func merged(with given: LoweredType, in table: LoweredTypeTable) -> LoweredType {
+        guard self != given else { return self }
+
+        return merged(with: given, takingGiven: accepts(given, in: table, rigid: true), in: table)
+    }
+
     // The record this stands for: a nameless one as it is, a declared one
     // as its row lays it out.
     private func record(in table: LoweredTypeTable) -> LoweredRecord? {
