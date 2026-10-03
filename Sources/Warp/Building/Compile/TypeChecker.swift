@@ -506,7 +506,7 @@ struct TypeChecker {
         let loweredTypes = context.loweredTypes
 
         guard let declared = returns?.lowered(in: loweredTypes), declared.namesParameter else {
-            return AnswerProof(alone: true, leaning: [])
+            return .holds(leaning: [])
         }
 
         let readsInPlace = readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
@@ -516,12 +516,12 @@ struct TypeChecker {
             return against.namesParameter
         }
 
-        var alone = readsInPlace && !appliesOpen
-        var leaning: Set<Name> = []
+        guard readsInPlace, !appliesOpen else { return .broken }
 
         // Read over what was judged, so a judgement whose call is not found
         // proves nothing rather than going unread.
         let selectors = Dictionary(calls.map { site in (site.place, site.call.selector) }) { first, _ in first }
+        var leaning: Set<Name> = []
 
         for (place, judgement) in judgements.judgements {
             guard case let .call(against) = judgement, against.namesParameter else { continue }
@@ -531,14 +531,13 @@ struct TypeChecker {
                 context.own[selector] != nil,
                 context.contractProcedures[selector] == nil
             else {
-                alone = false
-                continue
+                return .broken
             }
 
             leaning.insert(selector)
         }
 
-        return AnswerProof(alone: alone, leaning: leaning)
+        return .holds(leaning: leaning)
     }
 
     // Whether a write fits the slot it lands in, in the box `binding` holds.

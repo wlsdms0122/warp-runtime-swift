@@ -291,16 +291,22 @@ struct Derivation {
         }
     }
 
-    // Which of a document's declarations answer as they declare. Each starts
-    // from what its own body proves and is let go where it leans on one of
+    // Which of a document's declarations answer as they declare. Each whose
+    // own body holds starts held and is let go where it leans on one of
     // the document's that does not, until nothing more is let go: the
     // greatest such set, so a declaration leaning on itself, or two on each
     // other, keep what nothing else took away. A name nothing proved is let
     // go by whatever leans on it.
     func answersAsDeclared(_ proofs: [Name: AnswerProof]) -> Set<Name> {
-        var proven = Set(proofs.filter { _, proof in proof.alone }.keys)
+        var leanings: [Name: Set<Name>] = [:]
 
-        while let fallen = proven.first(where: { name in !(proofs[name]?.leaning ?? []).isSubset(of: proven) }) {
+        for case let (name, .holds(leaning)) in proofs {
+            leanings[name] = leaning
+        }
+
+        var proven = Set(leanings.keys)
+
+        while let fallen = proven.first(where: { name in !leanings[name, default: []].isSubset(of: proven) }) {
             proven.remove(fallen)
         }
 

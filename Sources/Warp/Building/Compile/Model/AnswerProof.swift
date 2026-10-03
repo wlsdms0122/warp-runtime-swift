@@ -7,15 +7,11 @@
 
 import Foundation
 
-// What one body proves of its answers: whether it does by itself, and which
-// of its own document's declarations the rest leans on. Settled over the
-// whole document, since a declaration it leans on may be read after it.
-struct AnswerProof: Sendable {
-    // MARK: - Property
-    let alone: Bool
-    let leaning: Set<Name>
-
-    // MARK: - Initializer
-    // MARK: - Public
-    // MARK: - Private
+// What one body proves of its answers: nothing, or that they hold once the
+// declarations of its own document it leans on hold, none where it proves
+// them alone. Settled over the whole document, since a declaration it leans
+// on may be read after it.
+enum AnswerProof: Sendable {
+    case broken
+    case holds(leaning: Set<Name>)
 }
