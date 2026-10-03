@@ -356,6 +356,13 @@ struct Evaluator: Sendable {
                 in: loweredTypes
             )
 
+        case let .checked(read, against):
+            let answered = try await evaluate(read, in: &activation, at: trace)
+
+            _ = try against.settling(answered, at: "answer", in: loweredTypes)
+
+            return answered
+
         case let .call(call):
             return try await self.call(call, in: &activation, at: trace)
 

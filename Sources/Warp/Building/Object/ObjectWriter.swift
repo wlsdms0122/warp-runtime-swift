@@ -761,6 +761,9 @@ struct ObjectWriter {
         case let .cast(read, as: type, optional: optional):
             return tagged(Tag.cast, try self.operation(read), lowered(type), .bool(optional))
 
+        case let .checked(read, against: type):
+            return tagged(Tag.checked, try self.operation(read), lowered(type))
+
         case let .block(body):
             return tagged(Tag.block, try self.body(body))
 

@@ -141,6 +141,28 @@ indirect enum LoweredType: Sendable, Equatable {
         return false
     }
 
+    // Whether a type parameter stands anywhere in this type. A declared name
+    // or a composition writes none.
+    var namesParameter: Bool {
+        switch self {
+        case .parameter:
+            return true
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.namesParameter
+
+        case let .record(record):
+            return record.fields.contains { field in field.namesParameter }
+
+        case let .procedure(parameters, returns, _, _):
+            return (parameters ?? []).contains { parameter in parameter.namesParameter }
+                || (returns?.namesParameter ?? false)
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+            return false
+        }
+    }
+
     // What a slot holds, through the two marks that say how it is held
     // rather than what it is.
     var slotUnwrapped: LoweredType {

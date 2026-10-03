@@ -980,6 +980,9 @@ struct ObjectReader {
                 optional: try cursor.field().flag()
             )
 
+        case .checked:
+            read = .checked(try operation(cursor.next()), against: try lowered(cursor.next()))
+
         case .block: read = .block(try body(cursor.next()))
         case .conditional:
             read = .conditional(

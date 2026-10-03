@@ -747,11 +747,15 @@ struct Lowering {
             // A selector naming a contract's procedure names no row. Which row
             // answers is the first argument's, so every one the build found is
             // lowered here and the run picks by the name it reads.
-            if let asked = contractProcedures[call.selector] {
-                return .dispatch(try lower(call, through: asked, in: scope, on: context, at: place))
+            let lowered: Operation = if let asked = contractProcedures[call.selector] {
+                .dispatch(try lower(call, through: asked, in: scope, on: context, at: place))
+            } else {
+                .call(try lower(call, in: scope, on: context, at: place))
             }
 
-            return .call(try lower(call, in: scope, on: context, at: place))
+            guard case let .call(checking)? = context.judgements[place] else { return lowered }
+
+            return checked(lowered, against: checking, on: context)
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -869,11 +873,11 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed)? = context.judgements[place] else {
+        guard case let .apply(handed, checking)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
-        return .apply(
+        let applied = Operation.apply(
             try lower(callee, naming: nil, in: scope, on: context, at: place.child(.callee)),
             arguments: try arguments.enumerated().map { position, argument in
                 let here = place.child(.argument(position))
@@ -891,6 +895,18 @@ struct Lowering {
                 return .reference(address)
             }
         )
+
+        guard let checking else { return applied }
+
+        return checked(applied, against: checking, on: context)
+    }
+
+    // A call's answer judged where the call stands, against what the build
+    // read it as. The type is one a body stands on, so it is numbered.
+    private func checked(_ call: Operation, against checking: LoweredType, on context: Context) -> Operation {
+        context.slots.note(checking)
+
+        return .checked(call, against: checking)
     }
 
     private mutating func lower(

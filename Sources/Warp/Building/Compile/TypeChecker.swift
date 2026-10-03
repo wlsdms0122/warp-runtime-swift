@@ -470,6 +470,52 @@ struct TypeChecker {
         }
     }
 
+    // Whether a write fits the slot it lands in, in the box `binding` holds.
+    // A body declares no type parameter of its own, so a declared box whose
+    // slot names one is a parameter handed in place, and that box is settled
+    // nowhere: the caller reads it as the type it handed, which is what
+    // filled the parameter. So there only the same type is written.
+    private func fits(
+        _ written: LoweredType,
+        into slot: LoweredType,
+        of binding: Binding?,
+        in loweredTypes: LoweredTypeTable
+    ) -> Bool {
+        guard case .declared? = binding?.holding, slot.namesParameter else {
+            return slot.accepts(written, in: loweredTypes)
+        }
+
+        return written == .never || slot.slotUnwrapped.identical(to: written.slotUnwrapped, in: loweredTypes)
+    }
+
+    // What a call's answer is judged against where the call stands: what the
+    // call reads it as, unless the callee already settles exactly that, or
+    // the call reads `any` or nothing. `answeredBy` is what the callee
+    // settles, nil where the callee is not known here.
+    private func checking(_ reading: LoweredType, answeredBy callee: LoweredType?) -> LoweredType? {
+        switch reading {
+        case .any, .never:
+            return nil
+
+        default:
+            return reading == callee ? nil : reading
+        }
+    }
+
+    // The same, for a call to a selector. A contract's procedure is answered
+    // by whichever row the run picks, and what that row settles is not known
+    // here. A native another document holds answers by its host's code, and
+    // what it declared is taken as said, as its other claims are.
+    private func checking(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
+        guard context.contractProcedures[selector] == nil else { return checking(reading, answeredBy: nil) }
+
+        if context.own[selector] == nil, case .native? = context.declared(selector)?.implementation {
+            return nil
+        }
+
+        return checking(reading, answeredBy: context.answer(of: selector))
+    }
+
     // The one membership judgment a call is held to, over the whole
     // signature. Answers the refusal, or nil where every constrained
     // parameter admits its reading.
@@ -1624,7 +1670,7 @@ struct TypeChecker {
                 for (name, wrote) in writes.sorted(by: { $0.name < $1.name }) {
                     guard let held = outside[name]?.type else { continue }
 
-                    guard held.accepts(wrote, in: context.loweredTypes) else {
+                    guard fits(wrote, into: held, of: outside[name], in: context.loweredTypes) else {
                         throw BuildError(
                             "writes '\(name)', which it captured, as"
                                 + " \(wrote.rendered(in: context.loweredTypes)). The body it captured"
@@ -1856,7 +1902,7 @@ struct TypeChecker {
                 )
             }
 
-            judgements.record(.apply(inPlace: handed), at: place)
+            judgements.record(.apply(inPlace: handed, checking: checking(answers, answeredBy: nil)), at: place)
 
             if failsHere(expression, given: context) {
                 flow.fail()
@@ -1990,6 +2036,17 @@ struct TypeChecker {
             )
 
             let rewritten = Call(selector: call.selector, arguments: arguments)
+            let reading = answered(
+                by: signature,
+                over: context.slots(of: call.selector),
+                answering: context.answer(of: call.selector),
+                readings: sent,
+                in: context.loweredTypes
+            )
+
+            if let checking = checking(reading, sending: call.selector, given: context) {
+                judgements.record(.call(checking: checking), at: place)
+            }
 
             if mayFail {
                 flow.fail()
@@ -2005,13 +2062,7 @@ struct TypeChecker {
                     )
                 ] + calls,
                 judgements: judgements,
-                reading: answered(
-                    by: signature,
-                    over: context.slots(of: call.selector),
-                    answering: context.answer(of: call.selector),
-                    readings: sent,
-                    in: context.loweredTypes
-                ),
+                reading: reading,
                 flow: flow
             )
 
@@ -2828,7 +2879,7 @@ struct TypeChecker {
             }
         }
 
-        guard slot.accepts(written, in: context.loweredTypes) else {
+        guard fits(written, into: slot, of: path.head.flatMap { head in environment[head] }, in: context.loweredTypes) else {
             try refuse(
                 "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), and it holds"
                     + " \(slot.rendered(in: context.loweredTypes))",
