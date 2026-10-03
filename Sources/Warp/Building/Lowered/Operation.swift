@@ -67,6 +67,35 @@ indirect enum Operation: Sendable {
     case leave(Leave.Reach, target: Name?, Operation?)
 
     // MARK: - Property
+    // The positions a call may hand a variable in place at, nil where this
+    // is no call. A call names them; a call through a contract or of a value
+    // hands a place wherever it wrote one, and the row or closure it reaches
+    // says which it takes in place. A call through a contract hands the
+    // first as what it read, so never that one.
+    var handingInPlace: [Int]? {
+        switch self {
+        case let .call(call):
+            return call.handed.map(\.position)
+
+        case let .dispatch(dispatch):
+            return dispatch.arguments.indices.compactMap { index in
+                guard case .reference = dispatch.arguments[index] else { return nil }
+
+                return index + 1
+            }
+
+        case let .apply(_, arguments):
+            return arguments.indices.compactMap { index in
+                guard case .reference = arguments[index] else { return nil }
+
+                return index
+            }
+
+        default:
+            return nil
+        }
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     // Whether this reads any slot in the range, through a path's index

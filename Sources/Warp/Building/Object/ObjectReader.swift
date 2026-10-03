@@ -987,27 +987,7 @@ struct ObjectReader {
             // What is judged where it stands is a call, of any of the three
             // kinds, and what it hands back stands at the positions it hands
             // a variable in place, each once, in order.
-            let inPlace: [Int]
-
-            switch judged {
-            case let .call(call):
-                inPlace = call.handed.map(\.position)
-
-            case let .dispatch(dispatch):
-                inPlace = dispatch.arguments.indices.compactMap { index in
-                    guard case .reference = dispatch.arguments[index] else { return nil }
-
-                    return index + 1
-                }
-
-            case let .apply(_, arguments):
-                inPlace = arguments.indices.compactMap { index in
-                    guard case .reference = arguments[index] else { return nil }
-
-                    return index
-                }
-
-            default:
+            guard let inPlace = judged.handingInPlace else {
                 throw ObjectRefused("a judgement where a call stands wraps what is no call")
             }
 
