@@ -210,8 +210,8 @@ final class LoweredTypeTable: Sendable {
     // `answering` is, unless `rigid`: then nothing is judged where the value
     // arrives, so a named type is held to what the documents say, and a
     // parameter or a composition to what its bounds prove.
-    func satisfies(contract name: Name, reading: LoweredType, rigid: Bool) -> Bool {
-        if case .settled(false) = answering(contract: name, reading: reading, assuming: [], rigid: rigid, orNull: false) { false } else { true }
+    func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
+        if case .settled(false) = answering(contract: name, reading: reading, assuming: [], rigid: rigid, orNull: orNull) { false } else { true }
     }
 
     // Whether a value is a member of a constraint. A member speaks through
@@ -251,14 +251,10 @@ final class LoweredTypeTable: Sendable {
         case .any, .projection:
             return true
 
-        case .null where orNull:
-            return true
+        case _ where orNull && besidesNull(reading) != reading:
+            guard let rest = besidesNull(reading) else { return true }
 
-        case let .nullable(inner) where orNull:
-            return admits(constraint: row, reading: inner, assuming: assuming, asking: pairs, rigid: rigid, orNull: orNull)
-
-        case let .named(named) where orNull && reading.declaresNull(in: self):
-            return admits(constraint: row, reading: loweredTypes[named], assuming: assuming, asking: pairs, rigid: rigid, orNull: orNull)
+            return admits(constraint: row, reading: rest, assuming: assuming, asking: pairs, rigid: rigid, orNull: orNull)
 
         // A parameter bounded by a membership stands for some member of it, so
         // it fits where every one of those would. One bounded by contracts
@@ -412,6 +408,25 @@ final class LoweredTypeTable: Sendable {
     }
 
     // MARK: - Private
+    // What a slot taking null as well holds a reading to besides null, or
+    // nil where null is all it is. A membership with a member that may be
+    // null stands as it is, and is asked member by member.
+    private func besidesNull(_ reading: LoweredType) -> LoweredType? {
+        switch reading {
+        case .null:
+            return nil
+
+        case let .nullable(inner):
+            return besidesNull(inner)
+
+        case let .named(row) where reading.declaresNull(in: self):
+            return besidesNull(loweredTypes[row])
+
+        default:
+            return reading
+        }
+    }
+
     private func answering(
         contract name: Name,
         reading: LoweredType,
@@ -428,14 +443,10 @@ final class LoweredTypeTable: Sendable {
         // unless the slot takes null as well: then null is taken and the rest
         // answers. A membership with a member that may be null is asked member
         // by member below.
-        case .null where orNull:
-            return .settled(true)
+        case _ where orNull && besidesNull(reading) != reading:
+            guard let rest = besidesNull(reading) else { return .settled(true) }
 
-        case let .nullable(inner) where orNull:
-            return answering(contract: name, reading: inner, assuming: assuming, rigid: rigid, orNull: orNull)
-
-        case let .named(row) where orNull && reading.declaresNull(in: self):
-            return answering(contract: name, reading: loweredTypes[row], assuming: assuming, rigid: rigid, orNull: orNull)
+            return answering(contract: name, reading: rest, assuming: assuming, rigid: rigid, orNull: orNull)
 
         case _ where !orNull && reading.declaresNull(in: self):
             return .settled(false)

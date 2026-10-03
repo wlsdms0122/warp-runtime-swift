@@ -705,6 +705,28 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.variable(inner), _):
             return inner.accepts(other, in: table, assuming: assuming, rigid: rigid)
 
+        // A composition or null takes null, and otherwise what its bounds
+        // take, asked of the table knowing the slot takes null as well.
+        case let (.nullable(.composition(bounds)), _):
+            guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+
+            return bounds.allSatisfy { bound in
+                switch bound {
+                case let .membership(row):
+                    table.admits(
+                        constraint: row,
+                        reading: other,
+                        assuming: [],
+                        asking: assuming + [(self, other)],
+                        rigid: rigid,
+                        orNull: true
+                    )
+
+                case let .contract(name):
+                    table.satisfies(contract: name, reading: other, rigid: rigid, orNull: true)
+                }
+            }
+
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
             return mine.accepts(other, in: table, assuming: assuming, rigid: rigid)
 
@@ -728,7 +750,7 @@ indirect enum LoweredType: Sendable, Equatable {
                     )
 
                 case let .contract(name):
-                    table.satisfies(contract: name, reading: other, rigid: rigid)
+                    table.satisfies(contract: name, reading: other, rigid: rigid, orNull: false)
                 }
             }
 
@@ -1197,8 +1219,8 @@ indirect enum LoweredType: Sendable, Equatable {
         // A composition or null holds what arrived as it stands, the table
         // answering whether it is null or held to the bounds, a membership
         // member by member.
-        case let (.nullable(.composition(slot)), .composition), let (.nullable(.composition(slot)), .parameter):
-            holding.append(Substitution.Held(reading: given, bounds: slot, orNull: true))
+        case let (.nullable(.composition(slot)), _):
+            holding.append(Substitution.Held(reading: given.slotUnwrapped, bounds: slot, orNull: true))
 
         case let (.nullable(mine), _) where !given.slotUnwrapped.declaresNull(in: table):
             mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
