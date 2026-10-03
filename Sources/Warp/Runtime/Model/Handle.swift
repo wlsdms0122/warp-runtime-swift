@@ -45,6 +45,11 @@ struct Handle: Sendable {
         try box.value.reading(at: path, under: rendered(path))
     }
 
+    // The same, with nil where the path reaches an entry not written yet.
+    func written() throws -> Value? {
+        try box.value.written(at: path, under: rendered(path))
+    }
+
     // Writes the part a path below the hold names. The box is read once,
     // rewritten, and stored once, so nothing observes the value halfway.
     func write(_ value: Value, at rest: [Projection]) throws {

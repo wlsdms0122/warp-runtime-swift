@@ -663,6 +663,40 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
+    // The same, with nil where the path reaches an entry not written yet,
+    // which is a place nothing holds rather than a mistake.
+    func written(at path: [Projection], under rendered: String) throws -> Value? {
+        guard let step = path.first else { return self }
+
+        let rest = Array(path.dropFirst())
+
+        switch (self, step) {
+        case let (.record(record), .field(position, name)):
+            guard record.values.indices.contains(position) else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+            }
+
+            return try record.values[position].written(at: rest, under: rendered)
+
+        case let (_, .key(name)) where holdsFields:
+            return try self[name]?.written(at: rest, under: rendered)
+
+        case let (.array(elements), .index(index)):
+            guard elements.indices.contains(index) else {
+                throw ExecutionError(
+                    "'\(rendered)' reads element \(index) of an array holding \(elements.count)"
+                )
+            }
+
+            return try elements[index].written(at: rest, under: rendered)
+
+        default:
+            throw ExecutionError(
+                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(type), which has no such part"
+            )
+        }
+    }
+
     // This value with one part replaced: the part the path names, in a record
     // by the place the build put the field at, in a dictionary by name and in
     // an array by position. The rest is kept as it was. The build judged the
