@@ -38,7 +38,9 @@ indirect enum Operation: Sendable {
     // callee settles a wider one: a type parameter the call filled, the
     // `returns` a value's slot wrote, a contract's answer. Refused at the run
     // the way a value arriving at a parameter is, and handed on as it came:
-    // the callee already shaped it to what it declared.
+    // the callee already shaped it to what it declared, and a reading takes a
+    // value it admits as that value, a whole number where a fraction is read
+    // included, which is what lets a tie answer the side that arrived.
     case checked(Operation, against: LoweredType)
 
     case block(LoweredBody)

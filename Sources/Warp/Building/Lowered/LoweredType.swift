@@ -862,6 +862,39 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // Whether a write into a box handed in place, of this type, holds. The
+    // caller reads its box as what filled each type parameter here, and
+    // nothing settles a write into it, so where this writes a parameter only
+    // that parameter lands. Around one, a nullable, a list or a dictionary
+    // takes what it takes anywhere; a type holding one some other way is
+    // written only as itself.
+    func takesInPlace(_ written: LoweredType, in table: LoweredTypeTable) -> Bool {
+        switch (self, written) {
+        case (_, .never):
+            return true
+
+        case let (.parameter(mine, _), .parameter(theirs, _)):
+            return mine == theirs
+
+        case (.parameter, _):
+            return false
+
+        case (.nullable, .null):
+            return true
+
+        case let (.nullable(mine), .nullable(theirs)),
+            let (.array(mine), .array(theirs)),
+            let (.dictionary(mine), .dictionary(theirs)):
+            return mine.takesInPlace(theirs, in: table)
+
+        case let (.nullable(mine), _):
+            return mine.takesInPlace(written, in: table)
+
+        default:
+            return namesParameter ? identical(to: written, in: table) : accepts(written, in: table)
+        }
+    }
+
     // Whether a position taking this may stand where a position handing
     // `handed` is: it accepts what is handed there, and a position taking a
     // place is handed one. A position taking a value may stand where a place

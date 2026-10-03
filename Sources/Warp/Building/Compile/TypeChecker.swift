@@ -472,9 +472,8 @@ struct TypeChecker {
 
     // Whether a write fits the slot it lands in, in the box `binding` holds.
     // A body declares no type parameter of its own, so a declared box whose
-    // slot names one is a parameter handed in place, and that box is settled
-    // nowhere: the caller reads it as the type it handed, which is what
-    // filled the parameter. So there only the same type is written.
+    // slot names one is a parameter handed in place, which `takesInPlace`
+    // judges.
     private func fits(
         _ written: LoweredType,
         into slot: LoweredType,
@@ -485,7 +484,7 @@ struct TypeChecker {
             return slot.accepts(written, in: loweredTypes)
         }
 
-        return written == .never || slot.slotUnwrapped.identical(to: written.slotUnwrapped, in: loweredTypes)
+        return slot.slotUnwrapped.takesInPlace(written.slotUnwrapped, in: loweredTypes)
     }
 
     // What a call's answer is judged against where the call stands: what the
