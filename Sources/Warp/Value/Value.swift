@@ -663,8 +663,9 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The same, with nil where the path reaches an entry not written yet,
-    // which is a place nothing holds rather than a mistake.
+    // The same, with nil where the path reaches an entry not written yet or
+    // an element past the end of a list, places nothing holds now rather
+    // than mistakes.
     func written(at path: [Projection], under rendered: String) throws -> Value? {
         guard let step = path.first else { return self }
 
@@ -682,11 +683,7 @@ public indirect enum Value: Sendable, Equatable {
             return try self[name]?.written(at: rest, under: rendered)
 
         case let (.array(elements), .index(index)):
-            guard elements.indices.contains(index) else {
-                throw ExecutionError(
-                    "'\(rendered)' reads element \(index) of an array holding \(elements.count)"
-                )
-            }
+            guard elements.indices.contains(index) else { return nil }
 
             return try elements[index].written(at: rest, under: rendered)
 

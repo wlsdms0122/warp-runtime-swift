@@ -839,8 +839,9 @@ struct Evaluator: Sendable {
         return answered
     }
 
-    // Each variable held, against what the caller holds it as. An entry not
-    // written yet holds nothing to judge.
+    // Each variable held, against what the caller holds it as. A place
+    // nothing holds now, an entry not written yet or an element past the end
+    // of a list, holds nothing to judge.
     private func judge(_ holds: [(position: Int, handle: Handle)], by handedBack: [HandedBack]) throws {
         for (position, handle) in holds {
             guard

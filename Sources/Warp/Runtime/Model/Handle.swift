@@ -45,7 +45,7 @@ struct Handle: Sendable {
         try box.value.reading(at: path, under: rendered(path))
     }
 
-    // The same, with nil where the path reaches an entry not written yet.
+    // The same, with nil where the path reaches a place nothing holds now.
     func written() throws -> Value? {
         try box.value.written(at: path, under: rendered(path))
     }
