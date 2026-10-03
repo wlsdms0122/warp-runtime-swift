@@ -100,8 +100,8 @@ struct AnswerProofTests {
         #expect(image["app.b"]?.answersAsDeclared == true)
     }
 
-    @Test("two bodies leaning on each other fall together when one answers `any`")
-    func twoBodiesLeaningOnEachOtherFallTogether() async throws {
+    @Test("a cycle through a body answering `any` falls")
+    func aCycleThroughAnUnprovenOneFalls() async throws {
         // Given. `app.b` leans on `app.a` and answers a value of `any` for its own `some T`
         let sut = try Module(
             procedures: [
@@ -131,6 +131,36 @@ struct AnswerProofTests {
         // Then
         #expect(image["app.a"]?.answersAsDeclared == false)
         #expect(image["app.b"]?.answersAsDeclared == false)
+    }
+
+    @Test("a fall carries back along the bodies leaning on it")
+    func aFallCarriesBackAlongTheChain() async throws {
+        // Given. `app.a` leans on `app.b`, `app.b` on `app.c`, and only `app.c` answers a value of `any` for its own `some T`
+        let sut = try Module(
+            procedures: [
+                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")])]))),
+                "app.b": generic(result: .call(Call(selector: "app.c", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
+                "app.c": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [],
+                    result: .reference([.key("junk")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then. `app.a` falls only once `app.b` has
+        #expect(image["app.c"]?.answersAsDeclared == false)
+        #expect(image["app.b"]?.answersAsDeclared == false)
+        #expect(image["app.a"]?.answersAsDeclared == false)
     }
 
     // MARK: - Public
