@@ -19,7 +19,8 @@ final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
     // type alone settles is settled here; a named type settles nothing,
     // since which types answer a contract is read off the claims of the whole
-    // list, so the name comes back and the asker writes it down.
+    // list, so the name comes back and the asker writes it down. Asked
+    // rigidly, the documents settle it.
     enum Answering {
         case settled(Bool)
         case leansOn([Name])
@@ -199,17 +200,18 @@ final class LoweredTypeTable: Sendable {
 
     // One-sided the way every judgment before the run is: only what is
     // provably outside is refused, and a reading nothing can be said about
-    // passes here and is judged again where the value arrives.
-    func answering(contract name: Name, reading: LoweredType) -> Answering {
-        answering(contract: name, reading: reading, assuming: [], rigid: false)
+    // passes here and is judged again where the value arrives. `orNull` is
+    // a slot taking null as well: what arrives is null or answers.
+    func answering(contract name: Name, reading: LoweredType, orNull: Bool) -> Answering {
+        answering(contract: name, reading: reading, assuming: [], rigid: false, orNull: orNull)
     }
 
     // Whether a reading stands where a contract bounds a slot. One-sided as
     // `answering` is, unless `rigid`: then nothing is judged where the value
-    // arrives, so a named type is held to what the documents say and a
-    // reading nothing can be said about refuses.
-    func satisfies(contract name: Name, reading: LoweredType, rigid: Bool) -> Bool {
-        if case .settled(false) = answering(contract: name, reading: reading, assuming: [], rigid: rigid) { false } else { true }
+    // arrives, so a named type is held to what the documents say, and a
+    // parameter or a composition to what its bounds prove.
+    func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
+        if case .settled(false) = answering(contract: name, reading: reading, assuming: [], rigid: rigid, orNull: orNull) { false } else { true }
     }
 
     // Whether a value is a member of a constraint. A member speaks through
@@ -235,14 +237,18 @@ final class LoweredTypeTable: Sendable {
     //
     // A constrained reading is judged by its own membership rather than by
     // its name: it stands for some member of its constraint, so it fits
-    // where every one of those members would.
+    // where every one of those members would. `orNull` is a slot taking null
+    // as well, so a reading that may be null is held by what it is besides.
     func admits(
         constraint row: Int,
-        reading: LoweredType,
+        reading given: LoweredType,
         assuming: [Int],
         asking pairs: [(LoweredType, LoweredType)] = [],
-        rigid: Bool
+        rigid: Bool,
+        orNull: Bool
     ) -> Bool {
+        guard let reading = read(given, orNull: orNull) else { return true }
+
         switch reading {
         case .any, .projection:
             return true
@@ -269,7 +275,7 @@ final class LoweredTypeTable: Sendable {
 
             return memberships.contains { constraint in
                 constraints[constraint].allSatisfy { member in
-                    admits(constraint: row, reading: member, assuming: assuming + [constraint], asking: pairs, rigid: rigid)
+                    admits(constraint: row, reading: member, assuming: assuming + [constraint], asking: pairs, rigid: rigid, orNull: orNull)
                 }
             }
 
@@ -399,18 +405,62 @@ final class LoweredTypeTable: Sendable {
     }
 
     // MARK: - Private
-    private func answering(contract name: Name, reading: LoweredType, assuming: [Int], rigid: Bool) -> Answering {
+    // What a slot reads a value as: its own marks off, and where it takes null
+    // as well, null off too, nil where null is all the value is.
+    private func read(_ given: LoweredType, orNull: Bool) -> LoweredType? {
+        let reading = given.slotUnwrapped
+
+        return orNull ? besidesNull(reading) : reading
+    }
+
+    // What a reading is besides null, or nil where null is all it is. A
+    // membership with a member that may be null stands as it is, and is
+    // asked member by member.
+    private func besidesNull(_ reading: LoweredType) -> LoweredType? {
+        switch reading {
+        case .null:
+            return nil
+
+        case let .nullable(inner):
+            return besidesNull(inner)
+
+        case let .named(row) where reading.declaresNull(in: self):
+            return besidesNull(loweredTypes[row])
+
+        default:
+            return reading
+        }
+    }
+
+    private func answering(
+        contract name: Name,
+        reading given: LoweredType,
+        assuming: [Int],
+        rigid: Bool,
+        orNull: Bool
+    ) -> Answering {
+        guard let reading = read(given, orNull: orNull) else { return .settled(true) }
+
         switch reading {
         case .any, .projection, .undeclared, .never:
             return .settled(true)
 
-        // Where nothing is judged on arrival, a name is held to what the
-        // documents say about it.
+        // A contract is answered by a type, and null wears none, so what may
+        // be null answers no contract, a name for such a type included,
+        // unless the slot takes null as well: then null was taken above and
+        // the rest answers. A membership with a member that may be null is
+        // asked member by member below.
+        case _ where !orNull && reading.declaresNull(in: self):
+            return .settled(false)
+
+        // A name answers as the record it names, since a value settled under
+        // it wears that record's name. Where nothing is judged on arrival, it
+        // is held to what the documents say about it.
         case let .named(row) where rigid:
-            return .settled(settles(contract: name, arrived: labels[row]) != false)
+            return .settled(settles(contract: name, arrived: labels[recordRows[row] ?? row]) != false)
 
         case let .named(row):
-            return .leansOn([labels[row]])
+            return .leansOn([labels[recordRows[row] ?? row]])
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of. A composition bounded by the
@@ -422,18 +472,10 @@ final class LoweredTypeTable: Sendable {
         // is provable and it passes to be judged where the value arrives,
         // unless `rigid`.
         case let .parameter(_, bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid) ?? .settled(false)
+            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid, orNull: orNull) ?? .settled(false)
 
         case let .composition(bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid) ?? .settled(!rigid)
-
-        // Where nothing is judged on arrival, what may be null answers no
-        // contract.
-        case .nullable where rigid:
-            return .settled(false)
-
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return answering(contract: name, reading: inner, assuming: assuming, rigid: rigid)
+            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid, orNull: orNull) ?? .settled(!rigid)
 
         default:
             return .settled(false)
@@ -450,7 +492,8 @@ final class LoweredTypeTable: Sendable {
         contract name: Name,
         boundedBy bounds: [LoweredType.Bound],
         assuming: [Int],
-        rigid: Bool
+        rigid: Bool,
+        orNull: Bool
     ) -> Answering? {
         guard !bounds.contains(.contract(name)) else { return .settled(true) }
 
@@ -460,7 +503,7 @@ final class LoweredTypeTable: Sendable {
             guard case let .membership(row) = bound, !assuming.contains(row) else { continue }
 
             answers.append(constraints[row].reduce(.settled(true)) { answered, member in
-                answered.joined(answering(contract: name, reading: member, assuming: assuming + [row], rigid: rigid))
+                answered.joined(answering(contract: name, reading: member, assuming: assuming + [row], rigid: rigid, orNull: orNull))
             })
         }
 

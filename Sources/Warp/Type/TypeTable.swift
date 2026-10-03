@@ -136,7 +136,7 @@ public struct TypeTable: Sendable {
     public func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
         guard let row = loweredTypes.constraintRow(named: name) else { return nil }
 
-        return loweredTypes.admits(constraint: row, reading: reading.lowered(in: loweredTypes), assuming: [], rigid: false)
+        return loweredTypes.admits(constraint: row, reading: reading.lowered(in: loweredTypes), assuming: [], rigid: false, orNull: false)
     }
 
     // The same membership, asked of a value at the boundary. Nil again

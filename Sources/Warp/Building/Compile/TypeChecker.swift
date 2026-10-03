@@ -149,35 +149,6 @@ struct TypeChecker {
 
     // MARK: - Initializer
     // MARK: - Public
-    // Why what arrived is provably outside what a declaration holds it to,
-    // wherever in the declaration a composition stands, or nothing. What
-    // leans on a claim this table cannot settle is written down for the
-    // link to settle.
-    func refusal(
-        holding given: LoweredType,
-        to declared: LoweredType,
-        as label: String,
-        in table: LoweredTypeTable,
-        fulfillment: Fulfillment?,
-        at place: Place
-    ) -> String? {
-        var readings: [Name: LoweredType] = [:]
-        var disagreeing: [Name: LoweredType] = [:]
-        var holding: [Substitution.Held] = []
-
-        declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
-
-        for held in holding {
-            for bound in held.bounds {
-                if let refusal = refusal(of: held.reading, holdingTo: bound, as: label, in: table, fulfillment: fulfillment, at: place) {
-                    return refusal
-                }
-            }
-        }
-
-        return nil
-    }
-
     // A block with every dot judged and every call gathered, each site carrying
     // what was in scope where it was written. Statements are read in order
     // because that is what a body means. A name holds what the statement before
@@ -232,58 +203,6 @@ struct TypeChecker {
         )
 
         return (inner.rewritten, inner.calls, inner.judgements, inner.reading)
-    }
-
-    // Why a reading is provably outside one bound, or nothing where it is
-    // not. A membership and a contract ask different questions of the same
-    // reading: what a membership admits is a set of types, what a contract
-    // asks is a set of procedures the reading's own type answers.
-    func refusal(
-        of reading: LoweredType,
-        holdingTo bound: LoweredType.Bound,
-        as label: String,
-        in loweredTypes: LoweredTypeTable,
-        fulfillment: Fulfillment?,
-        at place: Place
-    ) -> String? {
-        switch bound {
-        case let .contract(name):
-            switch loweredTypes.answering(contract: name, reading: reading) {
-            // What leans on a claim is written down for the link to settle;
-            // where nothing is written, it is held to what the documents say,
-            // and what they have not said yet passes.
-            case let .leansOn(types):
-                guard let fulfillment else {
-                    guard let unheld = types.first(where: { type in
-                        loweredTypes.settles(contract: name, arrived: type) == false
-                    }) else {
-                        return nil
-                    }
-
-                    return "\(label) \(reading.rendered(in: loweredTypes)), and no document"
-                        + " says '\(unheld)' answers every procedure '\(name)' asks"
-                }
-
-                for type in types {
-                    fulfillment.require(Claim(type: type, contract: name), at: place)
-                }
-
-                return nil
-
-            case .settled(true):
-                return nil
-
-            case .settled(false):
-                return "\(label) \(reading.rendered(in: loweredTypes)),"
-                    + " which does not answer every procedure '\(name)' asks"
-            }
-
-        case let .membership(row):
-            guard !loweredTypes.admits(constraint: row, reading: reading, assuming: [], rigid: false) else { return nil }
-
-            return "\(label) \(reading.rendered(in: loweredTypes)),"
-                + " which '\(loweredTypes.constraintLabels[row])' does not admit"
-        }
     }
 
     // A constant and a variable's start settle at the build, so what each is
@@ -458,7 +377,7 @@ struct TypeChecker {
         // slot.
         if let constant {
             do {
-                _ = try promised.settling(constant, at: "answer", in: table)
+                try promised.admitting(constant, at: "answer", in: table)
             } catch {
                 throw BuildError(
                     "answers \(read.rendered(in: table)), and its"
@@ -481,6 +400,126 @@ struct TypeChecker {
         ) {
             throw BuildError(refusal, at: place)
         }
+    }
+
+    // Why what arrived is provably outside what a declaration holds it to,
+    // wherever in the declaration a composition stands, or nothing. What
+    // leans on a claim this table cannot settle is written down for the
+    // link to settle.
+    private func refusal(
+        holding given: LoweredType,
+        to declared: LoweredType,
+        as label: String,
+        in table: LoweredTypeTable,
+        fulfillment: Fulfillment,
+        at place: Place
+    ) -> String? {
+        var readings: [Name: LoweredType] = [:]
+        var disagreeing: [Name: LoweredType] = [:]
+        var holding: [Substitution.Held] = []
+
+        declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, in: table)
+
+        for held in holding {
+            for bound in held.bounds {
+                if let refusal = refusal(
+                    of: held.reading,
+                    holdingTo: bound,
+                    orNull: held.orNull,
+                    as: label,
+                    in: table,
+                    fulfillment: fulfillment,
+                    at: place
+                ) {
+                    return refusal
+                }
+            }
+        }
+
+        return nil
+    }
+
+    // Why a reading is provably outside one bound, or nothing where it is
+    // not. A membership and a contract ask different questions of the same
+    // reading: what a membership admits is a set of types, what a contract
+    // asks is a set of procedures the reading's own type answers.
+    private func refusal(
+        of reading: LoweredType,
+        holdingTo bound: LoweredType.Bound,
+        orNull: Bool,
+        as label: String,
+        in loweredTypes: LoweredTypeTable,
+        fulfillment: Fulfillment,
+        at place: Place
+    ) -> String? {
+        switch bound {
+        case let .contract(name):
+            switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
+            // What leans on a claim is written down for the link to settle.
+            case let .leansOn(types):
+                for type in types {
+                    fulfillment.require(Claim(type: type, contract: name), at: place)
+                }
+
+                return nil
+
+            case .settled(true):
+                return nil
+
+            case .settled(false):
+                return "\(label) \(reading.rendered(in: loweredTypes)),"
+                    + " which does not answer every procedure '\(name)' asks"
+            }
+
+        case let .membership(row):
+            guard !loweredTypes.admits(constraint: row, reading: reading, assuming: [], rigid: false, orNull: orNull) else { return nil }
+
+            return "\(label) \(reading.rendered(in: loweredTypes)),"
+                + " which '\(loweredTypes.constraintLabels[row])' does not admit"
+        }
+    }
+
+    // Whether a write fits the slot it lands in, in the box `binding` holds.
+    // A body declares no type parameter of its own, so a declared box whose
+    // slot names one is a parameter handed in place, which `takesInPlace`
+    // judges.
+    private func fits(
+        _ written: LoweredType,
+        into slot: LoweredType,
+        of binding: Binding?,
+        in loweredTypes: LoweredTypeTable
+    ) -> Bool {
+        guard case .declared? = binding?.holding else { return slot.accepts(written, in: loweredTypes) }
+
+        return slot.slotUnwrapped.takesInPlace(written.slotUnwrapped, in: loweredTypes)
+    }
+
+    // What a call's answer is judged against where the call stands: what the
+    // call reads it as, unless the callee already settles exactly that, or
+    // the call reads `any` or nothing. `answeredBy` is what the callee
+    // settles, nil where the callee is not known here.
+    private func judgedAgainst(_ reading: LoweredType, answeredBy callee: LoweredType?) -> LoweredType? {
+        switch reading {
+        case .any, .never:
+            return nil
+
+        default:
+            return reading == callee ? nil : reading
+        }
+    }
+
+    // The same, for a call to a selector. A contract's procedure is answered
+    // by whichever row the run picks, and what that row settles is not known
+    // here. A native another document holds answers by its host's code, and
+    // what it declared is taken as said, as its other claims are.
+    private func judgedAgainst(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
+        guard context.contractProcedures[selector] == nil else { return judgedAgainst(reading, answeredBy: nil) }
+
+        if context.own[selector] == nil, case .native? = context.declared(selector)?.implementation {
+            return nil
+        }
+
+        return judgedAgainst(reading, answeredBy: context.answer(of: selector))
     }
 
     // The one membership judgment a call is held to, over the whole
@@ -509,6 +548,7 @@ struct TypeChecker {
                 if let refusal = refusal(
                     of: reading,
                     holdingTo: bound,
+                    orNull: false,
                     as: "'\(parameter)' is read as",
                     in: loweredTypes,
                     fulfillment: fulfillment,
@@ -1637,7 +1677,7 @@ struct TypeChecker {
                 for (name, wrote) in writes.sorted(by: { $0.name < $1.name }) {
                     guard let held = outside[name]?.type else { continue }
 
-                    guard held.accepts(wrote, in: context.loweredTypes) else {
+                    guard fits(wrote, into: held, of: outside[name], in: context.loweredTypes) else {
                         throw BuildError(
                             "writes '\(name)', which it captured, as"
                                 + " \(wrote.rendered(in: context.loweredTypes)). The body it captured"
@@ -1869,7 +1909,7 @@ struct TypeChecker {
                 )
             }
 
-            judgements.record(.apply(inPlace: handed), at: place)
+            judgements.record(.apply(inPlace: handed, against: judgedAgainst(answers, answeredBy: nil)), at: place)
 
             if failsHere(expression, given: context) {
                 flow.fail()
@@ -2003,6 +2043,17 @@ struct TypeChecker {
             )
 
             let rewritten = Call(selector: call.selector, arguments: arguments)
+            let reading = answered(
+                by: signature,
+                over: context.slots(of: call.selector),
+                answering: context.answer(of: call.selector),
+                readings: sent,
+                in: context.loweredTypes
+            )
+
+            if let against = judgedAgainst(reading, sending: call.selector, given: context) {
+                judgements.record(.call(against: against), at: place)
+            }
 
             if mayFail {
                 flow.fail()
@@ -2018,13 +2069,7 @@ struct TypeChecker {
                     )
                 ] + calls,
                 judgements: judgements,
-                reading: answered(
-                    by: signature,
-                    over: context.slots(of: call.selector),
-                    answering: context.answer(of: call.selector),
-                    readings: sent,
-                    in: context.loweredTypes
-                ),
+                reading: reading,
                 flow: flow
             )
 
@@ -2841,7 +2886,7 @@ struct TypeChecker {
             }
         }
 
-        guard slot.accepts(written, in: context.loweredTypes) else {
+        guard fits(written, into: slot, of: path.head.flatMap { head in environment[head] }, in: context.loweredTypes) else {
             try refuse(
                 "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), and it holds"
                     + " \(slot.rendered(in: context.loweredTypes))",

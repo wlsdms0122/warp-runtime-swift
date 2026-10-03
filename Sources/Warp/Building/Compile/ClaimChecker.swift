@@ -360,6 +360,22 @@ struct ClaimChecker {
             taken.binding(against: written, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
         }
 
+        // What fills the declaration's own parameters is held to their bounds
+        // the way a call's readings are, rigidly, since what the contract
+        // writes there is filled by no call. A bound nothing declares was
+        // refused where the declaration was judged.
+        for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
+            guard let reading = bound[parameter] else { continue }
+
+            let bounds = names.compactMap { name in loweredTypes.bound(named: name) }.sorted()
+
+            guard !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) else { continue }
+
+            return "is named for '\(type)' and the procedure '\(procedure)' that"
+                    + " '\(contract)' asks, and reads '\(parameter)' as \(reading.rendered(in: loweredTypes))"
+                    + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
+        }
+
         for (position, (taken, handed)) in zip(takes, asks).enumerated()
             where !taken.filling(bound).takes(handed, in: loweredTypes, rigid: true) {
             guard position > 0 else {

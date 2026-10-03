@@ -141,6 +141,28 @@ indirect enum LoweredType: Sendable, Equatable {
         return false
     }
 
+    // Whether a type parameter stands anywhere in this type. A declared name
+    // or a composition writes none.
+    var namesParameter: Bool {
+        switch self {
+        case .parameter:
+            return true
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.namesParameter
+
+        case let .record(record):
+            return record.fields.contains { field in field.namesParameter }
+
+        case let .procedure(parameters, returns, _, _):
+            return (parameters ?? []).contains { parameter in parameter.namesParameter }
+                || (returns?.namesParameter ?? false)
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+            return false
+        }
+    }
+
     // What a slot holds, through the two marks that say how it is held
     // rather than what it is.
     var slotUnwrapped: LoweredType {
@@ -587,8 +609,9 @@ indirect enum LoweredType: Sendable, Equatable {
     // a value of a type. The build
     // asks them of readings; the run asks the first of a closure value that
     // reached a procedure slot through `any`. A name the table does not answer
-    // passes every one of them: nothing is knowable about it here, and the
-    // value judge refuses it where a value arrives.
+    // passes every judge but the second, which reads it as only itself:
+    // nothing is knowable about it here, and the value judge refuses it where
+    // a value arrives.
     //
     // Whether a value of `other` may stand where this is declared.
     // Structural, and one-directional: `any` on the left accepts anything
@@ -682,15 +705,15 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.variable(inner), _):
             return inner.accepts(other, in: table, assuming: assuming, rigid: rigid)
 
-        case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
-            return mine.accepts(other, in: table, assuming: assuming, rigid: rigid)
-
         // A composition takes what each of its bounds takes: a membership
         // what its members admit, a contract what answers it, each asked of
-        // the table with the same rigidity. In the other direction a
-        // composition stands for some type nothing here lists.
-        case let (.composition(bounds), _):
+        // the table with the same rigidity, and, where the slot takes null as
+        // well, knowing it does. In the other direction a composition stands
+        // for some type nothing here lists.
+        case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+
+            let orNull = if case .nullable = self { true } else { false }
 
             return bounds.allSatisfy { bound in
                 switch bound {
@@ -700,13 +723,17 @@ indirect enum LoweredType: Sendable, Equatable {
                         reading: other,
                         assuming: [],
                         asking: assuming + [(self, other)],
-                        rigid: rigid
+                        rigid: rigid,
+                        orNull: orNull
                     )
 
                 case let .contract(name):
-                    table.satisfies(contract: name, reading: other, rigid: rigid)
+                    table.satisfies(contract: name, reading: other, rigid: rigid, orNull: orNull)
                 }
             }
+
+        case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
+            return mine.accepts(other, in: table, assuming: assuming, rigid: rigid)
 
         // In the other direction a value of a composition is one of every
         // membership's members and nothing says which, so it stands where
@@ -836,6 +863,47 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return self == other
+        }
+    }
+
+    // Whether a write into a box handed in place, of this type, holds. The
+    // caller reads its box as what filled each type parameter here, and a
+    // write settles against this type and never against what filled one, so
+    // where this writes a parameter only that parameter lands. Around one, a
+    // nullable, a list or a dictionary takes what it takes anywhere, a record
+    // as a dictionary included, which the write's settling makes one; a type
+    // holding one some other way is written only as itself. A type naming
+    // none takes what it accepts.
+    func takesInPlace(_ written: LoweredType, in table: LoweredTypeTable) -> Bool {
+        guard namesParameter else { return accepts(written, in: table) }
+
+        switch (self, written) {
+        case (_, .never):
+            return true
+
+        case let (.parameter(mine, _), .parameter(theirs, _)):
+            return mine == theirs
+
+        case (.parameter, _):
+            return false
+
+        case (.nullable, .null):
+            return true
+
+        case let (.nullable(mine), .nullable(theirs)),
+            let (.array(mine), .array(theirs)),
+            let (.dictionary(mine), .dictionary(theirs)):
+            return mine.takesInPlace(theirs, in: table)
+
+        // A record whose every field the entry takes is such a dictionary.
+        case let (.dictionary(mine), .record(theirs)):
+            return theirs.fields.allSatisfy { field in mine.takesInPlace(field, in: table) }
+
+        case let (.nullable(mine), _):
+            return mine.takesInPlace(written, in: table)
+
+        default:
+            return identical(to: written, in: table)
         }
     }
 
@@ -1014,6 +1082,14 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // The judge asked where a value is read and not rewritten: refused the
+    // way settling refuses it, and kept as it came. Settling is the one rule
+    // for what a type holds, so this is that rule with what it shapes left
+    // behind.
+    func admitting(_ value: Value, at path: String, in table: LoweredTypeTable) throws {
+        _ = try settling(value, at: path, in: table)
+    }
+
     // The judge asked as a question. Settling is the one rule for what a
     // type holds, so whether it holds something is that rule run with its
     // refusal dropped rather than a second rule written beside it. The path
@@ -1043,7 +1119,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A composition has no name to be read under: what arrived is held
         // to its bounds where it arrived, wherever in the slot that was.
         case let (.composition(bounds), _):
-            holding.append(Substitution.Held(reading: given, bounds: bounds))
+            holding.append(Substitution.Held(reading: given, bounds: bounds, orNull: false))
 
         case let (.parameter(name, _), _):
             guard let already = bound[name] else {
@@ -1120,6 +1196,12 @@ indirect enum LoweredType: Sendable, Equatable {
                 in: table,
                 assuming: assuming
             )
+
+        // A composition or null holds what arrived as it stands, the table
+        // answering whether it is null or held to the bounds, a membership
+        // member by member.
+        case let (.nullable(.composition(slot)), _):
+            holding.append(Substitution.Held(reading: given.slotUnwrapped, bounds: slot, orNull: true))
 
         case let (.nullable(mine), _) where !given.slotUnwrapped.declaresNull(in: table):
             mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)

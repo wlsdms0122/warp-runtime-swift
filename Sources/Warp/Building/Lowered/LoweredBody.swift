@@ -43,7 +43,7 @@ struct LoweredBody: Sendable {
                 case let .dispatch(dispatch):
                     return dispatch.arguments.contains { argument in argument.reads(slots) }
 
-                case .literal, .array, .record, .cast, .block, .conditional, .loop, .attempt, .leave:
+                case .literal, .array, .record, .cast, .checked, .block, .conditional, .loop, .attempt, .leave:
                     return false
                 }
             }
@@ -92,7 +92,7 @@ struct LoweredBody: Sendable {
                 case let .dispatch(dispatch):
                     dispatch.arguments.forEach { argument in argument.stand(in: &standing) }
 
-                case .literal, .array, .record, .cast, .block, .conditional, .leave:
+                case .literal, .array, .record, .cast, .checked, .block, .conditional, .leave:
                     break
                 }
             }

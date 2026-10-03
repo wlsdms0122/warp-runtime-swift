@@ -15,11 +15,12 @@ import Foundation
 // nothing.
 struct Substitution: Sendable {
     // A value that arrived where a composition stands, beside what the
-    // composition holds it to.
+    // composition holds it to, and whether the slot takes null as well.
     struct Held: Sendable {
         // MARK: - Property
         let reading: LoweredType
         let bounds: [LoweredType.Bound]
+        let orNull: Bool
 
         // MARK: - Initializer
         // MARK: - Public
