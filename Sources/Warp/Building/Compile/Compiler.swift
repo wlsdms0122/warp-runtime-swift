@@ -162,7 +162,7 @@ struct Compiler {
                 try compiling.settle(
                     try row(of: symbol),
                     body: rewritten,
-                    answeringAsDeclared: answer.answersAsDeclared,
+                    answersAsDeclared: answer.answersAsDeclared,
                     judgements: answer.judgements,
                     at: symbol.place
                 )

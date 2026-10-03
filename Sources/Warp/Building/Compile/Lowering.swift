@@ -428,7 +428,7 @@ struct Lowering {
     mutating func settle(
         _ row: Int,
         body block: Block,
-        answeringAsDeclared answersAsDeclared: Bool,
+        answersAsDeclared: Bool,
         judgements: JudgementTable,
         at place: Place
     ) throws {

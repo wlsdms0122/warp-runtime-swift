@@ -211,11 +211,11 @@ struct Compiling {
     mutating func settle(
         _ row: Int,
         body block: Block,
-        answeringAsDeclared answersAsDeclared: Bool,
+        answersAsDeclared: Bool,
         judgements: JudgementTable,
         at place: Place
     ) throws {
-        try lowering.settle(row, body: block, answeringAsDeclared: answersAsDeclared, judgements: judgements, at: place)
+        try lowering.settle(row, body: block, answersAsDeclared: answersAsDeclared, judgements: judgements, at: place)
 
         loweredRows.append(row)
     }
