@@ -16,9 +16,12 @@ enum Judgement: Sendable {
     // against where the slot's type writes `returns`.
     case apply(inPlace: [Int], against: LoweredType?)
 
-    // A call whose callee settles a wider answer than the call reads: what
-    // the answer is judged against where the call stands.
-    case call(against: LoweredType)
+    // A call whose callee settles a wider answer than the call reads, or
+    // hands back in place what it holds as its own type parameter: what the
+    // answer is judged against where the call stands, nil where it needs no
+    // judgement, and what each variable handed back is judged against once
+    // the call is over, by position.
+    case call(against: LoweredType?, handedBack: [Int: LoweredType])
 
     // A closure literal: what its row carries that the literal does not
     // write, derived from its body.

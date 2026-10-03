@@ -43,8 +43,10 @@ indirect enum Operation: Sendable {
     // included, which is what lets a tie answer the side that arrived. Nothing
     // after it stands on this type's shape: a field read stands on the call
     // inside, and a binding or a parameter that declares a type settles the
-    // value where it lands.
-    case checked(Operation, against: LoweredType)
+    // value where it lands. Nil where only what the call handed back in place
+    // is judged. Each variable it handed back is judged once the call is over,
+    // whether it answered or failed.
+    case checked(Operation, against: LoweredType?, handedBack: [HandedBack])
 
     case block(LoweredBody)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
@@ -96,7 +98,7 @@ indirect enum Operation: Sendable {
                     return operation.walk(visit)
                 }
 
-        case let .cast(read, _, _), let .checked(read, _):
+        case let .cast(read, _, _), let .checked(read, _, _):
             return read.walk(visit)
 
         case let .block(body):
@@ -173,8 +175,12 @@ indirect enum Operation: Sendable {
                 optional: optional
             )
 
-        case let .checked(read, against):
-            inside = .checked(try read.rewritten(operation: operation, type: type), against: try type(against))
+        case let .checked(read, against, handedBack):
+            inside = .checked(
+                try read.rewritten(operation: operation, type: type),
+                against: try against.map(type),
+                handedBack: try handedBack.map { back in HandedBack(address: back.address, against: try type(back.against)) }
+            )
 
         case let .block(body):
             inside = .block(try body.rewritten(operation: operation, type: type))

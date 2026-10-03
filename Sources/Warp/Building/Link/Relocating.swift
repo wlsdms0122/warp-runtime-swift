@@ -277,14 +277,15 @@ final class Relocating {
         case let .dispatch(dispatch):
             return .dispatch(try relocated(dispatch, in: context))
 
-        // What a call answers needs no judgement where it stands once the rows
-        // that may answer are known to answer what the call reads: a row its
-        // own document proved answers as declared, or, through a contract, rows
-        // that each settle exactly that type where they answer.
-        case let .checked(.call(call), _) where table[call.procedure].answersAsDeclared:
+        // What a call answers and hands back needs no judgement where it
+        // stands once the rows that may answer are known to answer what the
+        // call reads: a row its own document proved answers as declared, or,
+        // through a contract, rows that each settle exactly that type where
+        // they answer and hand nothing back to judge.
+        case let .checked(.call(call), _, _) where table[call.procedure].answersAsDeclared:
             return .call(call)
 
-        case let .checked(.dispatch(dispatch), against) where dispatch.calls.values.allSatisfy({ call in
+        case let .checked(.dispatch(dispatch), against?, handedBack) where handedBack.isEmpty && dispatch.calls.values.allSatisfy({ call in
             table[call.procedure].returns.map { returns in returns.identical(to: against, in: table[call.procedure].table) } ?? false
         }):
             return .dispatch(dispatch)

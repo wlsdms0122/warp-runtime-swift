@@ -356,12 +356,8 @@ struct Evaluator: Sendable {
                 in: loweredTypes
             )
 
-        case let .checked(read, against):
-            let answered = try await evaluate(read, in: &activation, at: trace)
-
-            try against.admitting(answered, at: "answer", in: loweredTypes)
-
-            return answered
+        case let .checked(read, against, handedBack):
+            return try await checked(read, against: against, handedBack: handedBack, in: &activation, at: trace)
 
         case let .call(call):
             return try await self.call(call, in: &activation, at: trace)
@@ -744,6 +740,45 @@ struct Evaluator: Sendable {
             }
 
             return (handed.position, handle.extended(by: try activation.projections(of: handed.address)))
+        }
+    }
+
+    // A call judged where it stands: what it answers against what the call
+    // reads, and what it handed back in place against what the caller holds
+    // it as. A variable written wrong is the author's mistake whatever the
+    // call left by, so it is judged before a failure passes on.
+    private func checked(
+        _ read: Operation,
+        against: LoweredType?,
+        handedBack: [HandedBack],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let answered: Value
+
+        do {
+            answered = try await evaluate(read, in: &activation, at: trace)
+        } catch {
+            try judge(handedBack, in: activation)
+
+            throw error
+        }
+
+        try judge(handedBack, in: activation)
+        try against?.admitting(answered, at: "answer", in: loweredTypes)
+
+        return answered
+    }
+
+    // What a call handed back in place, each variable judged against what
+    // the caller holds it as.
+    private func judge(_ handedBack: [HandedBack], in activation: Activation) throws {
+        for back in handedBack {
+            try back.against.admitting(
+                try activation.value(at: back.address),
+                at: "'\(activation.frame.names[back.address.slot])'",
+                in: loweredTypes
+            )
         }
     }
 

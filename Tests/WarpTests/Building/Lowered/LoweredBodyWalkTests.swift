@@ -75,7 +75,7 @@ struct LoweredBodyWalkTests {
                 return [.cast(leaf, as: .int, optional: false)]
 
             case .checked:
-                return [.checked(leaf, against: .int)]
+                return [.checked(leaf, against: .int, handedBack: [])]
 
             case .block:
                 return [.block(body)]

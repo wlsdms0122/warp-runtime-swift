@@ -982,7 +982,18 @@ struct ObjectReader {
             )
 
         case .checked:
-            read = .checked(try operation(cursor.next()), against: try lowered(cursor.next()))
+            read = .checked(
+                try operation(cursor.next()),
+                against: try cursor.field().maybe(lowered),
+                handedBack: try Field(cursor.next(), of: "handed back").list { written in
+                    var back = try FieldCursor(written, of: "handed back")
+                    let taken = HandedBack(address: try address(back.next()), against: try lowered(back.next()))
+
+                    try back.end()
+
+                    return taken
+                }
+            )
 
         case .block: read = .block(try body(cursor.next()))
         case .conditional:

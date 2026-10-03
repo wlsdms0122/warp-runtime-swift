@@ -128,6 +128,7 @@ struct Compiler {
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
+                    declaring: symbol.declared,
                     answering: declaration.signature.returns,
                     with: context().bounding(declaration.signature.parameterBounding.table),
                     folding: folding,
