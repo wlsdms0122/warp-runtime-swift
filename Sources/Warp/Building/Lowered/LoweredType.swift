@@ -636,10 +636,6 @@ indirect enum LoweredType: Sendable, Equatable {
         case (_, .never):
             return true
 
-        // A slot of `any` takes everything, whatever stands for it.
-        case (.any, _), (.projection, _):
-            return true
-
         // A slot handed a variable in place is the two sides being one type,
         // not one that fits the other. The body writes through the caller's box
         // and the caller reads back what the body wrote, so a type that merely
@@ -706,15 +702,17 @@ indirect enum LoweredType: Sendable, Equatable {
         // every member of some membership would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is
         // provable and it passes to be judged where it arrives, unless
-        // `rigid`.
-        case let (_, .composition(bounds)):
+        // `rigid`, which the last branch answers.
+        case let (_, .composition(bounds)) where !rigid || bounds.contains(where: { bound in
+            if case .membership = bound { true } else { false }
+        }):
             let memberships = bounds.compactMap { bound -> Int? in
                 guard case let .membership(row) = bound else { return nil }
 
                 return row
             }
 
-            guard !memberships.isEmpty else { return !rigid }
+            guard !memberships.isEmpty else { return true }
 
             return memberships.contains { row in
                 table.constraints[row].allSatisfy { member in accepts(member, in: table, assuming: assuming, rigid: rigid) }
@@ -728,7 +726,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming, rigid: rigid)
 
-        case (_, .any), (_, .projection):
+        case (.any, _), (_, .any), (.projection, _), (_, .projection):
             return true
 
         case (.never, _):
@@ -825,10 +823,12 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.double, .int):
             return true
 
-        // A parameter no call fills, which no branch above took by its
-        // structure (`any`, a composition, a nullable or a name around it).
-        // Last, because a refusal any earlier would answer for those too.
-        case (_, .parameter):
+        // A parameter no call fills, or a composition bounded by contracts
+        // alone where nothing is judged on arrival, which no branch above
+        // took by its structure (`any`, a composition, a nullable or a name
+        // around it). Last, because a refusal any earlier would answer for
+        // those too.
+        case (_, .parameter), (_, .composition):
             return false
 
         default:

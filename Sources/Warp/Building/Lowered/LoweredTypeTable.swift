@@ -427,6 +427,11 @@ final class LoweredTypeTable: Sendable {
         case let .composition(bounds):
             return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid) ?? .settled(!rigid)
 
+        // Where nothing is judged on arrival, what may be null answers no
+        // contract.
+        case .nullable where rigid:
+            return .settled(false)
+
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return answering(contract: name, reading: inner, assuming: assuming, rigid: rigid)
 
