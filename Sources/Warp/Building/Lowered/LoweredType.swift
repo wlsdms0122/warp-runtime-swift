@@ -2415,14 +2415,23 @@ indirect enum LoweredType: Sendable, Equatable {
         )
 
         // A type parameter the slot names is filled by what arrived, the way
-        // a call fills it at the build.
+        // a call fills it at the build. One the procedure's own signature
+        // names is one a closure took from the generic body that made it,
+        // filled by that body's call, which the run does not know; it is read
+        // as what the slot asks there, and what arrives at the closure is
+        // judged against its bounds where it arrives.
         let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
 
         slot.binding(against: given, into: &bound, disagreeing: &disagreeing, in: table)
 
-        guard slot.filling(bound).accepts(given, in: table) else {
+        let asked = slot.filling(bound)
+        var taken: [Name: LoweredType] = [:]
+
+        given.binding(against: asked, into: &taken, disagreeing: &disagreeing, in: table)
+
+        guard asked.accepts(given.filling(taken), in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )
