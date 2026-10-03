@@ -1193,6 +1193,37 @@ indirect enum LoweredType: Sendable, Equatable {
                 assuming: assuming
             )
 
+        // A value of a membership is one of its members, so a composition or
+        // null holds each member the way it holds a value of that member, a
+        // nullable one included. A member that is itself a composition is
+        // held as it stands.
+        case let (.nullable(.composition(slot)), .composition(bounds)),
+            let (.nullable(.composition(slot)), .parameter(_, bounds)):
+            let members = bounds.flatMap { bound -> [LoweredType] in
+                guard case let .membership(row) = bound else { return [] }
+
+                return table.constraints[row]
+            }
+
+            guard !members.isEmpty else {
+                LoweredType.composition(slot).binding(
+                    against: given,
+                    into: &bound,
+                    disagreeing: &disagreeing,
+                    holding: &holding,
+                    in: table,
+                    assuming: assuming
+                )
+
+                return
+            }
+
+            for member in members {
+                let holder: LoweredType = if case .composition = member { .composition(slot) } else { self }
+
+                holder.binding(against: member, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
+            }
+
         case let (.nullable(mine), _) where !given.slotUnwrapped.declaresNull(in: table):
             mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 

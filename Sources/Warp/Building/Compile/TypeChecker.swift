@@ -377,7 +377,7 @@ struct TypeChecker {
         // slot.
         if let constant {
             do {
-                _ = try promised.settling(constant, at: "answer", in: table)
+                try promised.admitting(constant, at: "answer", in: table)
             } catch {
                 throw BuildError(
                     "answers \(read.rendered(in: table)), and its"

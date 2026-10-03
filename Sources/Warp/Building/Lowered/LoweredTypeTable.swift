@@ -407,10 +407,7 @@ final class LoweredTypeTable: Sendable {
 
         // A contract is answered by a type, and null wears none, so what may
         // be null answers no contract, a name for such a type included.
-        case .nullable:
-            return .settled(false)
-
-        case let .named(row) where LoweredType.named(row).declaresNull(in: self):
+        case _ where reading.declaresNull(in: self):
             return .settled(false)
 
         // A name answers as the record it names, since a value settled under
