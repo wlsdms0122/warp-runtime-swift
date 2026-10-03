@@ -359,7 +359,7 @@ struct Evaluator: Sendable {
         case let .checked(read, against):
             let answered = try await evaluate(read, in: &activation, at: trace)
 
-            _ = try against.settling(answered, at: "answer", in: loweredTypes)
+            try against.admitting(answered, at: "answer", in: loweredTypes)
 
             return answered
 

@@ -863,10 +863,11 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether a write into a box handed in place, of this type, holds. The
-    // caller reads its box as what filled each type parameter here, and
-    // nothing settles a write into it, so where this writes a parameter only
-    // that parameter lands. Around one, a nullable, a list or a dictionary
-    // takes what it takes anywhere, a record as a dictionary included; a type
+    // caller reads its box as what filled each type parameter here, and a
+    // write settles against this type and never against what filled one, so
+    // where this writes a parameter only that parameter lands. Around one, a
+    // nullable, a list or a dictionary takes what it takes anywhere, a record
+    // as a dictionary included, which the write's settling makes one; a type
     // holding one some other way is written only as itself. A type naming
     // none takes what it accepts.
     func takesInPlace(_ written: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -1075,6 +1076,14 @@ indirect enum LoweredType: Sendable, Equatable {
         default:
             return self == other
         }
+    }
+
+    // The judge asked where a value is read and not rewritten: refused the
+    // way settling refuses it, and kept as it came. Settling is the one rule
+    // for what a type holds, so this is that rule with what it shapes left
+    // behind.
+    func admitting(_ value: Value, at path: String, in table: LoweredTypeTable) throws {
+        _ = try settling(value, at: path, in: table)
     }
 
     // The judge asked as a question. Settling is the one rule for what a
