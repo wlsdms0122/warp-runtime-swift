@@ -510,11 +510,7 @@ struct TypeChecker {
         let loweredTypes = context.loweredTypes
         let answer = context.answer(of: selector)
         let answersOpen = answer?.namesParameter == true
-        let handsBackOpen = context.slots(of: selector).contains { slot in
-            guard case let .inout(held) = slot.type else { return false }
-
-            return held.namesParameter
-        }
+        let handsBackOpen = context.slots(of: selector).contains { slot in slot.type.handsBackParameter }
 
         guard answersOpen || handsBackOpen else { return .holds(leaning: []) }
 
@@ -622,8 +618,7 @@ struct TypeChecker {
         // less than finding the row.
         for (position, slot) in slots.enumerated() {
             guard
-                case let .inout(held) = slot.type,
-                held.namesParameter,
+                slot.type.handsBackParameter,
                 case let .inout(holding) = slot.type.filling(filled),
                 let against = judgedAgainst(holding, answeredBy: nil)
             else {

@@ -215,7 +215,7 @@ struct Compiling {
     }
 
     // What a lowered body was settled, over the whole document, to prove of
-    // its answers.
+    // what it hands back.
     mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
         lowering.record(row, handsBackAsDeclared: handsBackAsDeclared)
     }

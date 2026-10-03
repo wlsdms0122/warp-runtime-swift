@@ -163,6 +163,15 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // Whether this is a slot taking a variable in place whose type names a
+    // type parameter: one a call hands back to be judged, where the body
+    // writes it as the parameter and the caller holds it as what filled it.
+    var handsBackParameter: Bool {
+        guard case let .inout(held) = self else { return false }
+
+        return held.namesParameter
+    }
+
     // What a slot holds, through the two marks that say how it is held
     // rather than what it is.
     var slotUnwrapped: LoweredType {

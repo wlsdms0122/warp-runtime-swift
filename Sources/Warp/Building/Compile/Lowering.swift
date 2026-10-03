@@ -452,7 +452,8 @@ struct Lowering {
         table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
     }
 
-    // A lowered row with what its document settled it proves of its answers.
+    // A lowered row with what its document settled it proves of what it
+    // hands back.
     mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
         table[row] = Linked(table[row], implementation: table[row].implementation, handsBackAsDeclared: handsBackAsDeclared)
     }

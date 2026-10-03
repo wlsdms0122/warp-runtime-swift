@@ -45,8 +45,9 @@ struct Judged: Sendable {
     let isolation: Isolation
     let failing: Failing
 
-    // Whether its answers are, at every type parameter its declaration
-    // answers, that parameter: what a call need not judge again.
+    // Whether what it hands back, its answer and every variable handed to it
+    // in place, is at every type parameter that parameter: what a call need
+    // not judge again.
     let handsBackAsDeclared: Bool
 
     let implementation: Implementation

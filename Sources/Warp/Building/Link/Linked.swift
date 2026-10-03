@@ -63,10 +63,10 @@ public final class Linked: Sendable {
     // rescues, or declared by the native procedure.
     public let failing: Failing
 
-    // Whether what this answers is, at every type parameter its declaration
-    // answers, that parameter and nothing a call has to judge again where it
-    // reads the answer filled. Read off the body's answers; a native's is its
-    // host's word, taken as said.
+    // Whether what this hands back, its answer and every variable handed to
+    // it in place, is at every type parameter that parameter, so nothing a
+    // call filled has to be judged again where the call stands. Read off the
+    // body; a native's is its host's word, taken as said.
     let handsBackAsDeclared: Bool
 
     // The parameters as the run settles them, in the same order, and what
@@ -182,7 +182,8 @@ public final class Linked: Sendable {
         self.init(row, implementation: implementation, handsBackAsDeclared: row.handsBackAsDeclared)
     }
 
-    // The same, with what the body lowered into it proved about its answers.
+    // The same, with what the body lowered into it proved about what it
+    // hands back.
     init(_ row: Linked, implementation: Implementation, handsBackAsDeclared: Bool) {
         self.label = row.label
         self.origin = row.origin

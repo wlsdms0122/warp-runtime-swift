@@ -441,7 +441,7 @@ struct Evaluator: Sendable {
                 holding: call.handed
             )
 
-            return try await answer(judging: handedBack, through: holds) {
+            return try await judging(handedBack, through: holds) {
                 try await run(effect, of: callee, settled: settled, holds: holds, trace: trace)
             }
 
@@ -453,7 +453,7 @@ struct Evaluator: Sendable {
                 holding: call.handed
             )
 
-            return try await answer(judging: handedBack, through: holds) {
+            return try await judging(handedBack, through: holds) {
                 try await answer(
                     callee,
                     running: body,
@@ -523,10 +523,10 @@ struct Evaluator: Sendable {
         // hands back what is judged, the way a dispatch judges only what the
         // picked row holds.
         let judged = handedBack.filter { back in
-            handed.contains { held in held.position == back.position } && linked.slots[back.position].type.namesParameter
+            handed.contains { held in held.position == back.position } && linked.slots[back.position].type.handsBackParameter
         }
 
-        return try await answer(judging: judged, through: holds) {
+        return try await judging(judged, through: holds) {
             try await answer(closure, as: linked, given: given, holding: holds, at: trace)
         }
     }
@@ -805,8 +805,8 @@ struct Evaluator: Sendable {
     // through the holds it made. A variable written wrong is the author's
     // mistake whatever the call left by, so it is judged before a failure
     // passes on.
-    private func answer(
-        judging handedBack: [HandedBack],
+    private func judging(
+        _ handedBack: [HandedBack],
         through holds: [(position: Int, handle: Handle)],
         _ answering: () async throws -> Value
     ) async throws -> Value {
