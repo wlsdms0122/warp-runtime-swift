@@ -157,11 +157,12 @@ struct TypeChecker {
         in block: Block,
         at place: Place,
         in environment: [Name: Binding],
+        declaring selector: Name,
         answering returns: TypeExpression?,
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: AnswerProof) {
+    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: HandBackProof) {
         let inner = try await inspected(
             block: block,
             at: place,
@@ -182,7 +183,7 @@ struct TypeChecker {
 
         let proof = proof(
             of: [inner.reading] + inner.flow.answered.map(\.reading),
-            to: returns,
+            declaring: selector,
             calling: inner.calls,
             judged: inner.judgements,
             given: context
@@ -487,36 +488,43 @@ struct TypeChecker {
         }
     }
 
-    // What a body proves of its answers by itself, and which of its own
-    // document's declarations the rest leans on. A declaration whose answer
-    // names no type parameter is settled to what it wrote where it answers,
-    // and one that wrote nothing answers what was read off it, so each
-    // proves it outright. Otherwise every answer has to be, at each type
+    // What a body proves of what it hands back by itself, and which of its
+    // own document's declarations the rest leans on. It hands back its answer
+    // and every variable handed to it in place. A declaration whose answer
+    // names no type parameter, as written or as read off its body, and which
+    // takes nothing in place at a type parameter, settles what it hands back
+    // to what it declares, so it proves it outright. Otherwise every answer
+    // whose declared type names a type parameter has to be, at each type
     // parameter, that parameter, with no reading of `any` and no member
-    // value; and a call whose answer names a type parameter and is judged
-    // where it stands hands back what proves nothing, unless it reaches a
-    // declaration of this document, whose proof is the document's to settle.
+    // value; and a call whose answer or variable handed back names a type
+    // parameter and is judged where it stands hands back what proves nothing,
+    // unless it reaches a declaration of this document, whose proof is the
+    // document's to settle.
     private func proof(
         of readings: [LoweredType],
-        to returns: TypeExpression?,
+        declaring selector: Name,
         calling calls: [CallSite],
         judged judgements: JudgementTable,
         given context: TypingContext
-    ) -> AnswerProof {
+    ) -> HandBackProof {
         let loweredTypes = context.loweredTypes
+        let answer = context.answer(of: selector)
+        let answersOpen = answer?.namesParameter == true
+        let handsBackOpen = context.slots(of: selector).contains { slot in slot.type.handsBackParameter }
 
-        guard let declared = returns?.lowered(in: loweredTypes), declared.namesParameter else {
-            return .holds(leaning: [])
+        guard answersOpen || handsBackOpen else { return .holds(leaning: []) }
+
+        if let answer, answersOpen, !readings.allSatisfy({ reading in answer.takesInPlace(reading, in: loweredTypes) }) {
+            return .broken
         }
 
-        let readsInPlace = readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
         let appliesOpen = judgements.judgements.values.contains { judgement in
-            guard case let .apply(_, against?) = judgement else { return false }
+            guard case let .apply(_, judging?) = judgement else { return false }
 
-            return against.namesParameter
+            return judging.namesParameter
         }
 
-        guard readsInPlace, !appliesOpen else { return .broken }
+        guard !appliesOpen else { return .broken }
 
         // Read over what was judged, so a judgement whose call is not found
         // proves nothing rather than going unread.
@@ -524,7 +532,7 @@ struct TypeChecker {
         var leaning: Set<Name> = []
 
         for (place, judgement) in judgements.judgements {
-            guard case let .call(against) = judgement, against.namesParameter else { continue }
+            guard case let .call(judging) = judgement, judging.namesParameter else { continue }
 
             guard
                 let selector = selectors[place],
@@ -574,7 +582,7 @@ struct TypeChecker {
 
     // The same, for a call to a selector. A contract's procedure is answered
     // by whichever row the run picks, and what that row settles is not known
-    // here. A row that proved it answers as declared, a native's by its
+    // here. A row that proved it hands back as declared, a native's by its
     // host's word, answers what the call reads. A body of this document has
     // proved nothing while its document is read, since its proof is settled
     // over the whole document after, so the judgement stands and the link
@@ -582,9 +590,75 @@ struct TypeChecker {
     private func judgedAgainst(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
         guard context.contractProcedures[selector] == nil else { return judgedAgainst(reading, answeredBy: nil) }
 
-        if let row = context.declared(selector), row.answersAsDeclared { return nil }
+        if handsBackAsDeclared(selector, given: context) { return nil }
 
         return judgedAgainst(reading, answeredBy: context.answer(of: selector))
+    }
+
+    // What each variable a call hands in place at a slot naming a type
+    // parameter is judged against once the call is over, by position: what
+    // the call filled the slot with. The callee writes it as its own
+    // parameter, which says nothing of what filled it, unless its row proved
+    // it hands back what it declares. A variable read as `any` needs no
+    // judgement.
+    private func handedBack(
+        over slots: [Slot],
+        filling filled: [Name: LoweredType],
+        sending selector: Name,
+        given context: TypingContext
+    ) -> [HandedBack] {
+        var judged: [HandedBack] = []
+
+        // The slots first: most take nothing in place, and asking them costs
+        // less than finding the row.
+        for (position, slot) in slots.enumerated() {
+            guard
+                slot.type.handsBackParameter,
+                case let .inout(holding) = slot.type.filling(filled),
+                let against = judgedAgainst(holding, answeredBy: nil)
+            else {
+                continue
+            }
+
+            judged.append(HandedBack(position: position, against: against))
+        }
+
+        guard !judged.isEmpty, !handsBackAsDeclared(selector, given: context) else { return [] }
+
+        return judged
+    }
+
+    // The same, for a call of a value: what each variable handed in place is
+    // judged against once the call is over, what the slot's type holds it as.
+    // No row of a closure value proves anything, so each is judged wherever
+    // the closure the run reaches names a type parameter there.
+    private func handedBack(at handed: [Int], of callee: LoweredType) -> [HandedBack] {
+        guard case let .procedure(parameters?, _, _, _) = callee else { return [] }
+
+        var judged: [HandedBack] = []
+
+        for position in handed {
+            guard
+                case let .inout(held) = parameters[position],
+                let against = judgedAgainst(held, answeredBy: nil)
+            else {
+                continue
+            }
+
+            judged.append(HandedBack(position: position, against: against))
+        }
+
+        return judged
+    }
+
+    // Whether what a call to a selector answers and hands back stands as its
+    // declaration says: a row that proved it does, a native's by its host's
+    // word. A contract's procedure is answered by whichever row the run
+    // picks, so it never does here.
+    private func handsBackAsDeclared(_ selector: Name, given context: TypingContext) -> Bool {
+        guard context.contractProcedures[selector] == nil else { return false }
+
+        return context.declared(selector)?.handsBackAsDeclared == true
     }
 
     // The one membership judgment a call is held to, over the whole
@@ -1974,7 +2048,16 @@ struct TypeChecker {
                 )
             }
 
-            judgements.record(.apply(inPlace: handed, against: judgedAgainst(answers, answeredBy: nil)), at: place)
+            judgements.record(
+                .apply(
+                    inPlace: handed,
+                    judging: CallJudgement(
+                        against: judgedAgainst(answers, answeredBy: nil),
+                        handedBack: handedBack(at: handed, of: callee)
+                    )
+                ),
+                at: place
+            )
 
             if failsHere(expression, given: context) {
                 flow.fail()
@@ -2107,6 +2190,8 @@ struct TypeChecker {
                 when: ask
             )
 
+            try heldBeside(over: slots, readings: sent, filling: filled, in: context.loweredTypes, at: place, when: ask)
+
             let rewritten = Call(selector: call.selector, arguments: arguments)
             let reading = answered(
                 by: signature,
@@ -2116,8 +2201,11 @@ struct TypeChecker {
                 in: context.loweredTypes
             )
 
-            if let against = judgedAgainst(reading, sending: call.selector, given: context) {
-                judgements.record(.call(against: against), at: place)
+            if let judging = CallJudgement(
+                against: judgedAgainst(reading, sending: call.selector, given: context),
+                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context)
+            ) {
+                judgements.record(.call(judging), at: place)
             }
 
             if mayFail {
@@ -2829,6 +2917,45 @@ struct TypeChecker {
         }
 
         return flow
+    }
+
+    // A type parameter a call fills from a variable it hands in place, where
+    // the caller holds that variable as a type parameter of its own, stands
+    // for whatever filled the caller's. Every other argument read at it takes
+    // only a value of that parameter, the way a write into the variable does:
+    // a value every member of its bounds takes is not one.
+    private func heldBeside(
+        over slots: [Slot],
+        readings sent: [LoweredType],
+        filling filled: [Name: LoweredType],
+        in loweredTypes: LoweredTypeTable,
+        at place: Place,
+        when ask: Ask
+    ) throws {
+        guard case .judging = ask else { return }
+
+        let held = Set(
+            slots.filter(\.type.isInout)
+                .flatMap { slot in slot.type.boundedParameters.keys }
+                .filter { name in filled[name]?.namesParameter == true }
+        )
+
+        guard !held.isEmpty else { return }
+
+        for (position, slot) in slots.enumerated() where !slot.type.isInout && position < sent.count {
+            guard !held.isDisjoint(with: slot.type.boundedParameters.keys) else { continue }
+
+            let taking = slot.type.filling(filled).slotUnwrapped
+
+            guard !taking.takesInPlace(sent[position], in: loweredTypes) else { continue }
+
+            try refuse(
+                "sends \(sent[position].rendered(in: loweredTypes)) where \(taking.rendered(in: loweredTypes))"
+                    + " is held in place, which takes only a value of that parameter",
+                at: place.child(.argument(position)),
+                when: ask
+            )
+        }
     }
 
     // The rules a call handing variables in place is held to, at each

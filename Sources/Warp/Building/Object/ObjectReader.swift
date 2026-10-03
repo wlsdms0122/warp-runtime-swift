@@ -813,7 +813,7 @@ struct ObjectReader {
             constness: try constness(cursor.next()),
             isolation: try isolation(cursor.next()),
             failing: try failing(cursor.next()),
-            answersAsDeclared: try cursor.field().flag(),
+            handsBackAsDeclared: try cursor.field().flag(),
             judging: try implementation(cursor.next())
         )
 
@@ -982,7 +982,35 @@ struct ObjectReader {
             )
 
         case .checked:
-            read = .checked(try operation(cursor.next()), against: try lowered(cursor.next()))
+            let judged = try operation(cursor.next())
+
+            // What is judged where it stands is a call, of any of the three
+            // kinds, and what it hands back stands at the positions it hands
+            // a variable in place, each once, in order.
+            guard let inPlace = judged.handingInPlace else {
+                throw ObjectRefused("a judgement where a call stands wraps what is no call")
+            }
+
+            let against = try cursor.field().maybe(lowered)
+            let handedBack = try Field(cursor.next(), of: "handed back").list { written in
+                var back = try FieldCursor(written, of: "handed back")
+                let taken = HandedBack(position: try back.field().count(), against: try lowered(back.next()))
+
+                try back.end()
+
+                return taken
+            }
+            let positions = handedBack.map(\.position)
+
+            guard zip(positions, positions.dropFirst()).allSatisfy({ $0 < $1 }), positions.allSatisfy(inPlace.contains) else {
+                throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
+            }
+
+            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
+                throw ObjectRefused("a judgement where a call stands judges nothing")
+            }
+
+            read = .checked(judged, judging)
 
         case .block: read = .block(try body(cursor.next()))
         case .conditional:

@@ -356,12 +356,8 @@ struct Evaluator: Sendable {
                 in: loweredTypes
             )
 
-        case let .checked(read, against):
-            let answered = try await evaluate(read, in: &activation, at: trace)
-
-            try against.admitting(answered, at: "answer", in: loweredTypes)
-
-            return answered
+        case let .checked(read, judging):
+            return try await checked(read, judging: judging, in: &activation, at: trace)
 
         case let .call(call):
             return try await self.call(call, in: &activation, at: trace)
@@ -419,6 +415,7 @@ struct Evaluator: Sendable {
     private func call(
         _ call: CallOperation,
         first: Value? = nil,
+        judging handedBack: [HandedBack] = [],
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -444,6 +441,12 @@ struct Evaluator: Sendable {
                 holding: call.handed
             )
 
+            guard handedBack.isEmpty else {
+                return try await judging(handedBack, through: holds) {
+                    try await run(effect, of: callee, settled: settled, holds: holds, trace: trace)
+                }
+            }
+
             return try await run(effect, of: callee, settled: settled, holds: holds, trace: trace)
 
         case let .body(body, frame):
@@ -453,6 +456,19 @@ struct Evaluator: Sendable {
                 given: try await given(call.arguments, first: first, in: &activation, at: trace),
                 holding: call.handed
             )
+
+            guard handedBack.isEmpty else {
+                return try await judging(handedBack, through: holds) {
+                    try await answer(
+                        callee,
+                        running: body,
+                        in: frame,
+                        settled: settled,
+                        holding: holds,
+                        at: trace.appending(callee.hop)
+                    )
+                }
+            }
 
             return try await answer(
                 callee,
@@ -476,6 +492,7 @@ struct Evaluator: Sendable {
     private func apply(
         _ callee: Operation,
         arguments: [Argument],
+        judging handedBack: [HandedBack] = [],
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -515,7 +532,19 @@ struct Evaluator: Sendable {
             }
         }
 
-        return try await answer(closure, as: linked, given: given, holding: holds, at: trace)
+        guard !handedBack.isEmpty else {
+            return try await answer(closure, as: linked, given: given, holding: holds, at: trace)
+        }
+
+        // A closure taking by value what the call hands in place writes
+        // nothing back, and one that wrote a type at a slot settles every
+        // write to it, so only a slot it holds naming a type parameter is
+        // judged.
+        let judged = holds.filter { position, _ in linked.slots[position].type.handsBackParameter }
+
+        return try await judging(handedBack, through: judged) {
+            try await answer(closure, as: linked, given: given, holding: holds, at: trace)
+        }
     }
 
     // The one way a closure is called: the arguments settled by the closure's
@@ -744,6 +773,85 @@ struct Evaluator: Sendable {
             }
 
             return (handed.position, handle.extended(by: try activation.projections(of: handed.address)))
+        }
+    }
+
+    // A call judged where it stands: what it answers against what the call
+    // reads, and what it handed back in place against what the caller holds
+    // it as, which the call judges through the holds it makes. A call
+    // handing nothing back is judged on its answer alone.
+    private func checked(
+        _ read: Operation,
+        judging: CallJudgement,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let handedBack = judging.handedBack
+        let answered: Value
+
+        if handedBack.isEmpty {
+            answered = try await evaluate(read, in: &activation, at: trace)
+        } else {
+            switch read {
+            case let .call(call):
+                answered = try await self.call(call, judging: handedBack, in: &activation, at: trace)
+
+            case let .dispatch(dispatch):
+                let (call, first) = try await picked(dispatch, in: &activation, at: trace)
+
+                answered = try await self.call(call, first: first, judging: handedBack, in: &activation, at: trace)
+
+            case let .apply(callee, arguments):
+                answered = try await apply(callee, arguments: arguments, judging: handedBack, in: &activation, at: trace)
+
+            default:
+                throw ExecutionError("a judgement where a call stands wraps what is no call")
+            }
+        }
+
+        try judging.against?.admitting(answered, at: "answer", in: loweredTypes)
+
+        return answered
+    }
+
+    // What a call answers, once what it handed back in place is judged
+    // through the holds it made. A variable written wrong is the author's
+    // mistake whatever the call left by, so it is judged before a failure
+    // passes on. A row or a closure taking by value what the call hands in
+    // place holds nothing there and writes nothing back.
+    private func judging(
+        _ handedBack: [HandedBack],
+        through holds: [(position: Int, handle: Handle)],
+        _ answering: () async throws -> Value
+    ) async throws -> Value {
+        let answered: Value
+
+        do {
+            answered = try await answering()
+        } catch {
+            try judge(holds, by: handedBack)
+
+            throw error
+        }
+
+        try judge(holds, by: handedBack)
+
+        return answered
+    }
+
+    // Each variable held, against what the caller holds it as. A place
+    // nothing holds now, an entry not written yet or an element past the end
+    // of a list, holds nothing to judge.
+    private func judge(_ holds: [(position: Int, handle: Handle)], by handedBack: [HandedBack]) throws {
+        for (position, handle) in holds {
+            guard
+                let back = handedBack.first(where: { back in back.position == position }),
+                let held = try handle.written()
+            else {
+                continue
+            }
+
+            try back.against.admitting(held, at: "'\(handle.spelled)'", in: loweredTypes)
         }
     }
 

@@ -134,6 +134,7 @@ struct TraversableTests {
             in: sut,
             at: place,
             in: [:],
+            declaring: "app.walked",
             answering: nil,
             with: context,
             folding: nil,

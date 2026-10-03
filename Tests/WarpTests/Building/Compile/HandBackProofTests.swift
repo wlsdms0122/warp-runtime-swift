@@ -1,5 +1,5 @@
 //
-//  AnswerProofTests.swift
+//  HandBackProofTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 10/3/26.
@@ -15,8 +15,8 @@ import WarpTestSupport
 // document, the way its constness is: a body proves it alone or leans on
 // the declarations it calls, and which it leans on is read once every body
 // is read, whatever order they were read in.
-@Suite("What a body proves of its answers")
-struct AnswerProofTests {
+@Suite("What a body proves of what it hands back")
+struct HandBackProofTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -34,8 +34,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.a"]?.answersAsDeclared == true)
-        #expect(image["app.z"]?.answersAsDeclared == true)
+        #expect(image["app.a"]?.handsBackAsDeclared == true)
+        #expect(image["app.z"]?.handsBackAsDeclared == true)
     }
 
     @Test("a body answering what one answering `any` answers is not proven")
@@ -62,8 +62,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.z"]?.answersAsDeclared == false)
-        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.z"]?.handsBackAsDeclared == false)
+        #expect(image["app.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a body leaning on itself keeps what nothing else took away")
@@ -79,7 +79,7 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.r"]?.answersAsDeclared == true)
+        #expect(image["app.r"]?.handsBackAsDeclared == true)
     }
 
     @Test("two bodies leaning on each other keep what nothing else took away")
@@ -96,8 +96,8 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.a"]?.answersAsDeclared == true)
-        #expect(image["app.b"]?.answersAsDeclared == true)
+        #expect(image["app.a"]?.handsBackAsDeclared == true)
+        #expect(image["app.b"]?.handsBackAsDeclared == true)
     }
 
     @Test("a cycle leaning on a body answering `any` falls whole")
@@ -137,9 +137,9 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.c"]?.answersAsDeclared == false)
-        #expect(image["app.b"]?.answersAsDeclared == false)
-        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.c"]?.handsBackAsDeclared == false)
+        #expect(image["app.b"]?.handsBackAsDeclared == false)
+        #expect(image["app.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a fall carries back along the bodies leaning on it")
@@ -167,9 +167,112 @@ struct AnswerProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then. `app.a` falls only once `app.b` has
-        #expect(image["app.c"]?.answersAsDeclared == false)
-        #expect(image["app.b"]?.answersAsDeclared == false)
-        #expect(image["app.a"]?.answersAsDeclared == false)
+        #expect(image["app.c"]?.handsBackAsDeclared == false)
+        #expect(image["app.b"]?.handsBackAsDeclared == false)
+        #expect(image["app.a"]?.handsBackAsDeclared == false)
+    }
+
+    @Test("a body that wrote no answer proves what was read off it")
+    func anUnsaidBodyProvesWhatWasReadOffIt() async throws {
+        // Given. `app.g` writes no `returns`, and what was read off it is its `some T`, carried from `app.f`, which answers a value of `any`
+        let sut = try Module(
+            procedures: [
+                "app.f": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [],
+                    result: .reference([.key("junk")])
+                ),
+                "app.g": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "x", type: .parameter(name: "T"))]),
+                    body: [],
+                    result: .call(Call(selector: "app.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                ),
+                "app.h": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "x", type: .parameter(name: "T"))]),
+                    body: [],
+                    result: .reference([.key("x")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.g"]?.handsBackAsDeclared == false)
+        #expect(image["app.h"]?.handsBackAsDeclared == true)
+    }
+
+    @Test("a body handed a variable in place at a type parameter proves what it writes there")
+    func aBodyHandedAVariableInPlaceProvesWhatItWrites() async throws {
+        // Given. `app.put` answers a whole number, and writes what `app.f` answers into the list it was handed in place
+        let sut = try Module(
+            imports: ["std.collection.append"],
+            procedures: [
+                "app.f": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [],
+                    result: .reference([.key("junk")])
+                ),
+                "app.put": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "xs", type: .inout(.array(.parameter(name: "T"))))
+                        ],
+                        returns: .int
+                    ),
+                    body: [
+                        Statement(
+                            expression: .call(
+                                Call(
+                                    selector: "std.collection.append",
+                                    arguments: [
+                                        .reference([.key("xs")]),
+                                        .call(Call(selector: "app.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                                    ]
+                                )
+                            )
+                        )
+                    ],
+                    result: .literal(.int(0))
+                ),
+                "app.keep": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "xs", type: .inout(.array(.parameter(name: "T"))))
+                        ],
+                        returns: .int
+                    ),
+                    body: [
+                        Statement(
+                            expression: .call(Call(selector: "std.collection.append", arguments: [.reference([.key("xs")]), .reference([.key("x")])]))
+                        )
+                    ],
+                    result: .literal(.int(0))
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.put"]?.handsBackAsDeclared == false)
+        #expect(image["app.keep"]?.handsBackAsDeclared == true)
     }
 
     // MARK: - Public

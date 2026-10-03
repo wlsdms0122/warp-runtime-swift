@@ -94,7 +94,7 @@ struct Compiler {
         // What each body proved of its answers by itself, and which of this
         // document's declarations the rest leans on: settled over the whole
         // document once every body is read.
-        var proofs: [Name: AnswerProof] = [:]
+        var proofs: [Name: HandBackProof] = [:]
 
         // A declaration, bound and dot-judged: every dot in the body is judged
         // against the type it reaches, every call is gathered, a
@@ -128,6 +128,7 @@ struct Compiler {
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
+                    declaring: symbol.declared,
                     answering: declaration.signature.returns,
                     with: context().bounding(declaration.signature.parameterBounding.table),
                     folding: folding,
@@ -344,12 +345,12 @@ struct Compiler {
             }
         }
 
-        // Which bodies answer as they declare, settled over all of them at
+        // Which bodies hand back as they declare, settled over all of them at
         // once, so the order they were read in says nothing.
-        let proven = Derivation().answersAsDeclared(proofs)
+        let proven = Derivation().handsBackAsDeclared(proofs)
 
         for symbol in holding where symbol.procedure.block != nil {
-            compiling.record(try row(of: symbol), answersAsDeclared: proven.contains(symbol.declared))
+            compiling.record(try row(of: symbol), handsBackAsDeclared: proven.contains(symbol.declared))
         }
 
         // The types its bodies stand on, written as this document's own

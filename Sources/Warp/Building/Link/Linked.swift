@@ -63,11 +63,11 @@ public final class Linked: Sendable {
     // rescues, or declared by the native procedure.
     public let failing: Failing
 
-    // Whether what this answers is, at every type parameter its declaration
-    // answers, that parameter and nothing a call has to judge again where it
-    // reads the answer filled. Read off the body's answers; a native's is its
-    // host's word, taken as said.
-    let answersAsDeclared: Bool
+    // Whether what this hands back, its answer and every variable handed to
+    // it in place, is at every type parameter that parameter, so nothing a
+    // call filled has to be judged again where the call stands. Read off the
+    // body; a native's is its host's word, taken as said.
+    let handsBackAsDeclared: Bool
 
     // The parameters as the run settles them, in the same order, and what
     // the answer settles against. The declaration's lowering, born here
@@ -125,7 +125,7 @@ public final class Linked: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        answersAsDeclared: Bool,
+        handsBackAsDeclared: Bool,
         implementation: Implementation,
         foldable: Bool,
         closure: (by: Closure.Declaration, nth: Int)? = nil,
@@ -144,7 +144,7 @@ public final class Linked: Sendable {
         self.slots = slots
         self.returns = returns
         self.failing = failing
-        self.answersAsDeclared = answersAsDeclared
+        self.handsBackAsDeclared = handsBackAsDeclared
         self.table = table
         self.implementation = implementation
         self.foldable = foldable
@@ -168,7 +168,7 @@ public final class Linked: Sendable {
         self.slots = row.slots
         self.returns = row.returns
         self.failing = row.failing
-        self.answersAsDeclared = row.answersAsDeclared
+        self.handsBackAsDeclared = row.handsBackAsDeclared
         self.table = table
         self.implementation = row.implementation
         self.foldable = row.foldable
@@ -179,11 +179,12 @@ public final class Linked: Sendable {
     // the numbers in one touches the signature, so the slots are carried over
     // rather than worked out again.
     convenience init(_ row: Linked, implementation: Implementation) {
-        self.init(row, implementation: implementation, answersAsDeclared: row.answersAsDeclared)
+        self.init(row, implementation: implementation, handsBackAsDeclared: row.handsBackAsDeclared)
     }
 
-    // The same, with what the body lowered into it proved about its answers.
-    init(_ row: Linked, implementation: Implementation, answersAsDeclared: Bool) {
+    // The same, with what the body lowered into it proved about what it
+    // hands back.
+    init(_ row: Linked, implementation: Implementation, handsBackAsDeclared: Bool) {
         self.label = row.label
         self.origin = row.origin
         self.closure = row.closure
@@ -194,7 +195,7 @@ public final class Linked: Sendable {
         self.slots = row.slots
         self.returns = row.returns
         self.failing = row.failing
-        self.answersAsDeclared = answersAsDeclared
+        self.handsBackAsDeclared = handsBackAsDeclared
         self.table = row.table
         self.implementation = implementation
         self.foldable = row.foldable
@@ -226,7 +227,7 @@ public final class Linked: Sendable {
             constness: const ? .const : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
-            answersAsDeclared: native != nil,
+            handsBackAsDeclared: native != nil,
             implementation: .native(native ?? .query(UnsettledProcedure()), sends: sends),
             foldable: native == nil || builtin,
             in: table

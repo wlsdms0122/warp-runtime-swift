@@ -43,8 +43,10 @@ indirect enum Operation: Sendable {
     // included, which is what lets a tie answer the side that arrived. Nothing
     // after it stands on this type's shape: a field read stands on the call
     // inside, and a binding or a parameter that declares a type settles the
-    // value where it lands.
-    case checked(Operation, against: LoweredType)
+    // value where it lands. Each variable it handed back in place is judged
+    // once the call is over, whether it answered or failed. The build makes
+    // one only around a call.
+    case checked(Operation, CallJudgement)
 
     case block(LoweredBody)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
@@ -64,6 +66,35 @@ indirect enum Operation: Sendable {
     case leave(Leave.Reach, target: Name?, Operation?)
 
     // MARK: - Property
+    // The positions a call may hand a variable in place at, nil where this
+    // is no call. A call names them; a call through a contract or of a value
+    // hands a place wherever it wrote one, and the row or closure it reaches
+    // says which it takes in place. A call through a contract hands the
+    // first as what it read, so never that one.
+    var handingInPlace: [Int]? {
+        switch self {
+        case let .call(call):
+            return call.handed.map(\.position)
+
+        case let .dispatch(dispatch):
+            return dispatch.arguments.indices.compactMap { index in
+                guard case .reference = dispatch.arguments[index] else { return nil }
+
+                return index + 1
+            }
+
+        case let .apply(_, arguments):
+            return arguments.indices.compactMap { index in
+                guard case .reference = arguments[index] else { return nil }
+
+                return index
+            }
+
+        default:
+            return nil
+        }
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     // Whether this reads any slot in the range, through a path's index
@@ -173,8 +204,8 @@ indirect enum Operation: Sendable {
                 optional: optional
             )
 
-        case let .checked(read, against):
-            inside = .checked(try read.rewritten(operation: operation, type: type), against: try type(against))
+        case let .checked(read, judgement):
+            inside = .checked(try read.rewritten(operation: operation, type: type), try judgement.rewritten(type: type))
 
         case let .block(body):
             inside = .block(try body.rewritten(operation: operation, type: type))

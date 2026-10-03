@@ -452,9 +452,10 @@ struct Lowering {
         table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
     }
 
-    // A lowered row with what its document settled it proves of its answers.
-    mutating func record(_ row: Int, answersAsDeclared: Bool) {
-        table[row] = Linked(table[row], implementation: table[row].implementation, answersAsDeclared: answersAsDeclared)
+    // A lowered row with what its document settled it proves of what it
+    // hands back.
+    mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
+        table[row] = Linked(table[row], implementation: table[row].implementation, handsBackAsDeclared: handsBackAsDeclared)
     }
 
     // A document's own declarations by row, as they were held.
@@ -763,9 +764,9 @@ struct Lowering {
                 .call(try lower(call, in: scope, on: context, at: place))
             }
 
-            guard case let .call(against)? = context.judgements[place] else { return lowered }
+            guard case let .call(judging)? = context.judgements[place] else { return lowered }
 
-            return checked(lowered, against: against, on: context)
+            return checked(lowered, judging: judging, on: context)
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -855,7 +856,7 @@ struct Lowering {
                 constness: constness,
                 isolation: isolation,
                 failing: failing,
-                answersAsDeclared: false,
+                handsBackAsDeclared: false,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),
@@ -884,7 +885,7 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed, against)? = context.judgements[place] else {
+        guard case let .apply(handed, judging)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
@@ -907,17 +908,22 @@ struct Lowering {
             }
         )
 
-        guard let against else { return applied }
+        guard let judging else { return applied }
 
-        return checked(applied, against: against, on: context)
+        return checked(applied, judging: judging, on: context)
     }
 
     // A call's answer judged where the call stands, against what the build
-    // read it as. The type is one a body stands on, so it is numbered.
-    private func checked(_ call: Operation, against: LoweredType, on context: Context) -> Operation {
-        context.slots.note(against)
+    // read it as, and what it handed back in place against what the caller
+    // holds it as. The types are ones a body stands on, so they are numbered.
+    private func checked(_ call: Operation, judging: CallJudgement, on context: Context) -> Operation {
+        context.slots.note(judging.against)
 
-        return .checked(call, against: against)
+        for back in judging.handedBack {
+            context.slots.note(back.against)
+        }
+
+        return .checked(call, judging)
     }
 
     private mutating func lower(

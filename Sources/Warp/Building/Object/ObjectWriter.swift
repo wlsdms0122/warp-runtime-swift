@@ -646,7 +646,7 @@ struct ObjectWriter {
             constness(row.constness),
             isolation(row.isolation),
             failing(row.failing),
-            .bool(row.answersAsDeclared),
+            .bool(row.handsBackAsDeclared),
             try implementation(row.implementation)
         ])
     }
@@ -762,8 +762,13 @@ struct ObjectWriter {
         case let .cast(read, as: type, optional: optional):
             return tagged(Tag.cast, try self.operation(read), lowered(type), .bool(optional))
 
-        case let .checked(read, against: type):
-            return tagged(Tag.checked, try self.operation(read), lowered(type))
+        case let .checked(read, judging):
+            return tagged(
+                Tag.checked,
+                try self.operation(read),
+                ObjectWriter.maybe(judging.against, lowered),
+                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
+            )
 
         case let .block(body):
             return tagged(Tag.block, try self.body(body))

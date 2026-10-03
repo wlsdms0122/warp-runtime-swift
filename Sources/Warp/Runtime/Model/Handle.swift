@@ -33,11 +33,21 @@ struct Handle: Sendable {
     }
 
     // MARK: - Public
+    // The variable and the path below it, as a refusal names them.
+    var spelled: String {
+        rendered(path)
+    }
+
     // What the path holds. The build judged the path against the box's
     // declared type, so a part not there now is a box whose scope
     // changed under the hold.
     func value() throws -> Value {
-        try box.value.reading(at: path, under: rendered(path))
+        try box.value.reading(at: path, under: spelled)
+    }
+
+    // The same, with nil where the path reaches a place nothing holds now.
+    func written() throws -> Value? {
+        try box.value.written(at: path, under: spelled)
     }
 
     // Writes the part a path below the hold names. The box is read once,
