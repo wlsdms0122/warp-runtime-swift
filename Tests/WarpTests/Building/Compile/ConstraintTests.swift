@@ -511,7 +511,7 @@ struct ConstraintTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("no document says 'bank.Card' answers every procedure 'app.Describable' asks")
+                && "\(error)".contains("answers bank.Card where the contract writes app.Describable")
         }
     }
 

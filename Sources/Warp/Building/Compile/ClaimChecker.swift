@@ -283,7 +283,6 @@ struct ClaimChecker {
                 answering: type,
                 of: contract,
                 procedure: procedure,
-                at: claim.place,
                 in: table
             ) {
                 return .waits("\(witness.spelled) declares '\(spelling)', which " + reason)
@@ -324,10 +323,12 @@ struct ClaimChecker {
     // answers, with what the contract's signature let it hand, and takes
     // back what that declaration answers. So each of the declaration's
     // positions stands where the contract's hands, the type first, and the
-    // contract's answer takes what the declaration answers.
-    // The contract's type parameters are its own and no call fills them
-    // here; the declaration's own are filled by what the contract writes at
-    // the same positions. The names are each declaration's own.
+    // contract's answer takes what the declaration answers. The contract's
+    // type parameters are its own and no call fills them here, so each is
+    // judged rigidly, and a contract its signature names is held to what the
+    // documents say answers it; the declaration's own are filled by what the
+    // contract writes at the same positions. The names are each
+    // declaration's own.
     //
     // A declaration that wrote no `returns` answers what the build read off
     // its body, which is `read`. A declaration being compiled now has no
@@ -339,7 +340,6 @@ struct ClaimChecker {
         answering type: Name,
         of contract: Name,
         procedure: Name,
-        at place: Place,
         in table: TypeTable
     ) -> String? {
         let loweredTypes = table.loweredTypes
@@ -383,21 +383,6 @@ struct ClaimChecker {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                     + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: loweredTypes))"
                     + " where the contract writes \(answer.rendered)"
-        }
-
-        // A composition the answer is held to, wherever in the promise it
-        // stands, is held the way a slot holds what arrives. Nothing is
-        // written down: a witness reads what the documents say, and where
-        // they are all in what they say is settled.
-        if let refusal = TypeChecker().refusal(
-            holding: answered,
-            to: promised,
-            as: "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)' asks, and answers",
-            in: loweredTypes,
-            fulfillment: nil,
-            at: place
-        ) {
-            return refusal
         }
 
         return nil
