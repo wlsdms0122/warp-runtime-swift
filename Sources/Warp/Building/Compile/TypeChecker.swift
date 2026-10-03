@@ -161,7 +161,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable) {
+    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, answersAsDeclared: Bool) {
         let inner = try await inspected(
             block: block,
             at: place,
@@ -180,7 +180,13 @@ struct TypeChecker {
             fulfillment: fulfillment
         )
 
-        return (inner.block, inner.calls, inner.judgements)
+        let answersAsDeclared = answersAsDeclared(
+            [inner.reading] + inner.flow.answered.map(\.reading),
+            to: returns,
+            in: context.loweredTypes
+        )
+
+        return (inner.block, inner.calls, inner.judgements, answersAsDeclared)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -477,6 +483,21 @@ struct TypeChecker {
             return "\(label) \(reading.rendered(in: loweredTypes)),"
                 + " which '\(loweredTypes.constraintLabels[row])' does not admit"
         }
+    }
+
+    // Whether what a body answers is, at every type parameter its declaration
+    // answers, that parameter: no reading of `any` and no member value, so a
+    // call reading the answer filled has nothing to judge again. One whose
+    // answer names no parameter is settled to what it wrote where it answers,
+    // and one that wrote nothing answers what was read off it.
+    private func answersAsDeclared(
+        _ readings: [LoweredType],
+        to returns: TypeExpression?,
+        in loweredTypes: LoweredTypeTable
+    ) -> Bool {
+        guard let declared = returns?.lowered(in: loweredTypes), declared.namesParameter else { return true }
+
+        return readings.allSatisfy { reading in declared.takesInPlace(reading, in: loweredTypes) }
     }
 
     // Whether a write fits the slot it lands in, in the box `binding` holds.

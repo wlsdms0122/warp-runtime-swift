@@ -104,7 +104,7 @@ struct Compiler {
 
             let declaration = symbol.procedure
 
-            var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable())
+            var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable(), answersAsDeclared: true)
 
             if let block = declaration.block {
                 // A body not yet lowered stands as its refusal, so a procedure
@@ -119,7 +119,7 @@ struct Compiler {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered, judgements) = try await TypeChecker().resolvedSites(
+                let (rewritten, gathered, judgements, answersAsDeclared) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
@@ -136,7 +136,8 @@ struct Compiler {
                         implementation: .body(rewritten)
                     ),
                     calls: gathered,
-                    judgements: judgements
+                    judgements: judgements,
+                    answersAsDeclared: answersAsDeclared
                 )
             }
 
@@ -158,7 +159,13 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
+                try compiling.settle(
+                    try row(of: symbol),
+                    body: rewritten,
+                    answeringAsDeclared: answer.answersAsDeclared,
+                    judgements: answer.judgements,
+                    at: symbol.place
+                )
             }
 
             return answer.procedure

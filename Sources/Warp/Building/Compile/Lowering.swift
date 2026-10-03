@@ -422,9 +422,16 @@ struct Lowering {
         constants[origin] = settled
     }
 
-    // Lowers a declaration's body into its row. `judgements` is what the type
-    // check judged at each place in it.
-    mutating func settle(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
+    // Lowers a declaration's body into its row, beside what the type check
+    // proved of its answers. `judgements` is what it judged at each place in
+    // the body.
+    mutating func settle(
+        _ row: Int,
+        body block: Block,
+        answeringAsDeclared answersAsDeclared: Bool,
+        judgements: JudgementTable,
+        at place: Place
+    ) throws {
         let declared = table[row]
         let slots = SlotAllocator(
             origin: declared.origin,
@@ -449,7 +456,7 @@ struct Lowering {
         standing[declared.origin, default: Standing()].types.formUnion(slots.types)
         standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
 
-        table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
+        table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame), answersAsDeclared: answersAsDeclared)
     }
 
     // A document's own declarations by row, as they were held.
@@ -850,6 +857,7 @@ struct Lowering {
                 constness: constness,
                 isolation: isolation,
                 failing: failing,
+                answersAsDeclared: false,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),
