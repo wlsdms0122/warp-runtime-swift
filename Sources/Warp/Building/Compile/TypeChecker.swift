@@ -2190,6 +2190,8 @@ struct TypeChecker {
                 when: ask
             )
 
+            try heldBeside(over: slots, readings: sent, filling: filled, in: context.loweredTypes, at: place, when: ask)
+
             let rewritten = Call(selector: call.selector, arguments: arguments)
             let reading = answered(
                 by: signature,
@@ -2915,6 +2917,45 @@ struct TypeChecker {
         }
 
         return flow
+    }
+
+    // A type parameter a call fills from a variable it hands in place, where
+    // the caller holds that variable as a type parameter of its own, stands
+    // for whatever filled the caller's. Every other argument read at it takes
+    // only a value of that parameter, the way a write into the variable does:
+    // a value every member of its bounds takes is not one.
+    private func heldBeside(
+        over slots: [Slot],
+        readings sent: [LoweredType],
+        filling filled: [Name: LoweredType],
+        in loweredTypes: LoweredTypeTable,
+        at place: Place,
+        when ask: Ask
+    ) throws {
+        guard case .judging = ask else { return }
+
+        let held = Set(
+            slots.filter(\.type.isInout)
+                .flatMap { slot in slot.type.boundedParameters.keys }
+                .filter { name in filled[name]?.namesParameter == true }
+        )
+
+        guard !held.isEmpty else { return }
+
+        for (position, slot) in slots.enumerated() where !slot.type.isInout && position < sent.count {
+            guard !held.isDisjoint(with: slot.type.boundedParameters.keys) else { continue }
+
+            let taking = slot.type.filling(filled).slotUnwrapped
+
+            guard !taking.takesInPlace(sent[position], in: loweredTypes) else { continue }
+
+            try refuse(
+                "sends \(sent[position].rendered(in: loweredTypes)) where \(taking.rendered(in: loweredTypes))"
+                    + " is held in place, which takes only a value of that parameter",
+                at: place.child(.argument(position)),
+                when: ask
+            )
+        }
     }
 
     // The rules a call handing variables in place is held to, at each

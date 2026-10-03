@@ -172,6 +172,29 @@ indirect enum LoweredType: Sendable, Equatable {
         return held.namesParameter
     }
 
+    // Every type parameter this names, by label, with the bounds it is held
+    // to.
+    var boundedParameters: [Name: [Bound]] {
+        switch self {
+        case let .parameter(label, bounds):
+            return [label: bounds]
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.boundedParameters
+
+        case let .record(record):
+            return record.fields.reduce(into: [:]) { found, field in found.merge(field.boundedParameters) { first, _ in first } }
+
+        case let .procedure(parameters, returns, _, _):
+            return ((parameters ?? []) + [returns].compactMap { $0 }).reduce(into: [:]) { found, part in
+                found.merge(part.boundedParameters) { first, _ in first }
+            }
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+            return [:]
+        }
+    }
+
     // What a slot holds, through the two marks that say how it is held
     // rather than what it is.
     var slotUnwrapped: LoweredType {
@@ -1878,29 +1901,6 @@ indirect enum LoweredType: Sendable, Equatable {
         guard self != given else { return self }
 
         return merged(with: given, takingGiven: accepts(given, in: table, rigid: true), in: table)
-    }
-
-    // Every type parameter this names, by label, with the bounds it is held
-    // to.
-    private var boundedParameters: [Name: [Bound]] {
-        switch self {
-        case let .parameter(label, bounds):
-            return [label: bounds]
-
-        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.boundedParameters
-
-        case let .record(record):
-            return record.fields.reduce(into: [:]) { found, field in found.merge(field.boundedParameters) { first, _ in first } }
-
-        case let .procedure(parameters, returns, _, _):
-            return ((parameters ?? []) + [returns].compactMap { $0 }).reduce(into: [:]) { found, part in
-                found.merge(part.boundedParameters) { first, _ in first }
-            }
-
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
-            return [:]
-        }
     }
 
     // The record this stands for: a nameless one as it is, a declared one
