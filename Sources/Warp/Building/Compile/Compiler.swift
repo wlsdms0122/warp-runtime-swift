@@ -91,6 +91,11 @@ struct Compiler {
         // One declaration resolves once, whichever table asks.
         var resolvedBodies: [Name: Procedure] = [:]
 
+        // What each body proved of its answers by itself, and which of this
+        // document's declarations the rest leans on: settled over the whole
+        // document once every body is read.
+        var proofs: [Name: (alone: Bool, leaning: Set<Name>)] = [:]
+
         // A declaration, bound and dot-judged: every dot in the body is judged
         // against the type it reaches, every call is gathered, a
         // constant-headed path (judged first, like any path) folds to the
@@ -104,7 +109,7 @@ struct Compiler {
 
             let declaration = symbol.procedure
 
-            var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable(), answersAsDeclared: true)
+            var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable())
 
             if let block = declaration.block {
                 // A body not yet lowered stands as its refusal, so a procedure
@@ -119,7 +124,7 @@ struct Compiler {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered, judgements, answersAsDeclared) = try await TypeChecker().resolvedSites(
+                let (rewritten, gathered, judgements, proof) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
@@ -136,9 +141,10 @@ struct Compiler {
                         implementation: .body(rewritten)
                     ),
                     calls: gathered,
-                    judgements: judgements,
-                    answersAsDeclared: answersAsDeclared
+                    judgements: judgements
                 )
+
+                proofs[symbol.declared] = proof
             }
 
             resolvedBodies[symbol.declared] = answer.procedure
@@ -159,13 +165,7 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(
-                    try row(of: symbol),
-                    body: rewritten,
-                    answersAsDeclared: answer.answersAsDeclared,
-                    judgements: answer.judgements,
-                    at: symbol.place
-                )
+                try compiling.settle(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
             }
 
             return answer.procedure
@@ -342,6 +342,14 @@ struct Compiler {
             try await fulfillment.folding(symbol.place) {
                 _ = try await resolved(symbol)
             }
+        }
+
+        // Which bodies answer as they declare, settled over all of them at
+        // once, so the order they were read in says nothing.
+        let proven = Derivation().answersAsDeclared(proofs)
+
+        for symbol in holding where symbol.procedure.block != nil {
+            compiling.prove(try row(of: symbol), answersAsDeclared: proven.contains(symbol.declared))
         }
 
         // The types its bodies stand on, written as this document's own

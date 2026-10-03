@@ -8,8 +8,8 @@
 import Foundation
 
 // The facts nobody declared, worked out over a document's declarations at
-// once: constness, isolation and what may fail. Each is a fixed point over what
-// the bodies reach.
+// once: constness, isolation, what may fail, and whose answers stand as
+// declared. Each is a fixed point over what the bodies reach.
 struct Derivation {
     // What a body is walked for. Constness and isolation are read by one walk
     // and differ only in these: which callee holds the fact, which slot says a
@@ -289,6 +289,22 @@ struct Derivation {
         case .assignment:
             return nil
         }
+    }
+
+    // Which of a document's declarations answer as they declare. Each starts
+    // from what its own body proves and is let go where it leans on one of
+    // the document's that does not, until nothing more is let go: the
+    // greatest such set, so a declaration leaning on itself, or two on each
+    // other, keep what nothing else took away. A name nothing proved is let
+    // go by whatever leans on it.
+    func answersAsDeclared(_ proofs: [Name: (alone: Bool, leaning: Set<Name>)]) -> Set<Name> {
+        var proven = Set(proofs.filter { _, proof in proof.alone }.keys)
+
+        while let fallen = proven.first(where: { name in !(proofs[name]?.leaning ?? []).isSubset(of: proven) }) {
+            proven.remove(fallen)
+        }
+
+        return proven
     }
 
     // MARK: - Private
