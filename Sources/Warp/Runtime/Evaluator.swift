@@ -517,11 +517,13 @@ struct Evaluator: Sendable {
             }
         }
 
-        // A closure that wrote a type at a slot settles every write to it,
-        // so only one naming a type parameter there hands back what is
-        // judged.
+        // A closure taking by value what the call hands in place writes
+        // nothing back, and one that wrote a type at a slot settles every
+        // write to it, so only a slot it holds that names a type parameter
+        // hands back what is judged, the way a dispatch judges only what the
+        // picked row holds.
         let judged = handedBack.filter { back in
-            !linked.slots.indices.contains(back.position) || linked.slots[back.position].type.namesParameter
+            handed.contains { held in held.position == back.position } && linked.slots[back.position].type.namesParameter
         }
 
         return try await answer(judging: judged, through: holds) {
