@@ -924,6 +924,15 @@ indirect enum LoweredType: Sendable, Equatable {
         accepts(handed, in: table, assuming: assuming, rigid: rigid) && (!isInout || handed.isInout)
     }
 
+    // The same type through every name that stands for no record, at the
+    // outermost only: a declared range or kind is what it stands for, and a
+    // name for a record stays that record's.
+    func throughAliases(in table: LoweredTypeTable) -> LoweredType {
+        guard case let .named(row) = self, table.recordRows[row] == nil else { return self }
+
+        return table.loweredTypes[row].throughAliases(in: table)
+    }
+
     // The same type with every row it holds walked through to what that row
     // stands for. At every depth, not only the outermost.
     //
@@ -1155,14 +1164,21 @@ indirect enum LoweredType: Sendable, Equatable {
             // parameter bounded to numbers are held by the parameter.
             // A range meets anything by its kind, so a range and the plain
             // kind under it take each other both ways, and so do two ranges
-            // that overlap. Which was read first says nothing, so the reading
-            // that holds both is the kind under them.
+            // that overlap; a declared record and a nameless record of its
+            // fields take each other too. Which was read first says nothing,
+            // so the reading that holds both is the kind under the ranges, or
+            // the nameless record, which is the one a value is sure to fit. A
+            // name that stands for no record meets the other reading as what
+            // it stands for.
             if already.accepts(given, in: table, rigid: true) {
-                switch (already, given) {
+                switch (already.throughAliases(in: table), given.throughAliases(in: table)) {
                 case let (.ranged(mine), .ranged):
                     bound[name] = mine.lowered
 
-                case (.ranged, _) where given.accepts(already, in: table, rigid: true):
+                case let (.ranged(mine), _) where given.accepts(already, in: table, rigid: true):
+                    bound[name] = mine.lowered
+
+                case (.named, .record) where given.accepts(already, in: table, rigid: true):
                     bound[name] = given
 
                 default:
