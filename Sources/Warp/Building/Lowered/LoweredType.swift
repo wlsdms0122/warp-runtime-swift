@@ -1115,6 +1115,64 @@ indirect enum LoweredType: Sendable, Equatable {
         (try? settling(value, at: "", in: table, assuming: assuming)) != nil
     }
 
+    // The reading that holds two readings of one type parameter where one
+    // takes the other, walked in step through lists, dictionaries, what may
+    // be null and record fields, a record read as a dictionary by each of
+    // its fields. Which was read first says nothing. At each
+    // position a range meeting its kind or another range gives the kind, and
+    // a declared record meeting a nameless record of its fields gives the
+    // nameless one, which is the one a value is sure to fit; a name that
+    // stands for no record meets the other reading as what it stands for.
+    // Elsewhere it is the one that takes the other. Rigidly, because a
+    // parameter read in a body is that body's own and nothing fills it. Nil
+    // where neither takes the other.
+    func joined(with given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
+        guard self != given else { return self }
+
+        let takesGiven = accepts(given, in: table, rigid: true)
+
+        guard takesGiven || given.accepts(self, in: table, rigid: true) else { return nil }
+
+        let looser = takesGiven ? self : given
+        let mine = throughAliases(in: table)
+        let theirs = given.throughAliases(in: table)
+
+        switch (mine, theirs) {
+        case let (.ranged(range), _) where takesGiven && given.accepts(self, in: table, rigid: true),
+             let (_, .ranged(range)) where takesGiven && given.accepts(self, in: table, rigid: true):
+            return range.lowered
+
+        case let (.array(element), .array(other)):
+            return .array(element.joined(with: other, in: table) ?? (takesGiven ? element : other))
+
+        case let (.dictionary(element), .dictionary(other)):
+            return .dictionary(element.joined(with: other, in: table) ?? (takesGiven ? element : other))
+
+        case let (.dictionary(element), other), let (other, .dictionary(element)):
+            guard let record = other.record(in: table) else { return looser }
+
+            return .dictionary(record.fields.reduce(element) { joined, field in joined.joined(with: field, in: table) ?? joined })
+
+        case let (.nullable(inner), .nullable(other)):
+            return .nullable(inner.joined(with: other, in: table) ?? (takesGiven ? inner : other))
+
+        case let (.nullable(inner), other) where takesGiven && other != .null:
+            return .nullable(inner.joined(with: other, in: table) ?? inner)
+
+        case let (other, .nullable(inner)) where !takesGiven && other != .null:
+            return .nullable(other.joined(with: inner, in: table) ?? inner)
+
+        case let (.named, .record(nameless)), let (.record, .record(nameless)):
+            return mine.record(in: table)?.joined(with: nameless, in: table).map(LoweredType.record) ?? looser
+
+        case let (.record(nameless), .named):
+            return theirs.record(in: table)?.joined(with: nameless, in: table).map(LoweredType.record) ?? looser
+
+        default:
+            return looser
+        }
+    }
+
     // What the type parameters in this declaration stand for, given what
     // arrived. Walked in step: where the declaration has a parameter, whatever
     // sits opposite it is what the parameter stands for; where both have a
@@ -1169,35 +1227,13 @@ indirect enum LoweredType: Sendable, Equatable {
             // disagreement, which is the same question the build asks elsewhere
             // and answers correctly. Rigidly, because a parameter read here is
             // the calling body's own and nothing fills it: a whole number and a
-            // parameter bounded to numbers are held by the parameter.
-            // A range meets anything by its kind, so a range and the plain
-            // kind under it take each other both ways, and so do two ranges
-            // that overlap; a declared record and a nameless record of its
-            // fields take each other too. Which was read first says nothing,
-            // so the reading that holds both is the kind under the ranges, or
-            // the nameless record, which is the one a value is sure to fit. A
-            // name that stands for no record meets the other reading as what
-            // it stands for.
-            if already.accepts(given, in: table, rigid: true) {
-                switch (already.throughAliases(in: table), given.throughAliases(in: table)) {
-                case let (.ranged(mine), .ranged):
-                    bound[name] = mine.lowered
-
-                case let (.ranged(mine), _) where given.accepts(already, in: table, rigid: true):
-                    bound[name] = mine.lowered
-
-                case (.named, .record) where given.accepts(already, in: table, rigid: true):
-                    bound[name] = given
-
-                default:
-                    break
-                }
-
-                return
-            }
-
-            if given.accepts(already, in: table, rigid: true) {
-                bound[name] = given
+            // parameter bounded to numbers are held by the parameter. A range
+            // meets anything by its kind, so a range and the plain kind under
+            // it take each other both ways, and so do two ranges that overlap;
+            // a declared record and a nameless record of its fields take each
+            // other too. What holds both is `joined`.
+            if let joined = already.joined(with: given, in: table) {
+                bound[name] = joined
 
                 return
             }
@@ -1808,6 +1844,23 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // The record this stands for: a nameless one as it is, a declared one
+    // as its row lays it out.
+    private func record(in table: LoweredTypeTable) -> LoweredRecord? {
+        switch self {
+        case let .record(record):
+            return record
+
+        case let .named(row):
+            guard let laid = table.recordRows[row], case let .record(record) = table.loweredTypes[laid] else { return nil }
+
+            return record
+
+        default:
+            return nil
+        }
+    }
+
     // The procedure type a slot holding this holds, through the names
     // standing for one and the marks a slot writes, and nil where it holds
     // none.
