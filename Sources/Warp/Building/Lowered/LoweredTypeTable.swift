@@ -247,15 +247,7 @@ final class LoweredTypeTable: Sendable {
         rigid: Bool,
         orNull: Bool
     ) -> Bool {
-        let reading: LoweredType
-
-        if orNull {
-            guard let rest = besidesNull(given) else { return true }
-
-            reading = rest
-        } else {
-            reading = given
-        }
+        guard let reading = read(given, orNull: orNull) else { return true }
 
         switch reading {
         case .any, .projection:
@@ -413,15 +405,19 @@ final class LoweredTypeTable: Sendable {
     }
 
     // MARK: - Private
-    // What a slot taking null as well holds a reading to besides null, or
-    // nil where null is all it is, a slot's own marks taken off on the way.
-    // A membership with a member that may be null stands as it is, and is
+    // What a slot reads a value as: its own marks off, and where it takes null
+    // as well, null off too, nil where null is all the value is.
+    private func read(_ given: LoweredType, orNull: Bool) -> LoweredType? {
+        let reading = given.slotUnwrapped
+
+        return orNull ? besidesNull(reading) : reading
+    }
+
+    // What a reading is besides null, or nil where null is all it is. A
+    // membership with a member that may be null stands as it is, and is
     // asked member by member.
     private func besidesNull(_ reading: LoweredType) -> LoweredType? {
         switch reading {
-        case let .variable(inner), let .inout(inner):
-            return besidesNull(inner)
-
         case .null:
             return nil
 
@@ -443,15 +439,7 @@ final class LoweredTypeTable: Sendable {
         rigid: Bool,
         orNull: Bool
     ) -> Answering {
-        let reading: LoweredType
-
-        if orNull {
-            guard let rest = besidesNull(given) else { return .settled(true) }
-
-            reading = rest
-        } else {
-            reading = given
-        }
+        guard let reading = read(given, orNull: orNull) else { return .settled(true) }
 
         switch reading {
         case .any, .projection, .undeclared, .never:
@@ -488,9 +476,6 @@ final class LoweredTypeTable: Sendable {
 
         case let .composition(bounds):
             return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid, orNull: orNull) ?? .settled(!rigid)
-
-        case let .variable(inner), let .inout(inner):
-            return answering(contract: name, reading: inner, assuming: assuming, rigid: rigid, orNull: orNull)
 
         default:
             return .settled(false)
