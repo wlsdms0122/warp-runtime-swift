@@ -180,13 +180,13 @@ struct TypeChecker {
             fulfillment: fulfillment
         )
 
-        let answersAsDeclared = answersAsDeclared(
+        let proven = answersAsDeclared(
             [inner.reading] + inner.flow.answered.map(\.reading),
             to: returns,
             in: context.loweredTypes
-        )
+        ) && !leansOnUnproven(inner.calls, judgements: inner.judgements, given: context)
 
-        return (inner.block, inner.calls, inner.judgements, answersAsDeclared)
+        return (inner.block, inner.calls, inner.judgements, proven)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -524,23 +524,57 @@ struct TypeChecker {
         case .any, .never:
             return nil
 
+        // Equal as types only where the callee's answer names no type
+        // parameter: one that does settles against its own parameter, which a
+        // call's reading spells alike and is not.
         default:
-            return reading == callee ? nil : reading
+            return reading == callee && callee?.namesParameter == false ? nil : reading
         }
     }
 
     // The same, for a call to a selector. A contract's procedure is answered
     // by whichever row the run picks, and what that row settles is not known
-    // here. A native another document holds answers by its host's code, and
-    // what it declared is taken as said, as its other claims are.
+    // here. A row that proved it answers as declared, a native's by its
+    // host's word, answers what the call reads.
     private func judgedAgainst(_ reading: LoweredType, sending selector: Name, given context: TypingContext) -> LoweredType? {
         guard context.contractProcedures[selector] == nil else { return judgedAgainst(reading, answeredBy: nil) }
 
-        if context.own[selector] == nil, case .native? = context.declared(selector)?.implementation {
-            return nil
-        }
+        guard context.declared(selector)?.answersAsDeclared != true else { return nil }
 
         return judgedAgainst(reading, answeredBy: context.answer(of: selector))
+    }
+
+    // Whether a body's answer may have come out of a call that proved
+    // nothing: a call, or a call of a value, whose answer names a type
+    // parameter and whose callee is not known to answer as it declared. What
+    // such a call hands back is judged nowhere this body's caller reads, so
+    // the body proves nothing of its own answers.
+    private func leansOnUnproven(_ calls: [CallSite], judgements: JudgementTable, given context: TypingContext) -> Bool {
+        let unprovenApply = judgements.judgements.values.contains { judgement in
+            guard case let .apply(_, against?) = judgement else { return false }
+
+            return against.namesParameter
+        }
+
+        guard !unprovenApply else { return true }
+
+        return calls.contains { site in
+            let selector = site.call.selector
+
+            guard let signature = context.signature(of: selector) else { return false }
+
+            let reading = answered(
+                by: signature,
+                over: context.slots(of: selector),
+                answering: context.answer(of: selector),
+                readings: site.readings,
+                in: context.loweredTypes
+            )
+
+            guard reading.namesParameter else { return false }
+
+            return context.contractProcedures[selector] != nil || context.declared(selector)?.answersAsDeclared != true
+        }
     }
 
     // The one membership judgment a call is held to, over the whole
