@@ -1778,11 +1778,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return "dictionary<\(entry.rendered(in: table))>"
 
         case let .record(held):
-            let written = held.named.map { name, field in
-                "\(name): \(field.rendered(in: table))"
-            }
-
-            return "{ \(written.joined(separator: ", ")) }"
+            return Self.rendered(fields: held.named.map { name, field in (name, field.rendered(in: table)) })
 
         case let .named(row):
             return table.labels[row].spelling
@@ -2141,6 +2137,12 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The names joined with `&`, as a composition or a bound is spelled.
+    // How a record reads in a message, each field beside how it reads, in
+    // the order given.
+    static func rendered(fields: [(name: Name, spelled: String)]) -> String {
+        "{ " + fields.map { name, spelled in "\(name): \(spelled)" }.joined(separator: ", ") + " }"
+    }
+
     private static func rendered(_ bounds: [Bound], in table: LoweredTypeTable) -> String {
         bounds.map { bound -> String in
             switch bound {

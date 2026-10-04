@@ -35,10 +35,10 @@ enum LiteralShape: Sendable {
     // MARK: - Public
     // Whether a slot handed in place takes it. Where the slot names a type
     // parameter it is judged part by part along the structure
-    // `takesInPlace` walks there, a list by each element and a record by
-    // each field, since the parts beside each other need not be one type for
-    // each to be a value of what the slot asks there. Elsewhere it is judged
-    // whole, as `takesInPlace` judges a slot naming none.
+    // `takesInPlace` walks there, a record only as a dictionary's entries,
+    // since the parts beside each other need not be one type for each to be
+    // a value of what the slot asks there. Elsewhere it is judged whole, as
+    // `takesInPlace` judges a slot naming none.
     func isTaken(inPlaceBy slot: LoweredType, in table: LoweredTypeTable) -> Bool {
         guard slot.namesParameter else { return slot.accepts(folded, in: table) }
 
@@ -60,18 +60,20 @@ enum LiteralShape: Sendable {
         }
     }
 
-    // How a refusal names it: a list and a record part by part.
+    // How a refusal names it: written as the literal is, a list in brackets
+    // and a record in braces, with each part spelled as the type it reads as.
+    // A list whose parts all read as one type is that type.
     func rendered(in table: LoweredTypeTable) -> String {
         switch self {
         case let .list(items):
             return "[" + items.map { item in item.rendered(in: table) }.joined(separator: ", ") + "]"
 
         case let .record(fields):
-            let named = fields.sorted { left, right in left.key < right.key }.map { name, field in
-                "\(name): \(field.rendered(in: table))"
-            }
-
-            return "{ " + named.joined(separator: ", ") + " }"
+            return LoweredType.rendered(
+                fields: fields.sorted { left, right in left.key < right.key }.map { name, field in
+                    (name, field.rendered(in: table))
+                }
+            )
 
         case let .part(reading):
             return reading.rendered(in: table)
