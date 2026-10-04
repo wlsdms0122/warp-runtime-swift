@@ -1492,10 +1492,11 @@ indirect enum LoweredType: Sendable, Equatable {
     //
     // `at` is the path into the value so the message names the field rather
     // than the whole argument. `assuming` is which constraints are already
-    // being asked of this value: a bounded parameter's membership test
-    // settles the value against each member, and a member reaching a
-    // bounded parameter again walks back into the same question, so met
-    // again it is assumed rather than asked.
+    // being asked of this value: a membership test settles the value against
+    // each member, and a member that is a membership reaching one of these
+    // again asks the same question of the same value, which proves nothing,
+    // so that member does not take it. A part of the value is another value
+    // and starts with none.
     func settling(
         _ value: Value,
         at path: @autoclosure () -> String,
@@ -2231,7 +2232,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return .array(
                 try items.enumerated().map { index, item in
-                    try element.settling(item, at: "\(path())[\(index)]", in: table, assuming: assuming)
+                    try element.settling(item, at: "\(path())[\(index)]", in: table, assuming: [])
                 }
             )
 
@@ -2244,7 +2245,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return .dictionary(
                 try held.mapValues { _, item in
-                    try entry.settling(item, at: path(), in: table, assuming: assuming)
+                    try entry.settling(item, at: path(), in: table, assuming: [])
                 }
             )
 
@@ -2348,7 +2349,13 @@ indirect enum LoweredType: Sendable, Equatable {
             }
         }
 
-        guard case let .membership(constraint) = bound, !assuming.contains(constraint) else { return value }
+        guard case let .membership(constraint) = bound else { return value }
+
+        guard !assuming.contains(constraint) else {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), which is already being asked of this value"
+            )
+        }
 
         guard table.admits(constraint: constraint, value: value, assuming: assuming) else {
             throw ArgumentError(
@@ -2441,7 +2448,7 @@ indirect enum LoweredType: Sendable, Equatable {
                         )
                     }
 
-                    return try field.settling(given, at: "\(path()).\(name)", in: table, assuming: assuming)
+                    return try field.settling(given, at: "\(path()).\(name)", in: table, assuming: [])
                 }
             )
         )

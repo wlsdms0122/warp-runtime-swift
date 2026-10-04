@@ -10,7 +10,7 @@ import Foundation
 // What a list or record literal holds where it is written into a slot, part
 // by part. A part that is no literal holds what it reads as. An attempt
 // writes what one of its two ways answers, each written on its own.
-enum LiteralShape: Sendable {
+enum LiteralShape: Sendable, Equatable {
     case list([LiteralShape])
     case record([Name: LiteralShape])
     case part(LoweredType)
@@ -119,21 +119,25 @@ enum LiteralShape: Sendable {
     }
 
     // MARK: - Private
+    // `asking` is which memberships are already being asked of this literal.
+    // A part the walk took apart is another literal and starts with none.
     private func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable, asking: [Int]) -> Bool {
         everyPart(along: slot, inPlace: inPlace, in: table) { slot, part, rigid in
             if rigid {
                 return slot.takesInPlace(part.folded.slotUnwrapped, in: table)
             }
 
-            return slot.accepts(part.folded, in: table) && part.isHeld(byMembersOf: slot, in: table, asking: asking)
+            return slot.accepts(part.folded, in: table)
+                && part.isHeld(byMembersOf: slot, in: table, asking: part == self ? asking : [])
         }
     }
 
     // Whether the bounds a literal stands under take it part by part, as
     // `accepts` reads them whole: a membership by one of its members, and a
     // parameter by every member of one membership bounding it. A membership
-    // already being asked holds, as `admits` holds it, so two that name each
-    // other end where one comes back.
+    // already being asked of this literal is the same question come back,
+    // which proves nothing, so it does not take it, the way the run settles
+    // a value.
     private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, asking: [Int]) -> Bool {
         switch (slot, self) {
         case (_, .part):
@@ -141,29 +145,30 @@ enum LiteralShape: Sendable {
 
         case let (.composition(bounds), _):
             return bounds.allSatisfy { bound in
-                guard case let .membership(row) = bound, !asking.contains(row) else { return true }
+                guard case let .membership(row) = bound else { return true }
 
-                return table.constraints[row].contains { member in
-                    isHeld(by: member, inPlace: false, in: table, asking: asking + [row])
-                }
+                return isHeld(byMembership: row, every: false, in: table, asking: asking)
             }
 
         case let (.parameter(_, bounds), _):
-            let rows = bounds.compactMap { bound -> Int? in
-                guard case let .membership(row) = bound else { return nil }
+            return bounds.contains { bound in
+                guard case let .membership(row) = bound else { return false }
 
-                return row
-            }
-
-            return rows.contains { row in
-                asking.contains(row) || table.constraints[row].allSatisfy { member in
-                    isHeld(by: member, inPlace: false, in: table, asking: asking + [row])
-                }
+                return isHeld(byMembership: row, every: true, in: table, asking: asking)
             }
 
         default:
             return true
         }
+    }
+
+    // Whether one member, or every member, of a membership takes it.
+    private func isHeld(byMembership row: Int, every: Bool, in table: LoweredTypeTable, asking: [Int]) -> Bool {
+        guard !asking.contains(row) else { return false }
+
+        let held = { (member: LoweredType) in isHeld(by: member, inPlace: false, in: table, asking: asking + [row]) }
+
+        return every ? table.constraints[row].allSatisfy(held) : table.constraints[row].contains(where: held)
     }
 
     // Two parts a literal holds side by side, as one type: joined as two
