@@ -182,7 +182,7 @@ struct TypeChecker {
         )
 
         try held(
-            reading: inner.reading,
+            written: inner.written,
             answered: inner.flow.answered,
             to: returns,
             result: inner.block.result,
@@ -1210,17 +1210,17 @@ struct TypeChecker {
         }
     }
 
-    // What a body answers, held to the `returns` written beside it: the
-    // result it reads and every `return` that carried something out, each
-    // at its own place. A declaration and a closure literal each write both
-    // in one document, so each asks here rather than working the question
-    // out again further on.
+    // What a body answers, held to the `returns` written beside it: what the
+    // result and every `return` that carried something out hold written into
+    // the answer, each at its own place. A declaration and a closure literal
+    // each write both in one document, so each asks here rather than working
+    // the question out again further on.
     //
     // A reading that opens to `any` stands and is settled where the value
     // arrives.
     private func held(
-        reading read: LoweredType,
-        answered: [(reading: LoweredType, value: Value?, place: Place)],
+        written answer: LoweredType,
+        answered: [(reading: LoweredType, written: LoweredType, value: Value?, place: Place)],
         to returns: TypeExpression?,
         result: Expression?,
         at place: Place,
@@ -1228,11 +1228,11 @@ struct TypeChecker {
         fulfillment: Fulfillment
     ) throws {
         for one in answered {
-            try held(one.reading, valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
+            try held(one.written, valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
         }
 
         try held(
-            read,
+            answer,
             valued: result?.constantValue,
             to: returns,
             at: place.part(result != nil ? .result : .returns),
@@ -1497,7 +1497,7 @@ struct TypeChecker {
 
                 var answering = flowed
                 answering.answered = flowed.answered + [
-                    (carried?.reading ?? .null, carried?.rewritten.constantValue, place)
+                    (carried?.reading ?? .null, carried?.written.folded ?? .null, carried?.rewritten.constantValue, place)
                 ]
 
                 return answering
@@ -1867,7 +1867,7 @@ struct TypeChecker {
                 }
 
                 try held(
-                    reading: inner.reading,
+                    written: inner.written,
                     answered: inner.flow.answered,
                     to: procedure.signature.returns,
                     result: inner.block.result,
@@ -2064,7 +2064,7 @@ struct TypeChecker {
                 )
 
                 rewritten.append(inner.rewritten)
-                readings.append(inner.reading)
+                readings.append(inner.written.folded)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 flow = flow.followed(by: inner.flow)
@@ -2579,7 +2579,7 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, reading: LoweredType, flow: Flow) {
+    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, reading: LoweredType, written: LoweredType, flow: Flow) {
         let body = try await inspected(
             block.body,
             at: place.child(.body),
@@ -2638,6 +2638,7 @@ struct TypeChecker {
             body.calls + (tail?.calls ?? []),
             body.judgements.absorbing(tail?.judgements),
             reading,
+            tail?.written.folded ?? reading,
             flow
         )
     }
@@ -2750,14 +2751,14 @@ struct TypeChecker {
                 locals.insert(id)
                 environment[id] = Binding(
                     .fixed(declared: declaredType),
-                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
+                    try held(inner.reading, writing: inner.written.folded, declaredAs: declared, at: here, with: context, when: ask)
                 )
 
             case let .variable(id, declared)?:
                 locals.insert(id)
                 environment[id] = Binding(
                     declaredType.map(Binding.Holding.declared) ?? .assigned,
-                    try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
+                    try held(inner.reading, writing: inner.written.folded, declaredAs: declared, at: here, with: context, when: ask)
                 )
 
             // A write to a whole variable retypes it, the way a declaration
@@ -3113,21 +3114,22 @@ struct TypeChecker {
         }
     }
 
-    // What a name holds: what it declared, held against what it was given, or
-    // what the build worked out where it declared nothing.
+    // What a name holds: what it declared, held against what was written into
+    // it, or what the build worked out where it declared nothing.
     private func held(
         _ given: LoweredType,
-        declaredAs written: TypeExpression?,
+        writing written: LoweredType,
+        declaredAs spelled: TypeExpression?,
         at place: Place,
         with context: TypingContext,
         when ask: Ask
     ) throws -> LoweredType {
-        guard let declared = written?.lowered(in: context.loweredTypes) else { return given }
+        guard let declared = spelled?.lowered(in: context.loweredTypes) else { return given }
 
-        guard declared.accepts(given, in: context.loweredTypes) else {
+        guard declared.accepts(written, in: context.loweredTypes) else {
             try refuse(
                 "holds \(declared.rendered(in: context.loweredTypes)), and what it was given is"
-                    + " \(given.rendered(in: context.loweredTypes))",
+                    + " \(written.rendered(in: context.loweredTypes))",
                 at: place,
                 when: ask
             )
@@ -3141,7 +3143,7 @@ struct TypeChecker {
         guard case let .judging(_, fulfillment) = ask else { return declared }
 
         if let refusal = refusal(
-            holding: given,
+            holding: written,
             to: declared,
             as: "holds",
             in: context.loweredTypes,

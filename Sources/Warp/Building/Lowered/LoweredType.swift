@@ -1852,11 +1852,14 @@ indirect enum LoweredType: Sendable, Equatable {
     // whole parameter: it is the loosest reading there is, and `accepts`
     // cannot order it.
     private func merged(with given: LoweredType, takingGiven takesGiven: Bool, in table: LoweredTypeTable) -> LoweredType {
-        guard throughAliases(in: table) != .any, given.throughAliases(in: table) != .any else { return .any }
+        let mine = throughAliases(in: table)
+        let theirs = given.throughAliases(in: table)
+
+        guard mine != .any, theirs != .any else { return .any }
 
         let looser = takesGiven ? self : given
 
-        switch (throughAliases(in: table), given.throughAliases(in: table)) {
+        switch (mine, theirs) {
         // The looser of the two is a range: its kind holds both, whichever
         // kind the other is a range of.
         case let (.ranged(range), _) where takesGiven, let (_, .ranged(range)) where !takesGiven:

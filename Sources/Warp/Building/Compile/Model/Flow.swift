@@ -104,12 +104,13 @@ struct Flow {
     // with the ways that went on as they are.
     var left: [Reach: [Way]] = [:]
 
-    // What every `return` inside here carried out of the procedure, each with
-    // the value it carried where that is a constant, and where it was written.
-    // Nothing absorbs one, so this only ever gathers on the way up. Kept apart
-    // rather than joined, so each is held to the declaration on its own: two
-    // that disagree join to `any`, and `any` fits everything.
-    var answered: [(reading: LoweredType, value: Value?, place: Place)] = []
+    // What every `return` inside here carried out of the procedure: what it
+    // reads as, what it holds written into the declared answer, the value it
+    // carried where that is a constant, and where it was written. Nothing
+    // absorbs one, so this only ever gathers on the way up. Kept apart rather
+    // than joined, so each is held to the declaration on its own: two that
+    // disagree join to `any`, and `any` fits everything.
+    var answered: [(reading: LoweredType, written: LoweredType, value: Value?, place: Place)] = []
 
     // The names read here that the body this flow came out of did not
     // declare. With what was written, what a closure takes from where it was
