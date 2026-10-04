@@ -8,11 +8,13 @@
 import Foundation
 
 // What a list or record literal holds where it is written into a slot, part
-// by part. A part that is no literal holds what it reads as.
+// by part. A part that is no literal holds what it reads as. An attempt
+// writes what one of its two ways answers, each written on its own.
 enum LiteralShape: Sendable {
     case list([LiteralShape])
     case record([Name: LiteralShape])
     case part(LoweredType)
+    indirect case either(LiteralShape, LiteralShape)
 
     // MARK: - Property
     // The literal as one type, for a slot that judges it whole and for a
@@ -29,6 +31,9 @@ enum LiteralShape: Sendable {
 
         case let .part(reading):
             return reading
+
+        case let .either(attempted, rescued):
+            return Self.joined(attempted.folded, rescued.folded)
         }
     }
 
@@ -41,6 +46,10 @@ enum LiteralShape: Sendable {
     // a value of what the slot asks there. Elsewhere it is judged whole, as
     // `takesInPlace` judges a slot naming none.
     func isTaken(inPlaceBy slot: LoweredType, in table: LoweredTypeTable) -> Bool {
+        if case let .either(attempted, rescued) = self {
+            return attempted.isTaken(inPlaceBy: slot, in: table) && rescued.isTaken(inPlaceBy: slot, in: table)
+        }
+
         guard slot.namesParameter else { return slot.accepts(folded, in: table) }
 
         switch (slot, self) {
@@ -78,6 +87,9 @@ enum LiteralShape: Sendable {
 
         case let .part(reading):
             return reading.rendered(in: table)
+
+        case let .either(attempted, rescued):
+            return attempted.rendered(in: table) + " or " + rescued.rendered(in: table)
         }
     }
 

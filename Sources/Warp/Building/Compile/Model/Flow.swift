@@ -110,7 +110,7 @@ struct Flow {
     // absorbs one, so this only ever gathers on the way up. Kept apart rather
     // than joined, so each is held to the declaration on its own: two that
     // disagree join to `any`, and `any` fits everything.
-    var answered: [(reading: LoweredType, written: LoweredType, value: Value?, place: Place)] = []
+    var answered: [(reading: LoweredType, written: LiteralShape, value: Value?, place: Place)] = []
 
     // The names read here that the body this flow came out of did not
     // declare. With what was written, what a closure takes from where it was
