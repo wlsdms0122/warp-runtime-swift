@@ -16,6 +16,11 @@ struct JudgementTable: Sendable {
     // MARK: - Property
     private(set) var judgements: [Place: Judgement] = [:]
 
+    // Whether a reading of a type parameter of the body may hold what is
+    // not a value of it somewhere here, which the hand-back proof reads as
+    // proving nothing.
+    private(set) var loosened = false
+
     // MARK: - Initializer
     init() {
     }
@@ -34,10 +39,18 @@ struct JudgementTable: Sendable {
         judgements[place] = judgement
     }
 
+    // A reading of a type parameter here may hold what is not a value of
+    // it.
+    mutating func loosen() {
+        loosened = true
+    }
+
     mutating func absorb(_ other: JudgementTable) {
         for (place, judgement) in other.judgements {
             record(judgement, at: place)
         }
+
+        loosened = loosened || other.loosened
     }
 
     // This table with the others' entries beside its own, for a construct

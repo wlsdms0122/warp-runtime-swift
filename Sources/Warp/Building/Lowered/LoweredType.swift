@@ -1158,7 +1158,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // Elsewhere it is the one that takes the other. Rigidly, because a
     // parameter read in a body is that body's own and nothing fills it. Nil
     // where neither takes the other.
-    func joined(with given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
+    func holdingBoth(_ given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
         guard self != given else { return self }
 
         let takesGiven = accepts(given, in: table, rigid: true)
@@ -1226,9 +1226,9 @@ indirect enum LoweredType: Sendable, Equatable {
             // meets anything by its kind, so a range and the plain kind under
             // it take each other both ways, and so do two ranges that overlap;
             // a declared record and a nameless record of its fields take each
-            // other too. What holds both is `joined`.
-            if let joined = already.joined(with: given, in: table) {
-                bound[name] = joined
+            // other too. What holds both is `holdingBoth`.
+            if let both = already.holdingBoth(given, in: table) {
+                bound[name] = both
 
                 return
             }
@@ -1778,11 +1778,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return "dictionary<\(entry.rendered(in: table))>"
 
         case let .record(held):
-            let written = held.named.map { name, field in
-                "\(name): \(field.rendered(in: table))"
-            }
-
-            return "{ \(written.joined(separator: ", ")) }"
+            return Self.rendered(fields: held.named.map { name, field in (name, field.rendered(in: table)) })
 
         case let .named(row):
             return table.labels[row].spelling
@@ -2141,6 +2137,12 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The names joined with `&`, as a composition or a bound is spelled.
+    // How a record reads in a message, each field beside how it reads, in
+    // the order given.
+    static func rendered(fields: [(name: Name, spelled: String)]) -> String {
+        "{ " + fields.map { name, spelled in "\(name): \(spelled)" }.joined(separator: ", ") + " }"
+    }
+
     private static func rendered(_ bounds: [Bound], in table: LoweredTypeTable) -> String {
         bounds.map { bound -> String in
             switch bound {

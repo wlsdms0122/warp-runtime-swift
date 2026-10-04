@@ -275,8 +275,107 @@ struct HandBackProofTests {
         #expect(image["app.keep"]?.handsBackAsDeclared == true)
     }
 
+    @Test("a body filling a call's type parameter from its own beside what is not a value of it proves nothing")
+    func aBodyFillingAParameterBesideAnotherValueIsNotProven() async throws {
+        // Given. `app.mixed` hands `app.pick` a list of its `some T` and a list read as `array<any>`, `app.same` hands it its own twice
+        let pick = Procedure(
+            signature: Signature(
+                parameters: [
+                    Parameter(name: "a", type: .parameter(name: "E")),
+                    Parameter(name: "b", type: .parameter(name: "E"))
+                ],
+                returns: .parameter(name: "E")
+            ),
+            body: [],
+            result: .reference([.key("b")])
+        )
+        let sut = try Module(
+            procedures: [
+                "app.pick": pick,
+                "app.mixed": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "x", type: .parameter(name: "T")),
+                            Parameter(name: "junk", type: .array(.any))
+                        ],
+                        returns: .array(.parameter(name: "T"))
+                    ),
+                    body: [],
+                    result: .call(Call(selector: "app.pick", arguments: [.array([.reference([.key("x")])]), .reference([.key("junk")])]))
+                ),
+                "app.same": generic(result: .call(Call(selector: "app.pick", arguments: [.reference([.key("x")]), .reference([.key("x")])])))
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.pick"]?.handsBackAsDeclared == true)
+        #expect(image["app.mixed"]?.handsBackAsDeclared == false)
+        #expect(image["app.same"]?.handsBackAsDeclared == true)
+    }
+
+    @Test("a body whose closure may write a variable of its type parameter proves nothing, and one whose closure only reads a parameter does")
+    func aBodyWhoseClosureWritesAVariableOfItsParameterIsNotProven() async throws {
+        // Given. Both closures write a variable the body declared, so neither is isolated. `app.writes` has its closure write `cell`, a variable of `some T`; `app.reads` has its closure write a whole number and read `x`
+        let sut = try Module(
+            procedures: [
+                "app.writes": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [
+                        Statement(binding: .variable("cell"), expression: .reference([.key("x")])),
+                        Statement(binding: .constant("c"), expression: closure(writing: "cell", with: .reference([.key("x")]))),
+                        Statement(binding: .constant("z"), expression: .apply(.reference([.key("c")]), arguments: []))
+                    ],
+                    result: .reference([.key("cell")])
+                ),
+                "app.reads": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [
+                        Statement(binding: .variable("count"), expression: .literal(.int(0))),
+                        Statement(
+                            binding: .constant("c"),
+                            expression: closure(writing: "count", with: .literal(.int(1)), reading: .reference([.key("x")]))
+                        ),
+                        Statement(binding: .constant("z"), expression: .apply(.reference([.key("c")]), arguments: []))
+                    ],
+                    result: .reference([.key("x")])
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
+        #expect(image["app.writes"]?.handsBackAsDeclared == false)
+        #expect(image["app.reads"]?.handsBackAsDeclared == true)
+    }
+
     // MARK: - Public
     // MARK: - Private
+    // A closure answering a whole number that writes a value into a name it
+    // captured, and reads another value where one is given.
+    private func closure(writing name: Name, with value: Warp.Expression, reading read: Warp.Expression? = nil) -> Warp.Expression {
+        .closure(
+            Procedure(
+                signature: Signature(parameters: [], returns: .int),
+                body: Body(
+                    [Statement(binding: .assignment([.key(name)]), expression: value)]
+                        + (read.map { read in [Statement(binding: .constant("read"), expression: read)] } ?? [])
+                ),
+                result: .literal(.int(0))
+            )
+        )
+    }
+
     // A declaration taking and answering its own `some T`.
     private func generic(result: Warp.Expression) -> Procedure {
         Procedure(

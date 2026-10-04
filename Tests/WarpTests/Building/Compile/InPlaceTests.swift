@@ -670,6 +670,68 @@ struct InPlaceTests {
         )
     }
 
+    @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
+    func aRefusedLiteralIsNamedPartByPart() async throws {
+        // Given. `app.g` writes its own `some T` beside a value read as `any`, and a record of an empty list beside one of `any`, into lists it was handed in place
+        let generic = TypeExpression.parameter(name: "T")
+        let list = try Module(
+            procedures: [
+                "app.list": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "xs", type: .inout(.array(generic))),
+                            Parameter(name: "x", type: generic),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .int
+                    ),
+                    body: [
+                        Statement(
+                            binding: .assignment([.key("xs")]),
+                            expression: .array([.reference([.key("x")]), .reference([.key("junk")])])
+                        )
+                    ],
+                    result: .literal(.int(0))
+                )
+            ]
+        )
+        let records = try Module(
+            procedures: [
+                "app.records": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            Parameter(name: "ds", type: .inout(.array(.dictionary(.array(generic))))),
+                            Parameter(name: "junk", type: .any)
+                        ],
+                        returns: .int
+                    ),
+                    body: [
+                        Statement(
+                            binding: .assignment([.key("ds")]),
+                            expression: .array([
+                                .record(["k": .array([])]),
+                                .record(["k": .array([.reference([.key("junk")])])])
+                            ])
+                        )
+                    ],
+                    result: .literal(.int(0))
+                )
+            ]
+        )
+
+        // When
+        let listRefusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([list] + Module.standard)
+        }
+        let recordsRefusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([records] + Module.standard)
+        }
+
+        // Then
+        #expect(listRefusal?.message == "writes 'xs' as [some T, any], and it holds array<some T>")
+        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: array<any> }], and it holds array<dictionary<array<some T>>>")
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
