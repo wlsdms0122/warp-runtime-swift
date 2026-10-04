@@ -97,11 +97,11 @@ struct TypeChecker {
         // What a literal holds where it is written into a slot, where that
         // is not its reading: an empty list holds no element, so wherever in
         // the literal it stands it is a list of `never` there.
-        var literal: LoweredType?
+        var literalWritten: LoweredType?
 
         // What the expression holds where it is written into a slot.
         var written: LoweredType {
-            literal ?? reading
+            literalWritten ?? reading
         }
 
         // MARK: - Initializer
@@ -1602,7 +1602,7 @@ struct TypeChecker {
                 judgements: judgements,
                 reading: .array(element ?? .any),
                 flow: flowed,
-                literal: .array(held)
+                literalWritten: .array(held)
             )
 
         // A cast is where a reading the walk could not judge becomes one it
@@ -1765,7 +1765,7 @@ struct TypeChecker {
                 judgements: judgements,
                 reading: .record(fields),
                 flow: flowed,
-                literal: .record(held)
+                literalWritten: .record(held)
             )
 
         // A closure literal carries the signature it declared, and running one
