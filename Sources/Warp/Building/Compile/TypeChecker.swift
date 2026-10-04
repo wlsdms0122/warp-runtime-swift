@@ -94,14 +94,14 @@ struct TypeChecker {
         var reading: LoweredType
         var flow = Flow()
 
-        // What a literal holds where it is written into a slot, where that
-        // is not its reading: an empty list holds no element, so wherever in
-        // the literal it stands it is a list of `never` there.
-        var literalWritten: LoweredType?
+        // What a list or record literal holds where it is written into a
+        // slot, part by part, where its reading, joined across the parts, does
+        // not say.
+        var literalShape: LiteralShape?
 
         // What the expression holds where it is written into a slot.
-        var written: LoweredType {
-            literalWritten ?? reading
+        var written: LiteralShape {
+            literalShape ?? .part(reading)
         }
 
         // MARK: - Initializer
@@ -567,14 +567,14 @@ struct TypeChecker {
     // slot names one is a parameter handed in place, which `takesInPlace`
     // judges.
     private func fits(
-        _ written: LoweredType,
+        _ written: LiteralShape,
         into slot: LoweredType,
         of binding: Binding?,
         in loweredTypes: LoweredTypeTable
     ) -> Bool {
-        guard case .declared? = binding?.holding else { return slot.accepts(written, in: loweredTypes) }
+        guard case .declared? = binding?.holding else { return slot.accepts(written.folded, in: loweredTypes) }
 
-        return slot.slotUnwrapped.takesInPlace(written.slotUnwrapped, in: loweredTypes)
+        return written.isTaken(inPlaceBy: slot.slotUnwrapped, in: loweredTypes)
     }
 
     // What a call's answer is judged against where the call stands: what the
@@ -1575,7 +1575,8 @@ struct TypeChecker {
             var judgements = JudgementTable()
             var flowed = Flow()
             var element: LoweredType?
-            var held: LoweredType = .never
+            var first: LoweredType?
+            var items: [LiteralShape]?
 
             for (position, member) in array.enumerated() {
                 let inner = try await inspected(
@@ -1592,7 +1593,15 @@ struct TypeChecker {
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 element = element?.joined(inner.reading) ?? inner.reading
-                held = held.joinedAsWritten(inner.written)
+
+                // Part by part only once a part is not what every one before
+                // it is, which its reading then says alone.
+                if items == nil, inner.literalShape != nil || first.map({ first in first != inner.reading }) == true {
+                    items = Array(repeating: .part(first ?? inner.reading), count: position)
+                }
+
+                first = first ?? inner.reading
+                items?.append(inner.written)
                 rewritten.append(inner.rewritten)
             }
 
@@ -1602,7 +1611,7 @@ struct TypeChecker {
                 judgements: judgements,
                 reading: .array(element ?? .any),
                 flow: flowed,
-                literalWritten: .array(held)
+                literalShape: array.isEmpty ? .list([]) : items.map(LiteralShape.list)
             )
 
         // A cast is where a reading the walk could not judge becomes one it
@@ -1738,7 +1747,7 @@ struct TypeChecker {
             var judgements = JudgementTable()
             var flowed = Flow()
             var fields: [Name: LoweredType] = [:]
-            var held: [Name: LoweredType] = [:]
+            var shapes: [Name: LiteralShape] = [:]
 
             for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try await inspected(
@@ -1755,7 +1764,7 @@ struct TypeChecker {
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 fields[name] = inner.reading
-                held[name] = inner.written
+                shapes[name] = inner.literalShape
                 rewritten[name] = inner.rewritten
             }
 
@@ -1765,7 +1774,7 @@ struct TypeChecker {
                 judgements: judgements,
                 reading: .record(fields),
                 flow: flowed,
-                literalWritten: .record(held)
+                literalShape: shapes.isEmpty ? nil : .record(fields.mapValues(LiteralShape.part).merging(shapes) { _, shape in shape })
             )
 
         // A closure literal carries the signature it declared, and running one
@@ -1836,7 +1845,7 @@ struct TypeChecker {
                 for (name, wrote) in writes.sorted(by: { $0.name < $1.name }) {
                     guard let held = outside[name]?.type else { continue }
 
-                    guard fits(wrote, into: held, of: outside[name], in: context.loweredTypes) else {
+                    guard fits(.part(wrote), into: held, of: outside[name], in: context.loweredTypes) else {
                         throw BuildError(
                             "writes '\(name)', which it captured, as"
                                 + " \(wrote.rendered(in: context.loweredTypes)). The body it captured"
@@ -2190,7 +2199,7 @@ struct TypeChecker {
 
             var arguments: [Expression] = []
             var sent: [LoweredType] = []
-            var wrote: [LoweredType] = []
+            var shapes: [Int: LiteralShape] = [:]
             var calls: [CallSite] = []
             var judgements = JudgementTable()
 
@@ -2206,7 +2215,7 @@ struct TypeChecker {
 
                 arguments.append(inner.rewritten)
                 sent.append(inner.reading)
-                wrote.append(inner.written)
+                shapes[position] = inner.literalShape
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 flow = flow.followed(by: inner.flow)
@@ -2225,7 +2234,7 @@ struct TypeChecker {
                 when: ask
             )
 
-            let loose = loose(taking: taking, writing: wrote, filling: filled, in: context.loweredTypes)
+            let loose = loose(taking: taking, readings: sent, shaped: shapes, filling: filled, in: context.loweredTypes)
 
             try heldBeside(
                 call.arguments,
@@ -2973,16 +2982,19 @@ struct TypeChecker {
     // what the call answers or hands back may be that argument.
     private func loose(
         taking: [LoweredType],
-        writing wrote: [LoweredType],
+        readings sent: [LoweredType],
+        shaped shapes: [Int: LiteralShape],
         filling filled: [Name: LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> [Int] {
         guard filled.values.contains(where: \.namesParameter) else { return [] }
 
         return taking.indices.filter { position in
-            guard position < wrote.count, taking[position].namesParameter else { return false }
+            guard position < sent.count, taking[position].namesParameter else { return false }
 
-            return !taking[position].slotUnwrapped.takesInPlace(wrote[position].slotUnwrapped, in: loweredTypes)
+            let written = shapes[position] ?? .part(sent[position])
+
+            return !written.isTaken(inPlaceBy: taking[position].slotUnwrapped, in: loweredTypes)
         }
     }
 
@@ -3147,7 +3159,7 @@ struct TypeChecker {
     // the path reaches, and loose where that names a type parameter and what
     // is written is not a value of it.
     private func refuseUnfit(
-        _ written: LoweredType,
+        _ written: LiteralShape,
         writtenTo path: Path,
         holding fixed: LoweredType?,
         in environment: [Name: Binding],
@@ -3173,7 +3185,7 @@ struct TypeChecker {
 
         guard fits(written, into: slot, of: path.head.flatMap { head in environment[head] }, in: context.loweredTypes) else {
             try refuse(
-                "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), and it holds"
+                "writes '\(path.rendered)' as \(written.folded.rendered(in: context.loweredTypes)), and it holds"
                     + " \(slot.rendered(in: context.loweredTypes))",
                 at: place,
                 when: ask
@@ -3184,7 +3196,7 @@ struct TypeChecker {
         guard case let .judging(_, fulfillment) = ask else { return }
 
         if let refusal = refusal(
-            holding: written,
+            holding: written.folded,
             to: slot,
             as: "writes '\(path.rendered)' as",
             in: context.loweredTypes,
@@ -3194,7 +3206,7 @@ struct TypeChecker {
             throw BuildError(refusal, at: place)
         }
 
-        if slot.namesParameter, !slot.slotUnwrapped.takesInPlace(written.slotUnwrapped, in: context.loweredTypes) {
+        if slot.namesParameter, !written.isTaken(inPlaceBy: slot.slotUnwrapped, in: context.loweredTypes) {
             judgements.loosen()
         }
     }
