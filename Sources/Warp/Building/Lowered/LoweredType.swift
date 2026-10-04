@@ -1791,6 +1791,12 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // How a record reads in a message, each field beside how it reads, in
+    // the order given.
+    static func rendered(fields: [(name: Name, spelled: String)]) -> String {
+        "{ " + fields.map { name, spelled in "\(name): \(spelled)" }.joined(separator: ", ") + " }"
+    }
+
     static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
         switch (lhs, rhs) {
         case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
@@ -2137,12 +2143,6 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The names joined with `&`, as a composition or a bound is spelled.
-    // How a record reads in a message, each field beside how it reads, in
-    // the order given.
-    static func rendered(fields: [(name: Name, spelled: String)]) -> String {
-        "{ " + fields.map { name, spelled in "\(name): \(spelled)" }.joined(separator: ", ") + " }"
-    }
-
     private static func rendered(_ bounds: [Bound], in table: LoweredTypeTable) -> String {
         bounds.map { bound -> String in
             switch bound {
