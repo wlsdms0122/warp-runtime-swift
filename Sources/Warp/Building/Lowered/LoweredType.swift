@@ -2216,7 +2216,7 @@ indirect enum LoweredType: Sendable, Equatable {
             // byte as it is, the compact spelling crosses whole: the slot
             // asked for an array and one is what it has, and unpacking it would
             // spend an element per byte to answer nothing.
-            if case .bytes = value, element.holdsEveryByte(in: table, boundAssuming: assuming) {
+            if case .bytes = value, element.holdsEveryByte(in: table, boundAssuming: []) {
                 return value
             }
 

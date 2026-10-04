@@ -244,6 +244,7 @@ final class LoweredTypeTable: Sendable {
         reading given: LoweredType,
         assuming: [Int],
         asking pairs: [(LoweredType, LoweredType)] = [],
+        through passed: [Int] = [],
         rigid: Bool,
         orNull: Bool
     ) -> Bool {
@@ -292,6 +293,7 @@ final class LoweredTypeTable: Sendable {
                 reading: reading.throughAliases(in: self),
                 assuming: assuming,
                 asking: pairs,
+                through: passed,
                 rigid: rigid,
                 orNull: false
             )
@@ -303,9 +305,28 @@ final class LoweredTypeTable: Sendable {
 
         // The pairs already being asked ride along, since a member may reach
         // the reading again through a name, and the walk that asked first
-        // is the one that answers.
+        // is the one that answers. A member naming another membership is its
+        // members, asked of this same reading; `passed` is the memberships
+        // the reading came through that way, and met again it is the question
+        // come back, which proves nothing.
         default:
-            return constraints[row].contains { member in member.accepts(reading, in: self, assuming: pairs, rigid: rigid) }
+            return constraints[row].contains { member in
+                guard case let .composition(bounds) = member, bounds.count == 1, case let .membership(inner) = bounds[0] else {
+                    return member.accepts(reading, in: self, assuming: pairs, rigid: rigid)
+                }
+
+                guard inner != row, !passed.contains(inner) else { return false }
+
+                return admits(
+                    constraint: inner,
+                    reading: reading,
+                    assuming: assuming,
+                    asking: pairs,
+                    through: passed + [row],
+                    rigid: rigid,
+                    orNull: false
+                )
+            }
         }
     }
 
