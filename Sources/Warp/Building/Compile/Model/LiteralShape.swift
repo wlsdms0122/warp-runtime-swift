@@ -39,35 +39,46 @@ enum LiteralShape: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // Whether a slot takes it, each way of an attempt on its own. A slot
-    // handed in place that names a type parameter judges it part by part
-    // along the structure `takesInPlace` walks there, a record only as a
-    // dictionary's entries, since the parts beside each other need not be
-    // one type for each to be a value of what the slot asks there. Every
-    // other slot judges it whole.
+    // Whether a slot takes it, along the structure the slot and the literal
+    // share: a list by its elements, a record by its fields (a dictionary by
+    // every field, a record by the fields it names), each way of an attempt
+    // on its own, and a name by the type it names. Where they part it is
+    // judged whole. A slot handed in place that names a type parameter
+    // takes what `takesInPlace` takes there, a record only as a dictionary's
+    // entries, since the parts beside each other need not be one type for
+    // each to be a value of what the slot asks there. Every other slot takes
+    // what it accepts.
     func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable) -> Bool {
-        if case let .either(attempted, rescued) = self {
-            return attempted.isHeld(by: slot, inPlace: inPlace, in: table)
-                && rescued.isHeld(by: slot, inPlace: inPlace, in: table)
-        }
-
-        guard inPlace, slot.namesParameter else { return slot.accepts(folded, in: table) }
+        let slot = inPlace ? slot.slotUnwrapped : slot
+        let rigid = inPlace && slot.namesParameter
 
         switch (slot, self) {
-        case let (_, .part(reading)):
-            return slot.takesInPlace(reading.slotUnwrapped, in: table)
+        case let (_, .either(attempted, rescued)):
+            return attempted.isHeld(by: slot, inPlace: inPlace, in: table)
+                && rescued.isHeld(by: slot, inPlace: inPlace, in: table)
 
-        case let (.nullable(inner), _):
-            return isHeld(by: inner, inPlace: true, in: table)
+        case let (_, .part(reading)):
+            return rigid ? slot.takesInPlace(reading.slotUnwrapped, in: table) : slot.accepts(reading, in: table)
+
+        case let (.nullable(inner), _), let (.variable(inner), _):
+            return isHeld(by: inner, inPlace: inPlace, in: table)
 
         case let (.array(element), .list(items)):
-            return items.allSatisfy { item in item.isHeld(by: element, inPlace: true, in: table) }
+            return items.allSatisfy { item in item.isHeld(by: element, inPlace: inPlace, in: table) }
 
         case let (.dictionary(element), .record(fields)):
-            return fields.values.allSatisfy { field in field.isHeld(by: element, inPlace: true, in: table) }
+            return fields.values.allSatisfy { field in field.isHeld(by: element, inPlace: inPlace, in: table) }
+
+        case let (.record(record), .record(fields)) where !rigid:
+            return record.named.allSatisfy { name, field in
+                fields[name].map { given in given.isHeld(by: field, inPlace: inPlace, in: table) } ?? false
+            }
+
+        case let (.named(row), _) where !rigid:
+            return isHeld(by: table.loweredTypes[row], inPlace: inPlace, in: table)
 
         default:
-            return slot.takesInPlace(folded, in: table)
+            return rigid ? slot.takesInPlace(folded, in: table) : slot.accepts(folded, in: table)
         }
     }
 

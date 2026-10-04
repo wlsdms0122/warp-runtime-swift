@@ -238,6 +238,45 @@ struct DeclaredNameTests {
         #expect(refusal?.message == "holds int, and what it was given is int or string")
     }
 
+    @Test("an attempt inside a list literal writes each way into the element on its own")
+    func anAttemptInAListIsHeldEachWay() async throws {
+        // Given. The list's one element is an attempt whose body answers an int and whose rescue a string
+        let attempt = Warp.Expression.attempt(
+            Block(
+                body: [
+                    Statement(
+                        expression: .conditional(
+                            .literal(.bool(false)),
+                            then: [Statement(expression: aborting(literal("stops")))],
+                            else: nil
+                        )
+                    )
+                ],
+                result: .literal(.int(1))
+            ),
+            rescue: Block(body: [], result: .literal(.string("s")))
+        )
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .variable("xs", declared: .array(.int)), expression: .array([attempt]))
+                    ],
+                    result: reference("xs")
+                )
+            ]
+        )
+
+        // When
+        let refusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+
+        // Then
+        #expect(refusal?.message == "holds array<int>, and what it was given is [int or string]")
+    }
+
     @Test("a name declaring a type parameter is refused, because no call fills a name")
     func aDeclaredTypeParameterIsRefused() async throws {
         // Given
