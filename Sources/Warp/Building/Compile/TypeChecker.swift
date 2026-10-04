@@ -423,7 +423,7 @@ struct TypeChecker {
     }
 
     // Why what is written into a slot is provably outside it, part by part
-    // along `parts(along:)`, or nothing.
+    // along `everyPart(along:)`, or nothing.
     private func refusal(
         writing written: LiteralShape,
         to declared: LoweredType,
@@ -434,7 +434,7 @@ struct TypeChecker {
     ) -> String? {
         var found: String?
 
-        _ = written.parts(along: declared, inPlace: false, in: table) { slot, part, _ in
+        _ = written.everyPart(along: declared, inPlace: false, in: table) { slot, part, _ in
             found = refusal(holding: part.folded, to: slot, as: label, in: table, fulfillment: fulfillment, at: place)
 
             return found == nil
