@@ -305,13 +305,14 @@ final class LoweredTypeTable: Sendable {
 
         // The pairs already being asked ride along, since a member may reach
         // the reading again through a name, and the walk that asked first
-        // is the one that answers. A member naming another membership is its
-        // members, asked of this same reading; `passed` is the memberships
-        // the reading came through that way, and met again it is the question
-        // come back, which proves nothing.
+        // is the one that answers. A member naming another membership, under
+        // a name or a `?` (which a reading that is not null passes through),
+        // is its members, asked of this same reading; `passed` is the
+        // memberships the reading came through that way, and met again it is
+        // the question come back, which proves nothing.
         default:
             return constraints[row].contains { member in
-                guard case let .composition(bounds) = member, bounds.count == 1, case let .membership(inner) = bounds[0] else {
+                guard let inner = membership(namedBy: member, holding: reading) else {
                     return member.accepts(reading, in: self, assuming: pairs, rigid: rigid)
                 }
 
@@ -522,6 +523,20 @@ final class LoweredTypeTable: Sendable {
         default:
             return .settled(false)
         }
+    }
+
+    // The membership a member names, under any name and a `?` where the
+    // reading is not null, or nothing where the member is something else.
+    private func membership(namedBy member: LoweredType, holding reading: LoweredType) -> Int? {
+        var named = member.throughAliases(in: self)
+
+        if case let .nullable(inner) = named, reading != .null {
+            named = inner.throughAliases(in: self)
+        }
+
+        guard case let .composition(bounds) = named, bounds.count == 1, case let .membership(row) = bounds[0] else { return nil }
+
+        return row
     }
 
     // What bounds answer about a contract, or nothing where none of them
