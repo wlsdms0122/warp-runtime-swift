@@ -1158,7 +1158,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // Elsewhere it is the one that takes the other. Rigidly, because a
     // parameter read in a body is that body's own and nothing fills it. Nil
     // where neither takes the other.
-    func joined(with given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
+    func holdingBoth(_ given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
         guard self != given else { return self }
 
         let takesGiven = accepts(given, in: table, rigid: true)
@@ -1226,9 +1226,9 @@ indirect enum LoweredType: Sendable, Equatable {
             // meets anything by its kind, so a range and the plain kind under
             // it take each other both ways, and so do two ranges that overlap;
             // a declared record and a nameless record of its fields take each
-            // other too. What holds both is `joined`.
-            if let joined = already.joined(with: given, in: table) {
-                bound[name] = joined
+            // other too. What holds both is `holdingBoth`.
+            if let both = already.holdingBoth(given, in: table) {
+                bound[name] = both
 
                 return
             }
