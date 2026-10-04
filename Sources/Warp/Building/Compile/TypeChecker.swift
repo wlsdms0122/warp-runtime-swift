@@ -538,7 +538,7 @@ struct TypeChecker {
             return judging.namesParameter
         }
 
-        guard !appliesOpen, judgements.loosened.isEmpty else { return .broken }
+        guard !appliesOpen, !judgements.loosened else { return .broken }
 
         // Read over what was judged, so a judgement whose call is not found
         // proves nothing rather than going unread.
@@ -1927,7 +1927,7 @@ struct TypeChecker {
                 // reaches whose type names one may hold what is not a value of
                 // it.
                 if !isolated, reached.contains(where: { name in outside[name]?.takenType?.namesParameter == true }) {
-                    judgements.loosen(at: place.child(.closure))
+                    judgements.loosen()
                 }
             } else if procedure.signature != written.signature {
                 rewritten = .closure(procedure)
@@ -2214,16 +2214,18 @@ struct TypeChecker {
 
             let filled = substitution(over: slots, readings: sent, in: context.loweredTypes).readings
 
+            let taking = slots.map { slot in slot.type.filling(filled) }
+
             try handedInPlace(
                 call.arguments,
-                to: slots.map { slot in slot.type.filling(filled) },
+                to: taking,
                 in: environment,
                 with: context,
                 at: place,
                 when: ask
             )
 
-            let loose = loose(over: slots, writing: wrote, filling: filled, in: context.loweredTypes)
+            let loose = loose(taking: taking, writing: wrote, filling: filled, in: context.loweredTypes)
 
             try heldBeside(
                 call.arguments,
@@ -2238,7 +2240,7 @@ struct TypeChecker {
             )
 
             if case .judging = ask, !loose.isEmpty {
-                judgements.loosen(at: place)
+                judgements.loosen()
             }
 
             let rewritten = Call(selector: call.selector, arguments: arguments)
@@ -2970,19 +2972,17 @@ struct TypeChecker {
     // member of its bounds takes and what a reading of `any` stands for, and
     // what the call answers or hands back may be that argument.
     private func loose(
-        over slots: [Slot],
+        taking: [LoweredType],
         writing wrote: [LoweredType],
         filling filled: [Name: LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> [Int] {
-        slots.indices.filter { position in
-            guard position < wrote.count, slots[position].type.namesParameter else { return false }
+        guard filled.values.contains(where: \.namesParameter) else { return [] }
 
-            let taking = slots[position].type.filling(filled).slotUnwrapped
+        return taking.indices.filter { position in
+            guard position < wrote.count, taking[position].namesParameter else { return false }
 
-            guard taking.namesParameter else { return false }
-
-            return !taking.takesInPlace(wrote[position].slotUnwrapped, in: loweredTypes)
+            return !taking[position].slotUnwrapped.takesInPlace(wrote[position].slotUnwrapped, in: loweredTypes)
         }
     }
 
@@ -3195,7 +3195,7 @@ struct TypeChecker {
         }
 
         if slot.namesParameter, !slot.slotUnwrapped.takesInPlace(written.slotUnwrapped, in: context.loweredTypes) {
-            judgements.loosen(at: place)
+            judgements.loosen()
         }
     }
 
