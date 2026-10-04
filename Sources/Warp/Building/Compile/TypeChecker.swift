@@ -1244,7 +1244,7 @@ struct TypeChecker {
     // What opens to `any` stands and is settled where the value arrives.
     private func held(
         written answer: LiteralShape,
-        answered: [(reading: LoweredType, written: LiteralShape, value: Value?, place: Place)],
+        answered: [Flow.Answer],
         to returns: TypeExpression?,
         result: Expression?,
         at place: Place,
