@@ -699,7 +699,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Each of the three says its own. They are one predicate where only the
     // shared fact is wanted (`provesNothing`), and three sentences here,
     // because a refusal carries its reason: telling an author that `T` names no
-    // type is false. A call names it, elsewhere.
+    // type is false. A call names it, elsewhere. A type parameter anywhere in
+    // the claim is the third, since nothing in a body fills it and the run
+    // would settle what arrived against no type there.
     var unreadableClaim: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing."
@@ -713,7 +715,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
                 + " nothing arrives to have this one"
         }
 
-        if decidedAtCall {
+        if isGeneric {
             return "reads as \(rendered), whose type the call"
                 + " decides. A cast names a type here, and this one is named"
                 + " somewhere else"

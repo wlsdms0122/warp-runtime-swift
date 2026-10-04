@@ -1214,9 +1214,9 @@ indirect enum LoweredType: Sendable, Equatable {
             // answers yes both ways and whichever was read first would win. A
             // parameter read as `any` anywhere is `any`, which is what a list
             // of anything says about what may be put in it.
-            guard already != .any else { return }
+            guard already.throughAliases(in: table) != .any else { return }
 
-            guard given != .any else {
+            guard given.throughAliases(in: table) != .any else {
                 bound[name] = .any
 
                 return
@@ -1852,7 +1852,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // whole parameter: it is the loosest reading there is, and `accepts`
     // cannot order it.
     private func merged(with given: LoweredType, takingGiven takesGiven: Bool, in table: LoweredTypeTable) -> LoweredType {
-        guard self != .any, given != .any else { return .any }
+        guard throughAliases(in: table) != .any, given.throughAliases(in: table) != .any else { return .any }
 
         let looser = takesGiven ? self : given
 

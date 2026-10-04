@@ -2146,7 +2146,7 @@ struct TypeChecker {
                         ask: ask
                     )
 
-                    readings.append(inner.reading)
+                    readings.append(inner.written.folded)
                     flow = flow.followed(by: inner.flow)
                 }
 
@@ -2214,7 +2214,7 @@ struct TypeChecker {
                 )
 
                 arguments.append(inner.rewritten)
-                sent.append(inner.literalShape?.folded ?? inner.reading)
+                sent.append(inner.written.folded)
                 shapes[position] = inner.literalShape
                 calls += inner.calls
                 judgements.absorb(inner.judgements)

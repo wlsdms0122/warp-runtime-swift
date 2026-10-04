@@ -284,17 +284,15 @@ struct DeclarationChecker {
     }
 
     // Everything a cast's type is held to on its spelling alone: the names it
-    // mentions resolve, unparameterized the way a name saying what it holds
-    // is, since nothing in a body fills a type parameter and the run would
-    // settle what arrived against no type there, and it names a type there
-    // is something to read. Both are answered without knowing what the value
-    // reads as, so every cast is held to both, reached or not.
+    // mentions resolve, and it names a type there is something to read. Both
+    // are answered without knowing what the value reads as, so every cast is
+    // held to both, reached or not.
     private func judge(
         cast named: TypeExpression,
         at place: Place,
         in table: TypeTable
     ) throws {
-        try mentioned(in: named, at: place, parameterized: false, resolve: table)
+        try mentioned(in: named, at: place, parameterized: true, resolve: table)
 
         if let refusal = named.resolved(in: table).unreadableClaim {
             throw BuildError(refusal, at: place)

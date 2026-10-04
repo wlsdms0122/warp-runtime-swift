@@ -82,26 +82,13 @@ enum LiteralShape: Sendable {
     }
 
     // MARK: - Private
-    // Two parts a literal holds side by side, as one type: what holds no
-    // value adds nothing, lists join by their elements and records of the
-    // same fields field by field, null beside a part is what may be null, and
-    // anything else joins as two readings do, a reading of `any` making the
-    // position `any`. Records of other fields are `any`, since a record slot
-    // takes either while no one record type holds both.
+    // Two parts a literal holds side by side, as one type: joined as two
+    // readings join, and part by part where a reading's join gives up, lists
+    // by their elements and records of the same fields field by field, inside
+    // what may be null too. Records of other fields are `any`, since a record
+    // slot takes either while no one record type holds both.
     private static func joined(_ held: LoweredType, _ part: LoweredType) -> LoweredType {
         switch (held, part) {
-        case (.never, _):
-            return part
-
-        case (_, .never):
-            return held
-
-        case (.null, _):
-            return part.admittingNull
-
-        case (_, .null):
-            return held.admittingNull
-
         case let (.nullable(mine), _):
             return joined(mine, part).admittingNull
 
