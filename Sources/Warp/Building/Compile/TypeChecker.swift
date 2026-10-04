@@ -94,6 +94,16 @@ struct TypeChecker {
         var reading: LoweredType
         var flow = Flow()
 
+        // What a literal holds where it is written into a slot, where that
+        // is not its reading: an empty list holds no element, so wherever in
+        // the literal it stands it is a list of `never` there.
+        var literal: LoweredType?
+
+        // What the expression holds where it is written into a slot.
+        var written: LoweredType {
+            literal ?? reading
+        }
+
         // MARK: - Initializer
         // MARK: - Public
         // MARK: - Private
@@ -1565,6 +1575,7 @@ struct TypeChecker {
             var judgements = JudgementTable()
             var flowed = Flow()
             var element: LoweredType?
+            var held: LoweredType = .never
 
             for (position, member) in array.enumerated() {
                 let inner = try await inspected(
@@ -1581,6 +1592,7 @@ struct TypeChecker {
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 element = element?.joined(inner.reading) ?? inner.reading
+                held = held.joined(inner.written)
                 rewritten.append(inner.rewritten)
             }
 
@@ -1589,7 +1601,8 @@ struct TypeChecker {
                 calls: calls,
                 judgements: judgements,
                 reading: .array(element ?? .any),
-                flow: flowed
+                flow: flowed,
+                literal: .array(held)
             )
 
         // A cast is where a reading the walk could not judge becomes one it
@@ -1725,6 +1738,7 @@ struct TypeChecker {
             var judgements = JudgementTable()
             var flowed = Flow()
             var fields: [Name: LoweredType] = [:]
+            var held: [Name: LoweredType] = [:]
 
             for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try await inspected(
@@ -1741,6 +1755,7 @@ struct TypeChecker {
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 fields[name] = inner.reading
+                held[name] = inner.written
                 rewritten[name] = inner.rewritten
             }
 
@@ -1749,7 +1764,8 @@ struct TypeChecker {
                 calls: calls,
                 judgements: judgements,
                 reading: .record(fields),
-                flow: flowed
+                flow: flowed,
+                literal: .record(held)
             )
 
         // A closure literal carries the signature it declared, and running one
@@ -2174,6 +2190,7 @@ struct TypeChecker {
 
             var arguments: [Expression] = []
             var sent: [LoweredType] = []
+            var wrote: [LoweredType] = []
             var calls: [CallSite] = []
             var judgements = JudgementTable()
 
@@ -2189,6 +2206,7 @@ struct TypeChecker {
 
                 arguments.append(inner.rewritten)
                 sent.append(inner.reading)
+                wrote.append(inner.written)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 flow = flow.followed(by: inner.flow)
@@ -2205,7 +2223,7 @@ struct TypeChecker {
                 when: ask
             )
 
-            let loose = loose(over: slots, readings: sent, of: call.arguments, filling: filled, in: context.loweredTypes)
+            let loose = loose(over: slots, writing: wrote, filling: filled, in: context.loweredTypes)
 
             try heldBeside(
                 call.arguments,
@@ -2741,7 +2759,7 @@ struct TypeChecker {
             case let .assignment(path)?:
                 guard let id = path.head else { break }
 
-                let written = written(statement.expression, reading: inner.reading)
+                let written = inner.written
 
                 switch environment[id] {
                 case let binding? where binding.heldType != nil:
@@ -2953,19 +2971,18 @@ struct TypeChecker {
     // what the call answers or hands back may be that argument.
     private func loose(
         over slots: [Slot],
-        readings sent: [LoweredType],
-        of arguments: [Expression],
+        writing wrote: [LoweredType],
         filling filled: [Name: LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> [Int] {
         slots.indices.filter { position in
-            guard position < sent.count, position < arguments.count, slots[position].type.namesParameter else { return false }
+            guard position < wrote.count, slots[position].type.namesParameter else { return false }
 
             let taking = slots[position].type.filling(filled).slotUnwrapped
 
             guard taking.namesParameter else { return false }
 
-            return !taking.takesInPlace(written(arguments[position], reading: sent[position]).slotUnwrapped, in: loweredTypes)
+            return !taking.takesInPlace(wrote[position].slotUnwrapped, in: loweredTypes)
         }
     }
 
@@ -3019,15 +3036,6 @@ struct TypeChecker {
                 when: ask
             )
         }
-    }
-
-    // What an expression written into a slot reads as there: an empty list
-    // holds no element, so it is a list of whatever the slot's elements are,
-    // at whatever depth of a list it stands.
-    private func written(_ expression: Expression, reading: LoweredType) -> LoweredType {
-        guard case let .array(elements) = expression, case let .array(element) = reading else { return reading }
-
-        return .array(elements.reduce(.never) { held, inner in held.joined(written(inner, reading: element)) })
     }
 
     // The rules a call handing variables in place is held to, at each
