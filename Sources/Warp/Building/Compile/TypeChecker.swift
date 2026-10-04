@@ -1910,7 +1910,7 @@ struct TypeChecker {
                 // its type parameter stands for nowhere, so a variable it
                 // reaches whose type names one may hold what is not a value of
                 // it.
-                if !isolated, reached.contains(where: { name in outside[name]?.type.namesParameter == true }) {
+                if !isolated, reached.contains(where: { name in outside[name]?.takenType?.namesParameter == true }) {
                     judgements.loosen(at: place.child(.closure))
                 }
             } else if procedure.signature != written.signature {
@@ -2965,7 +2965,7 @@ struct TypeChecker {
 
             guard taking.namesParameter else { return false }
 
-            return !taking.takesInPlace(written(arguments[position], reading: sent[position]), in: loweredTypes)
+            return !taking.takesInPlace(written(arguments[position], reading: sent[position]).slotUnwrapped, in: loweredTypes)
         }
     }
 
@@ -3022,11 +3022,12 @@ struct TypeChecker {
     }
 
     // What an expression written into a slot reads as there: an empty list
-    // holds no element, so it is a list of whatever the slot's elements are.
+    // holds no element, so it is a list of whatever the slot's elements are,
+    // at whatever depth of a list it stands.
     private func written(_ expression: Expression, reading: LoweredType) -> LoweredType {
-        guard case let .array(elements) = expression, elements.isEmpty else { return reading }
+        guard case let .array(elements) = expression, case let .array(element) = reading else { return reading }
 
-        return .array(.never)
+        return .array(elements.reduce(.never) { held, inner in held.joined(written(inner, reading: element)) })
     }
 
     // The rules a call handing variables in place is held to, at each

@@ -18,8 +18,7 @@ struct JudgementTable: Sendable {
 
     // The places where a reading of a type parameter of the body may hold
     // what is not a value of it, which the hand-back proof reads as proving
-    // nothing: a call filling one from what is not, and a closure writing a
-    // variable it captured whose type names one.
+    // nothing.
     private(set) var loosened: Set<Place> = []
 
     // MARK: - Initializer
