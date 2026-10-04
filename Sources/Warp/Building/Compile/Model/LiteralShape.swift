@@ -33,29 +33,57 @@ enum LiteralShape: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // Whether a slot handed in place takes it. Where the slot names a type
-    // parameter it is judged part by part along the slot, a list by each
+    // Whether a slot takes it, part by part along the slot: a list by each
     // element and a record by each field, since the parts beside each other
-    // need not be one type for each to be a value of what the slot asks
-    // there. Elsewhere it is judged whole.
-    func isTaken(inPlaceBy slot: LoweredType, in table: LoweredTypeTable) -> Bool {
-        guard slot.namesParameter else { return slot.accepts(folded, in: table) }
-
+    // need not be one type for each to fit what the slot asks there. A slot
+    // that asks for no such parts takes it whole. `takes` judges a part
+    // against what the slot asks at it.
+    func isTaken(by slot: LoweredType, taking takes: (LoweredType, LoweredType) -> Bool) -> Bool {
         switch (slot, self) {
         case let (_, .part(reading)):
-            return slot.takesInPlace(reading.slotUnwrapped, in: table)
+            return takes(slot, reading)
 
         case let (.nullable(inner), _):
-            return isTaken(inPlaceBy: inner, in: table)
+            return isTaken(by: inner, taking: takes)
 
         case let (.array(element), .list(items)):
-            return items.allSatisfy { item in item.isTaken(inPlaceBy: element, in: table) }
+            return items.allSatisfy { item in item.isTaken(by: element, taking: takes) }
 
         case let (.dictionary(element), .record(fields)):
-            return fields.values.allSatisfy { field in field.isTaken(inPlaceBy: element, in: table) }
+            return fields.values.allSatisfy { field in field.isTaken(by: element, taking: takes) }
 
         default:
-            return slot.takesInPlace(folded, in: table)
+            return takes(slot, folded)
+        }
+    }
+
+    // The same where a slot handed in place takes it, so where it asks for a
+    // type parameter only that parameter is taken.
+    func isTaken(inPlaceBy slot: LoweredType, in table: LoweredTypeTable) -> Bool {
+        isTaken(by: slot) { slot, part in slot.takesInPlace(part.slotUnwrapped, in: table) }
+    }
+
+    // The same where any other slot takes it.
+    func isAccepted(by slot: LoweredType, in table: LoweredTypeTable) -> Bool {
+        isTaken(by: slot) { slot, part in slot.accepts(part, in: table) }
+    }
+
+    // How a refusal names it: a list and a record part by part, the way the
+    // slot judged it.
+    func rendered(in table: LoweredTypeTable) -> String {
+        switch self {
+        case let .list(items):
+            return "[" + items.map { item in item.rendered(in: table) }.joined(separator: ", ") + "]"
+
+        case let .record(fields):
+            let named = fields.sorted { left, right in left.key < right.key }.map { name, field in
+                "\(name): \(field.rendered(in: table))"
+            }
+
+            return "{ " + named.joined(separator: ", ") + " }"
+
+        case let .part(reading):
+            return reading.rendered(in: table)
         }
     }
 

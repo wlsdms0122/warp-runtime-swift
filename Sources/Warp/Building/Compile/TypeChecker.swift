@@ -572,7 +572,7 @@ struct TypeChecker {
         of binding: Binding?,
         in loweredTypes: LoweredTypeTable
     ) -> Bool {
-        guard case .declared? = binding?.holding else { return slot.accepts(written.folded, in: loweredTypes) }
+        guard case .declared? = binding?.holding else { return written.isAccepted(by: slot.slotUnwrapped, in: loweredTypes) }
 
         return written.isTaken(inPlaceBy: slot.slotUnwrapped, in: loweredTypes)
     }
@@ -3185,7 +3185,7 @@ struct TypeChecker {
 
         guard fits(written, into: slot, of: path.head.flatMap { head in environment[head] }, in: context.loweredTypes) else {
             try refuse(
-                "writes '\(path.rendered)' as \(written.folded.rendered(in: context.loweredTypes)), and it holds"
+                "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), and it holds"
                     + " \(slot.rendered(in: context.loweredTypes))",
                 at: place,
                 when: ask
