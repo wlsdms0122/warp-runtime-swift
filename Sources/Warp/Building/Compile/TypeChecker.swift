@@ -2068,7 +2068,8 @@ struct TypeChecker {
             var rewritten: [Expression] = []
             var calls = called.calls
             var judgements = called.judgements
-            var written: [LiteralShape] = []
+            var sent: [LoweredType] = []
+            var shapes: [Int: LiteralShape] = [:]
 
             for (position, argument) in arguments.enumerated() {
                 let inner = try await inspected(
@@ -2081,7 +2082,8 @@ struct TypeChecker {
                 )
 
                 rewritten.append(inner.rewritten)
-                written.append(inner.written)
+                sent.append(inner.written.folded)
+                shapes[position] = inner.literalShape
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 flow = flow.followed(by: inner.flow)
@@ -2095,7 +2097,8 @@ struct TypeChecker {
 
                 try check(
                     rewritten,
-                    writing: written,
+                    reading: sent,
+                    shaped: shapes,
                     against: parameters,
                     naming: nil,
                     as: subject,
@@ -2215,7 +2218,8 @@ struct TypeChecker {
             )
 
             var arguments: [Expression] = []
-            var written: [LiteralShape] = []
+            var sent: [LoweredType] = []
+            var shapes: [Int: LiteralShape] = [:]
             var calls: [CallSite] = []
             var judgements = JudgementTable()
 
@@ -2230,13 +2234,13 @@ struct TypeChecker {
                 )
 
                 arguments.append(inner.rewritten)
-                written.append(inner.written)
+                sent.append(inner.written.folded)
+                shapes[position] = inner.literalShape
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 flow = flow.followed(by: inner.flow)
             }
 
-            let sent = written.map(\.folded)
             let filled = substitution(over: slots, readings: sent, in: context.loweredTypes).readings
 
             let taking = slots.map { slot in slot.type.filling(filled) }
@@ -2250,7 +2254,7 @@ struct TypeChecker {
                 when: ask
             )
 
-            let loose = loose(taking: taking, writing: written, filling: filled, in: context.loweredTypes)
+            let loose = loose(taking: taking, readings: sent, shaped: shapes, filling: filled, in: context.loweredTypes)
 
             try heldBeside(
                 call.arguments,
@@ -2294,7 +2298,8 @@ struct TypeChecker {
                     CallSite(
                         call: rewritten,
                         place: place,
-                        written: written
+                        readings: sent,
+                        shapes: shapes
                     )
                 ] + calls,
                 judgements: judgements,
@@ -3002,16 +3007,19 @@ struct TypeChecker {
     // what the call answers or hands back may be that argument.
     private func loose(
         taking: [LoweredType],
-        writing written: [LiteralShape],
+        readings sent: [LoweredType],
+        shaped shapes: [Int: LiteralShape],
         filling filled: [Name: LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> [Int] {
         guard filled.values.contains(where: \.namesParameter) else { return [] }
 
         return taking.indices.filter { position in
-            guard position < written.count, taking[position].namesParameter else { return false }
+            guard position < sent.count, taking[position].namesParameter else { return false }
 
-            return !written[position].isHeld(by: taking[position], inPlace: true, in: loweredTypes)
+            let written = shapes[position] ?? .part(sent[position])
+
+            return !written.isHeld(by: taking[position], inPlace: true, in: loweredTypes)
         }
     }
 
@@ -3258,7 +3266,7 @@ struct TypeChecker {
             declared,
             over: context.slots(of: call.selector),
             answering: context.answer(of: call.selector),
-            readings: site.written.map(\.folded),
+            readings: site.readings,
             in: loweredTypes,
             fulfillment: fulfillment,
             at: site.place
@@ -3275,7 +3283,8 @@ struct TypeChecker {
 
         try check(
             call.arguments,
-            writing: site.written,
+            reading: site.readings,
+            shaped: site.shapes,
             against: slots.map(\.type),
             naming: slots,
             as: subject,
@@ -3337,7 +3346,8 @@ struct TypeChecker {
     // a constant there may be; a value's type writes the positions alone.
     private func check(
         _ arguments: [Expression],
-        writing written: [LiteralShape],
+        reading readings: [LoweredType],
+        shaped shapes: [Int: LiteralShape],
         against types: [LoweredType],
         naming slots: [Slot]?,
         as subject: String,
@@ -3347,8 +3357,9 @@ struct TypeChecker {
     ) throws {
         try refuseCount(handing: arguments.count, taking: types.count, as: subject, at: place)
 
-        for (position, (type, (argument, given))) in zip(types, zip(arguments, written)).enumerated() {
+        for (position, (type, (argument, reading))) in zip(types, zip(arguments, readings)).enumerated() {
             let at = place.child(.argument(position))
+            let given = shapes[position] ?? .part(reading)
             let slot = slots?[position]
             let named = slot.map { slot in "\(slot.name)" } ?? "argument \(position)"
             let quoted = slot.map { slot in "'\(slot.name)'" } ?? named

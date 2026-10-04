@@ -53,12 +53,12 @@ enum LiteralShape: Sendable {
         let rigid = inPlace && slot.namesParameter
 
         switch (slot, self) {
+        case let (_, .part(reading)):
+            return rigid ? slot.takesInPlace(reading.slotUnwrapped, in: table) : slot.accepts(reading, in: table)
+
         case let (_, .either(attempted, rescued)):
             return attempted.isHeld(by: slot, inPlace: inPlace, in: table)
                 && rescued.isHeld(by: slot, inPlace: inPlace, in: table)
-
-        case let (_, .part(reading)):
-            return rigid ? slot.takesInPlace(reading.slotUnwrapped, in: table) : slot.accepts(reading, in: table)
 
         case let (.nullable(inner), _), let (.variable(inner), _):
             return isHeld(by: inner, inPlace: inPlace, in: table)
