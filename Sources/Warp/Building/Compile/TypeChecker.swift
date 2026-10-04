@@ -422,8 +422,8 @@ struct TypeChecker {
         }
     }
 
-    // Why what is written into a slot is provably outside it, each way of an
-    // attempt on its own, or nothing.
+    // Why what is written into a slot is provably outside it, part by part
+    // along `parts(along:)`, or nothing.
     private func refusal(
         writing written: LiteralShape,
         to declared: LoweredType,
@@ -432,12 +432,15 @@ struct TypeChecker {
         fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
-        guard case let .either(attempted, rescued) = written else {
-            return refusal(holding: written.folded, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
+        var found: String?
+
+        _ = written.parts(along: declared, inPlace: false, in: table) { slot, part, _ in
+            found = refusal(holding: part.folded, to: slot, as: label, in: table, fulfillment: fulfillment, at: place)
+
+            return found == nil
         }
 
-        return refusal(writing: attempted, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
-            ?? refusal(writing: rescued, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
+        return found
     }
 
     // Why what arrived is provably outside what a declaration holds it to,
