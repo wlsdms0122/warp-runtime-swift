@@ -2132,13 +2132,15 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether the types a membership admits take every byte between them.
+    // A membership met again on the way is the question come back, which
+    // proves nothing, so the bytes are then settled one by one.
     private func holdsEveryByte(
         of constraint: Int,
         in table: LoweredTypeTable,
         namedAssuming: [Int],
         boundAssuming: [Int]
     ) -> Bool {
-        guard !boundAssuming.contains(constraint) else { return true }
+        guard !boundAssuming.contains(constraint) else { return false }
 
         let deeper = boundAssuming + [constraint]
 
@@ -2152,7 +2154,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // boundary's own primitive: members that divide the range between them
         // still take every byte.
         return (0 ... 255).allSatisfy { byte in
-            table.admits(constraint: constraint, value: .int(byte), assuming: deeper)
+            table.admits(constraint: constraint, value: .int(byte), assuming: [])
         }
     }
 
