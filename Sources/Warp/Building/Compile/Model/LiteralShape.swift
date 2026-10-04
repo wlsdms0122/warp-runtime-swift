@@ -45,7 +45,7 @@ enum LiteralShape: Sendable, Equatable {
     // be one type for each to be a value of what the slot asks there. Every
     // other slot takes what it accepts.
     func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable) -> Bool {
-        isHeld(by: slot, inPlace: inPlace, in: table, asking: [])
+        isHeld(by: slot, inPlace: inPlace, in: table, assuming: [])
     }
 
     // Whether every part of it, along the structure it shares with the slot,
@@ -119,16 +119,16 @@ enum LiteralShape: Sendable, Equatable {
     }
 
     // MARK: - Private
-    // `asking` is which memberships are already being asked of this literal.
+    // `assuming` is which memberships are already being asked of this literal.
     // A part the walk took apart is another literal and starts with none.
-    private func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable, asking: [Int]) -> Bool {
+    private func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable, assuming: [Int]) -> Bool {
         everyPart(along: slot, inPlace: inPlace, in: table) { slot, part, rigid in
             if rigid {
                 return slot.takesInPlace(part.folded.slotUnwrapped, in: table)
             }
 
             return slot.accepts(part.folded, in: table)
-                && part.isHeld(byMembersOf: slot, in: table, asking: part == self ? asking : [])
+                && part.isHeld(byMembersOf: slot, in: table, assuming: part == self ? assuming : [])
         }
     }
 
@@ -138,7 +138,7 @@ enum LiteralShape: Sendable, Equatable {
     // already being asked of this literal is the same question come back,
     // which proves nothing, so it does not take it, the way the run settles
     // a value.
-    private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, asking: [Int]) -> Bool {
+    private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, assuming: [Int]) -> Bool {
         switch (slot, self) {
         case (_, .part):
             return true
@@ -147,14 +147,14 @@ enum LiteralShape: Sendable, Equatable {
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
 
-                return isHeld(byMembership: row, every: false, in: table, asking: asking)
+                return isHeld(byMembership: row, every: false, in: table, assuming: assuming)
             }
 
         case let (.parameter(_, bounds), _):
             return bounds.contains { bound in
                 guard case let .membership(row) = bound else { return false }
 
-                return isHeld(byMembership: row, every: true, in: table, asking: asking)
+                return isHeld(byMembership: row, every: true, in: table, assuming: assuming)
             }
 
         default:
@@ -163,10 +163,10 @@ enum LiteralShape: Sendable, Equatable {
     }
 
     // Whether one member, or every member, of a membership takes it.
-    private func isHeld(byMembership row: Int, every: Bool, in table: LoweredTypeTable, asking: [Int]) -> Bool {
-        guard !asking.contains(row) else { return false }
+    private func isHeld(byMembership row: Int, every: Bool, in table: LoweredTypeTable, assuming: [Int]) -> Bool {
+        guard !assuming.contains(row) else { return false }
 
-        let held = { (member: LoweredType) in isHeld(by: member, inPlace: false, in: table, asking: asking + [row]) }
+        let held = { (member: LoweredType) in isHeld(by: member, inPlace: false, in: table, assuming: assuming + [row]) }
 
         return every ? table.constraints[row].allSatisfy(held) : table.constraints[row].contains(where: held)
     }
