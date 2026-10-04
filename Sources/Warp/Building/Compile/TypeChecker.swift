@@ -2051,7 +2051,7 @@ struct TypeChecker {
             var rewritten: [Expression] = []
             var calls = called.calls
             var judgements = called.judgements
-            var readings: [LoweredType] = []
+            var sent: [LoweredType] = []
 
             for (position, argument) in arguments.enumerated() {
                 let inner = try await inspected(
@@ -2064,7 +2064,7 @@ struct TypeChecker {
                 )
 
                 rewritten.append(inner.rewritten)
-                readings.append(inner.written.folded)
+                sent.append(inner.written.folded)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 flow = flow.followed(by: inner.flow)
@@ -2078,7 +2078,7 @@ struct TypeChecker {
 
                 try check(
                     rewritten,
-                    reading: readings,
+                    reading: sent,
                     against: parameters,
                     naming: nil,
                     as: subject,
