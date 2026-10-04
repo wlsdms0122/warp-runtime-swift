@@ -1592,7 +1592,7 @@ struct TypeChecker {
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 element = element?.joined(inner.reading) ?? inner.reading
-                held = held.joined(inner.written)
+                held = held.joinedAsWritten(inner.written)
                 rewritten.append(inner.rewritten)
             }
 

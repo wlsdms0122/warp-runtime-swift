@@ -597,6 +597,42 @@ indirect enum LoweredType: Sendable, Equatable {
         return mine == theirs ? mine : .any
     }
 
+    // Two values a literal holds side by side, as the slot it is written
+    // into takes them: lists by their elements and records of the same
+    // fields field by field, so an empty list beside a fuller one is the
+    // fuller one wherever in the literal it stands. Null beside a value is
+    // what may be null, as two readings join, and anything else joins as
+    // two readings do.
+    func joinedAsWritten(_ other: LoweredType) -> LoweredType {
+        guard self != .never else { return other }
+        guard other != .never else { return self }
+
+        if self == .null { return other.admittingNull }
+        if other == .null { return admittingNull }
+
+        switch (self, other) {
+        case let (.nullable(mine), _):
+            return mine.joinedAsWritten(other).admittingNull
+
+        case let (_, .nullable(theirs)):
+            return joinedAsWritten(theirs).admittingNull
+
+        case let (.array(mine), .array(theirs)):
+            return .array(mine.joinedAsWritten(theirs))
+
+        case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
+            return .record(
+                LoweredRecord(
+                    layout: mine.layout,
+                    fields: zip(mine.fields, theirs.fields).map { field, given in field.joinedAsWritten(given) }
+                )
+            )
+
+        default:
+            return joined(other)
+        }
+    }
+
     // Whether two procedure types declare the same slots and the same answer.
     // What each requires of the value is beside that, so a join may keep the
     // slots while reading the two requirements together.
