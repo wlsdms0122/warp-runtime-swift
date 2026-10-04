@@ -754,7 +754,7 @@ indirect enum LoweredType: Sendable, Equatable {
                         constraint: row,
                         reading: other,
                         assuming: [],
-                        asking: assuming + [(self, other)],
+                        assumingPairs: assuming + [(self, other)],
                         rigid: rigid,
                         orNull: orNull
                     )

@@ -243,8 +243,8 @@ final class LoweredTypeTable: Sendable {
         constraint row: Int,
         reading given: LoweredType,
         assuming: [Int],
-        asking pairs: [(LoweredType, LoweredType)] = [],
-        through passed: [Int] = [],
+        assumingPairs pairs: [(LoweredType, LoweredType)] = [],
+        asking passed: [Int] = [],
         rigid: Bool,
         orNull: Bool
     ) -> Bool {
@@ -276,7 +276,7 @@ final class LoweredTypeTable: Sendable {
 
             return memberships.contains { constraint in
                 constraints[constraint].allSatisfy { member in
-                    admits(constraint: row, reading: member, assuming: assuming + [constraint], asking: pairs, rigid: rigid, orNull: orNull)
+                    admits(constraint: row, reading: member, assuming: assuming + [constraint], assumingPairs: pairs, rigid: rigid, orNull: orNull)
                 }
             }
 
@@ -284,16 +284,16 @@ final class LoweredTypeTable: Sendable {
         // is besides is too, since its value is one or the other. A name that
         // stands for no record is read as what it stands for.
         case let .nullable(inner):
-            return admits(constraint: row, reading: .null, assuming: assuming, asking: pairs, rigid: rigid, orNull: false)
-                && admits(constraint: row, reading: inner, assuming: assuming, asking: pairs, rigid: rigid, orNull: false)
+            return admits(constraint: row, reading: .null, assuming: assuming, assumingPairs: pairs, rigid: rigid, orNull: false)
+                && admits(constraint: row, reading: inner, assuming: assuming, assumingPairs: pairs, rigid: rigid, orNull: false)
 
         case .named where reading.throughAliases(in: self) != reading:
             return admits(
                 constraint: row,
                 reading: reading.throughAliases(in: self),
                 assuming: assuming,
-                asking: pairs,
-                through: passed,
+                assumingPairs: pairs,
+                asking: passed,
                 rigid: rigid,
                 orNull: false
             )
@@ -322,8 +322,8 @@ final class LoweredTypeTable: Sendable {
                     constraint: inner,
                     reading: reading,
                     assuming: assuming,
-                    asking: pairs,
-                    through: passed + [row],
+                    assumingPairs: pairs,
+                    asking: passed + [row],
                     rigid: rigid,
                     orNull: false
                 )
