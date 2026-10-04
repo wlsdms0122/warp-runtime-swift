@@ -144,7 +144,7 @@ public struct TypeTable: Sendable {
     public func admits(constraint name: Name, value: Value) -> Bool? {
         guard let row = loweredTypes.constraintRow(named: name) else { return nil }
 
-        return loweredTypes.admits(constraint: row, value: value, assuming: [])
+        return loweredTypes.admits(constraint: row, value: value, asking: [])
     }
 
     // MARK: - Private

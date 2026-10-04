@@ -220,10 +220,10 @@ final class LoweredTypeTable: Sendable {
     // caller was already asking; this constraint joins it only where a
     // member has to be settled to answer, since a scalar member answers by
     // kind.
-    func admits(constraint row: Int, value: Value, assuming: [Int]) -> Bool {
+    func admits(constraint row: Int, value: Value, asking: [Int]) -> Bool {
         constraints[row].contains { member in
             member.admitsAsScalar(value)
-                ?? member.settles(value, in: self, assuming: assuming + [row])
+                ?? member.settles(value, in: self, asking: asking + [row])
         }
     }
 

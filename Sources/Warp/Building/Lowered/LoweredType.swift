@@ -1143,8 +1143,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // type holds, so whether it holds something is that rule run with its
     // refusal dropped rather than a second rule written beside it. The path
     // is empty because nothing reads the refusal.
-    func settles(_ value: Value, in table: LoweredTypeTable, assuming: [Int] = []) -> Bool {
-        (try? settling(value, at: "", in: table, assuming: assuming)) != nil
+    func settles(_ value: Value, in table: LoweredTypeTable, asking: [Int] = []) -> Bool {
+        (try? settling(value, at: "", in: table, asking: asking)) != nil
     }
 
     // The reading that holds two readings of one type parameter where one
@@ -1491,7 +1491,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // for a value crossing a declaration, at the build and at the run alike.
     //
     // `at` is the path into the value so the message names the field rather
-    // than the whole argument. `assuming` is which constraints are already
+    // than the whole argument. `asking` is which constraints are already
     // being asked of this value: a membership test settles the value against
     // each member, and a member that is a membership reaching one of these
     // again asks the same question of the same value, which proves nothing,
@@ -1501,7 +1501,7 @@ indirect enum LoweredType: Sendable, Equatable {
         _ value: Value,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable,
-        assuming: [Int] = []
+        asking: [Int] = []
     ) throws -> Value {
         switch self {
         case .any, .projection:
@@ -1511,11 +1511,11 @@ indirect enum LoweredType: Sendable, Equatable {
         // it arrived as, and which member it matched is a question a cast asks.
         case let .parameter(_, bounds), let .composition(bounds):
             return try bounds.reduce(value) { value, bound in
-                try standing(value, boundBy: bound, at: path(), in: table, assuming: assuming)
+                try standing(value, boundBy: bound, at: path(), in: table, asking: asking)
             }
 
         default:
-            return try judging(value, at: path(), in: table, assuming: assuming)
+            return try judging(value, at: path(), in: table, asking: asking)
         }
     }
 
@@ -1635,14 +1635,14 @@ indirect enum LoweredType: Sendable, Equatable {
     func holdsEveryByte(
         in table: LoweredTypeTable,
         namedAssuming: [Int] = [],
-        boundAssuming: [Int] = []
+        boundAsking: [Int] = []
     ) -> Bool {
         switch self {
         case .any, .projection, .int:
             return true
 
         case let .variable(inner), let .inout(inner), let .nullable(inner):
-            return inner.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAssuming: boundAssuming)
+            return inner.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAsking: boundAsking)
 
         // A parameter stands for what arrived and does not settle it. A
         // bounded one still asks each value for its membership, and a member
@@ -1656,7 +1656,7 @@ indirect enum LoweredType: Sendable, Equatable {
                     of: constraint,
                     in: table,
                     namedAssuming: namedAssuming,
-                    boundAssuming: boundAssuming
+                    boundAsking: boundAsking
                 )
             }
 
@@ -1669,7 +1669,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return table.loweredTypes[row].holdsEveryByte(
                 in: table,
                 namedAssuming: namedAssuming + [row],
-                boundAssuming: boundAssuming
+                boundAsking: boundAsking
             )
 
         // `double` is the one widening the language has, so it changes every
@@ -2138,14 +2138,14 @@ indirect enum LoweredType: Sendable, Equatable {
         of constraint: Int,
         in table: LoweredTypeTable,
         namedAssuming: [Int],
-        boundAssuming: [Int]
+        boundAsking: [Int]
     ) -> Bool {
-        guard !boundAssuming.contains(constraint) else { return false }
+        guard !boundAsking.contains(constraint) else { return false }
 
-        let deeper = boundAssuming + [constraint]
+        let deeper = boundAsking + [constraint]
 
         if table.constraints[constraint].contains(where: { member in
-            member.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAssuming: deeper)
+            member.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAsking: deeper)
         }) {
             return true
         }
@@ -2154,7 +2154,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // boundary's own primitive: members that divide the range between them
         // still take every byte.
         return (0 ... 255).allSatisfy { byte in
-            table.admits(constraint: constraint, value: .int(byte), assuming: [])
+            table.admits(constraint: constraint, value: .int(byte), asking: [])
         }
     }
 
@@ -2175,11 +2175,11 @@ indirect enum LoweredType: Sendable, Equatable {
         _ value: Value,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable,
-        assuming: [Int]
+        asking: [Int]
     ) throws -> Value {
         switch self {
         case .any, .projection, .parameter, .composition:
-            return try settling(value, at: path(), in: table, assuming: assuming)
+            return try settling(value, at: path(), in: table, asking: asking)
 
         // A value arrived where nothing was supposed to, so the arrival is the
         // refusal: there is no type to compare it against.
@@ -2204,13 +2204,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // another name is refused, whatever its type. A declared name that is
         // not a record type settles as the type it stands for.
         case let .named(row):
-            return try settlingNamed(value, row: row, at: path(), in: table, assuming: assuming)
+            return try settlingNamed(value, row: row, at: path(), in: table, asking: asking)
 
         // Null arrives as itself; anything else is held to the declared half.
         case let .nullable(inner):
             guard value != .null else { return value }
 
-            return try inner.settling(value, at: path(), in: table, assuming: assuming)
+            return try inner.settling(value, at: path(), in: table, asking: asking)
 
         case let .array(element):
             // Bytes are an array of bytes in a compact spelling, so they arrive
@@ -2218,7 +2218,7 @@ indirect enum LoweredType: Sendable, Equatable {
             // byte as it is, the compact spelling crosses whole: the slot
             // asked for an array and one is what it has, and unpacking it would
             // spend an element per byte to answer nothing.
-            if case .bytes = value, element.holdsEveryByte(in: table, boundAssuming: []) {
+            if case .bytes = value, element.holdsEveryByte(in: table, boundAsking: []) {
                 return value
             }
 
@@ -2234,7 +2234,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return .array(
                 try items.enumerated().map { index, item in
-                    try element.settling(item, at: "\(path())[\(index)]", in: table, assuming: [])
+                    try element.settling(item, at: "\(path())[\(index)]", in: table, asking: [])
                 }
             )
 
@@ -2247,7 +2247,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return .dictionary(
                 try held.mapValues { _, item in
-                    try entry.settling(item, at: path(), in: table, assuming: [])
+                    try entry.settling(item, at: path(), in: table, asking: [])
                 }
             )
 
@@ -2256,12 +2256,12 @@ indirect enum LoweredType: Sendable, Equatable {
         // Settling builds the slot's layout, so what settles here holds these
         // fields and no others.
         case let .record(held):
-            return try settlingFields(value, of: held, at: path(), in: table, assuming: assuming)
+            return try settlingFields(value, of: held, at: path(), in: table, asking: asking)
 
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.
         case let .variable(inner), let .inout(inner):
-            return try inner.settling(value, at: path(), in: table, assuming: assuming)
+            return try inner.settling(value, at: path(), in: table, asking: asking)
 
         // A closure carries what the build derived about its text, its constness
         // and its isolation, and a slot that asks for either reads the
@@ -2314,7 +2314,7 @@ indirect enum LoweredType: Sendable, Equatable {
         boundBy bound: LoweredType.Bound,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable,
-        assuming: [Int]
+        asking: [Int]
     ) throws -> Value {
         // A contract is answered by the value's own name: what the link found
         // to satisfy it is what a value may arrive as.
@@ -2353,17 +2353,17 @@ indirect enum LoweredType: Sendable, Equatable {
 
         guard case let .membership(constraint) = bound else { return value }
 
-        guard !assuming.contains(constraint) else {
+        guard !asking.contains(constraint) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), which is already being asked of this value"
             )
         }
 
-        guard table.admits(constraint: constraint, value: value, assuming: assuming) else {
+        guard table.admits(constraint: constraint, value: value, asking: asking) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), and nothing"
                     + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
-                    + " \(refused(value, by: constraint, at: path(), in: table, assuming: assuming))"
+                    + " \(refused(value, by: constraint, at: path(), in: table, asking: asking))"
             )
         }
 
@@ -2378,9 +2378,9 @@ indirect enum LoweredType: Sendable, Equatable {
         by constraint: Int,
         at path: String,
         in table: LoweredTypeTable,
-        assuming: [Int]
+        asking: [Int]
     ) -> String {
-        let deeper = assuming + [constraint]
+        let deeper = asking + [constraint]
 
         return table.constraints[constraint]
             .map { member in
@@ -2391,7 +2391,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 }
 
                 do {
-                    _ = try member.settling(value, at: path, in: table, assuming: deeper)
+                    _ = try member.settling(value, at: path, in: table, asking: deeper)
 
                     return "as \(member.rendered(in: table)), got \(value.type)"
                 } catch {
@@ -2406,12 +2406,12 @@ indirect enum LoweredType: Sendable, Equatable {
         row: Int,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable,
-        assuming: [Int]
+        asking: [Int]
     ) throws -> Value {
         let declared = table.loweredTypes[row]
 
         guard value.holdsFields, let nominal = table.record(of: self) else {
-            return try declared.settling(value, at: path(), in: table, assuming: assuming)
+            return try declared.settling(value, at: path(), in: table, asking: asking)
         }
 
         let label = table.labels[nominal]
@@ -2424,7 +2424,7 @@ indirect enum LoweredType: Sendable, Equatable {
             }
         }
 
-        guard case let .record(settled) = try declared.settling(value, at: path(), in: table, assuming: assuming) else {
+        guard case let .record(settled) = try declared.settling(value, at: path(), in: table, asking: asking) else {
             throw mismatch(value, at: path(), in: table)
         }
 
@@ -2436,7 +2436,7 @@ indirect enum LoweredType: Sendable, Equatable {
         of held: LoweredRecord,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable,
-        assuming: [Int]
+        asking: [Int]
     ) throws -> Value {
         guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
 
@@ -2450,7 +2450,7 @@ indirect enum LoweredType: Sendable, Equatable {
                         )
                     }
 
-                    return try field.settling(given, at: "\(path()).\(name)", in: table, assuming: [])
+                    return try field.settling(given, at: "\(path()).\(name)", in: table, asking: [])
                 }
             )
         )
