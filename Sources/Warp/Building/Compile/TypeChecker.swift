@@ -384,7 +384,7 @@ struct TypeChecker {
 
         let promised = returns.lowered(in: table)
 
-        guard fits(written, into: promised, of: nil, in: table) else {
+        guard written.isHeld(by: promised, inPlace: false, in: table) else {
             throw BuildError(
                 "answers \(written.rendered(in: table)), and its"
                     + " declaration promises \(returns)",
@@ -411,7 +411,7 @@ struct TypeChecker {
         // bounds the way a slot holds what arrives, wherever in the promise
         // it stands.
         if let refusal = refusal(
-            holding: written,
+            writing: written,
             to: promised,
             as: "the answer holds",
             in: table,
@@ -422,10 +422,10 @@ struct TypeChecker {
         }
     }
 
-    // The same for what is written into a slot, each way of an attempt on
-    // its own.
+    // Why what is written into a slot is provably outside it, each way of an
+    // attempt on its own, or nothing.
     private func refusal(
-        holding written: LiteralShape,
+        writing written: LiteralShape,
         to declared: LoweredType,
         as label: String,
         in table: LoweredTypeTable,
@@ -436,8 +436,8 @@ struct TypeChecker {
             return refusal(holding: written.folded, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
         }
 
-        return refusal(holding: attempted, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
-            ?? refusal(holding: rescued, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
+        return refusal(writing: attempted, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
+            ?? refusal(writing: rescued, to: declared, as: label, in: table, fulfillment: fulfillment, at: place)
     }
 
     // Why what arrived is provably outside what a declaration holds it to,
@@ -581,25 +581,18 @@ struct TypeChecker {
         return .holds(leaning: leaning)
     }
 
-    // Whether what is written fits the slot it lands in: a name's start
-    // value, an answer, or a write into the box `binding` holds. Each way of
-    // an attempt writes on its own. A body declares no type parameter of its
-    // own, so a declared box whose slot names one is a parameter handed in
-    // place, which `takesInPlace` judges.
+    // Whether a write fits the slot it lands in, in the box `binding` holds.
+    // A body declares no type parameter of its own, so a declared box whose
+    // slot names one is a parameter handed in place.
     private func fits(
         _ written: LiteralShape,
         into slot: LoweredType,
         of binding: Binding?,
         in loweredTypes: LoweredTypeTable
     ) -> Bool {
-        if case let .either(attempted, rescued) = written {
-            return fits(attempted, into: slot, of: binding, in: loweredTypes)
-                && fits(rescued, into: slot, of: binding, in: loweredTypes)
-        }
+        guard case .declared? = binding?.holding else { return written.isHeld(by: slot, inPlace: false, in: loweredTypes) }
 
-        guard case .declared? = binding?.holding else { return slot.accepts(written.folded, in: loweredTypes) }
-
-        return written.isTaken(inPlaceBy: slot.slotUnwrapped, in: loweredTypes)
+        return written.isHeld(by: slot.slotUnwrapped, inPlace: true, in: loweredTypes)
     }
 
     // What a call's answer is judged against where the call stands: what the
@@ -3022,7 +3015,7 @@ struct TypeChecker {
 
             let written = shapes[position] ?? .part(sent[position])
 
-            return !written.isTaken(inPlaceBy: taking[position].slotUnwrapped, in: loweredTypes)
+            return !written.isHeld(by: taking[position].slotUnwrapped, inPlace: true, in: loweredTypes)
         }
     }
 
@@ -3153,7 +3146,7 @@ struct TypeChecker {
     ) throws -> LoweredType {
         guard let declared = spelled?.lowered(in: context.loweredTypes) else { return given }
 
-        guard fits(written, into: declared, of: nil, in: context.loweredTypes) else {
+        guard written.isHeld(by: declared, inPlace: false, in: context.loweredTypes) else {
             try refuse(
                 "holds \(declared.rendered(in: context.loweredTypes)), and what it was given is"
                     + " \(written.rendered(in: context.loweredTypes))",
@@ -3170,7 +3163,7 @@ struct TypeChecker {
         guard case let .judging(_, fulfillment) = ask else { return declared }
 
         if let refusal = refusal(
-            holding: written,
+            writing: written,
             to: declared,
             as: "holds",
             in: context.loweredTypes,
@@ -3225,7 +3218,7 @@ struct TypeChecker {
         guard case let .judging(_, fulfillment) = ask else { return }
 
         if let refusal = refusal(
-            holding: written,
+            writing: written,
             to: slot,
             as: "writes '\(path.rendered)' as",
             in: context.loweredTypes,
@@ -3235,7 +3228,7 @@ struct TypeChecker {
             throw BuildError(refusal, at: place)
         }
 
-        if slot.namesParameter, !written.isTaken(inPlaceBy: slot.slotUnwrapped, in: context.loweredTypes) {
+        if slot.namesParameter, !written.isHeld(by: slot.slotUnwrapped, inPlace: true, in: context.loweredTypes) {
             judgements.loosen()
         }
     }
