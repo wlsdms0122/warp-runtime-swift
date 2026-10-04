@@ -572,7 +572,7 @@ struct TypeChecker {
         of binding: Binding?,
         in loweredTypes: LoweredTypeTable
     ) -> Bool {
-        guard case .declared? = binding?.holding else { return written.isAccepted(by: slot.slotUnwrapped, in: loweredTypes) }
+        guard case .declared? = binding?.holding else { return slot.accepts(written.folded, in: loweredTypes) }
 
         return written.isTaken(inPlaceBy: slot.slotUnwrapped, in: loweredTypes)
     }
