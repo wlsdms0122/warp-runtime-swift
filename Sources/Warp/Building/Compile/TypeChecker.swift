@@ -496,10 +496,14 @@ struct TypeChecker {
     // to what it declares, so it proves it outright. Otherwise every answer
     // whose declared type names a type parameter has to be, at each type
     // parameter, that parameter, with no reading of `any` and no member
-    // value; and a call whose answer or variable handed back names a type
+    // value; a call whose answer or variable handed back names a type
     // parameter and is judged where it stands hands back what proves nothing,
     // unless it reaches a declaration of this document, whose proof is the
-    // document's to settle.
+    // document's to settle; and nothing proves what the body reads as a type
+    // parameter where that reading may hold what is not a value of it: a call
+    // filled one from an argument that is not, a write left a variable
+    // reading as one while it wrote what is not, or a closure that is not
+    // isolated reached a variable whose type names one.
     private func proof(
         of readings: [LoweredType],
         declaring selector: Name,
@@ -524,7 +528,7 @@ struct TypeChecker {
             return judging.namesParameter
         }
 
-        guard !appliesOpen else { return .broken }
+        guard !appliesOpen, judgements.loosened.isEmpty else { return .broken }
 
         // Read over what was judged, so a judgement whose call is not found
         // proves nothing rather than going unread.
@@ -1898,6 +1902,17 @@ struct TypeChecker {
                     ),
                     at: place.child(.closure)
                 )
+
+                // A closure that is not isolated may write a name it captured
+                // when it is called, by a write or by handing it in place, and
+                // the body around reads the variable as what it held before.
+                // A closure read as a procedure type may be called with what
+                // its type parameter stands for nowhere, so a variable it
+                // reaches whose type names one may hold what is not a value of
+                // it.
+                if !isolated, reached.contains(where: { name in outside[name]?.type.namesParameter == true }) {
+                    judgements.loosen(at: place.child(.closure))
+                }
             } else if procedure.signature != written.signature {
                 rewritten = .closure(procedure)
             }
@@ -2190,7 +2205,23 @@ struct TypeChecker {
                 when: ask
             )
 
-            try heldBeside(over: slots, readings: sent, filling: filled, in: context.loweredTypes, at: place, when: ask)
+            let loose = loose(over: slots, readings: sent, of: call.arguments, filling: filled, in: context.loweredTypes)
+
+            try heldBeside(
+                call.arguments,
+                over: slots,
+                loose: loose,
+                readings: sent,
+                filling: filled,
+                in: environment,
+                with: context.loweredTypes,
+                at: place,
+                when: ask
+            )
+
+            if case .judging = ask, !loose.isEmpty {
+                judgements.loosen(at: place)
+            }
 
             let rewritten = Call(selector: call.selector, arguments: arguments)
             let reading = answered(
@@ -2710,13 +2741,7 @@ struct TypeChecker {
             case let .assignment(path)?:
                 guard let id = path.head else { break }
 
-                // An empty list holds no element, so where it is written it is
-                // a list of whatever the slot's elements are.
-                let written: LoweredType = if case let .array(elements) = statement.expression, elements.isEmpty {
-                    .array(.never)
-                } else {
-                    inner.reading
-                }
+                let written = written(statement.expression, reading: inner.reading)
 
                 switch environment[id] {
                 case let binding? where binding.heldType != nil:
@@ -2727,7 +2752,8 @@ struct TypeChecker {
                         in: environment,
                         with: context,
                         at: here,
-                        when: ask
+                        when: ask,
+                        loosening: &judgements
                     )
 
                     if case let .held(held) = binding.holding, path.segments.count == 1 {
@@ -2753,7 +2779,8 @@ struct TypeChecker {
                             in: environment,
                             with: context,
                             at: here,
-                            when: ask
+                            when: ask,
+                            loosening: &judgements
                         )
 
                         if !locals.contains(id), let current = environment[id]?.type {
@@ -2919,43 +2946,87 @@ struct TypeChecker {
         return flow
     }
 
-    // A type parameter a call fills from a variable it hands in place, where
-    // the caller holds that variable as a type parameter of its own, stands
-    // for whatever filled the caller's. Every other argument read at it takes
-    // only a value of that parameter, the way a write into the variable does:
-    // a value every member of its bounds takes is not one.
-    private func heldBeside(
+    // The positions of a call whose argument is not a value of what fills
+    // its slot, where that names a type parameter of the body around. The
+    // call reads the argument as the parameter, which takes a value every
+    // member of its bounds takes and what a reading of `any` stands for, and
+    // what the call answers or hands back may be that argument.
+    private func loose(
         over slots: [Slot],
         readings sent: [LoweredType],
+        of arguments: [Expression],
         filling filled: [Name: LoweredType],
-        in loweredTypes: LoweredTypeTable,
+        in loweredTypes: LoweredTypeTable
+    ) -> [Int] {
+        slots.indices.filter { position in
+            guard position < sent.count, position < arguments.count, slots[position].type.namesParameter else { return false }
+
+            let taking = slots[position].type.filling(filled).slotUnwrapped
+
+            guard taking.namesParameter else { return false }
+
+            return !taking.takesInPlace(written(arguments[position], reading: sent[position]), in: loweredTypes)
+        }
+    }
+
+    // A type parameter a call fills from a parameter handed in place to the
+    // caller, which the caller holds as a type parameter of its own, stands
+    // for whatever filled the caller's. Every other argument read at it takes
+    // only a value of that parameter, the way a write into the parameter
+    // does: a value every member of its bounds takes is not one, so a loose
+    // position there refuses.
+    private func heldBeside(
+        _ arguments: [Expression],
+        over slots: [Slot],
+        loose: [Int],
+        readings sent: [LoweredType],
+        filling filled: [Name: LoweredType],
+        in environment: [Name: Binding],
+        with loweredTypes: LoweredTypeTable,
         at place: Place,
         when ask: Ask
     ) throws {
-        guard case .judging = ask else { return }
+        guard case .judging = ask, !loose.isEmpty else { return }
 
         let held = Set(
-            slots.filter(\.type.isInout)
-                .flatMap { slot in slot.type.boundedParameters.keys }
-                .filter { name in filled[name]?.namesParameter == true }
+            slots.indices.filter { position in
+                guard
+                    slots[position].type.isInout,
+                    position < arguments.count,
+                    case let .reference(path) = arguments[position],
+                    let head = path.head,
+                    case .declared? = environment[head]?.holding
+                else {
+                    return false
+                }
+
+                return true
+            }
+            .flatMap { position in slots[position].type.boundedParameters.keys }
+            .filter { name in filled[name]?.namesParameter == true }
         )
 
         guard !held.isEmpty else { return }
 
-        for (position, slot) in slots.enumerated() where !slot.type.isInout && position < sent.count {
-            guard !held.isDisjoint(with: slot.type.boundedParameters.keys) else { continue }
-
-            let taking = slot.type.filling(filled).slotUnwrapped
-
-            guard !taking.takesInPlace(sent[position], in: loweredTypes) else { continue }
+        for position in loose where !slots[position].type.isInout {
+            guard !held.isDisjoint(with: slots[position].type.boundedParameters.keys) else { continue }
 
             try refuse(
-                "sends \(sent[position].rendered(in: loweredTypes)) where \(taking.rendered(in: loweredTypes))"
+                "sends \(sent[position].rendered(in: loweredTypes))"
+                    + " where \(slots[position].type.filling(filled).slotUnwrapped.rendered(in: loweredTypes))"
                     + " is held in place, which takes only a value of that parameter",
                 at: place.child(.argument(position)),
                 when: ask
             )
         }
+    }
+
+    // What an expression written into a slot reads as there: an empty list
+    // holds no element, so it is a list of whatever the slot's elements are.
+    private func written(_ expression: Expression, reading: LoweredType) -> LoweredType {
+        guard case let .array(elements) = expression, elements.isEmpty else { return reading }
+
+        return .array(.never)
     }
 
     // The rules a call handing variables in place is held to, at each
@@ -3062,6 +3133,10 @@ struct TypeChecker {
         return declared
     }
 
+    // A write that leaves the box reading as what it is held to, or as it
+    // was through a path: refused where what is written does not fit what
+    // the path reaches, and loose where that names a type parameter and what
+    // is written is not a value of it.
     private func refuseUnfit(
         _ written: LoweredType,
         writtenTo path: Path,
@@ -3069,7 +3144,8 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
-        when ask: Ask
+        when ask: Ask,
+        loosening judgements: inout JudgementTable
     ) throws {
         let slot: LoweredType
 
@@ -3107,6 +3183,10 @@ struct TypeChecker {
             at: place
         ) {
             throw BuildError(refusal, at: place)
+        }
+
+        if slot.namesParameter, !slot.slotUnwrapped.takesInPlace(written.slotUnwrapped, in: context.loweredTypes) {
+            judgements.loosen(at: place)
         }
     }
 
