@@ -15,13 +15,14 @@ enum LiteralShape: Sendable {
     case part(LoweredType)
 
     // MARK: - Property
-    // The literal as one type, for a slot that judges it whole. An empty list
-    // holds no element, so it is a list of `never`, and the parts beside each
-    // other join as two readings do.
+    // The literal as one type, for a slot that judges it whole and for a
+    // call filling a type parameter from it. An empty list holds no element,
+    // so it is a list of `never`, and the parts beside each other join part
+    // by part.
     var folded: LoweredType {
         switch self {
         case let .list(items):
-            return .array(items.reduce(.never) { held, item in held.joined(item.folded) })
+            return .array(items.reduce(.never) { held, item in Self.joined(held, item.folded) })
 
         case let .record(fields):
             return .record(fields.mapValues(\.folded))
@@ -81,4 +82,42 @@ enum LiteralShape: Sendable {
     }
 
     // MARK: - Private
+    // Two parts a literal holds side by side, as one type: what holds no
+    // value adds nothing, lists join by their elements and records of the
+    // same fields field by field, null beside a part is what may be null, and
+    // anything else joins as two readings do, a reading of `any` making the
+    // position `any`. Records of other fields are `any`, since a record slot
+    // takes either while no one record type holds both.
+    private static func joined(_ held: LoweredType, _ part: LoweredType) -> LoweredType {
+        switch (held, part) {
+        case (.never, _):
+            return part
+
+        case (_, .never):
+            return held
+
+        case (.null, _):
+            return part.admittingNull
+
+        case (_, .null):
+            return held.admittingNull
+
+        case let (.nullable(mine), _):
+            return joined(mine, part).admittingNull
+
+        case let (_, .nullable(theirs)):
+            return joined(held, theirs).admittingNull
+
+        case let (.array(mine), .array(theirs)):
+            return .array(joined(mine, theirs))
+
+        case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
+            return .record(
+                LoweredRecord(layout: mine.layout, fields: zip(mine.fields, theirs.fields).map { field, given in joined(field, given) })
+            )
+
+        default:
+            return held.joined(part)
+        }
+    }
 }

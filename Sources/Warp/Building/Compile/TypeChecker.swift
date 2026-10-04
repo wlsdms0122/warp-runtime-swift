@@ -2214,7 +2214,7 @@ struct TypeChecker {
                 )
 
                 arguments.append(inner.rewritten)
-                sent.append(inner.reading)
+                sent.append(inner.literalShape?.folded ?? inner.reading)
                 shapes[position] = inner.literalShape
                 calls += inner.calls
                 judgements.absorb(inner.judgements)

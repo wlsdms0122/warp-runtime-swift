@@ -1191,6 +1191,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.composition(bounds), _):
             holding.append(Substitution.Held(reading: given, bounds: bounds, orNull: false))
 
+        // A reading that leaves, or an empty list's element, holds no value,
+        // so it fills nothing.
+        case (.parameter, .never):
+            return
+
         case let (.parameter(name, _), _):
             guard let already = bound[name] else {
                 bound[name] = given
@@ -1843,7 +1848,12 @@ indirect enum LoweredType: Sendable, Equatable {
     // MARK: - Private
     // The join of two readings where one takes the other, `takingGiven`
     // saying which, walked in step. Each position below is asked the same.
+    // A reading of `any` at a position is `any` there, as it is for the
+    // whole parameter: it is the loosest reading there is, and `accepts`
+    // cannot order it.
     private func merged(with given: LoweredType, takingGiven takesGiven: Bool, in table: LoweredTypeTable) -> LoweredType {
+        guard self != .any, given != .any else { return .any }
+
         let looser = takesGiven ? self : given
 
         switch (throughAliases(in: table), given.throughAliases(in: table)) {
