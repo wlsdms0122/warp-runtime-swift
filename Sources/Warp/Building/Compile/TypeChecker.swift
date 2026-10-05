@@ -2148,7 +2148,8 @@ struct TypeChecker {
                     inPlace: handed,
                     judging: CallJudgement(
                         against: judgedAgainst(answers, answeredBy: nil),
-                        handedBack: handedBack(at: handed, of: callee)
+                        handedBack: handedBack(at: handed, of: callee),
+                        settlesAnswer: true
                     )
                 ),
                 at: place
@@ -2316,9 +2317,13 @@ struct TypeChecker {
                 in: context.loweredTypes
             )
 
+            // Only a contract's answer is a declaration the callee did not
+            // settle to, and only where it names no type parameter the call
+            // filled.
             if let judging = CallJudgement(
                 against: judgedAgainst(reading, sending: call.selector, given: context),
-                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context)
+                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context),
+                settlesAnswer: context.contractProcedures[call.selector]?.answers.map { answer in !answer.namesParameter } ?? false
             ) {
                 judgements.record(.call(judging), at: place)
             }

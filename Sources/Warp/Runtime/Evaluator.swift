@@ -811,20 +811,13 @@ struct Evaluator: Sendable {
 
         guard let against = judging.against else { return answered }
 
-        // An answer read through what a declaration wrote, the `returns` of a
-        // value's slot or the answer a contract wrote, meets that declaration
-        // and settles to it. One read through a type parameter the call
-        // filled is the value the callee was handed or made, and is handed on
-        // as it came.
-        switch read {
-        case .apply, .dispatch:
-            return try against.settling(answered, at: "answer", in: loweredTypes)
-
-        default:
+        guard judging.settlesAnswer else {
             try against.admitting(answered, at: "answer", in: loweredTypes)
 
             return answered
         }
+
+        return try against.settling(answered, at: "answer", in: loweredTypes)
     }
 
     // What a call answers, once what it handed back in place is judged
