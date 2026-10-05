@@ -115,40 +115,53 @@ enum LiteralShape: Sendable {
         let slot = inPlace ? slot.slotUnwrapped : slot
         let rigid = inPlace && slot.namesParameter
 
-        switch (slot, self) {
-        case (_, .part):
+        switch self {
+        case .part:
             return holds(slot, self, rigid, whole)
 
-        case let (_, .either(attempted, rescued)):
+        case let .either(attempted, rescued):
             return attempted.everyPart(along: slot, inPlace: inPlace, in: table, whole: false, holds: holds)
                 && rescued.everyPart(along: slot, inPlace: inPlace, in: table, whole: false, holds: holds)
 
-        case let (.nullable(inner), _), let (.variable(inner), _):
+        case .list, .record:
+            break
+        }
+
+        switch slot {
+        case let .nullable(inner), let .variable(inner):
             return everyPart(along: inner, inPlace: inPlace, in: table, whole: whole, holds: holds)
 
-        case let (.array(element), .list(items)):
+        case let .named(row):
+            return everyPart(along: table.loweredTypes[row], inPlace: inPlace, in: table, whole: whole, holds: holds)
+
+        case let .array(element):
+            guard case let .list(items) = self else { break }
+
             return items.allSatisfy { item in
                 item.everyPart(along: element, inPlace: inPlace, in: table, whole: false, holds: holds)
             }
 
-        case let (.dictionary(element), .record(fields)):
+        case let .dictionary(element):
+            guard case let .record(fields) = self else { break }
+
             return fields.values.allSatisfy { field in
                 field.everyPart(along: element, inPlace: inPlace, in: table, whole: false, holds: holds)
             }
 
-        case let (.record(record), .record(fields)) where !rigid:
+        case let .record(record) where !rigid:
+            guard case let .record(fields) = self else { break }
+
             return record.named.allSatisfy { name, field in
                 fields[name].map { given in
                     given.everyPart(along: field, inPlace: inPlace, in: table, whole: false, holds: holds)
                 } ?? false
             }
 
-        case let (.named(row), _):
-            return everyPart(along: table.loweredTypes[row], inPlace: inPlace, in: table, whole: whole, holds: holds)
-
         default:
-            return holds(slot, self, rigid, whole)
+            break
         }
+
+        return holds(slot, self, rigid, whole)
     }
 
     // Whether the bounds a literal stands under take it part by part, as
