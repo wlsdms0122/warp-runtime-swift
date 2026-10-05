@@ -668,8 +668,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // the comparison it is inside, and a recursive type agrees with itself
     // precisely when assuming it does uncovers no disagreement. The two `named`
     // doors and a composition record a pair. `asking` is the memberships asked
-    // of this very reading, and met again one refuses: the same question come
-    // back proves nothing. A reading taken apart (an element, a field, a
+    // of this very reading. A reading taken apart (an element, a field, a
     // procedure's position, what a composition reading stands for) is another
     // reading and starts without them.
     func accepts(
@@ -747,15 +746,14 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.nullable, .null):
             return true
 
-        // A composition takes what each of its bounds takes: a membership
-        // what its members admit, a contract what answers it, each asked of
-        // the table with the same rigidity, and, where the slot takes null as
-        // well, knowing it does. In the other direction a composition stands
-        // for some type nothing here lists. A membership already being asked
-        // of this reading is the question come back, which proves nothing;
-        // asked again of a part of the reading that is the reading itself
-        // through a name, it holds, a recursive type meeting a recursive
-        // membership.
+        // A composition takes what each of its bounds takes: a membership what
+        // its members admit, a contract what answers it, each asked of the
+        // table with the same rigidity, and, where the slot takes null as well,
+        // knowing it does. In the other direction a composition stands for some
+        // type nothing here lists. A membership already being asked of this
+        // reading does not take it; asked again of a part of the reading that
+        // is the reading itself through a name, it holds, a recursive type
+        // meeting a recursive membership.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             guard !bounds.contains(where: { bound in
                 if case let .membership(row) = bound { asking.contains(row) } else { false }
@@ -2164,9 +2162,9 @@ indirect enum LoweredType: Sendable, Equatable {
         .sorted()
     }
 
-    // Whether the types a membership admits take every byte between them.
-    // A membership met again on the way is the question come back, which
-    // proves nothing, so the bytes are then settled one by one.
+    // Whether the types a membership admits take every byte between them. A
+    // membership met again on the way does not, and the bytes are then settled
+    // one by one.
     private func holdsEveryByte(
         of constraint: Int,
         in table: LoweredTypeTable,

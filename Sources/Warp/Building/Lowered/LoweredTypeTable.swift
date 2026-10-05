@@ -268,7 +268,8 @@ final class LoweredTypeTable: Sendable {
         // it fits where every one of those would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is provable
         // and it passes the way an unbounded one does, unless `rigid`. A
-        // membership already being asked answers yes.
+        // membership this reading already came through adds nothing met again,
+        // so where none is left it answers yes.
         case let .parameter(_, bounds), let .composition(bounds):
             let bounded = bounds.contains { bound in
                 if case .membership = bound { true } else { false }

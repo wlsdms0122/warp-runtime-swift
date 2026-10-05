@@ -8,13 +8,13 @@
 import Foundation
 
 // The memberships already being asked of one reading or one value. One met
-// again is the same question come back, which proves nothing. The latest is
-// held apart from the ones asked before it, so asking one membership more
-// than nothing builds no list.
+// again is the same question come back, which proves nothing.
 struct Asking: Sendable {
     // MARK: - Property
     static let nothing = Asking(earlier: [], latest: nil)
 
+    // The latest is held apart from the ones asked before it, so asking one
+    // membership more than nothing builds no list.
     private let earlier: [Int]
     private let latest: Int?
 

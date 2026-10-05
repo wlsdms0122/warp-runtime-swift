@@ -173,9 +173,8 @@ enum LiteralShape: Sendable {
     // Whether the bounds a literal stands under take it part by part, as
     // `accepts` reads them whole: a membership by one of its members, and a
     // parameter by every member of one membership bounding it. A membership
-    // already being asked of this literal is the same question come back,
-    // which proves nothing, so it does not take it, the way the run settles
-    // a value.
+    // already being asked of this literal does not take it, the way the run
+    // settles a value.
     private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, asking: Asking) -> Bool {
         switch (slot, self) {
         case (_, .part):
