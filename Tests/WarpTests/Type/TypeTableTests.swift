@@ -84,7 +84,9 @@ struct TypeTableTests {
         let table = sut.loweredTypes
         let loop = try #require(table.constraintRow(named: "Loop"))
 
-        #expect(table.admits(constraint: loop, value: .int(1), assuming: []) == true)
+        // A value asked of the same membership again is the question come
+        // back, which takes nothing
+        #expect(table.admits(constraint: loop, value: .int(1), asking: .nothing) == false)
     }
 
     // MARK: - Public

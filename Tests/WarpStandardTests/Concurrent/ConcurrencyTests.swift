@@ -365,7 +365,7 @@ struct ConcurrencyTests {
         }
     }
 
-    @Test("a piece that is not a closure is refused, named by where it sat")
+    @Test("a piece that is not a closure is refused at the build, the list judged part by part")
     func aValueAmongTheClosuresIsRefused() async throws {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
@@ -385,7 +385,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("input 'pieces'[1]: expected isolated procedure, got int")
+            "\(error)".contains("with pieces, which holds [const isolated procedure<() -> any>, int] where std.concurrent.Pieces is declared")
         }
     }
 

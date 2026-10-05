@@ -663,43 +663,16 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // Whether what this stands for is settled at the call. The shallow
-    // question, beside `isGeneric`'s deep one. A parameter and a walk through
-    // one answer alike, and that is the whole of what is asked: neither is
-    // knowable at the build, so a reading that would judge by type has nothing
-    // to judge on.
-    var decidedAtCall: Bool {
-        switch self {
-        case .parameter, .projection:
-            return true
-
-        default:
-            return false
-        }
-    }
-
-    // Whether this type proves nothing about the value it holds. The three
-    // that stop a walk, named once because they are one question asked twice. A
-    // dot needs a type the types prove, and a cast is the door onto one: what
-    // the walk may not read past is exactly what a cast may open, and a cast
-    // onto anything else is a claim the types already settled.
-    //
-    // The three say nothing for three different reasons, and where the reason
-    // matters (the sentence a refusal carries) they are asked apart. This is
-    // for the places that only need the shared fact.
-    var provesNothing: Bool {
-        self == .any || self == .never || decidedAtCall
-    }
-
     // The refusal a cast earns for naming a type there is nothing to read. Nil
     // where the type names one. Said here, once, because a cast's claim is
     // judged in two places: the declaration scan that sees every cast in every
     // module, and the walk that knows what the value reads as.
     //
-    // Each of the three says its own. They are one predicate where only the
-    // shared fact is wanted (`provesNothing`), and three sentences here,
-    // because a refusal carries its reason: telling an author that `T` names no
-    // type is false. A call names it, elsewhere.
+    // Each of the three says its own, because a refusal carries its reason:
+    // telling an author that `T` names no type is false. A call names it,
+    // elsewhere. A type parameter anywhere in the claim is the third, since
+    // nothing in a body fills it and the run would settle what arrived against
+    // no type there.
     var unreadableClaim: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing."
@@ -713,7 +686,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
                 + " nothing arrives to have this one"
         }
 
-        if decidedAtCall {
+        if isGeneric {
             return "reads as \(rendered), whose type the call"
                 + " decides. A cast names a type here, and this one is named"
                 + " somewhere else"

@@ -20,6 +20,11 @@ struct Flow {
     // types, and the walk that asks for a meeting makes it.
     typealias Meeting = (Name, LoweredType, LoweredType) throws -> Void
 
+    // What a `return` carried out of the procedure: what it reads as, what it
+    // holds written into the declared answer where its reading does not say,
+    // the value it carried where that is a constant, and where it was written.
+    typealias Answer = (reading: LoweredType, literalShape: LiteralShape?, value: Value?, place: Place)
+
     // Where a way that left lands: the procedure (`return`), the end of a
     // loop (`break`), the end of a round (`continue`), each by the loop it
     // names or nothing for the nearest, or the attempt around it (a failure).
@@ -104,12 +109,11 @@ struct Flow {
     // with the ways that went on as they are.
     var left: [Reach: [Way]] = [:]
 
-    // What every `return` inside here carried out of the procedure, each with
-    // the value it carried where that is a constant, and where it was written.
-    // Nothing absorbs one, so this only ever gathers on the way up. Kept apart
-    // rather than joined, so each is held to the declaration on its own: two
-    // that disagree join to `any`, and `any` fits everything.
-    var answered: [(reading: LoweredType, value: Value?, place: Place)] = []
+    // What every `return` inside here carried out of the procedure. Nothing
+    // absorbs one, so this only ever gathers on the way up. Kept apart rather
+    // than joined, so each is held to the declaration on its own: two that
+    // disagree join to `any`, and `any` fits everything.
+    var answered: [Answer] = []
 
     // The names read here that the body this flow came out of did not
     // declare. With what was written, what a closure takes from where it was

@@ -8,6 +8,8 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
+import WarpTestSupport
 
 @Suite("What a procedure returns")
 struct ReturnTypeTests {
@@ -154,6 +156,45 @@ struct ReturnTypeTests {
         } throws: { error in
             error is BuildError && "\(error)".contains("names type 'Nowhere', which no module in this link declares")
         }
+    }
+
+    @Test("an attempt a body answers is held to the declaration each way on its own")
+    func anAttemptAnswerIsHeldEachWay() async throws {
+        // Given. The body answers an int and the rescue a string, where the declaration promises an int
+        let attempt = Warp.Expression.attempt(
+            Block(
+                body: [
+                    Statement(
+                        expression: .conditional(
+                            .literal(.bool(false)),
+                            then: [Statement(expression: aborting(literal("stops")))],
+                            else: nil
+                        )
+                    )
+                ],
+                result: .literal(.int(1))
+            ),
+            rescue: Block(body: [], result: .literal(.string("s")))
+        )
+
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: attempt
+                )
+            ]
+        )
+
+        // When
+        let refusal = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard)
+        }
+
+        // Then
+        #expect(refusal?.message == "answers int or string, and its declaration promises int")
     }
 
     // MARK: - Public
