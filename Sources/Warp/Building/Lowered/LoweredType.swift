@@ -1423,7 +1423,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // call of a value asks before the run. A reading no procedure could stand in
     // is a call every run refuses.
     func couldBeProcedure(in table: LoweredTypeTable) -> Bool {
-        couldBeProcedure(in: table, assuming: [])
+        couldBeProcedure(in: table, namedAsking: [])
     }
 
     // Which rows this type stands on, in the two tables it names. Read by
@@ -2116,18 +2116,18 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Names are peeled one layer at a time, with the rows already being asked
     // about remembered, since a membership may name itself through a row.
-    private func couldBeProcedure(in table: LoweredTypeTable, assuming: [Int]) -> Bool {
+    private func couldBeProcedure(in table: LoweredTypeTable, namedAsking: [Int]) -> Bool {
         switch self {
         case .procedure, .any, .never, .projection, .undeclared:
             return true
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.couldBeProcedure(in: table, assuming: assuming)
+            return inner.couldBeProcedure(in: table, namedAsking: namedAsking)
 
         case let .named(row):
-            guard !assuming.contains(row) else { return false }
+            guard !namedAsking.contains(row) else { return false }
 
-            return table.loweredTypes[row].couldBeProcedure(in: table, assuming: assuming + [row])
+            return table.loweredTypes[row].couldBeProcedure(in: table, namedAsking: namedAsking + [row])
 
         // A value of a type parameter or a composition is one of every
         // bound's members at once. A contract is answered by declared types,
@@ -2137,7 +2137,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 switch bound {
                 case let .membership(row):
                     return table.constraints[row].contains { member in
-                        member.couldBeProcedure(in: table, assuming: assuming)
+                        member.couldBeProcedure(in: table, namedAsking: namedAsking)
                     }
 
                 case .contract:
