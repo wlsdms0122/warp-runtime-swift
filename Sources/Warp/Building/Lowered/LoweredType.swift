@@ -1031,10 +1031,11 @@ indirect enum LoweredType: Sendable, Equatable {
         resolved(in: table, assuming: [], keepingRecordNames: false)
     }
 
-    // The same with every name for a record kept, an alias of one included,
-    // and every other name walked through. A declared record is a name as
-    // well as a structure, so two readings are one type where they are the
-    // same through this, names and all.
+    // The same with every name for a record kept as the record's own, an
+    // alias of one read as the record it names, and every other name walked
+    // through. A declared record is a name as well as a structure, so two
+    // readings are one type where they are the same through this, names and
+    // all.
     func resolvedKeepingRecordNames(in table: LoweredTypeTable) -> LoweredType {
         resolved(in: table, assuming: [], keepingRecordNames: true)
     }
@@ -2087,12 +2088,15 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
-    // expanded every row at every depth would chase one forever. A name for a
-    // record stands as itself as well where record names are kept.
+    // expanded every row at every depth would chase one forever. Where record
+    // names are kept, a name for a record stands as the record's own, so an
+    // alias of it and the record are one name.
     private func resolved(in table: LoweredTypeTable, assuming: [Int], keepingRecordNames keeps: Bool) -> LoweredType {
         switch self {
         case let .named(row):
-            guard !assuming.contains(row), !keeps || table.recordRows[row] == nil else { return self }
+            if keeps, let record = table.recordRows[row] { return .named(record) }
+
+            guard !assuming.contains(row) else { return self }
 
             return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row], keepingRecordNames: keeps)
 
