@@ -773,7 +773,7 @@ indirect enum LoweredType: Sendable, Equatable {
                     table.admits(
                         constraint: row,
                         reading: other,
-                        assuming: [],
+                        assumingRows: [],
                         assumingPairs: assuming + [(self, other)],
                         asking: asking,
                         rigid: rigid,

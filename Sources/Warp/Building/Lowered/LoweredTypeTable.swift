@@ -203,7 +203,7 @@ final class LoweredTypeTable: Sendable {
     // passes here and is judged again where the value arrives. `orNull` is
     // a slot taking null as well: what arrives is null or answers.
     func answering(contract name: Name, reading: LoweredType, orNull: Bool) -> Answering {
-        answering(contract: name, reading: reading, assuming: [], rigid: false, orNull: orNull)
+        answering(contract: name, reading: reading, assumingRows: [], rigid: false, orNull: orNull)
     }
 
     // Whether a reading stands where a contract bounds a slot. One-sided as
@@ -211,12 +211,12 @@ final class LoweredTypeTable: Sendable {
     // arrives, so a named type is held to what the documents say, and a
     // parameter or a composition to what its bounds prove.
     func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
-        if case .settled(false) = answering(contract: name, reading: reading, assuming: [], rigid: rigid, orNull: orNull) { false } else { true }
+        if case .settled(false) = answering(contract: name, reading: reading, assumingRows: [], rigid: rigid, orNull: orNull) { false } else { true }
     }
 
     // Whether a value is a member of a constraint. A member speaks through
     // the same settlement a declared type applies, so what `int` admits as a
-    // slot it admits as a member, widening included. `assuming` is what the
+    // slot it admits as a member, widening included. `asking` is what the
     // caller was already asking; this constraint joins it only where a
     // member has to be settled to answer, since a scalar member answers by
     // kind.
@@ -240,19 +240,19 @@ final class LoweredTypeTable: Sendable {
     // where every one of those members would. `orNull` is a slot taking null
     // as well, so a reading that may be null is held by what it is besides.
     func admits(constraint row: Int, reading given: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
-        admits(constraint: row, reading: given, assuming: [], assumingPairs: [], asking: [], rigid: rigid, orNull: orNull)
+        admits(constraint: row, reading: given, assumingRows: [], assumingPairs: [], asking: [], rigid: rigid, orNull: orNull)
     }
 
     // The same question, carrying what is already being asked. Three lists
-    // ride along. `assuming` is the memberships a constrained reading came
-    // through, whose members met again add nothing. `assumingPairs` and
+    // ride along. `assumingRows` is the memberships a constrained reading
+    // came through, whose members met again add nothing. `assumingPairs` and
     // `asking` are what `accepts` carries, the pairs met on the way, which
     // hold met again, and the memberships asked of this very reading, which
     // refuse met again.
     func admits(
         constraint row: Int,
         reading given: LoweredType,
-        assuming: [Int],
+        assumingRows: [Int],
         assumingPairs: [(LoweredType, LoweredType)],
         asking: [Int],
         rigid: Bool,
@@ -277,7 +277,7 @@ final class LoweredTypeTable: Sendable {
             guard bounded || !rigid else { return false }
 
             let memberships = bounds.compactMap { bound -> Int? in
-                guard case let .membership(constraint) = bound, !assuming.contains(constraint) else { return nil }
+                guard case let .membership(constraint) = bound, !assumingRows.contains(constraint) else { return nil }
 
                 return constraint
             }
@@ -286,7 +286,7 @@ final class LoweredTypeTable: Sendable {
 
             return memberships.contains { constraint in
                 constraints[constraint].allSatisfy { member in
-                    admits(constraint: row, reading: member, assuming: assuming + [constraint], assumingPairs: assumingPairs, asking: [], rigid: rigid, orNull: orNull)
+                    admits(constraint: row, reading: member, assumingRows: assumingRows + [constraint], assumingPairs: assumingPairs, asking: [], rigid: rigid, orNull: orNull)
                 }
             }
 
@@ -294,14 +294,14 @@ final class LoweredTypeTable: Sendable {
         // is besides is too, since its value is one or the other. A name that
         // stands for no record is read as what it stands for.
         case let .nullable(inner):
-            return admits(constraint: row, reading: .null, assuming: assuming, assumingPairs: assumingPairs, asking: [], rigid: rigid, orNull: false)
-                && admits(constraint: row, reading: inner, assuming: assuming, assumingPairs: assumingPairs, asking: asking, rigid: rigid, orNull: false)
+            return admits(constraint: row, reading: .null, assumingRows: assumingRows, assumingPairs: assumingPairs, asking: [], rigid: rigid, orNull: false)
+                && admits(constraint: row, reading: inner, assumingRows: assumingRows, assumingPairs: assumingPairs, asking: asking, rigid: rigid, orNull: false)
 
         case .named where reading.throughAliases(in: self) != reading:
             return admits(
                 constraint: row,
                 reading: reading.throughAliases(in: self),
-                assuming: assuming,
+                assumingRows: assumingRows,
                 assumingPairs: assumingPairs,
                 asking: asking,
                 rigid: rigid,
@@ -467,7 +467,7 @@ final class LoweredTypeTable: Sendable {
     private func answering(
         contract name: Name,
         reading given: LoweredType,
-        assuming: [Int],
+        assumingRows: [Int],
         rigid: Bool,
         orNull: Bool
     ) -> Answering {
@@ -490,7 +490,7 @@ final class LoweredTypeTable: Sendable {
         // arrival, it is held to what the documents say about it. Any other
         // name answers as what it stands for, since a value of it wears none.
         case let .named(row) where recordRows[row] == nil:
-            return answering(contract: name, reading: loweredTypes[row], assuming: assuming, rigid: rigid, orNull: orNull)
+            return answering(contract: name, reading: loweredTypes[row], assumingRows: assumingRows, rigid: rigid, orNull: orNull)
 
         case let .named(row) where rigid:
             return .settled(settles(contract: name, arrived: labels[recordRows[row] ?? row]) != false)
@@ -508,10 +508,10 @@ final class LoweredTypeTable: Sendable {
         // is provable and it passes to be judged where the value arrives,
         // unless `rigid`.
         case let .parameter(_, bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid, orNull: orNull) ?? .settled(false)
+            return answering(contract: name, boundedBy: bounds, assumingRows: assumingRows, rigid: rigid, orNull: orNull) ?? .settled(false)
 
         case let .composition(bounds):
-            return answering(contract: name, boundedBy: bounds, assuming: assuming, rigid: rigid, orNull: orNull) ?? .settled(!rigid)
+            return answering(contract: name, boundedBy: bounds, assumingRows: assumingRows, rigid: rigid, orNull: orNull) ?? .settled(!rigid)
 
         default:
             return .settled(false)
@@ -527,7 +527,7 @@ final class LoweredTypeTable: Sendable {
     private func answering(
         contract name: Name,
         boundedBy bounds: [LoweredType.Bound],
-        assuming: [Int],
+        assumingRows: [Int],
         rigid: Bool,
         orNull: Bool
     ) -> Answering? {
@@ -536,10 +536,10 @@ final class LoweredTypeTable: Sendable {
         var answers: [Answering] = []
 
         for bound in bounds {
-            guard case let .membership(row) = bound, !assuming.contains(row) else { continue }
+            guard case let .membership(row) = bound, !assumingRows.contains(row) else { continue }
 
             answers.append(constraints[row].reduce(.settled(true)) { answered, member in
-                answered.joined(answering(contract: name, reading: member, assuming: assuming + [row], rigid: rigid, orNull: orNull))
+                answered.joined(answering(contract: name, reading: member, assumingRows: assumingRows + [row], rigid: rigid, orNull: orNull))
             })
         }
 
