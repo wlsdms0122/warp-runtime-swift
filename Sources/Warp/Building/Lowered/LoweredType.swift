@@ -2160,6 +2160,9 @@ indirect enum LoweredType: Sendable, Equatable {
             }
         }
 
+        // What is read as a membership may be a value written into it
+        // nameless, which stays nameless, so a member naming a declared record
+        // is read by that record's fields here.
         if case let .composition(bounds) = other {
             guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
 
@@ -2169,7 +2172,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 guard case let .membership(row) = bound else { return true }
 
                 return table.constraints[row].contains { member in
-                    couldBothHold(member, in: table, assuming: assuming, askingPairs: asked)
+                    couldBothHold(member.withoutRecordName(in: table), in: table, assuming: assuming, askingPairs: asked)
                 }
             }
         }
@@ -2217,6 +2220,23 @@ indirect enum LoweredType: Sendable, Equatable {
             return LoweredType.witnesses.contains { witness in
                 mine.settles(witness, in: table) && theirs.settles(witness, in: table)
             }
+        }
+    }
+
+    // This type with the declared record it names, through `?` and the
+    // aliases standing for it, read as that record's fields.
+    private func withoutRecordName(in table: LoweredTypeTable) -> LoweredType {
+        switch self {
+        case let .nullable(inner):
+            return .nullable(inner.withoutRecordName(in: table))
+
+        case let .named(row):
+            guard let record = table.recordRows[row] else { return table.loweredTypes[row].withoutRecordName(in: table) }
+
+            return table.loweredTypes[record]
+
+        default:
+            return self
         }
     }
 
