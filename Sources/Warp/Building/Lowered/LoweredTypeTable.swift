@@ -229,28 +229,30 @@ final class LoweredTypeTable: Sendable {
     // where it holds one type of collection it names the bad element, which
     // is what the author has to go and fix.
     func refusals(of value: Value, by row: Int, at path: @autoclosure () -> String, asking: Asking) -> [String]? {
-        let asked = asking.adding(row)
-        var reasons: [String] = []
+        var errors: [Int: any Error] = [:]
 
-        for member in constraints[row] {
+        for (position, member) in constraints[row].enumerated() {
             if let taken = member.admitsAsScalar(value) {
                 guard !taken else { return nil }
-
-                reasons.append("as \(member.rendered(in: self)), got \(value.type)")
 
                 continue
             }
 
             do {
-                _ = try member.settling(value, at: path(), in: self, asking: asked)
+                _ = try member.settling(value, at: path(), in: self, asking: asking.adding(row))
 
                 return nil
             } catch {
-                reasons.append("as \(member.rendered(in: self)), \(error)")
+                errors[position] = error
             }
         }
 
-        return reasons
+        // Spelled once no member took it, so a value a later member takes
+        // pays for no text. A scalar member holds no error: its reason is
+        // its kind.
+        return constraints[row].enumerated().map { position, member in
+            "as \(member.rendered(in: self)), " + (errors[position].map { error in "\(error)" } ?? "got \(value.type)")
+        }
     }
 
     // Whether some member of a membership answers `holds`, asked with the
@@ -282,7 +284,7 @@ final class LoweredTypeTable: Sendable {
 
     // The same question, carrying what is already being asked. Three lists
     // ride along. `assumingRows` is the memberships a constrained reading
-    // came through, whose members met again add nothing. `assumingPairs` and
+    // came through, which hold met again. `assumingPairs` and
     // `asking` are what `accepts` carries, the pairs met on the way, which
     // hold met again, and the memberships asked of this very reading, which
     // refuse met again.
@@ -305,22 +307,17 @@ final class LoweredTypeTable: Sendable {
         // it fits where every one of those would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is provable
         // and it passes the way an unbounded one does, unless `rigid`. A
-        // membership this reading already came through adds nothing met again,
-        // so where none is left it answers yes.
+        // membership this reading already came through holds met again, so
+        // one of them answers yes.
         case let .parameter(_, bounds), let .composition(bounds):
-            let bounded = bounds.contains { bound in
-                if case .membership = bound { true } else { false }
-            }
-
-            guard bounded || !rigid else { return false }
-
             let memberships = bounds.compactMap { bound -> Int? in
-                guard case let .membership(constraint) = bound, !assumingRows.contains(constraint) else { return nil }
+                guard case let .membership(constraint) = bound else { return nil }
 
                 return constraint
             }
 
-            guard !memberships.isEmpty else { return true }
+            guard !memberships.isEmpty else { return !rigid }
+            guard !memberships.contains(where: assumingRows.contains) else { return true }
 
             return memberships.contains { constraint in
                 constraints[constraint].allSatisfy { member in
@@ -427,33 +424,41 @@ final class LoweredTypeTable: Sendable {
             (constraints[label] ?? []).map { member in member.lowered(in: index) }
         }
 
-        // The end of each row's chain of names, or nil where the chain comes
-        // back on itself.
-        func end(of start: Int) -> Int? {
+        // Whether a row's chain of names comes back on itself, a `?` on the
+        // way included.
+        func comesBack(from start: Int) -> Bool {
             var row = start
             var walked: [Int] = [start]
 
             while let next = loweredTypes[row].row {
-                guard !walked.contains(next) else { return nil }
+                guard !walked.contains(next) else { return true }
 
                 walked.append(next)
                 row = next
             }
 
-            return row
+            return false
         }
 
         // Marked before any is replaced, so each row in a cycle is named
         // as itself rather than as whichever the replacement reached first.
-        let cycling = loweredTypes.indices.filter { row in end(of: row) == nil }
+        let cycling = loweredTypes.indices.filter { row in comesBack(from: row) }
 
         for row in cycling {
             loweredTypes[row] = .undeclared(label: labels[row].spelling, because: .namesItself)
         }
 
-        // The record a row names: the last row on the way to a record type.
+        // The record a row names: the last row on the way to a record type,
+        // along names alone, since a name for what may be null names no
+        // record. Every chain is finite by now.
         let recordRows = loweredTypes.indices.map { start -> Int? in
-            guard let row = end(of: start), case .record = loweredTypes[row] else { return nil }
+            var row = start
+
+            while case let .named(next) = loweredTypes[row] {
+                row = next
+            }
+
+            guard case .record = loweredTypes[row] else { return nil }
 
             return row
         }
@@ -559,7 +564,9 @@ final class LoweredTypeTable: Sendable {
     // membership answers where every member does. Memberships are asked
     // apart, since a value is a member of each of them: one that settles the
     // contract settles it for all, and what leans on claims is leaned on only
-    // where no membership settles it.
+    // where no membership settles it. A membership this reading already came
+    // through holds met again, as it does in `admits`, so it settles the
+    // contract for all.
     private func answering(
         contract name: Name,
         boundedBy bounds: [LoweredType.Bound],
@@ -569,17 +576,20 @@ final class LoweredTypeTable: Sendable {
     ) -> Answering? {
         guard !bounds.contains(.contract(name)) else { return .settled(true) }
 
-        var answers: [Answering] = []
+        let memberships = bounds.compactMap { bound -> Int? in
+            guard case let .membership(row) = bound else { return nil }
 
-        for bound in bounds {
-            guard case let .membership(row) = bound, !assumingRows.contains(row) else { continue }
-
-            answers.append(constraints[row].reduce(.settled(true)) { answered, member in
-                answered.joined(answering(contract: name, reading: member, assumingRows: assumingRows + [row], rigid: rigid, orNull: orNull))
-            })
+            return row
         }
 
-        return answers.reduce(nil) { answered, next in answered.map { answered in answered.either(next) } ?? next }
+        guard !memberships.contains(where: assumingRows.contains) else { return .settled(true) }
+
+        return memberships.map { row in
+            constraints[row].reduce(.settled(true)) { answered, member in
+                answered.joined(answering(contract: name, reading: member, assumingRows: assumingRows + [row], rigid: rigid, orNull: orNull))
+            }
+        }
+        .reduce(nil) { answered, next in answered.map { answered in answered.either(next) } ?? next }
     }
 }
 
