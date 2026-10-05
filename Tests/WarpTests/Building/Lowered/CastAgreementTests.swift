@@ -110,7 +110,10 @@ struct CastAgreementTests {
         // Given. "could some value be both" names no side, so an answer that
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
-        // side has one, which is exactly where an asymmetry would hide.
+        // side has one, which is exactly where an asymmetry would hide. The
+        // one side it tells apart is a membership with a declared record
+        // member, which these types hold none of: read, a value written into
+        // it nameless stays nameless, and cast onto, a value keeps its name.
 
         // When / Then
         for mine in typeExpressions {
@@ -158,7 +161,7 @@ struct CastAgreementTests {
     // document writes reaches it by lowering.
     private func couldBothHold(_ mine: TypeExpression, _ theirs: TypeExpression) -> Bool {
         mine.lowered(in: types.loweredTypes)
-            .couldBothHold(theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
+            .couldBothHold(reading: theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
     private func settles(_ type: TypeExpression, _ value: Value) -> Bool {

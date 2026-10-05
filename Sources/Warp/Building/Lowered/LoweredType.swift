@@ -1039,12 +1039,13 @@ indirect enum LoweredType: Sendable, Equatable {
         resolved(in: table, assuming: [], keepingRecordNames: true)
     }
 
-    // Whether some value could satisfy both types at once. Not `accepts`:
-    // two records that name no field in common accept each other in neither
-    // direction and are still both satisfied by a value carrying every
-    // field. The bias is deliberate: a refusal is earned only where the
-    // types provably disagree, and everything else is left to the run.
-    func couldBothHold(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
+    // Whether some value read as `reading` could be one of this type, which
+    // a cast names. Not `accepts`: two records that name no field in common
+    // accept each other in neither direction and are still both satisfied
+    // by a value carrying every field. The bias is deliberate: a refusal is
+    // earned only where the types provably disagree, and everything else is
+    // left to the run.
+    func couldBothHold(reading other: LoweredType, in table: LoweredTypeTable) -> Bool {
         couldBothHold(other, in: table, assuming: [], askingPairs: [])
     }
 
@@ -2122,6 +2123,10 @@ indirect enum LoweredType: Sendable, Equatable {
     // and the pairs a composition was taken apart at beside them. A pair met
     // again, inside a record or not, is the same question come back, which
     // no member answers.
+    //
+    // This is what a cast names and `other` is what it reads, and no step
+    // swaps the two: a record's name on the reading side is kept further than
+    // one on this side, so the sides are not alike.
     private func couldBothHold(
         _ other: LoweredType,
         in table: LoweredTypeTable,
@@ -2207,8 +2212,11 @@ indirect enum LoweredType: Sendable, Equatable {
         // Refinements and compact spellings are dropped first: whether a
         // value could be both is a question about kinds.
         switch (unrefined, other.unrefined) {
-        case let (.nullable(inner), side), let (side, .nullable(inner)):
-            return inner.couldBothHold(side, in: table, assuming: assuming, askingPairs: askingPairs)
+        case let (.nullable(inner), theirs):
+            return inner.couldBothHold(theirs, in: table, assuming: assuming, askingPairs: askingPairs)
+
+        case let (mine, .nullable(inner)):
+            return mine.couldBothHold(inner, in: table, assuming: assuming, askingPairs: askingPairs)
 
         case let (_, .named(row)):
             guard !assuming.contains(row) else { return true }
@@ -2226,7 +2234,10 @@ indirect enum LoweredType: Sendable, Equatable {
         // every field the record names must be able to be an entry. A list
         // and a map are not asked about their elements: an empty one is of
         // every element type there is.
-        case let (.dictionary(entry), .record(held)), let (.record(held), .dictionary(entry)):
+        case let (.dictionary(entry), .record(held)):
+            return held.fields.allSatisfy { field in entry.couldBothHold(field, in: table, assuming: assuming, askingPairs: askingPairs) }
+
+        case let (.record(held), .dictionary(entry)):
             return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assuming: assuming, askingPairs: askingPairs) }
 
         // Two decided kinds, which is where a value either is both or is

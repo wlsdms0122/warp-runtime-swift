@@ -291,7 +291,7 @@ struct LoweredTypeTests {
         #expect(TypeExpression.named("app.Bad").accepts(.int, in: table))
         #expect(TypeExpression.int.accepts(.named("app.Bad"), in: table))
         #expect(TypeExpression.named("app.Bad").lowered(in: table.loweredTypes)
-            .couldBothHold(.int, in: table.loweredTypes))
+            .couldBothHold(reading: .int, in: table.loweredTypes))
         #expect(!TypeExpression.named("app.Bad").declaresNull(in: table))
         #expect {
             try TypeExpression.named("app.Bad").settling(.int(1), at: "input", in: table)

@@ -1720,7 +1720,7 @@ struct TypeChecker {
                 ? LoweredType.nullable(claim)
                 : claim
 
-            if !claim.couldBothHold(inner.reading, in: context.loweredTypes) {
+            if !claim.couldBothHold(reading: inner.reading, in: context.loweredTypes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
