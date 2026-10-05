@@ -1242,6 +1242,11 @@ indirect enum LoweredType: Sendable, Equatable {
         assuming: [Int] = []
     ) {
         switch (self, given) {
+        // What arrived wears its slot's marks, which say nothing about its
+        // value, so they come off before anything is bound or held.
+        case let (_, .variable(theirs)), let (_, .inout(theirs)):
+            binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
+
         // A composition has no name to be read under: what arrived is held
         // to its bounds where it arrived, wherever in the slot that was.
         case let (.composition(bounds), _):
@@ -1381,9 +1386,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
                 field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
             }
-
-        case let (_, .variable(theirs)), let (_, .inout(theirs)):
-            binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
         case let (.procedure(.some(mine), myAnswer, _, _), .procedure(.some(theirs), theirAnswer, _, _)):
             for (parameter, against) in zip(mine, theirs) {
