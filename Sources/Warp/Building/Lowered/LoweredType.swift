@@ -2167,6 +2167,16 @@ indirect enum LoweredType: Sendable, Equatable {
         assuming: [Int],
         askingPairs: [(LoweredType, LoweredType)]
     ) -> Bool {
+        // A field's `var` is a fact about the field; the value read out of it
+        // is the type inside.
+        if case let .variable(inner) = self {
+            return inner.couldBothHold(other, in: table, assuming: assuming, askingPairs: askingPairs)
+        }
+
+        if case let .variable(inner) = other {
+            return couldBothHold(inner, in: table, assuming: assuming, askingPairs: askingPairs)
+        }
+
         if
             case let .named(mine) = self,
             case let .named(theirs) = other,
