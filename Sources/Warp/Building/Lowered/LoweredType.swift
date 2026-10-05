@@ -650,7 +650,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // because nothing was declared, and `any` on the right is accepted by
     // anything because nothing is known.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        accepts(other, in: table, assuming: [], asking: .nothing, rigid: false)
+        accepts(other, in: table, assumingPairs: [], asking: .nothing, rigid: false)
     }
 
     // The same question where `other` is a declaration's own, and no call
@@ -659,23 +659,23 @@ indirect enum LoweredType: Sendable, Equatable {
     // it fits by structure, takes it. What a declaration answering for
     // another is held to.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
-        accepts(other, in: table, assuming: [], asking: .nothing, rigid: rigid)
+        accepts(other, in: table, assumingPairs: [], asking: .nothing, rigid: rigid)
     }
 
-    // The same question, carrying what is already being asked. `assuming`
-    // is the pairs met on the way, and met again a pair holds: a named type
-    // may reach itself through a type, so comparing one structurally walks
-    // back to the comparison it is inside, and a recursive type agrees with
-    // itself precisely when assuming it does uncovers no disagreement. The
-    // two `named` doors and a composition record a pair. `asking` is the
-    // memberships asked of this very reading, and met again one refuses:
-    // the same question come back proves nothing. A reading taken apart (an
-    // element, a field, a procedure's position, what a composition reading
-    // stands for) is another reading and starts without them.
+    // The same question, carrying what is already being asked. `assumingPairs`
+    // is the pairs met on the way, and met again a pair holds: a named type may
+    // reach itself through a type, so comparing one structurally walks back to
+    // the comparison it is inside, and a recursive type agrees with itself
+    // precisely when assuming it does uncovers no disagreement. The two `named`
+    // doors and a composition record a pair. `asking` is the memberships asked
+    // of this very reading, and met again one refuses: the same question come
+    // back proves nothing. A reading taken apart (an element, a field, a
+    // procedure's position, what a composition reading stands for) is another
+    // reading and starts without them.
     func accepts(
         _ other: LoweredType,
         in table: LoweredTypeTable,
-        assuming: [(LoweredType, LoweredType)],
+        assumingPairs: [(LoweredType, LoweredType)],
         asking: Asking,
         rigid: Bool
     ) -> Bool {
@@ -719,7 +719,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return true
 
         case let (.parameter, .variable(inner)), let (.parameter, .inout(inner)):
-            return accepts(inner, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return accepts(inner, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
         case (.parameter, .any), (.parameter, .projection), (.parameter, .undeclared):
             return true
@@ -731,7 +731,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 guard case let .membership(row) = bound else { return false }
 
                 return table.constraints[row].allSatisfy { member in
-                    member.accepts(other, in: table, assuming: assuming, asking: asking, rigid: rigid)
+                    member.accepts(other, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
                 }
             }
 
@@ -741,7 +741,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // its declared half takes from what cannot be null, and what can is
         // answered below.
         case let (.variable(inner), _):
-            return inner.accepts(other, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return inner.accepts(other, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
         // A nullable slot takes null, whatever it declares besides.
         case (.nullable, .null):
@@ -763,7 +763,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 return false
             }
 
-            guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+            guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
             let orNull = if case .nullable = self { true } else { false }
 
@@ -774,7 +774,7 @@ indirect enum LoweredType: Sendable, Equatable {
                         constraint: row,
                         reading: other,
                         assumingRows: [],
-                        assumingPairs: assuming + [(self, other)],
+                        assumingPairs: assumingPairs + [(self, other)],
                         asking: asking,
                         rigid: rigid,
                         orNull: orNull
@@ -786,7 +786,7 @@ indirect enum LoweredType: Sendable, Equatable {
             }
 
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
-            return mine.accepts(other, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return mine.accepts(other, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
         // In the other direction a value of a composition is one of every
         // membership's members and nothing says which, so it stands where
@@ -806,11 +806,11 @@ indirect enum LoweredType: Sendable, Equatable {
             guard !memberships.isEmpty else { return true }
 
             return memberships.contains { row in
-                table.constraints[row].allSatisfy { member in accepts(member, in: table, assuming: assuming, asking: .nothing, rigid: rigid) }
+                table.constraints[row].allSatisfy { member in accepts(member, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid) }
             }
 
         case let (_, .variable(inner)), let (_, .inout(inner)):
-            return accepts(inner, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return accepts(inner, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
         case (.any, _), (_, .any), (.projection, _), (_, .projection):
             return true
@@ -822,39 +822,39 @@ indirect enum LoweredType: Sendable, Equatable {
             return true
 
         case let (.named(row), _):
-            guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+            guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
-            return table.loweredTypes[row].accepts(other, in: table, assuming: assuming + [(self, other)], asking: asking, rigid: rigid)
+            return table.loweredTypes[row].accepts(other, in: table, assumingPairs: assumingPairs + [(self, other)], asking: asking, rigid: rigid)
 
         case let (_, .named(row)):
-            guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+            guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
-            return accepts(table.loweredTypes[row], in: table, assuming: assuming + [(self, other)], asking: asking, rigid: rigid)
+            return accepts(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], asking: asking, rigid: rigid)
 
         // A nullable slot takes anything nullable whose declared half it
         // takes; null and what cannot be null were taken above. What may be
         // null does not stand where null was never declared.
         case let (.nullable(mine), .nullable(theirs)):
-            return mine.accepts(theirs, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return mine.accepts(theirs, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
         case let (.array(mine), .array(theirs)):
-            return mine.accepts(theirs, in: table, assuming: assuming, asking: .nothing, rigid: rigid)
+            return mine.accepts(theirs, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid)
 
         case let (.dictionary(mine), .dictionary(theirs)):
-            return mine.accepts(theirs, in: table, assuming: assuming, asking: .nothing, rigid: rigid)
+            return mine.accepts(theirs, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid)
 
         // A record is a dictionary whose fields happen to be known: a record
         // whose every field is the entry type is such a mapping. Not the
         // other way round, since a `dictionary` promises nothing about which
         // fields exist.
         case let (.dictionary(mine), .record(theirs)):
-            return theirs.fields.allSatisfy { field in mine.accepts(field, in: table, assuming: assuming, asking: .nothing, rigid: rigid) }
+            return theirs.fields.allSatisfy { field in mine.accepts(field, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid) }
 
         // Width: what stands here must declare at least the fields this one
         // names, and may declare more.
         case let (.record(mine), .record(theirs)):
             return mine.named.allSatisfy { name, field in
-                theirs[name].map { given in field.accepts(given, in: table, assuming: assuming, asking: .nothing, rigid: rigid) } ?? false
+                theirs[name].map { given in field.accepts(given, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid) } ?? false
             }
 
         case let (.procedure(required, wanted, wantedConstness, wantedIsolation),
@@ -878,25 +878,25 @@ indirect enum LoweredType: Sendable, Equatable {
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
             for (parameter, taken) in zip(required, given) {
-                guard taken.takes(parameter, in: table, assuming: assuming, rigid: rigid) else { return false }
+                guard taken.takes(parameter, in: table, assumingPairs: assumingPairs, rigid: rigid) else { return false }
             }
 
-            return (wanted ?? .any).accepts(offered ?? .any, in: table, assuming: assuming, asking: .nothing, rigid: rigid)
+            return (wanted ?? .any).accepts(offered ?? .any, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid)
 
         // Two ranges are the one meeting where both sides are the text's
         // fact: the kinds under them decide which way a value may widen, and
         // bounds that cannot overlap are provably apart.
         case let (.ranged(mine), .ranged(theirs)):
-            return mine.lowered.accepts(theirs.lowered, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return mine.lowered.accepts(theirs.lowered, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
                 && mine.overlaps(theirs)
 
         // A range against anything else is its kind against that: the bounds
         // speak where a value is settled.
         case let (.ranged(mine), _):
-            return mine.lowered.accepts(other, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return mine.lowered.accepts(other, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
         case let (_, .ranged(theirs)):
-            return accepts(theirs.lowered, in: table, assuming: assuming, asking: asking, rigid: rigid)
+            return accepts(theirs.lowered, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
         // The one conversion the language has, the way that cannot lose
         // anything.
@@ -970,16 +970,16 @@ indirect enum LoweredType: Sendable, Equatable {
     // place is handed one. A position taking a value may stand where a place
     // is handed, and reads what the place holds. Rigid as `accepts` is.
     func takes(_ handed: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
-        takes(handed, in: table, assuming: [], rigid: rigid)
+        takes(handed, in: table, assumingPairs: [], rigid: rigid)
     }
 
     private func takes(
         _ handed: LoweredType,
         in table: LoweredTypeTable,
-        assuming: [(LoweredType, LoweredType)],
+        assumingPairs: [(LoweredType, LoweredType)],
         rigid: Bool
     ) -> Bool {
-        accepts(handed, in: table, assuming: assuming, asking: .nothing, rigid: rigid) && (!isInout || handed.isInout)
+        accepts(handed, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid) && (!isInout || handed.isInout)
     }
 
     // The same type through every name that stands for no record, at the
@@ -1062,17 +1062,17 @@ indirect enum LoweredType: Sendable, Equatable {
     // since standing for anything is what `accepts` reads, and a type
     // parameter is itself, and so is a name the table does not answer.
     func identical(to other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        matches(other, in: table, assuming: [])
+        matches(other, in: table, assumingPairs: [])
     }
 
     private func matches(
         _ other: LoweredType,
         in table: LoweredTypeTable,
-        assuming: [(LoweredType, LoweredType)]
+        assumingPairs: [(LoweredType, LoweredType)]
     ) -> Bool {
-        if assuming.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
+        if assumingPairs.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
 
-        let walked = assuming + [(self, other)]
+        let walked = assumingPairs + [(self, other)]
 
         switch (self, other) {
         case (.undeclared, _), (_, .undeclared), (.parameter, _), (_, .parameter):
@@ -1090,27 +1090,27 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return table.recordRows[mine] == nil
                 && table.recordRows[theirs] == nil
-                && table.loweredTypes[mine].matches(table.loweredTypes[theirs], in: table, assuming: walked)
+                && table.loweredTypes[mine].matches(table.loweredTypes[theirs], in: table, assumingPairs: walked)
 
         case let (.named(mine), _):
             return table.recordRows[mine] == nil
-                && table.loweredTypes[mine].matches(other, in: table, assuming: walked)
+                && table.loweredTypes[mine].matches(other, in: table, assumingPairs: walked)
 
         case let (_, .named(theirs)):
             return table.recordRows[theirs] == nil
-                && matches(table.loweredTypes[theirs], in: table, assuming: walked)
+                && matches(table.loweredTypes[theirs], in: table, assumingPairs: walked)
 
         case let (.nullable(mine), .nullable(theirs)),
             let (.array(mine), .array(theirs)),
             let (.dictionary(mine), .dictionary(theirs)),
             let (.variable(mine), .variable(theirs)),
             let (.inout(mine), .inout(theirs)):
-            return mine.matches(theirs, in: table, assuming: walked)
+            return mine.matches(theirs, in: table, assumingPairs: walked)
 
         case let (.record(mine), .record(theirs)):
             return mine.layout == theirs.layout
                 && zip(mine.fields, theirs.fields).allSatisfy { one, other in
-                    one.matches(other, in: table, assuming: walked)
+                    one.matches(other, in: table, assumingPairs: walked)
                 }
 
         case let (.procedure(mine, myAnswer, myConstness, myIsolation),
@@ -1122,7 +1122,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 break
 
             case let (myAnswer?, theirAnswer?):
-                guard myAnswer.matches(theirAnswer, in: table, assuming: walked) else { return false }
+                guard myAnswer.matches(theirAnswer, in: table, assumingPairs: walked) else { return false }
 
             default:
                 return false
@@ -1135,7 +1135,7 @@ indirect enum LoweredType: Sendable, Equatable {
             case let (mine?, theirs?):
                 return mine.count == theirs.count
                     && zip(mine, theirs).allSatisfy { one, other in
-                        one.matches(other, in: table, assuming: walked)
+                        one.matches(other, in: table, assumingPairs: walked)
                     }
 
             default:

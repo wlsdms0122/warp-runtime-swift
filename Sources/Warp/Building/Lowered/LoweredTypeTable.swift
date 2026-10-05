@@ -319,7 +319,7 @@ final class LoweredTypeTable: Sendable {
             let asked = asking.adding(row)
 
             return constraints[row].contains { member in
-                member.accepts(reading, in: self, assuming: assumingPairs, asking: asked, rigid: rigid)
+                member.accepts(reading, in: self, assumingPairs: assumingPairs, asking: asked, rigid: rigid)
             }
         }
     }
