@@ -1943,8 +1943,20 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.record(nameless), theirs) where theirs.record(in: table)?.layout.fields == nameless.layout.fields:
             return .record(LoweredType.nameless(nameless, merging: theirs.record(in: table)?.fields ?? [], in: table))
 
-        default:
-            return looser
+        // Two records of other fields: the looser names fewer, and what holds
+        // both is a nameless record of its fields, each merged with the field
+        // of the same name in the other.
+        case let (mine, theirs):
+            guard let myRecord = mine.record(in: table), let theirRecord = theirs.record(in: table) else { return looser }
+
+            let (loose, tight) = takesGiven ? (myRecord, theirRecord) : (theirRecord, myRecord)
+
+            return .record(
+                LoweredRecord(
+                    layout: Layout(name: nil, ordered: loose.layout.fields),
+                    fields: loose.named.map { name, field in tight[name].map { other in field.merged(with: other, in: table) } ?? field }
+                )
+            )
         }
     }
 
