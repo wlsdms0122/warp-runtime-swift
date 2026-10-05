@@ -1315,14 +1315,18 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A record read as a dictionary fills a parameter with each of its
         // fields, as a list literal fills one with each of its elements: what
-        // the fields read a parameter as joins part by part, and that join is
-        // read as one more reading of it. Each field's value, its `var` off,
-        // is held to a composition where it stands.
+        // each field reads a parameter as is read on its own, what two fields
+        // read it as joins part by part, and that join is read as one more
+        // reading of it. Each field's value, its `var` off, is held to a
+        // composition where it stands.
         case let (.dictionary(mine), .record(theirs)):
-            var fields = Substitution(join: .partByPart)
+            var fields = Substitution()
 
             for field in theirs.fields {
-                mine.binding(against: field.fieldUnwrapped, into: &fields, holding: &holding, in: table, assuming: assuming)
+                var fieldReadings = Substitution()
+
+                mine.binding(against: field.fieldUnwrapped, into: &fieldReadings, holding: &holding, in: table, assuming: assuming)
+                fields.read(fieldReadings, joining: .partByPart, in: table)
             }
 
             substitution.read(fields, in: table)

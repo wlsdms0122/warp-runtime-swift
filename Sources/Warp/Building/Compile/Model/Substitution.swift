@@ -27,10 +27,11 @@ struct Substitution: Sendable {
         // MARK: - Private
     }
 
-    // How two readings of one parameter become one. Two arguments agree only
-    // where one holds the other, and are a disagreement otherwise. A record's
-    // fields read as a dictionary join part by part, as a list literal's
-    // elements do, and are no disagreement.
+    // How a reading of a parameter joins what it is already read as. Two
+    // arguments agree only where one holds the other, and are a disagreement
+    // otherwise. What two fields of a record read as a dictionary read a
+    // parameter as joins part by part, as a list literal's elements do, and
+    // is no disagreement.
     enum Join: Sendable {
         case holdingBoth
         case partByPart
@@ -50,13 +51,7 @@ struct Substitution: Sendable {
     // joined say nothing of each field.
     private(set) var apart: [Name: [LoweredType]] = [:]
 
-    let join: Join
-
     // MARK: - Initializer
-    init(join: Join = .holdingBoth) {
-        self.join = join
-    }
-
     // MARK: - Public
     // What a parameter is held to its bounds as: what it is read as, and each
     // reading that does not say.
@@ -81,7 +76,12 @@ struct Substitution: Sendable {
     // Where two do not join, the first reading is kept, so that what is
     // reported names both, and so that everything downstream sees one answer
     // rather than a parameter that is two things.
-    mutating func read(_ parameter: Name, as given: LoweredType, in table: LoweredTypeTable) {
+    mutating func read(
+        _ parameter: Name,
+        as given: LoweredType,
+        joining join: Join = .holdingBoth,
+        in table: LoweredTypeTable
+    ) {
         guard let already = readings[parameter] else {
             readings[parameter] = given
 
@@ -116,10 +116,16 @@ struct Substitution: Sendable {
     }
 
     // What another walk read, read into this one: what it read each
-    // parameter as, once more, and what it kept apart.
-    mutating func read(_ other: Substitution, in table: LoweredTypeTable) {
+    // parameter as, once more, where it read one two ways, and what it kept
+    // apart. A disagreement already here is the one reported.
+    mutating func read(_ other: Substitution, joining join: Join = .holdingBoth, in table: LoweredTypeTable) {
         for (parameter, reading) in other.readings.sorted(by: { $0.key < $1.key }) {
-            read(parameter, as: reading, in: table)
+            read(parameter, as: reading, joining: join, in: table)
+        }
+
+        for (parameter, reading) in other.disagreeing.sorted(by: { $0.key < $1.key })
+            where disagreeing[parameter] == nil {
+            disagreeing[parameter] = reading
         }
 
         for (parameter, readings) in other.apart.sorted(by: { $0.key < $1.key }) {
