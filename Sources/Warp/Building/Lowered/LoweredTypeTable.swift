@@ -239,12 +239,16 @@ final class LoweredTypeTable: Sendable {
     // its name: it stands for some member of its constraint, so it fits
     // where every one of those members would. `orNull` is a slot taking null
     // as well, so a reading that may be null is held by what it is besides.
-    //
-    // Three lists ride along. `assuming` is the memberships a constrained
-    // reading came through, whose members met again add nothing.
-    // `assumingPairs` and `asking` are what `accepts` carries, the pairs met
-    // on the way, which hold met again, and the memberships asked of this
-    // very reading, which refuse met again.
+    func admits(constraint row: Int, reading given: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
+        admits(constraint: row, reading: given, assuming: [], assumingPairs: [], asking: [], rigid: rigid, orNull: orNull)
+    }
+
+    // The same question, carrying what is already being asked. Three lists
+    // ride along. `assuming` is the memberships a constrained reading came
+    // through, whose members met again add nothing. `assumingPairs` and
+    // `asking` are what `accepts` carries, the pairs met on the way, which
+    // hold met again, and the memberships asked of this very reading, which
+    // refuse met again.
     func admits(
         constraint row: Int,
         reading given: LoweredType,
@@ -319,7 +323,6 @@ final class LoweredTypeTable: Sendable {
             }
         }
     }
-
 
     // The record a type names through the row it stands on, or nil where it
     // names none. The one reading of `recordRows` for a type that is not

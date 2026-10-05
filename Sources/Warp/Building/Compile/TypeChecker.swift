@@ -513,7 +513,7 @@ struct TypeChecker {
             }
 
         case let .membership(row):
-            guard !loweredTypes.admits(constraint: row, reading: reading, assuming: [], assumingPairs: [], asking: [], rigid: false, orNull: orNull) else { return nil }
+            guard !loweredTypes.admits(constraint: row, reading: reading, rigid: false, orNull: orNull) else { return nil }
 
             return "\(label) \(reading.rendered(in: loweredTypes)),"
                 + " which '\(loweredTypes.constraintLabels[row])' does not admit"
