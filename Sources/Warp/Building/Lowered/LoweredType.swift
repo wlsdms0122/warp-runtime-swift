@@ -2078,6 +2078,44 @@ indirect enum LoweredType: Sendable, Equatable {
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
     // expanded every row at every depth would chase one forever.
+    // The same type with every name that stands for no record walked
+    // through to what it stands for, at every depth, and every name for a
+    // record kept, an alias of one included. A declared record is a name as
+    // well as a structure, so two readings are one type where they are the
+    // same through this, names and all.
+    func resolvedKeepingRecordNames(in table: LoweredTypeTable) -> LoweredType {
+        resolvedKeepingRecordNames(in: table, assuming: [])
+    }
+
+    private func resolvedKeepingRecordNames(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
+        switch self {
+        case let .named(row):
+            guard table.recordRows[row] == nil, !assuming.contains(row) else { return self }
+
+            return table.loweredTypes[row].resolvedKeepingRecordNames(in: table, assuming: assuming + [row])
+
+        case let .array(element):
+            return .array(element.resolvedKeepingRecordNames(in: table, assuming: assuming))
+
+        case let .dictionary(element):
+            return .dictionary(element.resolvedKeepingRecordNames(in: table, assuming: assuming))
+
+        case let .nullable(element):
+            return .nullable(element.resolvedKeepingRecordNames(in: table, assuming: assuming))
+
+        case let .record(fields):
+            return .record(
+                LoweredRecord(
+                    layout: fields.layout,
+                    fields: fields.fields.map { field in field.resolvedKeepingRecordNames(in: table, assuming: assuming) }
+                )
+            )
+
+        default:
+            return self
+        }
+    }
+
     private func resolved(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
         switch self {
         case let .named(row):

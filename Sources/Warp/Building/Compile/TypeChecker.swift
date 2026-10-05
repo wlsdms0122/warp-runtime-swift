@@ -1693,7 +1693,7 @@ struct TypeChecker {
             let claim = type.lowered(in: context.loweredTypes)
             let settled = claim.resolved(in: context.loweredTypes)
 
-            let read = inner.reading.resolved(in: context.loweredTypes)
+            let read = inner.reading.resolvedKeepingRecordNames(in: context.loweredTypes)
 
             // Both refusals ask the types themselves, whether or not the
             // reading is fully proven.
@@ -1702,7 +1702,9 @@ struct TypeChecker {
             // that one would accept the other. `accepts` holds between `int`
             // and `int(0...10)`, and between anything and `any`, because the
             // value is checked when it arrives, so a narrowing cast still says
-            // something.
+            // something. Record names count at every depth: reading a nameless
+            // record as a declared one attaches the name, so it is never a
+            // cast of what the value already is.
             //
             // The claim is judged first, and on itself: a cast onto a type
             // that proves nothing opens no door, whatever it was written over.
@@ -1718,12 +1720,6 @@ struct TypeChecker {
                 ? LoweredType.nullable(claim)
                 : claim
 
-            // A declared record is a name as well as a structure: reading a
-            // nameless record as one attaches the name, so it is never a
-            // cast of what the value already is. Two names never hold one
-            // value, and the unresolved types are asked so that is seen.
-            let nominal = context.loweredTypes.record(of: claim) != nil
-
             if !claim.couldBothHold(inner.reading, in: context.loweredTypes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
@@ -1738,8 +1734,8 @@ struct TypeChecker {
                     at: place,
                     when: ask
                 )
-            } else if inner.reading == claim
-                || (!nominal && (settled == read || handed.resolved(in: context.loweredTypes) == read)) {
+            } else if claim.resolvedKeepingRecordNames(in: context.loweredTypes) == read
+                || handed.resolvedKeepingRecordNames(in: context.loweredTypes) == read {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same type by two spellings, and
