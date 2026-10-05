@@ -2175,9 +2175,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         // A value of a composition is one of every membership's members, so
-        // a value could be both wherever one member could. Asked before the
-        // other side's name is peeled, since a value settled into a member
-        // keeps its name, and each member meets it.
+        // a value could be both wherever one member could.
         if case let .composition(bounds) = self {
             guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
 
@@ -2192,7 +2190,11 @@ indirect enum LoweredType: Sendable, Equatable {
             }
         }
 
-        if case let .named(row) = other {
+        // A name that stands for no record is what it stands for. A record's
+        // name on the other side stays until a structure meets it, since a
+        // value of a declared record keeps its name wherever it is settled,
+        // and whatever wraps this side meets that name.
+        if case let .named(row) = other, table.recordRows[row] == nil {
             guard !assuming.contains(row) else { return true }
 
             return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row], askingPairs: askingPairs)
@@ -2235,6 +2237,11 @@ indirect enum LoweredType: Sendable, Equatable {
         switch (unrefined, other.unrefined) {
         case let (.nullable(inner), side), let (side, .nullable(inner)):
             return inner.couldBothHold(side, in: table, assuming: assuming, askingPairs: askingPairs)
+
+        case let (_, .named(row)):
+            guard !assuming.contains(row) else { return true }
+
+            return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row], askingPairs: askingPairs)
 
         // What both name has to be able to hold at once; what only one names
         // is data the other lets ride through.
