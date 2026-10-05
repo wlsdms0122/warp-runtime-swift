@@ -96,6 +96,7 @@ struct LoweredTypeTests {
         // Then
         #expect(substitution.readings["T"] == .int)
         #expect(substitution.disagreeing["T"] == .string)
+        #expect(Set(substitution.everyReading(of: "T").map { reading in reading.rendered(in: table) }) == ["int", "string", "bool"])
     }
 
     @Test("a parameter no call fills stands where a slot takes it by its structure, and nowhere else")

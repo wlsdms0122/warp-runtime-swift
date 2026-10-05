@@ -27,11 +27,13 @@ struct Substitution: Sendable {
         // MARK: - Private
     }
 
-    // How a reading of a parameter joins what it is already read as: only
-    // where one holds the other, and a disagreement otherwise, or part by
-    // part, as a list literal's elements do, and never a disagreement.
+    // How a reading of a parameter joins what it is already read as.
     enum Join: Sendable {
+        // Only where one holds the other, and a disagreement otherwise.
         case holdingBoth
+
+        // Part by part, as a list literal's elements do, and never a
+        // disagreement.
         case partByPart
     }
 
@@ -105,6 +107,16 @@ struct Substitution: Sendable {
             already.joinedPartByPart(given)
         }
 
+        // Two that do not join stay as they were read: the first is what the
+        // parameter is read as, and the second is kept apart as well, so that
+        // both are still held to the bounds.
+        guard let both else {
+            disagreeing[parameter] = given
+            apart[parameter, default: []].append(given)
+
+            return
+        }
+
         if already != both {
             apart[parameter, default: []].append(already)
         }
@@ -113,19 +125,16 @@ struct Substitution: Sendable {
             apart[parameter, default: []].append(given)
         }
 
-        guard let both else {
-            disagreeing[parameter] = given
-
-            return
-        }
-
         readings[parameter] = both
     }
 
     // What another walk read, read into this one: what it read each
-    // parameter as, once more, and what it kept apart. Where it read one two
-    // ways, its two are the ones reported, unless this one already read the
-    // parameter two ways, and what this one read it as is kept apart.
+    // parameter as, once more, and what it kept apart.
+    //
+    // Where the other read a parameter two ways and this one did not, the
+    // other's two are the ones reported, and what this one read the
+    // parameter as is kept apart. Where this one already read it two ways,
+    // its own two stay.
     mutating func read(_ other: Substitution, joining join: Join = .holdingBoth, in table: LoweredTypeTable) {
         for (parameter, second) in other.disagreeing.sorted(by: { $0.key < $1.key })
             where disagreeing[parameter] == nil {
