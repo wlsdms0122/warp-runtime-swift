@@ -72,11 +72,10 @@ struct DeclarationChecker {
             // A member is a concrete type. `some` stands for a type and names
             // none, `any` would admit everything a membership exists to narrow,
             // and `never` admits nothing. Each is a declaration that says
-            // nothing a membership could hold, and a member that names another
-            // constraint is what keeps the membership judgment from ever
-            // chasing itself. Judged through every name a member hides behind,
-            // or one alias would carry the refused type in. The chain is
-            // finite because a name-only cycle was refused above.
+            // nothing a membership could hold. Judged through every name a
+            // member hides behind, or one alias would carry the refused type
+            // in. The chain is finite because a name-only cycle was refused
+            // above.
             for member in admitted {
                 var resolved = member
 
