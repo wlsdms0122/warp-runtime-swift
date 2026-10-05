@@ -1178,10 +1178,12 @@ indirect enum LoweredType: Sendable, Equatable {
     // The reading that holds two readings of one type parameter where one
     // takes the other, walked in step through lists, dictionaries, what may
     // be null and record fields, a record read as a dictionary by each of
-    // its fields. Which was read first says nothing. At each
-    // position a range meeting its kind or another range gives the kind, and
-    // a declared record meeting a nameless record of its fields gives the
-    // nameless one, which is the one a value is sure to fit; a name that
+    // its fields. Which was read first says nothing. At each position a
+    // range meeting its kind or another range gives the kind, and a declared
+    // record meeting a nameless record of its fields gives the nameless one,
+    // which is the one a value is sure to fit; two records of other fields
+    // give a nameless record of the looser one's fields, each merged with
+    // the other's; a reading of `any` makes its position `any`; a name that
     // stands for no record meets the other reading as what it stands for.
     // Elsewhere it is the one that takes the other. Rigidly, because a
     // parameter read in a body is that body's own and nothing fills it. Nil
