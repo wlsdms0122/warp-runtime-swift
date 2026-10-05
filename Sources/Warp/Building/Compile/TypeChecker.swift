@@ -781,17 +781,13 @@ struct TypeChecker {
         // A list or record literal handed where a bounded parameter stands is
         // one of its bounds' members part by part, as one written into a slot
         // declaring them is: its join may be what a member takes while no
-        // member takes its parts. Only the parts standing at such a parameter
-        // are asked here; `check` judges the rest against what filled it.
+        // member takes its parts. Only what stands at such a parameter is
+        // asked here; `check` judges the rest against what filled it.
         for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
             let slot = slots[position]
-            let held = shape.everyPart(along: slot.type, inPlace: false, in: loweredTypes) { declared, part, _ in
-                guard case let .parameter(_, bounds) = declared, !bounds.isEmpty else { return true }
+            let bounded = slot.type.boundedAlone
 
-                return part.isHeld(by: .composition(bounds.sorted()), inPlace: false, in: loweredTypes)
-            }
-
-            guard !held else { continue }
+            guard bounded != .any, !shape.isHeld(by: bounded, inPlace: false, in: loweredTypes) else { continue }
 
             return .refusal(
                 "'\(slot.name)' holds \(shape.rendered(in: loweredTypes))"

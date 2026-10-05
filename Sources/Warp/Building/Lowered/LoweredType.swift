@@ -1365,6 +1365,53 @@ indirect enum LoweredType: Sendable, Equatable {
         binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &unread, in: table)
     }
 
+    // This type read by its bounded parameters alone: each as the
+    // composition of its bounds, and every other position as `any`. A
+    // procedure type is `any` whole, since what it is handed is no part of
+    // a value. What is handed where it stands at a call has to fit this,
+    // and what the call filled the parameters with judges the rest.
+    var boundedAlone: LoweredType {
+        switch self {
+        case let .parameter(_, bounds) where !bounds.isEmpty:
+            return .composition(bounds.sorted())
+
+        case let .array(element):
+            let bounded = element.boundedAlone
+
+            return bounded == .any ? .any : .array(bounded)
+
+        case let .dictionary(entry):
+            let bounded = entry.boundedAlone
+
+            return bounded == .any ? .any : .dictionary(bounded)
+
+        case let .record(record):
+            let fields = record.fields.map(\.boundedAlone)
+
+            guard fields.contains(where: { field in field != .any }) else { return .any }
+
+            return .record(LoweredRecord(layout: record.layout, fields: fields))
+
+        case let .nullable(inner):
+            let bounded = inner.boundedAlone
+
+            return bounded == .any ? .any : .nullable(bounded)
+
+        case let .variable(inner):
+            let bounded = inner.boundedAlone
+
+            return bounded == .any ? .any : .variable(bounded)
+
+        case let .inout(inner):
+            let bounded = inner.boundedAlone
+
+            return bounded == .any ? .any : .inout(bounded)
+
+        default:
+            return .any
+        }
+    }
+
     // This type with every parameter replaced by what it was read as. A
     // parameter nothing filled reads `any`, which is what a declaration says
     // when it says nothing.
