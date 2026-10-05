@@ -1161,7 +1161,12 @@ indirect enum LoweredType: Sendable, Equatable {
     // type holds, so whether it holds something is that rule run with its
     // refusal dropped rather than a second rule written beside it. The path
     // is empty because nothing reads the refusal.
-    func settles(_ value: Value, in table: LoweredTypeTable, asking: Asking = .nothing) -> Bool {
+    func settles(_ value: Value, in table: LoweredTypeTable) -> Bool {
+        settles(value, in: table, asking: .nothing)
+    }
+
+    // The same question, carrying the memberships already asked of the value.
+    func settles(_ value: Value, in table: LoweredTypeTable, asking: Asking) -> Bool {
         (try? settling(value, at: "", in: table, asking: asking)) != nil
     }
 
@@ -1509,17 +1514,21 @@ indirect enum LoweredType: Sendable, Equatable {
     // for a value crossing a declaration, at the build and at the run alike.
     //
     // `at` is the path into the value so the message names the field rather
-    // than the whole argument. `asking` is which constraints are already
-    // being asked of this value: a membership test settles the value against
-    // each member, and a member that is a membership reaching one of these
-    // again asks the same question of the same value, which proves nothing,
-    // so that member does not take it. A part of the value is another value
-    // and starts with none.
+    // than the whole argument.
+    func settling(_ value: Value, at path: @autoclosure () -> String, in table: LoweredTypeTable) throws -> Value {
+        try settling(value, at: path(), in: table, asking: .nothing)
+    }
+
+    // The same judge, carrying the constraints already being asked of this
+    // value: a membership test settles the value against each member, and a
+    // member that is a membership reaching one of these again asks the same
+    // question of the same value, so that member does not take it. A part of
+    // the value is another value and starts with none.
     func settling(
         _ value: Value,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable,
-        asking: Asking = .nothing
+        asking: Asking
     ) throws -> Value {
         switch self {
         case .any, .projection:
@@ -1650,10 +1659,16 @@ indirect enum LoweredType: Sendable, Equatable {
     // The two sets are two number spaces: a type row and a constraint row
     // may carry the same number, and folding the guards into one would let a
     // type's row end a constraint's question by assuming it.
+    func holdsEveryByte(in table: LoweredTypeTable) -> Bool {
+        holdsEveryByte(in: table, namedAssuming: [], boundAsking: .nothing)
+    }
+
+    // The same question, carrying the names and the memberships already
+    // being asked.
     func holdsEveryByte(
         in table: LoweredTypeTable,
-        namedAssuming: [Int] = [],
-        boundAsking: Asking = .nothing
+        namedAssuming: [Int],
+        boundAsking: Asking
     ) -> Bool {
         switch self {
         case .any, .projection, .int:
@@ -2236,7 +2251,7 @@ indirect enum LoweredType: Sendable, Equatable {
             // byte as it is, the compact spelling crosses whole: the slot
             // asked for an array and one is what it has, and unpacking it would
             // spend an element per byte to answer nothing.
-            if case .bytes = value, element.holdsEveryByte(in: table, boundAsking: .nothing) {
+            if case .bytes = value, element.holdsEveryByte(in: table) {
                 return value
             }
 
