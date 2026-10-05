@@ -377,8 +377,8 @@ struct ClaimChecker {
         // What fills the declaration's own parameters is held to their bounds
         // the way a call's readings are, rigidly, since what the contract
         // writes there is filled by no call: what each was read as, and each
-        // reading it was joined from. A bound nothing declares was refused
-        // where the declaration was judged.
+        // reading of it that its join is not. A bound nothing declares was
+        // refused where the declaration was judged.
         for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
             let bounds = names.compactMap { name in loweredTypes.bound(named: name) }.sorted()
             let readings = (bound[parameter].map { reading in [reading] } ?? []) + (substitution.apart[parameter] ?? [])

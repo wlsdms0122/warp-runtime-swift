@@ -1266,15 +1266,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
             guard already != given else { return }
 
-            // Two readings of a bounded parameter are each held to its bounds
-            // as they were read, since what they join to may not say: a join
-            // with `any` is `any`, and a record's fields joined say nothing of
-            // each field.
-            if !bounds.isEmpty {
-                holding.append(Substitution.Held(reading: already, bounds: bounds, orNull: false, parameter: name))
-                holding.append(Substitution.Held(reading: given, bounds: bounds, orNull: false, parameter: name))
-            }
-
             // Two readings agree when one takes the other. A list of numbers
             // and a whole number are not a disagreement, they are a parameter
             // read once loosely and once tightly, and the loose reading is the
@@ -1289,7 +1280,22 @@ indirect enum LoweredType: Sendable, Equatable {
             // ranges that overlap; a declared record and a nameless record of
             // its fields take each other too. What holds both is `holdingBoth`,
             // and a parameter read as `any` anywhere is `any` there.
-            if let both = already.holdingBoth(given, in: table) {
+            let both = already.holdingBoth(given, in: table)
+
+            // A reading of a bounded parameter that is not its join is held
+            // to its bounds as it was read, since the join may not say what it
+            // was: a join with `any` is `any`, a record's fields joined say
+            // nothing of each field, and two readings that do not join are
+            // both held where their disagreement is not reported.
+            if !bounds.isEmpty, already != both {
+                holding.append(Substitution.Held(reading: already, bounds: bounds, orNull: false, parameter: name))
+            }
+
+            if !bounds.isEmpty, given != both {
+                holding.append(Substitution.Held(reading: given, bounds: bounds, orNull: false, parameter: name))
+            }
+
+            if let both {
                 bound[name] = both
 
                 return
@@ -2676,8 +2682,8 @@ indirect enum LoweredType: Sendable, Equatable {
             given.binding(against: asked, into: &taken, disagreeing: &disagreeing, holding: &holding, in: table)
         }
 
-        // What each parameter is read as, and each reading it was joined
-        // from, is held to its bounds.
+        // What each parameter is read as, and each reading of it that its
+        // join is not, is held to its bounds.
         let apart = Substitution(readings: taken, disagreeing: disagreeing, holding: holding).apart
         let bounded = taken.isEmpty || given.boundedParameters.allSatisfy { label, bounds in
             ((taken[label].map { filled in [filled] } ?? []) + (apart[label] ?? [])).allSatisfy { filled in

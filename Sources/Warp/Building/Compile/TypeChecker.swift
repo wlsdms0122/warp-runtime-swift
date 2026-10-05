@@ -778,8 +778,8 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        // And each reading a bounded parameter was joined from, as it was
-        // read.
+        // And each reading of a bounded parameter that its join is not, as
+        // it was read.
         for (parameter, readings) in substitution.apart.sorted(by: { $0.key < $1.key }) {
             for reading in readings {
                 if let refusal = constraintRefusal(
