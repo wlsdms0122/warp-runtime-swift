@@ -383,7 +383,7 @@ struct ClaimChecker {
         for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
             let bounds = names.compactMap { name in loweredTypes.bound(named: name) }.sorted()
 
-            for reading in substitution.readings(of: parameter)
+            for reading in substitution.everyReading(of: parameter)
                 where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and reads '\(parameter)' as \(reading.rendered(in: loweredTypes))"

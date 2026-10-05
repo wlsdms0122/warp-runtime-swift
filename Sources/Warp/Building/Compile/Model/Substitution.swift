@@ -45,7 +45,7 @@ struct Substitution: Sendable {
     // MARK: - Public
     // What a bounded parameter is held to its bounds as: what it is read as,
     // and each reading that does not say.
-    func readings(of parameter: Name) -> [LoweredType] {
+    func everyReading(of parameter: Name) -> [LoweredType] {
         (readings[parameter].map { reading in [reading] } ?? []) + apart[parameter, default: []]
     }
 

@@ -458,9 +458,9 @@ struct TypeChecker {
         var readings: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
         var holding: [Substitution.Held] = []
-        var unread: [Name: [LoweredType]] = [:]
+        var apart: [Name: [LoweredType]] = [:]
 
-        declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, apart: &unread, in: table)
+        declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table)
 
         for held in holding {
             for bound in held.bounds {
@@ -713,7 +713,7 @@ struct TypeChecker {
         at place: Place
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
-            for reading in substitution.readings(of: parameter) {
+            for reading in substitution.everyReading(of: parameter) {
                 for name in names {
                     // One nothing declares was refused where the
                     // declaration was judged.

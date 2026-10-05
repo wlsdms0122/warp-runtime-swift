@@ -1437,9 +1437,9 @@ indirect enum LoweredType: Sendable, Equatable {
         in table: LoweredTypeTable
     ) {
         var unheld: [Substitution.Held] = []
-        var unread: [Name: [LoweredType]] = [:]
+        var apart: [Name: [LoweredType]] = [:]
 
-        binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &unheld, apart: &unread, in: table)
+        binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &unheld, apart: &apart, in: table)
     }
 
     // This type read by its bounded parameters alone: each as the
@@ -2701,7 +2701,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         let substitution = Substitution(readings: taken, disagreeing: disagreeing, apart: apart)
         let bounded = given.boundedParameters.allSatisfy { label, bounds in
-            substitution.readings(of: label).allSatisfy { filled in
+            substitution.everyReading(of: label).allSatisfy { filled in
                 LoweredType.composition(bounds).accepts(filled, in: table)
             }
         }
