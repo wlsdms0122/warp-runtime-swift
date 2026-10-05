@@ -782,17 +782,31 @@ struct TypeChecker {
         // one of its bounds' members part by part, as one written into a slot
         // declaring them is: its join may be what a member takes while no
         // member takes its parts. Only what stands at such a parameter is
-        // asked here; `check` judges the rest against what filled it.
+        // asked here; `check` judges the rest against what filled it. A part
+        // leaning on a claim is written down for the link, as a write is.
         for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
             let slot = slots[position]
             let bounded = slot.type.boundedAlone
 
-            guard bounded != .any, !shape.isHeld(by: bounded, inPlace: false, in: loweredTypes) else { continue }
+            guard bounded != .any else { continue }
 
-            return .refusal(
-                "'\(slot.name)' holds \(shape.rendered(in: loweredTypes))"
-                    + " where \(slot.type.rendered(in: loweredTypes)) is declared"
-            )
+            guard shape.isHeld(by: bounded, inPlace: false, in: loweredTypes) else {
+                return .refusal(
+                    "'\(slot.name)' holds \(shape.rendered(in: loweredTypes))"
+                        + " where \(slot.type.rendered(in: loweredTypes)) is declared"
+                )
+            }
+
+            if let refusal = refusal(
+                writing: shape,
+                to: bounded,
+                as: "'\(slot.name)' holds",
+                in: loweredTypes,
+                fulfillment: fulfillment,
+                at: place
+            ) {
+                return .refusal(refusal)
+            }
         }
 
         return .fits(
