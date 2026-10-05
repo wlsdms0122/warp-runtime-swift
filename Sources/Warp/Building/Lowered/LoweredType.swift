@@ -749,8 +749,9 @@ indirect enum LoweredType: Sendable, Equatable {
         // well, knowing it does. In the other direction a composition stands
         // for some type nothing here lists. A membership already being asked
         // of this reading is the question come back, which proves nothing;
-        // asked again after the reading went through a name, it holds, a
-        // recursive type meeting a recursive membership.
+        // asked again of a part of the reading that is the reading itself
+        // through a name, it holds, a recursive type meeting a recursive
+        // membership.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             guard !bounds.contains(where: { bound in
                 if case let .membership(row) = bound { asking.contains(row) } else { false }
