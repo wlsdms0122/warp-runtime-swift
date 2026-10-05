@@ -183,7 +183,7 @@ struct TypeChecker {
         )
 
         try held(
-            written: inner.written,
+            written: inner.literalShape ?? .part(inner.reading),
             answered: inner.flow.answered,
             to: returns,
             result: inner.block.result,
@@ -1248,7 +1248,7 @@ struct TypeChecker {
         fulfillment: Fulfillment
     ) throws {
         for one in answered {
-            try held(one.written, valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
+            try held(one.literalShape ?? .part(one.reading), valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
         }
 
         try held(
@@ -1517,7 +1517,7 @@ struct TypeChecker {
 
                 var answering = flowed
                 answering.answered = flowed.answered + [
-                    (carried?.reading ?? .null, carried?.written ?? .part(.null), carried?.rewritten.constantValue, place)
+                    (carried?.reading ?? .null, carried?.literalShape, carried?.rewritten.constantValue, place)
                 ]
 
                 return answering
@@ -1887,7 +1887,7 @@ struct TypeChecker {
                 }
 
                 try held(
-                    written: inner.written,
+                    written: inner.literalShape ?? .part(inner.reading),
                     answered: inner.flow.answered,
                     to: procedure.signature.returns,
                     result: inner.block.result,
@@ -2319,7 +2319,7 @@ struct TypeChecker {
                 judgements: inner.judgements,
                 reading: inner.reading,
                 flow: inner.flow,
-                literalShape: inner.written
+                literalShape: inner.literalShape
             )
 
         // A conditional answers nothing. A condition chooses a way through the
@@ -2592,7 +2592,10 @@ struct TypeChecker {
                 // The failure is bound in the rescue alone. The body reads
                 // the names around the attempt.
                 flow: flow,
-                literalShape: .either(attempted.written, rescued.written)
+                literalShape: .either(
+                    attempted.literalShape ?? .part(attempted.reading),
+                    rescued.literalShape ?? .part(rescued.reading)
+                )
             )
         }
     }
@@ -2606,7 +2609,7 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, reading: LoweredType, written: LiteralShape, flow: Flow) {
+    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, reading: LoweredType, literalShape: LiteralShape?, flow: Flow) {
         let body = try await inspected(
             block.body,
             at: place.child(.body),
@@ -2665,7 +2668,7 @@ struct TypeChecker {
             body.calls + (tail?.calls ?? []),
             body.judgements.absorbing(tail?.judgements),
             reading,
-            tail?.written ?? .part(reading),
+            tail?.literalShape,
             flow
         )
     }

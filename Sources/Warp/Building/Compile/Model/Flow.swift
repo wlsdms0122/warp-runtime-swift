@@ -21,9 +21,9 @@ struct Flow {
     typealias Meeting = (Name, LoweredType, LoweredType) throws -> Void
 
     // What a `return` carried out of the procedure: what it reads as, what it
-    // holds written into the declared answer, the value it carried where that
-    // is a constant, and where it was written.
-    typealias Answer = (reading: LoweredType, written: LiteralShape, value: Value?, place: Place)
+    // holds written into the declared answer where its reading does not say,
+    // the value it carried where that is a constant, and where it was written.
+    typealias Answer = (reading: LoweredType, literalShape: LiteralShape?, value: Value?, place: Place)
 
     // Where a way that left lands: the procedure (`return`), the end of a
     // loop (`break`), the end of a round (`continue`), each by the loop it
