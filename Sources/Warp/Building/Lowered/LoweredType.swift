@@ -83,11 +83,9 @@ indirect enum LoweredType: Sendable, Equatable {
         // contract is answered by a type and null wears none. A membership
         // already being asked adds no member.
         func admitsNull(in table: LoweredTypeTable, asking: Asking) -> Bool {
-            guard case let .membership(constraint) = self, !asking.contains(constraint) else { return false }
+            guard case let .membership(constraint) = self else { return false }
 
-            let asked = asking.adding(constraint)
-
-            return table.constraints[constraint].contains { member in member.admitsNull(in: table, asking: asked) }
+            return table.someMember(of: constraint, asking: asking) { member, asked in member.admitsNull(in: table, asking: asked) }
         }
 
         // Memberships first, by row; contracts behind, by name. One order,
@@ -1051,11 +1049,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { bound in
                 guard case let .membership(constraint) = bound else { return true }
-                guard !asking.contains(constraint) else { return false }
 
-                let asked = asking.adding(constraint)
-
-                return table.constraints[constraint].contains { member in member.spells(candidate, in: table, asking: asked) }
+                return table.someMember(of: constraint, asking: asking) { member, asked in member.spells(candidate, in: table, asking: asked) }
             }
 
         case let .named(row):
@@ -1654,11 +1649,9 @@ indirect enum LoweredType: Sendable, Equatable {
         // it. A membership already being asked adds no member.
         case let .composition(bounds):
             return bounds.allSatisfy { bound in
-                guard case let .membership(constraint) = bound, !asking.contains(constraint) else { return false }
+                guard case let .membership(constraint) = bound else { return false }
 
-                let asked = asking.adding(constraint)
-
-                return table.constraints[constraint].contains { member in member.declaresNull(in: table, asking: asked) }
+                return table.someMember(of: constraint, asking: asking) { member, asked in member.declaresNull(in: table, asking: asked) }
             }
 
         default:
@@ -2189,11 +2182,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return bounds.allSatisfy { bound in
                 switch bound {
                 case let .membership(row):
-                    guard !asking.contains(row) else { return false }
-
-                    let asked = asking.adding(row)
-
-                    return table.constraints[row].contains { member in
+                    return table.someMember(of: row, asking: asking) { member, asked in
                         member.couldBeProcedure(in: table, namedAsking: namedAsking, asking: asked)
                     }
 
@@ -2230,13 +2219,11 @@ indirect enum LoweredType: Sendable, Equatable {
     ) -> Bool {
         guard !boundAsking.contains(constraint) else { return false }
 
-        let deeper = boundAsking.adding(constraint)
-
-        if table.constraints[constraint].contains(where: { member in
-            member.holdsEveryByte(in: table, namedAsking: namedAsking, boundAsking: deeper)
-        }) {
-            return true
+        let covered = table.someMember(of: constraint, asking: boundAsking) { member, asked in
+            member.holdsEveryByte(in: table, namedAsking: namedAsking, boundAsking: asked)
         }
+
+        guard !covered else { return true }
 
         // No one member covers it, so the complete question is asked with the
         // boundary's own primitive: members that divide the range between them
@@ -2447,32 +2434,7 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        // Each member is settled once: the first that takes the value
-        // decides, and otherwise what each one said is the refusal. A scalar
-        // member says only that the kind is wrong, and the kind is already
-        // in front of the reader. A membership holding one type of
-        // collection refuses a bad element, and the element is what the
-        // author has to go and fix.
-        let asked = asking.adding(constraint)
-        var reasons: [String] = []
-
-        for member in table.constraints[constraint] {
-            if let taken = member.admitsAsScalar(value) {
-                guard !taken else { return value }
-
-                reasons.append("as \(member.rendered(in: table)), got \(value.type)")
-
-                continue
-            }
-
-            do {
-                _ = try member.settling(value, at: path(), in: table, asking: asked)
-
-                return value
-            } catch {
-                reasons.append("as \(member.rendered(in: table)), \(error)")
-            }
-        }
+        guard let reasons = table.refusals(of: value, by: constraint, at: path(), asking: asking) else { return value }
 
         throw ArgumentError(
             "\(path()): expected \(rendered(in: table)), and nothing"

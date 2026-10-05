@@ -214,17 +214,54 @@ final class LoweredTypeTable: Sendable {
         if case .settled(false) = answering(contract: name, reading: reading, assumingRows: [], rigid: rigid, orNull: orNull) { false } else { true }
     }
 
-    // Whether a value is a member of a constraint. A member speaks through
-    // the same settlement a declared type applies, so what `int` admits as a
-    // slot it admits as a member, widening included. `asking` is what the
-    // caller was already asking; this constraint joins it only where a
-    // member has to be settled to answer, since a scalar member answers by
-    // kind.
+    // Whether a value is a member of a constraint.
     func admits(constraint row: Int, value: Value, asking: Asking) -> Bool {
-        constraints[row].contains { member in
-            member.admitsAsScalar(value)
-                ?? member.settles(value, in: self, asking: asking.adding(row))
+        refusals(of: value, by: row, at: "", asking: asking) == nil
+    }
+
+    // What the members of a constraint said of a value, each settled once:
+    // nothing where one takes it, and otherwise each member's reason, in
+    // order. A member speaks through the same settlement a declared type
+    // applies, so what `int` admits as a slot it admits as a member,
+    // widening included. A scalar member answers by kind and says only that
+    // the kind is wrong, which is already in front of the reader; any other
+    // is settled with this constraint joining what is being asked, and
+    // where it holds one type of collection it names the bad element, which
+    // is what the author has to go and fix.
+    func refusals(of value: Value, by row: Int, at path: @autoclosure () -> String, asking: Asking) -> [String]? {
+        let asked = asking.adding(row)
+        var reasons: [String] = []
+
+        for member in constraints[row] {
+            if let taken = member.admitsAsScalar(value) {
+                guard !taken else { return nil }
+
+                reasons.append("as \(member.rendered(in: self)), got \(value.type)")
+
+                continue
+            }
+
+            do {
+                _ = try member.settling(value, at: path(), in: self, asking: asked)
+
+                return nil
+            } catch {
+                reasons.append("as \(member.rendered(in: self)), \(error)")
+            }
         }
+
+        return reasons
+    }
+
+    // Whether some member of a membership answers `holds`, asked with the
+    // membership joining what is being asked. A membership already being
+    // asked adds no member, so it answers no.
+    func someMember(of row: Int, asking: Asking, holds: (LoweredType, Asking) -> Bool) -> Bool {
+        guard !asking.contains(row) else { return false }
+
+        let asked = asking.adding(row)
+
+        return constraints[row].contains { member in holds(member, asked) }
     }
 
     // Whether a reading could be a member of a constraint. Membership is
@@ -317,9 +354,7 @@ final class LoweredTypeTable: Sendable {
         // Each member is asked with what is being asked here: the pairs, and
         // this membership joining the memberships asked of this reading.
         default:
-            let asked = asking.adding(row)
-
-            return constraints[row].contains { member in
+            return someMember(of: row, asking: asking) { member, asked in
                 member.accepts(reading, in: self, assumingPairs: assumingPairs, asking: asked, rigid: rigid)
             }
         }

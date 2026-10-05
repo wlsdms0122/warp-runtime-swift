@@ -186,7 +186,9 @@ enum LiteralShape: Sendable {
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
 
-                return isHeld(byMembership: row, in: table, asking: asking)
+                return table.someMember(of: row, asking: asking) { member, asked in
+                    isHeld(by: member, inPlace: false, in: table, asking: asked)
+                }
             }
 
         case let (.parameter(_, bounds), _):
@@ -200,17 +202,6 @@ enum LiteralShape: Sendable {
 
         default:
             return true
-        }
-    }
-
-    // Whether one member of a membership takes it.
-    private func isHeld(byMembership row: Int, in table: LoweredTypeTable, asking: Asking) -> Bool {
-        guard !asking.contains(row) else { return false }
-
-        let asked = asking.adding(row)
-
-        return table.constraints[row].contains { member in
-            isHeld(by: member, inPlace: false, in: table, asking: asked)
         }
     }
 
