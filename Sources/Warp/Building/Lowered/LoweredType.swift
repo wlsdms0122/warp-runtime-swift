@@ -2174,16 +2174,10 @@ indirect enum LoweredType: Sendable, Equatable {
             return table.loweredTypes[row].couldBothHold(other, in: table, assuming: assuming + [row], askingPairs: askingPairs)
         }
 
-        if case let .named(row) = other {
-            guard !assuming.contains(row) else { return true }
-
-            return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row], askingPairs: askingPairs)
-        }
-
-        if provesNothing || other.provesNothing { return true }
-
         // A value of a composition is one of every membership's members, so
-        // a value could be both wherever one member could.
+        // a value could be both wherever one member could. Asked before the
+        // other side's name is peeled, since a value settled into a member
+        // keeps its name, and each member meets it.
         if case let .composition(bounds) = self {
             guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
 
@@ -2197,6 +2191,14 @@ indirect enum LoweredType: Sendable, Equatable {
                 }
             }
         }
+
+        if case let .named(row) = other {
+            guard !assuming.contains(row) else { return true }
+
+            return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row], askingPairs: askingPairs)
+        }
+
+        if provesNothing || other.provesNothing { return true }
 
         // What is read as a membership may be a value written into it
         // nameless, which stays nameless, so a member naming a declared record
