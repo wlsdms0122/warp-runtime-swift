@@ -785,7 +785,7 @@ struct TypeChecker {
         // what stands at such a parameter is asked here; `check` judges the
         // rest against what filled it. A part leaning on a claim is written
         // down for the link, as a write is. What is handed in place is held
-        // by its own rule.
+        // by the in-place rule, `heldBeside`.
         for (position, slot) in slots.enumerated() where sent.indices.contains(position) && !slot.type.isInout {
             let shape = LiteralShape(shapes[position], reading: sent[position])
             let bounded = slot.type.boundedAlone
