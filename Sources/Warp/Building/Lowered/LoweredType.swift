@@ -1366,10 +1366,9 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // This type read by its bounded parameters alone: each as the
-    // composition of its bounds, and every other position as `any`. A
-    // procedure type is `any` whole, since what it is handed is no part of
-    // a value. What is handed where it stands at a call has to fit this,
-    // and what the call filled the parameters with judges the rest.
+    // composition of its bounds, and every other position as `any`. What is
+    // handed where it stands at a call has to fit this, and what the call
+    // filled the parameters with judges the rest.
     var boundedAlone: LoweredType {
         switch self {
         case let .parameter(_, bounds) where !bounds.isEmpty:
@@ -1406,6 +1405,21 @@ indirect enum LoweredType: Sendable, Equatable {
             let bounded = inner.boundedAlone
 
             return bounded == .any ? .any : .inout(bounded)
+
+        // A procedure's answer stands where it is held, and is held there. Its
+        // parameters are what it is handed and take `never`, which every
+        // parameter takes, so they ask nothing.
+        case let .procedure(parameters, returns, _, _):
+            let answer = (returns ?? .any).boundedAlone
+
+            guard answer != .any else { return .any }
+
+            return .procedure(
+                parameters: parameters?.map { parameter in parameter.isInout ? .inout(.never) : .never },
+                returns: answer,
+                constness: .unstated,
+                isolation: .unstated
+            )
 
         default:
             return .any
