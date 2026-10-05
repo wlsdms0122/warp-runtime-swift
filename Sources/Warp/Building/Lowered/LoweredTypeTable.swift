@@ -424,25 +424,25 @@ final class LoweredTypeTable: Sendable {
             (constraints[label] ?? []).map { member in member.lowered(in: index) }
         }
 
-        // The end of each row's chain of names, or nil where the chain comes
-        // back on itself.
-        func end(of start: Int) -> Int? {
+        // Whether a row's chain of names comes back on itself, a `?` on the
+        // way included.
+        func comesBack(from start: Int) -> Bool {
             var row = start
             var walked: [Int] = [start]
 
             while let next = loweredTypes[row].row {
-                guard !walked.contains(next) else { return nil }
+                guard !walked.contains(next) else { return true }
 
                 walked.append(next)
                 row = next
             }
 
-            return row
+            return false
         }
 
         // Marked before any is replaced, so each row in a cycle is named
         // as itself rather than as whichever the replacement reached first.
-        let cycling = loweredTypes.indices.filter { row in end(of: row) == nil }
+        let cycling = loweredTypes.indices.filter { row in comesBack(from: row) }
 
         for row in cycling {
             loweredTypes[row] = .undeclared(label: labels[row].spelling, because: .namesItself)
