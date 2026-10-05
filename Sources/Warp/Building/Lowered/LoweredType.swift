@@ -602,8 +602,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // and part by part where a reading's join gives up, lists by their
     // elements and records of the same fields field by field, inside what
     // may be null too. Records of other fields are `any`, since a record slot
-    // takes either while no one record type holds both. How a literal's parts
-    // and a record's fields read as a dictionary fill a parameter.
+    // takes either while no one record type holds both.
     func joinedPartByPart(_ part: LoweredType) -> LoweredType {
         switch (self, part) {
         case let (.nullable(mine), _):
@@ -1353,20 +1352,22 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A record read as a dictionary fills a parameter with its fields
         // joined part by part, as a list literal fills one with its elements,
-        // and each field is held to a composition where it stands. Only the
-        // holding is kept from each field, since two fields of two kinds read
-        // one parameter as their join and are no disagreement.
+        // and each field's value, its `var` off, is held to a composition
+        // where it stands. Only the holding is kept from each field, since two
+        // fields of two kinds read one parameter as their join and are no
+        // disagreement.
         case let (.dictionary(mine), .record(theirs)):
+            let values = theirs.fields.map(\.fieldUnwrapped)
             var apart: [Name: LoweredType] = [:]
             var apartDisagreeing: [Name: LoweredType] = [:]
             var unheld: [Substitution.Held] = []
 
-            for field in theirs.fields {
-                mine.binding(against: field, into: &apart, disagreeing: &apartDisagreeing, holding: &holding, in: table, assuming: assuming)
+            for value in values {
+                mine.binding(against: value, into: &apart, disagreeing: &apartDisagreeing, holding: &holding, in: table, assuming: assuming)
             }
 
             mine.binding(
-                against: theirs.fields.reduce(.never) { joined, field in joined.joinedPartByPart(field) },
+                against: values.reduce(.never) { joined, value in joined.joinedPartByPart(value) },
                 into: &bound,
                 disagreeing: &disagreeing,
                 holding: &unheld,
