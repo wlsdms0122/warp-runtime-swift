@@ -38,6 +38,12 @@ enum LiteralShape: Sendable {
     }
 
     // MARK: - Initializer
+    // What is written where a shape is kept only where the reading beside it
+    // does not say: that shape, or the reading as one part.
+    init(_ shape: LiteralShape?, reading: LoweredType) {
+        self = shape ?? .part(reading)
+    }
+
     // MARK: - Public
     // Whether a slot takes it, part by part along `everyPart(along:)`. A
     // slot handed in place that names a type parameter takes what

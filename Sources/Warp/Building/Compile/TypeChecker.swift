@@ -102,7 +102,7 @@ struct TypeChecker {
 
         // What the expression holds where it is written into a slot.
         var written: LiteralShape {
-            literalShape ?? .part(reading)
+            LiteralShape(literalShape, reading: reading)
         }
 
         // MARK: - Initializer
@@ -183,7 +183,7 @@ struct TypeChecker {
         )
 
         try held(
-            written: inner.literalShape ?? .part(inner.reading),
+            written: LiteralShape(inner.literalShape, reading: inner.reading),
             answered: inner.flow.answered,
             to: returns,
             result: inner.block.result,
@@ -1248,7 +1248,7 @@ struct TypeChecker {
         fulfillment: Fulfillment
     ) throws {
         for one in answered {
-            try held(one.literalShape ?? .part(one.reading), valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
+            try held(LiteralShape(one.literalShape, reading: one.reading), valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
         }
 
         try held(
@@ -1887,7 +1887,7 @@ struct TypeChecker {
                 }
 
                 try held(
-                    written: inner.literalShape ?? .part(inner.reading),
+                    written: LiteralShape(inner.literalShape, reading: inner.reading),
                     answered: inner.flow.answered,
                     to: procedure.signature.returns,
                     result: inner.block.result,
@@ -2593,8 +2593,8 @@ struct TypeChecker {
                 // the names around the attempt.
                 flow: flow,
                 literalShape: .either(
-                    attempted.literalShape ?? .part(attempted.reading),
-                    rescued.literalShape ?? .part(rescued.reading)
+                    LiteralShape(attempted.literalShape, reading: attempted.reading),
+                    LiteralShape(rescued.literalShape, reading: rescued.reading)
                 )
             )
         }
@@ -3023,7 +3023,7 @@ struct TypeChecker {
         return taking.indices.filter { position in
             guard position < sent.count, taking[position].namesParameter else { return false }
 
-            let written = shapes[position] ?? .part(sent[position])
+            let written = LiteralShape(shapes[position], reading: sent[position])
 
             return !written.isHeld(by: taking[position], inPlace: true, in: loweredTypes)
         }
@@ -3365,7 +3365,7 @@ struct TypeChecker {
 
         for (position, (type, (argument, reading))) in zip(types, zip(arguments, readings)).enumerated() {
             let at = place.child(.argument(position))
-            let given = shapes[position] ?? .part(reading)
+            let given = LiteralShape(shapes[position], reading: reading)
             let slot = slots?[position]
             let named = slot.map { slot in "\(slot.name)" } ?? "argument \(position)"
             let quoted = slot.map { slot in "'\(slot.name)'" } ?? named
