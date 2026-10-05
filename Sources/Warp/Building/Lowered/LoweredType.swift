@@ -1246,30 +1246,17 @@ indirect enum LoweredType: Sendable, Equatable {
             // Two readings agree when one takes the other. A list of numbers
             // and a whole number are not a disagreement, they are a parameter
             // read once loosely and once tightly, and the loose reading is the
-            // one that holds both. `any` first, because it is the loosest
-            // reading there is and `accepts` cannot order it: everything takes
-            // `any` and `any` takes everything, so asking which is looser
-            // answers yes both ways and whichever was read first would win. A
-            // parameter read as `any` anywhere is `any`, which is what a list
-            // of anything says about what may be put in it.
-            guard already.throughAliases(in: table) != .any else { return }
-
-            guard given.throughAliases(in: table) != .any else {
-                bound[name] = .any
-
-                return
-            }
-
-            // With the table, because a reading may stand on a row and the
-            // type that row holds. Asking without it would call those two a
-            // disagreement, which is the same question the build asks elsewhere
-            // and answers correctly. Rigidly, because a parameter read here is
-            // the calling body's own and nothing fills it: a whole number and a
-            // parameter bounded to numbers are held by the parameter. A range
-            // meets anything by its kind, so a range and the plain kind under
-            // it take each other both ways, and so do two ranges that overlap;
-            // a declared record and a nameless record of its fields take each
-            // other too. What holds both is `holdingBoth`.
+            // one that holds both. With the table, because a reading may stand
+            // on a row and the type that row holds. Asking without it would
+            // call those two a disagreement, which is the same question the
+            // build asks elsewhere and answers correctly. Rigidly, because a
+            // parameter read here is the calling body's own and nothing fills
+            // it: a whole number and a parameter bounded to numbers are held by
+            // the parameter. A range meets anything by its kind, so a range and
+            // the plain kind under it take each other both ways, and so do two
+            // ranges that overlap; a declared record and a nameless record of
+            // its fields take each other too. What holds both is `holdingBoth`,
+            // and a parameter read as `any` anywhere is `any` there.
             if let both = already.holdingBoth(given, in: table) {
                 bound[name] = both
 
