@@ -1854,12 +1854,19 @@ struct TypeChecker {
             let declared = Set(procedure.signature.names)
             let outside = environment.filter { name, _ in !declared.contains(name) }
 
+            // A box the closure takes is held, inside it, to what it reads as
+            // here: a write the closure makes is judged against that type
+            // and settles to it, and leaves the box reading it.
+            let taken = outside.mapValues { binding in
+                binding.holding == .assigned ? Binding(.held(binding.type), binding.type) : binding
+            }
+
             // The body read under the ask this walk answers: what it reaches
             // from outside is what the closure takes, which either ask needs.
             let inner = try await inspected(
                 block: block,
                 at: place.child(.closure),
-                in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
+                in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
                     _, own in own
                 },
                 with: context.bounding(procedure.signature.parameterBounding.table),
@@ -2830,7 +2837,7 @@ struct TypeChecker {
 
                 switch environment[id] {
                 case let binding? where binding.heldType != nil:
-                    try refuseUnfit(
+                    let held = try refuseUnfit(
                         written,
                         writtenTo: path,
                         holding: binding.heldType,
@@ -2840,6 +2847,13 @@ struct TypeChecker {
                         when: ask,
                         loosening: &judgements
                     )
+
+                    // A box held to a type no slot declared settles a write
+                    // to it, the way one a slot declared does, so what it
+                    // holds is what it reads as.
+                    if case .held = binding.holding, let held {
+                        judgements.record(write: held, at: here)
+                    }
 
                     if case let .held(held) = binding.holding, path.segments.count == 1 {
                         environment[id] = Binding(.held(held), held)
@@ -2857,7 +2871,10 @@ struct TypeChecker {
                             flowed.land((inner.reading, true), on: id)
                         }
                     } else {
-                        try refuseUnfit(
+                        // A write through a path leaves the box reading as it
+                        // was, so what it writes settles to what the path
+                        // reaches.
+                        if let reached = try refuseUnfit(
                             written,
                             writtenTo: path,
                             holding: nil,
@@ -2866,7 +2883,9 @@ struct TypeChecker {
                             at: here,
                             when: ask,
                             loosening: &judgements
-                        )
+                        ) {
+                            judgements.record(write: reached, at: here)
+                        }
 
                         if !locals.contains(id), let current = environment[id]?.type {
                             flowed.land((current, true), on: id)
@@ -3214,7 +3233,9 @@ struct TypeChecker {
     // A write that leaves the box reading as what it is held to, or as it
     // was through a path: refused where what is written does not fit what
     // the path reaches, and loose where that names a type parameter and what
-    // is written is not a value of it.
+    // is written is not a value of it. Answers the type the write was held
+    // to, or nil where it was refused.
+    @discardableResult
     private func refuseUnfit(
         _ written: LiteralShape,
         writtenTo path: Path,
@@ -3224,7 +3245,7 @@ struct TypeChecker {
         at place: Place,
         when ask: Ask,
         loosening judgements: inout JudgementTable
-    ) throws {
+    ) throws -> LoweredType? {
         let slot: LoweredType
 
         if path.segments.count == 1, let fixed {
@@ -3233,7 +3254,7 @@ struct TypeChecker {
             switch writable(path, in: environment, with: context, at: place) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
-                return
+                return nil
 
             case let .reaches(reached):
                 slot = reached
@@ -3247,10 +3268,10 @@ struct TypeChecker {
                 at: place,
                 when: ask
             )
-            return
+            return nil
         }
 
-        guard case let .judging(_, fulfillment) = ask else { return }
+        guard case let .judging(_, fulfillment) = ask else { return slot }
 
         if let refusal = refusal(
             writing: written,
@@ -3266,6 +3287,8 @@ struct TypeChecker {
         if slot.namesParameter, !written.isHeld(by: slot, inPlace: true, in: context.loweredTypes) {
             judgements.loosen()
         }
+
+        return slot
     }
 
     private func check(

@@ -21,6 +21,13 @@ struct JudgementTable: Sendable {
     // proving nothing.
     private(set) var loosened = false
 
+    // What a write into a box that declared nothing settles to, by the
+    // statement that writes it: the type the check held the write to, where
+    // the box is held to one (a variable a closure captured or a call handed
+    // in place, a module variable that wrote no type) or the write goes
+    // through a path. A box that declared its type settles by its slot.
+    private(set) var writes: [Place: LoweredType] = [:]
+
     // MARK: - Initializer
     init() {
     }
@@ -32,11 +39,23 @@ struct JudgementTable: Sendable {
         judgements[place]
     }
 
+    // What the write at this statement settles to, or nil where the check
+    // held it to nothing lowering reads.
+    func settling(writeAt place: Place) -> LoweredType? {
+        writes[place]
+    }
+
     // What the type check judged at this place.
     mutating func record(_ judgement: Judgement, at place: Place) {
         assert(judgements[place] == nil, "one place stands for one expression")
 
         judgements[place] = judgement
+    }
+
+    // What the write at this statement settles to. A statement walked again
+    // holds the type it was last held to.
+    mutating func record(write settling: LoweredType, at place: Place) {
+        writes[place] = settling
     }
 
     // A reading of a type parameter here may hold what is not a value of
@@ -49,6 +68,8 @@ struct JudgementTable: Sendable {
         for (place, judgement) in other.judgements {
             record(judgement, at: place)
         }
+
+        writes.merge(other.writes) { _, theirs in theirs }
 
         loosened = loosened || other.loosened
     }

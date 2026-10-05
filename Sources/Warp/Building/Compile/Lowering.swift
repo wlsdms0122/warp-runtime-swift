@@ -641,11 +641,11 @@ struct Lowering {
 
             // A write settles to what the path reaches, so a box that said
             // what it holds holds it after a write as it did after its
-            // declaration. A box that said nothing reaches nothing, and what
-            // was written stands as it was handed.
+            // declaration. Into a box that said nothing it settles to what the
+            // check held the write to, where it held it to anything.
             case let .assignment(path)?:
                 let (address, reached) = try lower(path, in: scope, on: context.slots, at: here)
-                let settling = reached?.slotUnwrapped
+                let settling = reached?.slotUnwrapped ?? context.judgements.settling(writeAt: here)?.slotUnwrapped
                 context.slots.note(settling)
                 binding = .assign(address, settling: settling)
 
