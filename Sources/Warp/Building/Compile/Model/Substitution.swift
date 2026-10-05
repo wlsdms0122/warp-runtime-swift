@@ -10,9 +10,9 @@ import Foundation
 // What a call put in a declaration's type parameters, and where it put two
 // things in one.
 //
-// A parameter read two ways has no answer, so the disagreement is held apart
-// rather than read as `any`: `any` is what a declaration says when it said
-// nothing.
+// A parameter read two ways has no answer, so the disagreement is kept beside
+// the first reading rather than read as `any`: `any` is what a declaration
+// says when it said nothing.
 struct Substitution: Sendable {
     // A value that arrived where a composition stands, beside what the
     // composition holds it to, and whether the slot takes null as well.
@@ -28,7 +28,9 @@ struct Substitution: Sendable {
     }
 
     // MARK: - Property
-    // The first reading of each type parameter.
+    // What each type parameter is read as: the join of its readings, or the
+    // first where two disagree. A parameter only ever read through a join
+    // that is no type it stands in is read as nothing.
     let readings: [Name: LoweredType]
 
     // For a parameter read two ways, the second reading. Keeping both is what
@@ -41,12 +43,10 @@ struct Substitution: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // What a bounded parameter is held to its bounds as: its join, and each
-    // reading the join is not.
+    // What a bounded parameter is held to its bounds as: what it is read as,
+    // and each reading that does not say.
     func readings(of parameter: Name) -> [LoweredType] {
-        guard let reading = readings[parameter] else { return [] }
-
-        return [reading] + apart[parameter, default: []]
+        (readings[parameter].map { reading in [reading] } ?? []) + apart[parameter, default: []]
     }
 
     // MARK: - Private

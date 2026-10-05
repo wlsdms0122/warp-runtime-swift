@@ -2700,7 +2700,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         let substitution = Substitution(readings: taken, disagreeing: disagreeing, apart: apart)
-        let bounded = taken.isEmpty || given.boundedParameters.allSatisfy { label, bounds in
+        let bounded = given.boundedParameters.allSatisfy { label, bounds in
             substitution.readings(of: label).allSatisfy { filled in
                 LoweredType.composition(bounds).accepts(filled, in: table)
             }
