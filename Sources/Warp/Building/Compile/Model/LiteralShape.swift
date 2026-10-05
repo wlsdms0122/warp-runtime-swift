@@ -51,7 +51,7 @@ enum LiteralShape: Sendable {
     // be one type for each to be a value of what the slot asks there. Every
     // other slot takes what it accepts.
     func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable) -> Bool {
-        isHeld(by: slot, inPlace: inPlace, in: table, asking: [])
+        isHeld(by: slot, inPlace: inPlace, in: table, asking: .nothing)
     }
 
     // Whether every part of it, along the structure it shares with the slot,
@@ -97,14 +97,14 @@ enum LiteralShape: Sendable {
     // MARK: - Private
     // `asking` is which memberships are already being asked of this literal.
     // A part the walk took apart is another literal and starts with none.
-    private func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable, asking: [Int]) -> Bool {
+    private func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable, asking: Asking) -> Bool {
         everyPart(along: slot, inPlace: inPlace, in: table, whole: true) { slot, part, rigid, whole in
             if rigid {
                 return slot.takesInPlace(part.folded.slotUnwrapped, in: table)
             }
 
             return slot.accepts(part.folded, in: table)
-                && part.isHeld(byMembersOf: slot, in: table, asking: whole ? asking : [])
+                && part.isHeld(byMembersOf: slot, in: table, asking: whole ? asking : .nothing)
         }
     }
 
@@ -176,7 +176,7 @@ enum LiteralShape: Sendable {
     // already being asked of this literal is the same question come back,
     // which proves nothing, so it does not take it, the way the run settles
     // a value.
-    private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, asking: [Int]) -> Bool {
+    private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, asking: Asking) -> Bool {
         switch (slot, self) {
         case (_, .part):
             return true
@@ -201,10 +201,10 @@ enum LiteralShape: Sendable {
     }
 
     // Whether one member, or every member, of a membership takes it.
-    private func isHeld(byMembership row: Int, every: Bool, in table: LoweredTypeTable, asking: [Int]) -> Bool {
+    private func isHeld(byMembership row: Int, every: Bool, in table: LoweredTypeTable, asking: Asking) -> Bool {
         guard !asking.contains(row) else { return false }
 
-        let held = { (member: LoweredType) in isHeld(by: member, inPlace: false, in: table, asking: asking + [row]) }
+        let held = { (member: LoweredType) in isHeld(by: member, inPlace: false, in: table, asking: asking.adding(row)) }
 
         return every ? table.constraints[row].allSatisfy(held) : table.constraints[row].contains(where: held)
     }

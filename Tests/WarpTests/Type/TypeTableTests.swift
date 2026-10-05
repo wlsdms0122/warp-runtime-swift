@@ -86,7 +86,7 @@ struct TypeTableTests {
 
         // A value asked of the same membership again is the question come
         // back, which takes nothing
-        #expect(table.admits(constraint: loop, value: .int(1), asking: []) == false)
+        #expect(table.admits(constraint: loop, value: .int(1), asking: .nothing) == false)
     }
 
     // MARK: - Public

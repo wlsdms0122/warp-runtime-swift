@@ -220,10 +220,10 @@ final class LoweredTypeTable: Sendable {
     // caller was already asking; this constraint joins it only where a
     // member has to be settled to answer, since a scalar member answers by
     // kind.
-    func admits(constraint row: Int, value: Value, asking: [Int]) -> Bool {
+    func admits(constraint row: Int, value: Value, asking: Asking) -> Bool {
         constraints[row].contains { member in
             member.admitsAsScalar(value)
-                ?? member.settles(value, in: self, asking: asking + [row])
+                ?? member.settles(value, in: self, asking: asking.adding(row))
         }
     }
 
@@ -240,7 +240,7 @@ final class LoweredTypeTable: Sendable {
     // where every one of those members would. `orNull` is a slot taking null
     // as well, so a reading that may be null is held by what it is besides.
     func admits(constraint row: Int, reading given: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
-        admits(constraint: row, reading: given, assumingRows: [], assumingPairs: [], asking: [], rigid: rigid, orNull: orNull)
+        admits(constraint: row, reading: given, assumingRows: [], assumingPairs: [], asking: .nothing, rigid: rigid, orNull: orNull)
     }
 
     // The same question, carrying what is already being asked. Three lists
@@ -254,7 +254,7 @@ final class LoweredTypeTable: Sendable {
         reading given: LoweredType,
         assumingRows: [Int],
         assumingPairs: [(LoweredType, LoweredType)],
-        asking: [Int],
+        asking: Asking,
         rigid: Bool,
         orNull: Bool
     ) -> Bool {
@@ -286,7 +286,7 @@ final class LoweredTypeTable: Sendable {
 
             return memberships.contains { constraint in
                 constraints[constraint].allSatisfy { member in
-                    admits(constraint: row, reading: member, assumingRows: assumingRows + [constraint], assumingPairs: assumingPairs, asking: [], rigid: rigid, orNull: orNull)
+                    admits(constraint: row, reading: member, assumingRows: assumingRows + [constraint], assumingPairs: assumingPairs, asking: .nothing, rigid: rigid, orNull: orNull)
                 }
             }
 
@@ -294,7 +294,7 @@ final class LoweredTypeTable: Sendable {
         // is besides is too, since its value is one or the other. A name that
         // stands for no record is read as what it stands for.
         case let .nullable(inner):
-            return admits(constraint: row, reading: .null, assumingRows: assumingRows, assumingPairs: assumingPairs, asking: [], rigid: rigid, orNull: false)
+            return admits(constraint: row, reading: .null, assumingRows: assumingRows, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid, orNull: false)
                 && admits(constraint: row, reading: inner, assumingRows: assumingRows, assumingPairs: assumingPairs, asking: asking, rigid: rigid, orNull: false)
 
         case .named where reading.throughAliases(in: self) != reading:
@@ -316,7 +316,7 @@ final class LoweredTypeTable: Sendable {
         // Each member is asked with what is being asked here: the pairs, and
         // this membership joining the memberships asked of this reading.
         default:
-            let asked = asking + [row]
+            let asked = asking.adding(row)
 
             return constraints[row].contains { member in
                 member.accepts(reading, in: self, assuming: assumingPairs, asking: asked, rigid: rigid)
