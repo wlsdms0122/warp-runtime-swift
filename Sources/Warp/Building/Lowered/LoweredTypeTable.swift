@@ -312,8 +312,10 @@ final class LoweredTypeTable: Sendable {
         // Each member is asked with what is being asked here: the pairs, and
         // this membership joining the memberships asked of this reading.
         default:
+            let asked = asking + [row]
+
             return constraints[row].contains { member in
-                member.accepts(reading, in: self, assuming: assumingPairs, asking: asking + [row], rigid: rigid)
+                member.accepts(reading, in: self, assuming: assumingPairs, asking: asked, rigid: rigid)
             }
         }
     }
