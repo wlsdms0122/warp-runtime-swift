@@ -1947,7 +1947,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // both is a nameless record of its fields, each merged with the field
         // of the same name in the other.
         case let (mine, theirs):
-            guard let myRecord = mine.record(in: table), let theirRecord = theirs.record(in: table) else { return looser }
+            guard
+                let myRecord = mine.record(in: table),
+                let theirRecord = theirs.record(in: table),
+                myRecord.layout.fields != theirRecord.layout.fields
+            else {
+                return looser
+            }
 
             let (loose, tight) = takesGiven ? (myRecord, theirRecord) : (theirRecord, myRecord)
 
