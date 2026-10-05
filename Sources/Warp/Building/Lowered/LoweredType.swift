@@ -1172,12 +1172,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // refusal dropped rather than a second rule written beside it. The path
     // is empty because nothing reads the refusal.
     func settles(_ value: Value, in table: LoweredTypeTable) -> Bool {
-        settles(value, in: table, asking: .nothing)
-    }
-
-    // The same question, carrying the memberships already asked of the value.
-    func settles(_ value: Value, in table: LoweredTypeTable, asking: Asking) -> Bool {
-        (try? settling(value, at: "", in: table, asking: asking)) != nil
+        (try? settling(value, at: "", in: table)) != nil
     }
 
     // The reading that holds two readings of one type parameter where one
