@@ -2422,46 +2422,38 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        guard table.admits(constraint: constraint, value: value, asking: asking) else {
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), and nothing"
-                    + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
-                    + " \(refused(value, by: constraint, at: path(), in: table, asking: asking))"
-            )
+        // Each member is settled once: the first that takes the value
+        // decides, and otherwise what each one said is the refusal. A scalar
+        // member says only that the kind is wrong, and the kind is already
+        // in front of the reader. A membership holding one type of
+        // collection refuses a bad element, and the element is what the
+        // author has to go and fix.
+        let asked = asking.adding(constraint)
+        var reasons: [String] = []
+
+        for member in table.constraints[constraint] {
+            if let taken = member.admitsAsScalar(value) {
+                guard !taken else { return value }
+
+                reasons.append("as \(member.rendered(in: table)), got \(value.type)")
+
+                continue
+            }
+
+            do {
+                _ = try member.settling(value, at: path(), in: table, asking: asked)
+
+                return value
+            } catch {
+                reasons.append("as \(member.rendered(in: table)), \(error)")
+            }
         }
 
-        return value
-    }
-
-    // Why each member of a membership said no, in one line. A membership
-    // holding one type of collection refuses a bad element, and the element
-    // is what the author has to go and fix.
-    private func refused(
-        _ value: Value,
-        by constraint: Int,
-        at path: String,
-        in table: LoweredTypeTable,
-        asking: Asking
-    ) -> String {
-        let deeper = asking.adding(constraint)
-
-        return table.constraints[constraint]
-            .map { member in
-                // A scalar member says only that the kind is wrong, and the
-                // kind is already in front of the reader.
-                if member.admitsAsScalar(value) != nil {
-                    return "as \(member.rendered(in: table)), got \(value.type)"
-                }
-
-                do {
-                    _ = try member.settling(value, at: path, in: table, asking: deeper)
-
-                    return "as \(member.rendered(in: table)), got \(value.type)"
-                } catch {
-                    return "as \(member.rendered(in: table)), \(error)"
-                }
-            }
-            .joined(separator: ". ")
+        throw ArgumentError(
+            "\(path()): expected \(rendered(in: table)), and nothing"
+                + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
+                + " \(reasons.joined(separator: ". "))"
+        )
     }
 
     private func settlingNamed(
