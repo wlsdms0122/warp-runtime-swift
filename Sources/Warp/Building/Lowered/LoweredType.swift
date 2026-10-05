@@ -2123,14 +2123,11 @@ indirect enum LoweredType: Sendable, Equatable {
             return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assuming: assuming, askingPairs: askingPairs)
         }
 
-        if
-            case let .named(mine) = self,
-            case let .named(theirs) = other,
-            let myRecord = table.recordRows[mine],
-            let theirRecord = table.recordRows[theirs],
-            myRecord != theirRecord
-        {
-            return false
+        // Two declared records are two types by name, through `?` and the
+        // aliases that stand for them, so the one value both could hold is
+        // null.
+        if let myRecord = table.record(of: self), let theirRecord = table.record(of: other), myRecord != theirRecord {
+            return declaresNull(in: table) && other.declaresNull(in: table)
         }
 
         if case let .named(row) = self {
