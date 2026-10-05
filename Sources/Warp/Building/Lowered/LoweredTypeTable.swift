@@ -312,22 +312,17 @@ final class LoweredTypeTable: Sendable {
         // it fits where every one of those would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is provable
         // and it passes the way an unbounded one does, unless `rigid`. A
-        // membership this reading already came through adds nothing met again,
-        // so where none is left it answers yes.
+        // membership this reading already came through holds met again, so
+        // one of them answers yes.
         case let .parameter(_, bounds), let .composition(bounds):
-            let bounded = bounds.contains { bound in
-                if case .membership = bound { true } else { false }
-            }
-
-            guard bounded || !rigid else { return false }
-
             let memberships = bounds.compactMap { bound -> Int? in
-                guard case let .membership(constraint) = bound, !assumingRows.contains(constraint) else { return nil }
+                guard case let .membership(constraint) = bound else { return nil }
 
                 return constraint
             }
 
-            guard !memberships.isEmpty else { return true }
+            guard !memberships.isEmpty else { return !rigid }
+            guard !memberships.contains(where: assumingRows.contains) else { return true }
 
             return memberships.contains { constraint in
                 constraints[constraint].allSatisfy { member in
@@ -575,8 +570,8 @@ final class LoweredTypeTable: Sendable {
     // apart, since a value is a member of each of them: one that settles the
     // contract settles it for all, and what leans on claims is leaned on only
     // where no membership settles it. A membership this reading already came
-    // through adds nothing met again, so where only those are left it
-    // answers, as `admits` does.
+    // through holds met again, as it does in `admits`, so it settles the
+    // contract for all.
     private func answering(
         contract name: Name,
         boundedBy bounds: [LoweredType.Bound],
@@ -591,11 +586,10 @@ final class LoweredTypeTable: Sendable {
 
             return row
         }
-        let unmet = memberships.filter { row in !assumingRows.contains(row) }
 
-        guard memberships.isEmpty || !unmet.isEmpty else { return .settled(true) }
+        guard !memberships.contains(where: assumingRows.contains) else { return .settled(true) }
 
-        return unmet.map { row in
+        return memberships.map { row in
             constraints[row].reduce(.settled(true)) { answered, member in
                 answered.joined(answering(contract: name, reading: member, assumingRows: assumingRows + [row], rigid: rigid, orNull: orNull))
             }
