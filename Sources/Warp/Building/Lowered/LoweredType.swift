@@ -1028,7 +1028,15 @@ indirect enum LoweredType: Sendable, Equatable {
     // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
     // are the same thing said twice.
     func resolved(in table: LoweredTypeTable) -> LoweredType {
-        resolved(in: table, assuming: [])
+        resolved(in: table, assuming: [], keepingRecordNames: false)
+    }
+
+    // The same with every name for a record kept, an alias of one included,
+    // and every other name walked through. A declared record is a name as
+    // well as a structure, so two readings are one type where they are the
+    // same through this, names and all.
+    func resolvedKeepingRecordNames(in table: LoweredTypeTable) -> LoweredType {
+        resolved(in: table, assuming: [], keepingRecordNames: true)
     }
 
     // Whether some value could satisfy both types at once. Not `accepts`:
@@ -2075,68 +2083,32 @@ indirect enum LoweredType: Sendable, Equatable {
             return nil
         }
     }
+
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
-    // expanded every row at every depth would chase one forever.
-    // The same type with every name that stands for no record walked
-    // through to what it stands for, at every depth, and every name for a
-    // record kept, an alias of one included. A declared record is a name as
-    // well as a structure, so two readings are one type where they are the
-    // same through this, names and all.
-    func resolvedKeepingRecordNames(in table: LoweredTypeTable) -> LoweredType {
-        resolvedKeepingRecordNames(in: table, assuming: [])
-    }
-
-    private func resolvedKeepingRecordNames(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
+    // expanded every row at every depth would chase one forever. A name for a
+    // record stands as itself as well where record names are kept.
+    private func resolved(in table: LoweredTypeTable, assuming: [Int], keepingRecordNames keeps: Bool) -> LoweredType {
         switch self {
         case let .named(row):
-            guard table.recordRows[row] == nil, !assuming.contains(row) else { return self }
+            guard !assuming.contains(row), !keeps || table.recordRows[row] == nil else { return self }
 
-            return table.loweredTypes[row].resolvedKeepingRecordNames(in: table, assuming: assuming + [row])
+            return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row], keepingRecordNames: keeps)
 
         case let .array(element):
-            return .array(element.resolvedKeepingRecordNames(in: table, assuming: assuming))
+            return .array(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
 
         case let .dictionary(element):
-            return .dictionary(element.resolvedKeepingRecordNames(in: table, assuming: assuming))
+            return .dictionary(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
 
         case let .nullable(element):
-            return .nullable(element.resolvedKeepingRecordNames(in: table, assuming: assuming))
+            return .nullable(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
 
         case let .record(fields):
             return .record(
                 LoweredRecord(
                     layout: fields.layout,
-                    fields: fields.fields.map { field in field.resolvedKeepingRecordNames(in: table, assuming: assuming) }
-                )
-            )
-
-        default:
-            return self
-        }
-    }
-
-    private func resolved(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
-        switch self {
-        case let .named(row):
-            guard !assuming.contains(row) else { return self }
-
-            return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row])
-
-        case let .array(element):
-            return .array(element.resolved(in: table, assuming: assuming))
-
-        case let .dictionary(element):
-            return .dictionary(element.resolved(in: table, assuming: assuming))
-
-        case let .nullable(element):
-            return .nullable(element.resolved(in: table, assuming: assuming))
-
-        case let .record(fields):
-            return .record(
-                LoweredRecord(
-                    layout: fields.layout,
-                    fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming) }
+                    fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming, keepingRecordNames: keeps) }
                 )
             )
 
