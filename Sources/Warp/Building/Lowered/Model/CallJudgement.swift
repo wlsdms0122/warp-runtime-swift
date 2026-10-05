@@ -17,11 +17,12 @@ struct CallJudgement: Sendable {
     let against: LoweredType?
     let handedBack: [HandedBack]
 
-    // Whether the answer settles to what it is judged against: where that is
-    // what a declaration wrote, the `returns` of a value's slot or an answer
-    // a contract wrote, rather than what the call filled a type parameter
-    // with, which the callee was handed or made and hands on as it came.
-    let settlesAnswer: Bool
+    // What the answer settles to, where a declaration wrote it: the
+    // `returns` of a value's slot, or the answer a contract wrote, with the
+    // type parameters it names left standing, so a position the call filled
+    // hands on as it came. Nil where the answer is what a call filled a
+    // declaration's type parameter with, which the callee was handed or made.
+    let settlesTo: LoweredType?
 
     // Whether what it is judged against names a type parameter: inside a
     // generic body, a judgement the run cannot hold to what filled it.
@@ -31,12 +32,12 @@ struct CallJudgement: Sendable {
 
     // MARK: - Initializer
     // Nil where there is nothing to judge.
-    init?(against: LoweredType?, handedBack: [HandedBack], settlesAnswer: Bool) {
+    init?(against: LoweredType?, handedBack: [HandedBack], settlesTo: LoweredType?) {
         guard against != nil || !handedBack.isEmpty else { return nil }
 
         self.against = against
         self.handedBack = handedBack
-        self.settlesAnswer = settlesAnswer
+        self.settlesTo = settlesTo
     }
 
     // MARK: - Public
@@ -45,15 +46,15 @@ struct CallJudgement: Sendable {
         CallJudgement(
             rewriting: try against.map(type),
             handedBack: try handedBack.map { back in HandedBack(position: back.position, against: try type(back.against)) },
-            settlesAnswer: settlesAnswer
+            settlesTo: try settlesTo.map(type)
         )
     }
 
     // MARK: - Private
     // Rewriting the types keeps what there is to judge, so it is never empty.
-    private init(rewriting against: LoweredType?, handedBack: [HandedBack], settlesAnswer: Bool) {
+    private init(rewriting against: LoweredType?, handedBack: [HandedBack], settlesTo: LoweredType?) {
         self.against = against
         self.handedBack = handedBack
-        self.settlesAnswer = settlesAnswer
+        self.settlesTo = settlesTo
     }
 }

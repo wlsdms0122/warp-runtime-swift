@@ -1006,9 +1006,9 @@ struct ObjectReader {
                 throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
             }
 
-            let settlesAnswer = try cursor.field().flag()
+            let settlesTo = try cursor.field().maybe(lowered)
 
-            guard let judging = CallJudgement(against: against, handedBack: handedBack, settlesAnswer: settlesAnswer) else {
+            guard let judging = CallJudgement(against: against, handedBack: handedBack, settlesTo: settlesTo) else {
                 throw ObjectRefused("a judgement where a call stands judges nothing")
             }
 

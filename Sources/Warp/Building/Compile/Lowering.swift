@@ -931,6 +931,7 @@ struct Lowering {
     // holds it as. The types are ones a body stands on, so they are numbered.
     private func checked(_ call: Operation, judging: CallJudgement, on context: Context) -> Operation {
         context.slots.note(judging.against)
+        context.slots.note(judging.settlesTo)
 
         for back in judging.handedBack {
             context.slots.note(back.against)

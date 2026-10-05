@@ -768,7 +768,7 @@ struct ObjectWriter {
                 try self.operation(read),
                 ObjectWriter.maybe(judging.against, lowered),
                 .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) }),
-                .bool(judging.settlesAnswer)
+                ObjectWriter.maybe(judging.settlesTo, lowered)
             )
 
         case let .block(body):
