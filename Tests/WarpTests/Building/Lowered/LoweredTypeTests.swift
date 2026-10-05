@@ -62,14 +62,13 @@ struct LoweredTypeTests {
         let wide = TypeExpression.ranged(.whole(from: 5, to: .through(100))).lowered(in: table)
 
         func read(_ readings: [LoweredType]) -> LoweredType? {
-            var bound: [Name: LoweredType] = [:]
-            var disagreeing: [Name: LoweredType] = [:]
+            var substitution = Substitution()
 
             for reading in readings {
-                parameter.binding(against: reading, into: &bound, disagreeing: &disagreeing, in: table)
+                parameter.binding(against: reading, into: &substitution, in: table)
             }
 
-            return bound["T"]
+            return substitution.readings["T"]
         }
 
         // When / Then

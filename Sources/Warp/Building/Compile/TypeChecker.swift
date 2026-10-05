@@ -455,12 +455,10 @@ struct TypeChecker {
         fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
-        var readings: [Name: LoweredType] = [:]
-        var disagreeing: [Name: LoweredType] = [:]
+        var unread = Substitution()
         var holding: [Substitution.Held] = []
-        var apart: [Name: [LoweredType]] = [:]
 
-        declared.binding(against: given, into: &readings, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table)
+        declared.binding(against: given, into: &unread, holding: &holding, in: table)
 
         for held in holding {
             for bound in held.bounds {
@@ -825,23 +823,13 @@ struct TypeChecker {
         readings sent: [LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> Substitution {
-        var bound: [Name: LoweredType] = [:]
-        var disagreeing: [Name: LoweredType] = [:]
-        var unheld: [Substitution.Held] = []
-        var apart: [Name: [LoweredType]] = [:]
+        var substitution = Substitution()
 
         for (slot, reading) in zip(slots, sent) {
-            slot.type.binding(
-                against: reading,
-                into: &bound,
-                disagreeing: &disagreeing,
-                holding: &unheld,
-                apart: &apart,
-                in: loweredTypes
-            )
+            slot.type.binding(against: reading, into: &substitution, in: loweredTypes)
         }
 
-        return Substitution(readings: bound, disagreeing: disagreeing, apart: apart)
+        return substitution
     }
 
     // Walking a path through types the way the resolver walks it through

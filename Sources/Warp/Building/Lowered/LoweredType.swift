@@ -1230,15 +1230,12 @@ indirect enum LoweredType: Sendable, Equatable {
     // type, the walk goes inside. Nothing infers across statements: a call
     // site is one place, and what it hands over is already known there.
     //
-    // A parameter reached twice has to be read the same both times, so two
-    // readings are a disagreement, written into `disagreeing`, rather than
-    // widened to `any`.
+    // A parameter reached twice is read once more, and the substitution says
+    // how the two readings become one.
     func binding(
         against given: LoweredType,
-        into bound: inout [Name: LoweredType],
-        disagreeing: inout [Name: LoweredType],
+        into substitution: inout Substitution,
         holding: inout [Substitution.Held],
-        apart: inout [Name: [LoweredType]],
         in table: LoweredTypeTable,
         assuming: [Int] = []
     ) {
@@ -1246,7 +1243,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // What arrived wears its slot's marks, which say nothing about its
         // value, so they come off before anything is bound or held.
         case let (_, .variable(theirs)), let (_, .inout(theirs)):
-            binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+            binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
 
         // A composition has no name to be read under: what arrived is held
         // to its bounds where it arrived, wherever in the slot that was.
@@ -1258,61 +1255,15 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.parameter, .never):
             return
 
-        case let (.parameter(name, bounds), _):
-            guard let already = bound[name] else {
-                bound[name] = given
-
-                return
-            }
-
-            guard already != given else { return }
-
-            // Two readings agree when one takes the other. A list of numbers
-            // and a whole number are not a disagreement, they are a parameter
-            // read once loosely and once tightly, and the loose reading is the
-            // one that holds both. With the table, because a reading may stand
-            // on a row and the type that row holds. Asking without it would
-            // call those two a disagreement, which is the same question the
-            // build asks elsewhere and answers correctly. Rigidly, because a
-            // parameter read here is the calling body's own and nothing fills
-            // it: a whole number and a parameter bounded to numbers are held by
-            // the parameter. A range meets anything by its kind, so a range and
-            // the plain kind under it take each other both ways, and so do two
-            // ranges that overlap; a declared record and a nameless record of
-            // its fields take each other too. What holds both is `holdingBoth`,
-            // and a parameter read as `any` anywhere is `any` there.
-            let both = already.holdingBoth(given, in: table)
-
-            // A reading of a bounded parameter that is not its join is held
-            // to its bounds as it was read, since the join may not say what it
-            // was: a join with `any` is `any`, a record's fields joined say
-            // nothing of each field, and two readings that do not join are
-            // both held where their disagreement is not reported.
-            if !bounds.isEmpty, already != both {
-                apart[name, default: []].append(already)
-            }
-
-            if !bounds.isEmpty, given != both {
-                apart[name, default: []].append(given)
-            }
-
-            if let both {
-                bound[name] = both
-
-                return
-            }
-
-            // The first reading is kept so that what is reported names both,
-            // and so that everything downstream sees one answer rather than a
-            // parameter that is two things.
-            disagreeing[name] = given
+        case let (.parameter(name, _), _):
+            substitution.read(name, as: given, in: table)
 
         // The slot's own wrapping comes off before what arrived is walked
         // through, so a name arriving is held to a composition as the name.
         // A nullable slot reads what cannot be null by its declared half, and
         // what can below.
         case let (.variable(mine), _), let (.inout(mine), _):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+            mine.binding(against: given, into: &substitution, holding: &holding, in: table, assuming: assuming)
 
         // A composition or null holds what arrived as it stands, the table
         // answering whether it is null or held to the bounds, a membership
@@ -1321,7 +1272,7 @@ indirect enum LoweredType: Sendable, Equatable {
             holding.append(Substitution.Held(reading: given, bounds: slot, orNull: true))
 
         case let (.nullable(mine), _) where !given.declaresNull(in: table):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+            mine.binding(against: given, into: &substitution, holding: &holding, in: table, assuming: assuming)
 
         // A name on either side is walked through to the type it declares,
         // once, since a type may name itself. Behind a parameter, so that a
@@ -1329,10 +1280,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.named(row), _) where !assuming.contains(row):
             table.loweredTypes[row].binding(
                 against: given,
-                into: &bound,
-                disagreeing: &disagreeing,
+                into: &substitution,
                 holding: &holding,
-                apart: &apart,
                 in: table,
                 assuming: assuming + [row]
             )
@@ -1340,10 +1289,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (_, .named(row)) where !assuming.contains(row):
             binding(
                 against: table.loweredTypes[row],
-                into: &bound,
-                disagreeing: &disagreeing,
+                into: &substitution,
                 holding: &holding,
-                apart: &apart,
                 in: table,
                 assuming: assuming + [row]
             )
@@ -1355,79 +1302,47 @@ indirect enum LoweredType: Sendable, Equatable {
             return
 
         case let (.nullable(mine), .nullable(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+            mine.binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
 
         case let (.nullable(mine), _):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+            mine.binding(against: given, into: &substitution, holding: &holding, in: table, assuming: assuming)
 
         case let (.array(mine), .array(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+            mine.binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
 
         case let (.dictionary(mine), .dictionary(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+            mine.binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
 
-        // A record read as a dictionary fills a parameter with its fields
-        // joined part by part, as a list literal fills one with its elements.
-        // Each field's value, its `var` off, is held to a composition where
-        // it stands. What the fields read a bounded parameter as is kept apart
-        // wherever what the parameter is read as does not say it: the fields'
-        // join may be no type the parameter stands in, and then it is read as
-        // nothing. Two fields of two kinds read one parameter as their join
-        // and are no disagreement, and what the join holds is not kept, since
-        // each field was held where it stands.
+        // A record read as a dictionary fills a parameter with each of its
+        // fields, as a list literal fills one with each of its elements: what
+        // the fields read a parameter as joins part by part, and that join is
+        // read as one more reading of it. Each field's value, its `var` off,
+        // is held to a composition where it stands.
         case let (.dictionary(mine), .record(theirs)):
-            let values = theirs.fields.map(\.fieldUnwrapped)
-            var fieldReadings: [Name: LoweredType] = [:]
-            var fieldsDisagreeing: [Name: LoweredType] = [:]
-            var unheld: [Substitution.Held] = []
+            var fields = Substitution(join: .partByPart)
 
-            for value in values {
-                mine.binding(
-                    against: value,
-                    into: &fieldReadings,
-                    disagreeing: &fieldsDisagreeing,
-                    holding: &holding,
-                    apart: &apart,
-                    in: table,
-                    assuming: assuming
-                )
+            for field in theirs.fields {
+                mine.binding(against: field.fieldUnwrapped, into: &fields, holding: &holding, in: table, assuming: assuming)
             }
 
-            mine.binding(
-                against: values.reduce(.never) { joined, value in joined.joinedPartByPart(value) },
-                into: &bound,
-                disagreeing: &disagreeing,
-                holding: &unheld,
-                apart: &apart,
-                in: table,
-                assuming: assuming
-            )
-
-            let bounded = mine.boundedParameters
-
-            for (name, reading) in fieldReadings.sorted(by: { $0.key < $1.key })
-                where bounded[name]?.isEmpty == false && bound[name] != reading {
-                apart[name, default: []].append(reading)
-            }
+            substitution.read(fields, in: table)
 
         case let (.record(mine), .record(theirs)):
             for (name, field) in mine.named {
                 guard let opposite = theirs[name] else { continue }
 
-                field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+                field.binding(against: opposite, into: &substitution, holding: &holding, in: table, assuming: assuming)
             }
 
         case let (.procedure(.some(mine), myAnswer, _, _), .procedure(.some(theirs), theirAnswer, _, _)):
             for (parameter, against) in zip(mine, theirs) {
-                parameter.binding(against: against, into: &bound, disagreeing: &disagreeing, holding: &holding, apart: &apart, in: table, assuming: assuming)
+                parameter.binding(against: against, into: &substitution, holding: &holding, in: table, assuming: assuming)
             }
 
             (myAnswer ?? .any).binding(
                 against: theirAnswer ?? .any,
-                into: &bound,
-                disagreeing: &disagreeing,
+                into: &substitution,
                 holding: &holding,
-                apart: &apart,
                 in: table,
                 assuming: assuming
             )
@@ -1438,16 +1353,10 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The same walk read for the type parameters alone.
-    func binding(
-        against given: LoweredType,
-        into bound: inout [Name: LoweredType],
-        disagreeing: inout [Name: LoweredType],
-        in table: LoweredTypeTable
-    ) {
+    func binding(against given: LoweredType, into substitution: inout Substitution, in table: LoweredTypeTable) {
         var unheld: [Substitution.Held] = []
-        var apart: [Name: [LoweredType]] = [:]
 
-        binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &unheld, apart: &apart, in: table)
+        binding(against: given, into: &substitution, holding: &unheld, in: table)
     }
 
     // This type read by its bounded parameters alone: each as the
@@ -2693,28 +2602,24 @@ indirect enum LoweredType: Sendable, Equatable {
         // filled by that body's call, which the run does not know; it is read
         // as what the slot asks there, held to its bounds.
         let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
-        var bound: [Name: LoweredType] = [:]
-        var disagreeing: [Name: LoweredType] = [:]
+        var bound = Substitution()
 
-        slot.binding(against: given, into: &bound, disagreeing: &disagreeing, in: table)
+        slot.binding(against: given, into: &bound, in: table)
 
-        let asked = slot.filling(bound)
-        var taken: [Name: LoweredType] = [:]
-        var unheld: [Substitution.Held] = []
-        var apart: [Name: [LoweredType]] = [:]
+        let asked = slot.filling(bound.readings)
+        var taken = Substitution()
 
         if given.namesParameter {
-            given.binding(against: asked, into: &taken, disagreeing: &disagreeing, holding: &unheld, apart: &apart, in: table)
+            given.binding(against: asked, into: &taken, in: table)
         }
 
-        let substitution = Substitution(readings: taken, disagreeing: disagreeing, apart: apart)
         let bounded = given.boundedParameters.allSatisfy { label, bounds in
-            substitution.everyReading(of: label).allSatisfy { filled in
+            taken.everyReading(of: label).allSatisfy { filled in
                 LoweredType.composition(bounds).accepts(filled, in: table)
             }
         }
 
-        guard bounded, asked.accepts(taken.isEmpty ? given : given.filling(taken), in: table) else {
+        guard bounded, asked.accepts(taken.readings.isEmpty ? given : given.filling(taken.readings), in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )

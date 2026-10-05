@@ -364,16 +364,11 @@ struct ClaimChecker {
         let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
         let asks = [TypeExpression.named(type).lowered(in: loweredTypes)]
             + asked.parameters.dropFirst().map { parameter in parameter.declared.lowered(in: loweredTypes) }
-        var bound: [Name: LoweredType] = [:]
-        var disagreeing: [Name: LoweredType] = [:]
-        var unheld: [Substitution.Held] = []
-        var apart: [Name: [LoweredType]] = [:]
+        var substitution = Substitution()
 
         for (taken, written) in zip(takes, asks) {
-            taken.binding(against: written, into: &bound, disagreeing: &disagreeing, holding: &unheld, apart: &apart, in: loweredTypes)
+            taken.binding(against: written, into: &substitution, in: loweredTypes)
         }
-
-        let substitution = Substitution(readings: bound, disagreeing: disagreeing, apart: apart)
 
         // What fills the declaration's own parameters is held to their bounds
         // the way a call's readings are, rigidly, since what the contract
@@ -392,7 +387,7 @@ struct ClaimChecker {
         }
 
         for (position, (taken, handed)) in zip(takes, asks).enumerated()
-            where !taken.filling(bound).takes(handed, in: loweredTypes, rigid: true) {
+            where !taken.filling(substitution.readings).takes(handed, in: loweredTypes, rigid: true) {
             guard position > 0 else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                         + " asks, and takes \(given.parameters[0].declared.rendered) first. A contract's"
@@ -408,7 +403,7 @@ struct ClaimChecker {
 
         let promised = answer.lowered(in: loweredTypes)
         let answered = (given.returns?.lowered(in: loweredTypes) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
-            .filling(bound)
+            .filling(substitution.readings)
 
         guard promised.accepts(answered, in: loweredTypes, rigid: true) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
