@@ -743,6 +743,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.variable(inner), _):
             return inner.accepts(other, in: table, assuming: assuming, asking: asking, rigid: rigid)
 
+        // A nullable slot takes null, whatever it declares besides.
+        case (.nullable, .null):
+            return true
+
         // A composition takes what each of its bounds takes: a membership
         // what its members admit, a contract what answers it, each asked of
         // the table with the same rigidity, and, where the slot takes null as
@@ -827,12 +831,9 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return accepts(table.loweredTypes[row], in: table, assuming: assuming + [(self, other)], asking: asking, rigid: rigid)
 
-        // A nullable slot takes null, and anything nullable whose declared
-        // half it takes; what cannot be null was taken above. What may be
+        // A nullable slot takes anything nullable whose declared half it
+        // takes; null and what cannot be null were taken above. What may be
         // null does not stand where null was never declared.
-        case (.nullable, .null):
-            return true
-
         case let (.nullable(mine), .nullable(theirs)):
             return mine.accepts(theirs, in: table, assuming: assuming, asking: asking, rigid: rigid)
 
