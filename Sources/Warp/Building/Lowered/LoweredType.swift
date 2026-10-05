@@ -598,6 +598,33 @@ indirect enum LoweredType: Sendable, Equatable {
         return mine == theirs ? mine : .any
     }
 
+    // Two parts held side by side, as one type: joined as two readings join,
+    // and part by part where a reading's join gives up, lists by their
+    // elements and records of the same fields field by field, inside what
+    // may be null too. Records of other fields are `any`, since a record slot
+    // takes either while no one record type holds both. How a literal's parts
+    // and a record's fields read as a dictionary fill a parameter.
+    func joinedPartByPart(_ part: LoweredType) -> LoweredType {
+        switch (self, part) {
+        case let (.nullable(mine), _):
+            return mine.joinedPartByPart(part).admittingNull
+
+        case let (_, .nullable(theirs)):
+            return joinedPartByPart(theirs).admittingNull
+
+        case let (.array(mine), .array(theirs)):
+            return .array(mine.joinedPartByPart(theirs))
+
+        case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
+            return .record(
+                LoweredRecord(layout: mine.layout, fields: zip(mine.fields, theirs.fields).map { field, given in field.joinedPartByPart(given) })
+            )
+
+        default:
+            return joined(part)
+        }
+    }
+
     // Whether two procedure types declare the same slots and the same answer.
     // What each requires of the value is beside that, so a join may keep the
     // slots while reading the two requirements together.
@@ -1325,10 +1352,10 @@ indirect enum LoweredType: Sendable, Equatable {
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
         // A record read as a dictionary fills a parameter with its fields
-        // joined, as a list fills one with its elements joined, and each field
-        // is held to a composition where it stands. Only the holding is kept
-        // from each field, since two fields of two kinds read one parameter
-        // as their join and are no disagreement.
+        // joined part by part, as a list literal fills one with its elements,
+        // and each field is held to a composition where it stands. Only the
+        // holding is kept from each field, since two fields of two kinds read
+        // one parameter as their join and are no disagreement.
         case let (.dictionary(mine), .record(theirs)):
             var apart: [Name: LoweredType] = [:]
             var apartDisagreeing: [Name: LoweredType] = [:]
@@ -1339,7 +1366,7 @@ indirect enum LoweredType: Sendable, Equatable {
             }
 
             mine.binding(
-                against: theirs.fields.reduce(.never) { joined, field in joined.joined(field) },
+                against: theirs.fields.reduce(.never) { joined, field in joined.joinedPartByPart(field) },
                 into: &bound,
                 disagreeing: &disagreeing,
                 holding: &unheld,

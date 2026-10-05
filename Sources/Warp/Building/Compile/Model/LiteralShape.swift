@@ -24,7 +24,7 @@ enum LiteralShape: Sendable {
     var folded: LoweredType {
         switch self {
         case let .list(items):
-            return .array(items.reduce(.never) { held, item in Self.joined(held, item.folded) })
+            return .array(items.reduce(.never) { held, item in held.joinedPartByPart(item.folded) })
 
         case let .record(fields):
             return .record(fields.mapValues(\.folded))
@@ -202,32 +202,6 @@ enum LiteralShape: Sendable {
 
         default:
             return true
-        }
-    }
-
-    // Two parts a literal holds side by side, as one type: joined as two
-    // readings join, and part by part where a reading's join gives up, lists
-    // by their elements and records of the same fields field by field, inside
-    // what may be null too. Records of other fields are `any`, since a record
-    // slot takes either while no one record type holds both.
-    private static func joined(_ held: LoweredType, _ part: LoweredType) -> LoweredType {
-        switch (held, part) {
-        case let (.nullable(mine), _):
-            return joined(mine, part).admittingNull
-
-        case let (_, .nullable(theirs)):
-            return joined(held, theirs).admittingNull
-
-        case let (.array(mine), .array(theirs)):
-            return .array(joined(mine, theirs))
-
-        case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
-            return .record(
-                LoweredRecord(layout: mine.layout, fields: zip(mine.fields, theirs.fields).map { field, given in joined(field, given) })
-            )
-
-        default:
-            return held.joined(part)
         }
     }
 }
