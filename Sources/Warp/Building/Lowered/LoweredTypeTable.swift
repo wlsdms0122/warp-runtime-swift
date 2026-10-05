@@ -559,7 +559,9 @@ final class LoweredTypeTable: Sendable {
     // membership answers where every member does. Memberships are asked
     // apart, since a value is a member of each of them: one that settles the
     // contract settles it for all, and what leans on claims is leaned on only
-    // where no membership settles it.
+    // where no membership settles it. A membership this reading already came
+    // through adds nothing met again, so where only those are left it
+    // answers, as `admits` does.
     private func answering(
         contract name: Name,
         boundedBy bounds: [LoweredType.Bound],
@@ -569,17 +571,21 @@ final class LoweredTypeTable: Sendable {
     ) -> Answering? {
         guard !bounds.contains(.contract(name)) else { return .settled(true) }
 
-        var answers: [Answering] = []
+        let memberships = bounds.compactMap { bound -> Int? in
+            guard case let .membership(row) = bound else { return nil }
 
-        for bound in bounds {
-            guard case let .membership(row) = bound, !assumingRows.contains(row) else { continue }
-
-            answers.append(constraints[row].reduce(.settled(true)) { answered, member in
-                answered.joined(answering(contract: name, reading: member, assumingRows: assumingRows + [row], rigid: rigid, orNull: orNull))
-            })
+            return row
         }
+        let unmet = memberships.filter { row in !assumingRows.contains(row) }
 
-        return answers.reduce(nil) { answered, next in answered.map { answered in answered.either(next) } ?? next }
+        guard memberships.isEmpty || !unmet.isEmpty else { return .settled(true) }
+
+        return unmet.map { row in
+            constraints[row].reduce(.settled(true)) { answered, member in
+                answered.joined(answering(contract: name, reading: member, assumingRows: assumingRows + [row], rigid: rigid, orNull: orNull))
+            }
+        }
+        .reduce(nil) { answered, next in answered.map { answered in answered.either(next) } ?? next }
     }
 }
 
