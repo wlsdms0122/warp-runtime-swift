@@ -2606,11 +2606,11 @@ indirect enum LoweredType: Sendable, Equatable {
         // filled by that body's call, which the run does not know; it is read
         // as what the slot asks there, held to its bounds.
         let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
-        var bound = Substitution()
+        var asking = Substitution()
 
-        slot.binding(against: given, into: &bound, in: table)
+        slot.binding(against: given, into: &asking, in: table)
 
-        let asked = slot.filling(bound.readings)
+        let asked = slot.filling(asking.readings)
         var taken = Substitution()
 
         if given.namesParameter {
