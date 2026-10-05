@@ -1317,15 +1317,15 @@ indirect enum LoweredType: Sendable, Equatable {
         // fields, as a list literal fills one with each of its elements: what
         // each field reads a parameter as is read on its own, what two fields
         // read it as joins part by part, and that join is read as one more
-        // reading of it. Each field's value, its `var` off, is held to a
-        // composition where it stands.
+        // reading of it. Each field's value is held to a composition where it
+        // stands.
         case let (.dictionary(mine), .record(theirs)):
             var fields = Substitution()
 
             for field in theirs.fields {
                 var fieldReadings = Substitution()
 
-                mine.binding(against: field.fieldUnwrapped, into: &fieldReadings, holding: &holding, in: table, assuming: assuming)
+                mine.binding(against: field, into: &fieldReadings, holding: &holding, in: table, assuming: assuming)
                 fields.read(fieldReadings, joining: .partByPart, in: table)
             }
 
@@ -1948,7 +1948,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // saying which, walked in step. Each position below is asked the same.
     // A reading of `any` at a position is `any` there, as it is for the
     // whole parameter: it is the loosest reading there is, and `accepts`
-    // cannot order it.
+    // cannot order it. A record's field is read without its `var`, which is
+    // a fact about the field and not about the value joined.
     private func merged(with given: LoweredType, takingGiven takesGiven: Bool, in table: LoweredTypeTable) -> LoweredType {
         let mine = throughAliases(in: table)
         let theirs = given.throughAliases(in: table)
@@ -1973,7 +1974,7 @@ indirect enum LoweredType: Sendable, Equatable {
              let (other, .dictionary(element)) where other.record(in: table) != nil:
             let fields = other.record(in: table)?.fields ?? []
 
-            return .dictionary(fields.reduce(element) { merged, field in merged.merged(with: field, in: table) })
+            return .dictionary(fields.reduce(element) { merged, field in merged.merged(with: field.fieldUnwrapped, in: table) })
 
         case let (.nullable(inner), .nullable(other)):
             return .nullable(inner.merged(with: other, in: table))
@@ -2009,7 +2010,10 @@ indirect enum LoweredType: Sendable, Equatable {
             return .record(
                 LoweredRecord(
                     layout: Layout(name: nil, ordered: loose.layout.fields),
-                    fields: loose.named.map { name, field in tight[name].map { other in field.merged(with: other, in: table) } ?? field }
+                    fields: loose.named.map { name, field in
+                        tight[name].map { other in field.fieldUnwrapped.merged(with: other.fieldUnwrapped, in: table) }
+                            ?? field.fieldUnwrapped
+                    }
                 )
             )
         }
@@ -2023,7 +2027,7 @@ indirect enum LoweredType: Sendable, Equatable {
     ) -> LoweredRecord {
         LoweredRecord(
             layout: record.layout,
-            fields: zip(fields, record.fields).map { field, given in field.merged(with: given, in: table) }
+            fields: zip(fields, record.fields).map { field, given in field.fieldUnwrapped.merged(with: given.fieldUnwrapped, in: table) }
         )
     }
 
@@ -2119,14 +2123,11 @@ indirect enum LoweredType: Sendable, Equatable {
             return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assuming: assuming, askingPairs: askingPairs)
         }
 
-        if
-            case let .named(mine) = self,
-            case let .named(theirs) = other,
-            let myRecord = table.recordRows[mine],
-            let theirRecord = table.recordRows[theirs],
-            myRecord != theirRecord
-        {
-            return false
+        // Two declared records are two types by name, through `?` and the
+        // aliases that stand for them, so the one value both could hold is
+        // null.
+        if let myRecord = table.record(of: self), let theirRecord = table.record(of: other), myRecord != theirRecord {
+            return declaresNull(in: table) && other.declaresNull(in: table)
         }
 
         if case let .named(row) = self {

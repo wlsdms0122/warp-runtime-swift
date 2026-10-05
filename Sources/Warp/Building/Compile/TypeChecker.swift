@@ -781,13 +781,12 @@ struct TypeChecker {
         // one of its bounds' members part by part, as one written into a slot
         // declaring them is: its join may be what a member takes while no
         // member takes its parts. Only what stands at such a parameter is
-        // asked here; `check` judges the rest against what filled it. What is
-        // handed in place is held by the in-place rule, `heldBeside`.
+        // asked here; `check` judges the rest against what filled it.
         for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
             let slot = slots[position]
             let bounded = slot.type.boundedAlone
 
-            guard !slot.type.isInout, bounded != .any else { continue }
+            guard bounded != .any else { continue }
 
             guard shape.isHeld(by: bounded, inPlace: false, in: loweredTypes) else {
                 return .refusal(
