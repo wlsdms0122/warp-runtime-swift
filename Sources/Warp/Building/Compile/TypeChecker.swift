@@ -782,14 +782,13 @@ struct TypeChecker {
         // one of its bounds' members part by part, as one written into a slot
         // declaring them is: its join may be what a member takes while no
         // member takes its parts.
-        let standing = bounding.table.compactMapValues { names -> LoweredType? in
-            let bounds = names.compactMap { name in loweredTypes.bound(named: name) }
-
-            return bounds.isEmpty ? nil : .composition(bounds.sorted())
-        }
-
         for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
             let slot = slots[position]
+            let standing = bounding.table.compactMapValues { names -> LoweredType? in
+                let bounds = names.compactMap { name in loweredTypes.bound(named: name) }
+
+                return bounds.isEmpty ? nil : .composition(bounds.sorted())
+            }
 
             guard !shape.isHeld(by: slot.type.filling(standing), inPlace: false, in: loweredTypes) else { continue }
 
