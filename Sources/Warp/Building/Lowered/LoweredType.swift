@@ -211,9 +211,9 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The row this stands on, through `?`, `var` and `inout`, which hold no
-    // value of their own. Nil for a type that names no row. What follows a
-    // chain of names follows this, so a name reached under a wrapper is a
-    // link of the chain and not its end.
+    // value of their own. Nil for a type that names no row. Whether a chain
+    // of names comes back on itself follows this, so a name reached under a
+    // wrapper is a link of the chain and not its end.
     var row: Int? {
         switch self {
         case let .named(row):
