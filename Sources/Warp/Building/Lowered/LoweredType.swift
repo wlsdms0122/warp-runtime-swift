@@ -1656,16 +1656,16 @@ indirect enum LoweredType: Sendable, Equatable {
     //
     // The two sets are two number spaces: a type row and a constraint row
     // may carry the same number, and folding the guards into one would let a
-    // type's row end a constraint's question by assuming it.
+    // type's row refuse a constraint's question it never asked.
     func holdsEveryByte(in table: LoweredTypeTable) -> Bool {
-        holdsEveryByte(in: table, namedAssuming: [], boundAsking: .nothing)
+        holdsEveryByte(in: table, namedAsking: [], boundAsking: .nothing)
     }
 
     // The same question, carrying the names and the memberships already
     // being asked.
     func holdsEveryByte(
         in table: LoweredTypeTable,
-        namedAssuming: [Int],
+        namedAsking: [Int],
         boundAsking: Asking
     ) -> Bool {
         switch self {
@@ -1673,7 +1673,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return true
 
         case let .variable(inner), let .inout(inner), let .nullable(inner):
-            return inner.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAsking: boundAsking)
+            return inner.holdsEveryByte(in: table, namedAsking: namedAsking, boundAsking: boundAsking)
 
         // A parameter stands for what arrived and does not settle it. A
         // bounded one still asks each value for its membership, and a member
@@ -1686,7 +1686,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 return holdsEveryByte(
                     of: constraint,
                     in: table,
-                    namedAssuming: namedAssuming,
+                    namedAsking: namedAsking,
                     boundAsking: boundAsking
                 )
             }
@@ -1695,11 +1695,11 @@ indirect enum LoweredType: Sendable, Equatable {
             return refinement.holdsEveryByte
 
         case let .named(row):
-            guard !namedAssuming.contains(row) else { return false }
+            guard !namedAsking.contains(row) else { return false }
 
             return table.loweredTypes[row].holdsEveryByte(
                 in: table,
-                namedAssuming: namedAssuming + [row],
+                namedAsking: namedAsking + [row],
                 boundAsking: boundAsking
             )
 
@@ -2168,7 +2168,7 @@ indirect enum LoweredType: Sendable, Equatable {
     private func holdsEveryByte(
         of constraint: Int,
         in table: LoweredTypeTable,
-        namedAssuming: [Int],
+        namedAsking: [Int],
         boundAsking: Asking
     ) -> Bool {
         guard !boundAsking.contains(constraint) else { return false }
@@ -2176,7 +2176,7 @@ indirect enum LoweredType: Sendable, Equatable {
         let deeper = boundAsking.adding(constraint)
 
         if table.constraints[constraint].contains(where: { member in
-            member.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAsking: deeper)
+            member.holdsEveryByte(in: table, namedAsking: namedAsking, boundAsking: deeper)
         }) {
             return true
         }
