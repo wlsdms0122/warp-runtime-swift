@@ -14,28 +14,15 @@ import Foundation
 // rather than read as `any`: `any` is what a declaration says when it said
 // nothing.
 struct Substitution: Sendable {
-    // A value that arrived where a composition stands, beside the bounds it
-    // is held to, and whether the slot takes null as well. Or a reading of
-    // a bounded parameter that its join is not, which the join may no
-    // longer say, held to the parameter's bounds as it was read.
+    // A value that arrived where a composition stands, beside what the
+    // composition holds it to, and whether the slot takes null as well.
     struct Held: Sendable {
         // MARK: - Property
         let reading: LoweredType
         let bounds: [LoweredType.Bound]
         let orNull: Bool
 
-        // The bounded parameter the reading was read at, or nil where a
-        // composition holds it.
-        let parameter: Name?
-
         // MARK: - Initializer
-        init(reading: LoweredType, bounds: [LoweredType.Bound], orNull: Bool, parameter: Name? = nil) {
-            self.reading = reading
-            self.bounds = bounds
-            self.orNull = orNull
-            self.parameter = parameter
-        }
-
         // MARK: - Public
         // MARK: - Private
     }
@@ -53,22 +40,14 @@ struct Substitution: Sendable {
     let apart: [Name: [LoweredType]]
 
     // MARK: - Initializer
-    // What a walk read, with what it held: the readings held at a bounded
-    // parameter are the ones its join is not.
-    init(readings: [Name: LoweredType], disagreeing: [Name: LoweredType], holding: [Held]) {
-        var apart: [Name: [LoweredType]] = [:]
+    // MARK: - Public
+    // What a bounded parameter is held to its bounds as: its join, and each
+    // reading the join is not.
+    func readings(of parameter: Name) -> [LoweredType] {
+        guard let reading = readings[parameter] else { return [] }
 
-        for held in holding {
-            guard let parameter = held.parameter else { continue }
-
-            apart[parameter, default: []].append(held.reading)
-        }
-
-        self.readings = readings
-        self.disagreeing = disagreeing
-        self.apart = apart
+        return [reading] + apart[parameter, default: []]
     }
 
-    // MARK: - Public
     // MARK: - Private
 }

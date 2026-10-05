@@ -366,13 +366,14 @@ struct ClaimChecker {
             + asked.parameters.dropFirst().map { parameter in parameter.declared.lowered(in: loweredTypes) }
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
-        var holding: [Substitution.Held] = []
+        var unheld: [Substitution.Held] = []
+        var apart: [Name: [LoweredType]] = [:]
 
         for (taken, written) in zip(takes, asks) {
-            taken.binding(against: written, into: &bound, disagreeing: &disagreeing, holding: &holding, in: loweredTypes)
+            taken.binding(against: written, into: &bound, disagreeing: &disagreeing, holding: &unheld, apart: &apart, in: loweredTypes)
         }
 
-        let substitution = Substitution(readings: bound, disagreeing: disagreeing, holding: holding)
+        let substitution = Substitution(readings: bound, disagreeing: disagreeing, apart: apart)
 
         // What fills the declaration's own parameters is held to their bounds
         // the way a call's readings are, rigidly, since what the contract
@@ -381,9 +382,9 @@ struct ClaimChecker {
         // refused where the declaration was judged.
         for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
             let bounds = names.compactMap { name in loweredTypes.bound(named: name) }.sorted()
-            let readings = (bound[parameter].map { reading in [reading] } ?? []) + (substitution.apart[parameter] ?? [])
 
-            for reading in readings where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
+            for reading in substitution.readings(of: parameter)
+                where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and reads '\(parameter)' as \(reading.rendered(in: loweredTypes))"
                         + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
