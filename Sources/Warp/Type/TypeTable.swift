@@ -129,10 +129,10 @@ public struct TypeTable: Sendable {
     //
     // A constrained reading is judged by its own membership rather than by its
     // name: it stands for some member of its constraint, so it fits where every
-    // one of those members would. The table ends its own recursion (a
-    // membership already being asked answers yes rather than being asked again)
-    // so a table built by hand refuses or answers where a linked one would, and
-    // never chases a declaration the link would have refused.
+    // one of those members would. The table ends its own recursion the way
+    // `LoweredTypeTable.admits` does, so a table built by hand refuses or
+    // answers where a linked one would, and never chases a declaration the link
+    // would have refused.
     public func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
         guard let row = loweredTypes.constraintRow(named: name) else { return nil }
 
