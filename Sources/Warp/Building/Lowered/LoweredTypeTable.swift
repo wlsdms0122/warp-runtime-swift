@@ -229,9 +229,9 @@ final class LoweredTypeTable: Sendable {
     // where it holds one type of collection it names the bad element, which
     // is what the author has to go and fix.
     func refusals(of value: Value, by row: Int, at path: @autoclosure () -> String, asking: Asking) -> [String]? {
-        var errors: [any Error] = []
+        var errors: [Int: any Error] = [:]
 
-        for member in constraints[row] {
+        for (position, member) in constraints[row].enumerated() {
             if let taken = member.admitsAsScalar(value) {
                 guard !taken else { return nil }
 
@@ -243,20 +243,15 @@ final class LoweredTypeTable: Sendable {
 
                 return nil
             } catch {
-                errors.append(error)
+                errors[position] = error
             }
         }
 
         // Spelled once no member took it, so a value a later member takes
-        // pays for no text. A scalar member's reason is its kind, read again.
-        var settled = errors.makeIterator()
-
-        return constraints[row].map { member in
-            guard member.admitsAsScalar(value) == nil, let error = settled.next() else {
-                return "as \(member.rendered(in: self)), got \(value.type)"
-            }
-
-            return "as \(member.rendered(in: self)), \(error)"
+        // pays for no text. A scalar member holds no error: its reason is
+        // its kind.
+        return constraints[row].enumerated().map { position, member in
+            "as \(member.rendered(in: self)), " + (errors[position].map { error in "\(error)" } ?? "got \(value.type)")
         }
     }
 
