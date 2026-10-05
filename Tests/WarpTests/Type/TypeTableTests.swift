@@ -89,6 +89,23 @@ struct TypeTableTests {
         #expect(table.admits(constraint: loop, value: .int(1), asking: .nothing) == false)
     }
 
+    @Test("a value a recursive membership refuses is refused in one walk, however deep")
+    func aDeepRefusalOfARecursiveMembershipIsOneWalk() {
+        // Given. Deep enough that settling a member more than once a level
+        // would not finish
+        let sut = TypeTable(
+            constraints: ["app.M": [.int, .array(.named("app.M"))]]
+        )
+        let value = (0 ..< 32).reduce(Value.string("s")) { inner, _ in .array([inner]) }
+
+        // When / Then
+        #expect {
+            try TypeExpression.named("app.M").settling(value, at: "x", in: sut)
+        } throws: { error in
+            "\(error)".hasPrefix("x: expected app.M, and nothing 'app.M' admits takes array.")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

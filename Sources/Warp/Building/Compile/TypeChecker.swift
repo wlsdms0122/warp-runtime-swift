@@ -741,6 +741,7 @@ struct TypeChecker {
         over slots: [Slot],
         answering: LoweredType?,
         readings sent: [LoweredType],
+        shaped shapes: [Int: LiteralShape],
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment,
         at place: Place
@@ -775,6 +776,26 @@ struct TypeChecker {
             at: place
         ) {
             return .refusal(refusal)
+        }
+
+        // A list or record literal handed where a bounded parameter stands is
+        // one of its bounds' members part by part, as one written into a slot
+        // declaring them is: its join may be what a member takes while no
+        // member takes its parts.
+        for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
+            let slot = slots[position]
+            let standing = bounding.table.compactMapValues { names -> LoweredType? in
+                let bounds = names.compactMap { name in loweredTypes.bound(named: name) }
+
+                return bounds.isEmpty ? nil : .composition(bounds.sorted())
+            }
+
+            guard !shape.isHeld(by: slot.type.filling(standing), inPlace: false, in: loweredTypes) else { continue }
+
+            return .refusal(
+                "'\(slot.name)' holds \(shape.rendered(in: loweredTypes))"
+                    + " where \(slot.type.rendered(in: loweredTypes)) is declared"
+            )
         }
 
         return .fits(
@@ -3273,6 +3294,7 @@ struct TypeChecker {
             over: context.slots(of: call.selector),
             answering: context.answer(of: call.selector),
             readings: site.readings,
+            shaped: site.shapes,
             in: loweredTypes,
             fulfillment: fulfillment,
             at: site.place

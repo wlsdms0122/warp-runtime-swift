@@ -172,9 +172,11 @@ enum LiteralShape: Sendable {
 
     // Whether the bounds a literal stands under take it part by part, as
     // `accepts` reads them whole: a membership by one of its members, and a
-    // parameter by every member of one membership bounding it. A membership
-    // already being asked of this literal does not take it, the way the run
-    // settles a value.
+    // parameter by every member of one membership bounding it. Asking every
+    // member of a bound is not asking whether the literal is one of that
+    // membership, so only a membership asked for one of its members joins
+    // what is being asked. A membership already being asked of this literal
+    // does not take it, the way the run settles a value.
     private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, asking: Asking) -> Bool {
         switch (slot, self) {
         case (_, .part):
@@ -184,28 +186,23 @@ enum LiteralShape: Sendable {
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
 
-                return isHeld(byMembership: row, every: false, in: table, asking: asking)
+                return table.someMember(of: row, asking: asking) { member, asked in
+                    isHeld(by: member, inPlace: false, in: table, asking: asked)
+                }
             }
 
         case let (.parameter(_, bounds), _):
             return bounds.contains { bound in
                 guard case let .membership(row) = bound else { return false }
 
-                return isHeld(byMembership: row, every: true, in: table, asking: asking)
+                return table.constraints[row].allSatisfy { member in
+                    isHeld(by: member, inPlace: false, in: table, asking: asking)
+                }
             }
 
         default:
             return true
         }
-    }
-
-    // Whether one member, or every member, of a membership takes it.
-    private func isHeld(byMembership row: Int, every: Bool, in table: LoweredTypeTable, asking: Asking) -> Bool {
-        guard !asking.contains(row) else { return false }
-
-        let held = { (member: LoweredType) in isHeld(by: member, inPlace: false, in: table, asking: asking.adding(row)) }
-
-        return every ? table.constraints[row].allSatisfy(held) : table.constraints[row].contains(where: held)
     }
 
     // Two parts a literal holds side by side, as one type: joined as two

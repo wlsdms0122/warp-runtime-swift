@@ -80,11 +80,12 @@ indirect enum LoweredType: Sendable, Equatable {
         // MARK: - Public
         // Whether null is a value of what this holds to: a membership's
         // where a member admits one, and a contract's never, since a
-        // contract is answered by a type and null wears none.
-        func admitsNull(in table: LoweredTypeTable) -> Bool {
+        // contract is answered by a type and null wears none. A membership
+        // already being asked adds no member.
+        func admitsNull(in table: LoweredTypeTable, asking: Asking) -> Bool {
             guard case let .membership(constraint) = self else { return false }
 
-            return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
+            return table.someMember(of: constraint, asking: asking) { member, asked in member.admitsNull(in: table, asking: asked) }
         }
 
         // Memberships first, by row; contracts behind, by name. One order,
@@ -791,7 +792,9 @@ indirect enum LoweredType: Sendable, Equatable {
         // every member of some membership would. One bounded by contracts
         // alone stands for a type nothing here lists, so nothing is
         // provable and it passes to be judged where it arrives, unless
-        // `rigid`, which the last branch answers.
+        // `rigid`, which the last branch answers. The pair is recorded: a
+        // membership that comes back to itself through its members adds no
+        // member that could disagree, so met again it holds.
         case let (_, .composition(bounds)) where !rigid || bounds.contains(where: { bound in
             if case .membership = bound { true } else { false }
         }):
@@ -802,9 +805,12 @@ indirect enum LoweredType: Sendable, Equatable {
             }
 
             guard !memberships.isEmpty else { return true }
+            guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+
+            let assumed = assumingPairs + [(self, other)]
 
             return memberships.contains { row in
-                table.constraints[row].allSatisfy { member in accepts(member, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid) }
+                table.constraints[row].allSatisfy { member in accepts(member, in: table, assumingPairs: assumed, asking: .nothing, rigid: rigid) }
             }
 
         case let (_, .variable(inner)), let (_, .inout(inner)):
@@ -1005,7 +1011,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // field. The bias is deliberate: a refusal is earned only where the
     // types provably disagree, and everything else is left to the run.
     func couldBothHold(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        couldBothHold(other, in: table, assuming: [])
+        couldBothHold(other, in: table, assuming: [], askingPairs: [])
     }
 
     // Whether an `enum` candidate could ever be a spelling of a value of this
@@ -1014,6 +1020,11 @@ indirect enum LoweredType: Sendable, Equatable {
     // them, and a number is read by the spelling the boundary reads: `1e0`
     // is a fraction no fraction spells, so no call could ever match it.
     func spells(_ candidate: String, in table: LoweredTypeTable) -> Bool {
+        spells(candidate, in: table, asking: .nothing)
+    }
+
+    // The same question, carrying the memberships already being asked.
+    func spells(_ candidate: String, in table: LoweredTypeTable, asking: Asking) -> Bool {
         switch self {
         case .any, .projection, .string, .undeclared:
             return true
@@ -1033,21 +1044,22 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // An unbounded type parameter is filled by the call, so nothing about
         // the candidates is knowable here. A bounded one takes only what some
-        // member of each of its memberships could spell.
+        // member of each of its memberships could spell. A membership already
+        // being asked adds no member.
         case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { bound in
                 guard case let .membership(constraint) = bound else { return true }
 
-                return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
+                return table.someMember(of: constraint, asking: asking) { member, asked in member.spells(candidate, in: table, asking: asked) }
             }
 
         case let .named(row):
-            return table.loweredTypes[row].spells(candidate, in: table)
+            return table.loweredTypes[row].spells(candidate, in: table, asking: asking)
 
         // A candidate spells a value, and null is not one an `enum` lists, so
         // a nullable slot's candidates are the declared half's.
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.spells(candidate, in: table)
+            return inner.spells(candidate, in: table, asking: asking)
 
         case .null, .never, .array, .dictionary, .record, .procedure:
             return false
@@ -1160,12 +1172,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // refusal dropped rather than a second rule written beside it. The path
     // is empty because nothing reads the refusal.
     func settles(_ value: Value, in table: LoweredTypeTable) -> Bool {
-        settles(value, in: table, asking: .nothing)
-    }
-
-    // The same question, carrying the memberships already asked of the value.
-    func settles(_ value: Value, in table: LoweredTypeTable, asking: Asking) -> Bool {
-        (try? settling(value, at: "", in: table, asking: asking)) != nil
+        (try? settling(value, at: "", in: table)) != nil
     }
 
     // The reading that holds two readings of one type parameter where one
@@ -1229,30 +1236,17 @@ indirect enum LoweredType: Sendable, Equatable {
             // Two readings agree when one takes the other. A list of numbers
             // and a whole number are not a disagreement, they are a parameter
             // read once loosely and once tightly, and the loose reading is the
-            // one that holds both. `any` first, because it is the loosest
-            // reading there is and `accepts` cannot order it: everything takes
-            // `any` and `any` takes everything, so asking which is looser
-            // answers yes both ways and whichever was read first would win. A
-            // parameter read as `any` anywhere is `any`, which is what a list
-            // of anything says about what may be put in it.
-            guard already.throughAliases(in: table) != .any else { return }
-
-            guard given.throughAliases(in: table) != .any else {
-                bound[name] = .any
-
-                return
-            }
-
-            // With the table, because a reading may stand on a row and the
-            // type that row holds. Asking without it would call those two a
-            // disagreement, which is the same question the build asks elsewhere
-            // and answers correctly. Rigidly, because a parameter read here is
-            // the calling body's own and nothing fills it: a whole number and a
-            // parameter bounded to numbers are held by the parameter. A range
-            // meets anything by its kind, so a range and the plain kind under
-            // it take each other both ways, and so do two ranges that overlap;
-            // a declared record and a nameless record of its fields take each
-            // other too. What holds both is `holdingBoth`.
+            // one that holds both. With the table, because a reading may stand
+            // on a row and the type that row holds. Asking without it would
+            // call those two a disagreement, which is the same question the
+            // build asks elsewhere and answers correctly. Rigidly, because a
+            // parameter read here is the calling body's own and nothing fills
+            // it: a whole number and a parameter bounded to numbers are held by
+            // the parameter. A range meets anything by its kind, so a range and
+            // the plain kind under it take each other both ways, and so do two
+            // ranges that overlap; a declared record and a nameless record of
+            // its fields take each other too. What holds both is `holdingBoth`,
+            // and a parameter read as `any` anywhere is `any` there.
             if let both = already.holdingBoth(given, in: table) {
                 bound[name] = both
 
@@ -1423,7 +1417,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // call of a value asks before the run. A reading no procedure could stand in
     // is a call every run refuses.
     func couldBeProcedure(in table: LoweredTypeTable) -> Bool {
-        couldBeProcedure(in: table, namedAsking: [])
+        couldBeProcedure(in: table, namedAsking: [], asking: .nothing)
     }
 
     // Which rows this type stands on, in the two tables it names. Read by
@@ -1605,21 +1599,26 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether a null that arrives is one of this type's values. `any` is
     // here and not below: it accepts what it is handed, null included.
     func admitsNull(in table: LoweredTypeTable) -> Bool {
+        admitsNull(in: table, asking: .nothing)
+    }
+
+    // The same question, carrying the memberships already being asked.
+    func admitsNull(in table: LoweredTypeTable, asking: Asking) -> Bool {
         switch self {
         case .any:
             return true
 
         case let .named(row):
-            return table.loweredTypes[row].admitsNull(in: table)
+            return table.loweredTypes[row].admitsNull(in: table, asking: asking)
 
         // A parameter stands for what arrived and does not settle it, so an
         // unbounded one holds a null the way it holds anything; a bounded
         // one, and a composition, hold null only where every bound does.
         case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.allSatisfy { bound in bound.admitsNull(in: table) }
+            return bounds.allSatisfy { bound in bound.admitsNull(in: table, asking: asking) }
 
         default:
-            return declaresNull(in: table)
+            return declaresNull(in: table, asking: asking)
         }
     }
 
@@ -1628,20 +1627,26 @@ indirect enum LoweredType: Sendable, Equatable {
     // this: an undeclared type accepts a null that arrives, but it does not
     // spell null as a value.
     func declaresNull(in table: LoweredTypeTable) -> Bool {
+        declaresNull(in: table, asking: .nothing)
+    }
+
+    // The same question, carrying the memberships already being asked.
+    func declaresNull(in table: LoweredTypeTable, asking: Asking) -> Bool {
         switch self {
         case .null, .nullable:
             return true
 
         case let .named(row):
-            return table.loweredTypes[row].declaresNull(in: table)
+            return table.loweredTypes[row].declaresNull(in: table, asking: asking)
 
         // A value of a composition is one of every membership's members, so
-        // null is spelled here where every membership has a member spelling it.
+        // null is spelled here where every membership has a member spelling
+        // it. A membership already being asked adds no member.
         case let .composition(bounds):
             return bounds.allSatisfy { bound in
                 guard case let .membership(constraint) = bound else { return false }
 
-                return table.constraints[constraint].contains { member in member.declaresNull(in: table) }
+                return table.someMember(of: constraint, asking: asking) { member, asked in member.declaresNull(in: table, asking: asked) }
             }
 
         default:
@@ -1926,8 +1931,26 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.record(nameless), theirs) where theirs.record(in: table)?.layout.fields == nameless.layout.fields:
             return .record(LoweredType.nameless(nameless, merging: theirs.record(in: table)?.fields ?? [], in: table))
 
-        default:
-            return looser
+        // Two records of other fields: the looser names fewer, and what holds
+        // both is a nameless record of its fields, each merged with the field
+        // of the same name in the other.
+        case let (mine, theirs):
+            guard
+                let myRecord = mine.record(in: table),
+                let theirRecord = theirs.record(in: table),
+                myRecord.layout.fields != theirRecord.layout.fields
+            else {
+                return looser
+            }
+
+            let (loose, tight) = takesGiven ? (myRecord, theirRecord) : (theirRecord, myRecord)
+
+            return .record(
+                LoweredRecord(
+                    layout: Layout(name: nil, ordered: loose.layout.fields),
+                    fields: loose.named.map { name, field in tight[name].map { other in field.merged(with: other, in: table) } ?? field }
+                )
+            )
         }
     }
 
@@ -2020,8 +2043,16 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Names are peeled one layer at a time, with the rows already being
-    // asked about remembered, because this walk is the one that recurses.
-    private func couldBothHold(_ other: LoweredType, in table: LoweredTypeTable, assuming: [Int]) -> Bool {
+    // asked about remembered, because this walk is the one that recurses,
+    // and the pairs a composition was taken apart at beside them. A pair met
+    // again, inside a record or not, is the same question come back, which
+    // no member answers.
+    private func couldBothHold(
+        _ other: LoweredType,
+        in table: LoweredTypeTable,
+        assuming: [Int],
+        askingPairs: [(LoweredType, LoweredType)]
+    ) -> Bool {
         if
             case let .named(mine) = self,
             case let .named(theirs) = other,
@@ -2035,13 +2066,13 @@ indirect enum LoweredType: Sendable, Equatable {
         if case let .named(row) = self {
             guard !assuming.contains(row) else { return true }
 
-            return table.loweredTypes[row].couldBothHold(other, in: table, assuming: assuming + [row])
+            return table.loweredTypes[row].couldBothHold(other, in: table, assuming: assuming + [row], askingPairs: askingPairs)
         }
 
         if case let .named(row) = other {
             guard !assuming.contains(row) else { return true }
 
-            return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row])
+            return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row], askingPairs: askingPairs)
         }
 
         if provesNothing || other.provesNothing { return true }
@@ -2049,21 +2080,29 @@ indirect enum LoweredType: Sendable, Equatable {
         // A value of a composition is one of every membership's members, so
         // a value could be both wherever one member could.
         if case let .composition(bounds) = self {
+            guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
+
+            let asked = askingPairs + [(self, other)]
+
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
 
                 return table.constraints[row].contains { member in
-                    member.couldBothHold(other, in: table, assuming: assuming)
+                    member.couldBothHold(other, in: table, assuming: assuming, askingPairs: asked)
                 }
             }
         }
 
         if case let .composition(bounds) = other {
+            guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
+
+            let asked = askingPairs + [(self, other)]
+
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
 
                 return table.constraints[row].contains { member in
-                    couldBothHold(member, in: table, assuming: assuming)
+                    couldBothHold(member, in: table, assuming: assuming, askingPairs: asked)
                 }
             }
         }
@@ -2077,7 +2116,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // Two ranges are asked of the judge that decides them, the way
         // `accepts` asks it: what is provably apart is refused here.
         if case let .ranged(mine) = self, case let .ranged(theirs) = other {
-            return mine.lowered.couldBothHold(theirs.lowered, in: table, assuming: assuming)
+            return mine.lowered.couldBothHold(theirs.lowered, in: table, assuming: assuming, askingPairs: askingPairs)
                 && mine.overlaps(theirs)
         }
 
@@ -2085,13 +2124,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // value could be both is a question about kinds.
         switch (unrefined, other.unrefined) {
         case let (.nullable(inner), side), let (side, .nullable(inner)):
-            return inner.couldBothHold(side, in: table, assuming: assuming)
+            return inner.couldBothHold(side, in: table, assuming: assuming, askingPairs: askingPairs)
 
         // What both name has to be able to hold at once; what only one names
         // is data the other lets ride through.
         case let (.record(mine), .record(theirs)):
             return mine.named.allSatisfy { name, field in
-                theirs[name].map { given in field.couldBothHold(given, in: table, assuming: assuming) } ?? true
+                theirs[name].map { given in field.couldBothHold(given, in: table, assuming: assuming, askingPairs: askingPairs) } ?? true
             }
 
         // A dictionary and a record are one value at run time read two ways, so
@@ -2099,7 +2138,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // and a map are not asked about their elements: an empty one is of
         // every element type there is.
         case let (.dictionary(entry), .record(held)), let (.record(held), .dictionary(entry)):
-            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assuming: assuming) }
+            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assuming: assuming, askingPairs: askingPairs) }
 
         // Two decided kinds, which is where a value either is both or is
         // neither. Anything else this walk does not read into is the run's.
@@ -2115,29 +2154,31 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Names are peeled one layer at a time, with the rows already being asked
-    // about remembered, since a membership may name itself through a row.
-    private func couldBeProcedure(in table: LoweredTypeTable, namedAsking: [Int]) -> Bool {
+    // about remembered, since a membership may name itself through a row,
+    // and the memberships already being asked beside them.
+    private func couldBeProcedure(in table: LoweredTypeTable, namedAsking: [Int], asking: Asking) -> Bool {
         switch self {
         case .procedure, .any, .never, .projection, .undeclared:
             return true
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.couldBeProcedure(in: table, namedAsking: namedAsking)
+            return inner.couldBeProcedure(in: table, namedAsking: namedAsking, asking: asking)
 
         case let .named(row):
             guard !namedAsking.contains(row) else { return false }
 
-            return table.loweredTypes[row].couldBeProcedure(in: table, namedAsking: namedAsking + [row])
+            return table.loweredTypes[row].couldBeProcedure(in: table, namedAsking: namedAsking + [row], asking: asking)
 
         // A value of a type parameter or a composition is one of every
         // bound's members at once. A contract is answered by declared types,
-        // and a procedure wears no name to answer one.
+        // and a procedure wears no name to answer one. A membership already
+        // being asked adds no member.
         case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { bound in
                 switch bound {
                 case let .membership(row):
-                    return table.constraints[row].contains { member in
-                        member.couldBeProcedure(in: table, namedAsking: namedAsking)
+                    return table.someMember(of: row, asking: asking) { member, asked in
+                        member.couldBeProcedure(in: table, namedAsking: namedAsking, asking: asked)
                     }
 
                 case .contract:
@@ -2173,13 +2214,11 @@ indirect enum LoweredType: Sendable, Equatable {
     ) -> Bool {
         guard !boundAsking.contains(constraint) else { return false }
 
-        let deeper = boundAsking.adding(constraint)
-
-        if table.constraints[constraint].contains(where: { member in
-            member.holdsEveryByte(in: table, namedAsking: namedAsking, boundAsking: deeper)
-        }) {
-            return true
+        let covered = table.someMember(of: constraint, asking: boundAsking) { member, asked in
+            member.holdsEveryByte(in: table, namedAsking: namedAsking, boundAsking: asked)
         }
+
+        guard !covered else { return true }
 
         // No one member covers it, so the complete question is asked with the
         // boundary's own primitive: members that divide the range between them
@@ -2390,46 +2429,13 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        guard table.admits(constraint: constraint, value: value, asking: asking) else {
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), and nothing"
-                    + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
-                    + " \(refused(value, by: constraint, at: path(), in: table, asking: asking))"
-            )
-        }
+        guard let reasons = table.refusals(of: value, by: constraint, at: path(), asking: asking) else { return value }
 
-        return value
-    }
-
-    // Why each member of a membership said no, in one line. A membership
-    // holding one type of collection refuses a bad element, and the element
-    // is what the author has to go and fix.
-    private func refused(
-        _ value: Value,
-        by constraint: Int,
-        at path: String,
-        in table: LoweredTypeTable,
-        asking: Asking
-    ) -> String {
-        let deeper = asking.adding(constraint)
-
-        return table.constraints[constraint]
-            .map { member in
-                // A scalar member says only that the kind is wrong, and the
-                // kind is already in front of the reader.
-                if member.admitsAsScalar(value) != nil {
-                    return "as \(member.rendered(in: table)), got \(value.type)"
-                }
-
-                do {
-                    _ = try member.settling(value, at: path, in: table, asking: deeper)
-
-                    return "as \(member.rendered(in: table)), got \(value.type)"
-                } catch {
-                    return "as \(member.rendered(in: table)), \(error)"
-                }
-            }
-            .joined(separator: ". ")
+        throw ArgumentError(
+            "\(path()): expected \(rendered(in: table)), and nothing"
+                + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
+                + " \(reasons.joined(separator: ". "))"
+        )
     }
 
     private func settlingNamed(
