@@ -1369,11 +1369,12 @@ indirect enum LoweredType: Sendable, Equatable {
         // A record read as a dictionary fills a parameter with its fields
         // joined part by part, as a list literal fills one with its elements.
         // Each field's value, its `var` off, is held to a composition where
-        // it stands, and kept apart where a bounded parameter's join does not
-        // say it. What each field reads a parameter as is not kept, since two
-        // fields of two kinds read one parameter as their join and are no
-        // disagreement, and what the join holds is not kept, since each field
-        // was held where it stands.
+        // it stands. What the fields read a bounded parameter as is kept apart
+        // wherever what the parameter is read as does not say it: the fields'
+        // join may be no type the parameter stands in, and then it is read as
+        // nothing. Two fields of two kinds read one parameter as their join
+        // and are no disagreement, and what the join holds is not kept, since
+        // each field was held where it stands.
         case let (.dictionary(mine), .record(theirs)):
             let values = theirs.fields.map(\.fieldUnwrapped)
             var fieldReadings: [Name: LoweredType] = [:]
@@ -1401,6 +1402,13 @@ indirect enum LoweredType: Sendable, Equatable {
                 in: table,
                 assuming: assuming
             )
+
+            let bounded = mine.boundedParameters
+
+            for (name, reading) in fieldReadings.sorted(by: { $0.key < $1.key })
+                where bounded[name]?.isEmpty == false && bound[name] != reading {
+                apart[name, default: []].append(reading)
+            }
 
         case let (.record(mine), .record(theirs)):
             for (name, field) in mine.named {
