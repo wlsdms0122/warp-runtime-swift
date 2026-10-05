@@ -1291,27 +1291,20 @@ indirect enum LoweredType: Sendable, Equatable {
             // parameter that is two things.
             disagreeing[name] = given
 
-        // A slot's own wrapping comes off before what arrived is walked
+        // The slot's own wrapping comes off before what arrived is walked
         // through, so a name arriving is held to a composition as the name.
-        // A slot's marks say nothing about the value; a nullable slot reads
-        // what cannot be null by its declared half, and what can below.
+        // A nullable slot reads what cannot be null by its declared half, and
+        // what can below.
         case let (.variable(mine), _), let (.inout(mine), _):
-            mine.binding(
-                against: given.slotUnwrapped,
-                into: &bound,
-                disagreeing: &disagreeing,
-                holding: &holding,
-                in: table,
-                assuming: assuming
-            )
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
         // A composition or null holds what arrived as it stands, the table
         // answering whether it is null or held to the bounds, a membership
         // member by member.
         case let (.nullable(.composition(slot)), _):
-            holding.append(Substitution.Held(reading: given.slotUnwrapped, bounds: slot, orNull: true))
+            holding.append(Substitution.Held(reading: given, bounds: slot, orNull: true))
 
-        case let (.nullable(mine), _) where !given.slotUnwrapped.declaresNull(in: table):
+        case let (.nullable(mine), _) where !given.declaresNull(in: table):
             mine.binding(against: given, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
         // A name on either side is walked through to the type it declares,
@@ -2169,14 +2162,9 @@ indirect enum LoweredType: Sendable, Equatable {
         assuming: [Int],
         askingPairs: [(LoweredType, LoweredType)]
     ) -> Bool {
-        // A field's `var` is a fact about the field; the value read out of it
-        // is the type inside.
-        if case let .variable(inner) = self {
-            return inner.couldBothHold(other, in: table, assuming: assuming, askingPairs: askingPairs)
-        }
-
-        if case let .variable(inner) = other {
-            return couldBothHold(inner, in: table, assuming: assuming, askingPairs: askingPairs)
+        // What a field holds is read without its `var`.
+        guard fieldUnwrapped == self, other.fieldUnwrapped == other else {
+            return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assuming: assuming, askingPairs: askingPairs)
         }
 
         if
@@ -2679,7 +2667,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         let bounded = taken.isEmpty || given.boundedParameters.allSatisfy { label, bounds in
-            taken[label].map { filled in LoweredType.composition(bounds).accepts(filled.slotUnwrapped, in: table) } ?? true
+            taken[label].map { filled in LoweredType.composition(bounds).accepts(filled, in: table) } ?? true
         }
 
         guard bounded, asked.accepts(taken.isEmpty ? given : given.filling(taken), in: table) else {
