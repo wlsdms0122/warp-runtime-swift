@@ -778,14 +778,16 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        // A list or record literal handed where a bounded parameter stands is
-        // one of its bounds' members part by part, as one written into a slot
-        // declaring them is: its join may be what a member takes while no
-        // member takes its parts. Only what stands at such a parameter is
-        // asked here; `check` judges the rest against what filled it. A part
-        // leaning on a claim is written down for the link, as a write is.
-        for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
-            let slot = slots[position]
+        // What is handed where a bounded parameter stands is one of its
+        // bounds' members part by part, as what is written into a slot
+        // declaring them is: a literal's join, or a record's fields joined,
+        // may be what a member takes while no member takes its parts. Only
+        // what stands at such a parameter is asked here; `check` judges the
+        // rest against what filled it. A part leaning on a claim is written
+        // down for the link, as a write is. What is handed in place is held
+        // by its own rule.
+        for (position, slot) in slots.enumerated() where sent.indices.contains(position) && !slot.type.isInout {
+            let shape = LiteralShape(shapes[position], reading: sent[position])
             let bounded = slot.type.boundedAlone
 
             guard bounded != .any else { continue }

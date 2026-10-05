@@ -1324,6 +1324,29 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.dictionary(mine), .dictionary(theirs)):
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, holding: &holding, in: table, assuming: assuming)
 
+        // A record read as a dictionary fills a parameter with its fields
+        // joined, as a list fills one with its elements joined, and each field
+        // is held to a composition where it stands. Only the holding is kept
+        // from each field, since two fields of two kinds read one parameter
+        // as their join and are no disagreement.
+        case let (.dictionary(mine), .record(theirs)):
+            var apart: [Name: LoweredType] = [:]
+            var apartDisagreeing: [Name: LoweredType] = [:]
+            var unheld: [Substitution.Held] = []
+
+            for field in theirs.fields {
+                mine.binding(against: field, into: &apart, disagreeing: &apartDisagreeing, holding: &holding, in: table, assuming: assuming)
+            }
+
+            mine.binding(
+                against: theirs.fields.reduce(.never) { joined, field in joined.joined(field) },
+                into: &bound,
+                disagreeing: &disagreeing,
+                holding: &unheld,
+                in: table,
+                assuming: assuming
+            )
+
         case let (.record(mine), .record(theirs)):
             for (name, field) in mine.named {
                 guard let opposite = theirs[name] else { continue }
