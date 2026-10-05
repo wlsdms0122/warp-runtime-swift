@@ -1257,7 +1257,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.parameter, .never):
             return
 
-        case let (.parameter(name, _), _):
+        case let (.parameter(name, bounds), _):
             guard let already = bound[name] else {
                 bound[name] = given
 
@@ -1265,6 +1265,15 @@ indirect enum LoweredType: Sendable, Equatable {
             }
 
             guard already != given else { return }
+
+            // Two readings of a bounded parameter are each held to its bounds
+            // as they were read, since what they join to may not say: a join
+            // with `any` is `any`, and a record's fields joined say nothing of
+            // each field.
+            if !bounds.isEmpty {
+                holding.append(Substitution.Held(reading: already, bounds: bounds, orNull: false, parameter: name))
+                holding.append(Substitution.Held(reading: given, bounds: bounds, orNull: false, parameter: name))
+            }
 
             // Two readings agree when one takes the other. A list of numbers
             // and a whole number are not a disagreement, they are a parameter
@@ -2661,13 +2670,19 @@ indirect enum LoweredType: Sendable, Equatable {
 
         let asked = slot.filling(bound)
         var taken: [Name: LoweredType] = [:]
+        var holding: [Substitution.Held] = []
 
         if given.namesParameter {
-            given.binding(against: asked, into: &taken, disagreeing: &disagreeing, in: table)
+            given.binding(against: asked, into: &taken, disagreeing: &disagreeing, holding: &holding, in: table)
         }
 
+        // What each parameter is read as, and each reading it was joined
+        // from, is held to its bounds.
+        let apart = Substitution(readings: taken, disagreeing: disagreeing, holding: holding).apart
         let bounded = taken.isEmpty || given.boundedParameters.allSatisfy { label, bounds in
-            taken[label].map { filled in LoweredType.composition(bounds).accepts(filled, in: table) } ?? true
+            ((taken[label].map { filled in [filled] } ?? []) + (apart[label] ?? [])).allSatisfy { filled in
+                LoweredType.composition(bounds).accepts(filled, in: table)
+            }
         }
 
         guard bounded, asked.accepts(taken.isEmpty ? given : given.filling(taken), in: table) else {

@@ -778,19 +778,33 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        // What is handed where a bounded parameter stands is one of its
-        // bounds' members part by part, as what is written into a slot
-        // declaring them is: a literal's join, or a record's fields joined,
-        // may be what a member takes while no member takes its parts. Only
-        // what stands at such a parameter is asked here; `check` judges the
-        // rest against what filled it. A part leaning on a claim is written
-        // down for the link, as a write is. What is handed in place is held
-        // by the in-place rule, `heldBeside`.
-        for (position, slot) in slots.enumerated() where sent.indices.contains(position) && !slot.type.isInout {
-            let shape = LiteralShape(shapes[position], reading: sent[position])
+        // And each reading a bounded parameter was joined from, as it was
+        // read.
+        for (parameter, readings) in substitution.apart.sorted(by: { $0.key < $1.key }) {
+            for reading in readings {
+                if let refusal = constraintRefusal(
+                    mentions: bounding.table,
+                    readings: [parameter: reading],
+                    in: loweredTypes,
+                    fulfillment: fulfillment,
+                    at: place
+                ) {
+                    return .refusal(refusal)
+                }
+            }
+        }
+
+        // A list or record literal handed where a bounded parameter stands is
+        // one of its bounds' members part by part, as one written into a slot
+        // declaring them is: its join may be what a member takes while no
+        // member takes its parts. Only what stands at such a parameter is
+        // asked here; `check` judges the rest against what filled it. What is
+        // handed in place is held by the in-place rule, `heldBeside`.
+        for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
+            let slot = slots[position]
             let bounded = slot.type.boundedAlone
 
-            guard bounded != .any else { continue }
+            guard !slot.type.isInout, bounded != .any else { continue }
 
             guard shape.isHeld(by: bounded, inPlace: false, in: loweredTypes) else {
                 return .refusal(
@@ -828,12 +842,13 @@ struct TypeChecker {
     ) -> Substitution {
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
+        var holding: [Substitution.Held] = []
 
         for (slot, reading) in zip(slots, sent) {
-            slot.type.binding(against: reading, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
+            slot.type.binding(against: reading, into: &bound, disagreeing: &disagreeing, holding: &holding, in: loweredTypes)
         }
 
-        return Substitution(readings: bound, disagreeing: disagreeing)
+        return Substitution(readings: bound, disagreeing: disagreeing, holding: holding)
     }
 
     // Walking a path through types the way the resolver walks it through

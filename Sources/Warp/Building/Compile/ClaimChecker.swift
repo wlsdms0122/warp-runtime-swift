@@ -366,25 +366,28 @@ struct ClaimChecker {
             + asked.parameters.dropFirst().map { parameter in parameter.declared.lowered(in: loweredTypes) }
         var bound: [Name: LoweredType] = [:]
         var disagreeing: [Name: LoweredType] = [:]
+        var holding: [Substitution.Held] = []
 
         for (taken, written) in zip(takes, asks) {
-            taken.binding(against: written, into: &bound, disagreeing: &disagreeing, in: loweredTypes)
+            taken.binding(against: written, into: &bound, disagreeing: &disagreeing, holding: &holding, in: loweredTypes)
         }
+
+        let substitution = Substitution(readings: bound, disagreeing: disagreeing, holding: holding)
 
         // What fills the declaration's own parameters is held to their bounds
         // the way a call's readings are, rigidly, since what the contract
-        // writes there is filled by no call. A bound nothing declares was
-        // refused where the declaration was judged.
+        // writes there is filled by no call: what each was read as, and each
+        // reading it was joined from. A bound nothing declares was refused
+        // where the declaration was judged.
         for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
-            guard let reading = bound[parameter] else { continue }
-
             let bounds = names.compactMap { name in loweredTypes.bound(named: name) }.sorted()
+            let readings = (bound[parameter].map { reading in [reading] } ?? []) + (substitution.apart[parameter] ?? [])
 
-            guard !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) else { continue }
-
-            return "is named for '\(type)' and the procedure '\(procedure)' that"
-                    + " '\(contract)' asks, and reads '\(parameter)' as \(reading.rendered(in: loweredTypes))"
-                    + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
+            for reading in readings where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
+                return "is named for '\(type)' and the procedure '\(procedure)' that"
+                        + " '\(contract)' asks, and reads '\(parameter)' as \(reading.rendered(in: loweredTypes))"
+                        + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
+            }
         }
 
         for (position, (taken, handed)) in zip(takes, asks).enumerated()
