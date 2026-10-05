@@ -284,7 +284,7 @@ final class LoweredTypeTable: Sendable {
 
     // The same question, carrying what is already being asked. Three lists
     // ride along. `assumingRows` is the memberships a constrained reading
-    // came through, whose members met again add nothing. `assumingPairs` and
+    // came through, which hold met again. `assumingPairs` and
     // `asking` are what `accepts` carries, the pairs met on the way, which
     // hold met again, and the memberships asked of this very reading, which
     // refuse met again.
