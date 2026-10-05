@@ -458,9 +458,17 @@ final class LoweredTypeTable: Sendable {
             loweredTypes[row] = .undeclared(label: labels[row].spelling, because: .namesItself)
         }
 
-        // The record a row names: the last row on the way to a record type.
+        // The record a row names: the last row on the way to a record type,
+        // along names alone, since a name for what may be null names no
+        // record. Every chain is finite by now.
         let recordRows = loweredTypes.indices.map { start -> Int? in
-            guard let row = end(of: start), case .record = loweredTypes[row] else { return nil }
+            var row = start
+
+            while case let .named(next) = loweredTypes[row] {
+                row = next
+            }
+
+            guard case .record = loweredTypes[row] else { return nil }
 
             return row
         }
