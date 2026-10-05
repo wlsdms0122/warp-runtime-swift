@@ -62,14 +62,13 @@ struct LoweredTypeTests {
         let wide = TypeExpression.ranged(.whole(from: 5, to: .through(100))).lowered(in: table)
 
         func read(_ readings: [LoweredType]) -> LoweredType? {
-            var bound: [Name: LoweredType] = [:]
-            var disagreeing: [Name: LoweredType] = [:]
+            var substitution = Substitution()
 
             for reading in readings {
-                parameter.binding(against: reading, into: &bound, disagreeing: &disagreeing, in: table)
+                parameter.binding(against: reading, into: &substitution, in: table)
             }
 
-            return bound["T"]
+            return substitution.readings["T"]
         }
 
         // When / Then
@@ -77,6 +76,27 @@ struct LoweredTypeTests {
         #expect(read([wide, narrow]) == .int)
         #expect(read([narrow, .int]) == .int)
         #expect(read([.int, narrow]) == .int)
+    }
+
+    @Test("a parameter one field reads two ways is reported by the two that disagreed")
+    func aFieldReadingTwoWaysReportsItsTwo() {
+        // Given. A record read as a dictionary whose first field reads `T` as
+        // a whole number and as text, and whose second reads it as truth
+        let table = types.loweredTypes
+        let slot = TypeExpression.dictionary(.record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])).lowered(in: table)
+        let handed = TypeExpression.record([
+            "x": .record(["a": .int, "b": .string]),
+            "y": .record(["a": .bool, "b": .bool])
+        ]).lowered(in: table)
+        var substitution = Substitution()
+
+        // When
+        slot.binding(against: handed, into: &substitution, in: table)
+
+        // Then
+        #expect(substitution.readings["T"] == .int)
+        #expect(substitution.disagreeing["T"] == .string)
+        #expect(Set(substitution.everyReading(of: "T").map { reading in reading.rendered(in: table) }) == ["int", "string", "bool"])
     }
 
     @Test("a parameter no call fills stands where a slot takes it by its structure, and nowhere else")
