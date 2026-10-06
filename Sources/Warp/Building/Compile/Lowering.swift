@@ -524,7 +524,7 @@ struct Lowering {
             scope.slots[name] = slots.allocate(name)
         }
 
-        let (address, _) = try lower(path, in: scope, on: slots, at: place)
+        let address = try lower(path, in: scope, on: slots, at: place)
 
         return (.local(address), slots.frame)
     }
@@ -543,21 +543,48 @@ struct Lowering {
     func numbered(
         _ rows: [Int],
         of origin: Int,
-        answering answers: [Name: LoweredType]
-    ) throws -> (table: [Linked], numbering: LoweredTypeNumbering, answers: [Name: LoweredType]) {
+        answering answers: [Name: LoweredType],
+        starting variables: [(name: Name, value: Value)]
+    ) throws -> (
+        table: [Linked],
+        numbering: LoweredTypeNumbering,
+        answers: [Name: LoweredType],
+        starting: [(name: Name, value: Value)]
+    ) {
         let stood = standing[origin] ?? Standing()
+        var types = stood.types
+        var memberships = stood.memberships
+
+        // A closure a literal or a variable's start holds answers what the
+        // slots it settled into wrote, which the document stands on as well.
+        func stand(_ type: LoweredType) -> LoweredType {
+            type.standing(into: &types, and: &memberships)
+
+            return type
+        }
+
+        for row in rows {
+            guard case let .body(body, _) = table[row].implementation else { continue }
+
+            _ = body.rewritten(operation: { operation in operation }, type: stand)
+        }
+
+        for (_, value) in variables {
+            _ = value.rewritten(types: stand)
+        }
+
         let numbering = LoweredTypeNumbering(
-            types: Set(stood.types.map { row in loweredTypes.labels[row] }),
-            memberships: Set(stood.memberships.map { row in loweredTypes.constraintLabels[row] })
+            types: Set(types.map { row in loweredTypes.labels[row] }),
+            memberships: Set(memberships.map { row in loweredTypes.constraintLabels[row] })
         )
 
         // Which number each row of this link stands at, so the walk that
         // writes them reads a place rather than hashing a name at every
         // type it meets.
         let place = (
-            types: Self.placed(stood.types, among: numbering.types, spelling: loweredTypes.labels),
+            types: Self.placed(types, among: numbering.types, spelling: loweredTypes.labels),
             memberships: Self.placed(
-                stood.memberships,
+                memberships,
                 among: numbering.memberships,
                 spelling: loweredTypes.constraintLabels
             )
@@ -581,7 +608,11 @@ struct Lowering {
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
-        return (numbered, numbering, read)
+        let starting = try variables.map { name, value in
+            (name: name, value: try value.rewritten(types: { type in try renumbered(type, in: place, of: name) }))
+        }
+
+        return (numbered, numbering, read, starting)
     }
 
     // MARK: - Private
@@ -639,13 +670,12 @@ struct Lowering {
                 context.slots.hold(slot, settling)
                 binding = .declare(slot, settling: settling)
 
-            // A write settles to what the path reaches, so a box that said
-            // what it holds holds it after a write as it did after its
-            // declaration. Into a box that said nothing it settles to what the
-            // check held the write to, where it held it to anything.
+            // A write settles to what the check held it to, so a box that
+            // said what it holds holds it after a write as it did after its
+            // declaration.
             case let .assignment(path)?:
-                let (address, reached) = try lower(path, in: scope, on: context.slots, at: here)
-                let settling = reached?.slotUnwrapped ?? context.judgements.settling(writeAt: here)?.slotUnwrapped
+                let address = try lower(path, in: scope, on: context.slots, at: here)
+                let settling = context.judgements.settling(writeAt: here)?.slotUnwrapped
                 context.slots.note(settling)
                 binding = .assign(address, settling: settling)
 
@@ -699,8 +729,7 @@ struct Lowering {
         case let .call(call):
             return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
 
-        // The answer is judged where the call reads it and handed on as the
-        // callee shaped it, so it stands as the call it wraps does.
+        // It stands as the call it wraps, which is what has a row to read.
         case let .checked(read, _):
             return standing(read, on: slots)
 
@@ -727,7 +756,7 @@ struct Lowering {
             return .literal(value)
 
         case let .reference(path):
-            let (address, _) = try lower(path, in: scope, on: context.slots, at: place)
+            let address = try lower(path, in: scope, on: context.slots, at: place)
 
             return .local(address)
 
@@ -915,7 +944,7 @@ struct Lowering {
                     throw BuildError.unjudged("a call of a value handing in place what is no path", at: here)
                 }
 
-                let (address, _) = try lower(path, in: scope, on: context.slots, at: here)
+                let address = try lower(path, in: scope, on: context.slots, at: here)
 
                 return .reference(address)
             }
@@ -1094,7 +1123,7 @@ struct Lowering {
             return .value(try lower(expression, naming: nil, in: scope, on: context, at: place))
         }
 
-        let (address, _) = try lower(path, in: scope, on: context.slots, at: place)
+        let address = try lower(path, in: scope, on: context.slots, at: place)
 
         return .reference(address)
     }
@@ -1133,7 +1162,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         at place: Place
-    ) throws -> (address: Address, reached: LoweredType?) {
+    ) throws -> Address {
         // A mark on the head expects a name to be missing, which is not
         // absence but a reading gone wrong.
         if let refusal = path.markedHead {
@@ -1173,7 +1202,7 @@ struct Lowering {
                 return .index(index, optional: optional)
 
             case let .indexRef(inner, optional):
-                let (address, _) = try lower(inner, in: scope, on: slots, at: place)
+                let address = try lower(inner, in: scope, on: slots, at: place)
                 reached = reached?.element(in: loweredTypes)
 
                 return .at(address, optional: optional)
@@ -1181,7 +1210,7 @@ struct Lowering {
             }
         }
 
-        return (Address(slot: slot, steps: steps), reached)
+        return Address(slot: slot, steps: steps)
     }
 
     // Which row of the link a number in a lowered body stands for. The body

@@ -21,11 +21,12 @@ struct JudgementTable: Sendable {
     // proving nothing.
     private(set) var loosened = false
 
-    // What a write into a box that declared nothing settles to, by the
-    // statement that writes it: the type the check held the write to, where
-    // the box is held to one (a variable a closure captured or a call handed
-    // in place, a module variable that wrote no type) or the write goes
-    // through a path. A box that declared its type settles by its slot.
+    // What a write settles to, by the statement that writes it: the type the
+    // check held the write to, which is what the path reaches in a box held
+    // to a type (one that declared it, one a closure captured or a call
+    // handed in place, a module variable) and what a path reaches in a box
+    // that declared nothing. A whole write into such a box retypes it and
+    // settles to nothing.
     private(set) var writes: [Place: LoweredType] = [:]
 
     // MARK: - Initializer

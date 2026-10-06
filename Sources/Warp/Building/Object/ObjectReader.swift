@@ -231,7 +231,9 @@ struct ObjectReader {
                 return read
             }
 
-            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
+            let slotAnswers = try cursor.field().list(lowered)
+
+            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured, slotAnswers: slotAnswers))
 
         case nil: throw ObjectRefused("'value' answers in a way this reads none of")
         }

@@ -118,5 +118,15 @@ struct Binding: Equatable, Sendable {
         Binding(holding, transform(type))
     }
 
+    // The same name once a closure or a call that holds it to `held` takes
+    // it: a box every write retyped is held to that from there, still
+    // reading as it did, and every other holding already says what a write
+    // is held to.
+    func taken(to held: LoweredType) -> Binding {
+        guard case .assigned = holding else { return self }
+
+        return Binding(.held(held), type)
+    }
+
     // MARK: - Private
 }

@@ -119,7 +119,8 @@ struct ObjectWriter {
                     }
 
                     return .array([.int(slot), try self.value(held)])
-                })
+                }),
+                .array(closure.slotAnswers.map(lowered))
             )
         }
     }

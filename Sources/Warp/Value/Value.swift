@@ -357,6 +357,17 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
+    // The same value with the type every closure in it answers read again:
+    // the one place a value holds a type, so a walk renumbering the types of
+    // a body reaches its literal values the way it reaches its code.
+    func rewritten(types type: (LoweredType) throws -> LoweredType) rethrows -> Value {
+        guard holdsProcedure else { return self }
+
+        return try rewritten { closure in
+            try closure.retyped(type)
+        }
+    }
+
     // The same value with every closure in it replaced, innermost first: what
     // a closure holds by value is rewritten and put back into what the body
     // answers, so the body answers for the closure alone. A cell held is the

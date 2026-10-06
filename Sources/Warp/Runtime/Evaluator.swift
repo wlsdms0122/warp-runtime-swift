@@ -602,12 +602,14 @@ struct Evaluator: Sendable {
             activation.cells[frame.parameters[position]] = .value(value)
         }
 
-        return try await answer(
+        let answered = try await answer(
             body,
             of: linked,
             in: &activation,
             at: trace.appending(linked.hop)
         )
+
+        return try closure.settling(answered, in: loweredTypes)
     }
 
     // A row answered with its arguments settled and nothing handed in place:

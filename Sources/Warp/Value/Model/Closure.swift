@@ -93,6 +93,20 @@ public struct Closure: Sendable {
     let linked: Linked?
     let captured: [(slot: Int, cell: Cell)]
 
+    // What the slots this closure was settled into wrote for its answer, in
+    // the order it met them and in the rows of the table the value holding
+    // it is read by.
+    let slotAnswers: [LoweredType]
+
+    // What a call of it settles its answer to, in turn: its own `returns`,
+    // then every answer a slot it was settled into wrote, so the closure
+    // answers what every slot it passed through made of it, wherever it is
+    // called from. A slot judges it by these, and `settling` is a call doing
+    // so.
+    var answerTypes: [LoweredType] {
+        [linked?.returns].compactMap { returns in returns } + slotAnswers
+    }
+
     // What a refusal calls this closure, spelled as the hop a trace takes
     // into its body.
     var rendered: String {
@@ -110,11 +124,18 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Initializer
-    init(writer: Writer, nth: Int, linked: Linked?, captured: [(slot: Int, cell: Cell)]) {
+    init(
+        writer: Writer,
+        nth: Int,
+        linked: Linked?,
+        captured: [(slot: Int, cell: Cell)],
+        slotAnswers: [LoweredType] = []
+    ) {
         self.writer = writer
         self.nth = nth
         self.linked = linked
         self.captured = captured
+        self.slotAnswers = slotAnswers
     }
 
     // MARK: - Public
@@ -128,15 +149,53 @@ public struct Closure: Sendable {
         return linked
     }
 
+    // What a call of it answers, settled the way `answerTypes` says: its own
+    // `returns` settled what its body answered, as every procedure's does,
+    // and each answer a slot wrote settles it in turn from there.
+    func settling(_ answered: Value, in table: LoweredTypeTable) throws -> Value {
+        try slotAnswers.reduce(answered) { answered, answer in
+            try answer.settling(answered, at: "answer", in: table)
+        }
+    }
+
     // The same closure as a link reads it: the body standing in that link's
-    // tables.
+    // tables. What a slot wrote for its answer is read into that link's rows
+    // by the walk that reads the value holding the closure.
     func standing(as linked: Linked) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers)
     }
 
     // The same closure holding something else.
     func holding(_ captured: [(slot: Int, cell: Cell)]) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers)
+    }
+
+    // The same closure settled into a slot that wrote `returns` for its
+    // answer: one more answer a call settles to, unless settling to it
+    // leaves what the closure answers last unchanged, which adds nothing to
+    // what a call makes of the answer. An answer met one step back, its own
+    // `returns` included, that the last one hands back as it was ends the
+    // list there again, since settling to it, to the last, and to it once
+    // more is settling to it once. Every other answer stays, since a slot
+    // taking one does not say what it said.
+    func passing(_ returns: LoweredType, in table: LoweredTypeTable) -> Closure {
+        let answers = answerTypes
+
+        if let last = answers.last, returns.settlesUnchanged(last, in: table) { return self }
+
+        if answers.count >= 2,
+           let last = slotAnswers.last,
+           answers[answers.count - 2].identical(to: returns, in: table),
+           returns.settlesBack(through: last, in: table) {
+            return Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers.dropLast())
+        }
+
+        return Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers + [returns])
+    }
+
+    // The same closure with every answer it keeps read through `type`.
+    func retyped(_ type: (LoweredType) throws -> LoweredType) rethrows -> Closure {
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: try slotAnswers.map(type))
     }
 
     // MARK: - Private

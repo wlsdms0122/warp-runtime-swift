@@ -363,7 +363,8 @@ struct Compiler {
         let lowered = try compiling.lowering.numbered(
             Array(block) + compiling.lowering.documents[origin].closureRows,
             of: origin,
-            answering: read
+            answering: read,
+            starting: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) }
         )
 
         // Through the one door an object read back goes through, so what a
@@ -381,7 +382,7 @@ struct Compiler {
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            judging: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
+            judging: lowered.starting,
             dependencies: dependencies,
             token: token
         )

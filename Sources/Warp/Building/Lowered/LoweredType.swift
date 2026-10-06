@@ -1022,22 +1022,15 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The same type with every row it holds walked through to what that row
-    // stands for. At every depth, not only the outermost.
+    // stands for, in its elements, entries, `?` and fields at every depth. A
+    // procedure type stands as it is written, so what a call of one answers
+    // keeps the record names its signature wrote.
     //
     // A row is a spelling, and two spellings of one type are one type: a
     // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
     // are the same thing said twice.
     func resolved(in table: LoweredTypeTable) -> LoweredType {
-        resolved(in: table, assuming: [], keepingRecordNames: false)
-    }
-
-    // The same with every name for a record kept as the record's own, an
-    // alias of one read as the record it names, and every other name walked
-    // through. A declared record is a name as well as a structure, so two
-    // readings are one type where they are the same through this, names and
-    // all.
-    func resolvedKeepingRecordNames(in table: LoweredTypeTable) -> LoweredType {
-        resolved(in: table, assuming: [], keepingRecordNames: true)
+        resolved(in: table, assuming: [])
     }
 
     // Whether some value read as `reading` could be one of this type, which
@@ -1609,6 +1602,125 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // Whether settling here leaves every value already settled to `settled`
+    // as it is, refusing none, read along the cases `settling` takes. It
+    // answers no where it cannot tell, which keeps one more answer where a
+    // closure keeps answers and never changes a value. A pair met again is a
+    // type naming itself, and holds.
+    func settlesUnchanged(_ settled: LoweredType, in table: LoweredTypeTable) -> Bool {
+        settlesUnchanged(settled, in: table, assumingPairs: [], namesAside: false)
+    }
+
+    // The same walk, where `namesAside` lets a declared record and a record
+    // of its fields stand for each other: settling one to the other takes a
+    // name off or puts one on, and changes nothing else where each field
+    // stays.
+    private func settlesUnchanged(
+        _ settled: LoweredType,
+        in table: LoweredTypeTable,
+        assumingPairs: [(LoweredType, LoweredType)],
+        namesAside: Bool
+    ) -> Bool {
+        if case .any = self { return true }
+        if identical(to: settled, in: table) { return true }
+
+        guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == settled }) else { return true }
+
+        let assumed = assumingPairs + [(self, settled)]
+
+        switch (self, settled) {
+        // A name that stands for no record is what it stands for, on either
+        // side. Settling to a record's name gives the value that name, which
+        // only a value of that record already has, and `identical` asked.
+        case let (.named(row), _) where table.recordRows[row] == nil:
+            return table.loweredTypes[row].settlesUnchanged(settled, in: table, assumingPairs: assumed, namesAside: namesAside)
+
+        case let (_, .named(row)) where table.recordRows[row] == nil:
+            return settlesUnchanged(table.loweredTypes[row], in: table, assumingPairs: assumed, namesAside: namesAside)
+
+        // Null passes a nullable slot as it is; anything else meets what the
+        // slot declares.
+        case (.nullable, .null):
+            return true
+
+        case let (.nullable(mine), .nullable(theirs)):
+            return mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside)
+
+        case let (.nullable(mine), _):
+            return mine.settlesUnchanged(settled, in: table, assumingPairs: assumed, namesAside: namesAside)
+
+        // A value held to a range is a value of the kind under it.
+        case let (_, .ranged(theirs)):
+            return settlesUnchanged(theirs.lowered, in: table, assumingPairs: assumed, namesAside: namesAside)
+
+        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)):
+            return mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside)
+
+        case let (.named, .record(inline)), let (.record(inline), .named):
+            guard namesAside,
+                  inline.layout.name == nil,
+                  let mine = record(in: table),
+                  let theirs = settled.record(in: table),
+                  mine.layout.fields == theirs.layout.fields
+            else { return false }
+
+            return zip(mine.fields, theirs.fields).allSatisfy { field, given in
+                field.settlesUnchanged(given, in: table, assumingPairs: assumed, namesAside: namesAside)
+            }
+
+        // A record is laid out on the slot's own fields, so one already laid
+        // out on the same fields stays as it is where every field does.
+        case let (.record(mine), .record(theirs)):
+            return mine.layout == theirs.layout
+                && zip(mine.fields, theirs.fields).allSatisfy { field, given in
+                    field.settlesUnchanged(given, in: table, assumingPairs: assumed, namesAside: namesAside)
+                }
+
+        // A closure settled into a procedure slot keeps one more answer
+        // unless the slot's answer leaves the one it settled to before as it
+        // is; what it takes and how it may run are judged, not changed.
+        case let (
+            .procedure(myParameters, myAnswer, myConstness, myIsolation),
+            .procedure(theirParameters, theirAnswer, theirConstness, theirIsolation)
+        ):
+            guard myConstness == theirConstness, myIsolation == theirIsolation else { return false }
+
+            switch (myParameters, theirParameters) {
+            case (nil, nil):
+                break
+
+            case let (mine?, theirs?):
+                guard mine.count == theirs.count,
+                      zip(mine, theirs).allSatisfy({ one, other in one.identical(to: other, in: table) })
+                else { return false }
+
+            default:
+                return false
+            }
+
+            switch (myAnswer, theirAnswer) {
+            case (nil, nil):
+                return true
+
+            case let (mine?, theirs?):
+                return mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside)
+
+            default:
+                return false
+            }
+
+        default:
+            return false
+        }
+    }
+
+    // Whether a value settled here, settled to `through` and then here
+    // again, is the value it was: where `through` changes it at most by the
+    // record names this puts back, at whatever depth.
+    func settlesBack(through: LoweredType, in table: LoweredTypeTable) -> Bool {
+        through.settlesUnchanged(self, in: table, assumingPairs: [], namesAside: true)
+    }
+
     // A value handed to a slot of this type: a null where the type admits
     // one, and otherwise the value settled. `locus` is where a refusal says
     // the value stood, in the caller's terms.
@@ -2088,32 +2200,28 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
-    // expanded every row at every depth would chase one forever. Where record
-    // names are kept, a name for a record stands as the record's own, so an
-    // alias of it and the record are one name.
-    private func resolved(in table: LoweredTypeTable, assuming: [Int], keepingRecordNames keeps: Bool) -> LoweredType {
+    // expanded every row at every depth would chase one forever.
+    private func resolved(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
         switch self {
         case let .named(row):
-            if keeps, let record = table.recordRows[row] { return .named(record) }
-
             guard !assuming.contains(row) else { return self }
 
-            return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row], keepingRecordNames: keeps)
+            return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row])
 
         case let .array(element):
-            return .array(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
+            return .array(element.resolved(in: table, assuming: assuming))
 
         case let .dictionary(element):
-            return .dictionary(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
+            return .dictionary(element.resolved(in: table, assuming: assuming))
 
         case let .nullable(element):
-            return .nullable(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
+            return .nullable(element.resolved(in: table, assuming: assuming))
 
         case let .record(fields):
             return .record(
                 LoweredRecord(
                     layout: fields.layout,
-                    fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming, keepingRecordNames: keeps) }
+                    fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming) }
                 )
             )
 
@@ -2642,9 +2750,10 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
+        // It is read as answering what a call of it settles to last.
         let given = LoweredType.procedure(
             parameters: linked.slots.map(\.type),
-            returns: linked.returns,
+            returns: closure.answerTypes.last,
             constness: linked.constness,
             isolation: linked.isolation
         )
@@ -2678,7 +2787,22 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        return value
+        // A call of it settles to each of its answers in turn, so a slot
+        // takes it only where its answer takes every one, not only the last.
+        if case let .procedure(_, wanted?, _, _) = asked,
+           let answer = closure.answerTypes.first(where: { answer in !wanted.accepts(answer, in: table) }) {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)),"
+                    + " got a procedure whose answer settles to \(answer.rendered(in: table)) on the way"
+            )
+        }
+
+        // What the slot wrote for the answer is one more answer every call of
+        // it settles to. An answer naming a type parameter is filled by a
+        // call, so the closure keeps what it answered before.
+        guard let returns, !returns.namesParameter else { return value }
+
+        return .procedure(closure.passing(returns, in: table))
     }
 
     // The one conversion the language performs, and it goes one way: every
