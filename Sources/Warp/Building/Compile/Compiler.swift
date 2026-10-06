@@ -362,7 +362,6 @@ struct Compiler {
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
             Array(block) + compiling.lowering.documents[origin].closureRows,
-            of: origin,
             answering: read,
             starting: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) }
         )
