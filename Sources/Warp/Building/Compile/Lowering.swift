@@ -698,8 +698,7 @@ struct Lowering {
         case let .call(call):
             return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
 
-        // The answer is judged where the call reads it and handed on as the
-        // callee shaped it, so it stands as the call it wraps does.
+        // It stands as the call it wraps, which is what has a row to read.
         case let .checked(read, _):
             return standing(read, on: slots)
 

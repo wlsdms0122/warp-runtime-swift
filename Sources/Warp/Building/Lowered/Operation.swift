@@ -37,10 +37,11 @@ indirect enum Operation: Sendable {
     // A call's answer judged against what the call reads it as, where the
     // callee settles a wider one: a type parameter the call filled, the
     // `returns` a value's slot wrote, a contract's answer. Refused at the run
-    // the way a value arriving at a parameter is, and handed on as it came:
-    // the callee already shaped it to what it declared, and a reading takes a
-    // value it admits as that value, a whole number where a fraction is read
-    // included, which is what lets a tie answer the side that arrived. Nothing
+    // the way a value arriving at a parameter is. Where a declaration wrote
+    // what the call reads, a value's slot or a contract, the answer then
+    // settles to that, the type parameters it names standing as they came;
+    // one read through a type parameter the call filled is handed on as it
+    // came, which is what lets a tie answer the side that arrived. Nothing
     // after it stands on this type's shape: a field read stands on the call
     // inside, and a binding or a parameter that declares a type settles the
     // value where it lands. Each variable it handed back in place is judged
