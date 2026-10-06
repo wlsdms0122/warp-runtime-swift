@@ -17,18 +17,6 @@ import Foundation
 // document wrote inside another, so it is lifted out into a row of its own and
 // the code that made it holds the number that reaches it.
 struct Lowering {
-    // What one document's lowered bodies stand on, by the rows of the table
-    // they were lowered against.
-    struct Standing {
-        // MARK: - Property
-        var types: Set<Int> = []
-        var memberships: Set<Int> = []
-
-        // MARK: - Initializer
-        // MARK: - Public
-        // MARK: - Private
-    }
-
     // One document as it was held: where its calls are numbered from, its
     // declarations by row, private ones included, its variables by name in
     // the order a run makes their boxes, and which row each of its closures
@@ -109,17 +97,7 @@ struct Lowering {
         // the build laid out is lowered to the place it stands in.
         private var held: [Int: LoweredType] = [:]
 
-        // The declarations the types written into this body stand on, by the
-        // rows of the table it was lowered against. Read where the document's
-        // own numbering is worked out.
-        private(set) var types: Set<Int> = []
-        private(set) var memberships: Set<Int> = []
-
         var size: Int { names.count }
-
-        private var root: SlotAllocator {
-            outer?.slots.root ?? self
-        }
 
         var frame: Frame {
             Frame(size: size, parameters: parameters, variables: reads, captures: captures.map { _, inner in inner }, names: names)
@@ -141,36 +119,6 @@ struct Lowering {
         }
 
         // MARK: - Public
-        // Notes what a type written into this body stands on. A closure notes
-        // into the body it was written in: the two are one document, and a
-        // document has one numbering.
-        //
-        // Read through the walk that rewrites a type's rows, so which cases
-        // hold a row is answered in one place. What that walk rebuilds is
-        // dropped here.
-        func note(_ type: LoweredType?) {
-            guard let type else { return }
-
-            note(type)
-        }
-
-        func note(_ type: LoweredType) {
-            let root = self.root
-
-            _ = type.renumbered(
-                type: { row in
-                    root.types.insert(row)
-
-                    return row
-                },
-                membership: { row in
-                    root.memberships.insert(row)
-
-                    return row
-                }
-            )
-        }
-
         func allocate(_ name: Name) -> Int {
             names.append(name)
 
@@ -300,12 +248,6 @@ struct Lowering {
     // closure's row.
     let loweredTypes: LoweredTypeTable
 
-    // What each document's lowered bodies stand on, by the rows of the table
-    // above. Noted where a type is written into a body, which is where the
-    // document that wrote it is known; the document's own numbering is worked
-    // out from it once everything is lowered.
-    private(set) var standing: [Int: Standing] = [:]
-
     // Each document's constants, settled, with what each reads as.
     private var constants: [Int: [Name: (value: Value, type: LoweredType)]] = [:]
 
@@ -417,17 +359,6 @@ struct Lowering {
         table = answered
     }
 
-    // A type the build read off a body rather than out of a signature. It is
-    // written into no body, so what it stands on is noted here: its document
-    // numbers it beside the types its bodies stand on.
-    mutating func stands(on type: LoweredType, of origin: Int) {
-        var stood = standing[origin] ?? Standing()
-
-        type.standing(into: &stood.types, and: &stood.memberships)
-
-        standing[origin] = stood
-    }
-
     // A document's constants, once they settle.
     mutating func settle(constants settled: [Name: (value: Value, type: LoweredType)], of origin: Int) {
         constants[origin] = settled
@@ -458,9 +389,6 @@ struct Lowering {
             at: place
         )
 
-        standing[declared.origin, default: Standing()].types.formUnion(slots.types)
-        standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
-
         table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
     }
 
@@ -477,9 +405,7 @@ struct Lowering {
 
     // Lowers one expression read against a frame of constants, as a constant's
     // own expression is. The frame starts as `names` in slot order and grows
-    // with what the expression declares; the frame says how large it is. What
-    // it stood on is its document's, as a body's is, since a closure it holds
-    // is a row of that document.
+    // with what the expression declares; the frame says how large it is.
     mutating func lower(
         _ expression: Expression,
         reading names: [Name],
@@ -502,9 +428,6 @@ struct Lowering {
             on: Context(slots: slots, writer: writer, judgements: judgements),
             at: place
         )
-
-        standing[origin, default: Standing()].types.formUnion(slots.types)
-        standing[origin, default: Standing()].memberships.formUnion(slots.memberships)
 
         return (code, slots.frame)
     }
@@ -542,7 +465,6 @@ struct Lowering {
     // document's last body is lowered and not while one is.
     func numbered(
         _ rows: [Int],
-        of origin: Int,
         answering answers: [Name: LoweredType],
         starting variables: [(name: Name, value: Value)]
     ) throws -> (
@@ -551,12 +473,13 @@ struct Lowering {
         answers: [Name: LoweredType],
         starting: [(name: Name, value: Value)]
     ) {
-        let stood = standing[origin] ?? Standing()
-        var types = stood.types
-        var memberships = stood.memberships
+        // What the document stands on is what it numbers: every type in its
+        // rows' bodies, the answers read off them and its variables' starts.
+        // Read through the walks that rewrite them, so which cases hold a type
+        // is answered in one place; what those walks rebuild is dropped.
+        var types: Set<Int> = []
+        var memberships: Set<Int> = []
 
-        // A closure a literal or a variable's start holds answers what the
-        // slots it settled into wrote, which the document stands on as well.
         func stand(_ type: LoweredType) -> LoweredType {
             type.standing(into: &types, and: &memberships)
 
@@ -567,6 +490,10 @@ struct Lowering {
             guard case let .body(body, _) = table[row].implementation else { continue }
 
             _ = body.rewritten(operation: { operation in operation }, type: stand)
+        }
+
+        for answer in answers.values {
+            _ = stand(answer)
         }
 
         for (_, value) in variables {
@@ -654,7 +581,6 @@ struct Lowering {
             case let .constant(name, declared)?:
                 let slot = context.slots.allocate(name)
                 let settling = declared?.lowered(in: loweredTypes)
-                context.slots.note(settling)
                 scope.slots[name] = slot
                 context.slots.hold(slot, settling ?? standing(code, on: context.slots))
                 binding = .bind(slot, settling: settling)
@@ -665,7 +591,6 @@ struct Lowering {
             case let .variable(name, declared)?:
                 let slot = context.slots.allocate(name)
                 let settling = declared?.lowered(in: loweredTypes)
-                context.slots.note(settling)
                 scope.slots[name] = slot
                 context.slots.hold(slot, settling)
                 binding = .declare(slot, settling: settling)
@@ -676,7 +601,6 @@ struct Lowering {
             case let .assignment(path)?:
                 let address = try lower(path, in: scope, on: context.slots, at: here)
                 let settling = context.judgements.settling(writeAt: here)?.slotUnwrapped
-                context.slots.note(settling)
                 binding = .assign(address, settling: settling)
 
             case nil:
@@ -807,7 +731,7 @@ struct Lowering {
 
             guard case let .call(judging)? = context.judgements[place] else { return lowered }
 
-            return checked(lowered, judging: judging, on: context)
+            return .checked(lowered, judging)
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -952,21 +876,7 @@ struct Lowering {
 
         guard let judging else { return applied }
 
-        return checked(applied, judging: judging, on: context)
-    }
-
-    // A call's answer judged where the call stands, against what the build
-    // read it as, and what it handed back in place against what the caller
-    // holds it as. The types are ones a body stands on, so they are numbered.
-    private func checked(_ call: Operation, judging: CallJudgement, on context: Context) -> Operation {
-        context.slots.note(judging.against)
-        context.slots.note(judging.settlesTo)
-
-        for back in judging.handedBack {
-            context.slots.note(back.against)
-        }
-
-        return .checked(call, judging)
+        return .checked(applied, judging)
     }
 
     private mutating func lower(
@@ -978,7 +888,6 @@ struct Lowering {
         at place: Place
     ) throws -> Operation {
         let lowered = type.lowered(in: loweredTypes)
-        context.slots.note(lowered)
 
         return .cast(
             try lower(value, naming: nil, in: scope, on: context, at: place.child(.subject(optional: optional))),
