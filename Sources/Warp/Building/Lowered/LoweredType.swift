@@ -2193,11 +2193,14 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // What is read as a membership may be a value written into it
         // nameless, and nothing inside such a value has a name either, so a
-        // member is read as a nameless reading.
+        // member is read as a nameless reading, whatever this one was, and
+        // that is the question taken apart here.
         if case let .composition(bounds) = other {
-            guard !asking.contains(where: { asked in asked == question }) else { return false }
+            let taken = (self, other, true)
 
-            let asked = asking + [question]
+            guard !asking.contains(where: { asked in asked == taken }) else { return false }
+
+            let asked = asking + [taken]
 
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
