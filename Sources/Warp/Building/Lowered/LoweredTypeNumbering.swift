@@ -7,14 +7,15 @@
 
 import Foundation
 
-// Where the type rows in a document's lowered bodies come from, and which
-// declaration each one stands for.
+// Where the type rows in a document's lowered bodies, the answers read off
+// them and its variables' starts come from, and which declaration each one
+// stands for.
 //
 // A body stands on types as well as on calls, and the same rule holds for
 // both: the number a document writes is the document's, and which row of a
-// link it is stays the link's resolution. So a document numbers the types its
-// bodies stand on from itself, in name order, and a link that puts other
-// documents beside it moves no number.
+// link it is stays the link's resolution. So a document numbers the types it
+// stands on from itself, in name order, and a link that puts other documents
+// beside it moves no number.
 //
 // The names are the ones its lowered code turned out to stand on rather than
 // the ones its text spells. A type reaches a body through what a path walked

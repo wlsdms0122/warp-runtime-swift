@@ -354,8 +354,8 @@ struct Compiler {
             compiling.record(try row(of: symbol), handsBackAsDeclared: proven.contains(symbol.declared))
         }
 
-        // The types its bodies stand on, written as this document's own
-        // numbers. Lowering read the link's table to judge, so what it wrote
+        // The types its bodies, the answers read off them and its variables'
+        // starts stand on, written as this document's own numbers. Lowering read the link's table to judge, so what it wrote
         // is that link's rows; what leaves here is the document's.
         //
         // Its rows are its declarations in name order, then the closures its
