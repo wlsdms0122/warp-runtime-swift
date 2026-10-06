@@ -130,9 +130,9 @@ struct Way {
         }
 
         for (name, type) in held {
-            guard let current = environment[name], current.holding == .assigned else { continue }
+            guard let current = environment[name] else { continue }
 
-            environment[name] = Binding(.held(type), current.type)
+            environment[name] = current.taken(to: type)
         }
     }
 
