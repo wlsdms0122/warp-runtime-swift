@@ -1693,7 +1693,7 @@ struct TypeChecker {
             let claim = type.lowered(in: context.loweredTypes)
             let settled = claim.resolved(in: context.loweredTypes)
 
-            let read = inner.reading.resolved(in: context.loweredTypes)
+            let read = inner.reading.resolvedKeepingRecordNames(in: context.loweredTypes)
 
             // Both refusals ask the types themselves, whether or not the
             // reading is fully proven.
@@ -1702,7 +1702,9 @@ struct TypeChecker {
             // that one would accept the other. `accepts` holds between `int`
             // and `int(0...10)`, and between anything and `any`, because the
             // value is checked when it arrives, so a narrowing cast still says
-            // something.
+            // something. Record names count at every depth: reading a nameless
+            // record as a declared one attaches the name, so it is never a
+            // cast of what the value already is.
             //
             // The claim is judged first, and on itself: a cast onto a type
             // that proves nothing opens no door, whatever it was written over.
@@ -1718,13 +1720,7 @@ struct TypeChecker {
                 ? LoweredType.nullable(claim)
                 : claim
 
-            // A declared record is a name as well as a structure: reading a
-            // nameless record as one attaches the name, so it is never a
-            // cast of what the value already is. Two names never hold one
-            // value, and the unresolved types are asked so that is seen.
-            let nominal = context.loweredTypes.record(of: claim) != nil
-
-            if !claim.couldBothHold(inner.reading, in: context.loweredTypes) {
+            if !claim.couldBothHold(reading: inner.reading, in: context.loweredTypes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
@@ -1738,8 +1734,8 @@ struct TypeChecker {
                     at: place,
                     when: ask
                 )
-            } else if inner.reading == claim
-                || (!nominal && (settled == read || handed.resolved(in: context.loweredTypes) == read)) {
+            } else if claim.resolvedKeepingRecordNames(in: context.loweredTypes) == read
+                || handed.resolvedKeepingRecordNames(in: context.loweredTypes) == read {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same type by two spellings, and
@@ -1858,12 +1854,19 @@ struct TypeChecker {
             let declared = Set(procedure.signature.names)
             let outside = environment.filter { name, _ in !declared.contains(name) }
 
+            // A box the closure takes is held, inside it, to what it reads as
+            // here: a write the closure makes is judged against that type
+            // and settles to it, and leaves the box reading it.
+            let taken = outside.mapValues { binding in
+                binding.holding == .assigned ? Binding(.held(binding.type), binding.type) : binding
+            }
+
             // The body read under the ask this walk answers: what it reaches
             // from outside is what the closure takes, which either ask needs.
             let inner = try await inspected(
                 block: block,
                 at: place.child(.closure),
-                in: outside.merging(procedure.signature.environment(in: context.loweredTypes)) {
+                in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
                     _, own in own
                 },
                 with: context.bounding(procedure.signature.parameterBounding.table),
@@ -2145,7 +2148,8 @@ struct TypeChecker {
                     inPlace: handed,
                     judging: CallJudgement(
                         against: judgedAgainst(answers, answeredBy: nil),
-                        handedBack: handedBack(at: handed, of: callee)
+                        handedBack: handedBack(at: handed, of: callee),
+                        settlesTo: answers
                     )
                 ),
                 at: place
@@ -2313,9 +2317,12 @@ struct TypeChecker {
                 in: context.loweredTypes
             )
 
+            // Only a contract's answer is a declaration the callee did not
+            // settle to.
             if let judging = CallJudgement(
                 against: judgedAgainst(reading, sending: call.selector, given: context),
-                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context)
+                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context),
+                settlesTo: context.contractProcedures[call.selector]?.answers
             ) {
                 judgements.record(.call(judging), at: place)
             }
@@ -2834,7 +2841,7 @@ struct TypeChecker {
 
                 switch environment[id] {
                 case let binding? where binding.heldType != nil:
-                    try refuseUnfit(
+                    let held = try refuseUnfit(
                         written,
                         writtenTo: path,
                         holding: binding.heldType,
@@ -2844,6 +2851,13 @@ struct TypeChecker {
                         when: ask,
                         loosening: &judgements
                     )
+
+                    // A box held to a type no slot declared settles a write
+                    // to it, the way one a slot declared does, so what it
+                    // holds is what it reads as.
+                    if case .held = binding.holding, let held {
+                        judgements.record(write: held, at: here)
+                    }
 
                     if case let .held(held) = binding.holding, path.segments.count == 1 {
                         environment[id] = Binding(.held(held), held)
@@ -2861,7 +2875,10 @@ struct TypeChecker {
                             flowed.land((inner.reading, true), on: id)
                         }
                     } else {
-                        try refuseUnfit(
+                        // A write through a path leaves the box reading as it
+                        // was, so what it writes settles to what the path
+                        // reaches.
+                        if let reached = try refuseUnfit(
                             written,
                             writtenTo: path,
                             holding: nil,
@@ -2870,7 +2887,9 @@ struct TypeChecker {
                             at: here,
                             when: ask,
                             loosening: &judgements
-                        )
+                        ) {
+                            judgements.record(write: reached, at: here)
+                        }
 
                         if !locals.contains(id), let current = environment[id]?.type {
                             flowed.land((current, true), on: id)
@@ -3218,7 +3237,9 @@ struct TypeChecker {
     // A write that leaves the box reading as what it is held to, or as it
     // was through a path: refused where what is written does not fit what
     // the path reaches, and loose where that names a type parameter and what
-    // is written is not a value of it.
+    // is written is not a value of it. Answers the type the write was held
+    // to, or nil where it was refused.
+    @discardableResult
     private func refuseUnfit(
         _ written: LiteralShape,
         writtenTo path: Path,
@@ -3228,7 +3249,7 @@ struct TypeChecker {
         at place: Place,
         when ask: Ask,
         loosening judgements: inout JudgementTable
-    ) throws {
+    ) throws -> LoweredType? {
         let slot: LoweredType
 
         if path.segments.count == 1, let fixed {
@@ -3237,7 +3258,7 @@ struct TypeChecker {
             switch writable(path, in: environment, with: context, at: place) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
-                return
+                return nil
 
             case let .reaches(reached):
                 slot = reached
@@ -3251,10 +3272,10 @@ struct TypeChecker {
                 at: place,
                 when: ask
             )
-            return
+            return nil
         }
 
-        guard case let .judging(_, fulfillment) = ask else { return }
+        guard case let .judging(_, fulfillment) = ask else { return slot }
 
         if let refusal = refusal(
             writing: written,
@@ -3270,6 +3291,8 @@ struct TypeChecker {
         if slot.namesParameter, !written.isHeld(by: slot, inPlace: true, in: context.loweredTypes) {
             judgements.loosen()
         }
+
+        return slot
     }
 
     private func check(

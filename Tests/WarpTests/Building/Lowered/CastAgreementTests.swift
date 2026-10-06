@@ -35,11 +35,20 @@ struct CastAgreementTests {
             "Whole": .int,
             // A type that names itself, so the walk's own guard is exercised
             // by every pair it takes part in.
-            "Tree": .record(["children": .array(.named("Tree"))])
+            "Tree": .record(["children": .array(.named("Tree"))]),
+            // The layout of `Person` under another name, and two chains of
+            // one layout under two names, so a name is all that tells them
+            // apart.
+            "Human": .record(["name": .string]),
+            "Chain": .record(["next": .nullable(.named("Chain"))]),
+            "Link": .record(["next": .nullable(.named("Link"))])
         ],
         constraints: [
             "Comparable": [.int, .double, .string],
-            "Listed": [.array(.any), .array(.byteElement)]
+            "Listed": [.array(.any), .array(.byteElement)],
+            "People": [.named("Person"), .int],
+            "Chains": [.named("Chain"), .int],
+            "Holders": [.record(["of": .named("Person")]), .bool]
         ]
     )
 
@@ -70,6 +79,18 @@ struct CastAgreementTests {
         .procedure(nil)
     ]
 
+    // Where a name decides the answer, and the two sides differ: a value read
+    // under a declared record wears its name, and one read as a membership
+    // may have been written into it nameless, at any depth.
+    private let namedTypeExpressions: [TypeExpression] = [
+        .named("Human"), .named("Chain"), .named("Link"),
+        .composition(["People"]), .composition(["Chains"]), .composition(["Holders"]),
+        .nullable(.named("Human")),
+        .record(["of": .named("Human")]),
+        .record(["next": .named("Link")]),
+        .record(["next": .record(["next": .named("Link")])])
+    ]
+
     private let values: [Value] = [
         .null, .bool(true), .bool(false),
         .int(0), .int(1), .int(255), .int(300), .int(-1),
@@ -80,21 +101,30 @@ struct CastAgreementTests {
         .bytes([]), .bytes([1, 2]),
         .dictionary([:]), .dictionary(["name": .string("n")]),
         .dictionary(["age": .int(1)]),
-        .dictionary(["children": .array([])])
+        .dictionary(["children": .array([])]),
+        .dictionary(["of": .dictionary(["name": .string("n")])]),
+        .dictionary(["next": .null]),
+        .dictionary(["next": .dictionary(["next": .null])]),
+        .dictionary(["next": .dictionary(["next": .dictionary(["next": .null])])])
     ]
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("no pair some value satisfies is called impossible")
+    @Test("no cast some run takes is called impossible")
     func theBuildNeverRefusesWhatARunWouldTake() {
+        // Given
+        let all = typeExpressions + namedTypeExpressions
+
         // When / Then
-        for mine in typeExpressions {
-            for theirs in typeExpressions {
-                // The witness: one value both judges take. Where there is none,
-                // the build is free. It may still allow the pair, and leaving
-                // what it cannot prove to the run is the whole bias.
+        for mine in all {
+            for theirs in all {
+                // The witness: one value that settles where it is read and is
+                // then taken by the cast, the way a run meets it. Where there
+                // is none, the build is free. It may still allow the pair,
+                // and leaving what it cannot prove to the run is the whole
+                // bias.
                 guard let witness = values.first(where: { value in
-                    settles(mine, value) && settles(theirs, value)
+                    settled(value, as: theirs).map { read in settled(read, as: mine) != nil } ?? false
                 }) else { continue }
 
                 #expect(
@@ -110,7 +140,10 @@ struct CastAgreementTests {
         // Given. "could some value be both" names no side, so an answer that
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
-        // side has one, which is exactly where an asymmetry would hide.
+        // side has one, which is exactly where an asymmetry would hide. The
+        // one side it tells apart is a membership with a declared record
+        // member, which these types hold none of: read, a value written into
+        // it nameless stays nameless, and cast onto, a value keeps its name.
 
         // When / Then
         for mine in typeExpressions {
@@ -152,16 +185,40 @@ struct CastAgreementTests {
         }
     }
 
+    @Test("a name or a chain that rules every value out is called impossible")
+    func recordsThatCannotMeetAreRefused() {
+        // Given. The other direction again, for names: a cast and the reading
+        // it is written on, where every value the reading may be is refused
+        // by the cast. A chain is read through its own name as far as the
+        // cast goes, so the walk's guard has to tell a question come back
+        // from a new one deeper down.
+        let fourDeep: TypeExpression = .record(["next": .record(["next": .record(["next": .record(["next": .int])])])])
+        let pairs: [(claim: TypeExpression, reading: TypeExpression)] = [
+            (.named("Human"), .named("Person")),
+            (.named("Link"), .named("Chain")),
+            (fourDeep, .named("Chain")),
+            (fourDeep, .composition(["Chains"]))
+        ]
+
+        // When / Then
+        for (claim, reading) in pairs {
+            #expect(
+                !couldBothHold(claim, reading),
+                "no value read as \(reading.rendered) is a \(claim.rendered)"
+            )
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // Asked of the lowered types, which is where the judgment lives. What a
     // document writes reaches it by lowering.
     private func couldBothHold(_ mine: TypeExpression, _ theirs: TypeExpression) -> Bool {
         mine.lowered(in: types.loweredTypes)
-            .couldBothHold(theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
+            .couldBothHold(reading: theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
-    private func settles(_ type: TypeExpression, _ value: Value) -> Bool {
-        (try? type.settling(value, at: "witness", in: types)) != nil
+    private func settled(_ value: Value, as type: TypeExpression) -> Value? {
+        try? type.settling(value, at: "witness", in: types)
     }
 }

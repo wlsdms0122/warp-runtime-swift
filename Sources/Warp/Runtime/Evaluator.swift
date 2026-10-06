@@ -809,9 +809,22 @@ struct Evaluator: Sendable {
             }
         }
 
-        try judging.against?.admitting(answered, at: "answer", in: loweredTypes)
+        guard let against = judging.against else { return answered }
 
-        return answered
+        // Judged against what the call reads, and settled to what a
+        // declaration wrote, where one did: a position naming a type
+        // parameter there stands as it came.
+        guard let settlesTo = judging.settlesTo else {
+            try against.admitting(answered, at: "answer", in: loweredTypes)
+
+            return answered
+        }
+
+        if settlesTo != against {
+            try against.admitting(answered, at: "answer", in: loweredTypes)
+        }
+
+        return try settlesTo.settling(answered, at: "answer", in: loweredTypes)
     }
 
     // What a call answers, once what it handed back in place is judged

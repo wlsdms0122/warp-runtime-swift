@@ -38,6 +38,11 @@ struct Lowering {
         let numbering: Numbering
         let owned: [Name: Int]
         let variables: [Name: Int]
+
+        // What each variable that declared its type holds. One that declared
+        // none holds nothing, as a body's own `var` does.
+        let variableTypes: [Name: LoweredType]
+
         var closureRows: [Int]
 
         // Which row each name it numbers stands for, once resolved. The names
@@ -80,6 +85,7 @@ struct Lowering {
         // MARK: - Property
         let origin: Int
         let variables: [Name: Int]
+        let variableTypes: [Name: LoweredType]
 
         // The document's constants, settled, for the slots of a declaration's
         // own body. A body names one only where the fold could not settle the
@@ -123,11 +129,13 @@ struct Lowering {
         init(
             origin: Int,
             variables: [Name: Int],
+            variableTypes: [Name: LoweredType],
             constants: [Name: (value: Value, type: LoweredType)],
             outer: (slots: SlotAllocator, names: SlotScope)? = nil
         ) {
             self.origin = origin
             self.variables = variables
+            self.variableTypes = variableTypes
             self.constants = constants
             self.outer = outer
         }
@@ -211,6 +219,7 @@ struct Lowering {
                 let slot = allocate(name)
                 variableSlots[name] = slot
                 reads.append((variable: variable, slot: slot))
+                hold(slot, variableTypes[name])
 
                 return slot
             }
@@ -358,7 +367,8 @@ struct Lowering {
         standing block: [Linked],
         closures lifted: [Linked] = [],
         numbering held: Numbering,
-        variables ordered: [Name]
+        variables ordered: [Name],
+        declaring variableTypes: [Name: LoweredType] = [:]
     ) -> (origin: Int, block: Range<Int>) {
         let start = table.count
 
@@ -381,6 +391,7 @@ struct Lowering {
                 variables: ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
                     positions[name.element] = name.offset
                 },
+                variableTypes: variableTypes,
                 closureRows: lifted.indices.map { offset in start + block.count + offset }
             )
         )
@@ -429,6 +440,7 @@ struct Lowering {
         let slots = SlotAllocator(
             origin: declared.origin,
             variables: documents[declared.origin].variables,
+            variableTypes: documents[declared.origin].variableTypes,
             constants: constants[declared.origin] ?? [:]
         )
         var scope = SlotScope()
@@ -476,7 +488,7 @@ struct Lowering {
         judgements: JudgementTable,
         at place: Place
     ) throws -> (Operation, Frame) {
-        let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
+        let slots = SlotAllocator(origin: origin, variables: [:], variableTypes: [:], constants: [:])
         var scope = SlotScope()
 
         for name in names {
@@ -505,7 +517,7 @@ struct Lowering {
         origin: Int,
         at place: Place
     ) throws -> (Operation, Frame) {
-        let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
+        let slots = SlotAllocator(origin: origin, variables: [:], variableTypes: [:], constants: [:])
         var scope = SlotScope()
 
         for name in names {
@@ -629,11 +641,11 @@ struct Lowering {
 
             // A write settles to what the path reaches, so a box that said
             // what it holds holds it after a write as it did after its
-            // declaration. A box that said nothing reaches nothing, and what
-            // was written stands as it was handed.
+            // declaration. Into a box that said nothing it settles to what the
+            // check held the write to, where it held it to anything.
             case let .assignment(path)?:
                 let (address, reached) = try lower(path, in: scope, on: context.slots, at: here)
-                let settling = reached?.slotUnwrapped
+                let settling = reached?.slotUnwrapped ?? context.judgements.settling(writeAt: here)?.slotUnwrapped
                 context.slots.note(settling)
                 binding = .assign(address, settling: settling)
 
@@ -816,6 +828,7 @@ struct Lowering {
         let inner = SlotAllocator(
             origin: context.slots.origin,
             variables: [:],
+            variableTypes: [:],
             constants: [:],
             outer: (context.slots, scope)
         )
@@ -918,6 +931,7 @@ struct Lowering {
     // holds it as. The types are ones a body stands on, so they are numbered.
     private func checked(_ call: Operation, judging: CallJudgement, on context: Context) -> Operation {
         context.slots.note(judging.against)
+        context.slots.note(judging.settlesTo)
 
         for back in judging.handedBack {
             context.slots.note(back.against)

@@ -271,7 +271,8 @@ struct Compiler {
                 )
             },
             numbering: numbering,
-            variables: boxes
+            variables: boxes,
+            declaring: declaredVariables
         )
 
         assert(heldAt == origin, "a document is compiled at the origin it is held at")

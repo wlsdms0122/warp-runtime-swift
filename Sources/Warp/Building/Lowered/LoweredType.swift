@@ -1028,16 +1028,26 @@ indirect enum LoweredType: Sendable, Equatable {
     // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
     // are the same thing said twice.
     func resolved(in table: LoweredTypeTable) -> LoweredType {
-        resolved(in: table, assuming: [])
+        resolved(in: table, assuming: [], keepingRecordNames: false)
     }
 
-    // Whether some value could satisfy both types at once. Not `accepts`:
-    // two records that name no field in common accept each other in neither
-    // direction and are still both satisfied by a value carrying every
-    // field. The bias is deliberate: a refusal is earned only where the
-    // types provably disagree, and everything else is left to the run.
-    func couldBothHold(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        couldBothHold(other, in: table, assuming: [], askingPairs: [])
+    // The same with every name for a record kept as the record's own, an
+    // alias of one read as the record it names, and every other name walked
+    // through. A declared record is a name as well as a structure, so two
+    // readings are one type where they are the same through this, names and
+    // all.
+    func resolvedKeepingRecordNames(in table: LoweredTypeTable) -> LoweredType {
+        resolved(in: table, assuming: [], keepingRecordNames: true)
+    }
+
+    // Whether some value read as `reading` could be one of this type, which
+    // a cast names. Not `accepts`: two records that name no field in common
+    // accept each other in neither direction and are still both satisfied
+    // by a value carrying every field. The bias is deliberate: a refusal is
+    // earned only where the types provably disagree, and everything else is
+    // left to the run.
+    func couldBothHold(reading other: LoweredType, in table: LoweredTypeTable) -> Bool {
+        couldBothHold(other, in: table, assumingQuestions: [], askingQuestions: [], nameless: false)
     }
 
     // Whether an `enum` candidate could ever be a spelling of a value of this
@@ -2075,30 +2085,35 @@ indirect enum LoweredType: Sendable, Equatable {
             return nil
         }
     }
+
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
-    // expanded every row at every depth would chase one forever.
-    private func resolved(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
+    // expanded every row at every depth would chase one forever. Where record
+    // names are kept, a name for a record stands as the record's own, so an
+    // alias of it and the record are one name.
+    private func resolved(in table: LoweredTypeTable, assuming: [Int], keepingRecordNames keeps: Bool) -> LoweredType {
         switch self {
         case let .named(row):
+            if keeps, let record = table.recordRows[row] { return .named(record) }
+
             guard !assuming.contains(row) else { return self }
 
-            return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row])
+            return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row], keepingRecordNames: keeps)
 
         case let .array(element):
-            return .array(element.resolved(in: table, assuming: assuming))
+            return .array(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
 
         case let .dictionary(element):
-            return .dictionary(element.resolved(in: table, assuming: assuming))
+            return .dictionary(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
 
         case let .nullable(element):
-            return .nullable(element.resolved(in: table, assuming: assuming))
+            return .nullable(element.resolved(in: table, assuming: assuming, keepingRecordNames: keeps))
 
         case let .record(fields):
             return .record(
                 LoweredRecord(
                     layout: fields.layout,
-                    fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming) }
+                    fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming, keepingRecordNames: keeps) }
                 )
             )
 
@@ -2107,69 +2122,91 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Names are peeled one layer at a time, with the rows already being
-    // asked about remembered, because this walk is the one that recurses,
-    // and the pairs a composition was taken apart at beside them. A pair met
-    // again, inside a record or not, is the same question come back, which
-    // no member answers.
+    // Names are peeled one layer at a time, with the question each was
+    // peeled at remembered, because this walk is the one that recurses: one
+    // met there again has come back, and is assumed to hold. The questions a
+    // composition was taken apart at sit beside them, and one of those met
+    // again, inside a record or not, is a question no member answers. A
+    // question is the two types and whether the reading is nameless, which
+    // changes what a name in it says.
+    //
+    // This is what a cast names and `other` is what it reads, and no step
+    // swaps the two: a record's name on the reading side is kept further than
+    // one on this side, so the sides are not alike. `nameless` says the
+    // reading is a value written with no name, at whatever depth: its names
+    // say only what structure it has.
     private func couldBothHold(
         _ other: LoweredType,
         in table: LoweredTypeTable,
-        assuming: [Int],
-        askingPairs: [(LoweredType, LoweredType)]
+        assumingQuestions: [(LoweredType, LoweredType, Bool)],
+        askingQuestions: [(LoweredType, LoweredType, Bool)],
+        nameless: Bool
     ) -> Bool {
         // What a field holds is read without its `var`.
         guard fieldUnwrapped == self, other.fieldUnwrapped == other else {
-            return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assuming: assuming, askingPairs: askingPairs)
+            return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assumingQuestions: assumingQuestions, askingQuestions: askingQuestions, nameless: nameless)
         }
+
+        let question = (self, other, nameless)
 
         // Two declared records are two types by name, through `?` and the
         // aliases that stand for them, so the one value both could hold is
-        // null.
-        if let myRecord = table.record(of: self), let theirRecord = table.record(of: other), myRecord != theirRecord {
+        // null. A nameless reading wears neither name.
+        if !nameless, let myRecord = table.record(of: self), let theirRecord = table.record(of: other), myRecord != theirRecord {
             return declaresNull(in: table) && other.declaresNull(in: table)
         }
 
         if case let .named(row) = self {
-            guard !assuming.contains(row) else { return true }
+            guard !assumingQuestions.contains(where: { asked in asked == question }) else { return true }
 
-            return table.loweredTypes[row].couldBothHold(other, in: table, assuming: assuming + [row], askingPairs: askingPairs)
+            return table.loweredTypes[row].couldBothHold(other, in: table, assumingQuestions: assumingQuestions + [question], askingQuestions: askingQuestions, nameless: nameless)
         }
-
-        if case let .named(row) = other {
-            guard !assuming.contains(row) else { return true }
-
-            return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row], askingPairs: askingPairs)
-        }
-
-        if provesNothing || other.provesNothing { return true }
 
         // A value of a composition is one of every membership's members, so
         // a value could be both wherever one member could.
         if case let .composition(bounds) = self {
-            guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
+            guard !askingQuestions.contains(where: { asked in asked == question }) else { return false }
 
-            let asked = askingPairs + [(self, other)]
+            let asked = askingQuestions + [question]
 
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
 
                 return table.constraints[row].contains { member in
-                    member.couldBothHold(other, in: table, assuming: assuming, askingPairs: asked)
+                    member.couldBothHold(other, in: table, assumingQuestions: assumingQuestions, askingQuestions: asked, nameless: nameless)
                 }
             }
         }
 
-        if case let .composition(bounds) = other {
-            guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
+        // A name that stands for no record is what it stands for, and so is
+        // any name in a nameless reading. A record's name on the other side
+        // otherwise stays until a structure meets it, since a value of a
+        // declared record keeps its name wherever it is settled, and whatever
+        // wraps this side meets that name.
+        if case let .named(row) = other, nameless || table.recordRows[row] == nil {
+            guard !assumingQuestions.contains(where: { asked in asked == question }) else { return true }
 
-            let asked = askingPairs + [(self, other)]
+            return couldBothHold(table.loweredTypes[row], in: table, assumingQuestions: assumingQuestions + [question], askingQuestions: askingQuestions, nameless: nameless)
+        }
+
+        if provesNothing || other.provesNothing { return true }
+
+        // What is read as a membership may be a value written into it
+        // nameless, and nothing inside such a value has a name either, so a
+        // member is read as a nameless reading, whatever this one was, and
+        // that is the question taken apart here.
+        if case let .composition(bounds) = other {
+            let taken = (self, other, true)
+
+            guard !askingQuestions.contains(where: { asked in asked == taken }) else { return false }
+
+            let asked = askingQuestions + [taken]
 
             return bounds.allSatisfy { bound in
                 guard case let .membership(row) = bound else { return true }
 
                 return table.constraints[row].contains { member in
-                    couldBothHold(member, in: table, assuming: assuming, askingPairs: asked)
+                    couldBothHold(member, in: table, assumingQuestions: assumingQuestions, askingQuestions: asked, nameless: true)
                 }
             }
         }
@@ -2183,29 +2220,40 @@ indirect enum LoweredType: Sendable, Equatable {
         // Two ranges are asked of the judge that decides them, the way
         // `accepts` asks it: what is provably apart is refused here.
         if case let .ranged(mine) = self, case let .ranged(theirs) = other {
-            return mine.lowered.couldBothHold(theirs.lowered, in: table, assuming: assuming, askingPairs: askingPairs)
+            return mine.lowered.couldBothHold(theirs.lowered, in: table, assumingQuestions: assumingQuestions, askingQuestions: askingQuestions, nameless: nameless)
                 && mine.overlaps(theirs)
         }
 
         // Refinements and compact spellings are dropped first: whether a
         // value could be both is a question about kinds.
         switch (unrefined, other.unrefined) {
-        case let (.nullable(inner), side), let (side, .nullable(inner)):
-            return inner.couldBothHold(side, in: table, assuming: assuming, askingPairs: askingPairs)
+        case let (.nullable(inner), theirs):
+            return inner.couldBothHold(theirs, in: table, assumingQuestions: assumingQuestions, askingQuestions: askingQuestions, nameless: nameless)
+
+        case let (mine, .nullable(inner)):
+            return mine.couldBothHold(inner, in: table, assumingQuestions: assumingQuestions, askingQuestions: askingQuestions, nameless: nameless)
+
+        case let (_, .named(row)):
+            guard !assumingQuestions.contains(where: { asked in asked == question }) else { return true }
+
+            return couldBothHold(table.loweredTypes[row], in: table, assumingQuestions: assumingQuestions + [question], askingQuestions: askingQuestions, nameless: nameless)
 
         // What both name has to be able to hold at once; what only one names
         // is data the other lets ride through.
         case let (.record(mine), .record(theirs)):
             return mine.named.allSatisfy { name, field in
-                theirs[name].map { given in field.couldBothHold(given, in: table, assuming: assuming, askingPairs: askingPairs) } ?? true
+                theirs[name].map { given in field.couldBothHold(given, in: table, assumingQuestions: assumingQuestions, askingQuestions: askingQuestions, nameless: nameless) } ?? true
             }
 
         // A dictionary and a record are one value at run time read two ways, so
         // every field the record names must be able to be an entry. A list
         // and a map are not asked about their elements: an empty one is of
         // every element type there is.
-        case let (.dictionary(entry), .record(held)), let (.record(held), .dictionary(entry)):
-            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assuming: assuming, askingPairs: askingPairs) }
+        case let (.dictionary(entry), .record(held)):
+            return held.fields.allSatisfy { field in entry.couldBothHold(field, in: table, assumingQuestions: assumingQuestions, askingQuestions: askingQuestions, nameless: nameless) }
+
+        case let (.record(held), .dictionary(entry)):
+            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assumingQuestions: assumingQuestions, askingQuestions: askingQuestions, nameless: nameless) }
 
         // Two decided kinds, which is where a value either is both or is
         // neither. Anything else this walk does not read into is the run's.
