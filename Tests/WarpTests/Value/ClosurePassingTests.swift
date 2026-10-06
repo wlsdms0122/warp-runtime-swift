@@ -66,28 +66,32 @@ struct ClosurePassingTests {
         #expect(ranges.slotAnswers == [whole, byte])
     }
 
-    @Test("a round trip between a declared record and a record of its fields, or between procedures answering them, grows no list")
-    func aRoundTripThatChangesOnlyANameGrowsNoList() {
+    @Test("a round trip between a declared record and a record of its fields grows no list, at whatever depth it stands", arguments: [
+        "itself", "a list", "a nullable", "a field", "a procedure's answer"
+    ])
+    func aRoundTripThatChangesOnlyANameGrowsNoList(depth: String) {
         // Given
         let fields = TypeExpression.record(["k": .string]).lowered(in: types.loweredTypes)
-        let answeringAnything: LoweredType = .procedure(parameters: [], returns: .any, constness: .unstated, isolation: .unstated)
-        let answeringRecord: LoweredType = .procedure(parameters: [], returns: record, constness: .unstated, isolation: .unstated)
-        var records = sut
-        var procedures = sut
+        let wrapped: (LoweredType) -> LoweredType = { inner in
+            switch depth {
+            case "a list": .array(inner)
+            case "a nullable": .nullable(inner)
+            case "a field": .record(LoweredRecord(layout: Layout(name: nil, ordered: ["of"]), fields: [inner]))
+            case "a procedure's answer": .procedure(parameters: [], returns: inner, constness: .unstated, isolation: .unstated)
+            default: inner
+            }
+        }
+        var closure = sut
 
         // When
         for _ in 0..<10 {
-            records = records
-                .passing(record, in: types.loweredTypes)
-                .passing(fields, in: types.loweredTypes)
-            procedures = procedures
-                .passing(answeringAnything, in: types.loweredTypes)
-                .passing(answeringRecord, in: types.loweredTypes)
+            closure = closure
+                .passing(wrapped(record), in: types.loweredTypes)
+                .passing(wrapped(fields), in: types.loweredTypes)
         }
 
         // Then
-        #expect(records.slotAnswers == [record, fields])
-        #expect(procedures.slotAnswers == [answeringAnything, answeringRecord])
+        #expect(closure.slotAnswers == [wrapped(record), wrapped(fields)])
     }
 
     @Test("a slot whose answer settles the last one unchanged adds nothing, and any other is kept")
