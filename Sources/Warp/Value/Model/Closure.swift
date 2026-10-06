@@ -100,6 +100,12 @@ public struct Closure: Sendable {
     // passed through made of it, wherever it is called from.
     let answering: [LoweredType]
 
+    // What a call of it settles its answer to, in turn: its own `returns`,
+    // then every answer a slot it was settled into wrote.
+    var answers: [LoweredType] {
+        [linked?.returns].compactMap { returns in returns } + answering
+    }
+
     // What a refusal calls this closure, spelled as the hop a trace takes
     // into its body.
     var rendered: String {

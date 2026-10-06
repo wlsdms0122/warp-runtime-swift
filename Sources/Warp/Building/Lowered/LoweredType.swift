@@ -2631,11 +2631,10 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        // It is read as answering the last answer a slot it was settled into
-        // wrote, which is what a call of it settles to last, else its own.
+        // It is read as answering what a call of it settles to last.
         let given = LoweredType.procedure(
             parameters: linked.slots.map(\.type),
-            returns: closure.answering.last ?? linked.returns,
+            returns: closure.answers.last,
             constness: linked.constness,
             isolation: linked.isolation
         )
@@ -2669,14 +2668,13 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        // A call of it settles to every answer a slot it was settled into
-        // wrote, in turn, so a slot takes it only where its answer takes each
-        // of those as well, not only the last.
+        // A call of it settles to each of its answers in turn, so a slot
+        // takes it only where its answer takes every one, not only the last.
         if case let .procedure(_, wanted?, _, _) = asked,
-           let unkept = closure.answering.first(where: { kept in !wanted.accepts(kept, in: table) }) {
+           let unkept = closure.answers.first(where: { kept in !wanted.accepts(kept, in: table) }) {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)),"
-                    + " got a procedure a slot settled to answer \(unkept.rendered(in: table))"
+                    + " got a procedure whose answer settles to \(unkept.rendered(in: table)) on the way"
             )
         }
 
