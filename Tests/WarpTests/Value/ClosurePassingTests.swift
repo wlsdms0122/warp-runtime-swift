@@ -201,21 +201,38 @@ struct ClosurePassingTests {
         #expect(text.slotAnswers == [record, .string])
     }
 
-    @Test("an answer before one the walk cannot tell leaves as it was is still borne, and a slot judges it")
+    @Test("an answer naming a type parameter, which the run cannot read, is still borne after a slot's answer, and a slot judges it")
     func anAnswerALaterOneCannotBeToldToChangeStaysBorne() {
         // Given
-        let byte: LoweredType = .ranged(.whole(from: 0, to: .through(3)))
-        let wider: LoweredType = .ranged(.whole(from: 0, to: .through(7)))
+        let parameter = TypeExpression.parameter(name: "T")
+        let closure = Closure(
+            writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("w")),
+            nth: 0,
+            linked: Linked(
+                label: "w",
+                origin: 0,
+                signature: Signature(returns: parameter),
+                access: .internal,
+                constness: .unstated,
+                isolation: .unstated,
+                failing: .unstated,
+                handsBackAsDeclared: false,
+                implementation: .body(
+                    LoweredBody(instructions: [], result: nil),
+                    Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
+                ),
+                foldable: true,
+                in: types.loweredTypes
+            ),
+            captured: []
+        )
 
         // When
-        let closure = sut
-            .passing(byte, in: types.loweredTypes)
-            .passing(wider, in: types.loweredTypes)
+        let held = closure.passing(record, in: types.loweredTypes)
 
         // Then
-        #expect(wider.settlesUnchanged(byte, in: types.loweredTypes) == nil)
-        #expect(closure.slotAnswers == [byte, wider])
-        #expect(closure.answersBorne(in: types.loweredTypes) == [byte, wider])
+        #expect(held.slotAnswers == [record])
+        #expect(held.answersBorne(in: types.loweredTypes) == [parameter.lowered(in: types.loweredTypes), record])
     }
 
     // MARK: - Public
