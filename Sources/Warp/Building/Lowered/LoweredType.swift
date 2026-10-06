@@ -1636,10 +1636,25 @@ indirect enum LoweredType: Sendable, Equatable {
 
         let assumed = assumingPairs + [(self, settled)]
 
+        // Yes where every part answers yes, no as soon as one answers no,
+        // and nil where none answers no and one cannot tell.
         func each(_ pairs: [(LoweredType, LoweredType)]) -> Bool? {
-            Self.all(pairs.map { mine, theirs in
-                mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside)
-            })
+            var told = true
+
+            for (mine, theirs) in pairs {
+                switch mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside) {
+                case false?:
+                    return false
+
+                case nil:
+                    told = false
+
+                case true?:
+                    break
+                }
+            }
+
+            return told ? true : nil
         }
 
         switch (self, settled) {
@@ -1720,7 +1735,11 @@ indirect enum LoweredType: Sendable, Equatable {
             case (nil, nil):
                 break
 
-            case let (mine?, theirs?) where mine.count == theirs.count:
+            // A slot taking another number of arguments takes none of these.
+            case let (mine?, theirs?) where mine.count != theirs.count:
+                return false
+
+            case let (mine?, theirs?):
                 guard zip(mine, theirs).allSatisfy({ one, other in one.identical(to: other, in: table) }) else { return nil }
 
             default:
@@ -1735,14 +1754,6 @@ indirect enum LoweredType: Sendable, Equatable {
         default:
             return false
         }
-    }
-
-    // Yes where every part answers yes, no where any answers no, and nil
-    // where none answers no and one cannot tell.
-    private static func all(_ answers: [Bool?]) -> Bool? {
-        if answers.contains(false) { return false }
-
-        return answers.contains(nil) ? nil : true
     }
 
     // A value handed to a slot of this type: a null where the type admits
