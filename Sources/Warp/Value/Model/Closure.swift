@@ -96,15 +96,15 @@ public struct Closure: Sendable {
     // What the slots this closure was settled into wrote for its answer, in
     // the order it met them and in the rows of the table the value holding
     // it is read by.
-    let answering: [LoweredType]
+    let slotAnswers: [LoweredType]
 
     // What a call of it settles its answer to, in turn: its own `returns`,
     // then every answer a slot it was settled into wrote, so the closure
     // answers what every slot it passed through made of it, wherever it is
     // called from. A slot judges it by these, and `settling` is a call doing
     // so.
-    var answers: [LoweredType] {
-        [linked?.returns].compactMap { returns in returns } + answering
+    var answerTypes: [LoweredType] {
+        [linked?.returns].compactMap { returns in returns } + slotAnswers
     }
 
     // What a refusal calls this closure, spelled as the hop a trace takes
@@ -129,13 +129,13 @@ public struct Closure: Sendable {
         nth: Int,
         linked: Linked?,
         captured: [(slot: Int, cell: Cell)],
-        answering: [LoweredType] = []
+        slotAnswers: [LoweredType] = []
     ) {
         self.writer = writer
         self.nth = nth
         self.linked = linked
         self.captured = captured
-        self.answering = answering
+        self.slotAnswers = slotAnswers
     }
 
     // MARK: - Public
@@ -149,11 +149,11 @@ public struct Closure: Sendable {
         return linked
     }
 
-    // What a call of it answers, settled the way `answers` says: its own
+    // What a call of it answers, settled the way `answerTypes` says: its own
     // `returns` settled what its body answered, as every procedure's does,
     // and each answer a slot wrote settles it in turn from there.
     func settling(_ answered: Value, in table: LoweredTypeTable) throws -> Value {
-        try answering.reduce(answered) { answered, answer in
+        try slotAnswers.reduce(answered) { answered, answer in
             try answer.settling(answered, at: "answer", in: table)
         }
     }
@@ -162,22 +162,22 @@ public struct Closure: Sendable {
     // tables. What a slot wrote for its answer is read into that link's rows
     // by the walk that reads the value holding the closure.
     func standing(as linked: Linked) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: answering)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers)
     }
 
     // The same closure holding something else.
     func holding(_ captured: [(slot: Int, cell: Cell)]) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: answering)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers)
     }
 
     // The same closure keeping `kept` as the answers slots wrote for it.
     func keeping(_ kept: [LoweredType]) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: kept)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: kept)
     }
 
     // The same closure with every answer it keeps read through `type`.
     func retyped(_ type: (LoweredType) throws -> LoweredType) rethrows -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: try answering.map(type))
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: try slotAnswers.map(type))
     }
 
     // MARK: - Private

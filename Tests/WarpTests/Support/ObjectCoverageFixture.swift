@@ -77,7 +77,7 @@ enum ObjectCoverageFixture {
                 )
             )
         ],
-        answering: [.double, .any]
+        slotAnswers: [.double, .any]
     )
 
     static let parameter = Parameter(
