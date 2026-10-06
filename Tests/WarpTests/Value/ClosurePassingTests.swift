@@ -66,6 +66,30 @@ struct ClosurePassingTests {
         #expect(ranges.slotAnswers == [whole, byte])
     }
 
+    @Test("a round trip between a declared record and a record of its fields, or between procedures answering them, grows no list")
+    func aRoundTripThatChangesOnlyANameGrowsNoList() {
+        // Given
+        let fields = TypeExpression.record(["k": .string]).lowered(in: types.loweredTypes)
+        let answeringAnything: LoweredType = .procedure(parameters: [], returns: .any, constness: .unstated, isolation: .unstated)
+        let answeringRecord: LoweredType = .procedure(parameters: [], returns: record, constness: .unstated, isolation: .unstated)
+        var records = sut
+        var procedures = sut
+
+        // When
+        for _ in 0..<10 {
+            records = records
+                .passing(record, in: types.loweredTypes)
+                .passing(fields, in: types.loweredTypes)
+            procedures = procedures
+                .passing(answeringAnything, in: types.loweredTypes)
+                .passing(answeringRecord, in: types.loweredTypes)
+        }
+
+        // Then
+        #expect(records.slotAnswers == [record, fields])
+        #expect(procedures.slotAnswers == [answeringAnything, answeringRecord])
+    }
+
     @Test("a slot whose answer settles the last one unchanged adds nothing, and any other is kept")
     func onlyAnAnswerThatChangesNothingIsLeftOut() {
         // Given
