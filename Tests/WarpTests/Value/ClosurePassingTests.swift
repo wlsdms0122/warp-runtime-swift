@@ -117,27 +117,7 @@ struct ClosurePassingTests {
     func aRoundTripFromItsOwnAnswerKeepsNone() {
         // Given
         let fields = TypeExpression.record(["k": .string])
-        let closure = Closure(
-            writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("w")),
-            nth: 0,
-            linked: Linked(
-                label: "w",
-                origin: 0,
-                signature: Signature(returns: fields),
-                access: .internal,
-                constness: .unstated,
-                isolation: .unstated,
-                failing: .unstated,
-                handsBackAsDeclared: false,
-                implementation: .body(
-                    LoweredBody(instructions: [], result: nil),
-                    Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
-                ),
-                foldable: true,
-                in: types.loweredTypes
-            ),
-            captured: []
-        )
+        let closure = self.closure(returning: fields)
 
         // When
         let back = closure
@@ -201,17 +181,46 @@ struct ClosurePassingTests {
         #expect(text.slotAnswers == [record, .string])
     }
 
-    @Test("an answer naming a type parameter, which the run cannot read, is still borne after a slot's answer, and a slot judges it")
+    @Test("an answer naming a type parameter, which the run cannot read, is still borne after a slot's answer")
     func anAnswerALaterOneCannotBeToldToChangeStaysBorne() {
         // Given
         let parameter = TypeExpression.parameter(name: "T")
-        let closure = Closure(
+        let closure = self.closure(returning: parameter)
+
+        // When
+        let held = closure.passing(record, in: types.loweredTypes)
+
+        // Then
+        #expect(held.slotAnswers == [record])
+        #expect(held.answersBorne(in: types.loweredTypes) == [parameter.lowered(in: types.loweredTypes), record])
+    }
+
+    @Test("settling over a type parameter cannot be told, and a procedure slot taking another number of arguments changes what it takes")
+    func whatTheWalkCannotTellIsToldApartFromWhatItRefuses() {
+        // Given
+        let parameter = TypeExpression.parameter(name: "T").lowered(in: types.loweredTypes)
+        let none: LoweredType = .procedure(parameters: [], returns: .int, constness: .unstated, isolation: .unstated)
+        let one: LoweredType = .procedure(parameters: [.int], returns: .int, constness: .unstated, isolation: .unstated)
+
+        // When
+        let overParameter = record.settlesUnchanged(parameter, in: types.loweredTypes)
+        let overArguments = one.settlesUnchanged(none, in: types.loweredTypes)
+
+        // Then
+        #expect(overParameter == nil)
+        #expect(overArguments == false)
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    private func closure(returning returns: TypeExpression) -> Closure {
+        Closure(
             writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("w")),
             nth: 0,
             linked: Linked(
                 label: "w",
                 origin: 0,
-                signature: Signature(returns: parameter),
+                signature: Signature(returns: returns),
                 access: .internal,
                 constness: .unstated,
                 isolation: .unstated,
@@ -226,15 +235,5 @@ struct ClosurePassingTests {
             ),
             captured: []
         )
-
-        // When
-        let held = closure.passing(record, in: types.loweredTypes)
-
-        // Then
-        #expect(held.slotAnswers == [record])
-        #expect(held.answersBorne(in: types.loweredTypes) == [parameter.lowered(in: types.loweredTypes), record])
     }
-
-    // MARK: - Public
-    // MARK: - Private
 }
