@@ -1676,6 +1676,12 @@ indirect enum LoweredType: Sendable, Equatable {
                     field.settlesUnchanged(given, in: table, assumingPairs: assumed, namesAside: namesAside)
                 }
 
+        // A composition settles nothing: a value it takes stands as it came,
+        // so it leaves every value of a type it takes whole as it was. A
+        // type that proves nothing is not taken whole.
+        case (.composition, _):
+            return !settled.provesNothing && accepts(settled, in: table, rigid: true)
+
         // A closure settled into a procedure slot keeps one more answer
         // unless the slot's answer leaves the one it settled to before as it
         // is; what it takes and how it may run are judged, not changed.
@@ -2788,9 +2794,10 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         // A call of it settles to each of its answers in turn, so a slot
-        // takes it only where its answer takes every one, not only the last.
+        // takes it only where its answer takes every one the value still
+        // bears, not only the last.
         if case let .procedure(_, wanted?, _, _) = asked,
-           let answer = closure.answerTypes.first(where: { answer in !wanted.accepts(answer, in: table) }) {
+           let answer = closure.answersBorne(in: table).first(where: { answer in !wanted.accepts(answer, in: table) }) {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)),"
                     + " got a procedure whose answer settles to \(answer.rendered(in: table)) on the way"

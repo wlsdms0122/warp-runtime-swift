@@ -101,8 +101,8 @@ public struct Closure: Sendable {
     // What a call of it settles its answer to, in turn: its own `returns`,
     // then every answer a slot it was settled into wrote, so the closure
     // answers what every slot it passed through made of it, wherever it is
-    // called from. A slot judges it by these, and `settling` is a call doing
-    // so.
+    // called from. `settling` is a call doing so, and a slot judges it by
+    // what that leaves the answer bearing, `answersBorne`.
     var answerTypes: [LoweredType] {
         [linked?.returns].compactMap { returns in returns } + slotAnswers
     }
@@ -147,6 +147,18 @@ public struct Closure: Sendable {
         guard let linked else { throw ExecutionError("a closure no link answered") }
 
         return linked
+    }
+
+    // What a call's answer still is once it is settled through every one of
+    // `answerTypes` in turn: the last, and each before it that every later
+    // one leaves as it was. An answer a later one changed says nothing of
+    // the value any more.
+    func answersBorne(in table: LoweredTypeTable) -> [LoweredType] {
+        let answers = answerTypes
+
+        return answers.indices.compactMap { at in
+            answers[(at + 1)...].allSatisfy { later in later.settlesUnchanged(answers[at], in: table) } ? answers[at] : nil
+        }
     }
 
     // What a call of it answers, settled the way `answerTypes` says: its own
