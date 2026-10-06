@@ -1693,8 +1693,6 @@ struct TypeChecker {
             let claim = type.lowered(in: context.loweredTypes)
             let settled = claim.resolved(in: context.loweredTypes)
 
-            let read = inner.reading.resolvedKeepingRecordNames(in: context.loweredTypes)
-
             // Both refusals ask the types themselves, whether or not the
             // reading is fully proven.
             //
@@ -1734,8 +1732,8 @@ struct TypeChecker {
                     at: place,
                     when: ask
                 )
-            } else if claim.resolvedKeepingRecordNames(in: context.loweredTypes) == read
-                || handed.resolvedKeepingRecordNames(in: context.loweredTypes) == read {
+            } else if claim.identical(to: inner.reading, in: context.loweredTypes)
+                || handed.identical(to: inner.reading, in: context.loweredTypes) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same type by two spellings, and
@@ -1758,8 +1756,8 @@ struct TypeChecker {
             }
 
             return Inspection(
-                // The author's spelling stands. `settled` is what the judgment
-                // needed (a name walked through to the type it declares) and
+                // The author's spelling stands. `settled` is what a refusal
+                // shows (a name walked through to the type it declares) and
                 // writing that back into the program would spend the name: a
                 // refusal would read `as { age: int }` where the author wrote
                 // `as Person`, and a document written back out would have lost
