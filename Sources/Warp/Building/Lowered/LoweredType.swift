@@ -2631,11 +2631,9 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        // What it answers is the last answer a slot it was settled into
-        // wrote, which is what that slot reads it as, else its own.
         let given = LoweredType.procedure(
             parameters: linked.slots.map(\.type),
-            returns: closure.answering.last ?? linked.returns,
+            returns: linked.returns,
             constness: linked.constness,
             isolation: linked.isolation
         )
@@ -2663,7 +2661,16 @@ indirect enum LoweredType: Sendable, Equatable {
             }
         }
 
-        guard bounded, asked.accepts(taken.readings.isEmpty ? given : given.filling(taken.readings), in: table) else {
+        // A call of it settles to every answer a slot it was settled into
+        // wrote, in turn, so a slot takes it only where its answer takes each
+        // of those as well.
+        let keeps = closure.answering.allSatisfy { kept in
+            guard case let .procedure(_, wanted?, _, _) = asked else { return true }
+
+            return wanted.accepts(kept, in: table)
+        }
+
+        guard bounded, keeps, asked.accepts(taken.readings.isEmpty ? given : given.filling(taken.readings), in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )
@@ -2672,10 +2679,16 @@ indirect enum LoweredType: Sendable, Equatable {
         // What the slot wrote for the answer is one more answer every call of
         // it settles to, after the ones it keeps. An answer naming a type
         // parameter is filled by a call, so the closure keeps what it
-        // answered before.
+        // answered before. One it keeps already ends the list there: the
+        // slots after it took it and it takes them, so it says what they all
+        // said, and a closure handed back and forth grows no list.
         guard let returns, !returns.namesParameter else { return value }
 
-        return .procedure(closure.settled(answering: returns, in: table))
+        let kept = closure.answering.firstIndex { held in held.identical(to: returns, in: table) }
+            .map { met in Array(closure.answering[...met]) }
+            ?? closure.answering + [returns]
+
+        return .procedure(closure.settled(answering: kept))
     }
 
     // The one conversion the language performs, and it goes one way: every

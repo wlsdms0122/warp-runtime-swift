@@ -117,16 +117,12 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Initializer
-    init(writer: Writer, nth: Int, linked: Linked?, captured: [(slot: Int, cell: Cell)]) {
-        self.init(writer: writer, nth: nth, linked: linked, captured: captured, answering: [])
-    }
-
     init(
         writer: Writer,
         nth: Int,
         linked: Linked?,
         captured: [(slot: Int, cell: Cell)],
-        answering: [LoweredType]
+        answering: [LoweredType] = []
     ) {
         self.writer = writer
         self.nth = nth
@@ -158,17 +154,9 @@ public struct Closure: Sendable {
         Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: answering)
     }
 
-    // The same closure settled into a slot that wrote `returns` for its
-    // answer. A slot takes a closure by the last answer it keeps, so every
-    // answer after one met before took what that one made and was taken by
-    // it again: meeting it again ends the list there, which keeps a closure
-    // handed back and forth from growing one.
-    func settled(answering returns: LoweredType, in table: LoweredTypeTable) -> Closure {
-        let kept = answering.firstIndex { held in held.identical(to: returns, in: table) }
-            .map { met in Array(answering[...met]) }
-            ?? answering + [returns]
-
-        return Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: kept)
+    // The same closure answering through `kept` instead.
+    func settled(answering kept: [LoweredType]) -> Closure {
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: kept)
     }
 
     // The same closure with every answer it keeps read through `type`.
