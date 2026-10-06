@@ -1095,18 +1095,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether settling here leaves every value already settled to `settled`
-    // as it is: the same type, a type naming nothing to check, or one that
-    // only adds null to either. Asked where settling twice would be one
-    // settling, so it answers no only where it cannot tell.
-    func settlesUnchanged(_ settled: LoweredType, in table: LoweredTypeTable) -> Bool {
-        if case .any = self { return true }
-        if identical(to: settled, in: table) { return true }
-        if case let .nullable(inner) = self { return inner.settlesUnchanged(settled, in: table) }
-
-        return false
-    }
-
     // Whether two types are one type exactly, names resolved. A name that
     // stands for a declared record is that record, and any other name is what
     // it names. Nothing stands for anything else: `any` is no wildcard here,
@@ -1611,6 +1599,67 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return try judging(value, at: path(), in: table, asking: asking)
+        }
+    }
+
+    // Whether settling here leaves every value already settled to `settled`
+    // as it is, read along the cases `settling` takes. It answers no where it
+    // cannot tell, which costs a settling done twice and never a value
+    // changed. A pair met again is a type naming itself, and holds.
+    func settlesUnchanged(_ settled: LoweredType, in table: LoweredTypeTable) -> Bool {
+        settlesUnchanged(settled, in: table, assumingPairs: [])
+    }
+
+    private func settlesUnchanged(
+        _ settled: LoweredType,
+        in table: LoweredTypeTable,
+        assumingPairs: [(LoweredType, LoweredType)]
+    ) -> Bool {
+        if case .any = self { return true }
+        if identical(to: settled, in: table) { return true }
+
+        guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == settled }) else { return true }
+
+        let assumed = assumingPairs + [(self, settled)]
+
+        switch (self, settled) {
+        // A name that stands for no record is what it stands for, on either
+        // side. Settling to a record's name gives the value that name, which
+        // only a value of that record already has, and `identical` asked.
+        case let (.named(row), _) where table.recordRows[row] == nil:
+            return table.loweredTypes[row].settlesUnchanged(settled, in: table, assumingPairs: assumed)
+
+        case let (_, .named(row)) where table.recordRows[row] == nil:
+            return settlesUnchanged(table.loweredTypes[row], in: table, assumingPairs: assumed)
+
+        // Null passes a nullable slot as it is; anything else meets what the
+        // slot declares.
+        case (.nullable, .null):
+            return true
+
+        case let (.nullable(mine), .nullable(theirs)):
+            return mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed)
+
+        case let (.nullable(mine), _):
+            return mine.settlesUnchanged(settled, in: table, assumingPairs: assumed)
+
+        // A value held to a range is a value of the kind under it.
+        case let (_, .ranged(theirs)):
+            return settlesUnchanged(theirs.lowered, in: table, assumingPairs: assumed)
+
+        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)):
+            return mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed)
+
+        // A record is laid out on the slot's own fields, so one already laid
+        // out on the same fields stays as it is where every field does.
+        case let (.record(mine), .record(theirs)):
+            return mine.layout == theirs.layout
+                && zip(mine.fields, theirs.fields).allSatisfy { field, given in
+                    field.settlesUnchanged(given, in: table, assumingPairs: assumed)
+                }
+
+        default:
+            return false
         }
     }
 

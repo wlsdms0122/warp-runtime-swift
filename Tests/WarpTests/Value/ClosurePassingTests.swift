@@ -43,6 +43,29 @@ struct ClosurePassingTests {
         #expect(closure.slotAnswers == [.any, record])
     }
 
+    @Test("a round trip through what holds the answer, a list or a range, grows no list either")
+    func aRoundTripInsideGrowsNoList() {
+        // Given
+        let whole: LoweredType = .int
+        let byte: LoweredType = .ranged(.whole(from: 0, to: .through(3)))
+        var lists = sut
+        var ranges = sut
+
+        // When
+        for _ in 0..<10 {
+            lists = lists
+                .passing(.array(.any), in: types.loweredTypes)
+                .passing(.array(record), in: types.loweredTypes)
+            ranges = ranges
+                .passing(whole, in: types.loweredTypes)
+                .passing(byte, in: types.loweredTypes)
+        }
+
+        // Then
+        #expect(lists.slotAnswers == [.array(.any), .array(record)])
+        #expect(ranges.slotAnswers == [whole, byte])
+    }
+
     @Test("a slot whose answer settles the last one unchanged adds nothing, and any other is kept")
     func onlyAnAnswerThatChangesNothingIsLeftOut() {
         // Given
