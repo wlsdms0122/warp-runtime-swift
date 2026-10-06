@@ -176,7 +176,10 @@ indirect enum Operation: Sendable {
         let inside: Operation
 
         switch self {
-        case .literal, .local, .closure:
+        case let .literal(value):
+            inside = .literal(try value.rewritten(types: type))
+
+        case .local, .closure:
             inside = self
 
         case let .array(elements):

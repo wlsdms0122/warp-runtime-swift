@@ -51,8 +51,9 @@ enum ObjectCoverageFixture {
         )
     }()
 
-    // A closure a fold settled, standing by its writing alone, whose one
-    // captured cell holds every kind of value there is.
+    // A closure a fold settled into a slot that wrote its answer, standing by
+    // its writing alone, whose one captured cell holds every kind of value
+    // there is, a closure that answers nothing more among them.
     static let everyValueClosure = Closure(
         writer: Closure.Writer(document: .written(Identity([1, 2, 3])), declaration: .procedure("a.eleven")),
         nth: 1,
@@ -76,7 +77,7 @@ enum ObjectCoverageFixture {
                 )
             )
         ]
-    )
+    ).answering(.double)
 
     static let parameter = Parameter(
         name: "p",

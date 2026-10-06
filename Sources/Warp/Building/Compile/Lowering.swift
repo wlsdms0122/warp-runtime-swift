@@ -543,9 +543,43 @@ struct Lowering {
     func numbered(
         _ rows: [Int],
         of origin: Int,
-        answering answers: [Name: LoweredType]
-    ) throws -> (table: [Linked], numbering: LoweredTypeNumbering, answers: [Name: LoweredType]) {
-        let stood = standing[origin] ?? Standing()
+        answering answers: [Name: LoweredType],
+        starting variables: [(name: Name, value: Value)]
+    ) throws -> (
+        table: [Linked],
+        numbering: LoweredTypeNumbering,
+        answers: [Name: LoweredType],
+        starting: [(name: Name, value: Value)]
+    ) {
+        var stood = standing[origin] ?? Standing()
+
+        // A closure a literal or a variable's start holds answers what the
+        // slot it settled into wrote, which the document stands on as well.
+        func stand(_ type: LoweredType) -> LoweredType {
+            type.renumbered(
+                type: { row in
+                    stood.types.insert(row)
+
+                    return row
+                },
+                membership: { row in
+                    stood.memberships.insert(row)
+
+                    return row
+                }
+            )
+        }
+
+        for row in rows {
+            guard case let .body(body, _) = table[row].implementation else { continue }
+
+            _ = body.rewritten(operation: { operation in operation }, type: stand)
+        }
+
+        for (_, value) in variables {
+            _ = value.rewritten(types: stand)
+        }
+
         let numbering = LoweredTypeNumbering(
             types: Set(stood.types.map { row in loweredTypes.labels[row] }),
             memberships: Set(stood.memberships.map { row in loweredTypes.constraintLabels[row] })
@@ -581,7 +615,11 @@ struct Lowering {
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
-        return (numbered, numbering, read)
+        let starting = try variables.map { name, value in
+            (name: name, value: try value.rewritten(types: { type in try renumbered(type, in: place, of: name) }))
+        }
+
+        return (numbered, numbering, read, starting)
     }
 
     // MARK: - Private

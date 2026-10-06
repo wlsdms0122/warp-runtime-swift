@@ -184,9 +184,9 @@ final class Relocating {
     private func relocated(_ value: Value, in context: Context) throws -> Value {
         guard value.holdsProcedure else { return value }
 
-        return try value.rewritten { closure in
-            try resolver.resolved(closure, at: context.place)
-        }
+        return try value
+            .rewritten(types: { type in try context.typeRows.read(type, at: context.place) })
+            .rewritten { closure in try resolver.resolved(closure, at: context.place) }
     }
 
     // A row relocated once.

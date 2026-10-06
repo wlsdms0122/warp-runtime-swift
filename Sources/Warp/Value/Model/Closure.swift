@@ -94,9 +94,9 @@ public struct Closure: Sendable {
     let captured: [(slot: Int, cell: Cell)]
 
     // What the slot this closure last settled into wrote for its answer, in
-    // the rows of the table that settled it. Every call settles the answer to
-    // it after the closure's own `returns`, so the closure answers what that
-    // slot is read as wherever it is called from.
+    // the rows of the table the value holding it is read by. Every call
+    // settles the answer to it after the closure's own `returns`, so the
+    // closure answers what that slot is read as wherever it is called from.
     let answering: LoweredType?
 
     // What a refusal calls this closure, spelled as the hop a trace takes
@@ -146,10 +146,10 @@ public struct Closure: Sendable {
     }
 
     // The same closure as a link reads it: the body standing in that link's
-    // tables. What a slot wrote for its answer is in another table's rows, so
-    // it stays behind.
+    // tables. What a slot wrote for its answer is read into that link's rows
+    // by the walk that reads the value holding the closure.
     func standing(as linked: Linked) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: nil)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: answering)
     }
 
     // The same closure holding something else.
