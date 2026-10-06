@@ -1856,7 +1856,7 @@ struct TypeChecker {
             // here: a write the closure makes is judged against that type
             // and settles to it, and leaves the box reading it.
             let taken = outside.mapValues { binding in
-                binding.takenType.map { held in binding.taken(to: held) } ?? binding
+                binding.taken(to: binding.type)
             }
 
             // The body read under the ask this walk answers: what it reaches

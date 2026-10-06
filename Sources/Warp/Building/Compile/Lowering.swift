@@ -551,23 +551,16 @@ struct Lowering {
         answers: [Name: LoweredType],
         starting: [(name: Name, value: Value)]
     ) {
-        var stood = standing[origin] ?? Standing()
+        let stood = standing[origin] ?? Standing()
+        var types = stood.types
+        var memberships = stood.memberships
 
         // A closure a literal or a variable's start holds answers what the
-        // slot it settled into wrote, which the document stands on as well.
+        // slots it settled into wrote, which the document stands on as well.
         func stand(_ type: LoweredType) -> LoweredType {
-            type.renumbered(
-                type: { row in
-                    stood.types.insert(row)
+            type.standing(into: &types, and: &memberships)
 
-                    return row
-                },
-                membership: { row in
-                    stood.memberships.insert(row)
-
-                    return row
-                }
-            )
+            return type
         }
 
         for row in rows {
@@ -581,17 +574,17 @@ struct Lowering {
         }
 
         let numbering = LoweredTypeNumbering(
-            types: Set(stood.types.map { row in loweredTypes.labels[row] }),
-            memberships: Set(stood.memberships.map { row in loweredTypes.constraintLabels[row] })
+            types: Set(types.map { row in loweredTypes.labels[row] }),
+            memberships: Set(memberships.map { row in loweredTypes.constraintLabels[row] })
         )
 
         // Which number each row of this link stands at, so the walk that
         // writes them reads a place rather than hashing a name at every
         // type it meets.
         let place = (
-            types: Self.placed(stood.types, among: numbering.types, spelling: loweredTypes.labels),
+            types: Self.placed(types, among: numbering.types, spelling: loweredTypes.labels),
             memberships: Self.placed(
-                stood.memberships,
+                memberships,
                 among: numbering.memberships,
                 spelling: loweredTypes.constraintLabels
             )
