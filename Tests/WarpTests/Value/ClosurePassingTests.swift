@@ -95,6 +95,21 @@ struct ClosurePassingTests {
         }
     }
 
+    @Test("a round trip through a record of the same fields under another name is no round trip")
+    func aRoundTripThroughAnotherNameKeepsEveryAnswer() {
+        // Given
+        let renamed: LoweredType = .record(LoweredRecord(layout: Layout(name: "bank.B", ordered: ["k"]), fields: [.string]))
+
+        // When
+        let closure = sut
+            .passing(record, in: types.loweredTypes)
+            .passing(renamed, in: types.loweredTypes)
+            .passing(record, in: types.loweredTypes)
+
+        // Then
+        #expect(closure.slotAnswers == [record, renamed, record])
+    }
+
     @Test("a round trip that starts from the closure's own answer takes the list back to nothing")
     func aRoundTripFromItsOwnAnswerKeepsNone() {
         // Given
