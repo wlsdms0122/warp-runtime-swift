@@ -173,17 +173,20 @@ public struct Closure: Sendable {
     // The same closure settled into a slot that wrote `returns` for its
     // answer: one more answer a call settles to, unless settling to it
     // leaves what the closure answers last unchanged, which adds nothing to
-    // what a call makes of the answer. An answer met one step back that the
-    // last one hands back as it was ends the list there again, since
+    // what a call makes of the answer. An answer met one step back, its own
+    // `returns` included, that the last one hands back as it was ends the
+    // list there again, since
     // settling to it, to the last, and to it once more is settling to it
     // once. Every other answer stays, since a slot taking one does not say
     // what it said.
     func passing(_ returns: LoweredType, in table: LoweredTypeTable) -> Closure {
         if let last = answerTypes.last, returns.settlesUnchanged(last, in: table) { return self }
 
-        if slotAnswers.count >= 2,
+        let answers = answerTypes
+
+        if answers.count >= 2,
            let last = slotAnswers.last,
-           slotAnswers[slotAnswers.count - 2].identical(to: returns, in: table),
+           answers[answers.count - 2].identical(to: returns, in: table),
            returns.settlesBack(through: last, in: table) {
             return Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers.dropLast())
         }

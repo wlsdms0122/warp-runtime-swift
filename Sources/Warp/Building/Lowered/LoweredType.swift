@@ -1656,8 +1656,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)):
             return mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside)
 
-        case (.named, .record), (.record, .named):
+        case let (.named, .record(inline)), let (.record(inline), .named):
             guard namesAside,
+                  inline.layout.name == nil,
                   let mine = record(in: table),
                   let theirs = settled.record(in: table),
                   mine.layout.fields == theirs.layout.fields
