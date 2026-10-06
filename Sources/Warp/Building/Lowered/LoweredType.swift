@@ -2631,9 +2631,11 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
+        // It is read as answering the last answer a slot it was settled into
+        // wrote, which is what a call of it settles to last, else its own.
         let given = LoweredType.procedure(
             parameters: linked.slots.map(\.type),
-            returns: linked.returns,
+            returns: closure.answering.last ?? linked.returns,
             constness: linked.constness,
             isolation: linked.isolation
         )
@@ -2661,18 +2663,20 @@ indirect enum LoweredType: Sendable, Equatable {
             }
         }
 
-        // A call of it settles to every answer a slot it was settled into
-        // wrote, in turn, so a slot takes it only where its answer takes each
-        // of those as well.
-        let keeps = closure.answering.allSatisfy { kept in
-            guard case let .procedure(_, wanted?, _, _) = asked else { return true }
-
-            return wanted.accepts(kept, in: table)
-        }
-
-        guard bounded, keeps, asked.accepts(taken.readings.isEmpty ? given : given.filling(taken.readings), in: table) else {
+        guard bounded, asked.accepts(taken.readings.isEmpty ? given : given.filling(taken.readings), in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
+            )
+        }
+
+        // A call of it settles to every answer a slot it was settled into
+        // wrote, in turn, so a slot takes it only where its answer takes each
+        // of those as well, not only the last.
+        if case let .procedure(_, wanted?, _, _) = asked,
+           let unkept = closure.answering.first(where: { kept in !wanted.accepts(kept, in: table) }) {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)),"
+                    + " got a procedure a slot settled to answer \(unkept.rendered(in: table))"
             )
         }
 
