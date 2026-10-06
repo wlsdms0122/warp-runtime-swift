@@ -120,7 +120,7 @@ struct ObjectWriter {
 
                     return .array([.int(slot), try self.value(held)])
                 }),
-                ObjectWriter.maybe(closure.answering, lowered)
+                .array(closure.answering.map(lowered))
             )
         }
     }

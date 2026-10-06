@@ -93,11 +93,12 @@ public struct Closure: Sendable {
     let linked: Linked?
     let captured: [(slot: Int, cell: Cell)]
 
-    // What the slot this closure last settled into wrote for its answer, in
-    // the rows of the table the value holding it is read by. Every call
-    // settles the answer to it after the closure's own `returns`, so the
-    // closure answers what that slot is read as wherever it is called from.
-    let answering: LoweredType?
+    // What the slots this closure was settled into wrote for its answer, in
+    // the order it met them and in the rows of the table the value holding
+    // it is read by. Every call settles the answer to each in turn after the
+    // closure's own `returns`, so the closure answers what every slot it
+    // passed through made of it, wherever it is called from.
+    let answering: [LoweredType]
 
     // What a refusal calls this closure, spelled as the hop a trace takes
     // into its body.
@@ -117,15 +118,15 @@ public struct Closure: Sendable {
 
     // MARK: - Initializer
     init(writer: Writer, nth: Int, linked: Linked?, captured: [(slot: Int, cell: Cell)]) {
-        self.init(writer: writer, nth: nth, linked: linked, captured: captured, answering: nil)
+        self.init(writer: writer, nth: nth, linked: linked, captured: captured, answering: [])
     }
 
-    private init(
+    init(
         writer: Writer,
         nth: Int,
         linked: Linked?,
         captured: [(slot: Int, cell: Cell)],
-        answering: LoweredType?
+        answering: [LoweredType]
     ) {
         self.writer = writer
         self.nth = nth
@@ -158,9 +159,21 @@ public struct Closure: Sendable {
     }
 
     // The same closure settled into a slot that wrote `returns` for its
-    // answer.
-    func answering(_ returns: LoweredType) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: returns)
+    // answer. A slot takes a closure by the last answer it keeps, so every
+    // answer after one met before took what that one made and was taken by
+    // it again: meeting it again ends the list there, which keeps a closure
+    // handed back and forth from growing one.
+    func settled(answering returns: LoweredType, in table: LoweredTypeTable) -> Closure {
+        let kept = answering.firstIndex { held in held.identical(to: returns, in: table) }
+            .map { met in Array(answering[...met]) }
+            ?? answering + [returns]
+
+        return Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: kept)
+    }
+
+    // The same closure with every answer it keeps read through `type`.
+    func retyped(_ type: (LoweredType) throws -> LoweredType) rethrows -> Closure {
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: try answering.map(type))
     }
 
     // MARK: - Private

@@ -2631,9 +2631,11 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
+        // What it answers is the last answer a slot it was settled into
+        // wrote, which is what that slot reads it as, else its own.
         let given = LoweredType.procedure(
             parameters: linked.slots.map(\.type),
-            returns: linked.returns,
+            returns: closure.answering.last ?? linked.returns,
             constness: linked.constness,
             isolation: linked.isolation
         )
@@ -2667,13 +2669,13 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        // What the slot wrote for the answer is what the closure is read to
-        // answer from here, so every call of it settles to that. An answer
-        // naming a type parameter is filled by a call, so the closure keeps
-        // what it answered before.
+        // What the slot wrote for the answer is one more answer every call of
+        // it settles to, after the ones it keeps. An answer naming a type
+        // parameter is filled by a call, so the closure keeps what it
+        // answered before.
         guard let returns, !returns.namesParameter else { return value }
 
-        return .procedure(closure.answering(returns))
+        return .procedure(closure.settled(answering: returns, in: table))
     }
 
     // The one conversion the language performs, and it goes one way: every

@@ -364,7 +364,7 @@ public indirect enum Value: Sendable, Equatable {
         guard holdsProcedure else { return self }
 
         return try rewritten { closure in
-            try closure.answering.map { answering in closure.answering(try type(answering)) } ?? closure
+            try closure.retyped(type)
         }
     }
 

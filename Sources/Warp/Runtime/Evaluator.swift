@@ -609,9 +609,9 @@ struct Evaluator: Sendable {
             at: trace.appending(linked.hop)
         )
 
-        guard let answering = closure.answering else { return answered }
-
-        return try answering.settling(answered, at: "answer", in: loweredTypes)
+        return try closure.answering.reduce(answered) { answered, answering in
+            try answering.settling(answered, at: "answer", in: loweredTypes)
+        }
     }
 
     // A row answered with its arguments settled and nothing handed in place:

@@ -76,8 +76,9 @@ enum ObjectCoverageFixture {
                     ])
                 )
             )
-        ]
-    ).answering(.double)
+        ],
+        answering: [.double, .any]
+    )
 
     static let parameter = Parameter(
         name: "p",
