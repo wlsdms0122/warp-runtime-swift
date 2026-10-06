@@ -2667,7 +2667,13 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        return value
+        // What the slot wrote for the answer is what the closure is read to
+        // answer from here, so every call of it settles to that. An answer
+        // naming a type parameter is filled by a call, so the closure keeps
+        // what it answered before.
+        guard let returns, !returns.namesParameter else { return value }
+
+        return .procedure(closure.answering(returns))
     }
 
     // The one conversion the language performs, and it goes one way: every

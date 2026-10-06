@@ -93,6 +93,12 @@ public struct Closure: Sendable {
     let linked: Linked?
     let captured: [(slot: Int, cell: Cell)]
 
+    // What the slot this closure last settled into wrote for its answer, in
+    // the rows of the table that settled it. Every call settles the answer to
+    // it after the closure's own `returns`, so the closure answers what that
+    // slot is read as wherever it is called from.
+    let answering: LoweredType?
+
     // What a refusal calls this closure, spelled as the hop a trace takes
     // into its body.
     var rendered: String {
@@ -111,10 +117,21 @@ public struct Closure: Sendable {
 
     // MARK: - Initializer
     init(writer: Writer, nth: Int, linked: Linked?, captured: [(slot: Int, cell: Cell)]) {
+        self.init(writer: writer, nth: nth, linked: linked, captured: captured, answering: nil)
+    }
+
+    private init(
+        writer: Writer,
+        nth: Int,
+        linked: Linked?,
+        captured: [(slot: Int, cell: Cell)],
+        answering: LoweredType?
+    ) {
         self.writer = writer
         self.nth = nth
         self.linked = linked
         self.captured = captured
+        self.answering = answering
     }
 
     // MARK: - Public
@@ -129,14 +146,21 @@ public struct Closure: Sendable {
     }
 
     // The same closure as a link reads it: the body standing in that link's
-    // tables.
+    // tables. What a slot wrote for its answer is in another table's rows, so
+    // it stays behind.
     func standing(as linked: Linked) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: nil)
     }
 
     // The same closure holding something else.
     func holding(_ captured: [(slot: Int, cell: Cell)]) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured)
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: answering)
+    }
+
+    // The same closure settled into a slot that wrote `returns` for its
+    // answer.
+    func answering(_ returns: LoweredType) -> Closure {
+        Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: returns)
     }
 
     // MARK: - Private
