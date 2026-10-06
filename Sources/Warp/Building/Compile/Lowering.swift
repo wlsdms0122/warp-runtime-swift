@@ -524,7 +524,7 @@ struct Lowering {
             scope.slots[name] = slots.allocate(name)
         }
 
-        let (address, _) = try lower(path, in: scope, on: slots, at: place)
+        let address = try lower(path, in: scope, on: slots, at: place)
 
         return (.local(address), slots.frame)
     }
@@ -639,13 +639,12 @@ struct Lowering {
                 context.slots.hold(slot, settling)
                 binding = .declare(slot, settling: settling)
 
-            // A write settles to what the path reaches, so a box that said
-            // what it holds holds it after a write as it did after its
-            // declaration. Into a box that said nothing it settles to what the
-            // check held the write to, where it held it to anything.
+            // A write settles to what the check held it to, so a box that
+            // said what it holds holds it after a write as it did after its
+            // declaration.
             case let .assignment(path)?:
-                let (address, reached) = try lower(path, in: scope, on: context.slots, at: here)
-                let settling = reached?.slotUnwrapped ?? context.judgements.settling(writeAt: here)?.slotUnwrapped
+                let address = try lower(path, in: scope, on: context.slots, at: here)
+                let settling = context.judgements.settling(writeAt: here)?.slotUnwrapped
                 context.slots.note(settling)
                 binding = .assign(address, settling: settling)
 
@@ -727,7 +726,7 @@ struct Lowering {
             return .literal(value)
 
         case let .reference(path):
-            let (address, _) = try lower(path, in: scope, on: context.slots, at: place)
+            let address = try lower(path, in: scope, on: context.slots, at: place)
 
             return .local(address)
 
@@ -915,7 +914,7 @@ struct Lowering {
                     throw BuildError.unjudged("a call of a value handing in place what is no path", at: here)
                 }
 
-                let (address, _) = try lower(path, in: scope, on: context.slots, at: here)
+                let address = try lower(path, in: scope, on: context.slots, at: here)
 
                 return .reference(address)
             }
@@ -1094,7 +1093,7 @@ struct Lowering {
             return .value(try lower(expression, naming: nil, in: scope, on: context, at: place))
         }
 
-        let (address, _) = try lower(path, in: scope, on: context.slots, at: place)
+        let address = try lower(path, in: scope, on: context.slots, at: place)
 
         return .reference(address)
     }
@@ -1133,7 +1132,7 @@ struct Lowering {
         in scope: SlotScope,
         on slots: SlotAllocator,
         at place: Place
-    ) throws -> (address: Address, reached: LoweredType?) {
+    ) throws -> Address {
         // A mark on the head expects a name to be missing, which is not
         // absence but a reading gone wrong.
         if let refusal = path.markedHead {
@@ -1173,7 +1172,7 @@ struct Lowering {
                 return .index(index, optional: optional)
 
             case let .indexRef(inner, optional):
-                let (address, _) = try lower(inner, in: scope, on: slots, at: place)
+                let address = try lower(inner, in: scope, on: slots, at: place)
                 reached = reached?.element(in: loweredTypes)
 
                 return .at(address, optional: optional)
@@ -1181,7 +1180,7 @@ struct Lowering {
             }
         }
 
-        return (Address(slot: slot, steps: steps), reached)
+        return Address(slot: slot, steps: steps)
     }
 
     // Which row of the link a number in a lowered body stands for. The body

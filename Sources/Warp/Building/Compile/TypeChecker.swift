@@ -2850,10 +2850,9 @@ struct TypeChecker {
                         loosening: &judgements
                     )
 
-                    // A box held to a type no slot declared settles a write
-                    // to it, the way one a slot declared does, so what it
-                    // holds is what it reads as.
-                    if case .held = binding.holding, let held {
+                    // The write settles to what it was held to, so what the
+                    // box holds is what it reads as.
+                    if let held {
                         judgements.record(write: held, at: here)
                     }
 
