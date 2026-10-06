@@ -2681,10 +2681,15 @@ indirect enum LoweredType: Sendable, Equatable {
         // What the slot wrote for the answer is one more answer every call of
         // it settles to, after the ones it keeps. An answer naming a type
         // parameter is filled by a call, so the closure keeps what it
-        // answered before. One it keeps already ends the list there: the
-        // slots after it took it and it takes them, so it says what they all
-        // said, and a closure handed back and forth grows no list.
+        // answered before. One it answers already ends the list there, its
+        // own `returns` included: the slots after it took it and it takes
+        // them, so it says what they all said, and a closure handed back and
+        // forth grows no list.
         guard let returns, !returns.namesParameter else { return value }
+
+        if linked.returns?.identical(to: returns, in: table) == true {
+            return .procedure(closure.keeping([]))
+        }
 
         let kept = closure.answering.firstIndex { held in held.identical(to: returns, in: table) }
             .map { met in Array(closure.answering[...met]) }
