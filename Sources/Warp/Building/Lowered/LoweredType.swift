@@ -2692,7 +2692,7 @@ indirect enum LoweredType: Sendable, Equatable {
             .map { met in Array(closure.answering[...met]) }
             ?? closure.answering + [returns]
 
-        return .procedure(closure.settled(answering: kept))
+        return .procedure(closure.keeping(kept))
     }
 
     // The one conversion the language performs, and it goes one way: every

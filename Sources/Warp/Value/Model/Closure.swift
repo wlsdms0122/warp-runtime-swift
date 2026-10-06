@@ -154,8 +154,8 @@ public struct Closure: Sendable {
         Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: answering)
     }
 
-    // The same closure answering through `kept` instead.
-    func settled(answering kept: [LoweredType]) -> Closure {
+    // The same closure keeping `kept` as the answers slots wrote for it.
+    func keeping(_ kept: [LoweredType]) -> Closure {
         Closure(writer: writer, nth: nth, linked: linked, captured: captured, answering: kept)
     }
 
