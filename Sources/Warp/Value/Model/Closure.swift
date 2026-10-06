@@ -170,9 +170,14 @@ public struct Closure: Sendable {
         Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers)
     }
 
-    // The same closure keeping `kept` as the answers slots wrote for it.
-    func keeping(_ kept: [LoweredType]) -> Closure {
-        Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: kept)
+    // The same closure settled into a slot that wrote `returns` for its
+    // answer: one more answer a call settles to, unless it is the one the
+    // closure answers last already, which settles nothing again. Any other
+    // answer stays, since a slot taking one does not say what it said.
+    func passing(_ returns: LoweredType, in table: LoweredTypeTable) -> Closure {
+        guard answerTypes.last?.identical(to: returns, in: table) != true else { return self }
+
+        return Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers + [returns])
     }
 
     // The same closure with every answer it keeps read through `type`.
