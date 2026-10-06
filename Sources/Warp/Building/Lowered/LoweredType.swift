@@ -1095,6 +1095,18 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // Whether settling here leaves every value already settled to `settled`
+    // as it is: the same type, a type naming nothing to check, or one that
+    // only adds null to either. Asked where settling twice would be one
+    // settling, so it answers no only where it cannot tell.
+    func settlesUnchanged(_ settled: LoweredType, in table: LoweredTypeTable) -> Bool {
+        if case .any = self { return true }
+        if identical(to: settled, in: table) { return true }
+        if case let .nullable(inner) = self { return inner.settlesUnchanged(settled, in: table) }
+
+        return false
+    }
+
     // Whether two types are one type exactly, names resolved. A name that
     // stands for a declared record is that record, and any other name is what
     // it names. Nothing stands for anything else: `any` is no wildcard here,

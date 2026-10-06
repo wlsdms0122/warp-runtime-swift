@@ -171,11 +171,12 @@ public struct Closure: Sendable {
     }
 
     // The same closure settled into a slot that wrote `returns` for its
-    // answer: one more answer a call settles to, unless it is the one the
-    // closure answers last already, which settles nothing again. Any other
-    // answer stays, since a slot taking one does not say what it said.
+    // answer: one more answer a call settles to, unless settling to it
+    // leaves what the closure answers last unchanged, which adds nothing to
+    // what a call makes of the answer. Every answer before stays, since a
+    // slot taking one does not say what it said.
     func passing(_ returns: LoweredType, in table: LoweredTypeTable) -> Closure {
-        guard answerTypes.last?.identical(to: returns, in: table) != true else { return self }
+        if let last = answerTypes.last, returns.settlesUnchanged(last, in: table) { return self }
 
         return Closure(writer: writer, nth: nth, linked: linked, captured: captured, slotAnswers: slotAnswers + [returns])
     }
