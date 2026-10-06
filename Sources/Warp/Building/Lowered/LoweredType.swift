@@ -1047,7 +1047,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // earned only where the types provably disagree, and everything else is
     // left to the run.
     func couldBothHold(reading other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        couldBothHold(other, in: table, assumingPairs: [], askingPairs: [])
+        couldBothHold(other, in: table, assumingPairs: [], askingPairs: [], nameless: false)
     }
 
     // Whether an `enum` candidate could ever be a spelling of a value of this
@@ -2131,29 +2131,32 @@ indirect enum LoweredType: Sendable, Equatable {
     //
     // This is what a cast names and `other` is what it reads, and no step
     // swaps the two: a record's name on the reading side is kept further than
-    // one on this side, so the sides are not alike.
+    // one on this side, so the sides are not alike. `nameless` says the
+    // reading is a value written with no name, at whatever depth: its names
+    // say only what structure it has.
     private func couldBothHold(
         _ other: LoweredType,
         in table: LoweredTypeTable,
         assumingPairs: [(LoweredType, LoweredType)],
-        askingPairs: [(LoweredType, LoweredType)]
+        askingPairs: [(LoweredType, LoweredType)],
+        nameless: Bool
     ) -> Bool {
         // What a field holds is read without its `var`.
         guard fieldUnwrapped == self, other.fieldUnwrapped == other else {
-            return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs)
+            return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs, nameless: nameless)
         }
 
         // Two declared records are two types by name, through `?` and the
         // aliases that stand for them, so the one value both could hold is
-        // null.
-        if let myRecord = table.record(of: self), let theirRecord = table.record(of: other), myRecord != theirRecord {
+        // null. A nameless reading wears neither name.
+        if !nameless, let myRecord = table.record(of: self), let theirRecord = table.record(of: other), myRecord != theirRecord {
             return declaresNull(in: table) && other.declaresNull(in: table)
         }
 
         if case let .named(row) = self {
             guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
-            return table.loweredTypes[row].couldBothHold(other, in: table, assumingPairs: assumingPairs + [(self, other)], askingPairs: askingPairs)
+            return table.loweredTypes[row].couldBothHold(other, in: table, assumingPairs: assumingPairs + [(self, other)], askingPairs: askingPairs, nameless: nameless)
         }
 
         // A value of a composition is one of every membership's members, so
@@ -2167,26 +2170,27 @@ indirect enum LoweredType: Sendable, Equatable {
                 guard case let .membership(row) = bound else { return true }
 
                 return table.constraints[row].contains { member in
-                    member.couldBothHold(other, in: table, assumingPairs: assumingPairs, askingPairs: asked)
+                    member.couldBothHold(other, in: table, assumingPairs: assumingPairs, askingPairs: asked, nameless: nameless)
                 }
             }
         }
 
-        // A name that stands for no record is what it stands for. A record's
-        // name on the other side stays until a structure meets it, since a
-        // value of a declared record keeps its name wherever it is settled,
-        // and whatever wraps this side meets that name.
-        if case let .named(row) = other, table.recordRows[row] == nil {
+        // A name that stands for no record is what it stands for, and so is
+        // any name in a nameless reading. A record's name on the other side
+        // otherwise stays until a structure meets it, since a value of a
+        // declared record keeps its name wherever it is settled, and whatever
+        // wraps this side meets that name.
+        if case let .named(row) = other, nameless || table.recordRows[row] == nil {
             guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
-            return couldBothHold(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], askingPairs: askingPairs)
+            return couldBothHold(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], askingPairs: askingPairs, nameless: nameless)
         }
 
         if provesNothing || other.provesNothing { return true }
 
         // What is read as a membership may be a value written into it
-        // nameless, which stays nameless at every depth, so a member is read
-        // here with every name walked through to what it stands for.
+        // nameless, and nothing inside such a value has a name either, so a
+        // member is read as a nameless reading.
         if case let .composition(bounds) = other {
             guard !askingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return false }
 
@@ -2196,7 +2200,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 guard case let .membership(row) = bound else { return true }
 
                 return table.constraints[row].contains { member in
-                    couldBothHold(member.resolved(in: table), in: table, assumingPairs: assumingPairs, askingPairs: asked)
+                    couldBothHold(member, in: table, assumingPairs: assumingPairs, askingPairs: asked, nameless: true)
                 }
             }
         }
@@ -2210,7 +2214,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // Two ranges are asked of the judge that decides them, the way
         // `accepts` asks it: what is provably apart is refused here.
         if case let .ranged(mine) = self, case let .ranged(theirs) = other {
-            return mine.lowered.couldBothHold(theirs.lowered, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs)
+            return mine.lowered.couldBothHold(theirs.lowered, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs, nameless: nameless)
                 && mine.overlaps(theirs)
         }
 
@@ -2218,21 +2222,21 @@ indirect enum LoweredType: Sendable, Equatable {
         // value could be both is a question about kinds.
         switch (unrefined, other.unrefined) {
         case let (.nullable(inner), theirs):
-            return inner.couldBothHold(theirs, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs)
+            return inner.couldBothHold(theirs, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs, nameless: nameless)
 
         case let (mine, .nullable(inner)):
-            return mine.couldBothHold(inner, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs)
+            return mine.couldBothHold(inner, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs, nameless: nameless)
 
         case let (_, .named(row)):
             guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
-            return couldBothHold(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], askingPairs: askingPairs)
+            return couldBothHold(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], askingPairs: askingPairs, nameless: nameless)
 
         // What both name has to be able to hold at once; what only one names
         // is data the other lets ride through.
         case let (.record(mine), .record(theirs)):
             return mine.named.allSatisfy { name, field in
-                theirs[name].map { given in field.couldBothHold(given, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs) } ?? true
+                theirs[name].map { given in field.couldBothHold(given, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs, nameless: nameless) } ?? true
             }
 
         // A dictionary and a record are one value at run time read two ways, so
@@ -2240,10 +2244,10 @@ indirect enum LoweredType: Sendable, Equatable {
         // and a map are not asked about their elements: an empty one is of
         // every element type there is.
         case let (.dictionary(entry), .record(held)):
-            return held.fields.allSatisfy { field in entry.couldBothHold(field, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs) }
+            return held.fields.allSatisfy { field in entry.couldBothHold(field, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs, nameless: nameless) }
 
         case let (.record(held), .dictionary(entry)):
-            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs) }
+            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assumingPairs: assumingPairs, askingPairs: askingPairs, nameless: nameless) }
 
         // Two decided kinds, which is where a value either is both or is
         // neither. Anything else this walk does not read into is the run's.
