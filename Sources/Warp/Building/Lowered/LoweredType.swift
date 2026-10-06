@@ -1603,12 +1603,20 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether settling here leaves every value already settled to `settled`
-    // as it is, refusing none, read along the cases `settling` takes. It
-    // answers no where it cannot tell, which keeps one more answer where a
-    // closure keeps answers and never changes a value. A pair met again is a
-    // type naming itself, and holds.
-    func settlesUnchanged(_ settled: LoweredType, in table: LoweredTypeTable) -> Bool {
+    // as it is, refusing none, read along the cases `settling` takes: yes,
+    // no, or nil where the walk cannot tell. Each caller picks what it makes
+    // of nil, since leaving out an answer is the careful side for one and
+    // keeping it is for another. A pair met again is a type naming itself,
+    // and holds.
+    func settlesUnchanged(_ settled: LoweredType, in table: LoweredTypeTable) -> Bool? {
         settlesUnchanged(settled, in: table, assumingPairs: [], namesAside: false)
+    }
+
+    // Whether a value settled here, settled to `through` and then here
+    // again, is the value it was: where `through` changes it at most by the
+    // record names this puts back, at whatever depth.
+    func settlesBack(through: LoweredType, in table: LoweredTypeTable) -> Bool {
+        through.settlesUnchanged(self, in: table, assumingPairs: [], namesAside: true) == true
     }
 
     // The same walk, where `namesAside` lets a declared record and a record
@@ -1620,7 +1628,7 @@ indirect enum LoweredType: Sendable, Equatable {
         in table: LoweredTypeTable,
         assumingPairs: [(LoweredType, LoweredType)],
         namesAside: Bool
-    ) -> Bool {
+    ) -> Bool? {
         if case .any = self { return true }
         if identical(to: settled, in: table) { return true }
 
@@ -1628,7 +1636,17 @@ indirect enum LoweredType: Sendable, Equatable {
 
         let assumed = assumingPairs + [(self, settled)]
 
+        func each(_ pairs: [(LoweredType, LoweredType)]) -> Bool? {
+            Self.all(pairs.map { mine, theirs in
+                mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside)
+            })
+        }
+
         switch (self, settled) {
+        // What settles nothing leaves every value as it came.
+        case (.projection, _):
+            return true
+
         // A name that stands for no record is what it stands for, on either
         // side. Settling to a record's name gives the value that name, which
         // only a value of that record already has, and `identical` asked.
@@ -1649,7 +1667,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.nullable(mine), _):
             return mine.settlesUnchanged(settled, in: table, assumingPairs: assumed, namesAside: namesAside)
 
-        // A value held to a range is a value of the kind under it.
+        // A value held to a range is a value of the kind under it. Which
+        // values two ranges hold is not read here.
+        case (.ranged, .ranged):
+            return nil
+
         case let (_, .ranged(theirs)):
             return settlesUnchanged(theirs.lowered, in: table, assumingPairs: assumed, namesAside: namesAside)
 
@@ -1664,23 +1686,25 @@ indirect enum LoweredType: Sendable, Equatable {
                   mine.layout.fields == theirs.layout.fields
             else { return false }
 
-            return zip(mine.fields, theirs.fields).allSatisfy { field, given in
-                field.settlesUnchanged(given, in: table, assumingPairs: assumed, namesAside: namesAside)
-            }
+            return each(Array(zip(mine.fields, theirs.fields)))
 
         // A record is laid out on the slot's own fields, so one already laid
         // out on the same fields stays as it is where every field does.
         case let (.record(mine), .record(theirs)):
-            return mine.layout == theirs.layout
-                && zip(mine.fields, theirs.fields).allSatisfy { field, given in
-                    field.settlesUnchanged(given, in: table, assumingPairs: assumed, namesAside: namesAside)
-                }
+            guard mine.layout == theirs.layout else { return false }
 
-        // A composition settles nothing: a value it takes stands as it came,
-        // so it leaves every value of a type it takes whole as it was. A
-        // type that proves nothing is not taken whole.
-        case (.composition, _):
-            return !settled.provesNothing && accepts(settled, in: table, rigid: true)
+            return each(Array(zip(mine.fields, theirs.fields)))
+
+        // A composition, and a type parameter the run reads by its bounds,
+        // settles nothing: a value it takes stands as it came, so it leaves
+        // every value of a type it takes whole as it was. A type that proves
+        // nothing is not taken whole.
+        case let (.composition(bounds), _), let (.parameter(_, bounds), _):
+            return !settled.provesNothing && LoweredType.composition(bounds).accepts(settled, in: table, rigid: true)
+
+        // What a membership or a type parameter holds is not read here.
+        case (_, .composition), (_, .parameter):
+            return nil
 
         // A closure settled into a procedure slot keeps one more answer
         // unless the slot's answer leaves the one it settled to before as it
@@ -1689,42 +1713,36 @@ indirect enum LoweredType: Sendable, Equatable {
             .procedure(myParameters, myAnswer, myConstness, myIsolation),
             .procedure(theirParameters, theirAnswer, theirConstness, theirIsolation)
         ):
-            guard myConstness == theirConstness, myIsolation == theirIsolation else { return false }
+            if myConstness == .const, theirConstness != .const { return false }
+            if myIsolation == .isolated, theirIsolation != .isolated { return false }
 
             switch (myParameters, theirParameters) {
             case (nil, nil):
                 break
 
-            case let (mine?, theirs?):
-                guard mine.count == theirs.count,
-                      zip(mine, theirs).allSatisfy({ one, other in one.identical(to: other, in: table) })
-                else { return false }
+            case let (mine?, theirs?) where mine.count == theirs.count:
+                guard zip(mine, theirs).allSatisfy({ one, other in one.identical(to: other, in: table) }) else { return nil }
 
             default:
-                return false
+                return nil
             }
 
-            switch (myAnswer, theirAnswer) {
-            case (nil, nil):
-                return true
+            // A slot that wrote no answer adds none.
+            guard let myAnswer else { return true }
 
-            case let (mine?, theirs?):
-                return mine.settlesUnchanged(theirs, in: table, assumingPairs: assumed, namesAside: namesAside)
-
-            default:
-                return false
-            }
+            return myAnswer.settlesUnchanged(theirAnswer ?? .any, in: table, assumingPairs: assumed, namesAside: namesAside)
 
         default:
             return false
         }
     }
 
-    // Whether a value settled here, settled to `through` and then here
-    // again, is the value it was: where `through` changes it at most by the
-    // record names this puts back, at whatever depth.
-    func settlesBack(through: LoweredType, in table: LoweredTypeTable) -> Bool {
-        through.settlesUnchanged(self, in: table, assumingPairs: [], namesAside: true)
+    // Yes where every part answers yes, no where any answers no, and nil
+    // where none answers no and one cannot tell.
+    private static func all(_ answers: [Bool?]) -> Bool? {
+        if answers.contains(false) { return false }
+
+        return answers.contains(nil) ? nil : true
     }
 
     // A value handed to a slot of this type: a null where the type admits

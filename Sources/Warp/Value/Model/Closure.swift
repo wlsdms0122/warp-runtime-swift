@@ -151,13 +151,13 @@ public struct Closure: Sendable {
 
     // What a call's answer still is once it is settled through every one of
     // `answerTypes` in turn: the last, and each before it that every later
-    // one leaves as it was. An answer a later one changed says nothing of
-    // the value any more.
+    // one leaves as it was, or may. An answer a later one changed says
+    // nothing of the value any more.
     func answersBorne(in table: LoweredTypeTable) -> [LoweredType] {
         let answers = answerTypes
 
         return answers.indices.compactMap { at in
-            answers[(at + 1)...].allSatisfy { later in later.settlesUnchanged(answers[at], in: table) } ? answers[at] : nil
+            answers[(at + 1)...].allSatisfy { later in later.settlesUnchanged(answers[at], in: table) != false } ? answers[at] : nil
         }
     }
 
@@ -193,7 +193,7 @@ public struct Closure: Sendable {
     func passing(_ returns: LoweredType, in table: LoweredTypeTable) -> Closure {
         let answers = answerTypes
 
-        if let last = answers.last, returns.settlesUnchanged(last, in: table) { return self }
+        if let last = answers.last, returns.settlesUnchanged(last, in: table) == true { return self }
 
         if answers.count >= 2,
            let last = slotAnswers.last,

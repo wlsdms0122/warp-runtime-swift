@@ -201,6 +201,23 @@ struct ClosurePassingTests {
         #expect(text.slotAnswers == [record, .string])
     }
 
+    @Test("an answer before one the walk cannot tell leaves as it was is still borne, and a slot judges it")
+    func anAnswerALaterOneCannotBeToldToChangeStaysBorne() {
+        // Given
+        let byte: LoweredType = .ranged(.whole(from: 0, to: .through(3)))
+        let wider: LoweredType = .ranged(.whole(from: 0, to: .through(7)))
+
+        // When
+        let closure = sut
+            .passing(byte, in: types.loweredTypes)
+            .passing(wider, in: types.loweredTypes)
+
+        // Then
+        #expect(wider.settlesUnchanged(byte, in: types.loweredTypes) == nil)
+        #expect(closure.slotAnswers == [byte, wider])
+        #expect(closure.answersBorne(in: types.loweredTypes) == [byte, wider])
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
