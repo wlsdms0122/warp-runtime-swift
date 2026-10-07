@@ -858,7 +858,11 @@ indirect enum LoweredType: Sendable, Equatable {
         // In the other direction a value of a composition is of some type
         // nothing here lists, so nothing is provable and it passes to be
         // judged where it arrives, unless `rigid`, which the last branch
-        // answers.
+        // answers. Null and a procedure are of no type that answers a
+        // contract, so a slot of either is provably no place for one.
+        case (.null, .composition), (.procedure, .composition):
+            return false
+
         case (_, .composition) where !rigid:
             return true
 

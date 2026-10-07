@@ -125,6 +125,35 @@ enum LiteralShape: Sendable {
         return holds(slot, self, rigid)
     }
 
+    // The literal as it reads once written where `place` is declared: each
+    // part as `LoweredType.written` reads it there, so a whole literal the
+    // place reads as a fraction is the fraction it names.
+    func written(into place: LoweredType, in table: LoweredTypeTable) -> LiteralShape {
+        if case let .nullable(inner) = place {
+            return written(into: inner, in: table)
+        }
+
+        switch self {
+        case let .part(reading):
+            return .part(place.written(reading, in: table))
+
+        case let .list(items):
+            guard let element = place.element(in: table) else { return self }
+
+            return .list(items.map { item in item.written(into: element, in: table) })
+
+        case let .record(fields):
+            return .record(
+                Dictionary(uniqueKeysWithValues: fields.map { name, field in
+                    (name, field.written(into: place.dotted(name, in: table) ?? .any, in: table))
+                })
+            )
+
+        case let .either(attempted, rescued):
+            return .either(attempted.written(into: place, in: table), rescued.written(into: place, in: table))
+        }
+    }
+
     // How a refusal names it: written as the literal is, a list in brackets
     // and a record in braces, with each part spelled as the type it reads as.
     // A list whose parts all read as one type is that type.

@@ -916,7 +916,11 @@ struct Evaluator: Sendable {
 
         // A call the link has not laid out reaches the row a claim standing
         // so far names, placed against it the way the link would place it.
+        // What it ran on is the claim, which the link still holds to the
+        // declarations behind it, so the pair is written down for the link.
         if dispatch.calls.isEmpty, let name = first.nominal, let row = witnesses[spelling]?[name] {
+            loweredTypes.unsettled?.require(folded: Claim(type: name, contract: dispatch.contract))
+
             let call = try CallOperation(
                 handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
                 to: linked[row],
@@ -929,10 +933,17 @@ struct Evaluator: Sendable {
             return (call, row, first)
         }
 
+        // Before the link, what answers is what a claim of a document this
+        // one stands on says, and a claim made anywhere else is not one a
+        // fold may lean on.
+        let because = dispatch.calls.isEmpty
+            ? ", and no document this one stands on says it answers '\(dispatch.contract)'"
+            : ", which answers no procedure of '\(dispatch.contract)'"
+
         throw ExecutionError(
             "'\(spelling)' is sent to"
-                + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)"),"
-                + " which answers no procedure of '\(dispatch.contract)'"
+                + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)")"
+                + because
         )
     }
 

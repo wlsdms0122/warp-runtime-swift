@@ -26,7 +26,7 @@ struct Folding {
 
     // The rows answering each contract's procedure, read off the claims
     // standing so far, for a call through a contract the link has not laid
-    // out.
+    // out: those of the declarations a fold is let run, and no other.
     private let witnesses: [Name: [Name: Int]]
 
     // MARK: - Initializer
@@ -37,6 +37,7 @@ struct Folding {
         origin: Int,
         in resolved: ResolvedTable,
         answering contractProcedures: [Name: LoweredContractProcedure],
+        through allowed: Set<Name>,
         loweredTypes: LoweredTypeTable
     ) {
         let names = constants.keys.sorted()
@@ -47,7 +48,9 @@ struct Folding {
         self.loweredTypes = loweredTypes
         self.resolved = resolved
         self.witnesses = contractProcedures.mapValues { asked in
-            asked.answering.compactMapValues { witness in resolved.rows[witness] }
+            asked.answering
+                .filter { _, witness in allowed.contains(witness) }
+                .compactMapValues { witness in resolved.rows[witness] }
         }
     }
 

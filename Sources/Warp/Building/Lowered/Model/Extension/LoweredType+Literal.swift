@@ -78,6 +78,46 @@ extension LoweredType {
         }
     }
 
+    // What a reading is once what it reads is written where this is
+    // declared: a whole literal standing where this declares a Double is the
+    // fraction it names, at whatever depth of a list or a record it stands,
+    // the way `literal` writes the value itself. Every other reading is what
+    // it was.
+    func written(_ reading: LoweredType, in table: LoweredTypeTable) -> LoweredType {
+        switch (self, reading) {
+        case (.double, .wholeLiteral), (.ranged(.fraction), .wholeLiteral):
+            return .double
+
+        case let (.named(row), _):
+            return table.loweredTypes[row].written(reading, in: table)
+
+        case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
+            return inner.written(reading, in: table)
+
+        case let (.array(element), .array(read)):
+            return .array(element.written(read, in: table))
+
+        case let (.dictionary(entry), .dictionary(read)):
+            return .dictionary(entry.written(read, in: table))
+
+        case let (.dictionary(entry), .record(read)) where read.layout.name == nil:
+            return .record(LoweredRecord(layout: read.layout, fields: read.fields.map { field in entry.written(field, in: table) }))
+
+        case let (.record(declared), .record(read)) where read.layout.name == nil:
+            return .record(
+                LoweredRecord(
+                    layout: read.layout,
+                    fields: read.named.map { name, field in
+                        declared[name].map { place in place.fieldUnwrapped.written(field, in: table) } ?? field
+                    }
+                )
+            )
+
+        default:
+            return reading
+        }
+    }
+
     // A block whose answer stands where this is declared.
     func literal(_ block: Block, in table: LoweredTypeTable) -> Block {
         Block(body: block.body, result: block.result.map { result in literal(result, in: table) })

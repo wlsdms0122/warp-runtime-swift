@@ -381,7 +381,10 @@ struct TypeChecker {
             ask: .probing
         )
 
-        return walked.flow.answered.map(\.reading).reduce(walked.reading) { joined, answered in joined.joined(answered) }
+        // Each way out is a place of its own, and none of them declares a
+        // fraction, so a whole literal one of them answers is the Int it is
+        // before the ways meet.
+        return walked.flow.answered.map(\.reading.bound).reduce(walked.reading.bound) { joined, answered in joined.joined(answered) }
     }
 
     // One answer, held to the `returns`. The refusal stands where the author
@@ -789,12 +792,16 @@ struct TypeChecker {
         // held to the bounds part by part, as one written into a slot
         // declaring them is: its join may answer them while a part does not.
         // Only what stands at such a parameter is asked here; `check` judges
-        // the rest against what filled it.
-        for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
+        // the rest against what filled it. Each part is asked as the call
+        // hands it on, a whole literal the filled slot reads as a fraction
+        // being that fraction.
+        for (position, written) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
             let slot = slots[position]
             let bounded = slot.type.boundedAlone
 
             guard bounded != .any else { continue }
+
+            let shape = written.written(into: slot.type.filling(substitution.readings), in: loweredTypes)
 
             guard shape.isHeld(by: bounded, inPlace: false, in: loweredTypes) else {
                 return .refusal(
@@ -837,7 +844,7 @@ struct TypeChecker {
             found.merge(slot.type.boundedParameters) { first, _ in first }
         }).sorted(by: { $0.key < $1.key }) where !bounds.isEmpty {
             guard let existential = substitution.everyReading(of: parameter).first(where: { reading in
-                guard case let .composition(read) = reading else { return false }
+                guard case let .composition(read) = reading.throughAliases(in: loweredTypes) else { return false }
 
                 return !read.isEmpty
             }) else {
@@ -2690,13 +2697,21 @@ struct TypeChecker {
 
             flow.going = flow.going?.indefinite()
 
+            // The two ways answer one value, so a whole literal one of them
+            // answers beside a fraction the other answers is the fraction it
+            // names, the way one written beside fractions in a list is.
+            let reading = attempted.reading.joined(rescued.reading)
+
             return Inspection(
                 rewritten: ask.rewrites
-                    ? .attempt(attempted.block, rescue: rescued.block)
+                    ? .attempt(
+                        reading.literal(attempted.block, in: context.loweredTypes),
+                        rescue: reading.literal(rescued.block, in: context.loweredTypes)
+                    )
                     : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
-                reading: attempted.reading.joined(rescued.reading),
+                reading: reading,
                 // The failure is bound in the rescue alone. The body reads
                 // the names around the attempt.
                 flow: flow,

@@ -322,8 +322,26 @@ public struct Builder: Sendable {
         var declarers = laid.declarers
         var built: [Compiled] = []
 
+        // What each document declares to the others and which of them it
+        // stands on, by the place it stands at. A document compiled already
+        // stands on the objects it says it was compiled against, and on every
+        // one beside it where it says nothing; one laid here stands on the
+        // ones declaring what it names.
+        let supplied = compiled.map(\.declares) + laying.map(\.supplies)
+        let standingOn = compiled.indices.map { origin -> Set<Int> in
+            guard let against = compiled[origin].dependencies.map(Set.init) else {
+                return Set(compiled.indices).subtracting([origin])
+            }
+
+            return Set(compiled.indices.filter { other in compiled[other].fingerprint.map(against.contains) == true })
+        } + laying.map { module in
+            Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: module.references) })
+        }
+
         for offset in laying.indices {
-            let object = try await Compiler().compile(
+            let witnesses = Self.witnesses(of: compiled.count + offset, standingOn: standingOn, supplied: supplied)
+
+            let object = try await Compiler(foldingThrough: witnesses).compile(
                 laying[offset],
                 at: compiled.count + offset,
                 declaring: holding[offset],
@@ -405,6 +423,28 @@ public struct Builder: Sendable {
     }
 
     // MARK: - Private
+    // The declarations a fold of the document at `origin` may run where it
+    // calls through a contract: those of every document it stands on, near
+    // or far, since a body it runs may run one of theirs, and its own.
+    private static func witnesses(of origin: Int, standingOn: [Set<Int>], supplied: [Set<Reference>]) -> Set<Name> {
+        var reached: Set<Int> = [origin]
+        var waiting = [origin]
+
+        while let next = waiting.popLast() {
+            for other in standingOn[next] where reached.insert(other).inserted {
+                waiting.append(other)
+            }
+        }
+
+        return Set(reached.flatMap { position in
+            supplied[position].compactMap { reference -> Name? in
+                guard case let .procedure(name) = reference else { return nil }
+
+                return name
+            }
+        })
+    }
+
     // Every object standing beside what it was compiled against. An object
     // says what it leaned on by fingerprint, and what it settled, a closure
     // spelled by a document's name and count among them, is true against

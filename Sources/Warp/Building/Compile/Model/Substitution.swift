@@ -117,12 +117,11 @@ struct Substitution: Sendable {
             return
         }
 
-        if already != both {
-            apart[parameter, default: []].append(already)
-        }
-
-        if given != both {
-            apart[parameter, default: []].append(given)
+        // What a reading reads as once the join writes it, so a whole literal
+        // the join reads as a fraction is held to the bounds as the fraction
+        // the call hands on.
+        for reading in [already, given] where both.written(reading, in: table) != both {
+            apart[parameter, default: []].append(both.written(reading, in: table))
         }
 
         readings[parameter] = both

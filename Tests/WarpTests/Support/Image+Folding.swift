@@ -17,6 +17,7 @@ extension Image {
             origin: 0,
             in: .relocated(linked, rows: rows, naming: naming),
             answering: [:],
+            through: [],
             loweredTypes: loweredTypes
         )
     }

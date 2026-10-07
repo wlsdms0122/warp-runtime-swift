@@ -502,14 +502,18 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // the name a claim writes and `Value.nominal` answers, each as the type
     // a claim about it stands for. A list and a map are named bare: every
     // list is a list whatever it holds, and a value does not say which
-    // elements a slot declared it to hold.
+    // elements a slot declared it to hold. So a claim about one is about
+    // every list, its element a type parameter nothing fills, which a
+    // declaration answering the claim takes whatever it is. The parameter is
+    // spelled with a dot, which no document's `some` writes, so it is no
+    // parameter a declaration names.
     public static let nominalTypes: [Name: TypeExpression] = [
         "Bool": .bool,
         "Int": .int,
         "Double": .double,
         "String": .string,
-        "Array": .array(.any),
-        "Dictionary": .dictionary(.any)
+        "Array": .array(.parameter(name: "Self.Element")),
+        "Dictionary": .dictionary(.parameter(name: "Self.Element"))
     ]
 
     // What one element of bytes is. The range `Standard` names `Standard.Byte`. Owned here

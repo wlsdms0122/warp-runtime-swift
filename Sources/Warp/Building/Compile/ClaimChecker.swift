@@ -409,8 +409,8 @@ struct ClaimChecker {
             where !taken.filling(substitution.readings).takes(handed, in: loweredTypes, rigid: true) {
             guard position > 0 else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                        + " asks, and takes \(given.parameters[0].declared.rendered) first. A contract's"
-                        + " procedure takes the type that answers it first"
+                        + " asks, and takes \(given.parameters[0].declared.rendered) first, where a call"
+                        + " through the contract hands it any value of '\(type)'"
             }
 
             return "is named for '\(type)' and the procedure '\(procedure)' that"
