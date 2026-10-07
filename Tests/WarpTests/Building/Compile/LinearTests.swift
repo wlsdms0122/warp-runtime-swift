@@ -629,25 +629,6 @@ struct LinearTests {
         }
     }
 
-    @Test("a cast does not carry one into a list either")
-    func aCastDoesNotCarryOneIntoAList() async throws {
-        // Given. A cast answers what it read, so the element is judged by that
-        // rather than by the cast's own shape
-        let sut = try holding(
-            body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open")))
-            ],
-            result: .array([.cast(reference("handle"), as: .record(["name": .string]), optional: false)])
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("carries 'handle' inside a list or a record")
-        }
-    }
-
     @Test("a name already given away is refused for that, not for the list it was written into")
     func aGoneNameInAListSaysWhyItIsGone() async throws {
         // Given. The advice "bind it to a name and hand it on from there" has

@@ -44,6 +44,29 @@ enum LiteralShape: Sendable {
         self = shape ?? .part(reading)
     }
 
+    // A list or a record written out as a value, which is a literal the way
+    // one written part by part is: each element and each field of a record
+    // with no name is a part of its own. Nil for a value of any other kind,
+    // which its reading says whole.
+    init?(literal value: Value, in table: LoweredTypeTable) {
+        switch value {
+        case let .array(elements):
+            self = .list(elements.map { element in LiteralShape(literal: element, in: table) ?? .part(LoweredType(literal: element, in: table)) })
+
+        case let .record(record) where record.name == nil:
+            self = .record(
+                Dictionary(
+                    zip(record.names, record.values).map { name, field in
+                        (name, LiteralShape(literal: field, in: table) ?? .part(LoweredType(literal: field, in: table)))
+                    }
+                ) { first, _ in first }
+            )
+
+        default:
+            return nil
+        }
+    }
+
     // MARK: - Public
     // Whether a slot takes it, part by part along `everyPart(along:)`. A
     // slot handed in place that names a type parameter takes what
@@ -109,8 +132,10 @@ enum LiteralShape: Sendable {
                 field.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
             }
 
+        // A record literal is written with exactly the fields the place
+        // declares; one of other fields is held whole, and refused there.
         case let .record(record) where !rigid:
-            guard case let .record(fields) = self else { break }
+            guard case let .record(fields) = self, Set(fields.keys) == Set(record.layout.fields) else { break }
 
             return record.named.allSatisfy { name, field in
                 fields[name].map { given in

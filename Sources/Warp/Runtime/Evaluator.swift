@@ -637,7 +637,7 @@ struct Evaluator: Sendable {
             at: trace.appending(linked.hop)
         )
 
-        return try closure.settling(answered, in: loweredTypes)
+        return answered
     }
 
     // A row answered with its arguments settled and nothing handed in place:
@@ -841,20 +841,11 @@ struct Evaluator: Sendable {
 
         guard let against = judging.against else { return answered }
 
-        // Judged against what the call reads, and settled to what a
-        // declaration wrote, where one did: a position naming a type
-        // parameter there stands as it came.
-        guard let settlesTo = judging.settlesTo else {
-            try against.admitting(answered, at: "answer", in: loweredTypes)
-
-            return answered
-        }
-
-        if settlesTo != against {
-            try against.admitting(answered, at: "answer", in: loweredTypes)
-        }
-
-        return try settlesTo.settling(answered, at: "answer", in: loweredTypes)
+        // Judged against what the call reads. An answer of the type it is
+        // read as comes out as it went in; one the callee read as `Any`
+        // crosses into that type here, as a cast from `Any` would, so a
+        // nameless record of a declared record's fields takes the name.
+        return try against.settling(answered, at: "answer", in: loweredTypes)
     }
 
     // What a call answers, once what it handed back in place is judged

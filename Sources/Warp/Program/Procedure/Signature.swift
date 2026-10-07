@@ -179,8 +179,9 @@ public struct Signature: Sendable, Equatable {
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused, and so is one it declares that
     // was not given. The door a host outside the build comes through, since
-    // the build resolves names itself. `subject` is what a refusal names the
-    // procedure as.
+    // the build resolves names itself, and so the one place a value is
+    // fitted to its type, a field the declaration never named left outside.
+    // `subject` is what a refusal names the procedure as.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
@@ -198,7 +199,12 @@ public struct Signature: Sendable, Equatable {
             )
         }
 
-        return try settle(slots.map { slot in given[slot.name] }, over: slots, as: subject, in: table)
+        return try settle(
+            slots.map { slot in given[slot.name].map { value in slot.type.fitted(value, in: table) } },
+            over: slots,
+            as: subject,
+            in: table
+        )
     }
 
     // Arguments handed by position, the way every call hands them: one for

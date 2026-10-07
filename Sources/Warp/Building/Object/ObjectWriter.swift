@@ -119,8 +119,7 @@ struct ObjectWriter {
                     }
 
                     return .array([.int(slot), try self.value(held)])
-                }),
-                .array(closure.slotAnswers.map(lowered))
+                })
             )
         }
     }
@@ -760,8 +759,7 @@ struct ObjectWriter {
                 Tag.checked,
                 try self.operation(read),
                 ObjectWriter.maybe(judging.against, lowered),
-                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) }),
-                ObjectWriter.maybe(judging.settlesTo, lowered)
+                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
             )
 
         case let .block(body):

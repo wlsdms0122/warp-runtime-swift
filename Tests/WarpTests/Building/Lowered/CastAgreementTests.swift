@@ -136,11 +136,23 @@ struct CastAgreementTests {
         // Given. "could some value be both" names no side, so an answer that
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
-        // side has one, which is exactly where an asymmetry would hide.
+        // side has one, which is exactly where an asymmetry would hide. The
+        // one side it tells apart is a declared record against a nameless
+        // record or a map: a cast writes the name onto a nameless value and
+        // takes none off.
+        let table = types.loweredTypes
+
+        func nominalBesideNameless(_ one: TypeExpression, _ other: TypeExpression) -> Bool {
+            let one = one.lowered(in: table)
+            let other = other.lowered(in: table)
+
+            return (table.record(of: one) != nil && other.isNamelessStructure(in: table))
+                || (table.record(of: other) != nil && one.isNamelessStructure(in: table))
+        }
 
         // When / Then
         for mine in typeExpressions {
-            for theirs in typeExpressions {
+            for theirs in typeExpressions where !nominalBesideNameless(mine, theirs) {
                 #expect(
                     couldBothHold(mine, theirs)
                         == couldBothHold(theirs, mine),

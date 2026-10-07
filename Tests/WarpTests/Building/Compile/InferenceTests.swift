@@ -830,12 +830,10 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast may name a type sharing no field with the reading")
-    func aCastOntoADisjointRecordStands() async throws {
-        // Given. Two records naming no field in common accept each other in
-        // neither direction and are still both satisfied by one value: a record
-        // says what must be there, not all there is. This is the spelling the
-        // specification gives for reading what a failure carries
+    @Test("a cast to a record of other fields is refused, since a record is exactly its fields")
+    func aCastOntoADisjointRecordIsRefused() async throws {
+        // Given. A record type says all there is, so no value is a record of
+        // these fields and of those at once
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -859,7 +857,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("no value is both")
+        }
     }
 
     @Test("a cast between two types that name themselves does not chase them forever")

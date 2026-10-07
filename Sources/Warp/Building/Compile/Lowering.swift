@@ -495,10 +495,6 @@ struct Lowering {
             _ = stand(answer)
         }
 
-        for (_, value) in variables {
-            _ = value.rewritten(types: stand)
-        }
-
         let numbering = LoweredTypeNumbering(types: Set(types.map { row in loweredTypes.labels[row] }))
 
         // Which number each row of this link stands at, so the walk that
@@ -524,11 +520,7 @@ struct Lowering {
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
-        let starting = try variables.map { name, value in
-            (name: name, value: try value.rewritten(types: { type in try renumbered(type, in: place, of: name) }))
-        }
-
-        return (numbered, numbering, read, starting)
+        return (numbered, numbering, read, variables)
     }
 
     // MARK: - Private

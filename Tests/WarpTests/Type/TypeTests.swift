@@ -48,21 +48,21 @@ struct TypeTests {
         #expect(error?.message.contains("names[1]") == true)
     }
 
-    @Test("a record settles to the fields declared, and a value carrying more loses them")
+    @Test("a record holds exactly the fields declared, one short or one over refusing")
     func recordDeclaresFields() throws {
-        // Given. What arrives is data from outside, and a payload gains fields
+        // Given. A record type is its fields, and a place holds a value as it
+        // is rather than cutting it to fit
         let sut = TypeExpression.record(["id": .string, "done": .bool])
 
         // When
-        let settled = try sut.settling(
-            .dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
-            at: "task"
-        )
+        let settled = try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true)]), at: "task")
 
         // Then
-        #expect(settled["extra"] == nil)
         #expect(settled["id"] == .string("a"))
 
+        #expect(throws: ArgumentError.self) {
+            try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]), at: "task")
+        }
         #expect(throws: ArgumentError.self) {
             try sut.settling(.dictionary(["id": .string("a")]), at: "task")
         }
@@ -343,17 +343,21 @@ struct TypeTests {
         }
     }
 
-    @Test("a dictionary slot takes a record and answers one whose names are data")
+    @Test("a dictionary slot takes a nameless record as the map it is, and no declared record")
     func aRecordSettlesIntoADictionaryAsData() throws {
-        // Given. A name is proved where a slot declares one, and a `dictionary`
-        // slot declares none
+        // Given. A nameless record holds its names as data, and a declared
+        // record is a value of its name, which nothing takes off
+        let nameless = Value.record(Record(name: nil, ["balance": .int(1)]))
         let named = Value.record(Record(name: "Bank.Account", ["balance": .int(1)]))
 
         // When
-        let settled = try TypeExpression.dictionary(.any).settling(named, at: "held")
+        let settled = try TypeExpression.dictionary(.any).settling(nameless, at: "held")
 
         // Then
         #expect(settled == .dictionary(["balance": .int(1)]))
+        #expect(throws: ArgumentError.self) {
+            try TypeExpression.dictionary(.any).settling(named, at: "held")
+        }
     }
 
     // MARK: - Public

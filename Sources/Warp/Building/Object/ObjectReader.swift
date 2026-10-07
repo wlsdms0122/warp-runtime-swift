@@ -224,9 +224,7 @@ struct ObjectReader {
                 return read
             }
 
-            let slotAnswers = try cursor.field().list(lowered)
-
-            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured, slotAnswers: slotAnswers))
+            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
 
         case nil: throw ObjectRefused("'value' answers in a way this reads none of")
         }
@@ -989,9 +987,7 @@ struct ObjectReader {
                 throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
             }
 
-            let settlesTo = try cursor.field().maybe(lowered)
-
-            guard let judging = CallJudgement(against: against, handedBack: handedBack, settlesTo: settlesTo) else {
+            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
                 throw ObjectRefused("a judgement where a call stands judges nothing")
             }
 

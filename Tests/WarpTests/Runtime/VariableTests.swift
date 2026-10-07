@@ -79,7 +79,7 @@ struct VariableTests {
             of: Body(sut.statements + [
                 Statement(binding: .constant("read"), expression: .cast(
                         reference("both"),
-                        as: .record(["left": .int]),
+                        as: .record(["left": .int, "right": .int]),
                         optional: false
                     )
                 )

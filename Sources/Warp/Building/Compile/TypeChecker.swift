@@ -1585,7 +1585,11 @@ struct TypeChecker {
     ) async throws -> Inspection {
         switch expression {
         case let .literal(value):
-            return Inspection(rewritten: expression, reading: LoweredType(literal: value, in: context.loweredTypes))
+            return Inspection(
+                rewritten: expression,
+                reading: LoweredType(literal: value, in: context.loweredTypes),
+                literalShape: LiteralShape(literal: value, in: context.loweredTypes)
+            )
 
         // Nothing comes back from here, so there is no value to have a type.
         // `Never` fits wherever it is written, and what evaluating the carried
@@ -1785,7 +1789,15 @@ struct TypeChecker {
                 ? LoweredType.nullable(claim)
                 : claim
 
-            if !claim.couldBothHold(reading: read, in: context.loweredTypes) {
+            // A list or a record written as a literal is written into the
+            // type the cast names, the way a literal written into any place
+            // is, so it could be one exactly where that place holds it; any
+            // other reading could be one where some value is both.
+            let couldBe = inner.literalShape.map { shape in
+                shape.isHeld(by: claim, inPlace: false, in: context.loweredTypes)
+            } ?? claim.couldBothHold(reading: read, in: context.loweredTypes)
+
+            if !couldBe {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
@@ -1884,7 +1896,7 @@ struct TypeChecker {
                 judgements: judgements,
                 reading: .record(fields),
                 flow: flowed,
-                literalShape: shapes.isEmpty ? nil : .record(fields.mapValues(LiteralShape.part).merging(shapes) { _, shape in shape })
+                literalShape: .record(fields.mapValues(LiteralShape.part).merging(shapes) { _, shape in shape })
             )
 
         // A closure literal carries the signature it declared, and running one
@@ -2217,8 +2229,7 @@ struct TypeChecker {
                     inPlace: handed,
                     judging: CallJudgement(
                         against: judgedAgainst(answers, answeredBy: nil),
-                        handedBack: handedBack(at: handed, of: callee),
-                        settlesTo: answers
+                        handedBack: handedBack(at: handed, of: callee)
                     )
                 ),
                 at: place
@@ -2396,12 +2407,9 @@ struct TypeChecker {
                 in: context.loweredTypes
             )
 
-            // Only a contract's answer is a declaration the callee did not
-            // settle to.
             if let judging = CallJudgement(
                 against: judgedAgainst(reading, sending: call.selector, given: context),
-                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context),
-                settlesTo: context.contractProcedures[call.selector]?.answers
+                handedBack: handedBack(over: slots, filling: filled, sending: call.selector, given: context)
             ) {
                 judgements.record(.call(judging), at: place)
             }

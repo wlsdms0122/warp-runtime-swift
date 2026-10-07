@@ -198,7 +198,7 @@ struct VariableNotationTests {
                 ]],
                 [
                     "let": "read",
-                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "Int"]]]]
+                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "Int", "right": "Int"]]]]
                 ]
             ],
             "result": ["record": ["result": ["ref": "read.left"]]]
