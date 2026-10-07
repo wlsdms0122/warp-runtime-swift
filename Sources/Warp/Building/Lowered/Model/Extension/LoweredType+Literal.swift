@@ -13,29 +13,29 @@ extension LoweredType {
     // names, at whatever depth of a list or a record it stands. Everything
     // else is the value as written, and whether it fits is the judge's to
     // say.
-    func literal(_ value: Value, in table: LoweredTypeTable) -> Value {
+    func written(_ value: Value, in table: LoweredTypeTable) -> Value {
         switch (self, value) {
         case let (.double, .int(whole)), let (.ranged(.fraction), .int(whole)):
             return .double(Double(whole))
 
         case let (.named(row), _):
-            return table.loweredTypes[row].literal(value, in: table)
+            return table.loweredTypes[row].written(value, in: table)
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
-            return inner.literal(value, in: table)
+            return inner.written(value, in: table)
 
         case let (.array(element), .array(items)):
-            return .array(items.map { item in element.literal(item, in: table) })
+            return .array(items.map { item in element.written(item, in: table) })
 
         case let (.dictionary(entry), .dictionary(entries)):
-            return .dictionary(entries.mapValues { _, held in entry.literal(held, in: table) })
+            return .dictionary(entries.mapValues { _, held in entry.written(held, in: table) })
 
         case let (.dictionary(entry), .record(record)) where record.name == nil:
-            return .record(record.mapValues { _, held in entry.literal(held, in: table) })
+            return .record(record.mapValues { _, held in entry.written(held, in: table) })
 
         case let (.record(declared), .record(record)) where record.name == nil:
             return .record(record.mapValues { name, held in
-                declared[name].map { field in field.fieldUnwrapped.literal(held, in: table) } ?? held
+                declared[name].map { field in field.fieldUnwrapped.written(held, in: table) } ?? held
             })
 
         default:
@@ -46,32 +46,32 @@ extension LoweredType {
     // The same for an expression written into a place of this type: the
     // literals in it, at the depths a list, a record and the answer of a
     // block or an attempt hand on.
-    func literal(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
+    func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
         if case let .nullable(inner) = self {
-            return inner.literal(expression, in: table)
+            return inner.written(expression, in: table)
         }
 
         switch expression {
         case let .literal(value):
-            return .literal(literal(value, in: table))
+            return .literal(written(value, in: table))
 
         case let .array(items):
             guard let element = element(in: table) else { return expression }
 
-            return .array(items.map { item in element.literal(item, in: table) })
+            return .array(items.map { item in element.written(item, in: table) })
 
         case let .record(fields):
             return .record(
                 Dictionary(uniqueKeysWithValues: fields.map { name, field in
-                    (name, (dotted(name, in: table) ?? .any).literal(field, in: table))
+                    (name, (dotted(name, in: table) ?? .any).written(field, in: table))
                 })
             )
 
         case let .block(block):
-            return .block(literal(block, in: table))
+            return .block(written(block, in: table))
 
         case let .attempt(block, rescue):
-            return .attempt(literal(block, in: table), rescue: literal(rescue, in: table))
+            return .attempt(written(block, in: table), rescue: written(rescue, in: table))
 
         default:
             return expression
@@ -81,7 +81,7 @@ extension LoweredType {
     // What a reading is once what it reads is written where this is
     // declared: a whole literal standing where this declares a Double is the
     // fraction it names, at whatever depth of a list or a record it stands,
-    // the way `literal` writes the value itself. Every other reading is what
+    // the way `written` writes the value itself. Every other reading is what
     // it was.
     func written(_ reading: LoweredType, in table: LoweredTypeTable) -> LoweredType {
         switch (self, reading) {
@@ -119,7 +119,7 @@ extension LoweredType {
     }
 
     // A block whose answer stands where this is declared.
-    func literal(_ block: Block, in table: LoweredTypeTable) -> Block {
-        Block(body: block.body, result: block.result.map { result in literal(result, in: table) })
+    func written(_ block: Block, in table: LoweredTypeTable) -> Block {
+        Block(body: block.body, result: block.result.map { result in written(result, in: table) })
     }
 }

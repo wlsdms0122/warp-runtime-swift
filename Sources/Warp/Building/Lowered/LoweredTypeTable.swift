@@ -7,14 +7,14 @@
 
 import Foundation
 
-// The declared types as the run reads them: by row. A
-// declared name survives into the run as a row rather than being expanded,
-// so a self-naming type is a type and not a regress, and a row is read
-// by number. The spellings ride along for a refusal and for a record's
-// name, and the one lookup by spelling left is a record that arrived under
-// an alias, which is resolved once and then carries the canonical spelling.
-// A class, so a judgment that recurses passes one reference down rather than
-// a copy of every array the table holds.
+// The declared types as the run reads them: by row. A declared name survives
+// into the run as a row rather than being expanded, so a self-naming type is
+// a type and not a regress, and a row is read by number. The spellings ride
+// along for a refusal and for a record's name, and the one lookup by spelling
+// left is a record that arrived under an alias, which is resolved once and
+// then carries the canonical spelling. A class, so a judgment that recurses
+// passes one reference down rather than a copy of every array the table
+// holds.
 final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
     // type alone settles is settled here; a named type settles nothing,
@@ -52,10 +52,10 @@ final class LoweredTypeTable: Sendable {
     let cycling: [Int]
 
     // Which types satisfy each declared contract, by the contract's own
-    // spelling. A contract's members are not a type the table lowers: what
-    // puts a type in one is a document's claim, held to the declarations that
-    // answer the procedures, which the link works out rather than the type
-    // language.
+    // spelling. Which types those are is no type the table lowers: what puts
+    // a type under a contract is a document's claim, held to the declarations
+    // that answer the procedures, which the link works out rather than the
+    // type language.
     //
     // Every declared contract has an entry, so a name with none is a name no
     // document declared as a contract at all.
@@ -114,14 +114,14 @@ final class LoweredTypeTable: Sendable {
         rows[name]
     }
 
-    // Whether the type a value that arrived is an instance of answers every
-    // procedure a contract asks. Nil where nothing declares the contract:
-    // what an undeclared name means is the asking surface's.
+    // Whether the type of a value that arrived answers every procedure a
+    // contract asks. Nil where nothing declares the contract: what an
+    // undeclared name means is for whoever asked to say.
     //
     // For a value already in hand and nothing else: a reading before the run
     // is not a name yet.
     func settles(contract name: Name, arrived type: Name?) -> Bool? {
-        guard let members = satisfying[name] else { return nil }
+        guard let claimed = satisfying[name] else { return nil }
 
         // A value that is an instance of no type a claim names answers no
         // contract, and no claim anywhere changes that, so a partial table
@@ -129,7 +129,7 @@ final class LoweredTypeTable: Sendable {
         guard let type else { return false }
         guard settled else { return nil }
 
-        return members.contains(type)
+        return claimed.contains(type)
     }
 
     // Whether a name is a declared contract, which is the one thing a bound
@@ -166,11 +166,10 @@ final class LoweredTypeTable: Sendable {
 
     // The declarations as the run reads them. A link says which order its rows
     // stand in, so a document's types take a run of rows the way its
-    // declarations do; where nothing says, the declared
-    // spellings order them.
+    // declarations do; where nothing says, the declared spellings order them.
     //
-    // Both spaces read the order from the same place. A run that stands where
-    // its document does is a run a later document cannot move, which is what
+    // A run that stands where its document does is a run a later document
+    // cannot move, which is what
     // lets a document already lowered keep the numbers it was lowered with.
     // Either way a row is a row of one table and nothing a link concludes
     // reads one to decide what to say. A name that names itself through a
@@ -303,8 +302,8 @@ final class LoweredTypeTable: Sendable {
         case .any, .projection, .undeclared, .never:
             return .settled(true)
 
-        // A contract is answered by a type, and null wears none, so what may
-        // be null answers no contract, a name for such a type included,
+        // A contract is answered by a type, and null is an instance of none,
+        // so what may be null answers no contract, a name for such a type included,
         // unless the slot takes null as well: then null was taken above and
         // the rest answers.
         case _ where !orNull && reading.declaresNull(in: self):

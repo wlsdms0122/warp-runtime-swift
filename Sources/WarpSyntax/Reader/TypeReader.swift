@@ -75,8 +75,8 @@ public struct TypeReader: Decodable {
         // MARK: - Property
         var spelling: String {
             switch self {
-            case .array: "Array"
-            case .dictionary: "Dictionary"
+            case .array: TypeSpelling.array.spelling
+            case .dictionary: TypeSpelling.dictionary.spelling
             }
         }
 
@@ -249,7 +249,7 @@ public struct TypeReader: Decodable {
 
             // `Self` is the type answering a contract, read as such in that
             // contract's procedures, so no type parameter takes its name.
-            guard bare != "Self" else {
+            guard bare != TypeSpelling.selfType.spelling else {
                 throw TypeFormError(
                     "type '\(text)' names no type parameter. `Self` is the type answering a contract,"
                         + " written bare in that contract's procedures"
@@ -265,7 +265,7 @@ public struct TypeReader: Decodable {
         // condition on a number, and no other kind is one. Which kind is
         // written out, because a bound is a value of the kind it bounds and the
         // two read their spellings differently.
-        for kind in ["Int", "Double"] where text.hasPrefix("\(kind)(") && text.hasSuffix(")") {
+        for kind in [TypeSpelling.int.spelling, TypeSpelling.double.spelling] where text.hasPrefix("\(kind)(") && text.hasSuffix(")") {
             let inner = String(text.dropFirst("\(kind)(".count).dropLast())
 
             // `..<` first: `...` is inside neither spelling of the other, but
@@ -298,7 +298,7 @@ public struct TypeReader: Decodable {
                 )
             }
 
-            return kind == "Int"
+            return kind == TypeSpelling.int.spelling
                 ? .ranged(.whole(
                     from: try whole(written.lower, of: text),
                     to: edge(try whole(written.upper, of: text), excluding: open != nil)

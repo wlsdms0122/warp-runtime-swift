@@ -560,8 +560,8 @@ struct ObjectWriter {
         case .bool:
             return tagged(Tag.bool)
 
-        // What a literal reads as is an Int once it is bound, and only a
-        // bound reading reaches an object.
+        // What a literal reads as is an Int once a name holds it, and only
+        // a reading as a name holds it reaches an object.
         case .int, .wholeLiteral:
             return tagged(Tag.int)
 

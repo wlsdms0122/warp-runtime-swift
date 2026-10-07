@@ -214,9 +214,9 @@ struct ClaimChecker {
 
         // A type the language names stands for itself, and one a document
         // declares for the record behind it.
-        let nominal = TypeExpression.nominalTypes[type]
+        let named = TypeExpression.nominalTypes[type]
 
-        guard nominal != nil || types[type] != nil else {
+        guard named != nil || types[type] != nil else {
             let reason = "'\(type)' is not a type this link declares, and only a"
                 + " type answers a contract"
 
@@ -243,7 +243,7 @@ struct ClaimChecker {
         // A value of a declared type is an instance of the record it is and of
         // no other name, so a claim about a declared name that is not itself
         // a record, an alias included, is about no type a value is.
-        if nominal == nil {
+        if named == nil {
             guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
                 throw BuildError(
                     "'\(type)' is not itself a record, and no value is an instance of it under that name."
@@ -253,7 +253,7 @@ struct ClaimChecker {
             }
         }
 
-        let claimed = nominal ?? .named(type)
+        let claimed = named ?? .named(type)
 
         // A value written `linear` is followed by the name that holds it, and
         // a contract standing where a type is written holds a value under no
@@ -297,10 +297,10 @@ struct ClaimChecker {
             // and this sentence stands where the pair was leaned on.
             if let reason = answers(
                 wanted.signature,
-                as: witness.held.signature,
+                by: witness.held.signature,
                 reading: witness.held.facts?.answer,
                 answering: type,
-                as: claimed,
+                claimed: claimed,
                 of: contract,
                 procedure: procedure,
                 in: table
@@ -362,10 +362,10 @@ struct ClaimChecker {
     // reading yet, and the link holds it when every row has one.
     private func answers(
         _ asked: Signature,
-        as given: Signature,
+        by given: Signature,
         reading read: LoweredType?,
         answering type: Name,
-        as claimed: TypeExpression,
+        claimed: TypeExpression,
         of contract: Name,
         procedure: Name,
         in table: TypeTable

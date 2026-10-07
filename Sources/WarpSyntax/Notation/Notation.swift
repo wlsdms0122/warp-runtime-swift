@@ -25,10 +25,10 @@ import Warp
 // or not. A notation that offers none owes no procedures for spellings it never
 // spends.
 public struct Notation: Sendable {
-    // Where a declared name stands: the types and contracts a type
-    // spelling, a bound or a claim names, or the
-    // procedures a call names. A text may declare one name in both, and the
-    // reader that asks says which it is reading.
+    // Where a declared name stands: the types and contracts a type spelling, a
+    // bound or a claim names, or the procedures a call names. A text may
+    // declare one name in both, and the reader that asks says which it is
+    // reading.
     public enum Space: Sendable {
         case type
         case procedure

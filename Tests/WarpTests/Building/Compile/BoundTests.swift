@@ -50,7 +50,7 @@ struct BoundTests {
     @Test("arithmetic on two strings refuses at the build")
     func arithmeticOnTwoStringsRefusesAtTheBuild() async throws {
         // Given. The two sides agree, so the one type parameter reads one
-        // thing. Agreement is not admission: no claim puts text under `Numeric`.
+        // thing. Agreement is not answering: no claim puts text under `Numeric`.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -888,8 +888,8 @@ struct BoundTests {
 
     // MARK: - Public
     // MARK: - Private
-    // Contracts asking nothing, which a test bounds by where what answers
-    // them is what the claims say and nothing else.
+    // Contracts asking no procedures, so what answers one is what the
+    // claims say and nothing else.
     private static func markers(_ names: Name...) -> [Name: [Name: Signature]] {
         Dictionary(uniqueKeysWithValues: names.map { name in (name, [Name: Signature]()) })
     }

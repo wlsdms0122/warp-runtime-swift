@@ -91,7 +91,7 @@ struct EnumTests {
         }
     }
 
-    @Test("enum membership is the number's worth, not its bit pattern")
+    @Test("an enum candidate meets a number by its worth, not its bit pattern")
     func anEnumMeetsANumberByWorth() async throws {
         // Given. The two zeros are one worth in the language's own order, so a
         // list that writes one admits the other

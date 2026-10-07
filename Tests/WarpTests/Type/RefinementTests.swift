@@ -184,7 +184,8 @@ struct RefinementTests {
     func wholeRangesMeetWithoutWidening() {
         // Given. Two ranges sharing exactly one number, chosen where a fraction
         // cannot hold it: 9007199254740997 and 9007199254740996 are one
-        // fraction, so widening loses the gap between them.
+        // fraction, so comparing them as fractions would lose the gap between
+        // them.
         let mine = TypeExpression.Refinement.whole(to: .upTo(9007199254740997))
         let theirs = TypeExpression.Refinement.whole(from: 9007199254740996)
 

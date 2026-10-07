@@ -485,17 +485,17 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // declares stands beside these, and a reader answers one of these before
     // it looks for a declaration.
     public static let keywords: [Name: TypeExpression] = [
-        "Any": .any,
+        TypeSpelling.any: .any,
         // A declaration a call never comes back from. Written out loud because
         // a procedure that always refuses is a procedure an author may declare.
-        "Never": .never,
-        "Null": .null,
-        "Bool": .bool,
-        "Int": .int,
-        "Double": .double,
-        "String": .string,
-        "Procedure": .procedure(nil),
-        "Self": .selfType
+        TypeSpelling.never: .never,
+        TypeSpelling.null: .null,
+        TypeSpelling.bool: .bool,
+        TypeSpelling.int: .int,
+        TypeSpelling.double: .double,
+        TypeSpelling.string: .string,
+        TypeSpelling.procedure: .procedure(nil),
+        TypeSpelling.selfType: .selfType
     ]
 
     // The types the language names that a value is an instance of, under
@@ -508,12 +508,12 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // spelled with a dot, which no document's `some` writes, so it is no
     // parameter a declaration names.
     public static let nominalTypes: [Name: TypeExpression] = [
-        "Bool": .bool,
-        "Int": .int,
-        "Double": .double,
-        "String": .string,
-        "Array": .array(.parameter(name: "Self.Element")),
-        "Dictionary": .dictionary(.parameter(name: "Self.Element"))
+        TypeSpelling.bool: .bool,
+        TypeSpelling.int: .int,
+        TypeSpelling.double: .double,
+        TypeSpelling.string: .string,
+        TypeSpelling.array: .array(.parameter(name: "Self.Element")),
+        TypeSpelling.dictionary: .dictionary(.parameter(name: "Self.Element"))
     ]
 
     // What one element of bytes is. The range `Standard` names `Standard.Byte`. Owned here
@@ -530,25 +530,25 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     public var rendered: String {
         switch self {
         case .any:
-            return "Any"
+            return TypeSpelling.any.spelling
 
         case .never:
-            return "Never"
+            return TypeSpelling.never.spelling
 
         case .null:
-            return "Null"
+            return TypeSpelling.null.spelling
 
         case .bool:
-            return "Bool"
+            return TypeSpelling.bool.spelling
 
         case .int:
-            return "Int"
+            return TypeSpelling.int.spelling
 
         case .double:
-            return "Double"
+            return TypeSpelling.double.spelling
 
         case .string:
-            return "String"
+            return TypeSpelling.string.spelling
 
         case let .ranged(refinement):
             // The exact spelling: what is rendered here is written into
@@ -569,7 +569,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return names.map(\.spelling).joined(separator: " & ")
 
         case .selfType:
-            return "Self"
+            return TypeSpelling.selfType.spelling
 
         // Spelled as what it is. The type reached by that path. No document
         // writes this, so the spelling answers to the message alone: an author
@@ -596,7 +596,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             let spelling = [
                 constness == .const ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
-                "Procedure"
+                TypeSpelling.procedure.spelling
             ]
             .compactMap { part in part }
             .joined(separator: " ")
@@ -957,10 +957,15 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // hide behind. The walk follows names and nothing else, and a name it is
     // already walking through is one that comes back on itself, which stands
     // for no type and so for no value handed on.
-    //
+    func handedOnce(in table: TypeTable) -> Bool {
+        handedOnce(in: table, assuming: [])
+    }
+
+    // MARK: - Private
+    // The same question, carrying the names already being walked through.
     // No `default`: a type nobody thought about must be a compile error here
     // rather than an answer of no.
-    func handedOnce(in table: TypeTable, assuming: Set<Name> = []) -> Bool {
+    private func handedOnce(in table: TypeTable, assuming: Set<Name>) -> Bool {
         switch self {
         case .linear:
             return true
@@ -995,7 +1000,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // MARK: - Private
     // A name already being walked through stands as itself. A type may name
     // itself (`Tree` holding `Array<Tree>` is a declared type) so a walk that
     // expanded every name at every depth would chase one forever. The link

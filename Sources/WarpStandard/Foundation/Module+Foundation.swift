@@ -29,7 +29,7 @@ public extension Module {
                     // What arithmetic is asked of: two of one kind, answered in
                     // that kind, and a quotient that is a fraction whatever the
                     // kind.
-                    "Standard.Numeric": [
+                    Grounds.numeric: [
                         "plus": .operation(answering: .selfType),
                         "minus": .operation(answering: .selfType),
                         "times": .operation(answering: .selfType),
@@ -37,11 +37,11 @@ public extension Module {
                         "dividedBy": .operation(answering: .double)
                     ],
                     // What orders two of one kind.
-                    "Standard.Comparable": [
+                    Grounds.comparable: [
                         "lessThan": .operation(answering: .bool)
                     ],
                     // What has a count.
-                    "Standard.Collection": [
+                    Grounds.collection: [
                         "count": ContractProcedure(
                             signature: Signature(parameters: [Parameter(name: "collection", type: .selfType)], returns: .int),
                             constness: .const,
@@ -49,73 +49,109 @@ public extension Module {
                         )
                     ]
                 ],
-                claims: [
-                    "Array": ["Standard.Collection"],
-                    "Dictionary": ["Standard.Collection"],
-                    "Double": ["Standard.Comparable", "Standard.Numeric"],
-                    "Int": ["Standard.Comparable", "Standard.Numeric"],
-                    "String": ["Standard.Collection", "Standard.Comparable"]
-                ],
-                procedures: arithmetic(of: "Int", as: .int)
-                    .merging(arithmetic(of: "Double", as: .double)) { first, _ in first }
-                    .merging(ordering(of: ["Int": .int, "Double": .double, "String": .string])) { first, _ in first }
-                    .merging(counting(of: ["Array": .array(.any), "Dictionary": .dictionary(.any), "String": .string])) { first, _ in first }
+                claims: witnesses.reduce(into: [Name: Set<Name>]()) { claims, witness in
+                    claims[witness.type, default: []].insert(witness.contract)
+                },
+                procedures: Dictionary(uniqueKeysWithValues: witnesses.map(\.declaration))
             ),
             builtin: true
         )
     ]
 
+    // One declaration answering a contract's procedure for a type the
+    // language names, under the spelling a claim holds it to: the type's
+    // name and the procedure's, with a dot between them.
+    private struct Witness {
+        // MARK: - Property
+        let type: Name
+        let contract: Name
+        let declaration: (name: Name, procedure: Procedure)
+
+        // MARK: - Initializer
+        init(_ type: Name, answering contract: Name, _ procedure: String, by declaring: (String) -> Procedure) {
+            let spelling = "\(type.spelling).\(procedure)"
+
+            self.type = type
+            self.contract = contract
+            self.declaration = (Name(normal: spelling), declaring(spelling))
+        }
+
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // The contracts this module declares, by the names a claim writes.
+    private enum Grounds {
+        static let numeric: Name = "Standard.Numeric"
+        static let comparable: Name = "Standard.Comparable"
+        static let collection: Name = "Standard.Collection"
+    }
+
+    // Every declaration answering a contract here: arithmetic for the two
+    // numbers, an ordering for them and for text, and a count for a list, a
+    // map and text. The claims are read off the same list, so a claim and
+    // what backs it are one fact.
+    private static let witnesses: [Witness] =
+        [(TypeSpelling.int, TypeExpression.int), (TypeSpelling.double, .double)].flatMap { type, kind in
+            arithmetic(of: type, as: kind)
+        }
+        + [(TypeSpelling.int, TypeExpression.int), (TypeSpelling.double, .double), (TypeSpelling.string, .string)].map { type, kind in
+            ordering(of: type, as: kind)
+        }
+        + [
+            (TypeSpelling.array, TypeExpression.array(.any)),
+            (TypeSpelling.dictionary, .dictionary(.any)),
+            (TypeSpelling.string, .string)
+        ].map { type, kind in
+            counting(of: type, as: kind)
+        }
+
     // What `Standard.Numeric` asks, answered for one kind of number: two of
     // the kind, answering the kind, and a quotient answering a fraction.
-    private static func arithmetic(of name: String, as kind: TypeExpression) -> [Name: Procedure] {
+    private static func arithmetic(of type: Name, as kind: TypeExpression) -> [Witness] {
         [
-            Name(normal: "\(name).plus"): .witness(PlusQuery(answering: "\(name).plus"), taking: kind, returns: kind, description: "The sum."),
-            Name(normal: "\(name).minus"): .witness(
-                MinusQuery(answering: "\(name).minus"),
-                taking: kind,
-                returns: kind,
-                description: "The difference."
-            ),
-            Name(normal: "\(name).times"): .witness(TimesQuery(answering: "\(name).times"), taking: kind, returns: kind, description: "The product."),
-            Name(normal: "\(name).remainder"): .witness(
-                RemainderQuery(answering: "\(name).remainder"),
-                taking: kind,
-                returns: kind,
-                description: "What is left of a division truncated toward zero."
-            ),
-            Name(normal: "\(name).dividedBy"): .witness(
-                DividedByQuery(answering: "\(name).dividedBy"),
-                taking: kind,
-                returns: .double,
-                description: "The quotient, which is not generally whole."
-            )
+            Witness(type, answering: Grounds.numeric, "plus") { spelling in
+                .witness(PlusQuery(answering: spelling), taking: kind, returns: kind, description: "The sum.")
+            },
+            Witness(type, answering: Grounds.numeric, "minus") { spelling in
+                .witness(MinusQuery(answering: spelling), taking: kind, returns: kind, description: "The difference.")
+            },
+            Witness(type, answering: Grounds.numeric, "times") { spelling in
+                .witness(TimesQuery(answering: spelling), taking: kind, returns: kind, description: "The product.")
+            },
+            Witness(type, answering: Grounds.numeric, "remainder") { spelling in
+                .witness(
+                    RemainderQuery(answering: spelling),
+                    taking: kind,
+                    returns: kind,
+                    description: "What is left of a division truncated toward zero."
+                )
+            },
+            Witness(type, answering: Grounds.numeric, "dividedBy") { spelling in
+                .witness(
+                    DividedByQuery(answering: spelling),
+                    taking: kind,
+                    returns: .double,
+                    description: "The quotient, which is not generally whole."
+                )
+            }
         ]
     }
 
-    // What `Standard.Comparable` asks, answered for each kind that orders.
-    private static func ordering(of kinds: [String: TypeExpression]) -> [Name: Procedure] {
-        kinds.reduce(into: [:]) { procedures, entry in
-            procedures[Name(normal: "\(entry.key).lessThan")] = .witness(
-                LessThanQuery(answering: "\(entry.key).lessThan"),
-                taking: entry.value,
-                returns: .bool,
-                description: "Whether one orders before the other."
-            )
+    // What `Standard.Comparable` asks, answered for one kind that orders.
+    private static func ordering(of type: Name, as kind: TypeExpression) -> Witness {
+        Witness(type, answering: Grounds.comparable, "lessThan") { spelling in
+            .witness(LessThanQuery(answering: spelling), taking: kind, returns: .bool, description: "Whether one orders before the other.")
         }
     }
 
-    // What `Standard.Collection` asks, answered for each kind that has a
+    // What `Standard.Collection` asks, answered for one kind that has a
     // count: the elements of a list, bytes included, the entries of a map,
     // a record's fields included, and the characters of text as a person
     // reads them.
-    private static func counting(of kinds: [String: TypeExpression]) -> [Name: Procedure] {
-        kinds.reduce(into: [:]) { procedures, entry in
-            procedures[Name(normal: "\(entry.key).count")] = .witness(
-                CountQuery(answering: "\(entry.key).count"),
-                taking: entry.value,
-                returns: .int,
-                description: "How many."
-            )
+    private static func counting(of type: Name, as kind: TypeExpression) -> Witness {
+        Witness(type, answering: Grounds.collection, "count") { spelling in
+            .witness(CountQuery(answering: spelling), taking: kind, returns: .int, description: "How many.")
         }
     }
 }

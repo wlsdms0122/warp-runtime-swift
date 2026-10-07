@@ -104,7 +104,7 @@ extension TypeExpression {
         // what is left is `Self` written where no contract stands, which is
         // refused where it was written.
         case .selfType:
-            return .undeclared(label: "Self", because: .noTypeNamed("Self"))
+            return .undeclared(label: TypeSpelling.selfType.spelling, because: .noTypeNamed(TypeSpelling.selfType))
         }
     }
 

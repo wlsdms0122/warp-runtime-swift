@@ -79,14 +79,14 @@ struct TypeWriter {
     // What a type is written as, before the reading is asked about it.
     private func form(of type: TypeExpression) throws -> Value {
         switch type {
-        case .any: return .string("Any")
-        case .never: return .string("Never")
-        case .null: return .string("Null")
-        case .bool: return .string("Bool")
-        case .int: return .string("Int")
-        case .double: return .string("Double")
-        case .string: return .string("String")
-        case .selfType: return .string("Self")
+        case .any: return .string(TypeSpelling.any.spelling)
+        case .never: return .string(TypeSpelling.never.spelling)
+        case .null: return .string(TypeSpelling.null.spelling)
+        case .bool: return .string(TypeSpelling.bool.spelling)
+        case .int: return .string(TypeSpelling.int.spelling)
+        case .double: return .string(TypeSpelling.double.spelling)
+        case .string: return .string(TypeSpelling.string.spelling)
+        case .selfType: return .string(TypeSpelling.selfType.spelling)
 
         // The range rides in the name's spelling (`Int(0...255)`) the way the
         // reader takes it in. A bound with no spelling has nothing to ride in:

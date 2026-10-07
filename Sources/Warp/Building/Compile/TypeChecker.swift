@@ -216,7 +216,7 @@ struct TypeChecker {
             given: context
         )
 
-        return (promised.map { promised in promised.literal(inner.block, in: context.loweredTypes) } ?? inner.block, inner.calls, inner.judgements, proof)
+        return (promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block, inner.calls, inner.judgements, proof)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -326,7 +326,7 @@ struct TypeChecker {
             // parameter reaches, named for the path that reached it) fills with
             // nothing, which is `Any`. One rule, and the useful half comes for
             // free.
-            recording(only.symbol.declared, read?.bound ?? .any)
+            recording(only.symbol.declared, read?.asHeld ?? .any)
         }
     }
 
@@ -384,7 +384,7 @@ struct TypeChecker {
         // Each way out is a place of its own, and none of them declares a
         // fraction, so a whole literal one of them answers is the Int it is
         // before the ways meet.
-        return walked.flow.answered.map(\.reading.bound).reduce(walked.reading.bound) { joined, answered in joined.joined(answered) }
+        return walked.flow.answered.map(\.reading.asHeld).reduce(walked.reading.asHeld) { joined, answered in joined.joined(answered) }
     }
 
     // One answer, held to the `returns`. The refusal stands where the author
@@ -416,7 +416,7 @@ struct TypeChecker {
         // slot, read as the promise reads it where it is a literal.
         if let constant {
             do {
-                try promised.admitting(promised.literal(constant, in: table), at: "answer", in: table)
+                try promised.admitting(promised.written(constant, in: table), at: "answer", in: table)
             } catch {
                 throw BuildError(
                     "answers \(written.rendered(in: table)), and its"
@@ -526,20 +526,20 @@ struct TypeChecker {
         }
     }
 
-    // What a body proves of what it hands back by itself, and which of its
-    // own document's declarations the rest leans on. It hands back its answer
-    // and every variable handed to it in place. A declaration whose answer
-    // names no type parameter, as written or as read off its body, and which
-    // takes nothing in place at a type parameter, settles what it hands back
-    // to what it declares, so it proves it outright. Otherwise every answer
-    // whose declared type names a type parameter has to be, at each type
-    // parameter, that parameter, with no reading of `Any` and no value of
-    // another type its bounds hold; a call whose answer or variable handed back names a type
-    // parameter and is judged where it stands hands back what proves nothing,
-    // unless it reaches a declaration of this document, whose proof is the
-    // document's to settle; and nothing proves what the body reads as a type
-    // parameter where that reading may hold what is not a value of it: a call
-    // filled one from an argument that is not, a write left a variable
+    // What a body proves of what it hands back by itself, and which of its own
+    // document's declarations the rest leans on. It hands back its answer and
+    // every variable handed to it in place. A declaration whose answer names
+    // no type parameter, as written or as read off its body, and which takes
+    // nothing in place at a type parameter, settles what it hands back to what
+    // it declares, so it proves it outright. Otherwise every answer whose
+    // declared type names a type parameter has to be, at each type parameter,
+    // that parameter, with no reading of `Any` and no value of another type
+    // its bounds hold; a call whose answer or variable handed back names a
+    // type parameter and is judged where it stands hands back what proves
+    // nothing, unless it reaches a declaration of this document, whose proof
+    // is the document's to settle; and nothing proves what the body reads as a
+    // type parameter where that reading may hold what is not a value of it: a
+    // call filled one from an argument that is not, a write left a variable
     // reading as one while it wrote what is not, or a closure that is not
     // isolated reached a variable whose type names one.
     private func proof(
@@ -784,7 +784,7 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        if let refusal = openingRefusal(over: slots, substitution: substitution, in: loweredTypes) {
+        if let refusal = contractValueRefusal(over: slots, substitution: substitution, in: loweredTypes) {
             return .refusal(refusal)
         }
 
@@ -835,7 +835,7 @@ struct TypeChecker {
     // Standing alone at one position, the value is the one thing the
     // parameter stands for, and the call reads the parameter as the
     // contract the way it read the value.
-    private func openingRefusal(
+    private func contractValueRefusal(
         over slots: [Slot],
         substitution: Substitution,
         in loweredTypes: LoweredTypeTable
@@ -843,7 +843,7 @@ struct TypeChecker {
         for (parameter, bounds) in slots.reduce(into: [Name: [Name]](), { found, slot in
             found.merge(slot.type.boundedParameters) { first, _ in first }
         }).sorted(by: { $0.key < $1.key }) where !bounds.isEmpty {
-            guard let existential = substitution.everyReading(of: parameter).first(where: { reading in
+            guard let valueOfContract = substitution.everyReading(of: parameter).first(where: { reading in
                 guard case let .composition(read) = reading.throughAliases(in: loweredTypes) else { return false }
 
                 return !read.isEmpty
@@ -857,9 +857,9 @@ struct TypeChecker {
                 continue
             }
 
-            let spelled = parameter == "Self" ? "`Self`" : "`some \(parameter)`"
+            let spelled = parameter == TypeSpelling.selfType ? "`Self`" : "`some \(parameter)`"
 
-            return "'\(parameter)' is read as \(existential.rendered(in: loweredTypes)), a value of whichever type"
+            return "'\(parameter)' is read as \(valueOfContract.rendered(in: loweredTypes)), a value of whichever type"
                 + " answers it, and \(spelled) is one type wherever it stands. A value of a contract"
                 + " fills a bounded parameter only where the parameter stands alone at one position"
         }
@@ -1618,7 +1618,7 @@ struct TypeChecker {
 
             // What a `return` carries stands where the body declares its answer.
             let handed = leave.reach == .procedure
-                ? ask.answer.map { answer in answer.literal(carried.rewritten, in: context.loweredTypes) } ?? carried.rewritten
+                ? ask.answer.map { answer in answer.written(carried.rewritten, in: context.loweredTypes) } ?? carried.rewritten
                 : carried.rewritten
 
             return Inspection(
@@ -1716,7 +1716,7 @@ struct TypeChecker {
             // A literal element read beside fractions is the fraction it
             // names, since the list holds one kind.
             if let element, ask.rewrites {
-                rewritten = rewritten.map { item in element.literal(item, in: context.loweredTypes) }
+                rewritten = rewritten.map { item in element.written(item, in: context.loweredTypes) }
             }
 
             return Inspection(
@@ -1756,7 +1756,7 @@ struct TypeChecker {
             }
 
             // A literal is cast as the value it is, so a whole number is an Int.
-            let read = inner.reading.bound
+            let read = inner.reading.asHeld
             let claim = type.lowered(in: context.loweredTypes)
             let settled = claim.resolved(in: context.loweredTypes)
 
@@ -1994,7 +1994,7 @@ struct TypeChecker {
                     fulfillment: fulfillment
                 )
 
-                body = promised.map { promised in promised.literal(inner.block, in: context.loweredTypes) } ?? inner.block
+                body = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
                 calls = inner.calls
                 judgements = inner.judgements
             }
@@ -2195,7 +2195,7 @@ struct TypeChecker {
             // declaration is held by. What is written into a slot as a
             // literal is read as the slot reads it.
             if case let .procedure(parameters?, _, _, _) = callee {
-                rewritten = zip(rewritten, parameters).map { argument, slot in slot.literal(argument, in: context.loweredTypes) }
+                rewritten = zip(rewritten, parameters).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
 
                 try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
 
@@ -2386,7 +2386,7 @@ struct TypeChecker {
             // reads it.
             let rewritten = Call(
                 selector: call.selector,
-                arguments: zip(arguments, taking).map { argument, slot in slot.literal(argument, in: context.loweredTypes) }
+                arguments: zip(arguments, taking).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
             )
             let reading = answered(
                 by: signature,
@@ -2705,8 +2705,8 @@ struct TypeChecker {
             return Inspection(
                 rewritten: ask.rewrites
                     ? .attempt(
-                        reading.literal(attempted.block, in: context.loweredTypes),
-                        rescue: reading.literal(rescued.block, in: context.loweredTypes)
+                        reading.written(attempted.block, in: context.loweredTypes),
+                        rescue: reading.written(rescued.block, in: context.loweredTypes)
                     )
                     : expression,
                 calls: attempted.calls + rescued.calls,
@@ -3016,7 +3016,7 @@ struct TypeChecker {
                     rewritten.statements.dropLast() + [
                         Statement(
                             binding: statement.binding,
-                            expression: writtenInto.literal(inner.rewritten, in: context.loweredTypes)
+                            expression: writtenInto.written(inner.rewritten, in: context.loweredTypes)
                         )
                     ]
                 )

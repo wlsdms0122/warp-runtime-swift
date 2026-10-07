@@ -272,10 +272,10 @@ struct DeclarationChecker {
     //
     // `parameterized` says whether a type parameter written here has a call to
     // fill it. A signature's slots do (the walk into a procedure type turns it
-    // on) and a declared type does not: a parameter
-    // there would stand for nothing any call ever decides, so it is refused
-    // where it is declared, and everything a `named` type can hide is judged
-    // here rather than at the sites that name it.
+    // on) and a declared type does not: a parameter there would stand for
+    // nothing any call ever decides, so it is refused where it is declared,
+    // and everything a `named` type can hide is judged here rather than at the
+    // sites that name it.
     private func mentioned(
         in type: TypeExpression,
         at place: Place,
@@ -605,11 +605,10 @@ struct DeclarationChecker {
     }
 
     // Whether a signature's bounded parameters could ever be judged: every
-    // name a bound names has to be one somebody declared, and one name is
-    // held to one set of them. A bound names a contract. Each occurrence
-    // carries its bounds separately,
-    // so occurrences carrying different sets for one name are two claims
-    // about one thing.
+    // name a bound names has to be one somebody declared, and one name is held
+    // to one set of them. A bound names a contract. Each occurrence carries
+    // its bounds separately, so occurrences carrying different sets for one
+    // name are two claims about one thing.
     private func judgeBounds(
         _ occurrences: [ParameterOccurrence],
         at place: Place,

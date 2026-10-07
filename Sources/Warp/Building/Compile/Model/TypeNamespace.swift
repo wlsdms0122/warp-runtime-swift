@@ -12,9 +12,9 @@ import Foundation
 // names in it.
 //
 // Types and contracts share the namespace, so no name in it is both and none
-// is declared twice. Each space is gathered whole before
-// the spaces are held against each other, so what is refused does not depend
-// on the order the documents were listed in.
+// is declared twice. Each space is gathered whole before the spaces are held
+// against each other, so what is refused does not depend on the order the
+// documents were listed in.
 struct TypeNamespace {
     // MARK: - Property
     let types: [Name: Placed<TypeExpression>]

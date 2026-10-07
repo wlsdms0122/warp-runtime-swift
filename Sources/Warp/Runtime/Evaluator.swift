@@ -372,9 +372,9 @@ struct Evaluator: Sendable {
             return try await self.call(call, in: &activation, at: trace)
 
         case let .dispatch(dispatch):
-            let (call, callee, first) = try await picked(dispatch, in: &activation, at: trace)
+            let (call, row, first) = try await picked(dispatch, in: &activation, at: trace)
 
-            return try await self.call(call, reaching: callee, first: first, in: &activation, at: trace)
+            return try await self.call(call, reaching: row, first: first, in: &activation, at: trace)
 
         case let .apply(callee, arguments):
             return try await apply(callee, arguments: arguments, in: &activation, at: trace)
@@ -827,9 +827,9 @@ struct Evaluator: Sendable {
                 answered = try await self.call(call, judging: handedBack, in: &activation, at: trace)
 
             case let .dispatch(dispatch):
-                let (call, callee, first) = try await picked(dispatch, in: &activation, at: trace)
+                let (call, row, first) = try await picked(dispatch, in: &activation, at: trace)
 
-                answered = try await self.call(call, reaching: callee, first: first, judging: handedBack, in: &activation, at: trace)
+                answered = try await self.call(call, reaching: row, first: first, judging: handedBack, in: &activation, at: trace)
 
             case let .apply(callee, arguments):
                 answered = try await apply(callee, arguments: arguments, judging: handedBack, in: &activation, at: trace)
@@ -906,7 +906,7 @@ struct Evaluator: Sendable {
         _ dispatch: DispatchOperation,
         in activation: inout Activation,
         at trace: Trace
-    ) async throws -> (call: CallOperation, callee: Int, first: Value) {
+    ) async throws -> (call: CallOperation, row: Int, first: Value) {
         let first = try await evaluate(dispatch.first, in: &activation, at: trace)
         let spelling = ContractProcedure.spelling(of: dispatch.contract, procedure: dispatch.procedure)
 

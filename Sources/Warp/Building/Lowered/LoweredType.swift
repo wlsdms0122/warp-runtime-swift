@@ -253,24 +253,24 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // This reading as a name holds it once it is bound: a literal whole
-    // number, wherever in it one stands, is an Int.
-    var bound: LoweredType {
+    // This reading as a name holds it: a literal whole number, wherever in it
+    // one stands, is an Int.
+    var asHeld: LoweredType {
         switch self {
         case .wholeLiteral:
             return .int
 
         case let .array(element):
-            return .array(element.bound)
+            return .array(element.asHeld)
 
         case let .dictionary(entry):
-            return .dictionary(entry.bound)
+            return .dictionary(entry.asHeld)
 
         case let .nullable(inner):
-            return .nullable(inner.bound)
+            return .nullable(inner.asHeld)
 
         case let .record(record):
-            return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.bound)))
+            return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.asHeld)))
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .procedure, .variable, .inout,
             .named, .parameter, .composition, .projection, .undeclared:
@@ -676,25 +676,25 @@ indirect enum LoweredType: Sendable, Equatable {
     func nominal(in table: LoweredTypeTable) -> Name? {
         switch self {
         case .bool:
-            return "Bool"
+            return TypeSpelling.bool
 
         case .int, .wholeLiteral:
-            return "Int"
+            return TypeSpelling.int
 
         case .double:
-            return "Double"
+            return TypeSpelling.double
 
         case .string:
-            return "String"
+            return TypeSpelling.string
 
         case let .ranged(refinement):
             return refinement.lowered.nominal(in: table)
 
         case .array:
-            return "Array"
+            return TypeSpelling.array
 
         case .dictionary, .record:
-            return "Dictionary"
+            return TypeSpelling.dictionary
 
         case let .named(row):
             guard let record = table.recordRows[row] else { return table.loweredTypes[row].nominal(in: table) }
@@ -1447,10 +1447,10 @@ indirect enum LoweredType: Sendable, Equatable {
     // parameter nothing filled reads `Any`, which is what a declaration says
     // when it says nothing, and one read off literal whole numbers alone is
     // filled with the Int they are.
-    func filling(_ bound: [Name: LoweredType]) -> LoweredType {
+    func filling(_ filled: [Name: LoweredType]) -> LoweredType {
         switch self {
         case let .parameter(name, _):
-            return (bound[name] ?? .any).bound
+            return (filled[name] ?? .any).asHeld
 
         // Nothing fills a walk through a parameter. It is named for a path only
         // the body that wrote it can read, and no call site says anything about
@@ -1459,35 +1459,35 @@ indirect enum LoweredType: Sendable, Equatable {
             return .any
 
         case let .array(element):
-            return .array(element.filling(bound))
+            return .array(element.filling(filled))
 
         case let .dictionary(entry):
-            return .dictionary(entry.filling(bound))
+            return .dictionary(entry.filling(filled))
 
         case let .record(fields):
             return .record(
                 LoweredRecord(
                     layout: fields.layout,
-                    fields: fields.fields.map { field in field.filling(bound) }
+                    fields: fields.fields.map { field in field.filling(filled) }
                 )
             )
 
         case let .procedure(parameters, returns, constness, isolation):
             return .procedure(
-                parameters: parameters?.map { parameter in parameter.filling(bound) },
-                returns: returns?.filling(bound),
+                parameters: parameters?.map { parameter in parameter.filling(filled) },
+                returns: returns?.filling(filled),
                 constness: constness,
                 isolation: isolation
             )
 
         case let .variable(inner):
-            return .variable(inner.filling(bound))
+            return .variable(inner.filling(filled))
 
         case let .inout(inner):
-            return .inout(inner.filling(bound))
+            return .inout(inner.filling(filled))
 
         case let .nullable(inner):
-            return .nullable(inner.filling(bound))
+            return .nullable(inner.filling(filled))
 
         default:
             return self
@@ -1828,40 +1828,6 @@ indirect enum LoweredType: Sendable, Equatable {
         holdsEveryByte(in: table, namedAsking: [])
     }
 
-    // The same question, carrying the names already being asked.
-    func holdsEveryByte(in table: LoweredTypeTable, namedAsking: [Int]) -> Bool {
-        switch self {
-        case .any, .projection, .int, .wholeLiteral:
-            return true
-
-        case let .variable(inner), let .inout(inner), let .nullable(inner):
-            return inner.holdsEveryByte(in: table, namedAsking: namedAsking)
-
-        // A parameter stands for what arrived and does not settle it. A
-        // bounded one asks each value whether its type answers every
-        // contract, and every byte is an `Int`, so one answer is the answer
-        // for all of them. A table that cannot say yet passes each byte as
-        // it is, and so passes them all.
-        case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.allSatisfy { contract in table.settles(contract: contract, arrived: "Int") != false }
-
-        case let .ranged(refinement):
-            return refinement.holdsEveryByte
-
-        case let .named(row):
-            guard !namedAsking.contains(row) else { return false }
-
-            return table.loweredTypes[row].holdsEveryByte(in: table, namedAsking: namedAsking + [row])
-
-        // `Double` takes no whole number and so no byte, and neither do the
-        // rest. Named rather than left to a default, so that a kind added to
-        // the type language has to be answered for here too.
-        case .never, .null, .bool, .double, .string,
-             .array, .dictionary, .record, .procedure, .undeclared:
-            return false
-        }
-    }
-
     // A candidate of an `enum` read as the number its canonical spelling names
     // for this slot: a fraction slot reads only fraction spellings, so the
     // boundary and the build agree on which members exist. Nil where the
@@ -1885,9 +1851,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner):
             return inner.numeral(candidate, in: table)
 
-        // A parameter a contract bounds, and the slots that declare no
-        // numeric type at all: the slot does not name one kind,
-        // so a numeral is whichever kind's one spelling the text is.
+        // A parameter a contract bounds, and the slots that declare no numeric
+        // type at all: the slot does not name one kind, so a numeral is
+        // whichever kind's one spelling the text is.
         default:
             if let whole = Int(spelling: candidate) { return .int(whole) }
 
@@ -1900,7 +1866,7 @@ indirect enum LoweredType: Sendable, Equatable {
     func rendered(in table: LoweredTypeTable) -> String {
         switch self {
         case .any:
-            return "Any"
+            return TypeSpelling.any.spelling
 
         // Spelled as what it is: the type reached by that path. No document
         // writes this, so the spelling answers to the message alone, and an
@@ -1909,22 +1875,22 @@ indirect enum LoweredType: Sendable, Equatable {
             return "some \(Path([.key(of)] + path.segments).rendered)"
 
         case .never:
-            return "Never"
+            return TypeSpelling.never.spelling
 
         case .null:
-            return "Null"
+            return TypeSpelling.null.spelling
 
         case .bool:
-            return "Bool"
+            return TypeSpelling.bool.spelling
 
         case .int, .wholeLiteral:
-            return "Int"
+            return TypeSpelling.int.spelling
 
         case .double:
-            return "Double"
+            return TypeSpelling.double.spelling
 
         case .string:
-            return "String"
+            return TypeSpelling.string.spelling
 
         case let .ranged(refinement):
             return refinement.rendered
@@ -1945,7 +1911,7 @@ indirect enum LoweredType: Sendable, Equatable {
             let spelling = [
                 constness == .const ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
-                "Procedure"
+                TypeSpelling.procedure.spelling
             ]
             .compactMap { part in part }
             .joined(separator: " ")
@@ -2027,6 +1993,40 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // The same question, carrying the names already being asked.
+    private func holdsEveryByte(in table: LoweredTypeTable, namedAsking: [Int]) -> Bool {
+        switch self {
+        case .any, .projection, .int, .wholeLiteral:
+            return true
+
+        case let .variable(inner), let .inout(inner), let .nullable(inner):
+            return inner.holdsEveryByte(in: table, namedAsking: namedAsking)
+
+        // A parameter stands for what arrived and does not settle it. A
+        // bounded one asks each value whether its type answers every
+        // contract, and every byte is an `Int`, so one answer is the answer
+        // for all of them. A table that cannot say yet passes each byte as
+        // it is, and so passes them all.
+        case let .parameter(_, bounds), let .composition(bounds):
+            return bounds.allSatisfy { contract in table.settles(contract: contract, arrived: TypeSpelling.int) != false }
+
+        case let .ranged(refinement):
+            return refinement.holdsEveryByte
+
+        case let .named(row):
+            guard !namedAsking.contains(row) else { return false }
+
+            return table.loweredTypes[row].holdsEveryByte(in: table, namedAsking: namedAsking + [row])
+
+        // `Double` takes no whole number and so no byte, and neither do the
+        // rest. Named rather than left to a default, so that a kind added to
+        // the type language has to be answered for here too.
+        case .never, .null, .bool, .double, .string,
+             .array, .dictionary, .record, .procedure, .undeclared:
+            return false
+        }
+    }
+
     // The join of two readings where one takes the other, `takingGiven`
     // saying which, walked in step. Each position below is asked the same.
     // A reading of `Any` at a position is `Any` there, as it is for the

@@ -271,25 +271,25 @@ public indirect enum Value: Sendable, Equatable {
             return nil
 
         case .bool:
-            return "Bool"
+            return TypeSpelling.bool
 
         case .int:
-            return "Int"
+            return TypeSpelling.int
 
         case .double:
-            return "Double"
+            return TypeSpelling.double
 
         case .string:
-            return "String"
+            return TypeSpelling.string
 
         case .bytes, .array:
-            return "Array"
+            return TypeSpelling.array
 
         case .dictionary:
-            return "Dictionary"
+            return TypeSpelling.dictionary
 
         case let .record(record):
-            return record.name ?? "Dictionary"
+            return record.name ?? TypeSpelling.dictionary
         }
     }
 

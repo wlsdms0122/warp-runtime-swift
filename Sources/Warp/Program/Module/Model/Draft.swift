@@ -71,10 +71,11 @@ public struct Draft: Sendable {
 
     public let types: [Name: TypeExpression]
 
-    // Contracts this module declares: a name bound to the procedures a value must
-    // answer to stand under it. Each procedure is a signature the implementing
-    // declaration is held to, taking the contract itself first, where the
-    // implementing declaration takes its own type.
+    // Contracts this module declares: a name bound to the procedures a value's
+    // type must answer to stand under it. Each procedure is a signature the
+    // implementing declaration is held to, taking `Self`, the type answering
+    // the contract, first, where the implementing declaration takes its own
+    // type.
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts each type this document names answers, by the name of

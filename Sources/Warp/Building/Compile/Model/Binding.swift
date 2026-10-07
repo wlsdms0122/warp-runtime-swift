@@ -91,11 +91,11 @@ struct Binding: Equatable, Sendable {
     }
 
     // MARK: - Initializer
-    // A name holds what it was given as a bound reading: a literal whole
+    // A name holds what it was given as a name holds it: a literal whole
     // number written to it is an Int from here on.
     init(_ holding: Holding, _ type: LoweredType) {
         self.holding = holding
-        self.type = type.bound
+        self.type = type.asHeld
     }
 
     // A parameter as the body holds it: one handed in place is the caller's

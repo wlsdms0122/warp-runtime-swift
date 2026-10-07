@@ -154,16 +154,11 @@ public struct Signature: Sendable, Equatable {
         )
     }
 
-    // Arguments given by name, settled into the order a run keeps them in.
-    // A name the declaration lacks is refused, and so is one it declares that
-    // was not given. The door a host outside the build comes through, since
-    // the build resolves names itself. `subject` is what a refusal names the
-    // procedure as.
     // A contract's procedure as a call through the contract reads it: `Self`
     // as one type parameter the contract bounds, which every position
     // writing it shares.
     func read(of contract: Name) -> Signature {
-        replacingSelf(with: .parameter(name: "Self", bounds: [contract]))
+        replacingSelf(with: .parameter(name: TypeSpelling.selfType, bounds: [contract]))
     }
 
     // This signature with `Self` written as `type` wherever it stands.
@@ -181,6 +176,11 @@ public struct Signature: Sendable, Equatable {
         )
     }
 
+    // Arguments given by name, settled into the order a run keeps them in.
+    // A name the declaration lacks is refused, and so is one it declares that
+    // was not given. The door a host outside the build comes through, since
+    // the build resolves names itself. `subject` is what a refusal names the
+    // procedure as.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
