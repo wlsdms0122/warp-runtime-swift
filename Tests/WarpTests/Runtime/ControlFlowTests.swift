@@ -188,7 +188,7 @@ struct ControlFlowTests {
         // is a procedure's failure like any other
         let sut = Warp.Expression.loop(
             while: .call(
-                Call(selector: "Standard.Math.lessThan", arguments: [reference("probe", "index"), .literal(.int(3))])
+                Call(selector: "Standard.Comparable.lessThan", arguments: [reference("probe", "index"), .literal(.int(3))])
             ),
             body: Block(body: [
                 Statement(
@@ -234,7 +234,7 @@ struct ControlFlowTests {
             element: "element",
             body: [
                 Statement(binding: .assignment([.key("sum")]), expression: .call(
-                    Call(selector: "Standard.Math.plus", arguments: [reference("sum"), reference("element")])
+                    Call(selector: "Standard.Numeric.plus", arguments: [reference("sum"), reference("element")])
                 ))
             ]
         )

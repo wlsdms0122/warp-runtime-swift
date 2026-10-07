@@ -23,13 +23,13 @@ struct CollectionTests {
         let doubling = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
             body: [],
-            result: .call(Call(selector: "Standard.Math.times", arguments: [reference("item"), .literal(.int(2))]))
+            result: .call(Call(selector: "Standard.Numeric.times", arguments: [reference("item"), .literal(.int(2))]))
         )
         let odd = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
             body: [
                 Statement(binding: .constant("left"), expression: .call(Call(
-                    selector: "Standard.Math.remainder",
+                    selector: "Standard.Numeric.remainder",
                     arguments: [reference("item"), .literal(.int(2))]
                 ))
                 )
@@ -45,7 +45,7 @@ struct CollectionTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(selector: "Standard.Math.plus", arguments: [reference("carried"), reference("item")]))
+            result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), reference("item")]))
         )
 
         let sut = try Module(
@@ -106,7 +106,7 @@ struct CollectionTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(selector: "Standard.Math.plus", arguments: [reference("carried"), .literal(.int(1))]))
+            result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), .literal(.int(1))]))
         )
         let sut = try Module(
             procedures: [
@@ -208,12 +208,12 @@ struct CollectionTests {
                     ),
                     body: [
                         Statement(binding: .constant("stepped"), expression: .call(Call(
-                            selector: "Standard.Math.plus",
+                            selector: "Standard.Numeric.plus",
                             arguments: [reference("head"), .literal(.int(1))]
                         ))
                         ),
                         Statement(binding: .constant("wrapped"), expression: .call(Call(
-                            selector: "Standard.Math.remainder",
+                            selector: "Standard.Numeric.remainder",
                             arguments: [reference("stepped"), reference("side")]
                         ))
                         ),

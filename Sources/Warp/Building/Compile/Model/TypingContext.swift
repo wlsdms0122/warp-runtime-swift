@@ -106,7 +106,7 @@ struct TypingContext: Sendable {
     }
 
     func failing(of selector: Name) -> Failing? {
-        declared(selector)?.failing
+        declared(selector)?.failing ?? contractProcedures[selector]?.failing
     }
 
     // A named type stands for what it was declared as. Inference walks into

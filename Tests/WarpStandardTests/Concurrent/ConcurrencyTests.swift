@@ -67,7 +67,7 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(
-                    selector: "Standard.Concurrent.all",
+                    selector: "Standard.Concurrent.allKeyed",
                     arguments: [
                         .record([
                             "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
@@ -351,7 +351,7 @@ struct ConcurrencyTests {
             Procedure(body: [Statement(expression: aborting(literal("doomed")))])
         )
         let sut = Statement(binding: .constant("both"), expression: .call(
-                Call(selector: "Standard.Concurrent.all", arguments: [.record(["first": doomed, "second": doomed])])
+                Call(selector: "Standard.Concurrent.allKeyed", arguments: [.record(["first": doomed, "second": doomed])])
             )
         )
 
@@ -385,7 +385,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("with pieces, which holds [const isolated Procedure<() -> Any>, Int] where Standard.Concurrent.Pieces is declared")
+            "\(error)".contains("with pieces, which holds [const isolated Procedure<() -> Any>, Int] where Array<isolated Procedure> is declared")
         }
     }
 

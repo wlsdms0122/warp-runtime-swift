@@ -445,7 +445,7 @@ struct ConstnessTests {
         #expect(image["clean"]?.constness == .const)
         #expect(dirty.constness != .const)
         #expect(entry.constness != .const)
-        #expect(image["Standard.Collection.count"]?.constness == .const)
+        #expect(image["String.count"]?.constness == .const)
     }
 
     @Test("a body that sends a const Procedure is const")

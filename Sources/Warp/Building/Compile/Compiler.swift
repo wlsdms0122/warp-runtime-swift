@@ -118,6 +118,7 @@ struct Compiler {
                     constants: constants,
                     origin: origin,
                     in: compiling.folding(),
+                    answering: context().contractProcedures,
                     loweredTypes: loweredTypes
                 )
 
@@ -554,6 +555,7 @@ struct Compiler {
                 constants: known.mapValues(\.value),
                 origin: origin,
                 in: resolved,
+                answering: context.contractProcedures,
                 loweredTypes: context.loweredTypes
             ).read(judged, as: .binding(name), judgements: judgements, writing: &lowering, at: place)
 

@@ -59,11 +59,16 @@ struct CallOperation: Sendable {
     // from the reading that picked this callee.
     //
     // One rule, whether the callee is the one the call named or one of the
-    // types the link found answering a contract's procedure.
+    // types the link found answering a contract's procedure. A call through a
+    // contract is placed against every type answering it and the run picks
+    // one by the value, so a literal one of those types refuses is left as
+    // written, `picked`, for the run to refuse where that type is the one it
+    // picks.
     init(
         handing written: [Argument?],
         to callee: Linked,
         row: Int,
+        picked: Bool = false,
         in loweredTypes: LoweredTypeTable,
         at place: Place
     ) throws {
@@ -103,7 +108,11 @@ struct CallOperation: Sendable {
 
                 guard case let .literal(value) = code else { return code }
 
-                return .literal(try slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes))
+                guard picked else {
+                    return .literal(try slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes))
+                }
+
+                return .literal((try? slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes)) ?? value)
             })
         }
 

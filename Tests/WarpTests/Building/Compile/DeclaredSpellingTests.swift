@@ -318,7 +318,7 @@ struct DeclaredSpellingTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        selector: "Standard.Math.plus",
+                        selector: "Standard.Numeric.plus",
                         arguments: [.literal(.string("a")), .literal(.string("b"))]
                     ))
                 )
@@ -328,7 +328,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await builder.build([arithmetic] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Numeric' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'String' answers it")
         }
     }
 

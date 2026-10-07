@@ -240,7 +240,7 @@ struct SwiftAuthoringTests {
 
         // Then. One table, and what separates them is only how each is written
         let shout = try #require(image["shout"])
-        let count = try #require(image["Standard.Collection.count"])
+        let count = try #require(image["String.count"])
 
         #expect(shout.signature.names.first == "of")
         #expect(count.signature.names.first == "collection")

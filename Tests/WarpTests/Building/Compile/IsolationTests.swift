@@ -73,14 +73,14 @@ struct IsolationTests {
     func aStatefulClosureIsRefusedBesideAnother() async throws {
         // Given. Two pieces to run at once, one of them reaching the box
         let sut = try Module(
-            imports: ["App.ticket", "Standard.Concurrent.all"],
+            imports: ["App.ticket", "Standard.Concurrent.allKeyed"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
                     result: .call(
                         Call(
-                            selector: "Standard.Concurrent.all",
+                            selector: "Standard.Concurrent.allKeyed",
                             arguments: [
                                 .record([
                                     "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
@@ -100,7 +100,7 @@ struct IsolationTests {
             try await run([sut, .ticketing])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("right: const Procedure<() -> Any> }, which 'Standard.Concurrent.Pieces' does not admit")
+                && "\(error)".contains("right: const Procedure<() -> Any> } where Dictionary<isolated Procedure> is declared")
         }
     }
 

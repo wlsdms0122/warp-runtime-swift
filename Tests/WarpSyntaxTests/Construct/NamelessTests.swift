@@ -27,12 +27,12 @@ struct NamelessTests {
     func aNamelessStatementRunsForItsEffect() async throws {
         // Given. A call whose answer nothing keeps, then an answer of its own
         let sut = try loader.loadDocument([
-            "imports": ["Standard.Math.plus"],
+            "imports": ["Standard.Numeric.plus"],
             "procedures": [
                 "entry": [
                     "returns": "Int",
                     "body": [
-                        ["value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]]],
+                        ["value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]]],
                         ["let": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]
@@ -185,12 +185,12 @@ struct NamelessTests {
         // Given. The reader's set of legal documents and the writer's must be
         // one set; a document that reads but does not write back broke that
         let document: Value = [
-            "imports": ["Standard.Math.plus"],
+            "imports": ["Standard.Numeric.plus"],
             "procedures": [
                 "entry": [
                     "returns": "Int",
                     "body": [
-                        ["value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]]],
+                        ["value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]]],
                         ["let": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]

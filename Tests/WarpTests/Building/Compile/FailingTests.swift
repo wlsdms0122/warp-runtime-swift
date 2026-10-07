@@ -24,13 +24,13 @@ struct FailingTests {
     func aQuietBodyFailsNothing() async throws {
         // Given. `plus` throws only at an author mistake, so it fails nothing
         let sut = try Module(
-            imports: ["Standard.Math.plus"],
+            imports: ["Standard.Numeric.plus"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
                     result: .call(
-                        Call(selector: "Standard.Math.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
+                        Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
                     )
                 )
             ]

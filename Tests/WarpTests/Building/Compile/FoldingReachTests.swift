@@ -35,9 +35,9 @@ struct FoldingReachTests {
     func aConstantSettlesFromTheStandardVocabulary() async throws {
         // Given. A constant written from a procedure the specification names.
         let document = try Module(
-            imports: ["Standard.Math.plus"],
+            imports: ["Standard.Numeric.plus"],
             constants: [
-                "sum": .call(Call(selector: "Standard.Math.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
+                "sum": .call(Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
             ],
             procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("sum"))]
         )

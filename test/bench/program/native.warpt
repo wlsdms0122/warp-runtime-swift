@@ -1,8 +1,8 @@
 warpt 1
 {
   imports [
-    "Standard.Math.lessThan"
-    "Standard.Math.plus"
+    "Standard.Comparable.lessThan"
+    "Standard.Numeric.plus"
   ]
   procedures {
     entry {
@@ -27,7 +27,7 @@ warpt 1
                         }
                         1
                       ]
-                      procedure "Standard.Math.plus"
+                      procedure "Standard.Numeric.plus"
                     }
                   }
                 }
@@ -42,7 +42,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "Standard.Math.lessThan"
+                  procedure "Standard.Comparable.lessThan"
                 }
               }
             }

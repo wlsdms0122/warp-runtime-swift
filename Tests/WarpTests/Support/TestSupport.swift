@@ -32,7 +32,7 @@ func walking(
     .loop(
         while: .call(
             Call(
-                selector: "Standard.Math.lessThan",
+                selector: "Standard.Comparable.lessThan",
                 arguments: [
                     .reference([.key(round), .key("index")]),
                     .call(Call(selector: "Standard.Collection.count", arguments: [.reference(material)]))

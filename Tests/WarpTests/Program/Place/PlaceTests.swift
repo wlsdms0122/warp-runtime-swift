@@ -657,7 +657,7 @@ struct PlaceTests {
         // reads keeps it anyway, because something does read it.
         let sut = try Module(
             constants: [
-                "beta": .call(Call(selector: "Standard.Math.plus", arguments: [reference("gamma"), reference("delta")])),
+                "beta": .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("gamma"), reference("delta")])),
                 "gamma": reference("beta"),
                 "delta": reference("epsilon"),
                 "epsilon": .literal(.int(1))

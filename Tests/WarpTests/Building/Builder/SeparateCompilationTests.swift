@@ -587,11 +587,11 @@ struct SeparateCompilationTests {
             procedures: [
                 "Lib.twice": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .int)],
+                        parameters: [Parameter(name: "of", type: .double)],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(selector: "Standard.Math.plus", arguments: [reference("of"), reference("of")]))
+                    result: .call(Call(selector: "Standard.Math.rounded", arguments: [reference("of")]))
                 )
             ]
         )
@@ -663,7 +663,7 @@ struct SeparateCompilationTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(selector: "Standard.Math.plus", arguments: [reference("of"), reference("of")]))
+                    result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("of"), reference("of")]))
                 )
             ]
         )
@@ -675,7 +675,7 @@ struct SeparateCompilationTests {
         #expect {
             try builder.lay(alone, supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("'Standard.Math.plus' is sent by this document")
+            "\(error)".contains("'Standard.Numeric.plus' is sent by this document")
         }
     }
 

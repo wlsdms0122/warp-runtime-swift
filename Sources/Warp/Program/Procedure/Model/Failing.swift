@@ -28,6 +28,21 @@ public enum Failing: Sendable, Equatable {
         self == .these([])
     }
 
+    // How a refusal names it: the failures in order, nothing, or anything
+    // where nothing was claimed.
+    public var rendered: String {
+        switch self {
+        case .unstated:
+            return "anything"
+
+        case let .these(failures) where failures.isEmpty:
+            return "nothing"
+
+        case let .these(failures):
+            return failures.sorted().map { failure in "'\(failure)'" }.joined(separator: ", ")
+        }
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     // What may come out of one and then the other. Unstated on either side
@@ -36,6 +51,14 @@ public enum Failing: Sendable, Equatable {
         guard case let .these(mine) = self, case let .these(theirs) = other else { return .unstated }
 
         return .these(mine.union(theirs))
+    }
+
+    // Whether everything this may fail with is among `allowed`. An unstated
+    // one may fail with anything, so it is within no list.
+    public func fails(within allowed: Set<String>) -> Bool {
+        guard case let .these(failures) = self else { return false }
+
+        return failures.isSubset(of: allowed)
     }
 
     // MARK: - Private

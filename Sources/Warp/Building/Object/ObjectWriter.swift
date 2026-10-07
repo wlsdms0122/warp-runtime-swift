@@ -157,7 +157,12 @@ struct ObjectWriter {
         case .contracts:
             return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
                 try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
-                    .array([try signature(asked.signature), constness(asked.constness), isolation(asked.isolation)])
+                    .array([
+                        try signature(asked.signature),
+                        constness(asked.constness),
+                        isolation(asked.isolation),
+                        failing(asked.failing)
+                    ])
                 }
             }
 

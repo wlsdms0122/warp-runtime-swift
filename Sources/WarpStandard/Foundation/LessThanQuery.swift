@@ -10,7 +10,9 @@ import Warp
 
 // Whether one orders before the other.
 struct LessThanQuery: Query {
-    // What this takes: two values of one member of `Standard.Comparable`.
+    // What this takes: two values of the one type answering
+    // `Standard.Comparable`. The type is each declaration's own, since one
+    // query answers for every type that orders.
     enum Parameters: Int, ParameterSet {
         case lhs
         case rhs
@@ -19,16 +21,10 @@ struct LessThanQuery: Query {
         var declared: Parameter {
             switch self {
             case .lhs:
-                return Parameter(
-                    name: "lhs",
-                    type: .parameter(name: "T", constraints: ["Standard.Comparable"])
-                )
+                return Parameter(name: "lhs")
 
             case .rhs:
-                return Parameter(
-                    name: "rhs",
-                    type: .parameter(name: "T", constraints: ["Standard.Comparable"])
-                )
+                return Parameter(name: "rhs")
             }
         }
 
@@ -38,7 +34,14 @@ struct LessThanQuery: Query {
     }
 
     // MARK: - Property
+    // The declared spelling, which a refusal names.
+    private let procedure: String
+
     // MARK: - Initializer
+    init(answering procedure: String) {
+        self.procedure = procedure
+    }
+
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         let lhs = question[.lhs]
@@ -48,8 +51,7 @@ struct LessThanQuery: Query {
         // claims the opposite comparison would say something, and it would not.
         guard let order = Value.order(lhs, rhs) else {
             throw ExecutionError(
-                "Standard.Math.lessThan asks \(lhs.type) and \(rhs.type), which have no order."
-                    + " It takes two numbers or two strings"
+                "\(procedure) asks \(lhs.type) and \(rhs.type), which have no order"
             )
         }
 

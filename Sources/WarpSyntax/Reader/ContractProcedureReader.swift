@@ -19,6 +19,7 @@ public struct ContractProcedureReader: Decodable {
         case returns
         case const
         case isolated
+        case failing
     }
 
     // MARK: - Property
@@ -44,7 +45,8 @@ public struct ContractProcedureReader: Decodable {
                     .type
             ),
             constness: try container.decodeIfPresent(Bool.self, forKey: .const) == true ? .const : .unstated,
-            isolation: try container.decodeIfPresent(Bool.self, forKey: .isolated) == true ? .isolated : .unstated
+            isolation: try container.decodeIfPresent(Bool.self, forKey: .isolated) == true ? .isolated : .unstated,
+            failing: .these(Set(try container.decodeIfPresent([String].self, forKey: .failing) ?? []))
         )
     }
 

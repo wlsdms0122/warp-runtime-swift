@@ -93,14 +93,14 @@ struct ImportsListTests {
         // all, so a list allowed to drift would be worse than none: it would be
         // trusted and wrong.
         let module = try loader.loadDocument([
-            "imports": ["Standard.Math.plus"],
+            "imports": ["Standard.Numeric.plus"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "Array<String>"]],
                     "body": [
                         [
                             "let": "many",
-                            "value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
+                            "value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]
                         ]]
                     ],
                     "result": ["ref": "many"]
@@ -112,7 +112,7 @@ struct ImportsListTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(written[ModuleReader.CodingKeys.imports.name] == .array([.string("Standard.Math.plus")]))
+        #expect(written[ModuleReader.CodingKeys.imports.name] == .array([.string("Standard.Numeric.plus")]))
     }
 
     @Test("a document that says nothing about what it imports is refused")
@@ -171,7 +171,7 @@ struct ImportsListTests {
                         "body": [
                             [
                                 "let": "sum",
-                                "value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
+                                "value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]
                             ]]
                         ],
                         "result": ["ref": "sum"]
@@ -179,7 +179,7 @@ struct ImportsListTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("uses [\"Standard.Math.plus\"], which it does not import")
+            "\(error)".contains("uses [\"Standard.Numeric.plus\"], which it does not import")
         }
     }
 
@@ -190,13 +190,13 @@ struct ImportsListTests {
         // listed but never sent is a grant the program had no use for
         #expect {
             try loader.loadDocument([
-                "imports": ["Standard.Math.plus", "Standard.Math.minus"],
+                "imports": ["Standard.Numeric.minus", "Standard.Numeric.plus"],
                 "procedures": [
                     "entry": [
                         "body": [
                             [
                                 "let": "sum",
-                                "value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
+                                "value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]
                             ]]
                         ],
                         "result": ["ref": "sum"]
@@ -204,7 +204,7 @@ struct ImportsListTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("imports [\"Standard.Math.minus\"], which it does not use")
+            "\(error)".contains("imports [\"Standard.Numeric.minus\"], which it does not use")
         }
     }
 
@@ -215,18 +215,18 @@ struct ImportsListTests {
         // what to allow, and would then be refused at the build by a procedure the
         // list never mentioned.
         let constant: Value = [
-            "call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
+            "call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]
         ]
 
         // When
         let module = try loader.loadDocument([
-            "imports": ["Standard.Math.plus"],
+            "imports": ["Standard.Numeric.plus"],
             "const": ["limit": constant],
             "procedures": ["entry": ["result": ["ref": "limit"]]]
         ])
 
         // Then
-        #expect(module.imports == ["Standard.Math.plus"])
+        #expect(module.imports == ["Standard.Numeric.plus"])
 
         // And a list that leaves the constant's procedure out is refused
         #expect {
@@ -236,7 +236,7 @@ struct ImportsListTests {
                 "procedures": ["entry": ["result": ["ref": "limit"]]]
             ])
         } throws: { error in
-            "\(error)".contains("uses [\"Standard.Math.plus\"]")
+            "\(error)".contains("uses [\"Standard.Numeric.plus\"]")
         }
     }
 
@@ -328,7 +328,7 @@ struct ImportsListTests {
         // Given / When. A list that missed one would be a list nobody could
         // rely on, so every place a message can be written is walked
         let module = try loader.loadDocument([
-            "imports": ["inClosure", "inLoop", "inBody", "inRescue", "inNestedData"],
+            "imports": ["inBody", "inClosure", "inLoop", "inNestedData", "inRescue"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "Array<String>"]],

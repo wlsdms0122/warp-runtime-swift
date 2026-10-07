@@ -121,7 +121,7 @@ struct WriterTests {
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
         "warp": 1,
-        "imports": ["Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Math.lessThan", "Standard.Math.plus"],
+        "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan", "Standard.Logic.notEqual", "Standard.Numeric.plus"],
         "description": "one of every type",
         "types": ["Task": ["record": ["done": "Bool", "id": "String"]]],
         "constraints": ["Scalar": ["Int", "String"]],
@@ -155,7 +155,7 @@ struct WriterTests {
                                 [
                                     "set": "seen",
                                     "value": ["call": [
-                                        "procedure": "Standard.Math.plus",
+                                        "procedure": "Standard.Numeric.plus",
                                         "arguments": [["ref": "seen"], 1]
                                     ]
                                 ]]
@@ -176,7 +176,7 @@ struct WriterTests {
                         "value": ["loop": [
                             "while": [
                                 "call": [
-                                    "procedure": "Standard.Math.lessThan",
+                                    "procedure": "Standard.Comparable.lessThan",
                                     "arguments": [
                                         ["ref": "mapped.index"],
                                         ["call": [
@@ -312,7 +312,7 @@ struct WriterTests {
         ],
         // Loop, attempt
         [
-            "imports": ["test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Math.lessThan", "Standard.Math.plus"],
+            "imports": ["test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Comparable.lessThan", "Standard.Numeric.plus"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "Array<String>"]],
@@ -326,7 +326,7 @@ struct WriterTests {
                                     [
                                         "set": "seen",
                                         "value": ["call": [
-                                            "procedure": "Standard.Math.plus",
+                                            "procedure": "Standard.Numeric.plus",
                                             "arguments": [["ref": "seen"], 1]
                                         ]
                                     ]]
@@ -358,7 +358,7 @@ struct WriterTests {
         ],
         // Leaving early, all three ways and both spellings of a target
         [
-            "imports": ["Standard.Collection.count", "Standard.Math.lessThan"],
+            "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "Array<String>"]],
@@ -617,9 +617,9 @@ struct WriterTests {
         let document: Value = [
             "imports": [
                 "Standard.Collection.count",
+                "Standard.Comparable.lessThan",
                 "Standard.Logic.equal",
-                "Standard.Math.lessThan",
-                "Standard.Math.plus",
+                "Standard.Numeric.plus",
                 "Standard.Text.joined",
                 "Standard.Text.text"
             ],
@@ -647,7 +647,7 @@ struct WriterTests {
                                     [
                                         "set": "walked",
                                         "value": ["call": [
-                                            "procedure": "Standard.Math.plus",
+                                            "procedure": "Standard.Numeric.plus",
                                             "arguments": [
                                                 ["ref": "walked"],
                                                 ["call": [

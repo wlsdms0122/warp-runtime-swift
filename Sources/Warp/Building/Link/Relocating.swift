@@ -356,6 +356,7 @@ final class Relocating {
                     handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
                     to: table[row],
                     row: row,
+                    picked: true,
                     in: loweredTypes,
                     at: context.place
                 )

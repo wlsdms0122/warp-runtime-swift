@@ -39,7 +39,7 @@ struct ObjectReadingTests {
             case times
 
             // MARK: - Property
-            var selector: Name { "Standard.Math.times" }
+            var selector: Name { "Int.times" }
 
             var handing: Int { 2 }
 
@@ -71,10 +71,10 @@ struct ObjectReadingTests {
     func aSendItsNumberingDoesNotNumber() async throws {
         // Given / When. A real object whose native row sends a spelling other
         // than the one its document numbered
-        let refusal = try await reading { send in send[1] = .string("Standard.Math.minus") }
+        let refusal = try await reading { send in send[1] = .string("Standard.Numeric.minus") }
 
         // Then. Refused where the object is read, before any link
-        #expect(refusal?.message.contains("'App.entry' sends 'Standard.Math.minus', which its document numbers nowhere") == true)
+        #expect(refusal?.message.contains("'App.entry' sends 'Standard.Numeric.minus', which its document numbers nowhere") == true)
     }
 
     @Test("is refused where a native's sends stand apart")
@@ -522,14 +522,14 @@ struct ObjectReadingTests {
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(0)))],
                     result: .loop(
                         while: .call(Call(
-                            selector: "Standard.Math.lessThan",
+                            selector: "Standard.Comparable.lessThan",
                             arguments: [reference("n"), .literal(.int(2))]
                         )),
                         body: Block(
                             body: [
                                 Statement(
                                     binding: .assignment([.key("n")]),
-                                    expression: .call(Call(selector: "Standard.Math.plus", arguments: [reference("n"), .literal(.int(1))]))
+                                    expression: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("n"), .literal(.int(1))]))
                                 ),
                                 Statement(binding: .constant("k"), expression: reference("n"))
                             ],
@@ -692,10 +692,10 @@ struct ObjectReadingTests {
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(
-                        selector: "Standard.Math.minus",
+                        selector: "Standard.Numeric.minus",
                         arguments: [
                             .call(Call(
-                                selector: "Standard.Math.plus",
+                                selector: "Standard.Numeric.plus",
                                 arguments: [.literal(.int(1)), .literal(.int(2))]
                             )),
                             .literal(.int(3))

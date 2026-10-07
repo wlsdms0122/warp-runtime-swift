@@ -325,6 +325,13 @@ struct ClaimChecker {
                             + " body could touch at once, and '\(contract)' asks '\(procedure)' to touch none"
                     )
                 }
+
+                if case let .these(allowed) = wanted.failing, !facts.failing.fails(within: allowed) {
+                    return .waits(
+                        "\(witness.spelled) declares '\(spelling)', which may fail with \(facts.failing.rendered),"
+                            + " and '\(contract)' lets '\(procedure)' fail with \(wanted.failing.rendered)"
+                    )
+                }
             }
 
             answering[procedure] = spelling

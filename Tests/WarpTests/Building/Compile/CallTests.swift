@@ -64,7 +64,7 @@ struct CallTests {
 
     @Test("an argument outside what a procedure declares is refused at the build")
     func argumentOutsideTheDeclarationIsRefused() async throws {
-        // Given. `count` declares `Standard.Collection`, and an int is no member
+        // Given. `count` asks `Standard.Collection`, and no claim puts an int under it
         let sut = Warp.Expression.call(
             Call(selector: "Standard.Collection.count", arguments: [.literal(.int(7))])
         )
@@ -76,7 +76,7 @@ struct CallTests {
                 result: reference("probe")
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("'collection' holds Int, which 'Standard.Collection' does not admit")
+            error is BuildError && "\(error)".contains("hands 'Int' where 'Standard.Collection' is asked, and no document in this link says 'Int' answers it")
         }
     }
 
@@ -87,7 +87,7 @@ struct CallTests {
         // answering one name collide the same way two bodies would
         let rival = try Module(
             procedures: [
-                "Standard.Collection.count": Procedure(
+                "Standard.Collection.keys": Procedure(
                     signature: Signature(returns: .int),
                     implementation: .query(TicketQuery())
                 )
@@ -100,7 +100,7 @@ struct CallTests {
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Collection.count' is declared more than once in this link")
+            error is BuildError && "\(error)".contains("'Standard.Collection.keys' is declared more than once in this link")
         }
     }
 

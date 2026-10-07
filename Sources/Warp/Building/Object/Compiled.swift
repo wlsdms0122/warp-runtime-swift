@@ -138,6 +138,11 @@ public struct Compiled: Sendable, Declaring {
     var declares: Set<Reference> {
         Set(
             declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
+                + contracts.flatMap { contract, procedures in
+                    procedures.keys.map { procedure in
+                        Reference.procedure(ContractProcedure.spelling(of: contract, procedure: procedure))
+                    }
+                }
                 + types.keys.map(Reference.type)
                 + constraints.keys.map(Reference.type)
                 + contracts.keys.map(Reference.type)

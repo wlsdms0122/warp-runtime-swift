@@ -252,7 +252,7 @@ struct BytesTests {
                                 element: "element",
                                 body: [
                                     Statement(binding: .assignment([.key("sum")]), expression: .call(Call(
-                                        selector: "Standard.Math.plus",
+                                        selector: "Standard.Numeric.plus",
                                         arguments: [reference("sum"), reference("element")]
                                     )))
                                 ]

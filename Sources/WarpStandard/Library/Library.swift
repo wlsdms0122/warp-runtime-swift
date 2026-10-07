@@ -20,10 +20,10 @@ enum Library {
                 "Standard.Collection.gathering"
                 "Standard.Collection.keys"
                 "Standard.Comparable"
+                "Standard.Comparable.lessThan"
                 "Standard.Logic.equal"
-                "Standard.Math.lessThan"
-                "Standard.Math.minus"
-                "Standard.Math.plus"
+                "Standard.Numeric.minus"
+                "Standard.Numeric.plus"
               ]
               procedures {
                 "Standard.Collection.append" {
@@ -117,7 +117,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -167,7 +167,7 @@ enum Library {
                                           }
                                           1
                                         ]
-                                        procedure "Standard.Math.plus"
+                                        procedure "Standard.Numeric.plus"
                                       }
                                     }
                                   ]
@@ -197,11 +197,11 @@ enum Library {
                                       }
                                       1
                                     ]
-                                    procedure "Standard.Math.minus"
+                                    procedure "Standard.Numeric.minus"
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -279,11 +279,11 @@ enum Library {
                                       }
                                       1
                                     ]
-                                    procedure "Standard.Math.minus"
+                                    procedure "Standard.Numeric.minus"
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -383,7 +383,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -455,7 +455,7 @@ enum Library {
                             }
                             1
                           ]
-                          procedure "Standard.Math.minus"
+                          procedure "Standard.Numeric.minus"
                         }
                       }
                     }
@@ -532,7 +532,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -672,7 +672,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -747,11 +747,11 @@ enum Library {
                                                 }
                                                 1
                                               ]
-                                              procedure "Standard.Math.plus"
+                                              procedure "Standard.Numeric.plus"
                                             }
                                           }
                                         ]
-                                        procedure "Standard.Math.minus"
+                                        procedure "Standard.Numeric.minus"
                                       }
                                     }
                                   ]
@@ -777,7 +777,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -857,7 +857,7 @@ enum Library {
                                                     }
                                                     1
                                                   ]
-                                                  procedure "Standard.Math.plus"
+                                                  procedure "Standard.Numeric.plus"
                                                 }
                                               }
                                             }
@@ -876,7 +876,7 @@ enum Library {
                                                   ref "array[outer.index]"
                                                 }
                                               ]
-                                              procedure "Standard.Math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -901,7 +901,7 @@ enum Library {
                                                   ref "array[inner.index]"
                                                 }
                                               ]
-                                              procedure "Standard.Math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -925,7 +925,7 @@ enum Library {
                                                             }
                                                             1
                                                           ]
-                                                          procedure "Standard.Math.plus"
+                                                          procedure "Standard.Numeric.plus"
                                                         }
                                                       }
                                                     }
@@ -940,7 +940,7 @@ enum Library {
                                                           ref "outer.index"
                                                         }
                                                       ]
-                                                      procedure "Standard.Math.lessThan"
+                                                      procedure "Standard.Comparable.lessThan"
                                                     }
                                                   }
                                                 }
@@ -964,7 +964,7 @@ enum Library {
                                           ref "total"
                                         }
                                       ]
-                                      procedure "Standard.Math.lessThan"
+                                      procedure "Standard.Comparable.lessThan"
                                     }
                                   }
                                 }
@@ -997,7 +997,7 @@ enum Library {
                                   ref "total"
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1040,7 +1040,7 @@ enum Library {
                                                   ref "pick.index"
                                                 }
                                               ]
-                                              procedure "Standard.Math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -1065,7 +1065,7 @@ enum Library {
                                                   ref "ranks[scan.index]"
                                                 }
                                               ]
-                                              procedure "Standard.Math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -1109,7 +1109,7 @@ enum Library {
                                           ref "total"
                                         }
                                       ]
-                                      procedure "Standard.Math.lessThan"
+                                      procedure "Standard.Comparable.lessThan"
                                     }
                                   }
                                 }
@@ -1126,7 +1126,7 @@ enum Library {
                                   ref "total"
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1222,7 +1222,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1252,8 +1252,8 @@ enum Library {
               imports [
                 "Standard.Collection.appending"
                 "Standard.Collection.count"
+                "Standard.Comparable.lessThan"
                 "Standard.Concurrent.all"
-                "Standard.Math.lessThan"
               ]
               procedures {
                 "Standard.Concurrent.map" {
@@ -1343,7 +1343,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1391,8 +1391,8 @@ enum Library {
               description "Negation, difference, choosing and the connectives, written from equality."
               imports [
                 "Standard.Collection.count"
+                "Standard.Comparable.lessThan"
                 "Standard.Logic.equal"
-                "Standard.Math.lessThan"
               ]
               procedures {
                 "Standard.Logic.and" {
@@ -1459,7 +1459,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1595,7 +1595,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1697,9 +1697,9 @@ enum Library {
               description "Ordering the other way round, choosing between two and dropping a sign, written from lessThan and minus."
               imports [
                 "Standard.Comparable"
-                "Standard.Math.lessThan"
-                "Standard.Math.minus"
+                "Standard.Comparable.lessThan"
                 "Standard.Numeric"
+                "Standard.Numeric.minus"
               ]
               procedures {
                 "Standard.Math.absolute" {
@@ -1716,7 +1716,7 @@ enum Library {
                               ref "number"
                             }
                           ]
-                          procedure "Standard.Math.minus"
+                          procedure "Standard.Numeric.minus"
                         }
                       }
                     }
@@ -1742,7 +1742,7 @@ enum Library {
                                   ref "number"
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1750,7 +1750,7 @@ enum Library {
                     }
                   ]
                   bounds {
-                    N "Standard.Numeric"
+                    N "Standard.Comparable & Standard.Numeric"
                   }
                   description "The number without its sign."
                   parameters [
@@ -1769,7 +1769,7 @@ enum Library {
                           ref "number"
                         }
                       ]
-                      procedure "Standard.Math.minus"
+                      procedure "Standard.Numeric.minus"
                     }
                   }
                   returns "some N"
@@ -1799,7 +1799,7 @@ enum Library {
                           ref "lhs"
                         }
                       ]
-                      procedure "Standard.Math.lessThan"
+                      procedure "Standard.Comparable.lessThan"
                     }
                   }
                   returns "Bool"
@@ -1828,7 +1828,7 @@ enum Library {
                                   ref "lhs"
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1878,7 +1878,7 @@ enum Library {
                                   ref "lhs"
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1915,12 +1915,12 @@ enum Library {
               imports [
                 "Standard.Collection.appending"
                 "Standard.Collection.count"
+                "Standard.Comparable.lessThan"
                 "Standard.Control.abort"
                 "Standard.Logic.equal"
                 "Standard.Logic.not"
-                "Standard.Math.lessThan"
-                "Standard.Math.minus"
-                "Standard.Math.plus"
+                "Standard.Numeric.minus"
+                "Standard.Numeric.plus"
                 "Standard.Text.characters"
                 "Standard.Text.joined"
               ]
@@ -1979,7 +1979,7 @@ enum Library {
                                               ref "probe.index"
                                             }
                                           ]
-                                          procedure "Standard.Math.plus"
+                                          procedure "Standard.Numeric.plus"
                                         }
                                       }
                                     }
@@ -2038,7 +2038,7 @@ enum Library {
                                           }
                                         }
                                       ]
-                                      procedure "Standard.Math.lessThan"
+                                      procedure "Standard.Comparable.lessThan"
                                     }
                                   }
                                 }
@@ -2094,16 +2094,16 @@ enum Library {
                                               }
                                             }
                                           ]
-                                          procedure "Standard.Math.minus"
+                                          procedure "Standard.Numeric.minus"
                                         }
                                       }
                                       1
                                     ]
-                                    procedure "Standard.Math.plus"
+                                    procedure "Standard.Numeric.plus"
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -2316,11 +2316,11 @@ enum Library {
                                                   ref "wantedCount"
                                                 }
                                               ]
-                                              procedure "Standard.Math.plus"
+                                              procedure "Standard.Numeric.plus"
                                             }
                                           }
                                         ]
-                                        procedure "Standard.Math.lessThan"
+                                        procedure "Standard.Comparable.lessThan"
                                       }
                                     }
                                   ]
@@ -2350,7 +2350,7 @@ enum Library {
                                                       ref "probe.index"
                                                     }
                                                   ]
-                                                  procedure "Standard.Math.plus"
+                                                  procedure "Standard.Numeric.plus"
                                                 }
                                               }
                                             }
@@ -2402,7 +2402,7 @@ enum Library {
                                                   ref "wantedCount"
                                                 }
                                               ]
-                                              procedure "Standard.Math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -2445,7 +2445,7 @@ enum Library {
                                             }
                                             1
                                           ]
-                                          procedure "Standard.Math.plus"
+                                          procedure "Standard.Numeric.plus"
                                         }
                                       }
                                     }
@@ -2491,7 +2491,7 @@ enum Library {
                                               ref "wantedCount"
                                             }
                                           ]
-                                          procedure "Standard.Math.plus"
+                                          procedure "Standard.Numeric.plus"
                                         }
                                       }
                                     }
@@ -2513,7 +2513,7 @@ enum Library {
                                   ref "heldCount"
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -2616,7 +2616,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -2678,7 +2678,7 @@ enum Library {
                                   }
                                 }
                               ]
-                              procedure "Standard.Math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }

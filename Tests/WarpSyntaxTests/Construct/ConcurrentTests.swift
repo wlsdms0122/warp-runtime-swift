@@ -52,7 +52,7 @@ struct ConcurrentTests {
                 [
                     "let": "par",
                     "value": ["call": [
-                        "procedure": "Standard.Concurrent.all",
+                        "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
                             ["record": [
                                 "left": ["closure": ["result": 1]],
@@ -63,7 +63,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "par"]]]
-        ], importing: ["Standard.Concurrent.all"])
+        ], importing: ["Standard.Concurrent.allKeyed"])
         let boundary = IsolationBoundaryProbe()
 
         // When
@@ -86,7 +86,7 @@ struct ConcurrentTests {
                             [
                                 "let": "par",
                                 "value": ["call": [
-                                    "procedure": "Standard.Concurrent.all",
+                                    "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
                                         ["record": [
                                             "fine": ["closure": ["result": "ok"]],
@@ -109,7 +109,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "par"]]]
-        ], importing: ["Standard.Concurrent.all", "test.fail"])
+        ], importing: ["Standard.Concurrent.allKeyed", "test.fail"])
 
         // When
         let outputs = try await run(spec, vocabulary: Module.standard + [.testing])
@@ -130,7 +130,7 @@ struct ConcurrentTests {
                             [
                                 "let": "par",
                                 "value": ["call": [
-                                    "procedure": "Standard.Concurrent.all",
+                                    "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
                                         ["record": [
                                             "fragile": [
@@ -154,7 +154,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ]
-        ], importing: ["Standard.Concurrent.all", "test.fail"])
+        ], importing: ["Standard.Concurrent.allKeyed", "test.fail"])
 
         // When / Then
         await #expect(throws: TestFatalError.self) {

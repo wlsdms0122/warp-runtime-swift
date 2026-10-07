@@ -185,13 +185,13 @@ struct ObjectClosureTests {
         // a procedure of the vocabulary, so its body reaches another row.
         // Laid down again in another order, the rows stand elsewhere.
         let calling = try Module(
-            imports: ["Standard.Math.plus"],
+            imports: ["Standard.Numeric.plus"],
             constants: [
                 "App.made": .closure(
                     Procedure(
                         signature: Signature(returns: .int),
                         body: [],
-                        result: .call(Call(selector: "Standard.Math.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
+                        result: .call(Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
                     )
                 )
             ],

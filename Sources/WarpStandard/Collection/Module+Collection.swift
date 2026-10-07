@@ -15,11 +15,6 @@ public extension Module {
         unchecked: Draft(
             description: "Counting, appending, gathering and the names of a record.",
             procedures: [
-                "Standard.Collection.count": Procedure(
-                    description: "How many, of what Standard.Collection admits.",
-                    signature: Signature(of: CountQuery.self, returns: .int),
-                    implementation: .query(CountQuery())
-                ),
                 "Standard.Collection.appending": Procedure(
                     description: "The elements with one more at the end.",
                     signature: Signature(

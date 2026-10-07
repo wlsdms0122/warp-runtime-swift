@@ -26,7 +26,7 @@ struct BuilderTests {
         let sut = try Module(
             constants: [
                 "greeting": .call(Call(
-                    selector: "Standard.Math.dividedBy",
+                    selector: "Standard.Numeric.dividedBy",
                     arguments: [.literal(.int(1)), .literal(.int(0))]
                 ))
             ],

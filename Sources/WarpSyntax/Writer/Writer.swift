@@ -102,6 +102,12 @@ public struct Writer: Sendable {
                                 written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
                             }
 
+                            if case let .these(failures) = asked.failing, !failures.isEmpty {
+                                written[ContractProcedureReader.CodingKeys.failing.name] = .array(
+                                    failures.sorted().map(Value.string)
+                                )
+                            }
+
                             return .dictionary(written)
                         }
                     )

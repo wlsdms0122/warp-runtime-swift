@@ -21,9 +21,9 @@ struct MathTests {
         // Given. Both are Swift traps if the answer is taken rather than
         // judged, and each arrives at run time
         let asks: [(Name, Value, Value)] = [
-            ("Standard.Math.remainder", .int(5), .int(0)),
-            ("Standard.Math.dividedBy", .int(5), .int(0)),
-            ("Standard.Math.dividedBy", .double(5), .double(0))
+            ("Standard.Numeric.remainder", .int(5), .int(0)),
+            ("Standard.Numeric.dividedBy", .int(5), .int(0)),
+            ("Standard.Numeric.dividedBy", .double(5), .double(0))
         ]
 
         for (procedure, subject, operand) in asks {
@@ -49,9 +49,9 @@ struct MathTests {
         // Given. Each of these falls off the edge of the int, and the
         // language stops rather than answering a number the digits do not say
         let asks: [(Name, Value, Value)] = [
-            ("Standard.Math.times", .int(Int.max), .int(2)),
-            ("Standard.Math.plus", .int(Int.max), .int(1)),
-            ("Standard.Math.minus", .int(Int.min), .int(1))
+            ("Standard.Numeric.times", .int(Int.max), .int(2)),
+            ("Standard.Numeric.plus", .int(Int.max), .int(1)),
+            ("Standard.Numeric.minus", .int(Int.min), .int(1))
         ]
 
         func asking(_ procedure: Name, _ subject: Value, _ operand: Value) throws -> Module {
@@ -75,7 +75,7 @@ struct MathTests {
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0. An answer an int holds, so it answers.
-        #expect(try await run(asking("Standard.Math.remainder", .int(Int.min), .int(-1))) == .int(0))
+        #expect(try await run(asking("Standard.Numeric.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("fraction arithmetic with no finite answer refuses rather than answering infinity")
@@ -83,9 +83,9 @@ struct MathTests {
         // Given. Each of these reaches past the largest fraction, and
         // infinity is a value no document can carry
         let asks: [(Name, Double, Double)] = [
-            ("Standard.Math.plus", 1e308, 1e308),
-            ("Standard.Math.minus", -1e308, 1e308),
-            ("Standard.Math.times", 1e308, 10.0)
+            ("Standard.Numeric.plus", 1e308, 1e308),
+            ("Standard.Numeric.minus", -1e308, 1e308),
+            ("Standard.Numeric.times", 1e308, 10.0)
         ]
 
         for (procedure, subject, operand) in asks {
@@ -101,8 +101,8 @@ struct MathTests {
     @Test("a whole literal beside a fraction is the fraction it names, on either side")
     func aWholeLiteralBesideAFractionIsOne() async throws {
         // When / Then
-        #expect(try await run(sending("Standard.Math.plus", .int(1), .double(0.5))) == .double(1.5))
-        #expect(try await run(sending("Standard.Math.plus", .double(0.5), .int(1))) == .double(1.5))
+        #expect(try await run(sending("Standard.Numeric.plus", .int(1), .double(0.5))) == .double(1.5))
+        #expect(try await run(sending("Standard.Numeric.plus", .double(0.5), .int(1))) == .double(1.5))
     }
 
     @Test("a quotient is a fraction even between wholes")
@@ -115,7 +115,7 @@ struct MathTests {
                         access: .public,
                         body: [],
                         result: .call(Call(
-                            selector: "Standard.Math.dividedBy",
+                            selector: "Standard.Numeric.dividedBy",
                             arguments: [.literal(.int(left)), .literal(.int(right))]
                         ))
                     )
@@ -178,17 +178,17 @@ struct MathTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("sum"), expression: .call(Call(
-                            selector: "Standard.Math.plus",
+                            selector: "Standard.Numeric.plus",
                             arguments: [.literal(.int(2)), .literal(.int(3))]
                         ))
                         ),
                         Statement(binding: .constant("product"), expression: .call(Call(
-                            selector: "Standard.Math.times",
+                            selector: "Standard.Numeric.times",
                             arguments: [.literal(.int(4)), .literal(.double(2.5))]
                         ))
                         ),
                         Statement(binding: .constant("quotient"), expression: .call(Call(
-                            selector: "Standard.Math.dividedBy",
+                            selector: "Standard.Numeric.dividedBy",
                             arguments: [.literal(.int(7)), .literal(.int(2))]
                         ))
                         )
@@ -223,7 +223,7 @@ struct MathTests {
                         Statement(
                             expression: .conditional(
                                 .call(Call(
-                                    selector: "Standard.Math.lessThan",
+                                    selector: "Standard.Comparable.lessThan",
                                     arguments: [reference("n"), .literal(.int(10))]
                                 )),
                                 then: [
@@ -253,18 +253,18 @@ struct MathTests {
 
     @Test("bytes do not order")
     func bytesDoNotOrder() async throws {
-        // Given. Bytes are an array, and `Standard.Comparable` admits numbers and
-        // strings, not collections. A literal is a reading the build can
-        // judge, so the refusal lands before the run.
+        // Given. Bytes are an array, and `Standard.Comparable` is claimed for
+        // numbers and strings, not collections. A literal is a reading the
+        // build can judge, so the refusal lands before the run.
         let sut = Warp.Expression.call(
-            Call(selector: "Standard.Math.lessThan", arguments: [.literal(.bytes([0x01])), .literal(.bytes([0x02]))])
+            Call(selector: "Standard.Comparable.lessThan", arguments: [.literal(.bytes([0x01])), .literal(.bytes([0x02]))])
         )
 
         // When / Then
         await #expect {
             try await answer(of: [Statement(binding: .constant("probe"), expression: sut)], result: reference("probe"))
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Comparable' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'Array' answers it")
         }
     }
 

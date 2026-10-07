@@ -2,8 +2,8 @@ warpt 1
 {
   imports [
     "Standard.Collection.setting"
-    "Standard.Math.lessThan"
-    "Standard.Math.remainder"
+    "Standard.Comparable.lessThan"
+    "Standard.Numeric.remainder"
     "Standard.Text.text"
   ]
   procedures {
@@ -40,7 +40,7 @@ warpt 1
                                     }
                                     100
                                   ]
-                                  procedure "Standard.Math.remainder"
+                                  procedure "Standard.Numeric.remainder"
                                 }
                               }
                             ]
@@ -64,7 +64,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "Standard.Math.lessThan"
+                  procedure "Standard.Comparable.lessThan"
                 }
               }
             }

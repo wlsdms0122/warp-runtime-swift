@@ -55,8 +55,8 @@ struct DictionaryProcedureTests {
         let laid = Question<CountQuery>(arguments: ["collection": .record(Record(name: "App.Point", ["a": .int(1)]))])
 
         // When / Then
-        #expect(try await CountQuery().evaluate(held) == .int(2))
-        #expect(try await CountQuery().evaluate(laid) == .int(1))
+        #expect(try await CountQuery(answering: "Dictionary.count").evaluate(held) == .int(2))
+        #expect(try await CountQuery(answering: "Dictionary.count").evaluate(laid) == .int(1))
     }
 
     // MARK: - Public

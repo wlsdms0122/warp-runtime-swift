@@ -46,7 +46,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "Standard.Math.plus"]]]]]]
+            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "Standard.Numeric.plus"]]]]]]
         ]
 
         // When
@@ -344,7 +344,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": .null,
-            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "Standard.Math.plus"]]]]]]
+            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "Standard.Numeric.plus"]]]]]]
         ]
 
         // When

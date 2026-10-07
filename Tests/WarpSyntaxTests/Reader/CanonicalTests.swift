@@ -78,7 +78,7 @@ struct CanonicalTests {
                             [
                                 "set": "seen",
                                 "value": ["call": [
-                                    "procedure": "Standard.Math.plus",
+                                    "procedure": "Standard.Numeric.plus",
                                     "arguments": [["ref": "seen"], 1]
                                 ]
                             ]]
@@ -87,7 +87,7 @@ struct CanonicalTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "seen"]]]
-        ], importing: ["Standard.Logic.notEqual", "Standard.Math.plus"])
+        ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When
         let outputs = try await run(sut)

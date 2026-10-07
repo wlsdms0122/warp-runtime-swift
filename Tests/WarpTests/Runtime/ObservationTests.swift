@@ -129,7 +129,7 @@ struct ObservationTests {
                         Statement(binding: .constant("round"), expression: .loop(
                                 while: .call(
                                     Call(
-                                        selector: "Standard.Math.lessThan",
+                                        selector: "Standard.Comparable.lessThan",
                                         arguments: [reference("round", "index"), .literal(.int(2))]
                                     )
                                 ),

@@ -40,7 +40,7 @@ struct StandardTests {
         // When / Then. A name in `builtinProcedures` that nothing declares is a list gone
         // stale
         #expect(Module.builtinProcedures.subtracting(shipped).isEmpty)
-        #expect(Module.builtinProcedures.count == 25)
+        #expect(Module.builtinProcedures.count == 36)
         #expect(Module.builtinProcedures.union(Module.derived) == shipped)
     }
 

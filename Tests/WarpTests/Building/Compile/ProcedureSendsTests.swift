@@ -34,7 +34,7 @@ struct ProcedureSendsTests {
             case times
 
             // MARK: - Property
-            var selector: Name { "Standard.Math.times" }
+            var selector: Name { "Int.times" }
 
             var handing: Int { 2 }
 
@@ -423,10 +423,10 @@ struct ProcedureSendsTests {
             var selector: Name {
                 switch self {
                 case .first:
-                    return "Standard.Math.plus"
+                    return "Int.plus"
 
                 case .apart:
-                    return "Standard.Math.minus"
+                    return "Int.minus"
                 }
             }
 
@@ -830,7 +830,7 @@ struct ProcedureSendsTests {
     func nativeSendsAreDisclosed() throws {
         // Given / When / Then. The list is what a host reads to decide what
         // to grant, so a procedure's own sends are in it
-        #expect(Self.sending.imports == ["Standard.Math.times", "App.shout"])
+        #expect(Self.sending.imports == ["Int.times", "App.shout"])
     }
 
     @Test("a module claiming a list its procedures contradict is refused")
@@ -847,7 +847,7 @@ struct ProcedureSendsTests {
                 ]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("uses [\"Standard.Math.times\"], which it does not import")
+            error is ValidationError && "\(error)".contains("uses [\"Int.times\"], which it does not import")
         }
     }
 

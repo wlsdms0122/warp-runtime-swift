@@ -157,7 +157,7 @@ struct CaseTests {
 
     @Test("is failed where a failure escapes the entry, and a refusal still matches", arguments: [
         ("Standard.Control.abort", "\"on purpose\"", Case.Stage?.none),
-        ("Standard.Math.dividedBy", "1\n                          0", Case.Stage.run)
+        ("Standard.Numeric.dividedBy", "1\n                          0", Case.Stage.run)
     ])
     func aFailureThatEscapes(procedure: String, arguments: String, reached: Case.Stage?) async throws {
         // Given. A case expecting the run to refuse, whose entry either raises

@@ -45,9 +45,9 @@ struct NestingBoundTests {
 
             switch self {
             case .call:
-                imports = ["Standard.Math.plus"]
+                imports = ["Standard.Numeric.plus"]
                 expression = (0 ..< deep).reduce(["ref": "one"]) { inner, _ in
-                    ["call": ["procedure": "Standard.Math.plus", "arguments": [inner, ["ref": "one"]]]]
+                    ["call": ["procedure": "Standard.Numeric.plus", "arguments": [inner, ["ref": "one"]]]]
                 }
 
             case .closure:

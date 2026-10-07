@@ -71,7 +71,7 @@ struct InPlaceTests {
     func moduleVariableStartsFreshEachRun() async throws {
         // Given
         let sut = try Module(
-            imports: ["Standard.Math.plus"],
+            imports: ["Standard.Numeric.plus"],
             variables: ["total": .literal(.int(0))],
             procedures: [
                 entryName: Procedure(
@@ -81,7 +81,7 @@ struct InPlaceTests {
                         Statement(
                             binding: .assignment([.key("total")]),
                             expression: .call(
-                                Call(selector: "Standard.Math.plus", arguments: [reference("total"), .literal(.int(1))])
+                                Call(selector: "Standard.Numeric.plus", arguments: [reference("total"), .literal(.int(1))])
                             )
                         )
                     ],

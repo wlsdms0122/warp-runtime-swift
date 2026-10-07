@@ -24,6 +24,11 @@ struct Folding {
     // so one run stands in one numbering.
     private let resolved: ResolvedTable
 
+    // The rows answering each contract's procedure, read off the claims
+    // standing so far, for a call through a contract the link has not laid
+    // out.
+    private let witnesses: [Name: [Name: Int]]
+
     // MARK: - Initializer
     // The table is one that says how its numbers read, since folding runs what
     // it lowers and running reads rows.
@@ -31,6 +36,7 @@ struct Folding {
         constants: [Name: Value],
         origin: Int,
         in resolved: ResolvedTable,
+        answering contractProcedures: [Name: LoweredContractProcedure],
         loweredTypes: LoweredTypeTable
     ) {
         let names = constants.keys.sorted()
@@ -40,6 +46,9 @@ struct Folding {
         self.origin = origin
         self.loweredTypes = loweredTypes
         self.resolved = resolved
+        self.witnesses = contractProcedures.mapValues { asked in
+            asked.answering.compactMapValues { witness in resolved.rows[witness] }
+        }
     }
 
     // MARK: - Public
@@ -120,7 +129,8 @@ struct Folding {
             linked: resolved.table,
             resolving: resolved.resolving,
             naming: resolved.naming,
-            loweredTypes: loweredTypes
+            loweredTypes: loweredTypes,
+            witnesses: witnesses
         )
         let value = try await evaluator.read(code, in: activation)
 

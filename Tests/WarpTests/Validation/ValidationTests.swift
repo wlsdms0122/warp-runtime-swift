@@ -34,7 +34,7 @@ struct ValidationTests {
     // MARK: - Test
     @Test("a module is held to the procedures it says it imports", arguments: [
         (claimed: [] as Set<Name>, refusal: "uses [\"Standard.Collection.count\"], which it does not import"),
-        (claimed: ["Standard.Collection.count", "Standard.Math.plus"] as Set<Name>, refusal: "imports [\"Standard.Math.plus\"], which it does not use")
+        (claimed: ["Standard.Collection.count", "Standard.Numeric.plus"] as Set<Name>, refusal: "imports [\"Standard.Numeric.plus\"], which it does not use")
     ])
     func aModuleIsHeldToItsImports(_ claimed: Set<Name>, refusal: String) {
         // Given. A host decides what to grant from this list and then links
@@ -427,7 +427,7 @@ struct ValidationTests {
         // the other is a grant nothing uses.
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                imports: ["Standard.Math.minus"],
+                imports: ["Standard.Numeric.minus"],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
@@ -446,7 +446,7 @@ struct ValidationTests {
         #expect(
             error?.message
                 == "uses [\"Standard.Collection.count\"], which it does not import,"
-                    + " and imports [\"Standard.Math.minus\"], which it does not use"
+                    + " and imports [\"Standard.Numeric.minus\"], which it does not use"
         )
     }
 

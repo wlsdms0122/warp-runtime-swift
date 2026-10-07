@@ -179,7 +179,7 @@ struct VariableNotationTests {
                 [
                     "let": "both",
                     "value": ["call": [
-                        "procedure": "Standard.Concurrent.all",
+                        "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
                             ["record": [
                                 "left": [
@@ -202,7 +202,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["record": ["result": ["ref": "read.left"]]]
-        ], importing: ["Standard.Concurrent.all"])
+        ], importing: ["Standard.Concurrent.allKeyed"])
 
         // When
         let outputs = try await run(sut)

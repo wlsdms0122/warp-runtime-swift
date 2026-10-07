@@ -24,8 +24,8 @@ struct ConstraintTests {
     // MARK: - Test
     @Test("a reading outside the constraint refuses at the build")
     func aReadingOutsideTheConstraintRefusesAtTheBuild() async throws {
-        // Given. Both sides of `lessThan` are booleans, and `Comparable` admits
-        // none of them. The reading is a literal, so the build can see it.
+        // Given. Both sides of `lessThan` are booleans, and no claim puts them
+        // under `Comparable`. The reading is a literal, so the build can see it.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -33,7 +33,7 @@ struct ConstraintTests {
                     signature: Signature(returns: .bool),
                     body: [],
                     result: .call(Call(
-                        selector: "Standard.Math.lessThan",
+                        selector: "Standard.Comparable.lessThan",
                         arguments: [.literal(.bool(true)), .literal(.bool(false))]
                     ))
                 )
@@ -44,14 +44,14 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Comparable' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'Bool' answers it")
         }
     }
 
     @Test("arithmetic on two strings refuses at the build")
     func arithmeticOnTwoStringsRefusesAtTheBuild() async throws {
         // Given. The two sides agree, so the one type parameter reads one
-        // thing. Agreement is not admission: `Numeric` does not admit text.
+        // thing. Agreement is not admission: no claim puts text under `Numeric`.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -59,7 +59,7 @@ struct ConstraintTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        selector: "Standard.Math.plus",
+                        selector: "Standard.Numeric.plus",
                         arguments: [.literal(.string("a")), .literal(.string("b"))]
                     ))
                 )
@@ -70,14 +70,14 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Numeric' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'String' answers it")
         }
     }
 
     @Test("a value arriving through any is judged at the boundary")
     func aValueArrivingThroughAnyIsJudgedAtTheBoundary() async throws {
         // Given. The parameter is declared `Any`, so the build reads nothing and
-        // the membership is judged where the value arrives
+        // the contract is judged where the value arrives
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -88,7 +88,7 @@ struct ConstraintTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        selector: "Standard.Math.lessThan",
+                        selector: "Standard.Comparable.lessThan",
                         arguments: [reference("left"), .literal(.int(1))]
                     ))
                 )
@@ -99,7 +99,7 @@ struct ConstraintTests {
         await #expect {
             try await run(sut, arguments: ["left": .bool(true)])
         } throws: { error in
-            "\(error)".contains("nothing 'Standard.Comparable' admits takes Bool")
+            "\(error)".contains("is sent to 'Bool', which answers no procedure of 'Standard.Comparable'")
         }
     }
 
@@ -982,7 +982,7 @@ struct ConstraintTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        selector: "Standard.Math.lessThan",
+                        selector: "Standard.Comparable.lessThan",
                         arguments: [reference("left"), reference("right")]
                     ))
                 ),
@@ -1023,7 +1023,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Comparable' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'Bool' answers it")
         }
     }
 

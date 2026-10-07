@@ -32,7 +32,7 @@ struct TestConditionSpelling: ExpressionSpelling {
         "notEqual": "Standard.Logic.notEqual",
         "contains": "Standard.Collection.contains",
         "startsWith": "Standard.Text.startsWith",
-        "lessThan": "Standard.Math.lessThan",
+        "lessThan": "Standard.Comparable.lessThan",
         "greaterThan": "Standard.Math.greaterThan",
         "longerThan": "extra.longerThan"
     ]

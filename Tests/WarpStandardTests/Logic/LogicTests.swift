@@ -29,7 +29,7 @@ struct LogicTests {
                                 equals(.literal(.int(1)), .literal(.int(2))),
                                 equals(
                                     .call(Call(
-                                        selector: "Standard.Math.dividedBy",
+                                        selector: "Standard.Numeric.dividedBy",
                                         arguments: [.literal(.int(1)), .literal(.int(0))]
                                     )),
                                     .literal(.int(0))

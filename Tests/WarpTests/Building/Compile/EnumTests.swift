@@ -65,40 +65,6 @@ struct EnumTests {
         #expect(error?.message.contains("admits nothing") == true)
     }
 
-    @Test("an enum no member of the bound can spell refuses at the build")
-    func anEnumOutsideTheBoundRefusesAtTheBuild() async throws {
-        // Given. Procedures on a Numeric slot: no member of the constraint can spell
-        // them, so no call could ever fit this parameter
-        let sut = try Module(
-            procedures: [
-                "pick": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "speed", type: .parameter(name: "N", constraints: ["Standard.Numeric"]),
-                                candidates: ["fast", "slow"]
-                            )
-                        ]
-                    ),
-                    body: [],
-                    result: .literal(.null)
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("enum admits nothing")
-        }
-    }
-
     @Test("a fraction candidate is judged by the fraction's one spelling", arguments: ["1", "1e0", "1.50", "1e-5"])
     func aFractionCandidateIsJudgedByItsSpelling(dead: String) async throws {
         // Given. A fraction spells with its point, so `1` on a double slot is

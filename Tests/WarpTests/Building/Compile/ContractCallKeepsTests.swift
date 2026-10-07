@@ -31,7 +31,7 @@ struct ContractCallKeepsTests {
         // walk that stops at the first sees nothing to put back.
         let loop = Warp.Expression.loop(
             while: .call(Call(
-                selector: "Standard.Math.lessThan",
+                selector: "Standard.Comparable.lessThan",
                 arguments: [reference("round", "index"), .literal(.int(3))]
             )),
             body: Block(

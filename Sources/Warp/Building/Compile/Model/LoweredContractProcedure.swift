@@ -28,6 +28,7 @@ struct LoweredContractProcedure: Sendable {
     // signature, which is what a call through the contract reads as.
     let constness: Constness
     let isolation: Isolation
+    let failing: Failing
 
     // The same declaration as the run reads it, lowered once here. A procedure
     // in a contract declares no row, so this is the only place its lowering
@@ -63,6 +64,7 @@ struct LoweredContractProcedure: Sendable {
                     signature: signature,
                     constness: asked.constness,
                     isolation: asked.isolation,
+                    failing: asked.failing,
                     slots: signature.lowered(in: types.loweredTypes),
                     answers: signature.returns?.lowered(in: types.loweredTypes),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in

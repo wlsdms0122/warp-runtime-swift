@@ -32,6 +32,13 @@ struct Evaluator: Sendable {
     // that declared it, in the order its frame reads them.
     let boxes: [[Handle]]
 
+    // The rows answering each contract's procedure, by the procedure's
+    // spelling and the type that answers, for a call through a contract the
+    // link has not laid out yet: what a build folding before the link knows
+    // from the claims standing so far. Empty for a run of an image, whose
+    // calls the link laid out.
+    let witnesses: [Name: [Name: Int]]
+
     // MARK: - Initializer
     // A run of an image: its table, relocated, and a box for each variable
     // its documents declared.
@@ -60,7 +67,8 @@ struct Evaluator: Sendable {
         resolving: Resolving,
         naming: [Closure.Document],
         loweredTypes: LoweredTypeTable,
-        boxes: [[Handle]] = []
+        boxes: [[Handle]] = [],
+        witnesses: [Name: [Name: Int]] = [:]
     ) {
         self.observer = observer
         self.environment = environment
@@ -69,6 +77,7 @@ struct Evaluator: Sendable {
         self.naming = naming
         self.loweredTypes = loweredTypes
         self.boxes = boxes
+        self.witnesses = witnesses
     }
 
     // MARK: - Public
@@ -363,9 +372,9 @@ struct Evaluator: Sendable {
             return try await self.call(call, in: &activation, at: trace)
 
         case let .dispatch(dispatch):
-            let (call, first) = try await picked(dispatch, in: &activation, at: trace)
+            let (call, callee, first) = try await picked(dispatch, in: &activation, at: trace)
 
-            return try await self.call(call, first: first, in: &activation, at: trace)
+            return try await self.call(call, reaching: callee, first: first, in: &activation, at: trace)
 
         case let .apply(callee, arguments):
             return try await apply(callee, arguments: arguments, in: &activation, at: trace)
@@ -419,7 +428,26 @@ struct Evaluator: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let callee = linked[try row(call.procedure, from: activation.origin)]
+        try await self.call(
+            call,
+            reaching: try row(call.procedure, from: activation.origin),
+            first: first,
+            judging: handedBack,
+            in: &activation,
+            at: trace
+        )
+    }
+
+    // The same call, its row already found.
+    private func call(
+        _ call: CallOperation,
+        reaching row: Int,
+        first: Value? = nil,
+        judging handedBack: [HandedBack] = [],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let callee = linked[row]
 
         switch callee.implementation {
         case .native(.query, _):
@@ -799,9 +827,9 @@ struct Evaluator: Sendable {
                 answered = try await self.call(call, judging: handedBack, in: &activation, at: trace)
 
             case let .dispatch(dispatch):
-                let (call, first) = try await picked(dispatch, in: &activation, at: trace)
+                let (call, callee, first) = try await picked(dispatch, in: &activation, at: trace)
 
-                answered = try await self.call(call, first: first, judging: handedBack, in: &activation, at: trace)
+                answered = try await self.call(call, reaching: callee, first: first, judging: handedBack, in: &activation, at: trace)
 
             case let .apply(callee, arguments):
                 answered = try await apply(callee, arguments: arguments, judging: handedBack, in: &activation, at: trace)
@@ -878,18 +906,34 @@ struct Evaluator: Sendable {
         _ dispatch: DispatchOperation,
         in activation: inout Activation,
         at trace: Trace
-    ) async throws -> (CallOperation, Value) {
+    ) async throws -> (call: CallOperation, callee: Int, first: Value) {
         let first = try await evaluate(dispatch.first, in: &activation, at: trace)
+        let spelling = ContractProcedure.spelling(of: dispatch.contract, procedure: dispatch.procedure)
 
-        guard let name = first.nominal, let call = dispatch.calls[name] else {
-            throw ExecutionError(
-                "'\(dispatch.contract).\(dispatch.procedure)' is sent to"
-                    + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)"),"
-                    + " which answers no procedure of '\(dispatch.contract)'"
-            )
+        if let name = first.nominal, let call = dispatch.calls[name] {
+            return (call, try row(call.procedure, from: activation.origin), first)
         }
 
-        return (call, first)
+        // A call the link has not laid out reaches the row a claim standing
+        // so far names, placed against it the way the link would place it.
+        if dispatch.calls.isEmpty, let name = first.nominal, let row = witnesses[spelling]?[name] {
+            let call = try CallOperation(
+                handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
+                to: linked[row],
+                row: row,
+                picked: true,
+                in: loweredTypes,
+                at: .procedure(linked[row].rendered, in: .assembled)
+            )
+
+            return (call, row, first)
+        }
+
+        throw ExecutionError(
+            "'\(spelling)' is sent to"
+                + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)"),"
+                + " which answers no procedure of '\(dispatch.contract)'"
+        )
     }
 
     // The arguments settled against the declaration, in parameter order: the

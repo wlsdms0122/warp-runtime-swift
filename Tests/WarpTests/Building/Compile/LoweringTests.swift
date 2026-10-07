@@ -198,7 +198,7 @@ struct LoweringTests {
         func loop(_ round: Name, _ body: Body, result: Warp.Expression?) -> Warp.Expression {
             .loop(
                 while: .call(Call(
-                    selector: "Standard.Math.lessThan",
+                    selector: "Standard.Comparable.lessThan",
                     arguments: [.reference([.key(round), .key("index")]), .literal(.int(1))]
                 )),
                 body: Block(body: body, result: result)

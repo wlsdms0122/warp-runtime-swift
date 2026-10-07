@@ -426,10 +426,10 @@ struct BakedTests {
         // of its procedures.
         let baked = try await builder.compile(Module.standard)
         let arriving = try Module(
-            imports: ["Standard.Math.plus"],
+            imports: ["Standard.Numeric.plus"],
             constants: [
                 "App.two": .call(
-                    Call(selector: "Standard.Math.plus", arguments: [.literal(.int(1)), .literal(.int(1))])
+                    Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(1)), .literal(.int(1))])
                 )
             ],
             procedures: [
@@ -445,7 +445,7 @@ struct BakedTests {
         await #expect {
             try await builder.compile([arriving], against: baked, supplying: .none)
         } throws: { error in
-            "\(error)".contains("'Standard.Math.plus' is implemented in native code")
+            "\(error)".contains("'Int.plus' is implemented in native code")
                 && "\(error)".contains("this compile was handed none")
         }
     }
@@ -501,7 +501,7 @@ struct BakedTests {
     // A document adding a number to what it is sent, through the vocabulary.
     private func adding(_ number: Int, called name: Name = "App.add1") throws -> Module {
         try Module(
-            imports: ["Standard.Math.plus"],
+            imports: ["Standard.Numeric.plus"],
             procedures: [
                 name: Procedure(
                     access: .public,
@@ -509,7 +509,7 @@ struct BakedTests {
                     body: [],
                     result: .call(
                         Call(
-                            selector: "Standard.Math.plus",
+                            selector: "Standard.Numeric.plus",
                             arguments: [.reference([.key("value")]), .literal(.int(number))]
                         )
                     )

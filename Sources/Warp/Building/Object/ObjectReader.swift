@@ -481,7 +481,8 @@ struct ObjectReader {
         let read = ContractProcedure(
             signature: try signature(cursor.next()),
             constness: try constness(cursor.next()),
-            isolation: try isolation(cursor.next())
+            isolation: try isolation(cursor.next()),
+            failing: try failing(cursor.next())
         )
 
         try cursor.end()

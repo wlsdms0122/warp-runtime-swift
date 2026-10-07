@@ -12,7 +12,7 @@ import WarpTestSupport
 
 @Suite("What a run from the entry can reach")
 struct ReachTests {
-    // Doubles what it is sent, by sending `Standard.Math.times`.
+    // Doubles what it is sent, by sending `Int.times`.
     private struct TwiceQuery: Query {
         enum Parameters: Int, ParameterSet {
             case of
@@ -29,7 +29,7 @@ struct ReachTests {
             case times
 
             // MARK: - Property
-            var selector: Name { "Standard.Math.times" }
+            var selector: Name { "Int.times" }
 
             var handing: Int { 2 }
 
@@ -207,7 +207,7 @@ struct ReachTests {
 
     @Test("what a native procedure declares it sends is reached")
     func aNativeSendIsReached() async throws {
-        // Given. `App.twice` is native and sends `Standard.Math.times`
+        // Given. `App.twice` is native and sends `Int.times`
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -230,8 +230,8 @@ struct ReachTests {
         let image = try await builder.build([sut, sending] + Module.standard)
 
         // Then
-        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "App.twice", "Standard.Math.times"]))
-        #expect(try !image.reached(from: entryName).contains("Standard.Math.plus"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "App.twice", "Int.times"]))
+        #expect(try !image.reached(from: entryName).contains("Int.plus"))
     }
 
     @Test("names resolve across every module in the link, flat")

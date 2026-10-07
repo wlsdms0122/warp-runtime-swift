@@ -223,7 +223,7 @@ struct LoweredTypeTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        selector: "Standard.Math.lessThan",
+                        selector: "Standard.Math.max",
                         arguments: [.literal(.int(1)), .literal(.int(2))]
                     ))
                 )
@@ -232,14 +232,13 @@ struct LoweredTypeTests {
 
         // When
         let image = try await builder.build([module] + Module.standard)
-        let row = try #require(image["Standard.Math.lessThan"])
-        let ordered = try #require(image.loweredTypes.constraintRow(named: "Standard.Comparable"))
+        let row = try #require(image["Standard.Math.max"])
 
         // Then
         #expect(row.slots.map(\.name) == ["lhs", "rhs"])
-        #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: [.membership(ordered)]), .parameter(label: "T", bounds: [.membership(ordered)])])
-        #expect(row.returns == .bool)
-        #expect(try await Executor().run(image) == .bool(true))
+        #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: [.contract("Standard.Comparable")]), .parameter(label: "T", bounds: [.contract("Standard.Comparable")])])
+        #expect(row.returns == .parameter(label: "T", bounds: [.contract("Standard.Comparable")]))
+        #expect(try await Executor().run(image) == .int(2))
     }
 
     @Test("a procedure type declared beside the types it names reads what they declare")
