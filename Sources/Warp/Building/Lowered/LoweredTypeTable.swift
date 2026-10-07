@@ -169,12 +169,11 @@ final class LoweredTypeTable: Sendable {
     // declarations do; where nothing says, the declared spellings order them.
     //
     // A run that stands where its document does is a run a later document
-    // cannot move, which is what
-    // lets a document already lowered keep the numbers it was lowered with.
-    // Either way a row is a row of one table and nothing a link concludes
-    // reads one to decide what to say. A name that names itself through a
-    // chain of names stands for no type and lowers to the type every
-    // judgment refuses, so a chain of names is always finite.
+    // cannot move, which is what lets a document already lowered keep the
+    // numbers it was lowered with. Either way a row is a row of one table and
+    // nothing a link concludes reads one to decide what to say. A name that
+    // names itself through a chain of names stands for no type and lowers to
+    // the type every judgment refuses, so a chain of names is always finite.
     static func lowering(
         _ types: [Name: TypeExpression],
         satisfying: [Name: Set<Name>] = [:],
@@ -303,9 +302,9 @@ final class LoweredTypeTable: Sendable {
             return .settled(true)
 
         // A contract is answered by a type, and null is an instance of none,
-        // so what may be null answers no contract, a name for such a type included,
-        // unless the slot takes null as well: then null was taken above and
-        // the rest answers.
+        // so what may be null answers no contract, a name for such a type
+        // included, unless the slot takes null as well: then null was taken
+        // above and the rest answers.
         case _ where !orNull && reading.declaresNull(in: self):
             return .settled(false)
 

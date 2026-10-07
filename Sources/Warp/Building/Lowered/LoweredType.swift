@@ -23,8 +23,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // What a whole number written as a literal reads as: an Int, or the
     // fraction it names where the place it is written into declares a
-    // Double. A reading and never a declaration, and it is an Int wherever
-    // it is bound.
+    // Double. A reading and never a declaration, and an Int as a name holds
+    // it.
     case wholeLiteral
 
     case ranged(TypeExpression.Refinement)

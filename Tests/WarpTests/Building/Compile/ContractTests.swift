@@ -10,11 +10,11 @@ import Testing
 @testable import Warp
 import WarpTestSupport
 
-// A contract: the procedures a value must answer. A document says which types
-// answer one, a signature bounds a type parameter by it, and a body calls the
-// procedures without knowing which type it holds. The link finds the declaration
-// behind each claimed procedure, and the run reads a row out of that by the name
-// the value wears.
+// A contract: the procedures a value's type must answer. A document says which
+// types answer one, a signature bounds a type parameter by it, and a body calls
+// the procedures without knowing which type it holds. The link finds the
+// declaration behind each claimed procedure, and the run reads a row out of
+// that by the type the value is an instance of.
 @Suite("What a value is able to do")
 struct ContractTests {
     // MARK: - Property

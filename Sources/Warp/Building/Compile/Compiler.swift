@@ -13,11 +13,11 @@ import Foundation
 struct Compiler {
     // MARK: - Property
     // The declarations a fold of this document may run where it calls
-    // through a contract: those of the documents it names, and its own. A
-    // claim another document makes is a fact of the whole list, and what
-    // this document settles at the build stands on what it names alone, so
-    // which documents the host handed over beside it changes nothing it
-    // settles.
+    // through a contract: those of every document it stands on, near or far,
+    // and its own. A claim another document makes is a fact of the whole
+    // list, and what this document settles at the build stands on what it
+    // names alone, so which documents the host handed over beside it changes
+    // nothing it settles.
     private let witnesses: Set<Name>
 
     // MARK: - Initializer

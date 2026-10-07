@@ -214,9 +214,9 @@ struct ClaimChecker {
 
         // A type the language names stands for itself, and one a document
         // declares for the record behind it.
-        let named = TypeExpression.nominalTypes[type]
+        let languageType = TypeExpression.nominalTypes[type]
 
-        guard named != nil || types[type] != nil else {
+        guard languageType != nil || types[type] != nil else {
             let reason = "'\(type)' is not a type this link declares, and only a"
                 + " type answers a contract"
 
@@ -243,7 +243,7 @@ struct ClaimChecker {
         // A value of a declared type is an instance of the record it is and of
         // no other name, so a claim about a declared name that is not itself
         // a record, an alias included, is about no type a value is.
-        if named == nil {
+        if languageType == nil {
             guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
                 throw BuildError(
                     "'\(type)' is not itself a record, and no value is an instance of it under that name."
@@ -253,7 +253,7 @@ struct ClaimChecker {
             }
         }
 
-        let claimed = named ?? .named(type)
+        let claimed = languageType ?? .named(type)
 
         // A value written `linear` is followed by the name that holds it, and
         // a contract standing where a type is written holds a value under no

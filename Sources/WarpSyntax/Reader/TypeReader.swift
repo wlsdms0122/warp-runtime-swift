@@ -391,7 +391,7 @@ public struct TypeReader: Decodable {
     // The one spelling of a procedure type's head: `const` before `isolated`,
     // both before the head.
     public static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
-        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? "Procedure" : "procedure"]
+        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? TypeSpelling.procedure.spelling : "procedure"]
             .compactMap { part in part }
             .joined(separator: " ")
     }

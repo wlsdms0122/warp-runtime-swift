@@ -18,8 +18,8 @@ struct FoundationTests {
     // MARK: - Test
     @Test("a divisor of zero refuses rather than taking the process")
     func divisionByZeroRefuses() async throws {
-        // Given. Both are Swift traps if the answer is taken rather than
-        // judged, and each arrives at run time
+        // Given. A divisor of zero has no answer, a whole one traps where the
+        // answer is taken rather than judged, and each arrives at run time
         let asks: [(Name, Value, Value)] = [
             ("Standard.Numeric.remainder", .int(5), .int(0)),
             ("Standard.Numeric.dividedBy", .int(5), .int(0)),
@@ -27,19 +27,9 @@ struct FoundationTests {
         ]
 
         for (procedure, subject, operand) in asks {
-            let sut = try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [],
-                        result: .call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)]))
-                    )
-                ]
-            )
-
             // When / Then
             await #expect(throws: ExecutionError.self, "\(procedure) took the process") {
-                try await run(sut)
+                try await run(sending(procedure, subject, operand))
             }
         }
     }
@@ -54,28 +44,16 @@ struct FoundationTests {
             ("Standard.Numeric.minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ procedure: Name, _ subject: Value, _ operand: Value) throws -> Module {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [],
-                        result: .call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)]))
-                    )
-                ]
-            )
-        }
-
         for (procedure, subject, operand) in asks {
             // When / Then
             await #expect(throws: ExecutionError.self, "\(procedure) answered") {
-                try await run(asking(procedure, subject, operand))
+                try await run(sending(procedure, subject, operand))
             }
         }
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0. An answer an int holds, so it answers.
-        #expect(try await run(asking("Standard.Numeric.remainder", .int(Int.min), .int(-1))) == .int(0))
+        #expect(try await run(sending("Standard.Numeric.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("fraction arithmetic with no finite answer refuses rather than answering infinity")
@@ -99,7 +77,7 @@ struct FoundationTests {
     }
 
     @Test("a whole literal beside a fraction is the fraction it names, on either side")
-    func aWholeLiteralBesideAFractionIsOne() async throws {
+    func aWholeLiteralBesideAFractionIsTheFraction() async throws {
         // When / Then
         #expect(try await run(sending("Standard.Numeric.plus", .int(1), .double(0.5))) == .double(1.5))
         #expect(try await run(sending("Standard.Numeric.plus", .double(0.5), .int(1))) == .double(1.5))
