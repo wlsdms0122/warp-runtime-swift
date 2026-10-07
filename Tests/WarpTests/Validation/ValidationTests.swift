@@ -508,7 +508,7 @@ struct ValidationTests {
         #expect {
             try Module(
                 imports: [],
-                contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Described"))], returns: .string)]],
+                contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
                 claims: ["Any": ["App.Described"]],
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
@@ -524,7 +524,7 @@ struct ValidationTests {
         // record is, and `Int` names no document to import.
         let sut = try Module(
             imports: [],
-            contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Described"))], returns: .string)]],
+            contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Int": ["App.Described"]],
             procedures: [
                 "Int.describe": Procedure(

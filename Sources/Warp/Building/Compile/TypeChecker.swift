@@ -777,6 +777,10 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
+        if let refusal = openingRefusal(over: slots, substitution: substitution, in: loweredTypes) {
+            return .refusal(refusal)
+        }
+
         // A list or record literal handed where a bounded parameter stands is
         // one of its bounds' members part by part, as one written into a slot
         // declaring them is: its join may be what a member takes while no
@@ -811,6 +815,47 @@ struct TypeChecker {
             slots: declared.lowered(in: loweredTypes, filling: substitution.readings),
             returns: answering?.filling(substitution.readings)
         )
+    }
+
+    // Why a value of a contract fills a bounded parameter it cannot, or nil
+    // where none does. A bounded parameter is one type wherever it stands,
+    // and a value of a contract is of whichever type answers it, so two of
+    // them, or one inside a list or a record, are not known to be one type.
+    // Standing alone at one position, the value is the one thing the
+    // parameter stands for, and the call reads the parameter as the
+    // contract the way it read the value.
+    private func openingRefusal(
+        over slots: [Slot],
+        substitution: Substitution,
+        in loweredTypes: LoweredTypeTable
+    ) -> String? {
+        for (parameter, bounds) in slots.reduce(into: [Name: [LoweredType.Bound]](), { found, slot in
+            found.merge(slot.type.boundedParameters) { first, _ in first }
+        }).sorted(by: { $0.key < $1.key }) where bounds.contains(where: { bound in
+            if case .contract = bound { true } else { false }
+        }) {
+            guard let existential = substitution.everyReading(of: parameter).first(where: { reading in
+                guard case let .composition(read) = reading else { return false }
+
+                return read.contains { bound in if case .contract = bound { true } else { false } }
+            }) else {
+                continue
+            }
+
+            let standing = slots.filter { slot in slot.type.boundedParameters[parameter] != nil }
+
+            if standing.count == 1, case let .parameter(alone, _) = standing[0].type.slotUnwrapped, alone == parameter {
+                continue
+            }
+
+            let spelled = parameter == "Self" ? "`Self`" : "`some \(parameter)`"
+
+            return "'\(parameter)' is read as \(existential.rendered(in: loweredTypes)), a value of whichever type"
+                + " answers it, and \(spelled) is one type wherever it stands. A value of a contract"
+                + " fills a bounded parameter only where the parameter stands alone at one position"
+        }
+
+        return nil
     }
 
     // What a call put in its callee's type parameters, read by holding each

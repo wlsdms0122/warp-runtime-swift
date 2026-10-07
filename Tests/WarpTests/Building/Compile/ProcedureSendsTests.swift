@@ -492,7 +492,7 @@ struct ProcedureSendsTests {
         contracts: [
             "App.Describable": [
                 "describe": ContractProcedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string),
                     constness: .const,
                     isolation: .isolated
                 )

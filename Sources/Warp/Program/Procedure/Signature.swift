@@ -159,6 +159,28 @@ public struct Signature: Sendable, Equatable {
     // was not given. The door a host outside the build comes through, since
     // the build resolves names itself. `subject` is what a refusal names the
     // procedure as.
+    // A contract's procedure as a call through the contract reads it: `Self`
+    // as one type parameter the contract bounds, which every position
+    // writing it shares.
+    func read(of contract: Name) -> Signature {
+        replacingSelf(with: .parameter(name: "Self", constraints: [contract]))
+    }
+
+    // This signature with `Self` written as `type` wherever it stands.
+    func replacingSelf(with type: TypeExpression) -> Signature {
+        Signature(
+            parameters: parameters.map { parameter in
+                Parameter(
+                    name: parameter.name,
+                    type: parameter.type?.replacingSelf(with: type),
+                    candidates: parameter.candidates,
+                    description: parameter.description
+                )
+            },
+            returns: returns?.replacingSelf(with: type)
+        )
+    }
+
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],

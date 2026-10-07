@@ -141,6 +141,12 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // contract's.
     case composition([Name])
 
+    // The type that answers a contract, written `Self` in that contract's
+    // procedures and nowhere else. A claim reads it as the type the claim is
+    // about, and a call through the contract as one type parameter the
+    // contract bounds, so every position writing it takes one type.
+    case selfType
+
     // What a walk *through* a type parameter reached. Still a type the call
     // decides (a dot on it stands as written, the way a dot on the parameter
     // does) and not the parameter, because a field of an unknown type is a
@@ -537,7 +543,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         "Int": .int,
         "Double": .double,
         "String": .string,
-        "Procedure": .procedure(nil)
+        "Procedure": .procedure(nil),
+        "Self": .selfType
     ]
 
     // The types the language names that a value is an instance of, under
@@ -605,6 +612,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case let .composition(names):
             return names.map(\.spelling).joined(separator: " & ")
+
+        case .selfType:
+            return "Self"
 
         // Spelled as what it is. The type reached by that path. No document
         // writes this, so the spelling answers to the message alone: an author
@@ -747,7 +757,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .composition(names):
             Set(names)
 
-        case .projection:
+        case .selfType, .projection:
             []
         }
     }
@@ -759,7 +769,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .parameter(name, constraints):
             return [ParameterOccurrence(name: name, constraints: constraints)]
 
-        case .projection, .composition:
+        case .projection, .composition, .selfType:
             return []
 
         case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
@@ -801,7 +811,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner.isGeneric
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition:
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .selfType:
             return false
         }
     }
@@ -820,7 +830,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
-            .nullable, .named, .parameter, .projection, .composition:
+            .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
     }
@@ -843,7 +853,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
-            .consuming, .borrowing, .nullable, .named, .parameter, .projection, .composition:
+            .consuming, .borrowing, .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
     }
@@ -883,7 +893,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .parameter(name, constraints):
             return .parameter(name: name, constraints: constraints.isEmpty ? bounds[name] ?? [] : constraints)
 
-        case .projection, .composition:
+        case .projection, .composition, .selfType:
             return self
 
         case let .linear(inner):
@@ -917,6 +927,51 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return .borrowing(inner.bounded(by: bounds))
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
+            return self
+        }
+    }
+
+    // The same type with `Self` written as `type` wherever it stands: what a
+    // contract's procedure says once a claim names the type answering it, or
+    // once a call through the contract reads `Self` as one of its type
+    // parameters.
+    func replacingSelf(with type: TypeExpression) -> TypeExpression {
+        switch self {
+        case .selfType:
+            return type
+
+        case let .array(element):
+            return .array(element.replacingSelf(with: type))
+
+        case let .dictionary(entry):
+            return .dictionary(entry.replacingSelf(with: type))
+
+        case let .record(fields):
+            return .record(fields.mapValues { field in field.replacingSelf(with: type) })
+
+        case let .procedure(procedure, constness, isolation):
+            return .procedure(procedure?.replacingSelf(with: type), constness, isolation)
+
+        case let .variable(inner):
+            return .variable(inner.replacingSelf(with: type))
+
+        case let .inout(inner):
+            return .inout(inner.replacingSelf(with: type))
+
+        case let .linear(inner):
+            return .linear(inner.replacingSelf(with: type))
+
+        case let .consuming(inner):
+            return .consuming(inner.replacingSelf(with: type))
+
+        case let .borrowing(inner):
+            return .borrowing(inner.replacingSelf(with: type))
+
+        case let .nullable(inner):
+            return .nullable(inner.replacingSelf(with: type))
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .parameter, .composition,
+            .projection:
             return self
         }
     }
@@ -1033,7 +1088,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // once is followed by the name that holds it, and a name does not go
         // into a type.
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .projection:
+            .ranged, .array, .dictionary, .record, .procedure, .projection, .selfType:
             return false
         }
     }

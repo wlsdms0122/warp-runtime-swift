@@ -22,7 +22,7 @@ struct UnheldClaimTests {
         // anywhere to answer it. The program names both and hands the type
         // nowhere.
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(
@@ -84,7 +84,7 @@ struct UnheldClaimTests {
         // Given. One document claiming two pairs, one of them with no procedure
         // behind it, and a program leaning on the other.
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(
@@ -154,7 +154,7 @@ struct UnheldClaimTests {
         // Given. The claim in one document with no procedure behind it, and the
         // program that hands the type in another.
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(
@@ -215,7 +215,7 @@ struct UnheldClaimTests {
         // constant handing it a type, and the claim in a document the program
         // never names.
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.count": Procedure(
                     signature: Signature(

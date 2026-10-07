@@ -309,6 +309,9 @@ struct ObjectWriter {
 
         case let .composition(names):
             return tagged(Tag.composition, .array(names.sorted().map(name)))
+
+        case .selfType:
+            return tagged(Tag.selfType)
         }
     }
 

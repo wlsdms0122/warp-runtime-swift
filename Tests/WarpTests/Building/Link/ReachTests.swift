@@ -62,7 +62,7 @@ struct ReachTests {
                 "Bank.Account": .record(["balance": .int]),
                 "Bank.Card": .record(["last": .string])
             ],
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: [
                 "Bank.Account": ["App.Describable"],
                 "Bank.Card": ["App.Describable"]

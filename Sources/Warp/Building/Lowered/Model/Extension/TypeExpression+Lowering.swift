@@ -101,6 +101,12 @@ extension TypeExpression {
 
         case let .projection(of, path):
             return .projection(of: of, path: path)
+
+        // A contract's procedures read `Self` before anything lowers them, so
+        // what is left is `Self` written where no contract stands, which is
+        // refused where it was written.
+        case .selfType:
+            return .undeclared(label: "Self", because: .noTypeNamed("Self"))
         }
     }
 

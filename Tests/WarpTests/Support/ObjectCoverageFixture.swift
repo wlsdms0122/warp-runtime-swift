@@ -17,7 +17,7 @@ enum ObjectCoverageFixture {
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
             constraints: ["a.four": [.int, .string]],
-            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .named("a.five")), parameter], returns: .bool), constness: .const, isolation: .isolated)]],
+            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .isolated)]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],

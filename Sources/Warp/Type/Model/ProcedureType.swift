@@ -60,6 +60,13 @@ public struct ProcedureType: Sendable, Equatable {
     // MARK: - Public
     // This type with each occurrence carrying the bound declared for its
     // name. The one `bounds` at the declaration speaks for a nested type.
+    func replacingSelf(with type: TypeExpression) -> ProcedureType {
+        ProcedureType(
+            parameters: parameters.map { parameter in parameter.replacingSelf(with: type) },
+            returns: returns?.replacingSelf(with: type)
+        )
+    }
+
     public func bounded(by bounds: [Name: [Name]]) -> ProcedureType {
         ProcedureType(
             parameters: parameters.map { parameter in parameter.bounded(by: bounds) },

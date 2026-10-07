@@ -97,8 +97,8 @@ struct UnwritableTests {
         // either or null
         let module = try Module(
             contracts: [
-                "App.A": ["a": Signature(parameters: [Parameter(name: "of", type: .named("App.A"))], returns: .int)],
-                "App.B": ["b": Signature(parameters: [Parameter(name: "of", type: .named("App.B"))], returns: .int)]
+                "App.A": ["a": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)],
+                "App.B": ["b": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]
             ],
             procedures: [
                 entryName: Procedure(

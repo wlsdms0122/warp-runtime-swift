@@ -146,7 +146,7 @@ struct ContractTests {
         func sending(_ contract: Name, _ procedure: Name, _ parameter: TypeExpression, _ argument: Warp.Expression) throws -> Module {
             try Module(
                 types: ["Bank.Account": .record(["balance": .int])],
-                contracts: [contract: [procedure: Signature(parameters: [Parameter(name: "of", type: .named(contract)), Parameter(name: "n", type: parameter)], returns: .int)]],
+                contracts: [contract: [procedure: Signature(parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "n", type: parameter)], returns: .int)]],
                 claims: ["Bank.Account": [contract]],
                 procedures: [
                     Name(stringLiteral: "Bank.Account.\(procedure.spelling)"): Procedure(
@@ -195,7 +195,7 @@ struct ContractTests {
         // writes a string
         let sut = try Module(
             types: ["Bank.Account": .record(["balance": .int])],
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: leaning(on: "Bank.Account", holding: ["balance": .literal(.int(1))]).merging([
                 "Bank.Account.describe": Procedure(
@@ -239,7 +239,7 @@ struct ContractTests {
             ]
         )
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.ask": Procedure(body: [], result: .literal(.null))
             ]
@@ -258,7 +258,7 @@ struct ContractTests {
         // `Bank.Plain.describe`
         let sut = try Module(
             types: ["Bank.Plain": .record(["note": .string])],
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Plain": ["App.Describable"]],
             procedures: leaning(on: "Bank.Plain", holding: ["note": .literal(.string("x"))])
         )
@@ -277,7 +277,7 @@ struct ContractTests {
         // that says one's type answers the other's contract and writes the
         // procedure that answers it.
         let charting = try Module(
-            contracts: ["Chart.Plottable": ["height": Signature(parameters: [Parameter(name: "of", type: .named("Chart.Plottable"))], returns: .int)]],
+            contracts: ["Chart.Plottable": ["height": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]],
             procedures: [
                 "Chart.draw": Procedure(
                     signature: Signature(
@@ -339,7 +339,7 @@ struct ContractTests {
         // Given. Two documents say the same type answers the same contract
         let held = try Module(
             types: ["Bank.Account": .record(["balance": .int])],
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
@@ -404,7 +404,7 @@ struct ContractTests {
         // Given
         let sut = try Module(
             types: ["App.Thing": .int],
-            contracts: ["App.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Thing"))], returns: .string)]],
+            contracts: ["App.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
@@ -450,7 +450,7 @@ struct ContractTests {
         try Module(
             imports: ["Standard.Text.uppercased"],
             types: ["Bank.Account": .record(["balance": .int])],
-            contracts: ["App.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string), constness: constness)]],
+            contracts: ["App.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string), constness: constness)]],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
@@ -542,7 +542,7 @@ struct ContractTests {
                 "Bank.Account": .record(["balance": .int]),
                 "Bank.Card": .record(["last": .string])
             ].merging(extra) { _, added in added },
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: [
                 "Bank.Account": ["App.Describable"],
                 "Bank.Card": ["App.Describable"]

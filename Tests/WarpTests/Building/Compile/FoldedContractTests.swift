@@ -73,7 +73,7 @@ struct FoldedContractTests {
         // which is the constant that handed it and not whichever was settled
         // last.
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.count": Procedure(
                     signature: Signature(
@@ -164,7 +164,7 @@ struct FoldedContractTests {
     // MARK: - Private
     private func documents(returning type: TypeExpression, giving: Warp.Expression) throws -> [Module] {
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.count": Procedure(
                     signature: Signature(

@@ -52,7 +52,7 @@ struct ContractCallKeepsTests {
 
         let sut = try Module(
             types: ["Bank.Box": .record(["v": .int])],
-            contracts: ["App.Show": ["show": Signature(parameters: [Parameter(name: "of", type: .named("App.Show")), Parameter(name: "with", type: .nullable(.int))], returns: .nullable(.int))]],
+            contracts: ["App.Show": ["show": Signature(parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .nullable(.int))], returns: .nullable(.int))]],
             claims: ["Bank.Box": ["App.Show"]],
             procedures: [
                 "App.entry": Procedure(

@@ -89,7 +89,7 @@ struct DeclarationChecker {
                 // mention below refuses by its own name.
                 let concrete = switch resolved {
                 case let .named(name): namespace.contracts[name] == nil
-                case .parameter, .any, .never, .composition: false
+                case .parameter, .any, .never, .composition, .selfType: false
                 case .null, .bool, .int, .double, .string, .ranged, .array,
                     .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
                     .borrowing, .nullable, .projection: true
@@ -159,7 +159,8 @@ struct DeclarationChecker {
             // A contract's procedures are declarations the way the module's
             // own are, and what a call is judged against is what was judged.
             // Each is answered about the value it takes first, so that value
-            // is written as the contract itself.
+            // is written `Self`, the type that answers the contract, which a
+            // call reads as one type parameter the contract bounds.
             for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
                 guard !procedures.isEmpty else {
                     throw BuildError(
@@ -173,16 +174,16 @@ struct DeclarationChecker {
                 for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
                     let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
 
-                    guard asked.signature.parameters.first?.type == .named(contract) else {
+                    guard asked.signature.parameters.first?.type == .selfType else {
                         throw BuildError(
                             "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
-                                + " A contract's procedure takes '\(contract)' first,"
-                                + " the value it is answered about",
+                                + " A contract's procedure takes `Self` first: the value it is"
+                                + " answered about, of the type that answers it",
                             at: place.part(.parameters)
                         )
                     }
 
-                    try judge(asked.signature, at: place, in: table)
+                    try judge(asked.signature.read(of: contract), at: place, in: table)
                 }
             }
 
@@ -411,6 +412,16 @@ struct DeclarationChecker {
             }
 
             return
+
+        // A contract's procedures read `Self` as the type answering the
+        // contract before they are judged, so one standing here stands
+        // where nothing answers one.
+        case .selfType:
+            throw BuildError(
+                "writes `Self`, which stands for the type that answers a contract"
+                    + " and is written in that contract's procedures alone",
+                at: place
+            )
 
         case .parameter:
             guard parameterized else {

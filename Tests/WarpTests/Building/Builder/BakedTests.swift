@@ -173,7 +173,7 @@ struct BakedTests {
             types: ["Bank.Account": .record(["balance": .int])],
             contracts: [
                 "App.Describable": [
-                    "describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)
+                    "describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)
                 ]
             ],
             claims: ["Bank.Account": ["App.Describable"]],

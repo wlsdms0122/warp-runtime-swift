@@ -86,6 +86,7 @@ struct TypeWriter {
         case .int: return .string("Int")
         case .double: return .string("Double")
         case .string: return .string("String")
+        case .selfType: return .string("Self")
 
         // The range rides in the name's spelling (`Int(0...255)`) the way the
         // reader takes it in. A bound with no spelling has nothing to ride in:
@@ -281,7 +282,7 @@ struct TypeWriter {
 
         // Neither carries a bound to strip: a composition is its bounds, and
         // a slot spells it whole.
-        case .projection, .composition:
+        case .projection, .composition, .selfType:
             return type
 
         case let .array(element):

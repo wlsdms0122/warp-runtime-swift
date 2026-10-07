@@ -18,9 +18,10 @@ struct LoweredContractProcedure: Sendable {
     let contract: Name
     let procedure: Name
 
-    // What the contract said the procedure takes and answers. It takes the
-    // contract first: whatever satisfies the contract stands there, which is
-    // the whole reason the procedure is in one.
+    // What the contract said the procedure takes and answers, `Self` read as
+    // the type parameter a call fills. It takes `Self` first: whatever
+    // satisfies the contract stands there, which is the whole reason the
+    // procedure is in one.
     let signature: Signature
 
     // What the contract asks of every declaration answering it beyond the
@@ -54,14 +55,16 @@ struct LoweredContractProcedure: Sendable {
             let answering = types.loweredTypes.satisfying[entry.key] ?? []
 
             for (procedure, asked) in entry.value {
+                let signature = asked.signature.read(of: entry.key)
+
                 table[ContractProcedure.spelling(of: entry.key, procedure: procedure)] = LoweredContractProcedure(
                     contract: entry.key,
                     procedure: procedure,
-                    signature: asked.signature,
+                    signature: signature,
                     constness: asked.constness,
                     isolation: asked.isolation,
-                    slots: asked.signature.lowered(in: types.loweredTypes),
-                    answers: asked.signature.returns?.lowered(in: types.loweredTypes),
+                    slots: signature.lowered(in: types.loweredTypes),
+                    answers: signature.returns?.lowered(in: types.loweredTypes),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in
                         held[type] = ContractProcedure.spelling(of: type, procedure: procedure)
                     }

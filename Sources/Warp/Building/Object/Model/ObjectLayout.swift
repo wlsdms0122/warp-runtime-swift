@@ -83,6 +83,7 @@ enum ObjectLayout {
         case parameter
         case composition
         case projection
+        case selfType
     }
 
     enum RefinementTag: Int {

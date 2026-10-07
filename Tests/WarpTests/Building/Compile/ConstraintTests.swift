@@ -411,7 +411,7 @@ struct ConstraintTests {
     func nullIsRefusedWhereAContractStands() async throws {
         // Given
         let sut = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Describable"))], returns: .int),
@@ -441,7 +441,7 @@ struct ConstraintTests {
         // witness answers a whole number
         let sut = try Module(
             types: ["Bank.Card": .record(["last": .string])],
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .array(.named("App.Describable")))]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .array(.named("App.Describable")))]],
             claims: ["Bank.Card": ["App.Describable"]],
             procedures: [
                 "Bank.Card.describe": Procedure(
@@ -478,8 +478,8 @@ struct ConstraintTests {
         let sut = try Module(
             types: ["App.Box": .record(["n": .int]), "Bank.Card": .record(["last": .string])],
             contracts: [
-                "App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)],
-                "App.Printable": ["show": Signature(parameters: [Parameter(name: "of", type: .named("App.Printable"))], returns: .named("App.Describable"))]
+                "App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)],
+                "App.Printable": ["show": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .named("App.Describable"))]
             ],
             claims: ["Bank.Card": ["App.Describable"], "App.Box": ["App.Printable"]],
             procedures: [
@@ -519,7 +519,7 @@ struct ConstraintTests {
     func nullFillsANullableComposition() async throws {
         // Given
         let sut = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .nullable(.named("App.Describable")))], returns: .int),
@@ -546,7 +546,7 @@ struct ConstraintTests {
         // name that holds it
         let sut = try Module(
             types: ["App.Handle": .linear(.record(["name": .string]))],
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["App.Handle": ["App.Describable"]],
             procedures: [
                 "App.Handle.describe": Procedure(
@@ -576,7 +576,7 @@ struct ConstraintTests {
                 "App.Pairing": [
                     "pair": Signature(
                         parameters: [
-                            Parameter(name: "of", type: .named("App.Pairing")),
+                            Parameter(name: "of", type: .selfType),
                             Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
                             Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
                         ],

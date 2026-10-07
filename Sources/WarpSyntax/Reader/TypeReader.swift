@@ -247,6 +247,15 @@ public struct TypeReader: Decodable {
                 )
             }
 
+            // `Self` is the type answering a contract, read as such in that
+            // contract's procedures, so no type parameter takes its name.
+            guard bare != "Self" else {
+                throw TypeFormError(
+                    "type '\(text)' names no type parameter. `Self` is the type answering a contract,"
+                        + " written bare in that contract's procedures"
+                )
+            }
+
             return .parameter(name: try named(bare))
         }
 

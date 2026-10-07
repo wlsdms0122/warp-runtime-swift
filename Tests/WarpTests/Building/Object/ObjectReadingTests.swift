@@ -581,8 +581,8 @@ struct ObjectReadingTests {
         let sut = try Module(
             types: ["App.Box": .record(["v": .int])],
             contracts: [
-                "App.One": ["one": Signature(parameters: [Parameter(name: "of", type: .named("App.One"))], returns: .int)],
-                "App.Two": ["two": Signature(parameters: [Parameter(name: "of", type: .named("App.Two"))], returns: .int)]
+                "App.One": ["one": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)],
+                "App.Two": ["two": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]
             ],
             claims: ["App.Box": ["App.One", "App.Two"]],
             procedures: [

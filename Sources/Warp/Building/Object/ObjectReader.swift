@@ -378,6 +378,9 @@ struct ObjectReader {
                 path: try path(cursor.next())
             )
 
+        case .selfType:
+            read = .selfType
+
         case nil:
             throw ObjectRefused("'type' names a kind this reads none of")
         }

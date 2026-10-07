@@ -314,7 +314,7 @@ struct SeparateCompilationTests {
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: ["App.ask": Procedure(body: [], result: .literal(.null))]
         )
         let answering = try Module(
@@ -618,7 +618,7 @@ struct SeparateCompilationTests {
         // link answers the call through the contract, so the document laid
         // before the last one is missing nothing.
         let contract = try Module(
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: ["App.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let leaning = try Module(
@@ -751,7 +751,7 @@ struct SeparateCompilationTests {
                 ]
             ),
             asking: try Module(
-                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
                 procedures: [
                     "App.tell": Procedure(
                         signature: Signature(
@@ -899,7 +899,7 @@ struct SeparateCompilationTests {
     private func describing() throws -> [Module] {
         [
             try Module(
-                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
                 procedures: [
                     "App.tell": Procedure(
                         signature: Signature(
