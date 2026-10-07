@@ -347,7 +347,7 @@ struct TypeTests {
     func aRecordSettlesIntoADictionaryAsData() throws {
         // Given. A name is proved where a slot declares one, and a `dictionary`
         // slot declares none
-        let named = Value.record(Record(name: "bank.Account", ["balance": .int(1)]))
+        let named = Value.record(Record(name: "Bank.Account", ["balance": .int(1)]))
 
         // When
         let settled = try TypeExpression.dictionary(.any).settling(named, at: "held")

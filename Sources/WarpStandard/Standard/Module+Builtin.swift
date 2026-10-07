@@ -20,20 +20,20 @@ public extension Module {
     // character is whitespace is a question about the code points inside it,
     // and `characters` answers characters.
     static let builtinProcedures: Set<Name> = [
-        "std.logic.equal",
+        "Standard.Logic.equal",
 
-        "std.math.plus", "std.math.minus", "std.math.times", "std.math.dividedBy",
-        "std.math.remainder", "std.math.lessThan", "std.math.floored", "std.math.rounded",
+        "Standard.Math.plus", "Standard.Math.minus", "Standard.Math.times", "Standard.Math.dividedBy",
+        "Standard.Math.remainder", "Standard.Math.lessThan", "Standard.Math.floored", "Standard.Math.rounded",
 
-        "std.text.text", "std.text.joined", "std.text.characters", "std.text.uppercased",
-        "std.text.lowercased", "std.text.encoded", "std.text.decoded", "std.text.trimmed",
+        "Standard.Text.text", "Standard.Text.joined", "Standard.Text.characters", "Standard.Text.uppercased",
+        "Standard.Text.lowercased", "Standard.Text.encoded", "Standard.Text.decoded", "Standard.Text.trimmed",
 
-        "std.collection.count", "std.collection.appending", "std.collection.gathering",
-        "std.collection.keys", "std.collection.setting",
+        "Standard.Collection.count", "Standard.Collection.appending", "Standard.Collection.gathering",
+        "Standard.Collection.keys", "Standard.Collection.setting",
 
-        "std.control.abort",
+        "Standard.Control.abort",
 
-        "std.concurrent.all", "std.concurrent.first"
+        "Standard.Concurrent.all", "Standard.Concurrent.first"
     ]
 
     // The procedures that are written in Warp from the builtin ones. Named by

@@ -14,7 +14,7 @@ struct RoundedQuery: Query {
     typealias Parameters = NumberOperand
 
     // MARK: - Property
-    private let integer = IntegerConversion("std.math.rounded")
+    private let integer = IntegerConversion("Standard.Math.rounded")
 
     // MARK: - Initializer
     // MARK: - Public
@@ -27,7 +27,7 @@ struct RoundedQuery: Query {
             return .int(try integer.of(real, rounded: .toNearestOrAwayFromZero))
 
         default:
-            throw ExecutionError("std.math.rounded asks a number")
+            throw ExecutionError("Standard.Math.rounded asks a number")
         }
     }
 

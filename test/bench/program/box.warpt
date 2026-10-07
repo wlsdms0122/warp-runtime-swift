@@ -1,8 +1,8 @@
 warpt 1
 {
   imports [
-    "std.math.lessThan"
-    "std.math.plus"
+    "Standard.Math.lessThan"
+    "Standard.Math.plus"
   ]
   procedures {
     counted {
@@ -23,7 +23,7 @@ warpt 1
                   ref "value"
                 }
               ]
-              procedure "std.math.plus"
+              procedure "Standard.Math.plus"
             }
           }
         }
@@ -73,7 +73,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "std.math.lessThan"
+                  procedure "Standard.Math.lessThan"
                 }
               }
             }

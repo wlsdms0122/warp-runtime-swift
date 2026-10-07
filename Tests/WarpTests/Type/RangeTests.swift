@@ -152,7 +152,7 @@ struct RangeTests {
         }
     }
 
-    @Test("std declares byte, and a name resolves to its range")
+    @Test("Standard declares Byte, and a name resolves to its range")
     func byteIsANamedRange() async throws {
         // Given. `byte = int(0...255)`, declared where every bundle can name it
         let sut = try Module(
@@ -160,7 +160,7 @@ struct RangeTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "value", type: .named("std.byte"))]
+                        parameters: [Parameter(name: "value", type: .named("Standard.Byte"))]
                     ),
                     body: [],
                     result: reference("value")
@@ -189,7 +189,7 @@ struct RangeTests {
                         parameters: [Parameter(name: "level", type: .ranged(.whole(from: -10, to: .through(10))))]
                     ),
                     body: [],
-                    result: .call(Call(selector: "std.math.absolute", arguments: [reference("level")]))
+                    result: .call(Call(selector: "Standard.Math.absolute", arguments: [reference("level")]))
                 )
             ]
         )

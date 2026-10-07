@@ -238,7 +238,7 @@ struct ClosureTests {
                                 Procedure(
                                     body: [
                                         Statement(binding: .constant("said"), expression: .call(Call(
-                                            selector: "app.shout",
+                                            selector: "App.shout",
                                             arguments: [.literal(.string("hi"))]
                                         )))
                                     ],

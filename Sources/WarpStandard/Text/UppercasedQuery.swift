@@ -17,7 +17,7 @@ struct UppercasedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("std.text.uppercased asks a string")
+            throw ExecutionError("Standard.Text.uppercased asks a string")
         }
 
         return .string(text.uppercased())

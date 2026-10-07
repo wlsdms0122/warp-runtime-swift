@@ -24,13 +24,13 @@ struct FailingTests {
     func aQuietBodyFailsNothing() async throws {
         // Given. `plus` throws only at an author mistake, so it fails nothing
         let sut = try Module(
-            imports: ["std.math.plus"],
+            imports: ["Standard.Math.plus"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
                     result: .call(
-                        Call(selector: "std.math.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
+                        Call(selector: "Standard.Math.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
                     )
                 )
             ]
@@ -47,17 +47,17 @@ struct FailingTests {
     func aRaisingProcedureCarriesToItsCallers() async throws {
         // Given
         let sut = try Module(
-            imports: ["std.control.abort"],
+            imports: ["Standard.Control.abort"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.reach"))
+                    result: .call(Call(selector: "App.reach"))
                 ),
-                "app.reach": Procedure(
+                "App.reach": Procedure(
                     body: [],
                     result: .call(
-                        Call(selector: "std.control.abort", arguments: [.literal(.string("no"))])
+                        Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
                     )
                 )
             ]
@@ -67,7 +67,7 @@ struct FailingTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.reach"]?.failing == .these(["aborted"]))
+        #expect(image["App.reach"]?.failing == .these(["aborted"]))
         #expect(image[entryName]?.failing == .these(["aborted"]))
     }
 
@@ -76,13 +76,13 @@ struct FailingTests {
         // Given. `abort` takes `of: any`, and null is a value `any` admits.
         // Null spells nothing, and a refusal says something
         let sut = try Module(
-            imports: ["std.control.abort"],
+            imports: ["Standard.Control.abort"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "it", type: .any)]),
                     body: [],
-                    result: .call(Call(selector: "std.control.abort", arguments: [reference("it")]))
+                    result: .call(Call(selector: "Standard.Control.abort", arguments: [reference("it")]))
                 )
             ]
         )
@@ -121,7 +121,7 @@ struct FailingTests {
     func aRescueClearsWhatTheBodyRaises() async throws {
         // Given. The body aborts, the rescue casts
         let sut = try Module(
-            imports: ["std.control.abort"],
+            imports: ["Standard.Control.abort"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -131,7 +131,7 @@ struct FailingTests {
                             binding: .constant("tried"),
                             expression: .attempt(
                                 Block(body: [], result: .call(
-                                    Call(selector: "std.control.abort", arguments: [.literal(.string("no"))])
+                                    Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
                                 )),
                                 rescue: Block(
                                     body: [],

@@ -16,7 +16,7 @@ import Foundation
 //
 // The table is one line per procedure: a key is the bare name of the declaration it
 // reaches, and a key not in the table is sent as written. What a real notation
-// does with the same hole, `is` reaching `std.logic.equal`, a connective
+// does with the same hole, `is` reaching `Standard.Logic.equal`, a connective
 // wrapping its sides, a spelling that takes no subject, is that notation's, and
 // it is tested where it lives.
 struct TestConditionSpelling: ExpressionSpelling {
@@ -28,12 +28,12 @@ struct TestConditionSpelling: ExpressionSpelling {
 
     // The key a condition is spelled with, and the declaration it names.
     static let procedures: [Name: Name] = [
-        "equal": "std.logic.equal",
-        "notEqual": "std.logic.notEqual",
-        "contains": "std.collection.contains",
-        "startsWith": "std.text.startsWith",
-        "lessThan": "std.math.lessThan",
-        "greaterThan": "std.math.greaterThan",
+        "equal": "Standard.Logic.equal",
+        "notEqual": "Standard.Logic.notEqual",
+        "contains": "Standard.Collection.contains",
+        "startsWith": "Standard.Text.startsWith",
+        "lessThan": "Standard.Math.lessThan",
+        "greaterThan": "Standard.Math.greaterThan",
         "longerThan": "extra.longerThan"
     ]
 

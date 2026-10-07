@@ -11,7 +11,7 @@ import Testing
 @testable import WarpStandard
 import WarpTestSupport
 
-@Suite("What std.text answers")
+@Suite("What Standard.Text answers")
 struct TextTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -26,7 +26,7 @@ struct TextTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        selector: "std.text.text",
+                        selector: "Standard.Text.text",
                         arguments: [
                             .literal(.array([
                                 .int(1),
@@ -56,17 +56,17 @@ struct TextTests {
                     signature: Signature(parameters: [Parameter(name: "line", type: .string)]),
                     body: [
                         Statement(binding: .constant("parts"), expression: .call(Call(
-                            selector: "std.text.split",
+                            selector: "Standard.Text.split",
                             arguments: [reference("line"), .literal(.string(","))]
                         ))
                         ),
                         Statement(binding: .constant("rejoined"), expression: .call(Call(
-                            selector: "std.text.joined",
+                            selector: "Standard.Text.joined",
                             arguments: [reference("parts"), .literal(.string(" / "))]
                         ))
                         ),
                         Statement(binding: .constant("fixed"), expression: .call(Call(
-                            selector: "std.text.replacing",
+                            selector: "Standard.Text.replacing",
                             arguments: [reference("rejoined"), .literal(.string("b")), .literal(.string("B"))]
                         ))
                         )
@@ -130,15 +130,15 @@ struct TextTests {
         }
 
         // When / Then
-        #expect(try await run(procedure("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
-        #expect(try await run(procedure("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
+        #expect(try await run(procedure("Standard.Text.decoded", on: .bytes([104, 105]))) == .string("hi"))
+        #expect(try await run(procedure("Standard.Text.encoded", on: .string("hi"))) == .bytes([104, 105]))
 
         // Bytes carry no promise of being text, and a completed guess is a
         // text nobody sent.
         await #expect {
-            try await run(procedure("std.text.decoded", on: .bytes([0xff])))
+            try await run(procedure("Standard.Text.decoded", on: .bytes([0xff])))
         } throws: { error in
-            "\(error)".contains("std.text.decoded asks bytes that are text")
+            "\(error)".contains("Standard.Text.decoded asks bytes that are text")
         }
     }
 
@@ -152,7 +152,7 @@ struct TextTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        selector: "std.text.decoded",
+                        selector: "Standard.Text.decoded",
                         arguments: [.literal(.bytes([104])), .literal(.string("utf16"))]
                     ))
                 )

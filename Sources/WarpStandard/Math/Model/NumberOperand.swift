@@ -15,7 +15,7 @@ enum NumberOperand: Int, ParameterSet {
 
     // MARK: - Property
     var declared: Parameter {
-        Parameter(name: "number", type: .parameter(name: "N", constraints: ["std.Numeric"]))
+        Parameter(name: "number", type: .parameter(name: "N", constraints: ["Standard.Numeric"]))
     }
 
     // MARK: - Initializer

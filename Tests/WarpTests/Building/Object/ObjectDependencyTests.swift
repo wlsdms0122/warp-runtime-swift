@@ -60,7 +60,7 @@ struct ObjectDependencyTests {
         get throws {
             try Module(
                 procedures: [
-                    "app.main": Procedure(
+                    "App.main": Procedure(
                         signature: Signature(returns: .int),
                         body: [],
                         result: .call(Call(selector: "a.foo"))
@@ -177,7 +177,7 @@ struct ObjectDependencyTests {
     ) async throws -> (behind: Value, calling: Value) {
         let caller = try Module(
             procedures: [
-                "app.main": Procedure(
+                "App.main": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(selector: selector))

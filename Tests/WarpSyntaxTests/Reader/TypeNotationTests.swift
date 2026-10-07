@@ -168,12 +168,12 @@ struct TypeNotationTests {
     @Test("names joined with & read as a composition, in name order, and write back the same way")
     func compositionsParse() throws {
         // When / Then
-        #expect(try TypeReader.parse("app.B & app.A") == .composition(["app.A", "app.B"]))
-        #expect(try TypeReader.parse("array<app.A & app.B>") == .array(.composition(["app.A", "app.B"])))
-        #expect(try Writer().value(of: .composition(["app.A", "app.B"])) == .string("app.A & app.B"))
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.B?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & array<int>") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.A") }
+        #expect(try TypeReader.parse("App.B & App.A") == .composition(["App.A", "App.B"]))
+        #expect(try TypeReader.parse("array<App.A & App.B>") == .array(.composition(["App.A", "App.B"])))
+        #expect(try Writer().value(of: .composition(["App.A", "App.B"])) == .string("App.A & App.B"))
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.B?") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & array<int>") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.A") }
     }
 
     @Test("a signature bounds its type parameters once, in bounds")

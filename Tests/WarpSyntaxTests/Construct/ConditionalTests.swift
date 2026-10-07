@@ -35,7 +35,7 @@ struct ConditionalTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "pick"]]]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let thenOutputs = try await run(spec, arguments: ["kind": .string("a")])

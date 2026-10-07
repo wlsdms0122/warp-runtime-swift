@@ -11,7 +11,7 @@ import Warp
 import WarpStandard
 import WarpTestSupport
 
-@Suite("What std.math answers")
+@Suite("What Standard.Math answers")
 struct MathTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -21,9 +21,9 @@ struct MathTests {
         // Given. Both are Swift traps if the answer is taken rather than
         // judged, and each arrives at run time
         let asks: [(Name, Value, Value)] = [
-            ("std.math.remainder", .int(5), .int(0)),
-            ("std.math.dividedBy", .int(5), .int(0)),
-            ("std.math.dividedBy", .double(5), .double(0))
+            ("Standard.Math.remainder", .int(5), .int(0)),
+            ("Standard.Math.dividedBy", .int(5), .int(0)),
+            ("Standard.Math.dividedBy", .double(5), .double(0))
         ]
 
         for (procedure, subject, operand) in asks {
@@ -49,9 +49,9 @@ struct MathTests {
         // Given. Each of these falls off the edge of the int, and the
         // language stops rather than answering a number the digits do not say
         let asks: [(Name, Value, Value)] = [
-            ("std.math.times", .int(Int.max), .int(2)),
-            ("std.math.plus", .int(Int.max), .int(1)),
-            ("std.math.minus", .int(Int.min), .int(1))
+            ("Standard.Math.times", .int(Int.max), .int(2)),
+            ("Standard.Math.plus", .int(Int.max), .int(1)),
+            ("Standard.Math.minus", .int(Int.min), .int(1))
         ]
 
         func asking(_ procedure: Name, _ subject: Value, _ operand: Value) throws -> Module {
@@ -75,7 +75,7 @@ struct MathTests {
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0. An answer an int holds, so it answers.
-        #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
+        #expect(try await run(asking("Standard.Math.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("fraction arithmetic with no finite answer refuses rather than answering infinity")
@@ -83,9 +83,9 @@ struct MathTests {
         // Given. Each of these reaches past the largest fraction, and
         // infinity is a value no document can carry
         let asks: [(Name, Double, Double)] = [
-            ("std.math.plus", 1e308, 1e308),
-            ("std.math.minus", -1e308, 1e308),
-            ("std.math.times", 1e308, 10.0)
+            ("Standard.Math.plus", 1e308, 1e308),
+            ("Standard.Math.minus", -1e308, 1e308),
+            ("Standard.Math.times", 1e308, 10.0)
         ]
 
         for (procedure, subject, operand) in asks {
@@ -101,8 +101,8 @@ struct MathTests {
     @Test("a whole number widens to a fraction on either side")
     func wholeNumbersWiden() async throws {
         // When / Then
-        #expect(try await run(sending("std.math.plus", .int(1), .double(0.5))) == .double(1.5))
-        #expect(try await run(sending("std.math.plus", .double(0.5), .int(1))) == .double(1.5))
+        #expect(try await run(sending("Standard.Math.plus", .int(1), .double(0.5))) == .double(1.5))
+        #expect(try await run(sending("Standard.Math.plus", .double(0.5), .int(1))) == .double(1.5))
     }
 
     @Test("a quotient is a fraction even between wholes")
@@ -115,7 +115,7 @@ struct MathTests {
                         access: .public,
                         body: [],
                         result: .call(Call(
-                            selector: "std.math.dividedBy",
+                            selector: "Standard.Math.dividedBy",
                             arguments: [.literal(.int(left)), .literal(.int(right))]
                         ))
                     )
@@ -145,9 +145,9 @@ struct MathTests {
         // holds. The refusal names the overflow, not a missing whole answer.
         // The two reasons are different facts.
         let asks: [(Name, Value)] = [
-            ("std.math.floored", .double(1e30)),
-            ("std.math.rounded", .double(1e30)),
-            ("std.math.absolute", .int(Int.min))
+            ("Standard.Math.floored", .double(1e30)),
+            ("Standard.Math.rounded", .double(1e30)),
+            ("Standard.Math.absolute", .int(Int.min))
         ]
 
         for (procedure, subject) in asks {
@@ -179,17 +179,17 @@ struct MathTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("sum"), expression: .call(Call(
-                            selector: "std.math.plus",
+                            selector: "Standard.Math.plus",
                             arguments: [.literal(.int(2)), .literal(.int(3))]
                         ))
                         ),
                         Statement(binding: .constant("product"), expression: .call(Call(
-                            selector: "std.math.times",
+                            selector: "Standard.Math.times",
                             arguments: [.literal(.int(4)), .literal(.double(2.5))]
                         ))
                         ),
                         Statement(binding: .constant("quotient"), expression: .call(Call(
-                            selector: "std.math.dividedBy",
+                            selector: "Standard.Math.dividedBy",
                             arguments: [.literal(.int(7)), .literal(.int(2))]
                         ))
                         )
@@ -224,7 +224,7 @@ struct MathTests {
                         Statement(
                             expression: .conditional(
                                 .call(Call(
-                                    selector: "std.math.lessThan",
+                                    selector: "Standard.Math.lessThan",
                                     arguments: [reference("n"), .literal(.int(10))]
                                 )),
                                 then: [
@@ -254,18 +254,18 @@ struct MathTests {
 
     @Test("bytes do not order")
     func bytesDoNotOrder() async throws {
-        // Given. Bytes are an array, and `std.Comparable` admits numbers and
+        // Given. Bytes are an array, and `Standard.Comparable` admits numbers and
         // strings, not collections. A literal is a reading the build can
         // judge, so the refusal lands before the run.
         let sut = Warp.Expression.call(
-            Call(selector: "std.math.lessThan", arguments: [.literal(.bytes([0x01])), .literal(.bytes([0x02]))])
+            Call(selector: "Standard.Math.lessThan", arguments: [.literal(.bytes([0x01])), .literal(.bytes([0x02]))])
         )
 
         // When / Then
         await #expect {
             try await answer(of: [Statement(binding: .constant("probe"), expression: sut)], result: reference("probe"))
         } throws: { error in
-            error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
+            error is BuildError && "\(error)".contains("'Standard.Comparable' does not admit")
         }
     }
 
@@ -293,7 +293,7 @@ struct MathTests {
             Procedure(
                 body: [],
                 result: .call(
-                    Call(selector: "std.math.max", arguments: [.literal(above), .literal(below)])
+                    Call(selector: "Standard.Math.max", arguments: [.literal(above), .literal(below)])
                 )
             )
         )
@@ -312,7 +312,7 @@ struct MathTests {
                     signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
-                        selector: "std.math.min",
+                        selector: "Standard.Math.min",
                         arguments: [.literal(.string("b")), .literal(.string("a"))]
                     ))
                 )

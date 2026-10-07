@@ -56,7 +56,7 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
-                                            selector: "app.fail",
+                                            selector: "App.fail",
                                             arguments: [.literal(.bool(true))]
                                         )))
                                     ]), rescue: Block(
@@ -91,7 +91,7 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
-                                            selector: "app.fail",
+                                            selector: "App.fail",
                                             arguments: [.literal(.bool(true))]
                                         )))
                                     ]), rescue: Block(
@@ -131,7 +131,7 @@ struct ExecutorTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .call(Call(
-                            selector: "app.fail",
+                            selector: "App.fail",
                             arguments: [.literal(.bool(true))]
                         )))
                     ]

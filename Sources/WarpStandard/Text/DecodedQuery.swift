@@ -42,18 +42,18 @@ struct DecodedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard let bytes = question[.bytes].bytes else {
-            throw ExecutionError("std.text.decoded asks bytes")
+            throw ExecutionError("Standard.Text.decoded asks bytes")
         }
 
         guard
             case let .string(name) = question[.encoding],
             let encoding = CharacterEncoding(rawValue: name)
         else {
-            throw ExecutionError("std.text.decoded asks the name of an encoding it has")
+            throw ExecutionError("Standard.Text.decoded asks the name of an encoding it has")
         }
 
         guard let text = encoding.text(of: bytes) else {
-            throw ExecutionError("std.text.decoded asks bytes that are text in the encoding named")
+            throw ExecutionError("Standard.Text.decoded asks bytes that are text in the encoding named")
         }
 
         return .string(text)

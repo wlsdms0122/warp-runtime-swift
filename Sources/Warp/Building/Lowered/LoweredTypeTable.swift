@@ -358,8 +358,8 @@ final class LoweredTypeTable: Sendable {
     }
 
     // The record a type names through the row it stands on, or nil where it
-    // names none. An alias names what it stands for, so `app.A?` and an alias
-    // of it name `app.A` alike. The one reading of `recordRows` for a type
+    // names none. An alias names what it stands for, so `App.A?` and an alias
+    // of it name `App.A` alike. The one reading of `recordRows` for a type
     // that is not itself a row.
     func record(of type: LoweredType) -> Int? {
         guard let row = type.row else { return nil }

@@ -119,7 +119,7 @@ struct CallTests {
         // way every other one is, so a document is not forced through
         // `x.shout` to hand it over
         let sut = try loader.loadDocument([
-            "imports": ["std.text.joined", "std.text.text"],
+            "imports": ["Standard.Text.joined", "Standard.Text.text"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "word", "type": "string"]],

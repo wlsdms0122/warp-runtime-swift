@@ -42,13 +42,13 @@ struct OneSpellingTests {
         // Given
         let document: Value = [
             "warp": 1,
-            "imports": ["std.text.text", "std.logic.not"],
+            "imports": ["Standard.Text.text", "Standard.Logic.not"],
             "procedures": [
                 "entry": [
                     "result": [
                         "call": [
-                            "arguments": [["call": ["arguments": [true], "procedure": "std.logic.not"]]],
-                            "procedure": "std.text.text"
+                            "arguments": [["call": ["arguments": [true], "procedure": "Standard.Logic.not"]]],
+                            "procedure": "Standard.Text.text"
                         ]
                     ]
                 ]
@@ -59,7 +59,7 @@ struct OneSpellingTests {
         #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
-            "\(error)".contains("imports[0]") && "\(error)".contains("The one way writes \"std.logic.not\"")
+            "\(error)".contains("imports[0]") && "\(error)".contains("The one way writes \"Standard.Logic.not\"")
         }
     }
 
@@ -127,7 +127,7 @@ struct OneSpellingTests {
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "types": ["app.Outer": ["record": ["inner": ["id": "string"]]]],
+            "types": ["App.Outer": ["record": ["inner": ["id": "string"]]]],
             "procedures": ["entry": ["result": 1]]
         ]
 
@@ -135,7 +135,7 @@ struct OneSpellingTests {
         #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
-            (error as? ReadingError)?.place?.rendered == "types.app.Outer.record.inner"
+            (error as? ReadingError)?.place?.rendered == "types.App.Outer.record.inner"
                 && "\(error)".contains("A record type is written")
         }
     }

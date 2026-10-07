@@ -39,7 +39,7 @@ struct ObjectReadingTests {
             case times
 
             // MARK: - Property
-            var selector: Name { "std.math.times" }
+            var selector: Name { "Standard.Math.times" }
 
             var handing: Int { 2 }
 
@@ -71,10 +71,10 @@ struct ObjectReadingTests {
     func aSendItsNumberingDoesNotNumber() async throws {
         // Given / When. A real object whose native row sends a spelling other
         // than the one its document numbered
-        let refusal = try await reading { send in send[1] = .string("std.math.minus") }
+        let refusal = try await reading { send in send[1] = .string("Standard.Math.minus") }
 
         // Then. Refused where the object is read, before any link
-        #expect(refusal?.message.contains("'app.entry' sends 'std.math.minus', which its document numbers nowhere") == true)
+        #expect(refusal?.message.contains("'App.entry' sends 'Standard.Math.minus', which its document numbers nowhere") == true)
     }
 
     @Test("is refused where a native's sends stand apart")
@@ -84,7 +84,7 @@ struct ObjectReadingTests {
         let refusal = try await reading { send in send[0] = .int(1) }
 
         // Then. Refused where the object is read, before any link
-        #expect(refusal?.message.contains("'app.entry' sends procedures standing at [1]") == true)
+        #expect(refusal?.message.contains("'App.entry' sends procedures standing at [1]") == true)
     }
 
     @Test("is refused where a count is written below zero")
@@ -214,7 +214,7 @@ struct ObjectReadingTests {
         // to hold none of it.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(binding: .constant("n"), expression: .literal(.int(1)))],
@@ -273,7 +273,7 @@ struct ObjectReadingTests {
         // types apart.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     body: [],
                     result: .record(["a": .literal(.int(1)), "b": .literal(.string("s"))])
@@ -350,13 +350,13 @@ struct ObjectReadingTests {
         // one argument added to what the call stands.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "app.twice", arguments: [.literal(.int(2))]))
+                    result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
                 ),
-                "app.twice": Procedure(
+                "App.twice": Procedure(
                     signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .int),
                     body: [],
                     result: reference("n")
@@ -414,7 +414,7 @@ struct ObjectReadingTests {
             return
         }
 
-        row[0] = .string("app.entr\u{0079}\u{0301}")
+        row[0] = .string("App.entr\u{0079}\u{0301}")
         declared[0] = .array(row)
         parts = parts.writing("rows", with: .array(declared))
 
@@ -422,7 +422,7 @@ struct ObjectReadingTests {
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
-            error is ObjectRefused && "\(error)".contains("the name 'app.entrý' is not in normal form C")
+            error is ObjectRefused && "\(error)".contains("the name 'App.entrý' is not in normal form C")
         }
     }
 
@@ -432,9 +432,9 @@ struct ObjectReadingTests {
         // order. The values read alike either way, so what breaks is quieter:
         // one object would have two writings and a cache key two answers.
         let sut = try Module(
-            types: ["app.One": .record(["x": .int]), "app.Two": .record(["y": .int])],
+            types: ["App.One": .record(["x": .int]), "App.Two": .record(["y": .int])],
             procedures: [
-                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -465,7 +465,7 @@ struct ObjectReadingTests {
         // writings as one object.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [],
@@ -516,20 +516,20 @@ struct ObjectReadingTests {
         // hold either way.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(0)))],
                     result: .loop(
                         while: .call(Call(
-                            selector: "std.math.lessThan",
+                            selector: "Standard.Math.lessThan",
                             arguments: [reference("n"), .literal(.int(2))]
                         )),
                         body: Block(
                             body: [
                                 Statement(
                                     binding: .assignment([.key("n")]),
-                                    expression: .call(Call(selector: "std.math.plus", arguments: [reference("n"), .literal(.int(1))]))
+                                    expression: .call(Call(selector: "Standard.Math.plus", arguments: [reference("n"), .literal(.int(1))]))
                                 ),
                                 Statement(binding: .constant("k"), expression: reference("n"))
                             ],
@@ -579,25 +579,25 @@ struct ObjectReadingTests {
         // set reads the same either way, so what breaks is quieter: one
         // object would have two writings.
         let sut = try Module(
-            types: ["app.Box": .record(["v": .int])],
+            types: ["App.Box": .record(["v": .int])],
             contracts: [
-                "app.One": ["one": Signature(parameters: [Parameter(name: "of", type: .named("app.One"))], returns: .int)],
-                "app.Two": ["two": Signature(parameters: [Parameter(name: "of", type: .named("app.Two"))], returns: .int)]
+                "App.One": ["one": Signature(parameters: [Parameter(name: "of", type: .named("App.One"))], returns: .int)],
+                "App.Two": ["two": Signature(parameters: [Parameter(name: "of", type: .named("App.Two"))], returns: .int)]
             ],
-            claims: ["app.Box": ["app.One", "app.Two"]],
+            claims: ["App.Box": ["App.One", "App.Two"]],
             procedures: [
-                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "app.Box.one": Procedure(
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "App.Box.one": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("app.Box"))],
+                        parameters: [Parameter(name: "of", type: .named("App.Box"))],
                         returns: .int
                     ),
                     body: [],
                     result: .literal(.int(1))
                 ),
-                "app.Box.two": Procedure(
+                "App.Box.two": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("app.Box"))],
+                        parameters: [Parameter(name: "of", type: .named("App.Box"))],
                         returns: .int
                     ),
                     body: [],
@@ -637,7 +637,7 @@ struct ObjectReadingTests {
         // the table that says where each one's begin written backwards.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
@@ -646,7 +646,7 @@ struct ObjectReadingTests {
                     )],
                     result: .apply(reference("made"), arguments: [])
                 ),
-                "app.other": Procedure(
+                "App.other": Procedure(
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made"),
@@ -687,15 +687,15 @@ struct ObjectReadingTests {
         // written twice or out of place rewires a call rather than refusing it.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(
-                        selector: "std.math.minus",
+                        selector: "Standard.Math.minus",
                         arguments: [
                             .call(Call(
-                                selector: "std.math.plus",
+                                selector: "Standard.Math.plus",
                                 arguments: [.literal(.int(1)), .literal(.int(2))]
                             )),
                             .literal(.int(3))
@@ -735,7 +735,7 @@ struct ObjectReadingTests {
         // that sum counted from behind the spellings, which does not.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
@@ -746,7 +746,7 @@ struct ObjectReadingTests {
                     )],
                     result: .apply(reference("made"), arguments: [])
                 ),
-                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
         )
 
@@ -760,8 +760,8 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array([
-            .array([ObjectWriter().declaration(.procedure("app.entry")), .int(.max - 1)]),
-            .array([ObjectWriter().declaration(.procedure("app.other")), .int(1)])
+            .array([ObjectWriter().declaration(.procedure("App.entry")), .int(.max - 1)]),
+            .array([ObjectWriter().declaration(.procedure("App.other")), .int(1)])
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
@@ -780,7 +780,7 @@ struct ObjectReadingTests {
         // count above it numbers closures no row holds.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
@@ -824,7 +824,7 @@ struct ObjectReadingTests {
         // one a numbering would have to count out.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
@@ -835,7 +835,7 @@ struct ObjectReadingTests {
                     )],
                     result: .apply(reference("made"), arguments: [])
                 ),
-                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
         )
 
@@ -849,8 +849,8 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array([
-            .array([ObjectWriter().declaration(.procedure("app.entry")), .int(.max)]),
-            .array([ObjectWriter().declaration(.procedure("app.other")), .int(.max)])
+            .array([ObjectWriter().declaration(.procedure("App.entry")), .int(.max)]),
+            .array([ObjectWriter().declaration(.procedure("App.other")), .int(.max)])
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
@@ -868,7 +868,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             try Module(
                 procedures: [
-                    "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                 ]
             ).draft,
             identity: Identity([0x01, 0x02, 0x03])
@@ -940,7 +940,7 @@ struct ObjectReadingTests {
         // name wrote one, so nothing it lays down carries this entry.
         let sut = try Module(
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [Statement(
@@ -951,7 +951,7 @@ struct ObjectReadingTests {
                     )],
                     result: .apply(reference("made"), arguments: [])
                 ),
-                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
         )
 
@@ -966,7 +966,7 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[1] = .array(counts + [.array([ObjectWriter().declaration(.procedure("app.other")), .int(0)])])
+        numbering[1] = .array(counts + [.array([ObjectWriter().declaration(.procedure("App.other")), .int(0)])])
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then
@@ -983,7 +983,7 @@ struct ObjectReadingTests {
     // refused with where it is read.
     private func reading(_ change: (inout [Value]) -> Void) async throws -> ObjectRefused? {
         let sut = try Module(procedures: [
-            "app.entry": Procedure(
+            "App.entry": Procedure(
                 access: .public,
                 signature: Signature(of: TwiceQuery.self, returns: .int),
                 implementation: .query(TwiceQuery())
@@ -991,7 +991,7 @@ struct ObjectReadingTests {
         ])
         let compiled = try await builder.compile([sut] + Module.standard)
 
-        guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
+        guard let mine = compiled.first(where: { one in one.declared.contains("App.entry") }),
             case var .dictionary(parts) = try mine.object(),
             case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
@@ -1020,13 +1020,13 @@ struct ObjectReadingTests {
     // what it means to mutate.
     private func parts() async throws -> Value.Dictionary {
         try await parts(of: try Module(
-            types: ["app.Point": .record(["x": .int, "y": .int])],
+            types: ["App.Point": .record(["x": .int, "y": .int])],
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "p", type: .any)], returns: .named("app.Point")),
+                    signature: Signature(parameters: [Parameter(name: "p", type: .any)], returns: .named("App.Point")),
                     body: [],
-                    result: .cast(reference("p"), as: .named("app.Point"), optional: false)
+                    result: .cast(reference("p"), as: .named("App.Point"), optional: false)
                 )
             ]
         ))
@@ -1035,7 +1035,7 @@ struct ObjectReadingTests {
     private func parts(of module: Module) async throws -> Value.Dictionary {
         let compiled = try await builder.compile([module] + Module.standard)
 
-        guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
+        guard let mine = compiled.first(where: { one in one.declared.contains("App.entry") }),
             case let .dictionary(written) = try mine.object()
         else {
             throw ObjectMissing()

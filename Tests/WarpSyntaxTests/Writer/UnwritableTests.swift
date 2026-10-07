@@ -71,7 +71,7 @@ struct UnwritableTests {
     @Test(
         "a type whose spelling the reading refuses, or reads as another type, has no document",
         arguments: [
-            TypeExpression.nullable(.composition(["app.A", "app.B"])),
+            TypeExpression.nullable(.composition(["App.A", "App.B"])),
             .nullable(.nullable(.int)),
             .nullable(.any),
             .nullable(.parameter(name: "T")),
@@ -97,14 +97,14 @@ struct UnwritableTests {
         // either or null
         let module = try Module(
             contracts: [
-                "app.A": ["a": Signature(parameters: [Parameter(name: "of", type: .named("app.A"))], returns: .int)],
-                "app.B": ["b": Signature(parameters: [Parameter(name: "of", type: .named("app.B"))], returns: .int)]
+                "App.A": ["a": Signature(parameters: [Parameter(name: "of", type: .named("App.A"))], returns: .int)],
+                "App.B": ["b": Signature(parameters: [Parameter(name: "of", type: .named("App.B"))], returns: .int)]
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "either", type: .nullable(.composition(["app.A", "app.B"])))]
+                        parameters: [Parameter(name: "either", type: .nullable(.composition(["App.A", "App.B"])))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -124,9 +124,9 @@ struct UnwritableTests {
     @Test("one name composing is written as the name, and names in any order are written in name order")
     func aCompositionIsWrittenInItsOneSpelling() throws {
         // When / Then
-        #expect(try sut.value(of: TypeExpression.composition(["app.A"])) == .string("app.A"))
-        #expect(try sut.value(of: TypeExpression.array(.composition(["app.A"]))) == .string("array<app.A>"))
-        #expect(try sut.value(of: TypeExpression.composition(["app.B", "app.A"])) == .string("app.A & app.B"))
+        #expect(try sut.value(of: TypeExpression.composition(["App.A"])) == .string("App.A"))
+        #expect(try sut.value(of: TypeExpression.array(.composition(["App.A"]))) == .string("array<App.A>"))
+        #expect(try sut.value(of: TypeExpression.composition(["App.B", "App.A"])) == .string("App.A & App.B"))
     }
 
     @Test("a nullable writes its trailing ?, and one with no spelling inside has no document")

@@ -219,7 +219,7 @@ struct BytesTests {
                         parameters: [Parameter(name: "data", type: .any)]
                     ),
                     body: [],
-                    result: .call(Call(selector: "std.text.joined", arguments: [reference("data"), .literal(.string(""))]))
+                    result: .call(Call(selector: "Standard.Text.joined", arguments: [reference("data"), .literal(.string(""))]))
                 )
             ]
         )
@@ -254,7 +254,7 @@ struct BytesTests {
                                 element: "element",
                                 body: [
                                     Statement(binding: .assignment([.key("sum")]), expression: .call(Call(
-                                        selector: "std.math.plus",
+                                        selector: "Standard.Math.plus",
                                         arguments: [reference("sum"), reference("element")]
                                     )))
                                 ]

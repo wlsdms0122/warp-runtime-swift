@@ -18,17 +18,17 @@ struct LoweredTypeTests {
 
     private let types = TypeTable(
         types: [
-            "bank.Account": .record(["balance": .int, "owner": .named("bank.Owner")]),
-            "bank.Owner": .record(["name": .string]),
-            "bank.Acct": .named("bank.Account"),
-            "app.Byte": .ranged(.whole(from: 0, to: .through(255))),
-            "app.Maybe": .nullable(.int)
+            "Bank.Account": .record(["balance": .int, "owner": .named("Bank.Owner")]),
+            "Bank.Owner": .record(["name": .string]),
+            "Bank.Acct": .named("Bank.Account"),
+            "App.Byte": .ranged(.whole(from: 0, to: .through(255))),
+            "App.Maybe": .nullable(.int)
         ],
         constraints: [
-            "app.Ordered": [.int, .double, .string],
-            "app.Numbers": [.int, .double],
-            "app.Lists": [.array(.int), .array(.double)],
-            "app.NumberLists": [.array(.named("app.Numbers"))]
+            "App.Ordered": [.int, .double, .string],
+            "App.Numbers": [.int, .double],
+            "App.Lists": [.array(.int), .array(.double)],
+            "App.NumberLists": [.array(.named("App.Numbers"))]
         ]
     )
 
@@ -39,11 +39,11 @@ struct LoweredTypeTests {
         // Given. Every declared type, and a few that name them
         let table = types.loweredTypes
         let written: [TypeExpression] = Array(types.types.values) + [
-            .array(.named("bank.Acct")),
-            .nullable(.named("bank.Owner")),
-            .parameter(name: "T", constraints: ["app.Ordered"]),
-            .procedure(ProcedureType(parameters: [.named("bank.Account")], returns: .int), .const),
-            .dictionary(.named("app.Maybe"))
+            .array(.named("Bank.Acct")),
+            .nullable(.named("Bank.Owner")),
+            .parameter(name: "T", constraints: ["App.Ordered"]),
+            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
+            .dictionary(.named("App.Maybe"))
         ]
 
         // When / Then
@@ -121,10 +121,10 @@ struct LoweredTypeTests {
 
     @Test("a membership takes a parameter no call fills only where the parameter's own bounds prove it")
     func aRigidParameterStandsInAMembershipByItsBounds() {
-        // Given. `app.Ordered` admits int, double and string
+        // Given. `App.Ordered` admits int, double and string
         let table = types.loweredTypes
-        let ordered = TypeExpression.composition(["app.Ordered"]).lowered(in: table)
-        let bounded = TypeExpression.parameter(name: "T", constraints: ["app.Ordered"]).lowered(in: table)
+        let ordered = TypeExpression.composition(["App.Ordered"]).lowered(in: table)
+        let bounded = TypeExpression.parameter(name: "T", constraints: ["App.Ordered"]).lowered(in: table)
         let unbounded = TypeExpression.parameter(name: "T").lowered(in: table)
 
         // When / Then. A parameter bounded by it is one of its members, and
@@ -135,13 +135,13 @@ struct LoweredTypeTests {
 
     @Test("a membership takes a list of a parameter no call fills only where the parameter's bounds prove each element")
     func aRigidParameterInsideAListStandsByItsBounds() {
-        // Given. `app.Lists` admits lists of ints and of doubles, and
-        // `app.NumberLists` lists of `app.Numbers`
+        // Given. `App.Lists` admits lists of ints and of doubles, and
+        // `App.NumberLists` lists of `App.Numbers`
         let table = types.loweredTypes
-        let lists = TypeExpression.composition(["app.Lists"]).lowered(in: table)
-        let numberLists = TypeExpression.composition(["app.NumberLists"]).lowered(in: table)
+        let lists = TypeExpression.composition(["App.Lists"]).lowered(in: table)
+        let numberLists = TypeExpression.composition(["App.NumberLists"]).lowered(in: table)
         let unbounded = LoweredType.array(TypeExpression.parameter(name: "T").lowered(in: table))
-        let bounded = LoweredType.array(TypeExpression.parameter(name: "T", constraints: ["app.Numbers"]).lowered(in: table))
+        let bounded = LoweredType.array(TypeExpression.parameter(name: "T", constraints: ["App.Numbers"]).lowered(in: table))
 
         // When / Then. A list of what may be anything is no member, and a
         // list of a parameter every member of whose bound is admitted is
@@ -156,12 +156,12 @@ struct LoweredTypeTests {
         let table = types.loweredTypes
 
         // When
-        let alias = try #require(table.row(named: "bank.Acct"))
-        let account = try #require(table.row(named: "bank.Account"))
-        let byte = try #require(table.row(named: "app.Byte"))
+        let alias = try #require(table.row(named: "Bank.Acct"))
+        let account = try #require(table.row(named: "Bank.Account"))
+        let byte = try #require(table.row(named: "App.Byte"))
 
         // Then. The alias names the account's record, and a range names none
-        #expect(TypeExpression.named("bank.Acct").lowered(in: table) == .named(alias))
+        #expect(TypeExpression.named("Bank.Acct").lowered(in: table) == .named(alias))
         #expect(table.recordRows[alias] == account)
         #expect(table.recordRows[account] == account)
         #expect(table.recordRows[byte] == nil)
@@ -187,14 +187,14 @@ struct LoweredTypeTests {
         // Given. A slot spelled with the alias, a nameless record, and one
         // already named by the alias
         let table = types.loweredTypes
-        let slot = TypeExpression.named("bank.Acct").lowered(in: table)
+        let slot = TypeExpression.named("Bank.Acct").lowered(in: table)
         let owner = Value.dictionary(["name": .string("a")])
 
         // When
         let settled = try slot.settling(.dictionary(["balance": .int(1), "owner": owner]), at: "input", in: table)
         let again = try slot.settling(settled, at: "input", in: table)
         let spelled = try slot.settling(
-            .record(Record(name: "bank.Acct", ["balance": .int(1), "owner": owner])),
+            .record(Record(name: "Bank.Acct", ["balance": .int(1), "owner": owner])),
             at: "input",
             in: table
         )
@@ -202,15 +202,15 @@ struct LoweredTypeTests {
         // Then
         #expect(
             settled == .record(
-                Record(name: "bank.Account", ["balance": .int(1), "owner": .record(Record(name: "bank.Owner", ["name": .string("a")]))])
+                Record(name: "Bank.Account", ["balance": .int(1), "owner": .record(Record(name: "Bank.Owner", ["name": .string("a")]))])
             )
         )
         #expect(again == settled)
         #expect(spelled == settled)
         #expect {
-            try slot.settling(.record(Record(name: "bank.Owner", ["balance": .int(1), "owner": owner])), at: "input", in: table)
+            try slot.settling(.record(Record(name: "Bank.Owner", ["balance": .int(1), "owner": owner])), at: "input", in: table)
         } throws: { error in
-            "\(error)".contains("is a bank.Owner, and the slot declares bank.Account")
+            "\(error)".contains("is a Bank.Owner, and the slot declares Bank.Account")
         }
     }
 
@@ -223,7 +223,7 @@ struct LoweredTypeTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        selector: "std.math.lessThan",
+                        selector: "Standard.Math.lessThan",
                         arguments: [.literal(.int(1)), .literal(.int(2))]
                     ))
                 )
@@ -232,8 +232,8 @@ struct LoweredTypeTests {
 
         // When
         let image = try await builder.build([module] + Module.standard)
-        let row = try #require(image["std.math.lessThan"])
-        let ordered = try #require(image.loweredTypes.constraintRow(named: "std.Comparable"))
+        let row = try #require(image["Standard.Math.lessThan"])
+        let ordered = try #require(image.loweredTypes.constraintRow(named: "Standard.Comparable"))
 
         // Then
         #expect(row.slots.map(\.name) == ["lhs", "rhs"])
@@ -249,15 +249,15 @@ struct LoweredTypeTests {
         // both rows is still being laid.
         let module = try Module(
             types: [
-                "app.Maybe": .nullable(.int),
-                "app.Kinds": .record([
-                    "soft": .procedure(ProcedureType(parameters: [.named("app.Maybe")]), .unstated, .unstated)
+                "App.Maybe": .nullable(.int),
+                "App.Kinds": .record([
+                    "soft": .procedure(ProcedureType(parameters: [.named("App.Maybe")]), .unstated, .unstated)
                 ])
             ],
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "k", type: .named("app.Kinds"))], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "k", type: .named("App.Kinds"))], returns: .int),
                     body: [],
                     result: .literal(.int(1))
                 )
@@ -266,10 +266,10 @@ struct LoweredTypeTests {
 
         // When
         let compiled = try await Builder().compile([module] + Module.standard)
-        let table = try #require(compiled.first { one in one.declared.contains("app.entry") }).types
+        let table = try #require(compiled.first { one in one.declared.contains("App.entry") }).types
 
         // Then. The parameter naming the nullable type need not be given.
-        guard case let .record(fields)? = table["app.Kinds"],
+        guard case let .record(fields)? = table["App.Kinds"],
             case let .procedure(soft?, _, _)? = fields["soft"]
         else {
             Issue.record("the declared record holds its procedure type")
@@ -283,20 +283,20 @@ struct LoweredTypeTests {
     @Test("one undeclared name passes every reading and is refused where a value meets it")
     func anUndeclaredNameTouchesOnlyItsOwnJudgments() {
         // Given. A table with one bad row beside a good one
-        let table = TypeTable(types: ["app.Bad": .named("app.Missing"), "app.Good": .nullable(.int)])
+        let table = TypeTable(types: ["App.Bad": .named("App.Missing"), "App.Good": .nullable(.int)])
 
         // When / Then
-        #expect(TypeExpression.named("app.Good").declaresNull(in: table))
-        #expect(TypeExpression.named("app.Good").accepts(.int, in: table))
-        #expect(TypeExpression.named("app.Bad").accepts(.int, in: table))
-        #expect(TypeExpression.int.accepts(.named("app.Bad"), in: table))
-        #expect(TypeExpression.named("app.Bad").lowered(in: table.loweredTypes)
+        #expect(TypeExpression.named("App.Good").declaresNull(in: table))
+        #expect(TypeExpression.named("App.Good").accepts(.int, in: table))
+        #expect(TypeExpression.named("App.Bad").accepts(.int, in: table))
+        #expect(TypeExpression.int.accepts(.named("App.Bad"), in: table))
+        #expect(TypeExpression.named("App.Bad").lowered(in: table.loweredTypes)
             .couldBothHold(reading: .int, in: table.loweredTypes))
-        #expect(!TypeExpression.named("app.Bad").declaresNull(in: table))
+        #expect(!TypeExpression.named("App.Bad").declaresNull(in: table))
         #expect {
-            try TypeExpression.named("app.Bad").settling(.int(1), at: "input", in: table)
+            try TypeExpression.named("App.Bad").settling(.int(1), at: "input", in: table)
         } throws: { error in
-            "\(error)".contains("input: declares type 'app.Missing', which nothing declares")
+            "\(error)".contains("input: declares type 'App.Missing', which nothing declares")
         }
     }
 
@@ -305,30 +305,30 @@ struct LoweredTypeTests {
         // Given. A table built by hand, which the build's refusals never saw
         let table = TypeTable(
             types: [
-                "app.M": .nullable(.named("app.M")),
-                "app.A": .variable(.named("app.B")),
-                "app.B": .inout(.named("app.A")),
-                "app.T": .nullable(.named("app.Leaf")),
-                "app.Leaf": .int
+                "App.M": .nullable(.named("App.M")),
+                "App.A": .variable(.named("App.B")),
+                "App.B": .inout(.named("App.A")),
+                "App.T": .nullable(.named("App.Leaf")),
+                "App.Leaf": .int
             ]
         )
 
         // When / Then. Each cycle is refused where a value meets it, and a
         // chain that ends is walked to its end
         #expect {
-            try TypeExpression.named("app.M").settling(.int(1), at: "input", in: table)
+            try TypeExpression.named("App.M").settling(.int(1), at: "input", in: table)
         } throws: { error in
-            "\(error)".contains("input: declares type 'app.M', which names itself")
+            "\(error)".contains("input: declares type 'App.M', which names itself")
         }
         #expect {
-            try TypeExpression.named("app.A").settling(.int(1), at: "input", in: table)
+            try TypeExpression.named("App.A").settling(.int(1), at: "input", in: table)
         } throws: { error in
-            "\(error)".contains("input: declares type 'app.A', which names itself")
+            "\(error)".contains("input: declares type 'App.A', which names itself")
         }
         #expect(throws: Never.self) {
-            try TypeExpression.named("app.T").settling(.int(1), at: "input", in: table)
+            try TypeExpression.named("App.T").settling(.int(1), at: "input", in: table)
         }
-        #expect(TypeExpression.named("app.T").declaresNull(in: table))
+        #expect(TypeExpression.named("App.T").declaresNull(in: table))
     }
 
     @Test("a procedure another link made is refused by a run, not read by its rows")

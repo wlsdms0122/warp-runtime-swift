@@ -16,7 +16,7 @@ public extension Module {
         unchecked: Draft(
             description: "Failing on purpose instead of answering.",
             procedures: [
-                "std.control.abort": Procedure(
+                "Standard.Control.abort": Procedure(
                     description: "Fails on purpose with a message, which an attempt around it catches.",
                     signature: Signature(of: AbortQuery.self, returns: .never),
                     implementation: .query(AbortQuery())

@@ -41,7 +41,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("head"), expression: .call(Call(
-                            selector: "std.collection.first",
+                            selector: "Standard.Collection.first",
                             arguments: [reference("names")]
                         ))),
                         Statement(binding: .constant("asked"), expression: .call(Call(
@@ -76,7 +76,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("head"), expression: .call(Call(
-                            selector: "std.collection.first",
+                            selector: "Standard.Collection.first",
                             arguments: [reference("counts")]
                         ))),
                         Statement(binding: .constant("asked"), expression: .call(Call(
@@ -108,7 +108,7 @@ struct InferenceTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(selector: "std.collection.count", arguments: [reference("item")]))
+            result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("item")]))
         )
         let wants = Procedure(
             signature: Signature(parameters: [Parameter(name: "ns", type: .array(.string))]),
@@ -124,7 +124,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("sizes"), expression: .call(Call(
-                            selector: "std.collection.map",
+                            selector: "Standard.Collection.map",
                             arguments: [reference("names"), .closure(counting)]
                         ))),
                         Statement(binding: .constant("asked"), expression: .call(Call(
@@ -558,7 +558,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("kept"), expression: .call(
                                 Call(
-                                    selector: "std.concurrent.map",
+                                    selector: "Standard.Concurrent.map",
                                     arguments: [
                                         .literal(.array([.int(1), .int(2)])),
                                         .closure(
@@ -726,7 +726,7 @@ struct InferenceTests {
                     body: [
                         Statement(
                             binding: .constant("said"),
-                            expression: .call(Call(selector: "std.collection.count", arguments: [reference("names")]))
+                            expression: .call(Call(selector: "Standard.Collection.count", arguments: [reference("names")]))
                         )
                     ]
                 )

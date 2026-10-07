@@ -32,10 +32,10 @@ struct CallTests {
         )
         let sut: Body = [
             Statement(binding: .constant("counted"), expression: .call(
-                Call(selector: "std.collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
+                Call(selector: "Standard.Collection.count", arguments: [.array([.literal(.int(1)), .literal(.int(2))])])
             )),
             Statement(binding: .constant("shouted"), expression: .call(
-                Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
+                Call(selector: "App.shout", arguments: [.literal(.string("hi"))])
             )),
             Statement(binding: .constant("echoed"), expression: .call(
                 Call(selector: "echo", arguments: [.literal(.string("back"))])
@@ -64,9 +64,9 @@ struct CallTests {
 
     @Test("an argument outside what a procedure declares is refused at the build")
     func argumentOutsideTheDeclarationIsRefused() async throws {
-        // Given. `count` declares `std.Collection`, and an int is no member
+        // Given. `count` declares `Standard.Collection`, and an int is no member
         let sut = Warp.Expression.call(
-            Call(selector: "std.collection.count", arguments: [.literal(.int(7))])
+            Call(selector: "Standard.Collection.count", arguments: [.literal(.int(7))])
         )
 
         // When / Then
@@ -76,7 +76,7 @@ struct CallTests {
                 result: reference("probe")
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("'collection' holds int, which 'std.Collection' does not admit")
+            error is BuildError && "\(error)".contains("'collection' holds int, which 'Standard.Collection' does not admit")
         }
     }
 
@@ -87,7 +87,7 @@ struct CallTests {
         // answering one name collide the same way two bodies would
         let rival = try Module(
             procedures: [
-                "std.collection.count": Procedure(
+                "Standard.Collection.count": Procedure(
                     signature: Signature(returns: .int),
                     implementation: .query(TicketQuery())
                 )
@@ -100,7 +100,7 @@ struct CallTests {
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("'std.collection.count' is declared more than once in this link")
+            error is BuildError && "\(error)".contains("'Standard.Collection.count' is declared more than once in this link")
         }
     }
 
@@ -111,7 +111,7 @@ struct CallTests {
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(
                         Call(
-                            selector: "app.shout",
+                            selector: "App.shout",
                             arguments: [
                                 .literal(.string("hi")),
                                 .literal(.int(11))
@@ -126,7 +126,7 @@ struct CallTests {
         await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'app.shout' with 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'App.shout' with 2 arguments, and it takes 1")
         }
     }
 
@@ -135,7 +135,7 @@ struct CallTests {
         // Given
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("shouted"), expression: .call(Call(selector: "app.shout")))
+                Statement(binding: .constant("shouted"), expression: .call(Call(selector: "App.shout")))
             ]
         )
 
@@ -143,7 +143,7 @@ struct CallTests {
         await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'app.shout' with 0 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'App.shout' with 0 arguments, and it takes 1")
         }
     }
 
@@ -154,7 +154,7 @@ struct CallTests {
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("shouted"), expression: .call(
-                    Call(selector: "app.shout", arguments: [.literal(.int(7))])
+                    Call(selector: "App.shout", arguments: [.literal(.int(7))])
                 ))
             ]
         )
@@ -163,7 +163,7 @@ struct CallTests {
         await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'app.shout': input 'text': expected string, got int")
+            error is BuildError && "\(error)".contains("sending 'App.shout': input 'text': expected string, got int")
         }
     }
 
@@ -185,12 +185,12 @@ struct CallTests {
 
     @Test("a call to another document's private declaration is refused as private, at the call")
     func aCallToAPrivateDeclarationIsRefusedAsPrivate() async throws {
-        // Given. `lib` declares `lib.hidden` privately, and `app` calls it
+        // Given. `lib` declares `Lib.hidden` privately, and `app` calls it
         let lib = try Module(procedures: [
-            "lib.hidden": Procedure(access: .private, signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
+            "Lib.hidden": Procedure(access: .private, signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
         ])
         let app = try Module(procedures: [
-            "entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "lib.hidden")))
+            "entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "Lib.hidden")))
         ])
 
         // When
@@ -199,7 +199,7 @@ struct CallTests {
         }
 
         // Then
-        #expect(refusal?.message == BuildError.concealed("lib.hidden", at: Place(in: Place.Document(identity: nil))).message)
+        #expect(refusal?.message == BuildError.concealed("Lib.hidden", at: Place(in: Place.Document(identity: nil))).message)
         #expect(refusal?.place?.rendered == "procedures.entry.result")
     }
 
@@ -390,7 +390,7 @@ struct CallTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        selector: "std.math.absolute",
+                        selector: "Standard.Math.absolute",
                         arguments: [.literal(.int(1)), .literal(.string("x"))]
                     ))
                 )
@@ -401,7 +401,7 @@ struct CallTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'std.math.absolute' with 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'Standard.Math.absolute' with 2 arguments, and it takes 1")
         }
     }
 

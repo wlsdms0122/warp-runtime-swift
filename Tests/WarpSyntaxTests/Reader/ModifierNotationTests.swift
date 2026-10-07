@@ -189,11 +189,11 @@ struct ModifierNotationTests {
     @Test("a plain name is written as itself and read back as itself")
     func aPlainNameRoundTrips() throws {
         // Given
-        let type = TypeExpression.named("app.Task")
+        let type = TypeExpression.named("App.Task")
 
         // When / Then
-        #expect(try Writer().value(of: type) == .string("app.Task"))
-        #expect(try TypeReader.parse("app.Task") == type)
+        #expect(try Writer().value(of: type) == .string("App.Task"))
+        #expect(try TypeReader.parse("App.Task") == type)
     }
 
     @Test("isolated is read in either order and written in one", arguments: [

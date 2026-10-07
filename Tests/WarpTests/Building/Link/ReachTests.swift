@@ -12,7 +12,7 @@ import WarpTestSupport
 
 @Suite("What a run from the entry can reach")
 struct ReachTests {
-    // Doubles what it is sent, by sending `std.math.times`.
+    // Doubles what it is sent, by sending `Standard.Math.times`.
     private struct TwiceQuery: Query {
         enum Parameters: Int, ParameterSet {
             case of
@@ -29,7 +29,7 @@ struct ReachTests {
             case times
 
             // MARK: - Property
-            var selector: Name { "std.math.times" }
+            var selector: Name { "Standard.Math.times" }
 
             var handing: Int { 2 }
 
@@ -55,17 +55,17 @@ struct ReachTests {
     // MARK: - Test
     @Test("a procedure reached only through a contract is reached")
     func aDispatchReachesEveryRowAnsweringIt() async throws {
-        // Given. The entry calls `app.tell`, which calls through the contract
+        // Given. The entry calls `App.tell`, which calls through the contract
         // and names no declaration; both types answering it are rows
         let sut = try Module(
             types: [
-                "bank.Account": .record(["balance": .int]),
-                "bank.Card": .record(["last": .string])
+                "Bank.Account": .record(["balance": .int]),
+                "Bank.Card": .record(["last": .string])
             ],
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
             claims: [
-                "bank.Account": ["app.Describable"],
-                "bank.Card": ["app.Describable"]
+                "Bank.Account": ["App.Describable"],
+                "Bank.Card": ["App.Describable"]
             ],
             procedures: [
                 entryName: Procedure(
@@ -75,38 +75,38 @@ struct ReachTests {
                             binding: .constant("account"),
                             expression: .cast(
                                 .record(["balance": .literal(.int(7))]),
-                                as: .named("bank.Account"),
+                                as: .named("Bank.Account"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .call(Call(selector: "app.tell", arguments: [reference("account")]))
+                    result: .call(Call(selector: "App.tell", arguments: [reference("account")]))
                 ),
-                "app.tell": Procedure(
+                "App.tell": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(selector: "app.Describable.describe", arguments: [reference("it")]))
+                    result: .call(Call(selector: "App.Describable.describe", arguments: [reference("it")]))
                 ),
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
                     result: .literal(.string("account"))
                 ),
-                "bank.Card.describe": Procedure(
+                "Bank.Card.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Card"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Card"))],
                         returns: .string
                     ),
                     body: [],
                     result: .literal(.string("card"))
                 ),
-                "app.aside": Procedure(body: [], result: .literal(.int(1)))
+                "App.aside": Procedure(body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -114,8 +114,8 @@ struct ReachTests {
         let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.tell", "bank.Account.describe", "bank.Card.describe"]))
-        #expect(try !image.reached(from: entryName).contains("app.aside"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "App.tell", "Bank.Account.describe", "Bank.Card.describe"]))
+        #expect(try !image.reached(from: entryName).contains("App.aside"))
     }
 
     @Test("a procedure a closure calls is reached, written in a body or folded into a constant")
@@ -124,7 +124,7 @@ struct ReachTests {
         // module constant; each calls a procedure nothing else names
         let sut = try Module(
             constants: [
-                "app.folded": .closure(Procedure(body: [], result: .call(Call(selector: "app.deep"))))
+                "App.folded": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(
@@ -132,16 +132,16 @@ struct ReachTests {
                     body: [
                         Statement(
                             binding: .constant("written"),
-                            expression: .closure(Procedure(body: [], result: .call(Call(selector: "app.leaf"))))
+                            expression: .closure(Procedure(body: [], result: .call(Call(selector: "App.leaf"))))
                         ),
                         Statement(binding: .constant("first"), expression: .apply(reference("written"), arguments: [])),
-                        Statement(binding: .constant("second"), expression: .apply(reference("app.folded"), arguments: []))
+                        Statement(binding: .constant("second"), expression: .apply(reference("App.folded"), arguments: []))
                     ],
                     result: reference("second")
                 ),
-                "app.leaf": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "app.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
-                "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+                "App.leaf": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
+                "App.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
             ]
         )
 
@@ -149,8 +149,8 @@ struct ReachTests {
         let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.leaf", "app.deep"]))
-        #expect(try !image.reached(from: entryName).contains("app.aside"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "App.leaf", "App.deep"]))
+        #expect(try !image.reached(from: entryName).contains("App.aside"))
     }
 
     @Test("a procedure a closure a variable starts out holding calls is reached")
@@ -159,16 +159,16 @@ struct ReachTests {
         // writes it; the entry applies what it reads out of the variable
         let sut = try Module(
             variables: [
-                "app.held": .closure(Procedure(body: [], result: .call(Call(selector: "app.deep"))))
+                "App.held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .apply(reference("app.held"), arguments: [])
+                    result: .apply(reference("App.held"), arguments: [])
                 ),
-                "app.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
-                "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+                "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
+                "App.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
             ]
         )
 
@@ -176,25 +176,25 @@ struct ReachTests {
         let image = try await builder.build([sut] + Module.standard)
 
         // Then
-        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.deep"]))
-        #expect(try !image.reached(from: entryName).contains("app.aside"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "App.deep"]))
+        #expect(try !image.reached(from: entryName).contains("App.aside"))
     }
 
     @Test("a closure a variable nobody reached reads starts out holding is not entered")
     func aVariableNoReachedBodyReadsIsNotEntered() async throws {
-        // Given. `app.aside` alone reads the variable, and nothing reaches it
+        // Given. `App.aside` alone reads the variable, and nothing reaches it
         let sut = try Module(
             variables: [
-                "app.held": .closure(Procedure(body: [], result: .call(Call(selector: "app.deep"))))
+                "App.held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
-                "app.aside": Procedure(
+                "App.aside": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .apply(reference("app.held"), arguments: [])
+                    result: .apply(reference("App.held"), arguments: [])
                 ),
-                "app.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
         )
 
@@ -207,19 +207,19 @@ struct ReachTests {
 
     @Test("what a native procedure declares it sends is reached")
     func aNativeSendIsReached() async throws {
-        // Given. `app.twice` is native and sends `std.math.times`
+        // Given. `App.twice` is native and sends `Standard.Math.times`
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.twice", arguments: [.literal(.int(2))]))
+                    result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
                 )
             ]
         )
         let sending = try Module(
             procedures: [
-                "app.twice": Procedure(
+                "App.twice": Procedure(
                     signature: Signature(of: TwiceQuery.self, returns: .int),
                     implementation: .query(TwiceQuery())
                 )
@@ -230,8 +230,8 @@ struct ReachTests {
         let image = try await builder.build([sut, sending] + Module.standard)
 
         // Then
-        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "app.twice", "std.math.times"]))
-        #expect(try !image.reached(from: entryName).contains("std.math.plus"))
+        #expect(try image.reached(from: entryName).isSuperset(of: [entryName, "App.twice", "Standard.Math.times"]))
+        #expect(try !image.reached(from: entryName).contains("Standard.Math.plus"))
     }
 
     @Test("names resolve across every module in the link, flat")

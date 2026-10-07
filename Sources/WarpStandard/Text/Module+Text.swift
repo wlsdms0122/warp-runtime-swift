@@ -15,22 +15,22 @@ public extension Module {
         unchecked: Draft(
             description: "Procedures about strings.",
             procedures: [
-                "std.text.decoded": Procedure(
+                "Standard.Text.decoded": Procedure(
                     description: "The bytes read as text in a named encoding.",
                     signature: Signature(of: DecodedQuery.self, returns: .string),
                     implementation: .query(DecodedQuery())
                 ),
-                "std.text.encoded": Procedure(
+                "Standard.Text.encoded": Procedure(
                     description: "The text written out as bytes in a named encoding.",
                     signature: Signature(of: EncodedQuery.self, returns: .bytes),
                     implementation: .query(EncodedQuery())
                 ),
-                "std.text.text": Procedure(
+                "Standard.Text.text": Procedure(
                     description: "How a value reads as text.",
                     signature: Signature(of: TextQuery.self, returns: .string),
                     implementation: .query(TextQuery())
                 ),
-                "std.text.characters": Procedure(
+                "Standard.Text.characters": Procedure(
                     description: "The text as an array of its characters.",
                     signature: Signature(
                         of: CharactersQuery.self,
@@ -38,22 +38,22 @@ public extension Module {
                     ),
                     implementation: .query(CharactersQuery())
                 ),
-                "std.text.uppercased": Procedure(
+                "Standard.Text.uppercased": Procedure(
                     description: "The text in upper case.",
                     signature: Signature(of: UppercasedQuery.self, returns: .string),
                     implementation: .query(UppercasedQuery())
                 ),
-                "std.text.lowercased": Procedure(
+                "Standard.Text.lowercased": Procedure(
                     description: "The text in lower case.",
                     signature: Signature(of: LowercasedQuery.self, returns: .string),
                     implementation: .query(LowercasedQuery())
                 ),
-                "std.text.trimmed": Procedure(
+                "Standard.Text.trimmed": Procedure(
                     description: "The text without surrounding whitespace.",
                     signature: Signature(of: TrimmedQuery.self, returns: .string),
                     implementation: .query(TrimmedQuery())
                 ),
-                "std.text.joined": Procedure(
+                "Standard.Text.joined": Procedure(
                     description: "The strings written one after another.",
                     signature: Signature(of: JoinedQuery.self, returns: .string),
                     implementation: .query(JoinedQuery())

@@ -22,14 +22,14 @@ struct IsolationTests {
     // MARK: - Test
     @Test("a procedure that says nothing about itself is isolated")
     func aSilentProcedureIsIsolated() async throws {
-        // Given. `app.shout` declares no isolation, so it takes the default
+        // Given. `App.shout` declares no isolation, so it takes the default
         let sut = try Module(
-            imports: ["app.shout"],
+            imports: ["App.shout"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.shout", arguments: [.literal(.string("hi"))]))
+                    result: .call(Call(selector: "App.shout", arguments: [.literal(.string("hi"))]))
                 )
             ]
         )
@@ -45,17 +45,17 @@ struct IsolationTests {
     func aStatefulProcedureStrikesItsCallers() async throws {
         // Given
         let sut = try Module(
-            imports: ["app.ticket"],
+            imports: ["App.ticket"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.reach"))
+                    result: .call(Call(selector: "App.reach"))
                 ),
-                "app.reach": Procedure(
+                "App.reach": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "app.ticket"))
+                    result: .call(Call(selector: "App.ticket"))
                 )
             ]
         )
@@ -64,8 +64,8 @@ struct IsolationTests {
         let image = try await Builder().build([sut, .ticketing] + Module.standard)
 
         // Then. The procedure itself, and the body one hop away from it
-        #expect(image["app.ticket"]?.isolation == .unstated)
-        #expect(image["app.reach"]?.isolation == .unstated)
+        #expect(image["App.ticket"]?.isolation == .unstated)
+        #expect(image["App.reach"]?.isolation == .unstated)
         #expect(image[entryName]?.isolation == .unstated)
     }
 
@@ -73,19 +73,19 @@ struct IsolationTests {
     func aStatefulClosureIsRefusedBesideAnother() async throws {
         // Given. Two pieces to run at once, one of them reaching the box
         let sut = try Module(
-            imports: ["app.ticket", "std.concurrent.all"],
+            imports: ["App.ticket", "Standard.Concurrent.all"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
                     result: .call(
                         Call(
-                            selector: "std.concurrent.all",
+                            selector: "Standard.Concurrent.all",
                             arguments: [
                                 .record([
                                     "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
                                     "right": .closure(
-                                        Procedure(body: [], result: .call(Call(selector: "app.ticket")))
+                                        Procedure(body: [], result: .call(Call(selector: "App.ticket")))
                                     )
                                 ])
                             ]
@@ -100,7 +100,7 @@ struct IsolationTests {
             try await run([sut, .ticketing])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("right: const procedure<() -> any> }, which 'std.concurrent.Pieces' does not admit")
+                && "\(error)".contains("right: const procedure<() -> any> }, which 'Standard.Concurrent.Pieces' does not admit")
         }
     }
 
@@ -108,12 +108,12 @@ struct IsolationTests {
     func constnessDoesNotAnswerIsolation() async throws {
         // Given. Nothing here runs, and the box is still shared
         let sut = try Module(
-            imports: ["app.ticket"],
+            imports: ["App.ticket"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.ticket"))
+                    result: .call(Call(selector: "App.ticket"))
                 )
             ]
         )

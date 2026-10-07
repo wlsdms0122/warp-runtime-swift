@@ -20,7 +20,7 @@ struct MutatorTests {
     @Test("walks the fields of a named record the way it walks a dictionary's")
     func aNamedRecordIsWalked() {
         // Given
-        let point = Value.record(Record(name: "app.Point", ["x": .int(1), "y": .int(2)]))
+        let point = Value.record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))
 
         // When
         let mutations = sut.mutations(of: point)
@@ -30,7 +30,7 @@ struct MutatorTests {
         #expect(
             mutations.contains { mutation in
                 mutation.path == "x"
-                    && mutation.value == .record(Record(name: "app.Point", ["x": .int(-1), "y": .int(2)]))
+                    && mutation.value == .record(Record(name: "App.Point", ["x": .int(-1), "y": .int(2)]))
             }
         )
     }

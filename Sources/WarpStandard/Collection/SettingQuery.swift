@@ -45,7 +45,7 @@ struct SettingQuery: Query {
             let held = question[.dictionary].asDictionary,
             case let .string(key) = question[.key]
         else {
-            throw ExecutionError("std.collection.setting asks a dictionary and a string")
+            throw ExecutionError("Standard.Collection.setting asks a dictionary and a string")
         }
 
         let field: Name
@@ -54,7 +54,7 @@ struct SettingQuery: Query {
             field = try Name(key)
         } catch let refusal as NameRefused {
             throw ExecutionError(
-                "std.collection.setting asks a key that is a name, and \(refusal.message)"
+                "Standard.Collection.setting asks a key that is a name, and \(refusal.message)"
             )
         }
 

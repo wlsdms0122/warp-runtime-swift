@@ -19,7 +19,7 @@ struct LowercasedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("std.text.lowercased asks a string")
+            throw ExecutionError("Standard.Text.lowercased asks a string")
         }
 
         return .string(lowercased(text))

@@ -23,7 +23,7 @@ struct TrimmedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("std.text.trimmed asks a string")
+            throw ExecutionError("Standard.Text.trimmed asks a string")
         }
 
         let trimmed = text.drop(while: Self.isWhitespace)

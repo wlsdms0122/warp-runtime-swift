@@ -93,14 +93,14 @@ struct ImportsListTests {
         // all, so a list allowed to drift would be worse than none: it would be
         // trusted and wrong.
         let module = try loader.loadDocument([
-            "imports": ["std.math.plus"],
+            "imports": ["Standard.Math.plus"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "array<string>"]],
                     "body": [
                         [
                             "let": "many",
-                            "value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]
+                            "value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
                         ]]
                     ],
                     "result": ["ref": "many"]
@@ -112,7 +112,7 @@ struct ImportsListTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(written[ModuleReader.CodingKeys.imports.name] == .array([.string("std.math.plus")]))
+        #expect(written[ModuleReader.CodingKeys.imports.name] == .array([.string("Standard.Math.plus")]))
     }
 
     @Test("a document that says nothing about what it imports is refused")
@@ -171,7 +171,7 @@ struct ImportsListTests {
                         "body": [
                             [
                                 "let": "sum",
-                                "value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]
+                                "value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
                             ]]
                         ],
                         "result": ["ref": "sum"]
@@ -179,7 +179,7 @@ struct ImportsListTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("uses [\"std.math.plus\"], which it does not import")
+            "\(error)".contains("uses [\"Standard.Math.plus\"], which it does not import")
         }
     }
 
@@ -190,13 +190,13 @@ struct ImportsListTests {
         // listed but never sent is a grant the program had no use for
         #expect {
             try loader.loadDocument([
-                "imports": ["std.math.plus", "std.math.minus"],
+                "imports": ["Standard.Math.plus", "Standard.Math.minus"],
                 "procedures": [
                     "entry": [
                         "body": [
                             [
                                 "let": "sum",
-                                "value": ["call": ["procedure": "std.math.plus", "arguments": [1, 2]]
+                                "value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
                             ]]
                         ],
                         "result": ["ref": "sum"]
@@ -204,7 +204,7 @@ struct ImportsListTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("imports [\"std.math.minus\"], which it does not use")
+            "\(error)".contains("imports [\"Standard.Math.minus\"], which it does not use")
         }
     }
 
@@ -215,18 +215,18 @@ struct ImportsListTests {
         // what to allow, and would then be refused at the build by a procedure the
         // list never mentioned.
         let constant: Value = [
-            "call": ["procedure": "std.math.plus", "arguments": [1, 2]]
+            "call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]
         ]
 
         // When
         let module = try loader.loadDocument([
-            "imports": ["std.math.plus"],
+            "imports": ["Standard.Math.plus"],
             "const": ["limit": constant],
             "procedures": ["entry": ["result": ["ref": "limit"]]]
         ])
 
         // Then
-        #expect(module.imports == ["std.math.plus"])
+        #expect(module.imports == ["Standard.Math.plus"])
 
         // And a list that leaves the constant's procedure out is refused
         #expect {
@@ -236,7 +236,7 @@ struct ImportsListTests {
                 "procedures": ["entry": ["result": ["ref": "limit"]]]
             ])
         } throws: { error in
-            "\(error)".contains("uses [\"std.math.plus\"]")
+            "\(error)".contains("uses [\"Standard.Math.plus\"]")
         }
     }
 

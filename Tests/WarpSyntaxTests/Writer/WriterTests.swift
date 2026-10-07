@@ -64,12 +64,12 @@ struct WriterTests {
                     body: [
                         Statement(binding: .constant("joined"), expression: .call(
                                 Call(
-                                    selector: "std.text.joined",
+                                    selector: "Standard.Text.joined",
                                     arguments: [
                                         .array([
                                             .call(
                                                 Call(
-                                                    selector: "std.text.text",
+                                                    selector: "Standard.Text.text",
                                                     arguments: [.reference([.key("procedure")])]
                                                 )
                                             ),
@@ -83,7 +83,7 @@ struct WriterTests {
                         Statement(binding: .constant("held"), expression: .record([
                                 "line": .reference([.key("joined")]),
                                 "size": .call(
-                                    Call(selector: "std.collection.count", arguments: [.reference([.key("procedure")])])
+                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.key("procedure")])])
                                 )
                             ])
                         )
@@ -121,7 +121,7 @@ struct WriterTests {
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
         "warp": 1,
-        "imports": ["std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
+        "imports": ["Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Math.lessThan", "Standard.Math.plus"],
         "description": "one of every type",
         "types": ["Task": ["record": ["done": "bool", "id": "string"]]],
         "constraints": ["Scalar": ["int", "string"]],
@@ -147,7 +147,7 @@ struct WriterTests {
                         "value": ["loop": [
                             "while": [
                                 "call": [
-                                    "procedure": "std.logic.notEqual",
+                                    "procedure": "Standard.Logic.notEqual",
                                     "arguments": [["ref": "seen"], 3]
                                 ]
                             ],
@@ -155,7 +155,7 @@ struct WriterTests {
                                 [
                                     "set": "seen",
                                     "value": ["call": [
-                                        "procedure": "std.math.plus",
+                                        "procedure": "Standard.Math.plus",
                                         "arguments": [["ref": "seen"], 1]
                                     ]
                                 ]]
@@ -176,11 +176,11 @@ struct WriterTests {
                         "value": ["loop": [
                             "while": [
                                 "call": [
-                                    "procedure": "std.math.lessThan",
+                                    "procedure": "Standard.Math.lessThan",
                                     "arguments": [
                                         ["ref": "mapped.index"],
                                         ["call": [
-                                            "procedure": "std.collection.count",
+                                            "procedure": "Standard.Collection.count",
                                             "arguments": [["ref": "names"]]
                                         ]]
                                     ]
@@ -259,7 +259,7 @@ struct WriterTests {
         ],
         // Branch, block and the condition spellings
         [
-            "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
+            "imports": ["Standard.Logic.and", "Standard.Logic.equal", "Standard.Logic.not"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "procedure", "type": "string"], ["name": "ready", "type": "bool"]],
@@ -273,14 +273,14 @@ struct WriterTests {
                                 // writes it.
                                 "when": [
                                     "call": [
-                                        "procedure": "std.logic.and",
+                                        "procedure": "Standard.Logic.and",
                                         "arguments": [
                                             [
                                                 [
                                                     "closure": [
                                                         "result": [
                                                             "call": [
-                                                                "procedure": "std.logic.equal",
+                                                                "procedure": "Standard.Logic.equal",
                                                                 "arguments": [["ref": "procedure"], "hey"]
                                                             ]
                                                         ]
@@ -290,7 +290,7 @@ struct WriterTests {
                                                     "closure": [
                                                         "result": [
                                                             "call": [
-                                                                "procedure": "std.logic.not",
+                                                                "procedure": "Standard.Logic.not",
                                                                 "arguments": [["ref": "ready"]]
                                                             ]
                                                         ]
@@ -312,7 +312,7 @@ struct WriterTests {
         ],
         // Loop, attempt
         [
-            "imports": ["test.fail", "std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
+            "imports": ["test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Math.lessThan", "Standard.Math.plus"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "array<string>"]],
@@ -326,7 +326,7 @@ struct WriterTests {
                                     [
                                         "set": "seen",
                                         "value": ["call": [
-                                            "procedure": "std.math.plus",
+                                            "procedure": "Standard.Math.plus",
                                             "arguments": [["ref": "seen"], 1]
                                         ]
                                     ]]
@@ -338,7 +338,7 @@ struct WriterTests {
                             "value": ["loop": [
                                 "while": [
                                     "of": ["ref": "mapped.index"],
-                                    "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
+                                    "lessThan": ["call": ["procedure": "Standard.Collection.count", "arguments": [["ref": "names"]]]]
                                 ],
                                 "body": [["let": "one", "value": ["ref": "names[mapped.index]"]]]
                             ]
@@ -358,7 +358,7 @@ struct WriterTests {
         ],
         // Leaving early, all three ways and both spellings of a target
         [
-            "imports": ["std.collection.count", "std.math.lessThan"],
+            "imports": ["Standard.Collection.count", "Standard.Math.lessThan"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "array<string>"]],
@@ -374,7 +374,7 @@ struct WriterTests {
                                         "value": ["loop": [
                                             "while": [
                                                 "of": ["ref": "walked.index"],
-                                                "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
+                                                "lessThan": ["call": ["procedure": "Standard.Collection.count", "arguments": [["ref": "names"]]]]
                                             ],
                                             "body": [
                                                 [
@@ -403,7 +403,7 @@ struct WriterTests {
         ],
         // Messages: calls by position, carried bodies, closures, invocation, templates
         [
-            "imports": ["std.collection.filter", "std.text.joined", "std.logic.notEqual", "std.text.text"],
+            "imports": ["Standard.Collection.filter", "Standard.Text.joined", "Standard.Logic.notEqual", "Standard.Text.text"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "array<string>"], ["name": "procedure", "type": "string"]],
@@ -412,7 +412,7 @@ struct WriterTests {
                         [
                             "let": "kept",
                             "value": ["call": [
-                                "procedure": "std.collection.filter",
+                                "procedure": "Standard.Collection.filter",
                                 "arguments": [
                                     ["ref": "names"],
                                     [
@@ -421,7 +421,7 @@ struct WriterTests {
                                             "returns": "bool",
                                             "result": [
                                                 "call": [
-                                                    "procedure": "std.logic.notEqual",
+                                                    "procedure": "Standard.Logic.notEqual",
                                                     "arguments": [["ref": "item"], ""]
                                                 ]
                                             ]
@@ -497,7 +497,7 @@ struct WriterTests {
         // a value that is text cannot be written there
         let sut = try Module(
             procedures: [
-                "entry": Procedure(body: [], result: .apply(.literal(.string("app.f")), arguments: []))
+                "entry": Procedure(body: [], result: .apply(.literal(.string("App.f")), arguments: []))
             ]
         )
 
@@ -616,12 +616,12 @@ struct WriterTests {
         // out.
         let document: Value = [
             "imports": [
-                "std.collection.count",
-                "std.logic.equal",
-                "std.math.lessThan",
-                "std.math.plus",
-                "std.text.joined",
-                "std.text.text"
+                "Standard.Collection.count",
+                "Standard.Logic.equal",
+                "Standard.Math.lessThan",
+                "Standard.Math.plus",
+                "Standard.Text.joined",
+                "Standard.Text.text"
             ],
             "procedures": [
                 "entry": [
@@ -641,17 +641,17 @@ struct WriterTests {
                             "value": ["loop": [
                                 "while": [
                                     "of": ["ref": "sized.index"],
-                                    "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
+                                    "lessThan": ["call": ["procedure": "Standard.Collection.count", "arguments": [["ref": "names"]]]]
                                 ],
                                 "body": [
                                     [
                                         "set": "walked",
                                         "value": ["call": [
-                                            "procedure": "std.math.plus",
+                                            "procedure": "Standard.Math.plus",
                                             "arguments": [
                                                 ["ref": "walked"],
                                                 ["call": [
-                                                    "procedure": "std.collection.count",
+                                                    "procedure": "Standard.Collection.count",
                                                     "arguments": [["ref": "names[sized.index]"]]
                                                 ]]
                                             ]
@@ -710,7 +710,7 @@ struct WriterTests {
                     ]
                 ]]
             ]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let written = try sut.value(of: module)
@@ -726,7 +726,7 @@ struct WriterTests {
         }
 
         // The procedure the spelling reached, written as the message it always was.
-        #expect(message["procedure"] == .string("std.logic.equal"))
+        #expect(message["procedure"] == .string("Standard.Logic.equal"))
         #expect(message["of"] == nil)
         #expect(message["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }

@@ -108,7 +108,7 @@ struct VocabularyTests {
             "parameters": [["name": "names", "type": "array<string>"]],
             "body": [
                 ["var": "verdict"],
-                ["let": "head", "value": ["call": ["procedure": "std.collection.first", "arguments": [["ref": "names"]]]]],
+                ["let": "head", "value": ["call": ["procedure": "Standard.Collection.first", "arguments": [["ref": "names"]]]]],
                 [
                     "value": ["conditional": [
                         "when": ["of": ["ref": "head"], "longerThan": 3],
@@ -117,7 +117,7 @@ struct VocabularyTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "verdict"], "head": ["ref": "head"]]]
-        ], importing: ["extra.longerThan", "std.collection.first"])
+        ], importing: ["extra.longerThan", "Standard.Collection.first"])
 
         // When
         let outputs = try await run(
@@ -138,9 +138,9 @@ struct VocabularyTests {
         let sut = try loader.loadProcedure([
             "parameters": [["name": "names", "type": "array<string>"]],
             "body": [
-                ["let": "said", "value": ["call": ["procedure": "std.collection.count"]]]
+                ["let": "said", "value": ["call": ["procedure": "Standard.Collection.count"]]]
             ]
-        ], importing: ["std.collection.count"])
+        ], importing: ["Standard.Collection.count"])
 
         // When / Then
         await #expect(throws: BuildError.self) {

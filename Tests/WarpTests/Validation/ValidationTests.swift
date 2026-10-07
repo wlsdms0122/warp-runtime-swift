@@ -33,8 +33,8 @@ struct ValidationTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a module is held to the procedures it says it imports", arguments: [
-        (claimed: [] as Set<Name>, refusal: "uses [\"std.collection.count\"], which it does not import"),
-        (claimed: ["std.collection.count", "std.math.plus"] as Set<Name>, refusal: "imports [\"std.math.plus\"], which it does not use")
+        (claimed: [] as Set<Name>, refusal: "uses [\"Standard.Collection.count\"], which it does not import"),
+        (claimed: ["Standard.Collection.count", "Standard.Math.plus"] as Set<Name>, refusal: "imports [\"Standard.Math.plus\"], which it does not use")
     ])
     func aModuleIsHeldToItsImports(_ claimed: Set<Name>, refusal: String) {
         // Given. A host decides what to grant from this list and then links
@@ -51,7 +51,7 @@ struct ValidationTests {
                         access: .public,
                         body: [
                             Statement(binding: .constant("counted"), expression: .call(Call(
-                                selector: "std.collection.count",
+                                selector: "Standard.Collection.count",
                                 arguments: [.literal(.array([.int(1)]))]
                             )))
                         ]
@@ -249,7 +249,7 @@ struct ValidationTests {
         let arm: Body = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
         let sut: Body = [
             Statement(binding: .constant("said"), expression: .call(
-                Call(selector: "app.shout", arguments: [.conditional(.literal(.bool(true)), then: arm, else: nil)])
+                Call(selector: "App.shout", arguments: [.conditional(.literal(.bool(true)), then: arm, else: nil)])
             ))
         ]
 
@@ -427,13 +427,13 @@ struct ValidationTests {
         // the other is a grant nothing uses.
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                imports: ["std.math.minus"],
+                imports: ["Standard.Math.minus"],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         body: [
                             Statement(binding: .constant("counted"), expression: .call(Call(
-                                selector: "std.collection.count",
+                                selector: "Standard.Collection.count",
                                 arguments: [.literal(.array([.int(1)]))]
                             )))
                         ]
@@ -445,8 +445,8 @@ struct ValidationTests {
         // Then
         #expect(
             error?.message
-                == "uses [\"std.collection.count\"], which it does not import,"
-                    + " and imports [\"std.math.minus\"], which it does not use"
+                == "uses [\"Standard.Collection.count\"], which it does not import,"
+                    + " and imports [\"Standard.Math.minus\"], which it does not use"
         )
     }
 
@@ -462,7 +462,7 @@ struct ValidationTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("counted"), expression: .call(Call(
-                            selector: "std.collection.count",
+                            selector: "Standard.Collection.count",
                             arguments: [.literal(.array([.int(1)]))]
                         )))
                     ]
@@ -471,7 +471,7 @@ struct ValidationTests {
         )
 
         // Then
-        #expect(sut.imports == ["std.collection.count"])
+        #expect(sut.imports == ["Standard.Collection.count"])
     }
 
     @Test("a module calling its own by the name the build knows it by imports nothing")
@@ -482,13 +482,13 @@ struct ValidationTests {
         let sut = try Module(
             imports: [],
             procedures: [
-                "wallet.pay": Procedure(
+                "Wallet.pay": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("charged"), expression: .call(Call(selector: "wallet.fee")))
+                        Statement(binding: .constant("charged"), expression: .call(Call(selector: "Wallet.fee")))
                     ]
                 ),
-                "wallet.fee": Procedure(body: [], result: .literal(.int(1)))
+                "Wallet.fee": Procedure(body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -509,8 +509,8 @@ struct ValidationTests {
         #expect {
             try Module(
                 imports: [],
-                contracts: ["app.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Described"))], returns: .string)]],
-                claims: ["int": ["app.Described"]],
+                contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Described"))], returns: .string)]],
+                claims: ["int": ["App.Described"]],
                 procedures: [
                     "int.describe": Procedure(
                         signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .string),
@@ -588,7 +588,7 @@ struct ValidationTests {
         // Given. A private procedure answered by the host, which a link joins
         // to its code by the document that declares it.
         let procedures: [Name: Procedure] = [
-            "app.ticket": Procedure(
+            "App.ticket": Procedure(
                 access: .private,
                 signature: Signature(returns: .int),
                 implementation: .query(TicketQuery())

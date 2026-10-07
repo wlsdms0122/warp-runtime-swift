@@ -38,7 +38,7 @@ struct CanonicalTests {
                     "value": ["conditional": [
                         "when": [
                             "call": [
-                                "procedure": "std.logic.equal",
+                                "procedure": "Standard.Logic.equal",
                                 "arguments": [["ref": "count"], 1]
                             ]
                         ],
@@ -48,7 +48,7 @@ struct CanonicalTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "pick"]]]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let one = try await run(sut, arguments: ["count": .int(1)])
@@ -70,7 +70,7 @@ struct CanonicalTests {
                     "value": ["loop": [
                         "while": [
                             "call": [
-                                "procedure": "std.logic.notEqual",
+                                "procedure": "Standard.Logic.notEqual",
                                 "arguments": [["ref": "seen"], 3]
                             ]
                         ],
@@ -78,7 +78,7 @@ struct CanonicalTests {
                             [
                                 "set": "seen",
                                 "value": ["call": [
-                                    "procedure": "std.math.plus",
+                                    "procedure": "Standard.Math.plus",
                                     "arguments": [["ref": "seen"], 1]
                                 ]
                             ]]
@@ -87,7 +87,7 @@ struct CanonicalTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "seen"]]]
-        ], importing: ["std.logic.notEqual", "std.math.plus"])
+        ], importing: ["Standard.Logic.notEqual", "Standard.Math.plus"])
 
         // When
         let outputs = try await run(sut)
@@ -115,13 +115,13 @@ struct CanonicalTests {
                     ]]
                 ],
                 "result": ["record": ["result": ["ref": "pick"]]]
-            ], importing: ["std.logic.equal"])
+            ], importing: ["Standard.Logic.equal"])
         }
 
         let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
         let plainly = try picking(on: [
             "call": [
-                "procedure": "std.logic.equal",
+                "procedure": "Standard.Logic.equal",
                 "arguments": [["ref": "word"], "hey"]
             ]
         ])

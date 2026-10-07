@@ -73,7 +73,7 @@ struct CaseTests {
               note "a brought procedure naming a place no runner has"
               program {
                 imports [
-                  "app.one"
+                  "App.one"
                 ]
                 procedures {
                   entry {
@@ -83,7 +83,7 @@ struct CaseTests {
                         arguments [
                           1
                         ]
-                        procedure "app.one"
+                        procedure "App.one"
                       }
                     }
                   }
@@ -93,7 +93,7 @@ struct CaseTests {
               test 1
               vocabulary {
                 procedures {
-                  "app.one" {
+                  "App.one" {
                     access "public"
                     answers 1
                     parameters [
@@ -156,8 +156,8 @@ struct CaseTests {
     }
 
     @Test("is failed where a failure escapes the entry, and a refusal still matches", arguments: [
-        ("std.control.abort", "\"on purpose\"", Case.Stage?.none),
-        ("std.math.dividedBy", "1\n                          0", Case.Stage.run)
+        ("Standard.Control.abort", "\"on purpose\"", Case.Stage?.none),
+        ("Standard.Math.dividedBy", "1\n                          0", Case.Stage.run)
     ])
     func aFailureThatEscapes(procedure: String, arguments: String, reached: Case.Stage?) async throws {
         // Given. A case expecting the run to refuse, whose entry either raises

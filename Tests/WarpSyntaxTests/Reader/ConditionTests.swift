@@ -71,7 +71,7 @@ struct ConditionTests {
             differs(.reference(path("kind")), .literal(.string("b")))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.collection.contains", arguments: [.array([.literal(.int(3)), .literal(.int(4))]), .reference(path("n"))]))
+            .call(Call(selector: "Standard.Collection.contains", arguments: [.array([.literal(.int(3)), .literal(.int(4))]), .reference(path("n"))]))
         ))
         #expect(try await sut.evaluate(
             differs(.reference(path("n")), .literal(.null))
@@ -100,7 +100,7 @@ struct ConditionTests {
 
         // And one_of can draw its candidates from the scope
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.collection.contains", arguments: [.reference(path("candidates")), .reference(path("left"))]))
+            .call(Call(selector: "Standard.Collection.contains", arguments: [.reference(path("candidates")), .reference(path("left"))]))
         ))
     }
 
@@ -140,13 +140,13 @@ struct ConditionTests {
 
         // When / Then
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.text.contains", arguments: [.reference(path("title")), .literal(.string("spec"))]))
+            .call(Call(selector: "Standard.Text.contains", arguments: [.reference(path("title")), .literal(.string("spec"))]))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.collection.contains", arguments: [.reference(path("tags")), .literal(.string("b"))]))
+            .call(Call(selector: "Standard.Collection.contains", arguments: [.reference(path("tags")), .literal(.string("b"))]))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("title")), .literal(.string("hello"))]))
+            .call(Call(selector: "Standard.Text.startsWith", arguments: [.reference(path("title")), .literal(.string("hello"))]))
         ))
 
         // And. Absence is not an empty collection. `contains` walks what it was
@@ -154,7 +154,7 @@ struct ConditionTests {
         // of nothing is refused rather than answered false.
         await #expect(throws: (any Error).self) {
             try await sut.evaluate(
-                .call(Call(selector: "std.collection.contains", arguments: [.reference(path("gone")), .literal(.string("x"))]))
+                .call(Call(selector: "Standard.Collection.contains", arguments: [.reference(path("gone")), .literal(.string("x"))]))
             )
         }
 
@@ -162,7 +162,7 @@ struct ConditionTests {
         // The number is refused where the argument it stands at is settled
         await #expect(throws: ArgumentError.self) {
             try await sut.evaluate(
-                .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("n")), .literal(.string("3"))]))
+                .call(Call(selector: "Standard.Text.startsWith", arguments: [.reference(path("n")), .literal(.string("3"))]))
             )
         }
     }

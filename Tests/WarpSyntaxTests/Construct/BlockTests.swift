@@ -45,7 +45,7 @@ struct BlockTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "greet"]]]
-        ], importing: ["std.text.joined", "std.text.text"])
+        ], importing: ["Standard.Text.joined", "Standard.Text.text"])
 
         // When
         let outputs = try await run(spec, arguments: ["who": .string("spec")])

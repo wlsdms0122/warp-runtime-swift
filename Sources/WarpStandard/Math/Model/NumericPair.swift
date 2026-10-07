@@ -21,13 +21,13 @@ enum NumericPair: Int, ParameterSet {
         case .lhs:
             return Parameter(
                 name: "lhs",
-                type: .parameter(name: "N", constraints: ["std.Numeric"])
+                type: .parameter(name: "N", constraints: ["Standard.Numeric"])
             )
 
         case .rhs:
             return Parameter(
                 name: "rhs",
-                type: .parameter(name: "N", constraints: ["std.Numeric"])
+                type: .parameter(name: "N", constraints: ["Standard.Numeric"])
             )
         }
     }

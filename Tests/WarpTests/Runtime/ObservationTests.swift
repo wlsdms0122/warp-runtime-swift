@@ -129,7 +129,7 @@ struct ObservationTests {
                         Statement(binding: .constant("round"), expression: .loop(
                                 while: .call(
                                     Call(
-                                        selector: "std.math.lessThan",
+                                        selector: "Standard.Math.lessThan",
                                         arguments: [reference("round", "index"), .literal(.int(2))]
                                     )
                                 ),
@@ -155,7 +155,7 @@ struct ObservationTests {
 
     @Test("a piece of a fan-out is announced under which piece it is")
     func piecesAreToldApart() async throws {
-        // Given. `std.concurrent.map` is written in Warp, so the walk that
+        // Given. `Standard.Concurrent.map` is written in Warp, so the walk that
         // builds the pieces stands in the path too, and so does the closure
         // of its own it runs each piece in. What tells the pieces apart is
         // the number the fan-out put on each
@@ -167,7 +167,7 @@ struct ObservationTests {
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(
-                                    selector: "std.concurrent.map",
+                                    selector: "Standard.Concurrent.map",
                                     arguments: [
                                         .literal(.array([.int(1), .int(2)])),
                                         .closure(
@@ -323,7 +323,7 @@ struct ObservationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail", arguments: [.literal(.bool(false))])))
+                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "App.fail", arguments: [.literal(.bool(false))])))
                     ]
                 )
             ]
@@ -396,7 +396,7 @@ struct ObservationTests {
                                 Block(
                                     body: [
                                         Statement(binding: .constant("doomed"), expression: .call(
-                                            Call(selector: "app.fail", arguments: [.literal(.bool(true))])
+                                            Call(selector: "App.fail", arguments: [.literal(.bool(true))])
                                         ))
                                     ]
                                 ),
@@ -424,7 +424,7 @@ struct ObservationTests {
         events.contains { event in
             guard case let .completed(place, answered) = event else { return false }
 
-            return place.hasPrefix("both.std.concurrent.map[\(piece)].")
+            return place.hasPrefix("both.Standard.Concurrent.map[\(piece)].")
                 && place.hasSuffix(".entry.closure[0].step")
                 && answered == value
         }

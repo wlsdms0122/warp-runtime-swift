@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// How many, of what `std.Collection` admits.
+// How many, of what `Standard.Collection` admits.
 struct CountQuery: Query {
     // What this takes: the thing counted, and nothing else.
     enum Parameters: Int, ParameterSet {
@@ -16,7 +16,7 @@ struct CountQuery: Query {
 
         // MARK: - Property
         var declared: Parameter {
-            Parameter(name: "collection", type: .named("std.Collection"))
+            Parameter(name: "collection", type: .named("Standard.Collection"))
         }
 
         // MARK: - Initializer
@@ -43,7 +43,7 @@ struct CountQuery: Query {
             return .int(held.count)
 
         default:
-            throw ExecutionError("std.collection.count asks a collection")
+            throw ExecutionError("Standard.Collection.count asks a collection")
         }
     }
 

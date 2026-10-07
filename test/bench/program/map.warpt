@@ -1,10 +1,10 @@
 warpt 1
 {
   imports [
-    "std.collection.setting"
-    "std.math.lessThan"
-    "std.math.remainder"
-    "std.text.text"
+    "Standard.Collection.setting"
+    "Standard.Math.lessThan"
+    "Standard.Math.remainder"
+    "Standard.Text.text"
   ]
   procedures {
     entry {
@@ -40,16 +40,16 @@ warpt 1
                                     }
                                     100
                                   ]
-                                  procedure "std.math.remainder"
+                                  procedure "Standard.Math.remainder"
                                 }
                               }
                             ]
-                            procedure "std.text.text"
+                            procedure "Standard.Text.text"
                           }
                         }
                         1
                       ]
-                      procedure "std.collection.setting"
+                      procedure "Standard.Collection.setting"
                     }
                   }
                 }
@@ -64,7 +64,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "std.math.lessThan"
+                  procedure "Standard.Math.lessThan"
                 }
               }
             }

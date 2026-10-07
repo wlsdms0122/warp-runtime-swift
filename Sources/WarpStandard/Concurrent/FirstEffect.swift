@@ -15,7 +15,7 @@ struct FirstEffect: Effect {
     // MARK: - Property
     let failing = Failing.these([ConcurrentFailed.type])
 
-    private let fanout = Fanout("std.concurrent.first")
+    private let fanout = Fanout("Standard.Concurrent.first")
 
     // MARK: - Initializer
     // MARK: - Public

@@ -54,7 +54,7 @@ struct SpellingTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "pick"]]]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])

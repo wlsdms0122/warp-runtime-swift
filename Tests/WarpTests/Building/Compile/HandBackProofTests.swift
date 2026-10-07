@@ -22,11 +22,11 @@ struct HandBackProofTests {
     // MARK: - Test
     @Test("a body answering what a declaration read after it answers is proven with it")
     func aBodyLeaningOnALaterOneIsProven() async throws {
-        // Given. `app.a` is read before `app.z`, and answers what it answers
+        // Given. `App.a` is read before `App.z`, and answers what it answers
         let sut = try Module(
             procedures: [
-                "app.a": generic(result: .call(Call(selector: "app.z", arguments: [.reference([.key("x")])]))),
-                "app.z": generic(result: .reference([.key("x")]))
+                "App.a": generic(result: .call(Call(selector: "App.z", arguments: [.reference([.key("x")])]))),
+                "App.z": generic(result: .reference([.key("x")]))
             ]
         )
 
@@ -34,17 +34,17 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.a"]?.handsBackAsDeclared == true)
-        #expect(image["app.z"]?.handsBackAsDeclared == true)
+        #expect(image["App.a"]?.handsBackAsDeclared == true)
+        #expect(image["App.z"]?.handsBackAsDeclared == true)
     }
 
     @Test("a body answering what one answering `any` answers is not proven")
     func aBodyLeaningOnAnUnprovenOneIsNot() async throws {
-        // Given. `app.z` answers a value of `any` for its own `some T`
+        // Given. `App.z` answers a value of `any` for its own `some T`
         let sut = try Module(
             procedures: [
-                "app.a": generic(result: .call(Call(selector: "app.z", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
-                "app.z": Procedure(
+                "App.a": generic(result: .call(Call(selector: "App.z", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
+                "App.z": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -62,8 +62,8 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.z"]?.handsBackAsDeclared == false)
-        #expect(image["app.a"]?.handsBackAsDeclared == false)
+        #expect(image["App.z"]?.handsBackAsDeclared == false)
+        #expect(image["App.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a body leaning on itself keeps what nothing else took away")
@@ -71,7 +71,7 @@ struct HandBackProofTests {
         // Given
         let sut = try Module(
             procedures: [
-                "app.r": generic(result: .call(Call(selector: "app.r", arguments: [.reference([.key("x")])])))
+                "App.r": generic(result: .call(Call(selector: "App.r", arguments: [.reference([.key("x")])])))
             ]
         )
 
@@ -79,7 +79,7 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.r"]?.handsBackAsDeclared == true)
+        #expect(image["App.r"]?.handsBackAsDeclared == true)
     }
 
     @Test("two bodies leaning on each other keep what nothing else took away")
@@ -87,8 +87,8 @@ struct HandBackProofTests {
         // Given
         let sut = try Module(
             procedures: [
-                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")])]))),
-                "app.b": generic(result: .call(Call(selector: "app.a", arguments: [.reference([.key("x")])])))
+                "App.a": generic(result: .call(Call(selector: "App.b", arguments: [.reference([.key("x")])]))),
+                "App.b": generic(result: .call(Call(selector: "App.a", arguments: [.reference([.key("x")])])))
             ]
         )
 
@@ -96,17 +96,17 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.a"]?.handsBackAsDeclared == true)
-        #expect(image["app.b"]?.handsBackAsDeclared == true)
+        #expect(image["App.a"]?.handsBackAsDeclared == true)
+        #expect(image["App.b"]?.handsBackAsDeclared == true)
     }
 
     @Test("a cycle leaning on a body answering `any` falls whole")
     func aCycleLeaningOnAnUnprovenOneFalls() async throws {
-        // Given. `app.a` and `app.b` lean on each other, and `app.b` also on `app.c`, the only one answering a value of `any` for its own `some T`
+        // Given. `App.a` and `App.b` lean on each other, and `App.b` also on `App.c`, the only one answering a value of `any` for its own `some T`
         let sut = try Module(
             procedures: [
-                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")])]))),
-                "app.b": Procedure(
+                "App.a": generic(result: .call(Call(selector: "App.b", arguments: [.reference([.key("x")])]))),
+                "App.b": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
                         returns: .parameter(name: "T")
@@ -114,12 +114,12 @@ struct HandBackProofTests {
                     body: [
                         Statement(
                             binding: .constant("back"),
-                            expression: .call(Call(selector: "app.a", arguments: [.reference([.key("x")])]))
+                            expression: .call(Call(selector: "App.a", arguments: [.reference([.key("x")])]))
                         )
                     ],
-                    result: .call(Call(selector: "app.c", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                    result: .call(Call(selector: "App.c", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
                 ),
-                "app.c": Procedure(
+                "App.c": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -137,19 +137,19 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.c"]?.handsBackAsDeclared == false)
-        #expect(image["app.b"]?.handsBackAsDeclared == false)
-        #expect(image["app.a"]?.handsBackAsDeclared == false)
+        #expect(image["App.c"]?.handsBackAsDeclared == false)
+        #expect(image["App.b"]?.handsBackAsDeclared == false)
+        #expect(image["App.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a fall carries back along the bodies leaning on it")
     func aFallCarriesBackAlongTheChain() async throws {
-        // Given. `app.a` leans on `app.b`, `app.b` on `app.c`, and only `app.c` answers a value of `any` for its own `some T`
+        // Given. `App.a` leans on `App.b`, `App.b` on `App.c`, and only `App.c` answers a value of `any` for its own `some T`
         let sut = try Module(
             procedures: [
-                "app.a": generic(result: .call(Call(selector: "app.b", arguments: [.reference([.key("x")])]))),
-                "app.b": generic(result: .call(Call(selector: "app.c", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
-                "app.c": Procedure(
+                "App.a": generic(result: .call(Call(selector: "App.b", arguments: [.reference([.key("x")])]))),
+                "App.b": generic(result: .call(Call(selector: "App.c", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
+                "App.c": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -166,18 +166,18 @@ struct HandBackProofTests {
         // When
         let image = try await Builder().build([sut] + Module.standard)
 
-        // Then. `app.a` falls only once `app.b` has
-        #expect(image["app.c"]?.handsBackAsDeclared == false)
-        #expect(image["app.b"]?.handsBackAsDeclared == false)
-        #expect(image["app.a"]?.handsBackAsDeclared == false)
+        // Then. `App.a` falls only once `App.b` has
+        #expect(image["App.c"]?.handsBackAsDeclared == false)
+        #expect(image["App.b"]?.handsBackAsDeclared == false)
+        #expect(image["App.a"]?.handsBackAsDeclared == false)
     }
 
     @Test("a body that wrote no answer proves what was read off it")
     func anUnsaidBodyProvesWhatWasReadOffIt() async throws {
-        // Given. `app.g` writes no `returns`, and what was read off it is its `some T`, carried from `app.f`, which answers a value of `any`
+        // Given. `App.g` writes no `returns`, and what was read off it is its `some T`, carried from `App.f`, which answers a value of `any`
         let sut = try Module(
             procedures: [
-                "app.f": Procedure(
+                "App.f": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -188,12 +188,12 @@ struct HandBackProofTests {
                     body: [],
                     result: .reference([.key("junk")])
                 ),
-                "app.g": Procedure(
+                "App.g": Procedure(
                     signature: Signature(parameters: [Parameter(name: "x", type: .parameter(name: "T"))]),
                     body: [],
-                    result: .call(Call(selector: "app.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                    result: .call(Call(selector: "App.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
                 ),
-                "app.h": Procedure(
+                "App.h": Procedure(
                     signature: Signature(parameters: [Parameter(name: "x", type: .parameter(name: "T"))]),
                     body: [],
                     result: .reference([.key("x")])
@@ -205,17 +205,17 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.g"]?.handsBackAsDeclared == false)
-        #expect(image["app.h"]?.handsBackAsDeclared == true)
+        #expect(image["App.g"]?.handsBackAsDeclared == false)
+        #expect(image["App.h"]?.handsBackAsDeclared == true)
     }
 
     @Test("a body handed a variable in place at a type parameter proves what it writes there")
     func aBodyHandedAVariableInPlaceProvesWhatItWrites() async throws {
-        // Given. `app.put` answers a whole number, and writes what `app.f` answers into the list it was handed in place
+        // Given. `App.put` answers a whole number, and writes what `App.f` answers into the list it was handed in place
         let sut = try Module(
-            imports: ["std.collection.append"],
+            imports: ["Standard.Collection.append"],
             procedures: [
-                "app.f": Procedure(
+                "App.f": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -226,7 +226,7 @@ struct HandBackProofTests {
                     body: [],
                     result: .reference([.key("junk")])
                 ),
-                "app.put": Procedure(
+                "App.put": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -238,10 +238,10 @@ struct HandBackProofTests {
                         Statement(
                             expression: .call(
                                 Call(
-                                    selector: "std.collection.append",
+                                    selector: "Standard.Collection.append",
                                     arguments: [
                                         .reference([.key("xs")]),
-                                        .call(Call(selector: "app.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
+                                        .call(Call(selector: "App.f", arguments: [.reference([.key("x")]), .reference([.key("x")])]))
                                     ]
                                 )
                             )
@@ -249,7 +249,7 @@ struct HandBackProofTests {
                     ],
                     result: .literal(.int(0))
                 ),
-                "app.keep": Procedure(
+                "App.keep": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -259,7 +259,7 @@ struct HandBackProofTests {
                     ),
                     body: [
                         Statement(
-                            expression: .call(Call(selector: "std.collection.append", arguments: [.reference([.key("xs")]), .reference([.key("x")])]))
+                            expression: .call(Call(selector: "Standard.Collection.append", arguments: [.reference([.key("xs")]), .reference([.key("x")])]))
                         )
                     ],
                     result: .literal(.int(0))
@@ -271,13 +271,13 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.put"]?.handsBackAsDeclared == false)
-        #expect(image["app.keep"]?.handsBackAsDeclared == true)
+        #expect(image["App.put"]?.handsBackAsDeclared == false)
+        #expect(image["App.keep"]?.handsBackAsDeclared == true)
     }
 
     @Test("a body filling a call's type parameter from its own beside what is not a value of it proves nothing")
     func aBodyFillingAParameterBesideAnotherValueIsNotProven() async throws {
-        // Given. `app.mixed` hands `app.pick` a list of its `some T` and a list read as `array<any>`, `app.same` hands it its own twice
+        // Given. `App.mixed` hands `App.pick` a list of its `some T` and a list read as `array<any>`, `App.same` hands it its own twice
         let pick = Procedure(
             signature: Signature(
                 parameters: [
@@ -291,8 +291,8 @@ struct HandBackProofTests {
         )
         let sut = try Module(
             procedures: [
-                "app.pick": pick,
-                "app.mixed": Procedure(
+                "App.pick": pick,
+                "App.mixed": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "x", type: .parameter(name: "T")),
@@ -301,9 +301,9 @@ struct HandBackProofTests {
                         returns: .array(.parameter(name: "T"))
                     ),
                     body: [],
-                    result: .call(Call(selector: "app.pick", arguments: [.array([.reference([.key("x")])]), .reference([.key("junk")])]))
+                    result: .call(Call(selector: "App.pick", arguments: [.array([.reference([.key("x")])]), .reference([.key("junk")])]))
                 ),
-                "app.same": generic(result: .call(Call(selector: "app.pick", arguments: [.reference([.key("x")]), .reference([.key("x")])])))
+                "App.same": generic(result: .call(Call(selector: "App.pick", arguments: [.reference([.key("x")]), .reference([.key("x")])])))
             ]
         )
 
@@ -311,17 +311,17 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.pick"]?.handsBackAsDeclared == true)
-        #expect(image["app.mixed"]?.handsBackAsDeclared == false)
-        #expect(image["app.same"]?.handsBackAsDeclared == true)
+        #expect(image["App.pick"]?.handsBackAsDeclared == true)
+        #expect(image["App.mixed"]?.handsBackAsDeclared == false)
+        #expect(image["App.same"]?.handsBackAsDeclared == true)
     }
 
     @Test("a body whose closure may write a variable of its type parameter proves nothing, and one whose closure only reads a parameter does")
     func aBodyWhoseClosureWritesAVariableOfItsParameterIsNotProven() async throws {
-        // Given. Both closures write a variable the body declared, so neither is isolated. `app.writes` has its closure write `cell`, a variable of `some T`; `app.reads` has its closure write a whole number and read `x`
+        // Given. Both closures write a variable the body declared, so neither is isolated. `App.writes` has its closure write `cell`, a variable of `some T`; `App.reads` has its closure write a whole number and read `x`
         let sut = try Module(
             procedures: [
-                "app.writes": Procedure(
+                "App.writes": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
                         returns: .parameter(name: "T")
@@ -333,7 +333,7 @@ struct HandBackProofTests {
                     ],
                     result: .reference([.key("cell")])
                 ),
-                "app.reads": Procedure(
+                "App.reads": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
                         returns: .parameter(name: "T")
@@ -355,8 +355,8 @@ struct HandBackProofTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["app.writes"]?.handsBackAsDeclared == false)
-        #expect(image["app.reads"]?.handsBackAsDeclared == true)
+        #expect(image["App.writes"]?.handsBackAsDeclared == false)
+        #expect(image["App.reads"]?.handsBackAsDeclared == true)
     }
 
     // MARK: - Public

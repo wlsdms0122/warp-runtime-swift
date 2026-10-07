@@ -11,7 +11,7 @@ import Testing
 import WarpSyntax
 @testable import WarpStandard
 
-// The documents of `lib/std` are the source and what ships is a copy of them,
+// The documents of `lib/standard` are the source and what ships is a copy of them,
 // so the two being the same bytes is what the copy is worth. A document edited
 // without running `script/embed-library.sh` is caught here rather than by a
 // runtime that quietly answers the old one.
@@ -20,7 +20,7 @@ struct LibraryTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("what ships is what lib/std holds")
+    @Test("what ships is what lib/standard holds")
     func whatShipsIsWhatTheRepositoryHolds() throws {
         // Given
         let directory = URL(fileURLWithPath: #filePath)
@@ -31,7 +31,7 @@ struct LibraryTests {
             .deletingLastPathComponent()   // runtime
             .deletingLastPathComponent()   // the repository
             .appendingPathComponent("lib")
-            .appendingPathComponent("std")
+            .appendingPathComponent("standard")
         let files = try FileManager.default
             .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { file in file.pathExtension == "warpt" }
@@ -51,7 +51,7 @@ struct LibraryTests {
         }
     }
 
-    @Test("every document of lib/std reads")
+    @Test("every document of lib/standard reads")
     func everyDocumentReads() throws {
         // When
         for text in Library.documents.values {

@@ -26,7 +26,7 @@ struct BuilderTests {
         let sut = try Module(
             constants: [
                 "greeting": .call(Call(
-                    selector: "std.math.dividedBy",
+                    selector: "Standard.Math.dividedBy",
                     arguments: [.literal(.int(1)), .literal(.int(0))]
                 ))
             ],
@@ -196,11 +196,11 @@ struct BuilderTests {
                 "host": .literal(.string("warp.dev")),
                 "url": .call(
                     Call(
-                        selector: "std.text.joined",
+                        selector: "Standard.Text.joined",
                         arguments: [
                             .array([
                                 .literal(.string("https://")),
-                                .call(Call(selector: "std.text.text", arguments: [reference("host")]))
+                                .call(Call(selector: "Standard.Text.text", arguments: [reference("host")]))
                             ]),
                             .literal(.string(""))
                         ]
@@ -400,7 +400,7 @@ struct BuilderTests {
 
     @Test("a dotted spelling resolves beside the full link")
     func aDottedSpellingResolvesBesideTheFullLink() async throws {
-        // Given. `std.concurrent.all` is sent beside every standard bundle, and
+        // Given. `Standard.Concurrent.all` is sent beside every standard bundle, and
         // its spelling names one declaration among all of them
         let sut = try Module(
             procedures: [
@@ -409,7 +409,7 @@ struct BuilderTests {
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(
-                                    selector: "std.concurrent.all",
+                                    selector: "Standard.Concurrent.all",
                                     arguments: [
                                         .array([
                                             .closure(Procedure(body: [], result: .literal(.int(1))))
@@ -439,7 +439,7 @@ struct BuilderTests {
                     returns: .int
                 ),
                 body: [],
-                result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
+                result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("of")]))
             ),
             "helper": Procedure(
                 signature: Signature(returns: .int),
@@ -492,7 +492,7 @@ struct BuilderTests {
                     signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
-                        selector: "std.text.uppercased",
+                        selector: "Standard.Text.uppercased",
                         arguments: [.literal(.string("a")), .literal(.bool(true))]
                     ))
                 ))
@@ -511,7 +511,7 @@ struct BuilderTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' with 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'Standard.Text.uppercased' with 2 arguments, and it takes 1")
         }
     }
 
@@ -528,7 +528,7 @@ struct BuilderTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        selector: "std.text.uppercased",
+                        selector: "Standard.Text.uppercased",
                         arguments: [.reference([.key("of")]), .literal(.bool(true))]
                     ))
                 ),
@@ -545,7 +545,7 @@ struct BuilderTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'std.text.uppercased' with 2 arguments, and it takes 1")
+            error is BuildError && "\(error)".contains("sending 'Standard.Text.uppercased' with 2 arguments, and it takes 1")
         }
     }
 

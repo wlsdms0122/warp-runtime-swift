@@ -419,7 +419,7 @@ struct ConstnessTests {
                 "dirty": Procedure(
                     body: [
                         Statement(binding: .constant("done"), expression: .call(Call(
-                            selector: "app.fail",
+                            selector: "App.fail",
                             arguments: [.literal(.bool(true))]
                         )))
                     ]
@@ -445,7 +445,7 @@ struct ConstnessTests {
         #expect(image["clean"]?.constness == .const)
         #expect(dirty.constness != .const)
         #expect(entry.constness != .const)
-        #expect(image["std.collection.count"]?.constness == .const)
+        #expect(image["Standard.Collection.count"]?.constness == .const)
     }
 
     @Test("a body that sends a const procedure is const")
@@ -459,7 +459,7 @@ struct ConstnessTests {
                 returns: .string
             ),
             body: [],
-            result: .call(Call(selector: "std.text.joined", arguments: [reference("of"), .literal(.string(""))]))
+            result: .call(Call(selector: "Standard.Text.joined", arguments: [reference("of"), .literal(.string(""))]))
         )
         let sut = try Module(
             procedures: [

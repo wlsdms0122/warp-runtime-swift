@@ -42,9 +42,9 @@ struct Chain {
     }
 
     // MARK: - Private
-    private static func step(_ number: Int) throws -> Name { try Name("chain.step\(number)") }
+    private static func step(_ number: Int) throws -> Name { try Name("Chain.step\(number)") }
 
-    private static func type(_ number: Int) throws -> Name { try Name("chain.Step\(number)") }
+    private static func type(_ number: Int) throws -> Name { try Name("Chain.Step\(number)") }
 
     // One document: a type for each procedure it holds, and each procedure standing on
     // its own type and handing what it was sent to the procedure in front of it.

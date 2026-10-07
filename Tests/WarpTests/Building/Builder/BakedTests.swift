@@ -78,7 +78,7 @@ struct BakedTests {
     // MARK: - Property
     private let builder = Builder()
 
-    private var entry: Name { "app.add1" }
+    private var entry: Name { "App.add1" }
 
     // MARK: - Initializer
     // MARK: - Test
@@ -107,20 +107,20 @@ struct BakedTests {
         // Given. Two documents handed over with the one that reaches the other
         // first, which is the order a host has no way to sort out.
         let reaching = try Module(
-            imports: ["app.add1"],
+            imports: ["App.add1"],
             procedures: [
-                "app.twice": Procedure(
+                "App.twice": Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
                     body: [
                         Statement(
                             binding: .constant("once"),
                             expression: .call(
-                                Call(selector: "app.add1", arguments: [.reference([.key("value")])])
+                                Call(selector: "App.add1", arguments: [.reference([.key("value")])])
                             )
                         )
                     ],
-                    result: .call(Call(selector: "app.add1", arguments: [reference("once")]))
+                    result: .call(Call(selector: "App.add1", arguments: [reference("once")]))
                 )
             ]
         )
@@ -128,14 +128,14 @@ struct BakedTests {
         // When
         let baked = try await builder.compile(Module.standard)
         let compiled = try await builder.compile(
-            [reaching, try adding(1, called: "app.add1")],
+            [reaching, try adding(1, called: "App.add1")],
             against: baked,
             supplying: Supplying(Module.standard)
         )
         let image = try builder.link(baked + compiled, supplying: Supplying(Module.standard))
 
         // Then
-        #expect(try await Executor().run(image, entry: "app.twice", arguments: ["value": .int(40)]) == .int(42))
+        #expect(try await Executor().run(image, entry: "App.twice", arguments: ["value": .int(40)]) == .int(42))
     }
 
     @Test("a procedure nothing compiled answers is refused where it is sent")
@@ -143,12 +143,12 @@ struct BakedTests {
         // Given. A document sending a procedure neither it nor the vocabulary
         // declares.
         let arriving = try Module(
-            imports: ["app.missing"],
+            imports: ["App.missing"],
             procedures: [
-                "app.main": Procedure(
+                "App.main": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "app.missing"))
+                    result: .call(Call(selector: "App.missing"))
                 )
             ]
         )
@@ -161,7 +161,7 @@ struct BakedTests {
                 supplying: Supplying(Module.standard)
             )
         } throws: { error in
-            "\(error)".contains("'app.missing', which no module in this link declares")
+            "\(error)".contains("'App.missing', which no module in this link declares")
         }
     }
 
@@ -170,17 +170,17 @@ struct BakedTests {
         // Given. A document sending a contract's procedure, which no row
         // answers, before a procedure another document declares.
         let bank = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .record(["balance": .int])],
             contracts: [
-                "app.Describable": [
-                    "describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)
+                "App.Describable": [
+                    "describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)
                 ]
             ],
-            claims: ["bank.Account": ["app.Describable"]],
+            claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
                     body: [],
                     result: .literal(.string("a"))
                 )
@@ -188,30 +188,30 @@ struct BakedTests {
         )
         let sending = try Module(
             procedures: [
-                "app.main": Procedure(
+                "App.main": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
                             binding: .constant("account"),
-                            expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("bank.Account"), optional: false)
+                            expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("Bank.Account"), optional: false)
                         ),
                         Statement(
                             binding: .constant("said"),
-                            expression: .call(Call(selector: "app.Describable.describe", arguments: [reference("account")]))
+                            expression: .call(Call(selector: "App.Describable.describe", arguments: [reference("account")]))
                         )
                     ],
-                    result: .call(Call(selector: "app.add1", arguments: [.literal(.int(1))]))
+                    result: .call(Call(selector: "App.add1", arguments: [.literal(.int(1))]))
                 )
             ]
         )
         let compiled = try await builder.compile([bank, try adding(1), sending] + Module.standard)
 
-        // When / Then. Laid without the document declaring `app.add1`.
+        // When / Then. Laid without the document declaring `App.add1`.
         #expect {
             try builder.lay([compiled[0], compiled[2]] + compiled[3...], supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("'app.add1' is sent by this document, and no document laid beside it declares one")
+            "\(error)".contains("'App.add1' is sent by this document, and no document laid beside it declares one")
         }
     }
 
@@ -228,7 +228,7 @@ struct BakedTests {
         #expect {
             try builder.link(baked + one + two, supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("'app.add1' is declared by")
+            "\(error)".contains("'App.add1' is declared by")
                 && "\(error)".contains("Two declarations of a name have no way to be told apart")
         }
     }
@@ -246,12 +246,12 @@ struct BakedTests {
         for held in [baked + one + two, baked + two + one] {
             await #expect {
                 try await builder.compile(
-                    [try reaching("app.add1")],
+                    [try reaching("App.add1")],
                     against: held,
                     supplying: Supplying(Module.standard)
                 )
             } throws: { error in
-                "\(error)".contains("'app.add1' is declared by")
+                "\(error)".contains("'App.add1' is declared by")
                     && "\(error)".contains("Two declarations of a name have no way to be told apart")
             }
         }
@@ -403,7 +403,7 @@ struct BakedTests {
         #expect {
             try Supplying([try counting(isolated: true), try counting(isolated: false)])
         } throws: { error in
-            "\(error)".contains("'app.counted' is brought by two of the modules handed over")
+            "\(error)".contains("'App.counted' is brought by two of the modules handed over")
         }
     }
 
@@ -426,17 +426,17 @@ struct BakedTests {
         // of its procedures.
         let baked = try await builder.compile(Module.standard)
         let arriving = try Module(
-            imports: ["std.math.plus"],
+            imports: ["Standard.Math.plus"],
             constants: [
-                "app.two": .call(
-                    Call(selector: "std.math.plus", arguments: [.literal(.int(1)), .literal(.int(1))])
+                "App.two": .call(
+                    Call(selector: "Standard.Math.plus", arguments: [.literal(.int(1)), .literal(.int(1))])
                 )
             ],
             procedures: [
-                "app.main": Procedure(
+                "App.main": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: reference("app.two")
+                    result: reference("App.two")
                 )
             ]
         )
@@ -445,7 +445,7 @@ struct BakedTests {
         await #expect {
             try await builder.compile([arriving], against: baked, supplying: .none)
         } throws: { error in
-            "\(error)".contains("'std.math.plus' is implemented in native code")
+            "\(error)".contains("'Standard.Math.plus' is implemented in native code")
                 && "\(error)".contains("this compile was handed none")
         }
     }
@@ -457,7 +457,7 @@ struct BakedTests {
     private func reading(under name: Name) throws -> Module {
         try Module(
             procedures: [
-                "app.counted": Procedure(
+                "App.counted": Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [Parameter(name: name, type: .int)],
@@ -474,7 +474,7 @@ struct BakedTests {
     private func counting(isolated: Bool) throws -> Module {
         try Module(
             procedures: [
-                "app.counted": Procedure(
+                "App.counted": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     implementation: .query(CountingQuery(isolated: isolated))
@@ -488,7 +488,7 @@ struct BakedTests {
         try Module(
             imports: [name],
             procedures: [
-                "app.main": Procedure(
+                "App.main": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
@@ -499,9 +499,9 @@ struct BakedTests {
     }
 
     // A document adding a number to what it is sent, through the vocabulary.
-    private func adding(_ number: Int, called name: Name = "app.add1") throws -> Module {
+    private func adding(_ number: Int, called name: Name = "App.add1") throws -> Module {
         try Module(
-            imports: ["std.math.plus"],
+            imports: ["Standard.Math.plus"],
             procedures: [
                 name: Procedure(
                     access: .public,
@@ -509,7 +509,7 @@ struct BakedTests {
                     body: [],
                     result: .call(
                         Call(
-                            selector: "std.math.plus",
+                            selector: "Standard.Math.plus",
                             arguments: [.reference([.key("value")]), .literal(.int(number))]
                         )
                     )

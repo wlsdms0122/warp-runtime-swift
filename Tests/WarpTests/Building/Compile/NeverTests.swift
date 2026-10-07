@@ -22,7 +22,7 @@ struct NeverTests {
     // MARK: - Test
     @Test("a statement after a call that never finishes is refused at the build")
     func nothingRunsAfterANeverCall() async throws {
-        // Given. `std.control.abort` declares never, so the statement after it
+        // Given. `Standard.Control.abort` declares never, so the statement after it
         // would never run, and a name written there would never bind
         let sut = try Module(
             procedures: [
@@ -221,7 +221,7 @@ struct NeverTests {
                     expression: .leave(
                         Leave(
                             reach: .procedure,
-                            value: .call(Call(selector: "std.collection.count", arguments: [reference("items")]))
+                            value: .call(Call(selector: "Standard.Collection.count", arguments: [reference("items")]))
                         )
                     )
                 )

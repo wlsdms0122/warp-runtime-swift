@@ -44,7 +44,7 @@ struct ArgumentValidationTests {
     // MARK: - Property
     private static let host = try! Module(
         procedures: [
-            "app.even": Procedure(
+            "App.even": Procedure(
                 signature: Signature(of: EvenQuery.self, returns: .bool),
                 implementation: .query(EvenQuery())
             )
@@ -57,7 +57,7 @@ struct ArgumentValidationTests {
     func aRefusedConstantIsRefusedAtTheBuild() async throws {
         // Given
         let odd = try Module(
-            imports: ["app.even"],
+            imports: ["App.even"],
             procedures: ["entry": Procedure(access: .public, body: [], result: even(.literal(.int(3))))]
         )
 
@@ -65,7 +65,7 @@ struct ArgumentValidationTests {
         await #expect {
             try await Builder().build([odd, Self.host])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'app.even': even takes an even number, and 3 is odd")
+            error is BuildError && "\(error)".contains("sending 'App.even': even takes an even number, and 3 is odd")
         }
     }
 
@@ -73,7 +73,7 @@ struct ArgumentValidationTests {
     func anAcceptedConstantBuilds() async throws {
         // Given
         let even = try Module(
-            imports: ["app.even"],
+            imports: ["App.even"],
             procedures: ["entry": Procedure(access: .public, body: [], result: even(.literal(.int(2))))]
         )
 
@@ -84,6 +84,6 @@ struct ArgumentValidationTests {
     // MARK: - Public
     // MARK: - Private
     private func even(_ value: Warp.Expression) -> Warp.Expression {
-        .call(Call(selector: "app.even", arguments: [value]))
+        .call(Call(selector: "App.even", arguments: [value]))
     }
 }

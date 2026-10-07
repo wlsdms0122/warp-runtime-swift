@@ -540,7 +540,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         "procedure": .procedure(nil)
     ]
 
-    // What one element of bytes is. The range `std` names `byte`. Owned here
+    // What one element of bytes is. The range `Standard` names `byte`. Owned here
     // because the `bytes = array<byte>` equation reads it without a table, so it
     // cannot live behind the name.
     public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))

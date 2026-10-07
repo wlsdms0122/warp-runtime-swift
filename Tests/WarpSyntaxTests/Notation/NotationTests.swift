@@ -59,7 +59,7 @@ struct NotationTests {
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
         let module = try sut.loadDocument([
-            "imports": ["std.logic.equal"],
+            "imports": ["Standard.Logic.equal"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "word", "type": "string"]],
@@ -69,7 +69,7 @@ struct NotationTests {
                             "value": ["conditional": [
                                 "when": [
                                     "call": [
-                                        "procedure": "std.logic.equal",
+                                        "procedure": "Standard.Logic.equal",
                                         "arguments": [["ref": "word"], "hey"]
                                     ]
                                 ],
@@ -203,7 +203,7 @@ struct NotationTests {
         // next door, and nothing would say so.
         #expect {
             try sut.loadDocument([
-                "imports": ["std.text.joined", "std.text.text"],
+                "imports": ["Standard.Text.joined", "Standard.Text.text"],
                 "procedures": [
                     "entry": [
                         "parameters": [["name": "word", "type": "string"]],
@@ -230,7 +230,7 @@ struct NotationTests {
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
             ]
-        ], importing: ["std.text.joined", "std.text.text"])
+        ], importing: ["Standard.Text.joined", "Standard.Text.text"])
 
         // Then
         guard

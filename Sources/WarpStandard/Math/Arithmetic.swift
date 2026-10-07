@@ -32,7 +32,7 @@ struct Arithmetic: Sendable {
     private let operation: Operation
 
     // The declared spelling, which a refusal names.
-    private var procedure: String { "std.math.\(operation)" }
+    private var procedure: String { "Standard.Math.\(operation)" }
 
     // Whether a zero on the right has no answer. Both read a divisor, and both
     // are asked before the whole path so the check cannot be walked around.

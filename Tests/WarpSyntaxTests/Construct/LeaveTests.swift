@@ -45,7 +45,7 @@ struct LeaveTests {
                 ]]
             ],
             "result": ["ref": "early"]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let stopped = try await answer(sut, ["word": .string("stop")])
@@ -72,7 +72,7 @@ struct LeaveTests {
                             [
                                 "set": "seen",
                                 "value": ["call": [
-                                    "procedure": "std.math.plus",
+                                    "procedure": "Standard.Math.plus",
                                     "arguments": [["ref": "seen"], 1]
                                 ]
                             ]],
@@ -88,7 +88,7 @@ struct LeaveTests {
                 ]]
             ],
             "result": ["ref": "walked"]
-        ], importing: ["std.logic.equal", "std.logic.notEqual", "std.math.plus"])
+        ], importing: ["Standard.Logic.equal", "Standard.Logic.notEqual", "Standard.Math.plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(3))
@@ -107,7 +107,7 @@ struct LeaveTests {
                     "value": ["loop": [
                         "while": [
                             "of": ["ref": "kept.index"],
-                            "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
+                            "lessThan": ["call": ["procedure": "Standard.Collection.count", "arguments": [["ref": "names"]]]]
                         ],
                         "body": [
                             ["let": "item", "value": ["ref": "names[kept.index]"]],
@@ -133,11 +133,11 @@ struct LeaveTests {
             ],
             "result": ["ref": "seen"]
         ], importing: [
-            "std.collection.count",
-            "std.logic.equal",
-            "std.math.lessThan",
-            "std.text.joined",
-            "std.text.text"
+            "Standard.Collection.count",
+            "Standard.Logic.equal",
+            "Standard.Math.lessThan",
+            "Standard.Text.joined",
+            "Standard.Text.text"
         ])
 
         // When
@@ -171,7 +171,7 @@ struct LeaveTests {
                                         [
                                             "set": "count",
                                             "value": ["call": [
-                                                "procedure": "std.math.plus",
+                                                "procedure": "Standard.Math.plus",
                                                 "arguments": [["ref": "count"], 1]
                                             ]
                                         ]],
@@ -185,7 +185,7 @@ struct LeaveTests {
                 ]]
             ],
             "result": ["ref": "outer"]
-        ], importing: ["std.logic.notEqual", "std.math.plus"])
+        ], importing: ["Standard.Logic.notEqual", "Standard.Math.plus"])
 
         // When / Then. One round of each, because the break left both
         #expect(try await answer(sut) == .int(1))
@@ -264,7 +264,7 @@ struct LeaveTests {
                                 [
                                     "let": "kept",
                                     "value": ["call": [
-                                        "procedure": "std.collection.filter",
+                                        "procedure": "Standard.Collection.filter",
                                         "arguments": [
                                             ["ref": "names"],
                                             [
@@ -381,7 +381,7 @@ struct LeaveTests {
                                         [
                                             "set": "seen",
                                             "value": ["call": [
-                                                "procedure": "std.math.plus",
+                                                "procedure": "Standard.Math.plus",
                                                 "arguments": [["ref": "seen"], 1]
                                             ]
                                         ]],
@@ -396,7 +396,7 @@ struct LeaveTests {
                 ]]
             ],
             "result": ["ref": "walked"]
-        ], importing: ["std.math.plus"])
+        ], importing: ["Standard.Math.plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(1))
@@ -418,7 +418,7 @@ struct LeaveTests {
                             [
                                 "set": "seen",
                                 "value": ["call": [
-                                    "procedure": "std.math.plus",
+                                    "procedure": "Standard.Math.plus",
                                     "arguments": [["ref": "seen"], 1]
                                 ]
                             ]],
@@ -429,7 +429,7 @@ struct LeaveTests {
                 ]]
             ],
             "result": ["ref": "walked"]
-        ], importing: ["std.logic.notEqual", "std.math.plus"])
+        ], importing: ["Standard.Logic.notEqual", "Standard.Math.plus"])
 
         // When / Then. What the last round bound, not nothing
         #expect(try await answer(sut) == .int(2))

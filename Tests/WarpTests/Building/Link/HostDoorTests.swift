@@ -16,7 +16,7 @@ struct HostDoorTests {
         get throws {
             try Module(
                 imports: [],
-                types: ["bank.Account": .record(["balance": .int])],
+                types: ["Bank.Account": .record(["balance": .int])],
                 procedures: ["entry": Procedure(access: .public, implementation: .body(Block(body: [], result: .literal(.null))))]
             )
         }
@@ -30,7 +30,7 @@ struct HostDoorTests {
         let image = try await Builder().build([sut])
 
         // When
-        let settled = try image.settling(.dictionary(["balance": .int(1)]), as: "bank.Account")
+        let settled = try image.settling(.dictionary(["balance": .int(1)]), as: "Bank.Account")
 
         // Then
         guard case let .record(record) = settled else {
@@ -39,7 +39,7 @@ struct HostDoorTests {
             return
         }
 
-        #expect(record.name == "bank.Account")
+        #expect(record.name == "Bank.Account")
         #expect(record.names == ["balance"])
     }
 
@@ -50,7 +50,7 @@ struct HostDoorTests {
 
         // When / Then
         #expect(throws: ValueRefused.self) {
-            try image.settling(.dictionary(["balance": .int(1)]), as: "bank.Vault")
+            try image.settling(.dictionary(["balance": .int(1)]), as: "Bank.Vault")
         }
     }
 
@@ -61,7 +61,7 @@ struct HostDoorTests {
 
         // When / Then
         #expect {
-            try image.settling(.dictionary(["balance": .string("much")]), as: "bank.Account")
+            try image.settling(.dictionary(["balance": .string("much")]), as: "Bank.Account")
         } throws: { error in
             error is ArgumentError && "\(error)".contains("expected int, got string")
         }
@@ -75,7 +75,7 @@ struct HostDoorTests {
         // When
         let settled = try image.settling(
             .dictionary(["balance": .int(1), "note": .string("x")]),
-            as: "bank.Account"
+            as: "Bank.Account"
         )
 
         // Then

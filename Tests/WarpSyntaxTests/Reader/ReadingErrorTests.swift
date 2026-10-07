@@ -46,7 +46,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "std.math.plus"]]]]]]
+            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "Standard.Math.plus"]]]]]]
         ]
 
         // When
@@ -344,7 +344,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": .null,
-            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "std.math.plus"]]]]]]
+            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "Standard.Math.plus"]]]]]]
         ]
 
         // When
@@ -373,7 +373,7 @@ struct ReadingErrorTests {
     @Test("a refusal about one key stands on that key", arguments: [
         (["access": "open"], "procedures.entry.access"),
         (["bounds": ["T": "array<int>"], "parameters": [["name": "x", "type": "some T"]]], "procedures.entry.bounds.T"),
-        (["bounds": ["U": "std.Numeric"]], "procedures.entry.bounds"),
+        (["bounds": ["U": "Standard.Numeric"]], "procedures.entry.bounds"),
         (["result": ["ref": 5]], "procedures.entry.result.ref"),
         (["result": ["ref": "a[0"]], "procedures.entry.result.ref")
     ] as [(Value, String)])

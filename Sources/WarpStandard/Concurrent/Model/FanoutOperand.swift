@@ -16,7 +16,7 @@ enum FanoutOperand: Int, ParameterSet {
 
     // MARK: - Property
     var declared: Parameter {
-        Parameter(name: "pieces", type: .named("std.concurrent.Pieces"))
+        Parameter(name: "pieces", type: .named("Standard.Concurrent.Pieces"))
     }
 
     // MARK: - Initializer

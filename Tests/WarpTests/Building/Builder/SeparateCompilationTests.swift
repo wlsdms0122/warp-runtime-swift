@@ -37,8 +37,8 @@ struct SeparateCompilationTests {
         // Given. Two entries, neither reaching the other.
         let sut = try Module(
             procedures: [
-                "app.here": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "app.there": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.here": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "App.there": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
         )
 
@@ -46,8 +46,8 @@ struct SeparateCompilationTests {
         let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
 
         // Then. Each run starts where it was asked to.
-        #expect(try await Executor().run(image, entry: "app.here") == .int(1))
-        #expect(try await Executor().run(image, entry: "app.there") == .int(2))
+        #expect(try await Executor().run(image, entry: "App.here") == .int(1))
+        #expect(try await Executor().run(image, entry: "App.there") == .int(2))
     }
 
     @Test("what a document says holds whichever entry a host names")
@@ -56,7 +56,7 @@ struct SeparateCompilationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
-                "app.stray": Procedure(
+                "App.stray": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(selector: "nobody.declares"))
@@ -83,10 +83,10 @@ struct SeparateCompilationTests {
 
         // When / Then
         await #expect {
-            try await Executor().run(image, entry: "app.nowhere")
+            try await Executor().run(image, entry: "App.nowhere")
         } throws: { error in
             error is ExecutionError
-                && "\(error)".contains("entry 'app.nowhere' is not declared by any module in this link")
+                && "\(error)".contains("entry 'App.nowhere' is not declared by any module in this link")
         }
     }
 
@@ -210,12 +210,12 @@ struct SeparateCompilationTests {
         // Given. A document naming a type another declares, handed over first,
         // so the rows follow the documents and not what they name.
         let naming = try Module(
-            types: ["z.Wraps": .named("a.Held"), "z.Also": .named("a.Held")],
+            types: ["Z.Wraps": .named("A.Held"), "Z.Also": .named("A.Held")],
             procedures: [
-                entryName: Procedure(access: .public, signature: Signature(returns: .named("z.Wraps")), body: [], result: .literal(.int(1)))
+                entryName: Procedure(access: .public, signature: Signature(returns: .named("Z.Wraps")), body: [], result: .literal(.int(1)))
             ]
         )
-        let held = try Module(types: ["a.Held": .int], procedures: [:])
+        let held = try Module(types: ["A.Held": .int], procedures: [:])
 
         // When
         let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes
@@ -225,8 +225,8 @@ struct SeparateCompilationTests {
         // over.
         let row = { (declared: Name) in loweredTypes.labels.firstIndex(of: declared) }
 
-        #expect(try #require(row("z.Also")) + 1 == #require(row("z.Wraps")))
-        #expect(try #require(row("z.Wraps")) < #require(row("a.Held")))
+        #expect(try #require(row("Z.Also")) + 1 == #require(row("Z.Wraps")))
+        #expect(try #require(row("Z.Wraps")) < #require(row("A.Held")))
     }
 
     @Test("compiling leaves which types answer a contract to the link")
@@ -239,17 +239,17 @@ struct SeparateCompilationTests {
         let compiled = try await compiled(sut + Module.standard)
 
         // Then. The call names the contract's procedure and no row.
-        let compiledCall = try dispatch(in: code(of: "app.tell", in: compiled))
+        let compiledCall = try dispatch(in: code(of: "App.tell", in: compiled))
 
-        #expect(compiledCall.contract == "app.Describable")
+        #expect(compiledCall.contract == "App.Describable")
         #expect(compiledCall.procedure == "describe")
         #expect(compiledCall.calls.isEmpty)
 
         // And. Linking fills one call for every type that answers.
         let image = try builder.link(compiled, supplying: Supplying(Module.standard))
-        let linkedCall = try dispatch(in: code(of: "app.tell", in: image))
+        let linkedCall = try dispatch(in: code(of: "App.tell", in: image))
 
-        #expect(Set(linkedCall.calls.keys) == ["bank.Account", "bank.Card"])
+        #expect(Set(linkedCall.calls.keys) == ["Bank.Account", "Bank.Card"])
     }
 
     @Test("a type answering a contract from a document the caller never names")
@@ -298,7 +298,7 @@ struct SeparateCompilationTests {
         #expect {
             try builder.link(compiled, supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("no document in this link says 'bank.Account' answers it")
+            "\(error)".contains("no document in this link says 'Bank.Account' answers it")
         }
     }
 
@@ -309,19 +309,19 @@ struct SeparateCompilationTests {
         // claim first, and a document compiled against what stands before it
         // would then be asked for an answer that has not arrived.
         let holding = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
-            claims: ["bank.Account": ["app.Describable"]],
-            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+            types: ["Bank.Account": .record(["balance": .int])],
+            claims: ["Bank.Account": ["App.Describable"]],
+            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
-            procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            procedures: ["App.ask": Procedure(body: [], result: .literal(.null))]
         )
         let answering = try Module(
             procedures: [
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -333,11 +333,11 @@ struct SeparateCompilationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .named("bank.Account")),
+                    signature: Signature(returns: .named("Bank.Account")),
                     body: [],
                     result: .cast(
                         .record(["balance": .literal(.int(7))]),
-                        as: .named("bank.Account"),
+                        as: .named("Bank.Account"),
                         optional: false
                     )
                 )
@@ -388,7 +388,7 @@ struct SeparateCompilationTests {
         let sut = try calling()
         let ahead = try Module(
             procedures: [
-                "aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
             ]
         )
 
@@ -411,7 +411,7 @@ struct SeparateCompilationTests {
         let sut = try calling()
         let ahead = try Module(
             procedures: [
-                "aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
             ]
         )
 
@@ -443,7 +443,7 @@ struct SeparateCompilationTests {
 
         #expect(
             try cast(in: code(of: entryName, in: image)).row
-                == image.types.loweredTypes.row(named: "bank.Account")
+                == image.types.loweredTypes.row(named: "Bank.Account")
         )
     }
 
@@ -453,9 +453,9 @@ struct SeparateCompilationTests {
         // whose type takes a row in front of its own.
         let sut = try casting()
         let ahead = try Module(
-            types: ["aaa.Ahead": .record(["first": .int])],
+            types: ["Aaa.Ahead": .record(["first": .int])],
             procedures: [
-                "aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
             ]
         )
 
@@ -465,8 +465,8 @@ struct SeparateCompilationTests {
 
         // Then. The row moved and the number the cast stands on did not.
         #expect(
-            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
-                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
+            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
+                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
         )
         #expect(
             try cast(in: code(of: entryName, in: alone)).row
@@ -486,9 +486,9 @@ struct SeparateCompilationTests {
         let beside = try await compiled(
             [
                 try Module(
-                    types: ["aaa.Ahead": .record(["first": .int])],
+                    types: ["Aaa.Ahead": .record(["first": .int])],
                     procedures: [
-                        "aaa.first": Procedure(
+                        "Aaa.first": Procedure(
                             signature: Signature(returns: .int),
                             body: [],
                             result: .literal(.int(0))
@@ -503,8 +503,8 @@ struct SeparateCompilationTests {
 
         // And. The row it stands on moved and the number did not.
         #expect(
-            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
-                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account"))
+            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
+                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
         )
         #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
     }
@@ -515,7 +515,7 @@ struct SeparateCompilationTests {
         // that procedure's body standing on a type its own document declared, so
         // running it reads a type as well as a row.
         let answering = try Module(
-            types: ["a.Held": .record(["count": .int])],
+            types: ["A.Held": .record(["count": .int])],
             procedures: [
                 "a.answer": Procedure(
                     signature: Signature(returns: .int),
@@ -524,7 +524,7 @@ struct SeparateCompilationTests {
                             binding: .constant("held"),
                             expression: .cast(
                                 .record(["count": .literal(.int(7))]),
-                                as: .named("a.Held"),
+                                as: .named("A.Held"),
                                 optional: false
                             )
                         )
@@ -585,13 +585,13 @@ struct SeparateCompilationTests {
         // Given. A document whose body sends a procedure another document declares.
         let library = try Module(
             procedures: [
-                "lib.twice": Procedure(
+                "Lib.twice": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(selector: "std.math.plus", arguments: [reference("of"), reference("of")]))
+                    result: .call(Call(selector: "Standard.Math.plus", arguments: [reference("of"), reference("of")]))
                 )
             ]
         )
@@ -602,7 +602,7 @@ struct SeparateCompilationTests {
         // says that order is the standing one.
         var reordered = compiled
         reordered.swapAt(0, try #require(compiled.firstIndex { document in
-            document.declared.contains("lib.twice")
+            document.declared.contains("Lib.twice")
         }))
 
         let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
@@ -618,23 +618,23 @@ struct SeparateCompilationTests {
         // link answers the call through the contract, so the document laid
         // before the last one is missing nothing.
         let contract = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
-            procedures: ["app.nothing": Procedure(body: [], result: .literal(.null))]
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
+            procedures: ["App.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let leaning = try Module(
-            imports: ["app.Describable", "app.Describable.describe"],
-            types: ["bank.Account": .record(["balance": .int])],
-            claims: ["bank.Account": ["app.Describable"]],
+            imports: ["App.Describable", "App.Describable.describe"],
+            types: ["Bank.Account": .record(["balance": .int])],
+            claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
-                "bank.Account.describe": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                "Bank.Account.describe": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
                     body: [],
                     result: .literal(.string("an account"))
                 ),
-                "bank.tell": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                "Bank.tell": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
                     body: [],
-                    result: .call(Call(selector: "app.Describable.describe", arguments: [reference("of")]))
+                    result: .call(Call(selector: "App.Describable.describe", arguments: [reference("of")]))
                 )
             ]
         )
@@ -657,25 +657,25 @@ struct SeparateCompilationTests {
         // its own. What it numbered reaches nothing.
         let library = try Module(
             procedures: [
-                "lib.twice": Procedure(
+                "Lib.twice": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(selector: "std.math.plus", arguments: [reference("of"), reference("of")]))
+                    result: .call(Call(selector: "Standard.Math.plus", arguments: [reference("of"), reference("of")]))
                 )
             ]
         )
         let alone = try await builder.compile([library] + Module.standard)
-            .filter { document in document.declared.contains("lib.twice") }
+            .filter { document in document.declared.contains("Lib.twice") }
 
         // When / Then. The refusal names the spelling, not the number a body
         // of it happens to carry.
         #expect {
             try builder.lay(alone, supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("'std.math.plus' is sent by this document")
+            "\(error)".contains("'Standard.Math.plus' is sent by this document")
         }
     }
 
@@ -684,7 +684,7 @@ struct SeparateCompilationTests {
         // Given. A document declaring a procedure that writes no `returns`, and
         // another calling it and then reading into what it answers.
         let answering = try Module(
-            types: ["a.Held": .record(["count": .int])],
+            types: ["A.Held": .record(["count": .int])],
             procedures: [
                 "a.first": Procedure(
                     signature: Signature(
@@ -693,7 +693,7 @@ struct SeparateCompilationTests {
                     body: [],
                     result: .cast(
                         .record(["count": .literal(.int(3))]),
-                        as: .named("a.Held"),
+                        as: .named("A.Held"),
                         optional: false
                     )
                 )
@@ -738,11 +738,11 @@ struct SeparateCompilationTests {
     private func leaning() throws -> (typed: Module, asking: Module, claims: Module, program: Module) {
         (
             typed: try Module(
-                types: ["bank.Account": .record(["balance": .int])],
+                types: ["Bank.Account": .record(["balance": .int])],
                 procedures: [
-                    "bank.Account.describe": Procedure(
+                    "Bank.Account.describe": Procedure(
                         signature: Signature(
-                            parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                            parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                             returns: .string
                         ),
                         body: [],
@@ -751,24 +751,24 @@ struct SeparateCompilationTests {
                 ]
             ),
             asking: try Module(
-                contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
                 procedures: [
-                    "app.tell": Procedure(
+                    "App.tell": Procedure(
                         signature: Signature(
                             parameters: [
-                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
                             ],
                             returns: .string
                         ),
                         body: [],
                         result: .call(
-                            Call(selector: "app.Describable.describe", arguments: [reference("it")])
+                            Call(selector: "App.Describable.describe", arguments: [reference("it")])
                         )
                     )
                 ]
             ),
             claims: try Module(
-                claims: ["bank.Account": ["app.Describable"]],
+                claims: ["Bank.Account": ["App.Describable"]],
                 procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
             ),
             program: try Module(
@@ -781,12 +781,12 @@ struct SeparateCompilationTests {
                                 binding: .constant("account"),
                                 expression: .cast(
                                     .record(["balance": .literal(.int(7))]),
-                                    as: .named("bank.Account"),
+                                    as: .named("Bank.Account"),
                                     optional: false
                                 )
                             )
                         ],
-                        result: .call(Call(selector: "app.tell", arguments: [reference("account")]))
+                        result: .call(Call(selector: "App.tell", arguments: [reference("account")]))
                     )
                 ]
             )
@@ -865,14 +865,14 @@ struct SeparateCompilationTests {
     private func casting() throws -> [Module] {
         [
             try Module(
-                types: ["bank.Account": .record(["balance": .int])],
+                types: ["Bank.Account": .record(["balance": .int])],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         body: [],
                         result: .cast(
                             .record(["balance": .literal(.int(7))]),
-                            as: .named("bank.Account"),
+                            as: .named("Bank.Account"),
                             optional: false
                         )
                     )
@@ -887,7 +887,7 @@ struct SeparateCompilationTests {
         let result: Warp.Operation? = if case let .checked(read, _)? = body.result { read } else { body.result }
 
         guard case let .dispatch(dispatch)? = result else {
-            throw Unheld(description: "'app.tell' holds no call through a contract")
+            throw Unheld(description: "'App.tell' holds no call through a contract")
         }
 
         return dispatch
@@ -899,30 +899,30 @@ struct SeparateCompilationTests {
     private func describing() throws -> [Module] {
         [
             try Module(
-                contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Describable"))], returns: .string)]],
                 procedures: [
-                    "app.tell": Procedure(
+                    "App.tell": Procedure(
                         signature: Signature(
                             parameters: [
-                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
                             ],
                             returns: .string
                         ),
                         body: [],
                         result: .call(
-                            Call(selector: "app.Describable.describe", arguments: [reference("it")])
+                            Call(selector: "App.Describable.describe", arguments: [reference("it")])
                         )
                     )
                 ]
             ),
             try Module(
                 types: [
-                    "bank.Account": .record(["balance": .int]),
-                    "bank.Card": .record(["last": .string])
+                    "Bank.Account": .record(["balance": .int]),
+                    "Bank.Card": .record(["last": .string])
                 ],
                 claims: [
-                    "bank.Account": ["app.Describable"],
-                    "bank.Card": ["app.Describable"]
+                    "Bank.Account": ["App.Describable"],
+                    "Bank.Card": ["App.Describable"]
                 ],
                 procedures: [
                     entryName: Procedure(
@@ -932,7 +932,7 @@ struct SeparateCompilationTests {
                                 binding: .constant("account"),
                                 expression: .cast(
                                     .record(["balance": .literal(.int(7))]),
-                                    as: .named("bank.Account"),
+                                    as: .named("Bank.Account"),
                                     optional: false
                                 )
                             ),
@@ -940,19 +940,19 @@ struct SeparateCompilationTests {
                                 binding: .constant("card"),
                                 expression: .cast(
                                     .record(["last": .literal(.string("42"))]),
-                                    as: .named("bank.Card"),
+                                    as: .named("Bank.Card"),
                                     optional: false
                                 )
                             )
                         ],
                         result: .array([
-                            .call(Call(selector: "app.tell", arguments: [reference("account")])),
-                            .call(Call(selector: "app.tell", arguments: [reference("card")]))
+                            .call(Call(selector: "App.tell", arguments: [reference("account")])),
+                            .call(Call(selector: "App.tell", arguments: [reference("card")]))
                         ])
                     ),
-                    "bank.Account.describe": Procedure(
+                    "Bank.Account.describe": Procedure(
                         signature: Signature(
-                            parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                            parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                             returns: .string
                         ),
                         body: [],
@@ -961,9 +961,9 @@ struct SeparateCompilationTests {
                             spelling(.reference([.key("of"), .key("balance")]))
                         )
                     ),
-                    "bank.Card.describe": Procedure(
+                    "Bank.Card.describe": Procedure(
                         signature: Signature(
-                            parameters: [Parameter(name: "of", type: .named("bank.Card"))],
+                            parameters: [Parameter(name: "of", type: .named("Bank.Card"))],
                             returns: .string
                         ),
                         body: [],

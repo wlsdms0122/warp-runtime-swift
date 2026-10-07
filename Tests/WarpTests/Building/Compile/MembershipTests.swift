@@ -22,17 +22,17 @@ struct MembershipTests {
     func aMemberFitsTheMembership() async throws {
         // Given
         let sut = try Module(
-            constraints: ["app.Text": [.string, .array(.byteElement)]],
+            constraints: ["App.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.hold", arguments: [.literal(.string("a"))]))
+                    result: .call(Call(selector: "App.hold", arguments: [.literal(.string("a"))]))
                 ),
-                "app.hold": Procedure(
+                "App.hold": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .named("app.Text"))],
-                        returns: .named("app.Text")
+                        parameters: [Parameter(name: "it", type: .named("App.Text"))],
+                        returns: .named("App.Text")
                     ),
                     body: [],
                     result: reference("it")
@@ -48,15 +48,15 @@ struct MembershipTests {
     func anOutsiderRefuses() async throws {
         // Given
         let sut = try Module(
-            constraints: ["app.Text": [.string, .array(.byteElement)]],
+            constraints: ["App.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "app.hold", arguments: [.literal(.int(1))]))
+                    result: .call(Call(selector: "App.hold", arguments: [.literal(.int(1))]))
                 ),
-                "app.hold": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
+                "App.hold": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Text"))]),
                     body: [],
                     result: .literal(.null)
                 )
@@ -68,7 +68,7 @@ struct MembershipTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'app.hold': 'it' holds int, which 'app.Text' does not admit")
+                && "\(error)".contains("sending 'App.hold': 'it' holds int, which 'App.Text' does not admit")
         }
     }
 
@@ -77,15 +77,15 @@ struct MembershipTests {
         // Given. `string` takes one of the two, so the whole membership does
         // not fit it
         let sut = try Module(
-            constraints: ["app.Text": [.string, .array(.byteElement)]],
+            constraints: ["App.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Text"))]),
                     body: [],
-                    result: .call(Call(selector: "app.narrow", arguments: [reference("it")]))
+                    result: .call(Call(selector: "App.narrow", arguments: [reference("it")]))
                 ),
-                "app.narrow": Procedure(
+                "App.narrow": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .string)]),
                     body: [],
                     result: .literal(.null)
@@ -98,7 +98,7 @@ struct MembershipTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'app.narrow' with it, which holds app.Text where string is declared")
+                && "\(error)".contains("sending 'App.narrow' with it, which holds App.Text where string is declared")
         }
     }
 
@@ -107,11 +107,11 @@ struct MembershipTests {
         // Given
         func module(reading type: TypeExpression) throws -> Module {
             try Module(
-                constraints: ["app.Text": [.string, .array(.byteElement)]],
+                constraints: ["App.Text": [.string, .array(.byteElement)]],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
+                        signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Text"))]),
                         body: [.init(binding: .constant("narrowed"), expression: .cast(
                             reference("it"),
                             as: type,
@@ -130,7 +130,7 @@ struct MembershipTests {
         await #expect {
             try await Builder().build([try module(reading: .int)] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("reads app.Text as int, and no value is both")
+            error is BuildError && "\(error)".contains("reads App.Text as int, and no value is both")
         }
     }
 
@@ -139,11 +139,11 @@ struct MembershipTests {
         // Given. The declaration is what the argument meets, and an argument
         // is what only the run can see
         let sut = try Module(
-            constraints: ["app.Text": [.string, .array(.byteElement)]],
+            constraints: ["App.Text": [.string, .array(.byteElement)]],
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "it", type: .named("app.Text"))]),
+                    signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Text"))]),
                     body: [],
                     result: reference("it")
                 )
@@ -156,7 +156,7 @@ struct MembershipTests {
         await #expect {
             try await run(sut, arguments: ["it": .int(1)])
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("expected app.Text, and nothing 'app.Text' admits takes int")
+            error is ArgumentError && "\(error)".contains("expected App.Text, and nothing 'App.Text' admits takes int")
         }
     }
 

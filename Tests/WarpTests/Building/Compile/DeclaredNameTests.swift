@@ -50,7 +50,7 @@ struct DeclaredNameTests {
                     access: .public,
                     body: [
                         Statement(
-                            binding: .constant("held", declared: .named("app.Missing")),
+                            binding: .constant("held", declared: .named("App.Missing")),
                             expression: .literal(.int(1))
                         )
                     ],
@@ -64,7 +64,7 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("names type 'app.Missing', which no module in this link declares")
+                && "\(error)".contains("names type 'App.Missing', which no module in this link declares")
         }
     }
 
@@ -74,18 +74,18 @@ struct DeclaredNameTests {
         // and that nothing calls, so it is not on the frontier. Its text still
         // has to compile
         let sut = try Module(
-            imports: ["app.Missing", "std.control.abort"],
+            imports: ["App.Missing", "Standard.Control.abort"],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
                 "stray": Procedure(
                     body: [
                         Statement(
                             expression: .call(
-                                Call(selector: "std.control.abort", arguments: [.literal(.string("x"))])
+                                Call(selector: "Standard.Control.abort", arguments: [.literal(.string("x"))])
                             )
                         ),
                         Statement(
-                            binding: .constant("held", declared: .named("app.Missing")),
+                            binding: .constant("held", declared: .named("App.Missing")),
                             expression: .literal(.int(1))
                         )
                     ],
@@ -98,7 +98,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("app.Missing")
+            "\(error)".contains("App.Missing")
         }
     }
 
@@ -154,13 +154,13 @@ struct DeclaredNameTests {
     func aDeclaredRangeRefusesWhatIsOutsideIt() async throws {
         // Given
         let sut = try Module(
-            types: ["app.Byte": .ranged(.whole(from: 0, to: .through(255)))],
+            types: ["App.Byte": .ranged(.whole(from: 0, to: .through(255)))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(
-                            binding: .constant("held", declared: .named("app.Byte")),
+                            binding: .constant("held", declared: .named("App.Byte")),
                             expression: .literal(.int(300))
                         )
                     ],
@@ -309,7 +309,7 @@ struct DeclaredNameTests {
                     Procedure(
                         body: [
                             Statement(
-                                binding: .constant("inner", declared: .named("app.Missing")),
+                                binding: .constant("inner", declared: .named("App.Missing")),
                                 expression: .literal(.int(1))
                             )
                         ],
@@ -324,7 +324,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("app.Missing")
+            "\(error)".contains("App.Missing")
         }
     }
 

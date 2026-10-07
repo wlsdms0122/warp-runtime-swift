@@ -32,10 +32,10 @@ func walking(
     .loop(
         while: .call(
             Call(
-                selector: "std.math.lessThan",
+                selector: "Standard.Math.lessThan",
                 arguments: [
                     .reference([.key(round), .key("index")]),
-                    .call(Call(selector: "std.collection.count", arguments: [.reference(material)]))
+                    .call(Call(selector: "Standard.Collection.count", arguments: [.reference(material)]))
                 ]
             )
         ),

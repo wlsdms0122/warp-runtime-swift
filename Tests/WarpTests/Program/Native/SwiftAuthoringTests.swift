@@ -120,7 +120,7 @@ struct SwiftAuthoringTests {
         let procedure = Procedure(
             body: [
                 Statement(binding: .constant("shout"), expression: .call(
-                    Call(selector: "app.shout", arguments: [.literal(.string("hey"))])
+                    Call(selector: "App.shout", arguments: [.literal(.string("hey"))])
                 ))
             ],
             result: .record(["shout": .reference([.key("shout")])])
@@ -145,10 +145,10 @@ struct SwiftAuthoringTests {
             body: [
                 Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
                 Statement(binding: .constant("counted"), expression: .call(
-                    Call(selector: "std.collection.count", arguments: [.reference([.key("names")])])
+                    Call(selector: "Standard.Collection.count", arguments: [.reference([.key("names")])])
                 )),
                 Statement(binding: .constant("shouted"), expression: .call(
-                    Call(selector: "app.shout", arguments: [.literal(.string("hi"))])
+                    Call(selector: "App.shout", arguments: [.literal(.string("hi"))])
                 )),
                 Statement(binding: .constant("called"), expression: .call(
                     Call(selector: "echo", arguments: [.literal(.string("yo"))])
@@ -192,10 +192,10 @@ struct SwiftAuthoringTests {
                     access: .public,
                     body: [],
                     result: .record([
-                        "result": .call(Call(selector: "app.echo", arguments: [.literal(.int(20))]))
+                        "result": .call(Call(selector: "App.echo", arguments: [.literal(.int(20))]))
                     ])
                 ),
-                "app.echo": Procedure(
+                "App.echo": Procedure(
                     signature: Signature(of: EchoQuery.self, returns: .int),
                     implementation: .query(EchoQuery())
                 )
@@ -240,7 +240,7 @@ struct SwiftAuthoringTests {
 
         // Then. One table, and what separates them is only how each is written
         let shout = try #require(image["shout"])
-        let count = try #require(image["std.collection.count"])
+        let count = try #require(image["Standard.Collection.count"])
 
         #expect(shout.signature.names.first == "of")
         #expect(count.signature.names.first == "collection")

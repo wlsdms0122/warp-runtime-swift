@@ -23,7 +23,7 @@ struct ContractCallKeepsTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("puts back what a round that ended early had bound", arguments: ["app.Show.show", "bank.Box.show"])
+    @Test("puts back what a round that ended early had bound", arguments: ["App.Show.show", "Bank.Box.show"])
     func aRoundCutShortIsPutBack(through: Name) async throws {
         // Given. A loop of three rounds that leaves in the third after binding
         // `k`, whose result hands `k` to a call on a value it was given. The
@@ -31,7 +31,7 @@ struct ContractCallKeepsTests {
         // walk that stops at the first sees nothing to put back.
         let loop = Warp.Expression.loop(
             while: .call(Call(
-                selector: "std.math.lessThan",
+                selector: "Standard.Math.lessThan",
                 arguments: [reference("round", "index"), .literal(.int(3))]
             )),
             body: Block(
@@ -39,7 +39,7 @@ struct ContractCallKeepsTests {
                     Statement(binding: .constant("k"), expression: reference("round", "index")),
                     Statement(expression: .conditional(
                         .call(Call(
-                            selector: "std.logic.equal",
+                            selector: "Standard.Logic.equal",
                             arguments: [reference("round", "index"), .literal(.int(2))]
                         )),
                         then: [Statement(expression: .leave(Leave(reach: .construct)))],
@@ -51,35 +51,35 @@ struct ContractCallKeepsTests {
         )
 
         let sut = try Module(
-            types: ["bank.Box": .record(["v": .int])],
-            contracts: ["app.Show": ["show": Signature(parameters: [Parameter(name: "of", type: .named("app.Show")), Parameter(name: "with", type: .nullable(.int))], returns: .nullable(.int))]],
-            claims: ["bank.Box": ["app.Show"]],
+            types: ["Bank.Box": .record(["v": .int])],
+            contracts: ["App.Show": ["show": Signature(parameters: [Parameter(name: "of", type: .named("App.Show")), Parameter(name: "with", type: .nullable(.int))], returns: .nullable(.int))]],
+            claims: ["Bank.Box": ["App.Show"]],
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [Statement(
                         binding: .constant("box"),
-                        expression: .cast(.record(["v": .literal(.int(100))]), as: .named("bank.Box"), optional: false)
+                        expression: .cast(.record(["v": .literal(.int(100))]), as: .named("Bank.Box"), optional: false)
                     )],
-                    result: .call(Call(selector: "app.tell", arguments: [reference("box")]))
+                    result: .call(Call(selector: "App.tell", arguments: [reference("box")]))
                 ),
-                "app.tell": Procedure(
+                "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: through == "app.Show.show"
-                                ? .parameter(name: "T", constraints: ["app.Show"])
-                                : .named("bank.Box"))
+                            Parameter(name: "it", type: through == "App.Show.show"
+                                ? .parameter(name: "T", constraints: ["App.Show"])
+                                : .named("Bank.Box"))
                         ],
                         returns: .nullable(.int)
                     ),
                     body: [Statement(binding: .constant("round"), expression: loop)],
                     result: reference("round")
                 ),
-                "bank.Box.show": Procedure(
+                "Bank.Box.show": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "of", type: .named("bank.Box")),
+                            Parameter(name: "of", type: .named("Bank.Box")),
                             Parameter(name: "with", type: .nullable(.int))
                         ],
                         returns: .nullable(.int)
@@ -92,7 +92,7 @@ struct ContractCallKeepsTests {
 
         // When
         let image = try await Builder().build([sut] + Module.standard)
-        let answered = try await Executor().run(image, entry: "app.entry", arguments: [:])
+        let answered = try await Executor().run(image, entry: "App.entry", arguments: [:])
 
         // Then. The second round is the last whole one, and what it bound is
         // what the result reads. The third bound 2 and then left.

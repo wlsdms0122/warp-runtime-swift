@@ -20,7 +20,7 @@ struct LinearTests {
             case of
 
             // MARK: - Property
-            var declared: Parameter { Parameter(name: "of", type: .consuming(.named("app.Handle"))) }
+            var declared: Parameter { Parameter(name: "of", type: .consuming(.named("App.Handle"))) }
 
             // MARK: - Initializer
             // MARK: - Public
@@ -45,8 +45,8 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -62,7 +62,7 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open")))
             ],
             result: .literal(.null)
         )
@@ -80,9 +80,9 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")]))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -100,13 +100,13 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     expression: .conditional(
                         .literal(.bool(true)),
                         then: [
                             Statement(
-                                expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))
+                                expression: .call(Call(selector: "App.close", arguments: [reference("handle")]))
                             )
                         ],
                         else: nil
@@ -129,14 +129,14 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     expression: .loop(
                         while: .literal(.bool(false)),
                         body: Block(
                             body: [
                                 Statement(
-                                    expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))
+                                    expression: .call(Call(selector: "App.close", arguments: [reference("handle")]))
                                 )
                             ]
                         )
@@ -159,11 +159,11 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
-                    expression: .call(Call(selector: "app.peek", arguments: [reference("handle")]))
+                    expression: .call(Call(selector: "App.peek", arguments: [reference("handle")]))
                 ),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -178,18 +178,18 @@ struct LinearTests {
 
     @Test("a body may hand it on by answering it, and its caller then owes it")
     func handedOnByAnswering() async throws {
-        // Given. `app.borrow` answers the handle, so the entry owes it
+        // Given. `App.borrow` answers the handle, so the entry owes it
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.borrow"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.borrow"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.borrow": Procedure(
-                    signature: Signature(returns: .named("app.Handle")),
+                "App.borrow": Procedure(
+                    signature: Signature(returns: .named("App.Handle")),
                     body: [],
-                    result: .call(Call(selector: "app.open"))
+                    result: .call(Call(selector: "App.open"))
                 )
             ]
         )
@@ -228,8 +228,8 @@ struct LinearTests {
         // list handed each of them on
         let sut = try Module(
             types: [
-                "app.Handle": .linear(.record(["name": .string])),
-                "app.Batch": .record(["held": .array(.named("app.Handle"))])
+                "App.Handle": .linear(.record(["name": .string])),
+                "App.Batch": .record(["held": .array(.named("App.Handle"))])
             ],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -238,22 +238,22 @@ struct LinearTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("carries 'app.Handle' inside another type")
+            "\(error)".contains("carries 'App.Handle' inside another type")
         }
     }
 
     @Test("a body may read what it borrowed and still owes nothing")
     func borrowedIsReadAndNotOwed() async throws {
-        // Given. `app.name` borrows, so the caller still holds the handle
+        // Given. `App.name` borrows, so the caller still holds the handle
         // afterwards and closes it itself
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(selector: "app.name", arguments: [reference("handle")]))
+                    expression: .call(Call(selector: "App.name", arguments: [reference("handle")]))
                 ),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: reference("shown")
         )
@@ -266,13 +266,13 @@ struct LinearTests {
 
     @Test("a borrowing slot does not end the obligation")
     func borrowingIsNotClosing() async throws {
-        // Given. Only `app.name` is called, so the handle is still held at the end
+        // Given. Only `App.name` is called, so the handle is still held at the end
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(selector: "app.name", arguments: [reference("handle")]))
+                    expression: .call(Call(selector: "App.name", arguments: [reference("handle")]))
                 )
             ],
             result: reference("shown")
@@ -288,21 +288,21 @@ struct LinearTests {
 
     @Test("a body cannot hand on what it only borrowed")
     func borrowedIsNotHandedOn() async throws {
-        // Given. `app.give` borrows and then closes what it was lent
+        // Given. `App.give` borrows and then closes what it was lent
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.give", arguments: [reference("handle")]))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.give", arguments: [reference("handle")]))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.give": Procedure(
+                "App.give": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))]
                     ),
                     body: [
-                        Statement(expression: .call(Call(selector: "app.close", arguments: [reference("of")])))
+                        Statement(expression: .call(Call(selector: "App.close", arguments: [reference("of")])))
                     ],
                     result: .literal(.null)
                 )
@@ -322,15 +322,15 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.leak": Procedure(
+                "App.leak": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
-                        returns: .named("app.Handle")
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))],
+                        returns: .named("App.Handle")
                     ),
                     body: [],
                     result: reference("of")
@@ -351,14 +351,14 @@ struct LinearTests {
         // Given
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.stash": Procedure(
+                "App.stash": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))]
                     ),
                     body: [
                         Statement(binding: .variable("kept"), expression: reference("of"))
@@ -382,12 +382,12 @@ struct LinearTests {
         // of the type carries
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.count": Procedure(
+                "App.count": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .consuming(.int))]),
                     body: [],
                     result: .literal(.null)
@@ -405,17 +405,17 @@ struct LinearTests {
 
     @Test("inout is not one of the two things a slot may say about it")
     func inoutIsNotAConvention() async throws {
-        // Given. `app.swap` writes `inout` on the type and neither mark
+        // Given. `App.swap` writes `inout` on the type and neither mark
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.swap": Procedure(
+                "App.swap": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .inout(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .inout(.named("App.Handle")))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -433,18 +433,18 @@ struct LinearTests {
 
     @Test("a conditional in the body does not forget what was borrowed")
     func aConditionalKeepsTheBorrow() async throws {
-        // Given. `app.leak` answers what it borrowed after a conditional
+        // Given. `App.leak` answers what it borrowed after a conditional
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.leak": Procedure(
+                "App.leak": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
-                        returns: .named("app.Handle")
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))],
+                        returns: .named("App.Handle")
                     ),
                     body: [
                         Statement(
@@ -471,11 +471,11 @@ struct LinearTests {
         // slot that only borrows is still a slot that reads it
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")]))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(selector: "app.name", arguments: [reference("handle")]))
+                    expression: .call(Call(selector: "App.name", arguments: [reference("handle")]))
                 )
             ],
             result: reference("shown")
@@ -491,18 +491,18 @@ struct LinearTests {
 
     @Test("a closure does not capture what was borrowed")
     func aClosureDoesNotCaptureABorrow() async throws {
-        // Given. `app.stash` answers a closure that reads a part of what it
+        // Given. `App.stash` answers a closure that reads a part of what it
         // borrowed
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.stash": Procedure(
+                "App.stash": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))],
                         returns: .procedure(ProcedureType(returns: .string))
                     ),
                     body: [],
@@ -531,14 +531,14 @@ struct LinearTests {
         // goes into the list, and what a body borrowed it may not give away
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.leak": Procedure(
+                "App.leak": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))],
                         returns: .any
                     ),
                     body: [],
@@ -561,7 +561,7 @@ struct LinearTests {
         // the obligation would neither be handed on nor still be held
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open")))
             ],
             result: .array([reference("handle")])
         )
@@ -578,13 +578,13 @@ struct LinearTests {
     func aFreshObligationDoesNotReachAList() async throws {
         // Given. The name check is not enough: nothing holds this one yet, and
         // writing it straight into the list is the same loss
-        let sut = try holding(body: [], result: .array([.call(Call(selector: "app.open"))]))
+        let sut = try holding(body: [], result: .array([.call(Call(selector: "App.open"))]))
 
         // When / Then
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("writes what 'app.open' answers inside a list or a record")
+            "\(error)".contains("writes what 'App.open' answers inside a list or a record")
         }
     }
 
@@ -594,7 +594,7 @@ struct LinearTests {
         // out, so the element is judged by that rather than by its own shape
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open")))
             ],
             result: .array([.block(Block(body: [], result: reference("handle")))])
         )
@@ -615,7 +615,7 @@ struct LinearTests {
             body: [
                 Statement(
                     binding: .constant("held"),
-                    expression: .block(Block(body: [], result: .call(Call(selector: "app.open"))))
+                    expression: .block(Block(body: [], result: .call(Call(selector: "App.open"))))
                 )
             ],
             result: .literal(.null)
@@ -635,10 +635,10 @@ struct LinearTests {
         // rather than by the cast's own shape
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open")))
             ],
-            result: .array([.cast(reference("handle"), as: .named("app.Openable"), optional: false)]),
-            constraints: ["app.Openable": [.named("app.Handle")]]
+            result: .array([.cast(reference("handle"), as: .named("App.Openable"), optional: false)]),
+            constraints: ["App.Openable": [.named("App.Handle")]]
         )
 
         // When / Then
@@ -655,8 +655,8 @@ struct LinearTests {
         // nowhere to land when the name already handed it on once
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .array([reference("handle")])
         )
@@ -675,15 +675,15 @@ struct LinearTests {
         // obligation, and dropping it is refused like any other
         let sut = try holding(
             body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make")))
             ],
             result: .literal(.null),
-            constraints: ["app.Openable": [.named("app.Handle")]],
+            constraints: ["App.Openable": [.named("App.Handle")]],
             beside: [
-                "app.make": Procedure(
-                    signature: Signature(returns: .named("app.Openable")),
+                "App.make": Procedure(
+                    signature: Signature(returns: .named("App.Openable")),
                     body: [],
-                    result: .call(Call(selector: "app.open"))
+                    result: .call(Call(selector: "App.open"))
                 )
             ]
         )
@@ -702,11 +702,11 @@ struct LinearTests {
         // not on others, and which it was is what a membership does not say
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
-            constraints: ["app.Openable": [.named("app.Handle"), .int]]
+            constraints: ["App.Openable": [.named("App.Handle"), .int]]
         )
 
         // When / Then
@@ -727,7 +727,7 @@ struct LinearTests {
             result: .array([
                 .cast(
                     .record(["name": .literal(.string("f"))]),
-                    as: .named("app.Handle"),
+                    as: .named("App.Handle"),
                     optional: false
                 )
             ])
@@ -737,23 +737,23 @@ struct LinearTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("writes what this reads as 'app.Handle' inside a list")
+            "\(error)".contains("writes what this reads as 'App.Handle' inside a list")
         }
     }
 
     @Test("two memberships that name each other are all of one thing or not")
     func aRingOfMembershipsAnswersAsItStood() async throws {
-        // Given. `app.A` and `app.B` name each other, and every other member of
-        // either is `app.Handle`
+        // Given. `App.A` and `App.B` name each other, and every other member of
+        // either is `App.Handle`
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             constraints: [
-                "app.A": [.named("app.Handle"), .named("app.B")],
-                "app.B": [.named("app.Handle"), .named("app.A")]
+                "App.A": [.named("App.Handle"), .named("App.B")],
+                "App.B": [.named("App.Handle"), .named("App.A")]
             ]
         )
 
@@ -765,12 +765,12 @@ struct LinearTests {
 
     @Test("a cast that may answer nothing does not take one")
     func anOptionalCastRefuses() async throws {
-        // Given. `payload` is read as `app.Handle` with `as?`
+        // Given. `payload` is read as `App.Handle` with `as?`
         let sut = try holding(
             body: [
                 Statement(
                     binding: .constant("held"),
-                    expression: .cast(reference("payload"), as: .named("app.Handle"), optional: true)
+                    expression: .cast(reference("payload"), as: .named("App.Handle"), optional: true)
                 )
             ],
             result: .literal(.null),
@@ -792,11 +792,11 @@ struct LinearTests {
         // other
         let sut = try holding(
             body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make")))
             ],
             result: .literal(.null),
             beside: [
-                "app.make": Procedure(
+                "App.make": Procedure(
                     signature: Signature(),
                     body: [
                         Statement(
@@ -809,7 +809,7 @@ struct LinearTests {
                                         expression: .leave(
                                             Leave(
                                                 reach: .procedure,
-                                                value: .call(Call(selector: "app.open"))
+                                                value: .call(Call(selector: "App.open"))
                                             )
                                         )
                                     )
@@ -838,14 +838,14 @@ struct LinearTests {
         // question at the same time
         let sut = try holding(
             body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make")))
             ],
             result: .literal(.null),
             beside: [
-                "app.make": Procedure(
+                "App.make": Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(binding: .constant("own"), expression: .call(Call(selector: "app.open"))),
+                        Statement(binding: .constant("own"), expression: .call(Call(selector: "App.open"))),
                         Statement(
                             binding: .none,
                             expression: .leave(Leave(reach: .procedure, value: reference("own")))
@@ -866,15 +866,15 @@ struct LinearTests {
 
     @Test("an attempt does not drop what a body already handed out")
     func anAttemptKeepsWhatWasHandedOut() async throws {
-        // Given. `app.make` returns one from inside the attempt's body and
+        // Given. `App.make` returns one from inside the attempt's body and
         // writes no `returns`
         let sut = try holding(
             body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make")))
             ],
             result: .literal(.null),
             beside: [
-                "app.make": Procedure(
+                "App.make": Procedure(
                     signature: Signature(),
                     body: [
                         Statement(
@@ -888,7 +888,7 @@ struct LinearTests {
                                             expression: .leave(
                                                 Leave(
                                                     reach: .procedure,
-                                                    value: .call(Call(selector: "app.open"))
+                                                    value: .call(Call(selector: "App.open"))
                                                 )
                                             )
                                         )
@@ -915,16 +915,16 @@ struct LinearTests {
 
     @Test("a body carried as a value does not answer one")
     func aCarriedBodyDoesNotAnswerOne() async throws {
-        // Given. The closure writes `returns` naming `app.Handle`
+        // Given. The closure writes `returns` naming `App.Handle`
         let sut = try holding(
             body: [
                 Statement(
                     binding: .constant("made"),
                     expression: .closure(
                         Procedure(
-                            signature: Signature(returns: .named("app.Handle")),
+                            signature: Signature(returns: .named("App.Handle")),
                             body: [],
-                            result: .call(Call(selector: "app.open"))
+                            result: .call(Call(selector: "App.open"))
                         )
                     )
                 )
@@ -936,7 +936,7 @@ struct LinearTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("writes a procedure answering app.Handle")
+            "\(error)".contains("writes a procedure answering App.Handle")
         }
     }
 
@@ -949,7 +949,7 @@ struct LinearTests {
                 Statement(
                     binding: .constant("made"),
                     expression: .closure(
-                        Procedure(body: [], result: .call(Call(selector: "app.open")))
+                        Procedure(body: [], result: .call(Call(selector: "App.open")))
                     )
                 )
             ],
@@ -978,7 +978,7 @@ struct LinearTests {
                             body: [
                                 Statement(
                                     binding: .constant("own"),
-                                    expression: .call(Call(selector: "app.open"))
+                                    expression: .call(Call(selector: "App.open"))
                                 )
                             ],
                             result: reference("own")
@@ -1010,7 +1010,7 @@ struct LinearTests {
                                 Statement(
                                     binding: .constant("inner"),
                                     expression: .closure(
-                                        Procedure(body: [], result: .call(Call(selector: "app.open")))
+                                        Procedure(body: [], result: .call(Call(selector: "App.open")))
                                     )
                                 )
                             ],
@@ -1044,7 +1044,7 @@ struct LinearTests {
                             body: [
                                 Statement(
                                     binding: .constant("own"),
-                                    expression: .call(Call(selector: "app.open"))
+                                    expression: .call(Call(selector: "App.open"))
                                 )
                             ],
                             result: .literal(.null)
@@ -1069,7 +1069,7 @@ struct LinearTests {
         // it is holding still on the other side of the loop, and closes there
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     binding: .constant("spin"),
                     expression: .loop(
@@ -1081,7 +1081,7 @@ struct LinearTests {
                         )
                     )
                 ),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -1100,15 +1100,15 @@ struct LinearTests {
         // afterwards
         let sut = try holding(
             body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("held")])))
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("held")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.make": Procedure(
-                    signature: Signature(returns: .named("app.Handle")),
+                "App.make": Procedure(
+                    signature: Signature(returns: .named("App.Handle")),
                     body: [
-                        Statement(binding: .constant("own"), expression: .call(Call(selector: "app.open"))),
+                        Statement(binding: .constant("own"), expression: .call(Call(selector: "App.open"))),
                         Statement(
                             binding: .none,
                             expression: .conditional(
@@ -1122,11 +1122,11 @@ struct LinearTests {
                                 else: nil
                             )
                         ),
-                        Statement(expression: .call(Call(selector: "app.close", arguments: [reference("own")]))),
+                        Statement(expression: .call(Call(selector: "App.close", arguments: [reference("own")]))),
                         Statement(
                             binding: .none,
                             expression: .leave(
-                                Leave(reach: .procedure, value: .call(Call(selector: "app.open")))
+                                Leave(reach: .procedure, value: .call(Call(selector: "App.open")))
                             )
                         )
                     ],
@@ -1147,15 +1147,15 @@ struct LinearTests {
         // answers a handle it does not hold and drops the one it does
         let sut = try holding(
             body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("held")])))
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("held")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.make": Procedure(
-                    signature: Signature(returns: .named("app.Handle")),
+                "App.make": Procedure(
+                    signature: Signature(returns: .named("App.Handle")),
                     body: [
-                        Statement(binding: .constant("own"), expression: .call(Call(selector: "app.open"))),
+                        Statement(binding: .constant("own"), expression: .call(Call(selector: "App.open"))),
                         Statement(
                             binding: .none,
                             expression: .conditional(
@@ -1166,7 +1166,7 @@ struct LinearTests {
                                         expression: .leave(
                                             Leave(
                                                 reach: .procedure,
-                                                value: .call(Call(selector: "app.open"))
+                                                value: .call(Call(selector: "App.open"))
                                             )
                                         )
                                     )
@@ -1174,11 +1174,11 @@ struct LinearTests {
                                 else: nil
                             )
                         ),
-                        Statement(expression: .call(Call(selector: "app.close", arguments: [reference("own")]))),
+                        Statement(expression: .call(Call(selector: "App.close", arguments: [reference("own")]))),
                         Statement(
                             binding: .none,
                             expression: .leave(
-                                Leave(reach: .procedure, value: .call(Call(selector: "app.open")))
+                                Leave(reach: .procedure, value: .call(Call(selector: "App.open")))
                             )
                         )
                     ],
@@ -1215,7 +1215,7 @@ struct LinearTests {
                                         then: [
                                             Statement(
                                                 binding: .constant("own"),
-                                                expression: .call(Call(selector: "app.open"))
+                                                expression: .call(Call(selector: "App.open"))
                                             ),
                                             Statement(
                                                 binding: .none,
@@ -1252,14 +1252,14 @@ struct LinearTests {
             )
 
             return [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     binding: .none,
                     expression: .conditional(
                         .literal(.bool(true)),
                         then: [
                             Statement(
-                                expression: .call(Call(selector: "app.close", arguments: [reference("handle")]))
+                                expression: .call(Call(selector: "App.close", arguments: [reference("handle")]))
                             ),
                             Statement(
                                 binding: .none,
@@ -1281,7 +1281,7 @@ struct LinearTests {
                         else: nil
                     )
                 ),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ]
         }
 
@@ -1310,14 +1310,14 @@ struct LinearTests {
         // value, so a slot writing both says nothing a body could act on
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.maybe": Procedure(
+                "App.maybe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .nullable(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .nullable(.named("App.Handle")))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -1329,7 +1329,7 @@ struct LinearTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("writes `?` on app.Handle, which is handed on exactly once")
+            "\(error)".contains("writes `?` on App.Handle, which is handed on exactly once")
         }
     }
 
@@ -1340,14 +1340,14 @@ struct LinearTests {
         // the caller would bind an obligation nothing told it about
         let sut = try holding(
             body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make")))
             ],
             result: .literal(.null),
             beside: [
-                "app.make": Procedure(
+                "App.make": Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .call(Call(selector: "app.open"))
+                    result: .call(Call(selector: "App.open"))
                 )
             ]
         )
@@ -1368,8 +1368,8 @@ struct LinearTests {
             body: [],
             result: .array([
                 .attempt(
-                    Block(body: [mayFail()], result: .call(Call(selector: "app.open"))),
-                    rescue: Block(body: [], result: .call(Call(selector: "app.open")))
+                    Block(body: [mayFail()], result: .call(Call(selector: "App.open"))),
+                    rescue: Block(body: [], result: .call(Call(selector: "App.open")))
                 )
             ])
         )
@@ -1384,15 +1384,15 @@ struct LinearTests {
 
     @Test("a slot does not say what it does with a type parameter")
     func aTypeParameterTakesNoMark() async throws {
-        // Given. `app.pass` writes `consuming` on `some T`
+        // Given. `App.pass` writes `consuming` on `some T`
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.pass": Procedure(
+                "App.pass": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .consuming(.parameter(name: "T")))],
                         returns: .parameter(name: "T")
@@ -1413,27 +1413,27 @@ struct LinearTests {
 
     @Test("a borrow passes on to another slot that borrows")
     func aBorrowPassesToAnotherBorrow() async throws {
-        // Given. The one thing a borrowed name may be handed to. `app.show`
-        // borrows and lends the same value on to `app.name`, which borrows too,
+        // Given. The one thing a borrowed name may be handed to. `App.show`
+        // borrows and lends the same value on to `App.name`, which borrows too,
         // so the obligation never moves and the entry still closes it
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     binding: .constant("shown"),
-                    expression: .call(Call(selector: "app.show", arguments: [reference("handle")]))
+                    expression: .call(Call(selector: "App.show", arguments: [reference("handle")]))
                 ),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: reference("shown"),
             beside: [
-                "app.show": Procedure(
+                "App.show": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(selector: "app.name", arguments: [reference("of")]))
+                    result: .call(Call(selector: "App.name", arguments: [reference("of")]))
                 )
             ]
         )
@@ -1450,7 +1450,7 @@ struct LinearTests {
         // where something is handed on, and lending hands nothing on
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
                 Statement(
                     binding: .constant("spin"),
                     expression: .loop(
@@ -1460,14 +1460,14 @@ struct LinearTests {
                                 Statement(
                                     binding: .constant("shown"),
                                     expression: .call(
-                                        Call(selector: "app.name", arguments: [reference("handle")])
+                                        Call(selector: "App.name", arguments: [reference("handle")])
                                     )
                                 )
                             ]
                         )
                     )
                 ),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null)
         )
@@ -1484,14 +1484,14 @@ struct LinearTests {
         // replace the one a borrow puts on giving it away at all
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.give": Procedure(
+                "App.give": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))]
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))]
                     ),
                     body: [
                         Statement(
@@ -1502,7 +1502,7 @@ struct LinearTests {
                                     body: [
                                         Statement(
                                             expression: .call(
-                                                Call(selector: "app.close", arguments: [reference("of")])
+                                                Call(selector: "App.close", arguments: [reference("of")])
                                             )
                                         )
                                     ]
@@ -1525,17 +1525,17 @@ struct LinearTests {
 
     @Test("a parameter naming a type handed on once says what it does with it")
     func aSilentSlotRefuses() async throws {
-        // Given. `app.take` names the type and writes neither mark
+        // Given. `App.take` names the type and writes neither mark
         let sut = try holding(
             body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
-                Statement(expression: .call(Call(selector: "app.close", arguments: [reference("handle")])))
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
+                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
             ],
             result: .literal(.null),
             beside: [
-                "app.take": Procedure(
+                "App.take": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("app.Handle"))]
+                        parameters: [Parameter(name: "of", type: .named("App.Handle"))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -1553,9 +1553,9 @@ struct LinearTests {
 
     // MARK: - Public
     // MARK: - Private
-    // A linear handle, the entry, and procedures that make one (`app.open`),
-    // take one (`app.close`), say neither (`app.peek`) and borrow one
-    // (`app.name`).
+    // A linear handle, the entry, and procedures that make one (`App.open`),
+    // take one (`App.close`), say neither (`App.peek`) and borrow one
+    // (`App.name`).
     private func holding(
         body: Body,
         result: Warp.Expression,
@@ -1564,7 +1564,7 @@ struct LinearTests {
         beside others: [Name: Procedure] = [:]
     ) throws -> Module {
         try Module(
-            types: ["app.Handle": .linear(.record(["name": .string]))],
+            types: ["App.Handle": .linear(.record(["name": .string]))],
             constraints: constraints,
             procedures: [
                 entryName: Procedure(
@@ -1573,28 +1573,28 @@ struct LinearTests {
                     body: body,
                     result: result
                 ),
-                "app.open": Procedure(
-                    signature: Signature(returns: .named("app.Handle")),
+                "App.open": Procedure(
+                    signature: Signature(returns: .named("App.Handle")),
                     body: [],
                     result: .cast(
                         .record(["name": .literal(.string("f"))]),
-                        as: .named("app.Handle"),
+                        as: .named("App.Handle"),
                         optional: false
                     )
                 ),
-                "app.close": Procedure(
+                "App.close": Procedure(
                     signature: Signature(of: CloseEffect.self),
                     implementation: .effect(CloseEffect())
                 ),
-                "app.peek": Procedure(
+                "App.peek": Procedure(
                     signature: Signature(parameters: [Parameter(name: "at", type: .any)]),
                     body: [],
                     result: .literal(.null)
                 ),
                 // Reads the handle and leaves the obligation with the caller.
-                "app.name": Procedure(
+                "App.name": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .borrowing(.named("app.Handle")))],
+                        parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))],
                         returns: .string
                     ),
                     body: [],

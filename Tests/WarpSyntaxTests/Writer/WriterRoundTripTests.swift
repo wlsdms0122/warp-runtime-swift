@@ -57,14 +57,14 @@ struct WriterRoundTripTests {
     func aSatisfactionSurvivesAWriting() throws {
         // Given
         let module = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            claims: ["bank.Account": ["app.Describable"]],
+            types: ["Bank.Account": .record(["balance": .int])],
+            contracts: ["App.Describable": ["describe": Signature(returns: .string)]],
+            claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],

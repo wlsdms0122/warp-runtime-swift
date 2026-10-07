@@ -11,7 +11,7 @@ import Warp
 import WarpStandard
 import WarpTestSupport
 
-@Suite("What std.control answers")
+@Suite("What Standard.Control answers")
 struct ControlTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -83,7 +83,7 @@ struct ControlTests {
                         )
                     ]
                 ),
-                "app.wants": Procedure(
+                "App.wants": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .int)]),
                     body: []
                 )

@@ -27,7 +27,7 @@ import Foundation
 // another module in the same link.
 //
 // A name is its declared spelling and nothing else. A call site says
-// `std.math.plus`, and that is the one declaration it can mean, wherever it was
+// `Standard.Math.plus`, and that is the one declaration it can mean, wherever it was
 // written; the image the executor runs is spelled the way the documents were,
 // so a run never has to ask again. Constants settle here: compiling folds a
 // read of one into its value wherever the run has nothing left to settle.

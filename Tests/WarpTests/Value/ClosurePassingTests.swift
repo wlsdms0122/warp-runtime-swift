@@ -13,12 +13,12 @@ import Testing
 struct ClosurePassingTests {
     // MARK: - Property
     private let types = TypeTable(
-        types: ["bank.A": .record(["k": .string])],
-        constraints: ["app.M": [.named("bank.A"), .int]]
+        types: ["Bank.A": .record(["k": .string])],
+        constraints: ["App.M": [.named("Bank.A"), .int]]
     )
 
     private var record: LoweredType {
-        TypeExpression.named("bank.A").lowered(in: types.loweredTypes)
+        TypeExpression.named("Bank.A").lowered(in: types.loweredTypes)
     }
 
     private let sut = Closure(
@@ -101,7 +101,7 @@ struct ClosurePassingTests {
     @Test("a round trip through a record of the same fields under another name is no round trip")
     func aRoundTripThroughAnotherNameKeepsEveryAnswer() {
         // Given
-        let renamed: LoweredType = .record(LoweredRecord(layout: Layout(name: "bank.B", ordered: ["k"]), fields: [.string]))
+        let renamed: LoweredType = .record(LoweredRecord(layout: Layout(name: "Bank.B", ordered: ["k"]), fields: [.string]))
 
         // When
         let closure = sut
@@ -149,7 +149,7 @@ struct ClosurePassingTests {
     @Test("a membership slot taking the answer adds nothing, so a round trip through one keeps one answer")
     func aMembershipSlotAddsNothing() {
         // Given
-        let membership = TypeExpression.composition(["app.M"]).lowered(in: types.loweredTypes)
+        let membership = TypeExpression.composition(["App.M"]).lowered(in: types.loweredTypes)
         var closure = sut
 
         // When

@@ -53,7 +53,7 @@ struct VariableTests {
         let sut: Body = [
             Statement(binding: .constant("both"), expression: .call(
                     Call(
-                        selector: "std.concurrent.all",
+                        selector: "Standard.Concurrent.all",
                         arguments: [
                             .record([
                                 "left": .closure(

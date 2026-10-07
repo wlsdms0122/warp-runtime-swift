@@ -74,7 +74,7 @@ struct EnumTests {
                 "pick": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "speed", type: .parameter(name: "N", constraints: ["std.Numeric"]),
+                            Parameter(name: "speed", type: .parameter(name: "N", constraints: ["Standard.Numeric"]),
                                 candidates: ["fast", "slow"]
                             )
                         ]
@@ -164,7 +164,7 @@ struct EnumTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "level", type: .parameter(name: "N", constraints: ["std.Numeric"]),
+                            Parameter(name: "level", type: .parameter(name: "N", constraints: ["Standard.Numeric"]),
                                 candidates: ["1", "2.5"]
                             )
                         ]

@@ -297,12 +297,12 @@ struct PlaceTests {
 
     @Test("a declared spelling with a dot in it is one key in the place")
     func aDottedSpellingIsOneKey() async throws {
-        // Given. The same refusal from a declaration spelled `wallet.entry`.
+        // Given. The same refusal from a declaration spelled `Wallet.entry`.
         // The dot is part of the key the document wrote, so the place holds
         // that key whole rather than two steps.
         let sut = try Module(
             procedures: [
-                "wallet.entry": Procedure(body: [
+                "Wallet.entry": Procedure(body: [
                     Statement(binding: .constant("sent"), expression: .call(Call(selector: "nowhere")))
                 ])
             ],
@@ -316,8 +316,8 @@ struct PlaceTests {
 
         // Then
         #expect(error?.place?.document == Place.Document(identity: reading))
-        #expect(error?.place?.steps.contains(.key("wallet.entry")) == true)
-        #expect(error?.place?.rendered == "d0cf00/procedures.wallet.entry.body.sent[0].call")
+        #expect(error?.place?.steps.contains(.key("Wallet.entry")) == true)
+        #expect(error?.place?.rendered == "d0cf00/procedures.Wallet.entry.body.sent[0].call")
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
@@ -375,10 +375,10 @@ struct PlaceTests {
 
     @Test("a type is placed by the key it was declared under, dot and all")
     func aTypeIsPlacedByItsDeclaredKey() async throws {
-        // Given. A type declared as `wallet.Coin`. The place is spelled from
+        // Given. A type declared as `Wallet.Coin`. The place is spelled from
         // that key, which is what the document writes.
         let sut = try Module(
-            types: ["wallet.Coin": .record(["amount": .named("Missing")])],
+            types: ["Wallet.Coin": .record(["amount": .named("Missing")])],
             procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading
         )
@@ -389,7 +389,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "d0cf00/types.wallet.Coin.fields.amount")
+        #expect(error?.place?.rendered == "d0cf00/types.Wallet.Coin.fields.amount")
     }
 
     @Test("a membership is placed the same way")
@@ -398,7 +398,7 @@ struct PlaceTests {
         // from the table alone, which is the walk that has only the declared
         // keys to go on.
         let sut = try Module(
-            constraints: ["wallet.Spendable": []],
+            constraints: ["Wallet.Spendable": []],
             procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading
         )
@@ -409,7 +409,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "d0cf00/constraints.wallet.Spendable")
+        #expect(error?.place?.rendered == "d0cf00/constraints.Wallet.Spendable")
     }
 
     @Test("a statement's construct is the language's name, and says so")
@@ -541,7 +541,7 @@ struct PlaceTests {
         // collision between two declarations, the sentence names the same
         // document on both sides and tells the host nothing it can act on.
         let module = try Module(
-            procedures: ["pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
+            procedures: ["Pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
             identity: Identity([0x01])
         )
 
@@ -563,7 +563,7 @@ struct PlaceTests {
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
         func declaring(_ type: TypeExpression, as identity: Identity) throws -> Module {
-            try Module(types: ["pricing.Money": type], procedures: [:], identity: identity)
+            try Module(types: ["Pricing.Money": type], procedures: [:], identity: identity)
         }
 
         let held = try declaring(.int, as: Identity([0x01]))
@@ -576,7 +576,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "02/types.pricing.Money")
+        #expect(error?.place?.rendered == "02/types.Pricing.Money")
         #expect(error?.message.contains("by 01") == true)
     }
 
@@ -585,9 +585,9 @@ struct PlaceTests {
         // Given. The two tables held against each other, which is the one
         // judgment that reads both tables. The membership is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
-        let type = try Module(types: ["pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
+        let type = try Module(types: ["Pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
 
-        let membership = try Module(constraints: ["pricing.Money": [.int]], procedures: [:], identity: Identity([0x02]))
+        let membership = try Module(constraints: ["Pricing.Money": [.int]], procedures: [:], identity: Identity([0x02]))
 
         let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
@@ -597,7 +597,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "02/constraints.pricing.Money")
+        #expect(error?.place?.rendered == "02/constraints.Pricing.Money")
         #expect(error?.message.contains("01") == true)
     }
 
@@ -657,7 +657,7 @@ struct PlaceTests {
         // reads keeps it anyway, because something does read it.
         let sut = try Module(
             constants: [
-                "beta": .call(Call(selector: "std.math.plus", arguments: [reference("gamma"), reference("delta")])),
+                "beta": .call(Call(selector: "Standard.Math.plus", arguments: [reference("gamma"), reference("delta")])),
                 "gamma": reference("beta"),
                 "delta": reference("epsilon"),
                 "epsilon": .literal(.int(1))

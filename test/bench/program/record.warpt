@@ -1,14 +1,14 @@
 warpt 1
 {
   imports [
-    "std.math.lessThan"
+    "Standard.Math.lessThan"
   ]
   procedures {
-    "app.read" {
+    "App.read" {
       parameters [
         {
           name "account"
-          type "app.Account"
+          type "App.Account"
         }
       ]
       result {
@@ -45,7 +45,7 @@ warpt 1
                           ref "account"
                         }
                       ]
-                      procedure "app.read"
+                      procedure "App.read"
                     }
                   }
                 }
@@ -60,7 +60,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "std.math.lessThan"
+                  procedure "Standard.Math.lessThan"
                 }
               }
             }
@@ -80,7 +80,7 @@ warpt 1
     }
   }
   types {
-    "app.Account" {
+    "App.Account" {
       record {
         balance "int"
       }

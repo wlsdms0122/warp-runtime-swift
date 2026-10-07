@@ -41,14 +41,14 @@ struct EncodedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("std.text.encoded asks a string")
+            throw ExecutionError("Standard.Text.encoded asks a string")
         }
 
         guard
             case let .string(name) = question[.encoding],
             let encoding = CharacterEncoding(rawValue: name)
         else {
-            throw ExecutionError("std.text.encoded asks the name of an encoding it has")
+            throw ExecutionError("Standard.Text.encoded asks the name of an encoding it has")
         }
 
         return .bytes(encoding.bytes(of: text))

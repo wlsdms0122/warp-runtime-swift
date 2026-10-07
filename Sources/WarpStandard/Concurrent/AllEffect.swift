@@ -17,7 +17,7 @@ struct AllEffect: Effect {
     // Every recoverable failure a piece raises is gathered into one.
     let failing = Failing.these([ConcurrentFailed.type])
 
-    private let fanout = Fanout("std.concurrent.all")
+    private let fanout = Fanout("Standard.Concurrent.all")
 
     // MARK: - Initializer
     // MARK: - Public

@@ -11,7 +11,7 @@ import Warp
 import WarpStandard
 import WarpTestSupport
 
-// Running at once is vocabulary, not grammar. `std.concurrent` takes isolated
+// Running at once is vocabulary, not grammar. `Standard.Concurrent` takes isolated
 // closures, and a host that leaves the bundle out of the link has granted no
 // concurrency at all.
 @Suite("Running at once")
@@ -67,7 +67,7 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(
-                    selector: "std.concurrent.all",
+                    selector: "Standard.Concurrent.all",
                     arguments: [
                         .record([
                             "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
@@ -90,7 +90,7 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("all"), expression: .call(
                 Call(
-                    selector: "std.concurrent.all",
+                    selector: "Standard.Concurrent.all",
                     arguments: [
                         .array([
                             .closure(Procedure(body: [], result: .literal(.int(1)))),
@@ -114,7 +114,7 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("kept"), expression: .call(
                 Call(
-                    selector: "std.concurrent.map",
+                    selector: "Standard.Concurrent.map",
                     arguments: [
                         .literal(.array([.int(1), .int(2), .int(3)])),
                         .closure(
@@ -143,12 +143,12 @@ struct ConcurrencyTests {
 
     @Test("a closure a walk calls declares as many parameters as the walk hands over")
     func mapHandsOverEveryName() async throws {
-        // Given. `std.concurrent.map` hands over the item and its index, and
+        // Given. `Standard.Concurrent.map` hands over the item and its index, and
         // this closure declares one parameter. A value nothing can receive is
         // not one to hand over quietly
         let sut = Statement(binding: .constant("placed"), expression: .call(
                 Call(
-                    selector: "std.concurrent.map",
+                    selector: "Standard.Concurrent.map",
                     arguments: [
                         .literal(.array([.string("a"), .string("b")])),
                         .closure(
@@ -181,7 +181,7 @@ struct ConcurrencyTests {
         // was given": what a procedure offers is what arrived
         let sut = Statement(binding: .constant("kept"), expression: .call(
                 Call(
-                    selector: "std.concurrent.map",
+                    selector: "Standard.Concurrent.map",
                     arguments: [
                         .literal(.array([.int(1), .null, .int(3)])),
                         .closure(
@@ -213,7 +213,7 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("none"), expression: .call(
                 Call(
-                    selector: "std.concurrent.map",
+                    selector: "Standard.Concurrent.map",
                     arguments: [
                         .literal(.array([])),
                         .closure(
@@ -243,7 +243,7 @@ struct ConcurrencyTests {
         // can
         let sut = Statement(binding: .constant("either"), expression: .call(
                 Call(
-                    selector: "std.concurrent.first",
+                    selector: "Standard.Concurrent.first",
                     arguments: [
                         .array([
                             .closure(
@@ -276,14 +276,14 @@ struct ConcurrencyTests {
         let waiting = CancellationWatch()
         let sut = Statement(binding: .constant("either"), expression: .call(
                 Call(
-                    selector: "std.concurrent.first",
+                    selector: "Standard.Concurrent.first",
                     arguments: [
                         .array([
                             .closure(Procedure(body: [], result: .literal(.string("answered")))),
                             .closure(
                                 Procedure(
                                     body: [
-                                        Statement(binding: .constant("slow"), expression: .call(Call(selector: "app.wait"))
+                                        Statement(binding: .constant("slow"), expression: .call(Call(selector: "App.wait"))
                                         )
                                     ],
                                     result: reference("slow")
@@ -302,7 +302,7 @@ struct ConcurrencyTests {
             vocabulary: Module.standard + [
                 try Module(
                     procedures: [
-                        "app.wait": Procedure(implementation: .effect(WaitEffect(watch: waiting)))
+                        "App.wait": Procedure(implementation: .effect(WaitEffect(watch: waiting)))
                     ]
                 )
             ]
@@ -323,7 +323,7 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("either"), expression: .call(
                 Call(
-                    selector: "std.concurrent.first",
+                    selector: "Standard.Concurrent.first",
                     arguments: [
                         .array([
                             .closure(
@@ -351,7 +351,7 @@ struct ConcurrencyTests {
             Procedure(body: [Statement(expression: aborting(literal("doomed")))])
         )
         let sut = Statement(binding: .constant("both"), expression: .call(
-                Call(selector: "std.concurrent.all", arguments: [.record(["first": doomed, "second": doomed])])
+                Call(selector: "Standard.Concurrent.all", arguments: [.record(["first": doomed, "second": doomed])])
             )
         )
 
@@ -370,7 +370,7 @@ struct ConcurrencyTests {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(
-                    selector: "std.concurrent.all",
+                    selector: "Standard.Concurrent.all",
                     arguments: [
                         .array([
                             .closure(Procedure(body: [], result: .literal(.int(1)))),
@@ -385,7 +385,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("with pieces, which holds [const isolated procedure<() -> any>, int] where std.concurrent.Pieces is declared")
+            "\(error)".contains("with pieces, which holds [const isolated procedure<() -> any>, int] where Standard.Concurrent.Pieces is declared")
         }
     }
 
@@ -395,7 +395,7 @@ struct ConcurrencyTests {
         // and the boundary every procedure shares is what judges it
         let sut = Statement(binding: .constant("walked"), expression: .call(
                 Call(
-                    selector: "std.concurrent.map",
+                    selector: "Standard.Concurrent.map",
                     arguments: [
                         reference("subject"),
                         .closure(
@@ -439,9 +439,9 @@ struct ConcurrencyTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        selector: "std.concurrent.map",
+                        selector: "Standard.Concurrent.map",
                         arguments: [
-                            .call(Call(selector: "std.collection.reversed", arguments: [reference("items")])),
+                            .call(Call(selector: "Standard.Collection.reversed", arguments: [reference("items")])),
                             .closure(Procedure(
                                 signature: Signature(
                                     parameters: [

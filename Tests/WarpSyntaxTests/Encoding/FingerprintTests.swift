@@ -53,7 +53,7 @@ struct FingerprintTests {
 
     private let program = try! Module(
         procedures: [
-            "app.main": Procedure(
+            "App.main": Procedure(
                 signature: Signature(returns: .int),
                 body: [],
                 result: .call(Call(selector: "a.foo", arguments: [.literal(.null)]))
@@ -90,7 +90,7 @@ struct FingerprintTests {
         // Given
         let other = try Module(
             procedures: [
-                "app.main": Procedure(
+                "App.main": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .literal(.int(3))

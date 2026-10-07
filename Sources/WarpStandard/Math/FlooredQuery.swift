@@ -15,7 +15,7 @@ struct FlooredQuery: Query {
     typealias Parameters = NumberOperand
 
     // MARK: - Property
-    private let integer = IntegerConversion("std.math.floored")
+    private let integer = IntegerConversion("Standard.Math.floored")
 
     // MARK: - Initializer
     // MARK: - Public
@@ -28,7 +28,7 @@ struct FlooredQuery: Query {
             return .int(try integer.of(real, rounded: .down))
 
         default:
-            throw ExecutionError("std.math.floored asks a number")
+            throw ExecutionError("Standard.Math.floored asks a number")
         }
     }
 

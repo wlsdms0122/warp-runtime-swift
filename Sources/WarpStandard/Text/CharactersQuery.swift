@@ -22,7 +22,7 @@ struct CharactersQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("std.text.characters asks a string")
+            throw ExecutionError("Standard.Text.characters asks a string")
         }
 
         return .array(text.map { character in .string(String(character)) })
