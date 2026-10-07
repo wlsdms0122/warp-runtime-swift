@@ -43,7 +43,7 @@ public extension Module {
                     description: "The record with one name bound to another value.",
                     signature: Signature(
                         of: SettingQuery.self,
-                        returns: .dictionary(.any)
+                        returns: .dictionary(.parameter(name: "Value"))
                     ),
                     implementation: .query(SettingQuery())
                 )

@@ -201,7 +201,7 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "data", type: .any)]
+                        parameters: [Parameter(name: "data", type: .array(.string))]
                     ),
                     body: [],
                     result: .call(Call(selector: "Standard.Text.joined", arguments: [reference("data"), .literal(.string(""))]))
@@ -214,7 +214,7 @@ struct BytesTests {
         await #expect {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
-            "\(error)".contains("input 'strings'[0]: expected String, got Int")
+            "\(error)".contains("input 'data'[0]: expected String, got Int")
                 && !"\(error)".contains("expected array")
         }
     }

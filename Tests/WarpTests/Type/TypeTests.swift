@@ -50,8 +50,8 @@ struct TypeTests {
 
     @Test("a record holds exactly the fields declared, one short or one over refusing")
     func recordDeclaresFields() throws {
-        // Given. A record type is its fields, and a place holds a value as it
-        // is rather than cutting it to fit
+        // Given. A record type is its fields, and a place holds a value as
+        // it is
         let sut = TypeExpression.record(["id": .string, "done": .bool])
 
         // When
@@ -222,16 +222,21 @@ struct TypeTests {
             error is BuildError && "\(error)".contains("holds Int where String is declared")
         }
 
-        // And a body whose answer nothing can be read from says nothing. An
-        // answer worked out from its own is not one the text states.
+        // And a body whose answer nothing can be read from reads `Any`, since
+        // an answer worked out from its own is not one the text states, and a
+        // slot of a type takes a value read as `Any` only through a cast.
         let cycling = Procedure(
             body: [],
             result: .call(Call(selector: "counts"))
         )
 
-        _ = try await Builder().build(
-            [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])]
-        )
+        await #expect {
+            try await Builder().build(
+                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])]
+            )
+        } throws: { error in
+            error is BuildError && "\(error)".contains("holds Any where String is declared")
+        }
     }
 
     @Test("a dictionary slot takes a record whose fields all fit it")

@@ -939,7 +939,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }
 
-    // Whether a value of `other` may stand where this is declared. Structural,
+    // Whether a value of `other` may stand where this is declared. Exact on
+    // records, a declared one by its name and a nameless one by its fields,
     // and one-directional: `Any` on the left accepts anything because nothing
     // was declared, and `Any` on the right is accepted by anything because
     // nothing is known. An undeclared answer cannot be proven wrong.

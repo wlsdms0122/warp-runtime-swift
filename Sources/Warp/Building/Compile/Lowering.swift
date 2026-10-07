@@ -465,16 +465,14 @@ struct Lowering {
     // document's last body is lowered and not while one is.
     func numbered(
         _ rows: [Int],
-        answering answers: [Name: LoweredType],
-        starting variables: [(name: Name, value: Value)]
+        answering answers: [Name: LoweredType]
     ) throws -> (
         table: [Linked],
         numbering: LoweredTypeNumbering,
-        answers: [Name: LoweredType],
-        starting: [(name: Name, value: Value)]
+        answers: [Name: LoweredType]
     ) {
         // What the document stands on is what it numbers: every type in its
-        // rows' bodies, the answers read off them and its variables' starts.
+        // rows' bodies and the answers read off them.
         // Read through the walks that rewrite them, so which cases hold a type
         // is answered in one place; what those walks rebuild is dropped.
         var types: Set<Int> = []
@@ -520,7 +518,7 @@ struct Lowering {
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
-        return (numbered, numbering, read, variables)
+        return (numbered, numbering, read)
     }
 
     // MARK: - Private
@@ -553,28 +551,30 @@ struct Lowering {
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
             let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
+            let asItIs = context.judgements.landsAsItIs(at: here)
             let binding: Instruction.Binding?
 
             switch statement.binding {
             // A name that says what it holds settles to it, so what stands in
             // the slot is the declared type. One that says nothing holds what
-            // the code it was given stands as.
+            // the code it was given stands as. What the build proved a value
+            // of the type as it stands is not judged again.
             case let .constant(name, declared)?:
                 let slot = context.slots.allocate(name)
-                let settling = declared?.lowered(in: loweredTypes)
+                let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
-                context.slots.hold(slot, settling ?? standing(code, on: context.slots))
-                binding = .bind(slot, settling: settling)
+                context.slots.hold(slot, holding ?? standing(code, on: context.slots))
+                binding = .bind(slot, settling: asItIs ? nil : holding)
 
             // A box that said what it holds is settled to it by its
             // declaration and by every write, so what stands in it is that
             // type. One that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = context.slots.allocate(name)
-                let settling = declared?.lowered(in: loweredTypes)
+                let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
-                context.slots.hold(slot, settling)
-                binding = .declare(slot, settling: settling)
+                context.slots.hold(slot, holding)
+                binding = .declare(slot, settling: asItIs ? nil : holding)
 
             // A write settles to what the check held it to, so a box that
             // said what it holds holds it after a write as it did after its
@@ -582,7 +582,7 @@ struct Lowering {
             case let .assignment(path)?:
                 let address = try lower(path, in: scope, on: context.slots, at: here)
                 let settling = context.judgements.settling(writeAt: here)?.slotUnwrapped
-                binding = .assign(address, settling: settling)
+                binding = .assign(address, settling: asItIs ? nil : settling)
 
             case nil:
                 binding = nil

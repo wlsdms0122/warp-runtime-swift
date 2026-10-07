@@ -59,12 +59,23 @@ extension LoweredType {
         case let .procedure(parameters, returns, constness, isolation):
             guard let parameters else { return .procedure(nil, constness, isolation) }
 
-            let taken = parameters.compactMap { parameter in parameter.spelled(in: table) }
-            let answer = returns.map { returns in returns.spelled(in: table) }
+            var taken: [TypeExpression] = []
 
-            guard taken.count == parameters.count, answer != .some(nil) else { return nil }
+            for parameter in parameters {
+                guard let spelled = parameter.spelled(in: table) else { return nil }
 
-            return .procedure(ProcedureType(parameters: taken, returns: answer ?? nil), constness, isolation)
+                taken.append(spelled)
+            }
+
+            var answer: TypeExpression?
+
+            if let returns {
+                guard let spelled = returns.spelled(in: table) else { return nil }
+
+                answer = spelled
+            }
+
+            return .procedure(ProcedureType(parameters: taken, returns: answer), constness, isolation)
 
         case let .variable(inner):
             return inner.spelled(in: table).map(TypeExpression.variable)

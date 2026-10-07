@@ -27,27 +27,27 @@ public extension Module {
                 "Standard.Concurrent.all": Procedure(
                     description: "Runs every closure, and answers every answer in the closures' order."
                         + " A failure fails the whole procedure, with every piece's failure reported.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: .array(.any)),
+                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: .array(answer)),
                     implementation: .effect(AllEffect(answering: "Standard.Concurrent.all"))
                 ),
                 "Standard.Concurrent.allKeyed": Procedure(
                     description: "Runs every closure, and answers every answer under the closure's key."
                         + " A failure fails the whole procedure, with every piece's failure reported.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: .dictionary(.any)),
+                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: .dictionary(answer)),
                     implementation: .effect(AllEffect(answering: "Standard.Concurrent.allKeyed"))
                 ),
                 "Standard.Concurrent.first": Procedure(
                     description: "Runs every closure, answers the first success and"
                         + " asks the rest to stop. Which one wins is the one fact"
                         + " here timing decides.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: .any),
+                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: answer),
                     implementation: .effect(FirstEffect(answering: "Standard.Concurrent.first"))
                 ),
                 "Standard.Concurrent.firstKeyed": Procedure(
                     description: "Runs every closure under a key, answers the first success and"
                         + " asks the rest to stop. Which one wins is the one fact"
                         + " here timing decides.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: .any),
+                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: answer),
                     implementation: .effect(FirstEffect(answering: "Standard.Concurrent.firstKeyed"))
                 )
             ]
@@ -55,9 +55,14 @@ public extension Module {
         builtin: true
     )
 
+    // What every piece answers, one type the call fills from the pieces, so
+    // what comes back is said in the type.
+    private static let answer = TypeExpression.parameter(name: "Answer")
+
     // The pieces a fan-out runs, held in a list or under keys: closures that
-    // touch nothing another piece could touch at once.
+    // touch nothing another piece could touch at once, each answering the
+    // one type the call fills.
     private static func pieces(in holding: (TypeExpression) -> TypeExpression) -> Parameter {
-        Parameter(name: "pieces", type: holding(.procedure(nil, .unstated, .isolated)))
+        Parameter(name: "pieces", type: holding(.procedure(ProcedureType(returns: answer), .unstated, .isolated)))
     }
 }

@@ -384,7 +384,7 @@ struct BoundTests {
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .array(.int)),
+                    signature: Signature(returns: .array(.named("App.Describable"))),
                     body: [
                         Statement(
                             binding: .constant("card"),

@@ -112,7 +112,7 @@ struct FingerprintTests {
         // the native's document's, and that document's object is what this one
         // leans on.
         let first = try await fingerprint(of: program, against: native(returning: .int))
-        let second = try await fingerprint(of: program, against: native(returning: .any))
+        let second = try await fingerprint(of: program, against: native(returning: .ranged(.whole(from: 0, to: nil))))
 
         // Then
         #expect(first != second)

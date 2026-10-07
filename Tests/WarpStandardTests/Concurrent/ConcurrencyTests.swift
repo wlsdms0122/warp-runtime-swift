@@ -385,14 +385,14 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("with pieces, which holds [const isolated Procedure<() -> Any>, Int] where Array<isolated Procedure> is declared")
+            "\(error)".contains("with pieces, which holds [const isolated Procedure<() -> Int>, Int] where Array<isolated Procedure<() -> Any>> is declared")
         }
     }
 
     @Test("map refuses material that is not a collection")
     func mapRefusesUnfitMaterial() async throws {
-        // Given. The material arrives as `Any`, so only the run can judge it,
-        // and the boundary every procedure shares is what judges it
+        // Given. The material arrives as `Any`, which a slot of a type takes
+        // only through a cast, so the build refuses it
         let sut = Statement(binding: .constant("walked"), expression: .call(
                 Call(
                     selector: "Standard.Concurrent.map",
@@ -421,7 +421,7 @@ struct ConcurrencyTests {
                 signature: Signature(parameters: [Parameter(name: "subject", type: .any)])
             )
         } throws: { error in
-            "\(error)".contains("expected Array") && "\(error)".contains("got String")
+            error is BuildError && "\(error)".contains("with array, which holds Any where")
         }
     }
 

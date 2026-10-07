@@ -150,8 +150,8 @@ struct FieldPlaceTests {
 
     @Test("a box that said what it holds is read by its place")
     func aDeclaredBoxIsReadByItsPlace() async throws {
-        // Given. A write settles to what the box said it holds, so the value
-        // is laid out the way the declaration says and a place reads it.
+        // Given. A value read as `Any` cast to what the box said it holds is
+        // laid out the way the declaration says, and a place reads it.
         let sut = Procedure(
             signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
             body: [
@@ -161,7 +161,7 @@ struct FieldPlaceTests {
                 ),
                 Statement(
                     binding: .assignment([PathSegment.key("point")]),
-                    expression: .reference([.key("given")])
+                    expression: .cast(.reference([.key("given")]), as: .record(["x": .int, "y": .int]), optional: false)
                 )
             ],
             result: .reference([.key("point"), .key("y")])
@@ -211,8 +211,8 @@ struct FieldPlaceTests {
 
     @Test("a box holds exactly the fields it declared, so a write of more refuses")
     func aWriteOfMoreThanTheBoxDeclaresRefuses() async throws {
-        // Given. The declaration is the whole of what the box holds, and a
-        // place holds a value as it is rather than cutting it to fit
+        // Given. The declaration is the whole of what the box holds, so a
+        // value of more fields cast to it fails, and nothing is cut to fit
         let sut = Procedure(
             signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
             body: [
@@ -222,7 +222,7 @@ struct FieldPlaceTests {
                 ),
                 Statement(
                     binding: .assignment([PathSegment.key("point")]),
-                    expression: .reference([.key("given")])
+                    expression: .cast(.reference([.key("given")]), as: .record(["x": .int, "y": .int]), optional: false)
                 )
             ],
             result: .reference([.key("point")])

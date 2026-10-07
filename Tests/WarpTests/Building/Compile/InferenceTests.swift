@@ -456,7 +456,8 @@ struct InferenceTests {
     @Test("a name a conditional may have rewritten holds neither reading")
     func disagreeingWritesAreUnknown() async throws {
         // Given. A join that guessed would be a refusal an author cannot act
-        // on, so where two readings disagree nothing is claimed
+        // on, so where two readings disagree nothing is claimed: the name
+        // reads `Any`, which a slot of a type takes only through a cast
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -496,7 +497,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("holds Any where String is declared")
+        }
     }
 
     @Test("a declared answer the body's answer fits builds")
@@ -1153,8 +1158,8 @@ struct InferenceTests {
 
     @Test("a dictionary and a record are one value read two ways, so a cast between them stands")
     func aCastBetweenADictionaryAndARecordStands() async throws {
-        // Given. The boundary settles both from the same runtime value, so
-        // refusing this would refuse a cast that succeeds
+        // Given. A map holding exactly the record's fields is a value of
+        // both, so refusing this would refuse a cast that succeeds
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1831,8 +1836,9 @@ struct InferenceTests {
     func aBodyWriteJoinsTheRescueWrite() async throws {
         // Given. The body wrote a string or got nowhere, the rescue wrote an
         // int or never ran: the name holds any of null, the string and the int.
-        // That is `Any` (where readings disagree the slot holds neither), and
-        // `Any` passes the string slot below.
+        // That is `Any` (where readings disagree the slot holds neither), which
+        // the string slot below takes only through a cast. A rescue that
+        // overwrote the body's write would read `Int` instead.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1870,7 +1876,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("with text, which holds Any where String is declared")
+        }
     }
 
     @Test("an arm that refuses does not cost the arm that writes its say")

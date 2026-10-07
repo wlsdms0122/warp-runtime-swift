@@ -100,7 +100,7 @@ struct IsolationTests {
             try await run([sut, .ticketing])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("right: const Procedure<() -> Any> } where Dictionary<isolated Procedure> is declared")
+                && "\(error)".contains("right: const Procedure<() -> Int> } where Dictionary<isolated Procedure<() -> Int>> is declared")
         }
     }
 

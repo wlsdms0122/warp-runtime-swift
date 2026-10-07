@@ -212,6 +212,21 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
+            Instruction(
+                binding: nil,
+                code: .checked(
+                    .apply(
+                        .local(Address(slot: 6, steps: [])),
+                        arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))]
+                    ),
+                    CallJudgement(
+                        against: .int,
+                        handedBack: [HandedBack(position: 1, against: .string)],
+                        handedOn: [HandedOn(position: 0, against: .double)]
+                    )!
+                ),
+                label: "checked"
+            ),
             Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,

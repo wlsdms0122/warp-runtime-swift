@@ -103,12 +103,12 @@ struct InPlaceTests {
 
     @Test("a module variable settled as a dictionary is written under new names")
     func moduleVariableSettledAsADictionaryTakesNewNames() async throws {
-        // Given. An empty dictionary to start with: a dictionary's names are
-        // data, so what it reads as is what its entries hold, not which names
-        // it holds them under.
+        // Given. A dictionary of one name to start with: a dictionary's names
+        // are data, so what it reads as is what its entries hold, not which
+        // names it holds them under.
         let sut = try Module(
             imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
-            variables: ["seen": .literal(.dictionary(Value.Dictionary([:])))],
+            variables: ["seen": .literal(.dictionary(Value.Dictionary(["x": .int(0)])))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -133,7 +133,27 @@ struct InPlaceTests {
         let answer = try await Executor().run(try await Builder().build([sut] + Module.standard))
 
         // Then
-        #expect(answer == .array([.string("a")]))
+        #expect(answer == .array([.string("a"), .string("x")]))
+    }
+
+    @Test("a module variable that starts empty and declares nothing is refused")
+    func moduleVariableStartedEmptyIsRefused() async throws {
+        // Given. A variable that declares nothing holds the type of its start,
+        // and an empty dictionary holds no entry, so nothing says what the box
+        // will hold
+        let sut = try Module(
+            variables: ["seen": .literal(.dictionary(Value.Dictionary([:])))],
+            procedures: [
+                entryName: Procedure(access: .public, body: [], result: .literal(.null))
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which holds nothing, and declares no type")
+        }
     }
 
     @Test("a module variable holds the type it declares, whatever it started as")

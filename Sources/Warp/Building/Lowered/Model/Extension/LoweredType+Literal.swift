@@ -45,36 +45,33 @@ extension LoweredType {
 
     // The same for an expression written into a place of this type: the
     // literals in it, at the depths a list, a record and the answer of a
-    // block or an attempt hand on.
+    // block or an attempt hand on. A record literal written where a declared
+    // record is read takes the record's name here: one written whole is the
+    // named value, and one built from parts is the cast to the record, which
+    // stands, since the build held each part to its field.
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        if case let .nullable(inner) = self {
-            return inner.written(expression, in: table)
-        }
+        reaching(expression, in: table) { place, standing in
+            if let nominal = table.record(of: place) {
+                let label = table.labels[nominal]
+                let declared = table.loweredTypes[nominal]
 
-        switch expression {
-        case let .literal(value):
-            return .literal(written(value, in: table))
+                switch standing {
+                case let .literal(.record(record)) where record.name == nil:
+                    guard case let .record(fields) = declared.written(.record(record), in: table) else { return nil }
 
-        case let .array(items):
-            guard let element = element(in: table) else { return expression }
+                    return .literal(.record(fields.named(label)))
 
-            return .array(items.map { item in element.written(item, in: table) })
+                case .record:
+                    return .cast(declared.written(standing, in: table), as: .named(label), optional: false)
 
-        case let .record(fields):
-            return .record(
-                Dictionary(uniqueKeysWithValues: fields.map { name, field in
-                    (name, (dotted(name, in: table) ?? .any).written(field, in: table))
-                })
-            )
+                default:
+                    return nil
+                }
+            }
 
-        case let .block(block):
-            return .block(written(block, in: table))
+            guard case let .literal(value) = standing else { return nil }
 
-        case let .attempt(block, rescue):
-            return .attempt(written(block, in: table), rescue: written(rescue, in: table))
-
-        default:
-            return expression
+            return .literal(place.written(value, in: table))
         }
     }
 
@@ -118,49 +115,6 @@ extension LoweredType {
         }
     }
 
-    // A value from outside fitted to this type before it is held to it: a
-    // record's fields this does not declare left out, at whatever depth a
-    // record, a list, a map or what may be null holds one. The door a host
-    // comes through is the one place a value is fitted to a type; everywhere
-    // else a place holds a value as it is.
-    func fitted(_ value: Value, in table: LoweredTypeTable) -> Value {
-        switch (self, value) {
-        case let (.named(row), _):
-            return table.loweredTypes[row].fitted(value, in: table)
-
-        case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
-            return inner.fitted(value, in: table)
-
-        case let (.array(element), .array(items)):
-            return .array(items.map { item in element.fitted(item, in: table) })
-
-        case let (.dictionary(entry), .dictionary(entries)):
-            return .dictionary(entries.mapValues { _, held in entry.fitted(held, in: table) })
-
-        case let (.record(declared), .record(record)):
-            return .record(
-                Record(
-                    name: record.name,
-                    Dictionary(uniqueKeysWithValues: declared.named.compactMap { name, field in
-                        record[name].map { held in (name, field.fieldUnwrapped.fitted(held, in: table)) }
-                    })
-                )
-            )
-
-        case let (.record(declared), .dictionary(entries)):
-            return .dictionary(
-                Value.Dictionary(
-                    Dictionary(uniqueKeysWithValues: declared.named.compactMap { name, field in
-                        entries[name].map { held in (name, field.fieldUnwrapped.fitted(held, in: table)) }
-                    })
-                )
-            )
-
-        default:
-            return value
-        }
-    }
-
     // A block whose answer stands where this is declared.
     func written(_ block: Block, in table: LoweredTypeTable) -> Block {
         Block(body: block.body, result: block.result.map { result in written(result, in: table) })
@@ -169,60 +123,89 @@ extension LoweredType {
     // A closure literal written where this is read, its signature completed
     // by the place: one that writes no `returns`, written where a procedure
     // type says what it answers, answers that, so its body is judged against
-    // it and a literal it answers is read as the place reads it. At every
-    // depth `written` reaches a literal, so where a closure is written does
-    // not decide when what it answers is judged. An answer a call fills is
-    // no place's to say, and anything else stands as written.
+    // it and a literal it answers is read as the place reads it. It reaches
+    // every depth a literal is written at, so where a closure is written does
+    // not decide when what it answers is judged. An answer a call fills is no
+    // place's to say, and anything else stands as written.
     func completing(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        switch self {
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.completing(expression, in: table)
+        reaching(expression, in: table) { place, standing in
+            guard case let .closure(written) = standing else { return nil }
 
-        case let .named(row):
-            return table.loweredTypes[row].completing(expression, in: table)
-
-        default:
-            break
-        }
-
-        switch expression {
-        case let .closure(written):
             guard
                 written.signature.returns == nil,
-                case let .procedure(_, returns?, _, _) = self,
+                case let .procedure(_, returns?, _, _) = place,
                 let answer = returns.spelled(in: table),
                 !answer.isGeneric
             else {
-                return expression
+                return standing
             }
 
             return .closure(written.with(signature: Signature(parameters: written.signature.parameters, returns: answer)))
-
-        case let .array(items):
-            guard let element = element(in: table) else { return expression }
-
-            return .array(items.map { item in element.completing(item, in: table) })
-
-        case let .record(fields):
-            return .record(
-                Dictionary(uniqueKeysWithValues: fields.map { name, field in
-                    (name, dotted(name, in: table).map { place in place.completing(field, in: table) } ?? field)
-                })
-            )
-
-        case let .block(block):
-            return .block(completing(block, in: table))
-
-        case let .attempt(block, rescue):
-            return .attempt(completing(block, in: table), rescue: completing(rescue, in: table))
-
-        default:
-            return expression
         }
     }
 
     // The same for a block whose answer stands where this is read.
     func completing(_ block: Block, in table: LoweredTypeTable) -> Block {
         Block(body: block.body, result: block.result.map { result in completing(result, in: table) })
+    }
+
+    // MARK: - Private
+    // The walk `written` and `completing` share: an expression standing where
+    // this is read, through what may be null and the names around it, at the
+    // depths a list, a record and the answer of a block or an attempt hand on.
+    // `replacing` is asked first at each depth, with the type read there, and
+    // answers what stands in place of the expression, or nil to walk on.
+    private func reaching(
+        _ expression: Expression,
+        in table: LoweredTypeTable,
+        replacing: (LoweredType, Expression) -> Expression?
+    ) -> Expression {
+        switch self {
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.reaching(expression, in: table, replacing: replacing)
+
+        // A declared record is asked as itself before what it stands for, so
+        // what writes a literal there knows the name it is written into.
+        case let .named(row):
+            if table.recordRows[row] != nil, let standing = replacing(self, expression) {
+                return standing
+            }
+
+            return table.loweredTypes[row].reaching(expression, in: table, replacing: replacing)
+
+        default:
+            break
+        }
+
+        if let standing = replacing(self, expression) {
+            return standing
+        }
+
+        func answering(_ block: Block) -> Block {
+            Block(body: block.body, result: block.result.map { result in reaching(result, in: table, replacing: replacing) })
+        }
+
+        switch expression {
+        case let .array(items):
+            guard let element = element(in: table) else { return expression }
+
+            return .array(items.map { item in element.reaching(item, in: table, replacing: replacing) })
+
+        case let .record(fields):
+            return .record(
+                Dictionary(uniqueKeysWithValues: fields.map { name, field in
+                    (name, dotted(name, in: table).map { place in place.reaching(field, in: table, replacing: replacing) } ?? field)
+                })
+            )
+
+        case let .block(block):
+            return .block(answering(block))
+
+        case let .attempt(block, rescue):
+            return .attempt(answering(block), rescue: answering(rescue))
+
+        default:
+            return expression
+        }
     }
 }

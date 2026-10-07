@@ -292,6 +292,7 @@ struct ObservationTests {
                             binding: .constant("second"),
                             expression: .closure(
                                 Procedure(
+                                    signature: Signature(returns: .int),
                                     body: [
                                         Statement(expression: aborting(literal("no")))
                                     ]

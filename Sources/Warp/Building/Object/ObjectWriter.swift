@@ -759,7 +759,8 @@ struct ObjectWriter {
                 Tag.checked,
                 try self.operation(read),
                 ObjectWriter.maybe(judging.against, lowered),
-                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
+                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) }),
+                .array(judging.handedOn.map { on in .array([.int(on.position), lowered(on.against)]) })
             )
 
         case let .block(body):

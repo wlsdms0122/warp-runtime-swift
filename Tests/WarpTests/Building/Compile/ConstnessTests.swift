@@ -24,7 +24,7 @@ struct ConstnessTests {
     // so what fits here is exactly what the predicate admits.
     private let asking = Procedure(
         signature: Signature(
-            parameters: [Parameter(name: "body", type: .procedure(nil, .const))],
+            parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string), .const))],
             returns: .string
         ),
         body: [
@@ -121,7 +121,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> Any> where const Procedure is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure<() -> String> is declared")
         }
     }
 
@@ -152,7 +152,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds Procedure<() -> Any> where const Procedure is declared")
+                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure<() -> String> is declared")
         }
     }
 
@@ -189,7 +189,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> Any> where const Procedure is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure<() -> String> is declared")
         }
     }
 
@@ -325,18 +325,18 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure is declared")
+                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure<() -> String> is declared")
         }
     }
 
     @Test("a body applying a name no slot said anything about is refused")
     func aBodyApplyingAnUndeclaredNameIsRefused() async throws {
-        // Given. The same apply, on a name whose slot says only `Procedure`.
-        // Nothing before the run says which procedure that holds.
+        // Given. The same apply, on a name whose slot says what the procedure
+        // answers and nothing of whether it runs. Nothing before the run says
+        // which procedure that holds.
         let relaying = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(nil))],
-                returns: .string
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string)))]
             ),
             body: [],
             result: .apply(reference("body"), arguments: [])
@@ -381,7 +381,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure is declared")
+                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure<() -> String> is declared")
         }
     }
 

@@ -173,7 +173,8 @@ struct LoweredTypeTests {
 
     @Test("a projection lowers to itself, and every judgment answers it as Any")
     func aProjectionLowersToItself() throws {
-        // Given
+        // Given. Nothing is known of what a projection holds, so it takes
+        // anything, and a slot of a type takes it only through a cast
         let table = types.loweredTypes
         let projection = try TypeExpression.projection(of: "T", path: [.key("inner")]).lowered(in: table)
 
@@ -181,7 +182,7 @@ struct LoweredTypeTests {
         #expect(projection == .projection(of: "T", path: [.key("inner")]))
         #expect(try TypeExpression.array(.projection(of: "T", path: [])).lowered(in: table)
             == .array(.projection(of: "T", path: [])))
-        #expect(LoweredType.int.accepts(projection, in: table))
+        #expect(!LoweredType.int.accepts(projection, in: table))
         #expect(projection.accepts(.int, in: table))
         #expect(try projection.settling(.int(1), at: "", in: table) == .int(1))
     }

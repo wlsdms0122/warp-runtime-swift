@@ -11,6 +11,7 @@ warpt 1
       access "public"
       body [
         {
+          type "Dictionary<Int>"
           value {
             record {}
           }

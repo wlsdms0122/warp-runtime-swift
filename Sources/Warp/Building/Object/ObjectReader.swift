@@ -987,7 +987,31 @@ struct ObjectReader {
                 throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
             }
 
-            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
+            // What a call of a value hands on is judged at the positions it
+            // hands a value, each once, in order; no other call hands one on.
+            let handedOn = try Field(cursor.next(), of: "handed on").list { written in
+                var on = try FieldCursor(written, of: "handed on")
+                let taken = HandedOn(position: try on.field().count(), against: try lowered(on.next()))
+
+                try on.end()
+
+                return taken
+            }
+            let onPositions = handedOn.map(\.position)
+            var values = 0..<0
+
+            if case let .apply(_, arguments) = judged {
+                values = arguments.indices
+            }
+
+            guard
+                zip(onPositions, onPositions.dropFirst()).allSatisfy({ $0 < $1 }),
+                onPositions.allSatisfy({ position in values.contains(position) && !inPlace.contains(position) })
+            else {
+                throw ObjectRefused("a call hands on a value at a position it hands no value")
+            }
+
+            guard let judging = CallJudgement(against: against, handedBack: handedBack, handedOn: handedOn) else {
                 throw ObjectRefused("a judgement where a call stands judges nothing")
             }
 

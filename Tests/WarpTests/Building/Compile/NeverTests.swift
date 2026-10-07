@@ -74,8 +74,9 @@ struct NeverTests {
         // Given. The run may take any exit: a condition that declines at the
         // start answers before a single round wrote anything. So the result
         // reads in the settled join of the exits (`x` holds int or string, not
-        // the one a finished round would prove) and a slot the 0-round value
-        // fits is not refused on the round's account
+        // the one a finished round would prove), so a cast to the int the
+        // 0-round value is stands, where a reading of the round's string would
+        // make it a cast no value could satisfy
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
@@ -95,7 +96,7 @@ struct NeverTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("kept")])]
+                            arguments: [.cast(.reference([.key("kept")]), as: .int, optional: false)]
                         )))
                     ],
                     result: reference("kept")

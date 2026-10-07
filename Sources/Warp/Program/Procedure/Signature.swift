@@ -178,9 +178,9 @@ public struct Signature: Sendable, Equatable {
 
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused, and so is one it declares that
-    // was not given. The door a host outside the build comes through, since
-    // the build resolves names itself, and so the one place a value is
-    // fitted to its type, a field the declaration never named left outside.
+    // was not given. A door a host outside the build comes through, since
+    // the build resolves names itself, and so a value is fitted to its type
+    // here, a field the declaration never named left out.
     // `subject` is what a refusal names the procedure as.
     func settle(
         _ given: [Name: Value],

@@ -457,10 +457,11 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What every one of these readings joins to, and `Any` where there are
-    // none.
+    // What every one of these readings joins to, and `Never` where there
+    // are none: an empty list or map holds no element, so it is a value of a
+    // list or a map of any type.
     private init(joining readings: [LoweredType]) {
-        self = readings.dropFirst().reduce(readings.first ?? .any) { joined, next in joined.joined(next) }
+        self = readings.dropFirst().reduce(readings.first ?? .never) { joined, next in joined.joined(next) }
     }
 
     // MARK: - Public
@@ -788,8 +789,9 @@ indirect enum LoweredType: Sendable, Equatable {
     // nothing is knowable about it here, and the value judge refuses it where
     // a value arrives.
     //
-    // Whether a value of `other` may stand where this is declared.
-    // Structural, and one-directional: `Any` on the left accepts anything
+    // Whether a value of `other` may stand where this is declared. Exact on
+    // records, a declared one by its name and a nameless one by its fields,
+    // and one-directional: `Any` on the left accepts anything
     // because nothing was declared, and `Any` on the right is accepted by
     // anything because nothing is known.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -858,7 +860,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.parameter, .variable(inner)), let (.parameter, .inout(inner)):
             return accepts(inner, in: table, assumingPairs: assumingPairs, rigid: rigid)
 
-        case (.parameter, .any), (.parameter, .projection), (.parameter, .undeclared):
+        case (.parameter, .any) where !rigid, (.parameter, .projection) where !rigid, (.parameter, .undeclared):
             return true
 
         // A slot's own wrapping comes off before what stands for it is taken
@@ -873,6 +875,18 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.nullable, .null):
             return true
 
+        // A value read as `Any` or along a path a call decides is of a type
+        // the build does not know, and one read as a composition of a type
+        // that answers its contracts and nothing more the build knows of, so
+        // it stands only where nothing is declared, where a call fills a
+        // type parameter, or where every contract asked is one it answers.
+        // A cast says what it is anywhere else.
+        case let (.composition(bounds), .composition(theirs)), let (.nullable(.composition(bounds)), .composition(theirs)):
+            return Set(bounds).isSubset(of: theirs)
+
+        case (.composition, .any), (.composition, .projection), (.nullable(.composition), .any), (.nullable(.composition), .projection):
+            return false
+
         // A composition takes what answers each of its contracts, asked of
         // the table with the same rigidity and, where the slot takes null as
         // well, knowing it does.
@@ -886,22 +900,14 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
             return mine.accepts(other, in: table, assumingPairs: assumingPairs, rigid: rigid)
 
-        // In the other direction a value of a composition is of some type
-        // nothing here lists, so nothing is provable and it passes to be
-        // judged where it arrives, unless `rigid`, which the last branch
-        // answers. Null and a procedure are of no type that answers a
-        // contract, so a slot of either is provably no place for one.
-        case (_, .composition) where throughAliases(in: table).holdsNoValueOfAContract:
-            return false
-
-        case (_, .composition) where !rigid:
-            return true
-
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assumingPairs: assumingPairs, rigid: rigid)
 
-        case (.any, _), (_, .any), (.projection, _), (_, .projection):
+        case (.any, _), (.projection, _):
             return true
+
+        case (_, .any), (_, .projection), (_, .composition):
+            return false
 
         case (.never, _):
             return false
@@ -1003,16 +1009,86 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.int, .wholeLiteral), (.double, .wholeLiteral):
             return true
 
-        // A parameter no call fills, or a composition bounded by contracts
-        // alone where nothing is judged on arrival, which no branch above
-        // took by its structure (`Any`, a composition, a nullable or a name
-        // around it). Last, because a refusal any earlier would answer for
-        // those too.
-        case (_, .parameter), (_, .composition):
+        // A parameter no call fills, which no branch above took by its
+        // structure (`Any`, a composition, a nullable or a name around it).
+        // Last, because a refusal any earlier would answer for those too.
+        case (_, .parameter):
             return false
 
         default:
             return self == other
+        }
+    }
+
+    // Whether every value read as `reading` is a value of this type as it
+    // stands, so a slot of this type has nothing to judge or to write where
+    // it lands: the same type, a part of it this takes whole, or null where
+    // this may be null. A reading the build does not know the value of, one
+    // of `Any`, a contract or a type parameter this is not, is never one;
+    // the run says what arrived.
+    func takesAsItIs(_ reading: LoweredType, in table: LoweredTypeTable) -> Bool {
+        if self == .any || reading == .never || identical(to: reading, in: table) {
+            return true
+        }
+
+        switch (self, reading) {
+        case (_, .any), (_, .composition), (_, .parameter), (_, .projection), (_, .undeclared):
+            return false
+
+        case (.nullable, .null):
+            return true
+
+        case let (.nullable(mine), .nullable(theirs)):
+            return mine.takesAsItIs(theirs, in: table)
+
+        case let (.nullable(mine), _):
+            return mine.takesAsItIs(reading, in: table)
+
+        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)):
+            return mine.takesAsItIs(theirs, in: table)
+
+        // A value of a declared type answers the contracts its claims name,
+        // which the build already asked of it.
+        case (.composition, _):
+            return accepts(reading, in: table)
+
+        case let (.named(row), _) where table.record(of: self) == nil:
+            return table.loweredTypes[row].takesAsItIs(reading, in: table)
+
+        default:
+            return false
+        }
+    }
+
+    // Whether a value of any type passes this as it is: nothing declared,
+    // a type parameter no bound holds, or a path a call decides. Settling
+    // against one says nothing, so what holds it need not be walked.
+    var passesEverything: Bool {
+        switch self {
+        case .any, .projection, .parameter(_, bounds: []):
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    // Whether a list or a map here, at whatever depth, holds no element a
+    // value could be: what an empty literal reads as, which says nothing of
+    // what a box of it will hold.
+    var holdsNoElement: Bool {
+        switch self {
+        case .array(.never), .dictionary(.never):
+            return true
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner):
+            return inner.holdsNoElement
+
+        case let .record(record):
+            return record.fields.contains { field in field.holdsNoElement }
+
+        default:
+            return false
         }
     }
 
@@ -2206,11 +2282,12 @@ indirect enum LoweredType: Sendable, Equatable {
                 throw UndeclaredTypeError("\(path()): declares type '\(label)', which names itself")
             }
 
-        // A declared record is nominal. A record arriving under this name,
-        // or an alias of it, is held to the declared fields and keeps it; a
+        // A declared record is nominal. A record arriving under this name, or
+        // an alias of it, is held to the declared fields and keeps it; a
         // nameless one of exactly those fields takes the name, which only a
-        // literal, a value from outside or one crossing out of `Any` can
-        // be, since the build refuses any other; one arriving under another
+        // literal, a value from outside or a cast can be, the cast written or
+        // left unwritten where a value read as `Any` or as a contract crosses
+        // in, since the build refuses any other; one arriving under another
         // name is refused, whatever its type. A declared name that is not a
         // record type settles as the type it stands for.
         case let .named(row):
@@ -2232,14 +2309,14 @@ indirect enum LoweredType: Sendable, Equatable {
                 return value
             }
 
-            // An element nothing was declared for passes as it is, so the
-            // array does too: settling each element to itself would copy the
-            // array to say nothing.
-            if element == .any, case .array = value { return value }
+            // An element nothing judges passes as it is, so the array does
+            // too: settling each element to itself would copy the array to
+            // say nothing.
+            if element.passesEverything, case .array = value { return value }
 
-            // Otherwise the slot's spelling wins the way `Double` settles a
-            // whole number, and both spellings are read through the one
-            // projection that owns the equation.
+            // Otherwise each element is settled against the element type,
+            // and both spellings are read through the one projection that
+            // owns the equation.
             guard let items = value.elements else { throw mismatch(value, at: path(), in: table) }
 
             return .array(
@@ -2250,16 +2327,13 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A dictionary slot holds the names as data, so a nameless record
         // settling here is the map it is, its layout's names written beside
-        // their values. A declared record is a value of its name and of no
-        // map, and a place takes no name off.
+        // their values.
         case let .dictionary(entry):
-            if case let .record(record) = value, let name = record.name {
-                throw ArgumentError("\(path()): is a \(name), and the slot declares \(rendered(in: table))")
-            }
+            try refuseNamed(value, at: path(), in: table)
 
             guard let held = value.asDictionary else { throw mismatch(value, at: path(), in: table) }
 
-            if entry == .any { return .dictionary(held) }
+            if entry.passesEverything { return .dictionary(held) }
 
             return .dictionary(
                 try held.mapValues { _, item in
@@ -2268,11 +2342,11 @@ indirect enum LoweredType: Sendable, Equatable {
             )
 
         // An inline record is its fields: a nameless value holding exactly
-        // these fits it, and settling builds the slot's layout. A declared
-        // record is a value of its name and of no inline record, and a place
-        // takes no name off.
+        // these fits it, and settling builds the slot's layout.
         case let .record(held):
-            return try settlingFields(value, of: held, named: nil, at: path(), in: table)
+            try refuseNamed(value, at: path(), in: table)
+
+            return try settlingFields(value, of: held, at: path(), in: table)
 
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.
@@ -2376,21 +2450,16 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A tag already canonical is the same spelling. One that is not
         // is an alias or another record, told apart by the table once.
-        var tag: Name?
-
-        if case let .record(record) = value, let written = record.name {
-            guard written == label || table.row(named: written).map({ spelled in table.recordRows[spelled] == nominal }) == true else {
-                throw ArgumentError("\(path()): is a \(written), and the slot declares \(label)")
-            }
-
-            tag = written
+        if case let .record(record) = value, let written = record.name,
+           written != label, table.row(named: written).map({ spelled in table.recordRows[spelled] == nominal }) != true {
+            throw ArgumentError("\(path()): is a \(written), and the slot declares \(label)")
         }
 
         // A nameless record holding exactly the declared fields takes the
-        // name here, which is where a literal or a value from outside is
-        // written into the type.
+        // name here, which is where a literal, a value from outside and a
+        // cast are written into the type.
         guard case let .record(held) = table.loweredTypes[nominal],
-              case let .record(settled) = try settlingFields(value, of: held, named: tag, at: path(), in: table)
+              case let .record(settled) = try settlingFields(value, of: held, at: path(), in: table)
         else {
             throw mismatch(value, at: path(), in: table)
         }
@@ -2398,21 +2467,36 @@ indirect enum LoweredType: Sendable, Equatable {
         return .record(settled.named(label))
     }
 
+    // A declared record is a value of its name and of no structural type,
+    // and a place takes no name off.
+    private func refuseNamed(_ value: Value, at path: @autoclosure () -> String, in table: LoweredTypeTable) throws {
+        if case let .record(record) = value, let name = record.name {
+            throw ArgumentError("\(path()): is a \(name), and the slot declares \(rendered(in: table))")
+        }
+    }
+
     // A value holding exactly the fields of `held`, each settled against its
-    // type, built on the record's layout. `named` is the one name the value
-    // may carry, the declared record it is already a value of; any other
-    // name is a value of that name and of no record here.
+    // type, built on the record's layout. Whose name it carries is asked
+    // before this.
     private func settlingFields(
         _ value: Value,
         of held: LoweredRecord,
-        named accepted: Name?,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
         guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
 
-        if case let .record(record) = value, let name = record.name, name != accepted {
-            throw ArgumentError("\(path()): is a \(name), and the slot declares \(rendered(in: table))")
+        // A record laid out as this one is holds exactly its fields, which is
+        // what a value of a record type the build judged is.
+        if case let .record(record) = value, record.layout.fields == held.layout.fields {
+            return .record(
+                Record(
+                    layout: held.layout,
+                    values: try zip(held.named, record.values).map { pair, given in
+                        try pair.1.settling(given, at: "\(path()).\(pair.0)", in: table)
+                    }
+                )
+            )
         }
 
         let extra = Set(value.asDictionary?.names ?? []).subtracting(held.layout.fields)

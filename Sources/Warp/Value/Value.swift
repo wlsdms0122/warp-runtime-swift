@@ -28,12 +28,13 @@ public indirect enum Value: Sendable, Equatable {
     case bytes([UInt8])
     case array([Value])
 
-    // Fields under names, and the name of the declared type the record
-    // settled to, where it has. A record made by a literal, answered by a
-    // native procedure or read out of a document has no name; it takes one the
-    // first time it settles into a slot that declares a type, and from then
-    // on it fits only that name. Two records of one structure under two names
-    // are two values.
+    // Fields under names, and the name of the declared record type it is a
+    // value of, where it has one. A record made by a literal, answered by a
+    // native procedure or read out of a document has no name; it takes one
+    // where it is written into a declared record, by a literal, at the door
+    // a host hands it through or by a cast, and from then on it fits only
+    // that name. Two records of one structure under two names are two
+    // values.
     case record(Record)
 
     // Names and values where the names are data: what a document hands in,

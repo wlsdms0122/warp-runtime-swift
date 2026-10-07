@@ -29,6 +29,12 @@ struct JudgementTable: Sendable {
     // settles to nothing.
     private(set) var writes: [Place: LoweredType] = [:]
 
+    // Whether what the statement at a place binds or writes is, by what the
+    // build read, a value of the type it lands in as it stands, so the run
+    // has nothing to judge there. A statement walked again holds what its
+    // last walk read.
+    private(set) var asItIs: [Place: Bool] = [:]
+
     // MARK: - Initializer
     init() {
     }
@@ -61,6 +67,16 @@ struct JudgementTable: Sendable {
 
     // A reading of a type parameter here may hold what is not a value of
     // it.
+    // Whether the run has nothing to judge where the statement at this
+    // place binds or writes.
+    func landsAsItIs(at place: Place) -> Bool {
+        asItIs[place] == true
+    }
+
+    mutating func record(asItIs: Bool, at place: Place) {
+        self.asItIs[place] = asItIs
+    }
+
     mutating func loosen() {
         loosened = true
     }
@@ -71,6 +87,7 @@ struct JudgementTable: Sendable {
         }
 
         writes.merge(other.writes) { _, theirs in theirs }
+        asItIs.merge(other.asItIs) { _, theirs in theirs }
 
         loosened = loosened || other.loosened
     }

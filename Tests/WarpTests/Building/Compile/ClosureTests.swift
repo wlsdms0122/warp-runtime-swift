@@ -212,7 +212,7 @@ struct ClosureTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated Procedure<(Int, Int?) -> Any> where Procedure<(Int) -> Any> is declared")
+                && "\(error)".contains("which holds const isolated Procedure<(Int, Int?) -> Int> where Procedure<(Int) -> Any> is declared")
         }
     }
 
@@ -260,7 +260,7 @@ struct ClosureTests {
             try await Builder().build([sut, .shouting] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> Any> where const Procedure is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure is declared")
         }
     }
 
@@ -269,7 +269,7 @@ struct ClosureTests {
         // Given. The same declaration, handed a body that only reads
         let twice = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(nil, .const))],
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string), .const))],
                 returns: .string
             ),
             body: [

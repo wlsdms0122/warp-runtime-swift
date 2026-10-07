@@ -131,15 +131,14 @@ struct CastAgreementTests {
         }
     }
 
-    @Test("the question reads the same from either side")
+    @Test("the question reads the same from either side, but for a declared record beside a nameless one")
     func theQuestionIsSymmetric() {
         // Given. "could some value be both" names no side, so an answer that
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
-        // side has one, which is exactly where an asymmetry would hide. The
-        // one side it tells apart is a declared record against a nameless
-        // record or a map: a cast writes the name onto a nameless value and
-        // takes none off.
+        // side has one, which is exactly where an asymmetry would hide. A
+        // declared record beside a nameless record or a map is the one pair
+        // it tells apart, pinned below.
         let table = types.loweredTypes
 
         func nominalBesideNameless(_ one: TypeExpression, _ other: TypeExpression) -> Bool {
@@ -159,6 +158,19 @@ struct CastAgreementTests {
                     "\(mine.rendered) beside \(theirs.rendered)"
                 )
             }
+        }
+    }
+
+    @Test("a cast writes a declared record's name onto a nameless value and takes none off")
+    func aCastNamesAndNeverUnnames() {
+        // Given. A declared record, a nameless record of its fields and a map
+        let named = TypeExpression.named("Person")
+        let structures: [TypeExpression] = [.record(["name": .string]), .dictionary(.string)]
+
+        // When / Then
+        for structure in structures {
+            #expect(couldBothHold(named, structure), "reading \(structure.rendered) as Person")
+            #expect(!couldBothHold(structure, named), "reading Person as \(structure.rendered)")
         }
     }
 

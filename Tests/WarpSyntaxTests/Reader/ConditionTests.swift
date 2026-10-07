@@ -16,7 +16,8 @@ import WarpTestSupport
 struct ConditionTests {
     // A condition read by a run against the standard vocabulary as a host
     // gets it, so the procedures written in Warp answer here the way the
-    // native ones do. The bindings are handed over as arguments.
+    // native ones do. The bindings are handed over as arguments, each
+    // declared as the type of the value it binds.
     private struct Scope {
         // MARK: - Property
         let bindings: [Name: Value]
@@ -34,7 +35,9 @@ struct ConditionTests {
                         entryName: Procedure(
                             access: .public,
                             signature: Signature(
-                                parameters: bindings.keys.sorted().map { name in Parameter(name: name, type: .any) }
+                                parameters: bindings.keys.sorted().map { name in
+                                    Parameter(name: name, type: declared(bindings[name] ?? .null))
+                                }
                             ),
                             body: [],
                             result: condition
@@ -51,6 +54,11 @@ struct ConditionTests {
         }
 
         // MARK: - Private
+        private func declared(_ value: Value) -> TypeExpression {
+            let table = TypeTable.empty.loweredTypes
+
+            return LoweredType(of: value, in: table).spelled(in: table) ?? .any
+        }
     }
 
     // MARK: - Property
@@ -159,8 +167,9 @@ struct ConditionTests {
         }
 
         // And. A text atom asking a number is type misuse, not a false answer.
-        // The number is refused where the argument it stands at is settled
-        await #expect(throws: ArgumentError.self) {
+        // The number is refused at the build, where the argument it stands at
+        // is judged
+        await #expect(throws: BuildError.self) {
             try await sut.evaluate(
                 .call(Call(selector: "Standard.Text.startsWith", arguments: [.reference(path("n")), .literal(.string("3"))]))
             )

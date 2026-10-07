@@ -21,6 +21,7 @@ warpt 1
       body [
         {
           let "account"
+          type "App.Account"
           value {
             record {
               balance 1

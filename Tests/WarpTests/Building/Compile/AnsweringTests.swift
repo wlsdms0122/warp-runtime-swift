@@ -273,13 +273,13 @@ struct AnsweringTests {
         #expect(image[entryName]!.signature.returns == nil)
     }
 
-    @Test("what no body settles is not something the build can be wrong about")
-    func anAnswerNothingSettlesIsNotJudged() async throws {
+    @Test("what no body settles reads Any, which a typed slot takes only through a cast")
+    func anAnswerNothingSettlesReadsAny() async throws {
         // Given. `held` comes back from a call that declares no answer, and
         // whose body answers what that same call answers. An answer worked out
-        // from its own is not one the text states, so nothing is known about it
-        // and nothing is refused. That is the bound on the promise: inference
-        // answers where the text settles and `Any` everywhere else.
+        // from its own is not one the text states, so nothing is known about
+        // it: inference answers where the text settles and `Any` everywhere
+        // else, and a slot of a type takes `Any` only through a cast.
         let sut = try Module(
             procedures: [
                 "callee": Procedure(
@@ -310,7 +310,11 @@ struct AnsweringTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut])
+        await #expect {
+            try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("with base, which holds Any where Int is declared")
+        }
     }
 
     @Test("a body that settles an answer is held to it, declared or not")
