@@ -154,7 +154,7 @@ struct RangeTests {
 
     @Test("Standard declares Byte, and a name resolves to its range")
     func byteIsANamedRange() async throws {
-        // Given. `byte = int(0...255)`, declared where every bundle can name it
+        // Given. `Standard.Byte = Int(0...255)`, declared where every bundle can name it
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

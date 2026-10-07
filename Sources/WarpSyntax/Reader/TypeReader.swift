@@ -11,14 +11,14 @@ import Warp
 // How a document spells a type. Two readings, because a type is written two
 // ways:
 //
-//   string / any / procedure  . A built-in, by its own name
-//   array<string>             . A built-in applied to another type
-//   dictionary<Task>          . The same, for a map of string keys
+//   String / Any / Procedure  . A built-in, by its own name
+//   Array<String>             . A built-in applied to another type
+//   Dictionary<Task>          . The same, for a map of string keys
 //   Task                      . A name some module declares
-//   { record: { id: string } }. A record, its fields under `record`
+//   { record: { id: String } }. A record, its fields under `record`
 //   { procedure: { parameters: [], returns: } }
 //                             . A procedure, written as the types it is called
-//                                with and what it answers. Bare `procedure` says
+//                                with and what it answers. Bare `Procedure` says
 //                                only that it is one
 //
 // A mapping is one of these by its one key, so a record's field names are

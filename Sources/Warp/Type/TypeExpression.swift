@@ -43,7 +43,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // the value is a whole number or a fraction, and the bounds are judged
     // where a value is settled, the way `enum` is. At the build for a constant,
     // at the boundary for what only the run can see. A module gives one a name
-    // the way it names any type: `byte = int(0...255)`.
+    // the way it names any type: `Standard.Byte = Int(0...255)`.
     case ranged(Refinement)
 
     // A list of one type. The element is always written, so `Array<Any>` says
@@ -183,7 +183,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // this is the slot saying which part of that kind it takes. Judged where
     // any other admission is, at the build for a constant and at the boundary
     // for what only a run can see. A module names one the way it names any type
-    // (`byte = int(0...255)`), so the kinds never grow.
+    // (`Standard.Byte = Int(0...255)`), so the kinds never grow.
     //
     // The two halves are apart because a bound is a value of the kind it
     // bounds. A whole range compares whole numbers exactly and a fraction

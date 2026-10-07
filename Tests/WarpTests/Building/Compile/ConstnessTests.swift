@@ -331,7 +331,7 @@ struct ConstnessTests {
 
     @Test("a body applying a name no slot said anything about is refused")
     func aBodyApplyingAnUndeclaredNameIsRefused() async throws {
-        // Given. The same apply, on a name whose slot says only `procedure`.
+        // Given. The same apply, on a name whose slot says only `Procedure`.
         // Nothing before the run says which procedure that holds.
         let relaying = Procedure(
             signature: Signature(
