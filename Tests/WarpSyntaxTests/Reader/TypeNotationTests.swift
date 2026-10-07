@@ -192,19 +192,19 @@ struct TypeNotationTests {
 
         #expect(
             signature?.parameter(named: "of")?.type
-                == .parameter(name: "T", constraints: ["Comparable"])
+                == .parameter(name: "T", bounds: ["Comparable"])
         )
         #expect(
             signature?.parameter(named: "value")?.type
-                == .parameter(name: "T", constraints: ["Comparable"])
+                == .parameter(name: "T", bounds: ["Comparable"])
         )
-        #expect(signature?.returns == .parameter(name: "T", constraints: ["Comparable"]))
+        #expect(signature?.returns == .parameter(name: "T", bounds: ["Comparable"]))
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
     func aBoundBelongsToTheSignature() throws {
         // When / Then. The slot names the parameter and nothing else. The
-        // constraint is declared once, in the signature's `bounds`.
+        // bound is declared once, in the signature's `bounds`.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
 
@@ -217,7 +217,7 @@ struct TypeNotationTests {
             ])
         }
 
-        // And. A bound is a constraint's name, never a type.
+        // And. A bound is a contract's name, never a type.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Array<Int>"],
@@ -273,7 +273,7 @@ struct TypeNotationTests {
 
         #expect(
             signature?.parameter(named: "of")?.type
-                == .array(.parameter(name: "Element", constraints: ["Comparable"]))
+                == .array(.parameter(name: "Element", bounds: ["Comparable"]))
         )
 
         guard case let .procedure(.some(inner), _, _) = signature?.parameter(named: "by")?.type else {
@@ -284,7 +284,7 @@ struct TypeNotationTests {
 
         #expect(
             inner.parameters.first
-                == .parameter(name: "Element", constraints: ["Comparable"])
+                == .parameter(name: "Element", bounds: ["Comparable"])
         )
     }
 

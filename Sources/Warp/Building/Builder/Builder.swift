@@ -347,7 +347,7 @@ public struct Builder: Sendable {
     //
     // What is judged here is what no document could answer about itself, and
     // is the second judgement for that reason: every claimed type answers the
-    // contract it is claimed under, and every constraint a document leaned on
+    // contract it is claimed under, and every claim a document leaned on
     // is held by some document beside it. `supplying` is the native code the
     // documents named. An object says which of its procedures are native and
     // holds none of the code, so the modules that declared them are handed

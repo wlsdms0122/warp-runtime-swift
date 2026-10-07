@@ -406,7 +406,6 @@ struct ObjectClosureTests {
             return try Compiled(
                 document: one.document,
                 types: one.types,
-                constraints: one.constraints,
                 contracts: one.contracts,
                 claims: one.claims,
                 leaned: one.leaned,
@@ -486,7 +485,6 @@ struct ObjectClosureTests {
             return try Compiled(
                 document: one.document,
                 types: one.types,
-                constraints: one.constraints,
                 contracts: one.contracts,
                 claims: one.claims,
                 leaned: one.leaned,

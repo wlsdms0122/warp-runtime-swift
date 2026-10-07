@@ -126,19 +126,17 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // call.
     //
     // The names bound it: a parameter bounded by `Comparable` takes only
-    // what the constraint by that name admits, and one bounded by several
-    // takes only what every one of them admits or asks. A bound is a
-    // declaration like a type (a module binds a name to the types it admits,
-    // or to the procedures it asks) so a signature writes the names and never
-    // the membership, and there is no inline union for the membership to
-    // leak out through. In name order, so one set has one spelling.
-    case parameter(name: Name, constraints: [Name] = [])
+    // what answers the contract by that name, and one bounded by several
+    // takes only what answers every one of them. A bound is a declaration
+    // like a type (a module binds a name to the procedures it asks) so a
+    // signature writes the names. In name order, so one set has one
+    // spelling.
+    case parameter(name: Name, bounds: [Name] = [])
 
-    // A value of whatever type answers every name here, written `A & B`:
-    // the contracts it answers and the memberships it belongs to, with no
-    // name of its own to tie one mention to another. One name in this
-    // position is written as the name and read as this where the name is a
-    // contract's.
+    // A value of whatever type answers every contract here, written
+    // `A & B`, with no name of its own to tie one mention to another. One
+    // name in this position is written as the name and read as this where
+    // the name is a contract's.
     case composition([Name])
 
     // The type that answers a contract, written `Self` in that contract's
@@ -151,8 +149,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // decides (a dot on it stands as written, the way a dot on the parameter
     // does) and not the parameter, because a field of an unknown type is a
     // different unknown. It carries no bound for the same reason: what a
-    // constraint admits was proven of the parameter, and nothing was proven of
-    // what was read out of it.
+    // bound asks was proven of the parameter, and nothing was proven of what
+    // was read out of it.
     //
     // Apart from `parameter` rather than spelled into one. Both are types the
     // link cannot see, but only one of them is a slot a call fills, and the
@@ -558,10 +556,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // no document spells. So the bound rides along: `some N` alone would
         // hide the one fact a bound refusal is about. What a document spells is
         // the writer's question, and the writer answers it with `bounds`.
-        case let .parameter(name, constraints):
-            return constraints.isEmpty
+        case let .parameter(name, bounds):
+            return bounds.isEmpty
                 ? "some \(name)"
-                : "some \(name): \(constraints.map(\.spelling).joined(separator: " & "))"
+                : "some \(name): \(bounds.map(\.spelling).joined(separator: " & "))"
 
         case let .composition(names):
             return names.map(\.spelling).joined(separator: " & ")
@@ -673,7 +671,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Every declared name this reaches: the types it names, and the
-    // memberships it bounds a parameter by.
+    // contracts it bounds a parameter by.
     //
     // A parameter's own name is not one of them. It stands for a type the
     // call decides rather than one a module declared, and what a walk through
@@ -704,8 +702,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .named(name):
             [name]
 
-        case let .parameter(_, constraints):
-            Set(constraints)
+        case let .parameter(_, bounds):
+            Set(bounds)
 
         case let .composition(names):
             Set(names)
@@ -719,8 +717,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // with the bounds it carries.
     var parameterOccurrences: [ParameterOccurrence] {
         switch self {
-        case let .parameter(name, constraints):
-            return [ParameterOccurrence(name: name, constraints: constraints)]
+        case let .parameter(name, bounds):
+            return [ParameterOccurrence(name: name, bounds: bounds)]
 
         case .projection, .composition, .selfType:
             return []
@@ -843,8 +841,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // included, because they are the outer signature's own slots.
     func bounded(by bounds: [Name: [Name]]) -> TypeExpression {
         switch self {
-        case let .parameter(name, constraints):
-            return .parameter(name: name, constraints: constraints.isEmpty ? bounds[name] ?? [] : constraints)
+        case let .parameter(name, own):
+            return .parameter(name: name, bounds: own.isEmpty ? bounds[name] ?? [] : own)
 
         case .projection, .composition, .selfType:
             return self
@@ -952,11 +950,45 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Whether values of this type are handed on once, through the names it may
-    // hide behind. The one door: what the walk below could not decide is folded
-    // to "not one" here and nowhere inside it, so the answer does not depend on
-    // how many wrappers a type was written under.
-    func handedOnce(in table: TypeTable) -> Bool {
-        Self.reaches(self, in: table, assuming: []) ?? false
+    // hide behind. The walk follows names and nothing else, and a name it is
+    // already walking through is one that comes back on itself, which stands
+    // for no type and so for no value handed on.
+    //
+    // No `default`: a type nobody thought about must be a compile error here
+    // rather than an answer of no.
+    func handedOnce(in table: TypeTable, assuming: Set<Name> = []) -> Bool {
+        switch self {
+        case .linear:
+            return true
+
+        case let .named(name):
+            guard !assuming.contains(name), let declared = table.types[name] else { return false }
+
+            return declared.handedOnce(in: table, assuming: assuming.union([name]))
+
+        // A parameter or a composition stands for whatever type the call or
+        // the value put there, which the build never wrote down, and a
+        // contract says what procedures a type answers and not how its
+        // values are handed on.
+        case .parameter, .composition:
+            return false
+
+        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
+            return inner.handedOnce(in: table, assuming: assuming)
+
+        // A nullable of one is refused where it is written, because "hand it on
+        // if it is there" is not something this language says. So nothing is
+        // one behind a `?`.
+        case .nullable:
+            return false
+
+        // None of these is one, and none of them carries one: a value handed on
+        // once is followed by the name that holds it, and a name does not go
+        // into a type.
+        case .any, .never, .null, .bool, .int, .double, .string,
+            .ranged, .array, .dictionary, .record, .procedure, .projection, .selfType:
+            return false
+        }
     }
 
     // MARK: - Private
@@ -992,79 +1024,5 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         default:
             return self
         }
-    }
-
-    // The same question, answering nil where the walk only ever came back to a
-    // membership it was already inside. A cycle says nothing new, so a cycle of
-    // nothing else says nothing at all, and folding that to "not one" is done
-    // at the one door above rather than partway down: fold it inside the
-    // recursion and the answer starts depending on how many wrappers a member
-    // was written under.
-    //
-    // No `default`: a type nobody thought about must be a compile error here
-    // rather than an answer of no.
-    private static func reaches(
-        _ type: TypeExpression,
-        in table: TypeTable,
-        assuming: Set<Name>
-    ) -> Bool? {
-        switch type {
-        case .linear:
-            return true
-
-        case let .named(name):
-            if let declared = table.types[name] {
-                return reaches(declared, in: table, assuming: assuming)
-            }
-
-            return reaches(membership: name, in: table, assuming: assuming)
-
-        // A parameter bounded by a membership stands for some member of it, so
-        // what every member is, it is. An unbounded one stands for whatever the
-        // call put there, which the build never wrote down. A composition
-        // stands for a member of every membership it names.
-        case let .parameter(_, bounds), let .composition(bounds):
-            let answers = bounds.compactMap { bound in reaches(membership: bound, in: table, assuming: assuming) }
-
-            return answers.isEmpty ? nil : answers.contains(true)
-
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return reaches(inner, in: table, assuming: assuming)
-
-        // A nullable of one is refused where it is written, because "hand it on
-        // if it is there" is not something this language says. So nothing is
-        // one behind a `?`.
-        case .nullable:
-            return false
-
-        // None of these is one, and none of them carries one: a value handed on
-        // once is followed by the name that holds it, and a name does not go
-        // into a type.
-        case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .projection, .selfType:
-            return false
-        }
-    }
-
-    // A membership is one when every member is. A membership this question is
-    // already inside is taken as it stood rather than asked again, which is
-    // what every other question about a membership does here, and one that
-    // reached no member of its own answers nothing at all.
-    private static func reaches(
-        membership name: Name,
-        in table: TypeTable,
-        assuming: Set<Name>
-    ) -> Bool? {
-        guard !assuming.contains(name) else { return nil }
-
-        guard let members = table.constraints[name], !members.isEmpty else { return false }
-
-        let answers = members.compactMap { member in
-            reaches(member, in: table, assuming: assuming.union([name]))
-        }
-
-        guard !answers.isEmpty else { return nil }
-
-        return answers.allSatisfy { answer in answer }
     }
 }

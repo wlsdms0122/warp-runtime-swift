@@ -68,7 +68,7 @@ struct ContractCallKeepsTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "it", type: through == "App.Show.show"
-                                ? .parameter(name: "T", constraints: ["App.Show"])
+                                ? .parameter(name: "T", bounds: ["App.Show"])
                                 : .named("Bank.Box"))
                         ],
                         returns: .nullable(.int)

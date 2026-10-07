@@ -82,7 +82,6 @@ public struct Place: Sendable, Hashable {
         case constants
         case variables
         case types
-        case constraints
         case contracts
         case satisfies
         case imports
@@ -124,7 +123,6 @@ public struct Place: Sendable, Hashable {
             case .constants: "constants"
             case .variables: "variables"
             case .types: "types"
-            case .constraints: "constraints"
             case .contracts: "contracts"
             case .satisfies: "satisfies"
             case .imports: "imports"
@@ -300,10 +298,6 @@ public struct Place: Sendable, Hashable {
 
     public static func type(_ name: String, in document: Document) -> Place {
         Place([.part(.types), .key(name)], in: document)
-    }
-
-    public static func constraint(_ name: String, in document: Document) -> Place {
-        Place([.part(.constraints), .key(name)], in: document)
     }
 
     public static func contract(_ name: String, in document: Document) -> Place {

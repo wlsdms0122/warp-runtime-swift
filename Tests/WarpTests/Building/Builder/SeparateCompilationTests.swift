@@ -574,7 +574,6 @@ struct SeparateCompilationTests {
             #expect(one.declared == other.declared)
             #expect(one.answers == other.answers)
             #expect(one.typeNumbering.types == other.typeNumbering.types)
-            #expect(one.typeNumbering.memberships == other.typeNumbering.memberships)
             #expect(one.variables.map(\.name) == other.variables.map(\.name))
             #expect(one.table.count == other.table.count)
         }
@@ -756,7 +755,7 @@ struct SeparateCompilationTests {
                     "App.tell": Procedure(
                         signature: Signature(
                             parameters: [
-                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                             ],
                             returns: .string
                         ),
@@ -904,7 +903,7 @@ struct SeparateCompilationTests {
                     "App.tell": Procedure(
                         signature: Signature(
                             parameters: [
-                                Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                             ],
                             returns: .string
                         ),

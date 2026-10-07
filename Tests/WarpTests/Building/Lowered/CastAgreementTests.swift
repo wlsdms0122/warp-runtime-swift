@@ -43,13 +43,10 @@ struct CastAgreementTests {
             "Chain": .record(["next": .nullable(.named("Chain"))]),
             "Link": .record(["next": .nullable(.named("Link"))])
         ],
-        constraints: [
-            "Comparable": [.int, .double, .string],
-            "Listed": [.array(.any), .array(.byteElement)],
-            "People": [.named("Person"), .int],
-            "Chains": [.named("Chain"), .int],
-            "Holders": [.record(["of": .named("Person")]), .bool]
-        ]
+        contracts: ["Comparable": [:]],
+        satisfying: ["Comparable": ["Int", "Double", "String"]],
+        settled: true,
+        of: Linkage()
     )
 
     private let typeExpressions: [TypeExpression] = [
@@ -74,17 +71,16 @@ struct CastAgreementTests {
         .named("Tree"),
         .named("Nothing declares this"),
         .parameter(name: "T"),
-        .parameter(name: "N", constraints: ["Comparable"]),
+        .parameter(name: "N", bounds: ["Comparable"]),
+        .composition(["Comparable"]),
         .projection(of: "T", path: [.key("inner")]),
         .procedure(nil)
     ]
 
-    // Where a name decides the answer, and the two sides differ: a value read
-    // under a declared record wears its name, and one read as a membership
-    // may have been written into it nameless, at any depth.
+    // Where a name decides the answer: a value read under a declared record
+    // wears its name, at any depth.
     private let namedTypeExpressions: [TypeExpression] = [
         .named("Human"), .named("Chain"), .named("Link"),
-        .composition(["People"]), .composition(["Chains"]), .composition(["Holders"]),
         .nullable(.named("Human")),
         .record(["of": .named("Human")]),
         .record(["next": .named("Link")]),
@@ -140,10 +136,7 @@ struct CastAgreementTests {
         // Given. "could some value be both" names no side, so an answer that
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
-        // side has one, which is exactly where an asymmetry would hide. The
-        // one side it tells apart is a membership with a declared record
-        // member, which these types hold none of: read, a value written into
-        // it nameless stays nameless, and cast onto, a value keeps its name.
+        // side has one, which is exactly where an asymmetry would hide.
 
         // When / Then
         for mine in typeExpressions {
@@ -196,8 +189,7 @@ struct CastAgreementTests {
         let pairs: [(claim: TypeExpression, reading: TypeExpression)] = [
             (.named("Human"), .named("Person")),
             (.named("Link"), .named("Chain")),
-            (fourDeep, .named("Chain")),
-            (fourDeep, .composition(["Chains"]))
+            (fourDeep, .named("Chain"))
         ]
 
         // When / Then

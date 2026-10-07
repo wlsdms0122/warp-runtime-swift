@@ -150,7 +150,6 @@ struct Case: Sendable, CustomStringConvertible {
 
                 let brought = try Module(
                     types: declared.types,
-                    constraints: declared.constraints,
                     contracts: declared.contracts,
                     claims: declared.claims,
                     procedures: Dictionary(

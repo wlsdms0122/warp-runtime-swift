@@ -69,8 +69,8 @@ struct TypeWriter {
         }
 
         let bounds = held.table
-            .filter { _, constraints in !constraints.isEmpty }
-            .mapValues { constraints in Value.string(constraints.sorted().map(\.spelling).joined(separator: " & ")) }
+            .filter { _, named in !named.isEmpty }
+            .mapValues { named in Value.string(named.sorted().map(\.spelling).joined(separator: " & ")) }
 
         return bounds.isEmpty ? nil : .dictionary(bounds)
     }
@@ -119,17 +119,17 @@ struct TypeWriter {
                     + " fills"
             )
 
-        // Bare, because an occurrence names the parameter and its constraint is
+        // Bare, because an occurrence names the parameter and its bound is
         // written once, in the `bounds` of the signature that declares the
         // name. A signature entry strips the bound before writing and emits it
         // there, so a bound still on the type here means no signature owns it,
         // and no surface of the document could carry it: writing the name alone
         // would be a document that reads back meaning something else.
-        case let .parameter(name, constraints):
-            guard constraints.isEmpty else {
+        case let .parameter(name, bounds):
+            guard bounds.isEmpty else {
                 throw WritingError(
                     "'some \(name)' is bounded by"
-                        + " '\(constraints.map(\.spelling).joined(separator: " & "))', and nothing"
+                        + " '\(bounds.map(\.spelling).joined(separator: " & "))', and nothing"
                         + " here declares it. A bound is written in the `bounds` of"
                         + " a procedure's signature, which this type is not part of"
                 )

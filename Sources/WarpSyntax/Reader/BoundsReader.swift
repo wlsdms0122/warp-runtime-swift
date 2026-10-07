@@ -8,13 +8,13 @@
 import Foundation
 import Warp
 
-// The signature-level `bounds:` key, which constraint each type parameter is
+// The signature-level `bounds:` key, which contracts each type parameter is
 // bounded by, declared once where the parameter's name lives:
 //
 //   bounds { N "Standard.Numeric" }
 //   parameters [ { name "of" type "some N" } { name "value" type "some N" } ]
 //
-// The slots name the parameter and the signature says what the name admits, so
+// The slots name the parameter and the signature says what the name answers, so
 // one bound is one claim however many slots mention the name.
 struct BoundsReader {
     // MARK: - Property
@@ -35,10 +35,9 @@ struct BoundsReader {
     ) throws -> Signature {
         guard let bounds, !bounds.isEmpty else { return signature }
 
-        // A bound is the names of contracts and memberships, one or several
-        // joined with `&`, and never a type: the membership lives in a
-        // declaration, not in a signature. Read by the one reading every type
-        // spelling gets, so what `&` means here is what it means in a slot.
+        // A bound is the names of contracts, one or several joined with `&`,
+        // and never a type. Read by the one reading every type spelling gets,
+        // so what `&` means here is what it means in a slot.
         var named: [Name: [Name]] = [:]
 
         for (parameter, bound) in bounds.sorted(by: { $0.key < $1.key }) {
@@ -62,9 +61,8 @@ struct BoundsReader {
             default:
                 throw ReadingError(
                     "bounds bind '\(parameter)' to"
-                        + " '\(bound)', which is not a constraint's name."
-                        + " A membership is declared, never written in a"
-                        + " signature",
+                        + " '\(bound)', which is not a contract's name, nor"
+                        + " contracts' names joined with `&`",
                     at: here
                 )
             }

@@ -66,8 +66,8 @@ public struct ProcedureReader: Decodable {
             access: access ?? .internal,
             // Absent `parameters:` means an empty signature, not an absent
             // contract. `parameters:`, `returns:` and `bounds:` are one
-            // signature. What a call may pass, what comes back, and what each
-            // type parameter admits.
+            // signature. What a call may pass, what comes back, and which
+            // contracts each type parameter answers.
             signature: try BoundsReader().apply(
                 try bounds?.read([Name: String].self),
                 qualifying: { [notation = decoder.notation] name in notation.qualified(name, as: .type) },

@@ -177,7 +177,7 @@ public struct TypeReader: Decodable {
                 guard case let .named(name) = parsed else {
                     throw TypeFormError(
                         "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
-                            + " and `&` joins the names of contracts and memberships, each a bare name"
+                            + " and `&` joins the names of contracts, each a bare name"
                     )
                 }
 
@@ -229,7 +229,7 @@ public struct TypeReader: Decodable {
         // it. The same place a reader expects an adjective. A type parameter
         // rather than a name: `some T` is worked out from the call, where `T`
         // alone would be looked up in the table of declared types. A slot only
-        // names the parameter. Its constraint is declared once, in the
+        // names the parameter. Its bound is declared once, in the
         // signature's `bounds`, because the signature owns what its names mean
         // and a bound repeated per slot is one claim written several times.
         if text == "some" || text.hasPrefix("some ") {
@@ -243,7 +243,7 @@ public struct TypeReader: Decodable {
             guard isName(bare), !bare.contains(".") else {
                 throw TypeFormError(
                     "type '\(text)' names no type parameter. Write `some` and one"
-                        + " bare name; a constraint is declared in the signature's `bounds`"
+                        + " bare name; a bound is declared in the signature's `bounds`"
                 )
             }
 

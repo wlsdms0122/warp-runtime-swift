@@ -124,7 +124,7 @@ struct StandardTests {
         }
     }
 
-    @Test("a bundle mentioning the shared constraints needs Standard in the link")
+    @Test("a bundle mentioning the shared contracts needs Standard in the link")
     func aBundleNeedsStandardInTheLink() async throws {
         // Given. Collection's procedures mention `Collection` and
         // `Comparable`, which only the foundation module declares
@@ -142,7 +142,7 @@ struct StandardTests {
             ]
         )
 
-        // When / Then, without the foundation the constraint name resolves to
+        // When / Then, without the foundation the contract name resolves to
         // nothing, and the declaration that mentions it is refused
         await #expect {
             try await Builder().build([sut] + Module.collection)

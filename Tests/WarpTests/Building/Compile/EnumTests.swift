@@ -120,8 +120,8 @@ struct EnumTests {
 
     @Test("a slot that names no one kind reads a candidate as either")
     func aBoundedSlotMeetsEitherKindByWorth() async throws {
-        // Given. A constraint-bounded parameter admits wholes and fractions
-        // alike, so `"1"` is a live member and worth carries across kinds: the
+        // Given. A contract-bounded parameter takes wholes and fractions
+        // alike, so `"1"` is a live candidate and worth carries across kinds: the
         // same rule `number` takes, pinned so the build's candidate judge and
         // this boundary cannot drift apart
         let sut = try Module(
@@ -130,7 +130,7 @@ struct EnumTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "level", type: .parameter(name: "N", constraints: ["Standard.Numeric"]),
+                            Parameter(name: "level", type: .parameter(name: "N", bounds: ["Standard.Numeric"]),
                                 candidates: ["1", "2.5"]
                             )
                         ]

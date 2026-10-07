@@ -12,9 +12,9 @@ import Foundation
 // document in this list declares it.
 //
 // The kind is part of the value, so a procedure and a type spelled alike are
-// two references. Types, memberships and contracts are one namespace: a link
-// refuses a name standing for a type and a membership at once, and says
-// nothing about a procedure spelled like a type.
+// two references. Types and contracts are one namespace: a link refuses a
+// name standing for a type and a contract at once, and says nothing about a
+// procedure spelled like a type.
 enum Reference: Hashable, Sendable, Comparable {
     case procedure(Name)
     case type(Name)

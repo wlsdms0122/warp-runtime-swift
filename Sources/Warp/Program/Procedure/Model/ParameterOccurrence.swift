@@ -8,16 +8,16 @@
 import Foundation
 
 // One mention of a type parameter in a signature: the name, and the
-// constraint names that mention carries.
+// contracts that mention bounds it by.
 public struct ParameterOccurrence: Sendable, Equatable {
     // MARK: - Property
     public let name: Name
-    public let constraints: [Name]
+    public let bounds: [Name]
 
     // MARK: - Initializer
-    public init(name: Name, constraints: [Name]) {
+    public init(name: Name, bounds: [Name]) {
         self.name = name
-        self.constraints = constraints
+        self.bounds = bounds
     }
 
     // MARK: - Public

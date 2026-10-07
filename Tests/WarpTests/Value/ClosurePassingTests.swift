@@ -14,7 +14,10 @@ struct ClosurePassingTests {
     // MARK: - Property
     private let types = TypeTable(
         types: ["Bank.A": .record(["k": .string])],
-        constraints: ["App.M": [.named("Bank.A"), .int]]
+        contracts: ["App.M": [:]],
+        satisfying: ["App.M": ["Bank.A", "Int"]],
+        settled: true,
+        of: Linkage()
     )
 
     private var record: LoweredType {
@@ -146,17 +149,17 @@ struct ClosurePassingTests {
         #expect(closure.slotAnswers == [answeringAnything, answeringRecord])
     }
 
-    @Test("a membership slot taking the answer adds nothing, so a round trip through one keeps one answer")
-    func aMembershipSlotAddsNothing() {
+    @Test("a contract slot taking the answer adds nothing, so a round trip through one keeps one answer")
+    func aContractSlotAddsNothing() {
         // Given
-        let membership = TypeExpression.composition(["App.M"]).lowered(in: types.loweredTypes)
+        let contract = TypeExpression.composition(["App.M"]).lowered(in: types.loweredTypes)
         var closure = sut
 
         // When
         for _ in 0..<10 {
             closure = closure
                 .passing(record, in: types.loweredTypes)
-                .passing(membership, in: types.loweredTypes)
+                .passing(contract, in: types.loweredTypes)
         }
 
         // Then

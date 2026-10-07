@@ -186,24 +186,20 @@ struct ObjectReadingTests {
         // after it onto some other declaration.
         var parts = try await parts()
 
-        guard case var .array(numbering) = parts["typeNumbering"],
-            case let .array(types) = numbering[0],
-            let first = types.first
-        else {
+        guard case let .array(types) = parts["typeNumbering"], let first = types.first else {
             Issue.record("an object writes its type numbering as a part")
 
             return
         }
 
-        numbering[0] = .array(types + [first])
-        parts = parts.writing("typeNumbering", with: .array(numbering))
+        parts = parts.writing("typeNumbering", with: .array(types + [first]))
 
         // When / Then
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
             error is ObjectRefused
-                && "\(error)".contains("'type numbering types' writes its names out of order, or one of them twice")
+                && "\(error)".contains("'type numbering' writes its names out of order, or one of them twice")
         }
     }
 

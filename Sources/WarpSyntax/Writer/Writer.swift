@@ -79,14 +79,6 @@ public struct Writer: Sendable {
             written[ModuleReader.CodingKeys.types.name] = .dictionary(try draft.types.mapValues(value(of:)))
         }
 
-        if !draft.constraints.isEmpty {
-            written[ModuleReader.CodingKeys.constraints.name] = .dictionary(
-                try draft.constraints.mapValues { members in
-                    .array(try members.map(value(of:)))
-                }
-            )
-        }
-
         if !draft.contracts.isEmpty {
             written[ModuleReader.CodingKeys.contracts.name] = .dictionary(
                 try draft.contracts.mapValues { procedures in

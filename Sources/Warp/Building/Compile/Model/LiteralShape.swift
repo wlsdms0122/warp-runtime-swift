@@ -51,7 +51,13 @@ enum LiteralShape: Sendable {
     // be one type for each to be a value of what the slot asks there. Every
     // other slot takes what it accepts.
     func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable) -> Bool {
-        isHeld(by: slot, inPlace: inPlace, in: table, asking: .nothing)
+        everyPart(along: slot, inPlace: inPlace, in: table) { slot, part, rigid in
+            if rigid {
+                return slot.takesInPlace(part.folded.slotUnwrapped, in: table)
+            }
+
+            return slot.accepts(part.folded, in: table)
+        }
     }
 
     // Whether every part of it, along the structure it shares with the slot,
@@ -60,15 +66,63 @@ enum LiteralShape: Sendable {
     // lacks refuses), a name by the type it names, what may be null by what
     // it is besides, and each way of an attempt on its own. A slot handed in
     // place that names a type parameter is rigid, and shares no record,
-    // which `takesInPlace` judges whole. A membership shares no structure:
-    // which member a literal is, is a judgement, made where it is held.
+    // which `takesInPlace` judges whole.
     func everyPart(
         along slot: LoweredType,
         inPlace: Bool,
         in table: LoweredTypeTable,
         holds: (LoweredType, LiteralShape, Bool) -> Bool
     ) -> Bool {
-        everyPart(along: slot, inPlace: inPlace, in: table, whole: true) { slot, part, rigid, _ in holds(slot, part, rigid) }
+        let slot = inPlace ? slot.slotUnwrapped : slot
+        let rigid = inPlace && slot.namesParameter
+
+        switch self {
+        case .part:
+            return holds(slot, self, rigid)
+
+        case let .either(attempted, rescued):
+            return attempted.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
+                && rescued.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
+
+        case .list, .record:
+            break
+        }
+
+        switch slot {
+        case let .nullable(inner), let .variable(inner):
+            return everyPart(along: inner, inPlace: inPlace, in: table, holds: holds)
+
+        case let .named(row):
+            return everyPart(along: table.loweredTypes[row], inPlace: inPlace, in: table, holds: holds)
+
+        case let .array(element):
+            guard case let .list(items) = self else { break }
+
+            return items.allSatisfy { item in
+                item.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
+            }
+
+        case let .dictionary(element):
+            guard case let .record(fields) = self else { break }
+
+            return fields.values.allSatisfy { field in
+                field.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
+            }
+
+        case let .record(record) where !rigid:
+            guard case let .record(fields) = self else { break }
+
+            return record.named.allSatisfy { name, field in
+                fields[name].map { given in
+                    given.everyPart(along: field, inPlace: inPlace, in: table, holds: holds)
+                } ?? false
+            }
+
+        default:
+            break
+        }
+
+        return holds(slot, self, rigid)
     }
 
     // How a refusal names it: written as the literal is, a list in brackets
@@ -95,113 +149,4 @@ enum LiteralShape: Sendable {
     }
 
     // MARK: - Private
-    // `asking` is which memberships are already being asked of this literal.
-    // A part the walk took apart is another literal and starts with none.
-    private func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable, asking: Asking) -> Bool {
-        everyPart(along: slot, inPlace: inPlace, in: table, whole: true) { slot, part, rigid, whole in
-            if rigid {
-                return slot.takesInPlace(part.folded.slotUnwrapped, in: table)
-            }
-
-            return slot.accepts(part.folded, in: table)
-                && part.isHeld(byMembersOf: slot, in: table, asking: whole ? asking : .nothing)
-        }
-    }
-
-    // The walk. `whole` is whether the part is still the literal the walk
-    // began with, which a name, what may be null or a slot's mark leaves as
-    // it is, and a list, a record or an attempt's way takes apart.
-    private func everyPart(
-        along slot: LoweredType,
-        inPlace: Bool,
-        in table: LoweredTypeTable,
-        whole: Bool,
-        holds: (LoweredType, LiteralShape, Bool, Bool) -> Bool
-    ) -> Bool {
-        let slot = inPlace ? slot.slotUnwrapped : slot
-        let rigid = inPlace && slot.namesParameter
-
-        switch self {
-        case .part:
-            return holds(slot, self, rigid, whole)
-
-        case let .either(attempted, rescued):
-            return attempted.everyPart(along: slot, inPlace: inPlace, in: table, whole: false, holds: holds)
-                && rescued.everyPart(along: slot, inPlace: inPlace, in: table, whole: false, holds: holds)
-
-        case .list, .record:
-            break
-        }
-
-        switch slot {
-        case let .nullable(inner), let .variable(inner):
-            return everyPart(along: inner, inPlace: inPlace, in: table, whole: whole, holds: holds)
-
-        case let .named(row):
-            return everyPart(along: table.loweredTypes[row], inPlace: inPlace, in: table, whole: whole, holds: holds)
-
-        case let .array(element):
-            guard case let .list(items) = self else { break }
-
-            return items.allSatisfy { item in
-                item.everyPart(along: element, inPlace: inPlace, in: table, whole: false, holds: holds)
-            }
-
-        case let .dictionary(element):
-            guard case let .record(fields) = self else { break }
-
-            return fields.values.allSatisfy { field in
-                field.everyPart(along: element, inPlace: inPlace, in: table, whole: false, holds: holds)
-            }
-
-        case let .record(record) where !rigid:
-            guard case let .record(fields) = self else { break }
-
-            return record.named.allSatisfy { name, field in
-                fields[name].map { given in
-                    given.everyPart(along: field, inPlace: inPlace, in: table, whole: false, holds: holds)
-                } ?? false
-            }
-
-        default:
-            break
-        }
-
-        return holds(slot, self, rigid, whole)
-    }
-
-    // Whether the bounds a literal stands under take it part by part, as
-    // `accepts` reads them whole: a membership by one of its members, and a
-    // parameter by every member of one membership bounding it. Asking every
-    // member of a bound is not asking whether the literal is one of that
-    // membership, so only a membership asked for one of its members joins
-    // what is being asked. A membership already being asked of this literal
-    // does not take it, the way the run settles a value.
-    private func isHeld(byMembersOf slot: LoweredType, in table: LoweredTypeTable, asking: Asking) -> Bool {
-        switch (slot, self) {
-        case (_, .part):
-            return true
-
-        case let (.composition(bounds), _):
-            return bounds.allSatisfy { bound in
-                guard case let .membership(row) = bound else { return true }
-
-                return table.someMember(of: row, asking: asking) { member, asked in
-                    isHeld(by: member, inPlace: false, in: table, asking: asked)
-                }
-            }
-
-        case let (.parameter(_, bounds), _):
-            return bounds.contains { bound in
-                guard case let .membership(row) = bound else { return false }
-
-                return table.constraints[row].allSatisfy { member in
-                    isHeld(by: member, inPlace: false, in: table, asking: asking)
-                }
-            }
-
-        default:
-            return true
-        }
-    }
 }

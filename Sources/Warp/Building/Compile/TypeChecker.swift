@@ -30,7 +30,7 @@ import Foundation
 struct TypeChecker {
     // What a call put in a generic declaration's type parameters, read once:
     // a parameter read two ways is refused rather than folded, a bounded one
-    // is judged against its membership, and the declaration comes back with
+    // is judged against its bounds, and the declaration comes back with
     // the readings filled.
     private enum Judgment {
         case fits(slots: [Slot], returns: LoweredType?)
@@ -477,10 +477,10 @@ struct TypeChecker {
         declared.binding(against: given, into: &unread, holding: &holding, in: table)
 
         for held in holding {
-            for bound in held.bounds {
+            for contract in held.bounds {
                 if let refusal = refusal(
                     of: held.reading,
-                    holdingTo: bound,
+                    answering: contract,
                     orNull: held.orNull,
                     as: label,
                     in: table,
@@ -495,43 +495,31 @@ struct TypeChecker {
         return nil
     }
 
-    // Why a reading is provably outside one bound, or nothing where it is
-    // not. A membership and a contract ask different questions of the same
-    // reading: what a membership admits is a set of types, what a contract
-    // asks is a set of procedures the reading's own type answers.
+    // Why a reading provably does not answer a contract a bound names, or
+    // nothing where it is not. A contract asks a set of procedures the
+    // reading's own type answers.
     private func refusal(
         of reading: LoweredType,
-        holdingTo bound: LoweredType.Bound,
+        answering name: Name,
         orNull: Bool,
         as label: String,
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
-        switch bound {
-        case let .contract(name):
-            switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
-            // What leans on a claim is written down for the link to settle.
-            case let .leansOn(types):
-                for type in types {
-                    fulfillment.require(Claim(type: type, contract: name), at: place)
-                }
+        switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
+        // What leans on a claim is written down for the link to settle.
+        case let .leansOn(type):
+            fulfillment.require(Claim(type: type, contract: name), at: place)
 
-                return nil
+            return nil
 
-            case .settled(true):
-                return nil
+        case .settled(true):
+            return nil
 
-            case .settled(false):
-                return "\(label) \(reading.rendered(in: loweredTypes)),"
-                    + " which does not answer every procedure '\(name)' asks"
-            }
-
-        case let .membership(row):
-            guard !loweredTypes.admits(constraint: row, reading: reading, rigid: false, orNull: orNull) else { return nil }
-
+        case .settled(false):
             return "\(label) \(reading.rendered(in: loweredTypes)),"
-                + " which '\(loweredTypes.constraintLabels[row])' does not admit"
+                + " which does not answer every procedure '\(name)' asks"
         }
     }
 
@@ -542,8 +530,8 @@ struct TypeChecker {
     // takes nothing in place at a type parameter, settles what it hands back
     // to what it declares, so it proves it outright. Otherwise every answer
     // whose declared type names a type parameter has to be, at each type
-    // parameter, that parameter, with no reading of `Any` and no member
-    // value; a call whose answer or variable handed back names a type
+    // parameter, that parameter, with no reading of `Any` and no value of
+    // another type its bounds hold; a call whose answer or variable handed back names a type
     // parameter and is judged where it stands hands back what proves nothing,
     // unless it reaches a declaration of this document, whose proof is the
     // document's to settle; and nothing proves what the body reads as a type
@@ -711,15 +699,15 @@ struct TypeChecker {
         return context.declared(selector)?.handsBackAsDeclared == true
     }
 
-    // The one membership judgment a call is held to, over the whole
-    // signature. Answers the refusal, or nil where every constrained
-    // parameter admits each of its readings.
+    // The one bounds judgment a call is held to, over the whole signature.
+    // Answers the refusal, or nil where every bounded parameter's readings
+    // answer each of its bounds.
     //
     // That one parameter takes one bound, and that a named bound is declared,
     // are the declaration's own facts, held where it is declared, before
     // anything gathers readings for this. Judging against every name in a
     // mention set costs nothing when the set holds its one.
-    private func constraintRefusal(
+    private func boundsRefusal(
         mentions: [Name: [Name]],
         substitution: Substitution,
         in loweredTypes: LoweredTypeTable,
@@ -731,11 +719,11 @@ struct TypeChecker {
                 for name in names {
                     // One nothing declares was refused where the
                     // declaration was judged.
-                    guard let bound = loweredTypes.bound(named: name) else { continue }
+                    guard loweredTypes.declaresContract(name) else { continue }
 
                     if let refusal = refusal(
                         of: reading,
-                        holdingTo: bound,
+                        answering: name,
                         orNull: false,
                         as: "'\(parameter)' is read as",
                         in: loweredTypes,
@@ -783,7 +771,7 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        if let refusal = constraintRefusal(
+        if let refusal = boundsRefusal(
             mentions: bounding.table,
             substitution: substitution,
             in: loweredTypes,
@@ -798,10 +786,10 @@ struct TypeChecker {
         }
 
         // A list or record literal handed where a bounded parameter stands is
-        // one of its bounds' members part by part, as one written into a slot
-        // declaring them is: its join may be what a member takes while no
-        // member takes its parts. Only what stands at such a parameter is
-        // asked here; `check` judges the rest against what filled it.
+        // held to the bounds part by part, as one written into a slot
+        // declaring them is: its join may answer them while a part does not.
+        // Only what stands at such a parameter is asked here; `check` judges
+        // the rest against what filled it.
         for (position, shape) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
             let slot = slots[position]
             let bounded = slot.type.boundedAlone
@@ -845,15 +833,13 @@ struct TypeChecker {
         substitution: Substitution,
         in loweredTypes: LoweredTypeTable
     ) -> String? {
-        for (parameter, bounds) in slots.reduce(into: [Name: [LoweredType.Bound]](), { found, slot in
+        for (parameter, bounds) in slots.reduce(into: [Name: [Name]](), { found, slot in
             found.merge(slot.type.boundedParameters) { first, _ in first }
-        }).sorted(by: { $0.key < $1.key }) where bounds.contains(where: { bound in
-            if case .contract = bound { true } else { false }
-        }) {
+        }).sorted(by: { $0.key < $1.key }) where !bounds.isEmpty {
             guard let existential = substitution.everyReading(of: parameter).first(where: { reading in
                 guard case let .composition(read) = reading else { return false }
 
-                return read.contains { bound in if case .contract = bound { true } else { false } }
+                return !read.isEmpty
             }) else {
                 continue
             }
@@ -3167,8 +3153,8 @@ struct TypeChecker {
 
     // The positions of a call whose argument is not a value of what fills
     // its slot, where that names a type parameter of the body around. The
-    // call reads the argument as the parameter, which takes a value every
-    // member of its bounds takes and what a reading of `Any` stands for, and
+    // call reads the argument as the parameter, which takes a value of any
+    // type its bounds hold and what a reading of `Any` stands for, and
     // what the call answers or hands back may be that argument.
     private func loose(
         taking: [LoweredType],
@@ -3192,7 +3178,7 @@ struct TypeChecker {
     // caller, which the caller holds as a type parameter of its own, stands
     // for whatever filled the caller's. Every other argument read at it takes
     // only a value of that parameter, the way a write into the parameter
-    // does: a value every member of its bounds takes is not one, so a loose
+    // does: a value of another type its bounds hold is not one, so a loose
     // position there refuses.
     private func heldBeside(
         _ arguments: [Expression],
@@ -3422,7 +3408,7 @@ struct TypeChecker {
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
         // refuse whatever arrived. The judgment (a parameter read two ways has
-        // no answer, a bounded one takes only what its constraint admits) is
+        // no answer, a bounded one takes only what answers its bounds) is
         // the one every call surface shares, so this only gathers what the call
         // wrote into each slot. This is what one signature says in place of the
         // several a language with overloading would need: `some N` on both

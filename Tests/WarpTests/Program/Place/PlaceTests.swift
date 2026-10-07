@@ -392,13 +392,13 @@ struct PlaceTests {
         #expect(error?.place?.rendered == "d0cf00/types.Wallet.Coin.fields.amount")
     }
 
-    @Test("a membership is placed the same way")
-    func aConstraintIsPlacedByItsDeclaredKey() async throws {
-        // Given. The other space. A membership admitting nothing is refused
-        // from the table alone, which is the walk that has only the declared
-        // keys to go on.
+    @Test("a contract is placed the same way")
+    func aContractIsPlacedByItsDeclaredKey() async throws {
+        // Given. The other space. A contract's procedure that takes something
+        // other than `Self` first is refused from the declaration alone, which
+        // is the walk that has only the declared keys to go on.
         let sut = try Module(
-            constraints: ["Wallet.Spendable": []],
+            contracts: ["Wallet.Spendable": ["spend": Signature(parameters: [Parameter(name: "of", type: .int)])]],
             procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading
         )
@@ -409,7 +409,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "d0cf00/constraints.Wallet.Spendable")
+        #expect(error?.place?.rendered == "d0cf00/contracts.Wallet.Spendable.spend.parameters")
     }
 
     @Test("a statement's construct is the language's name, and says so")
@@ -580,24 +580,24 @@ struct PlaceTests {
         #expect(error?.message.contains("by 01") == true)
     }
 
-    @Test("a name written as a type in one document and a membership in another")
-    func aNameThatIsBothIsPlacedAtTheMembership() async throws {
+    @Test("a name written as a type in one document and a contract in another")
+    func aNameThatIsBothIsPlacedAtTheContract() async throws {
         // Given. The two tables held against each other, which is the one
-        // judgment that reads both tables. The membership is what the walk is
+        // judgment that reads both tables. The contract is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
         let type = try Module(types: ["Pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
 
-        let membership = try Module(constraints: ["Pricing.Money": [.int]], procedures: [:], identity: Identity([0x02]))
+        let contract = try Module(contracts: ["Pricing.Money": [Name: Signature]()], procedures: [:], identity: Identity([0x02]))
 
         let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
         // When
         let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([type, membership, caller] + Module.standard)
+            try await Builder().build([type, contract, caller] + Module.standard)
         }
 
         // Then
-        #expect(error?.place?.rendered == "02/constraints.Pricing.Money")
+        #expect(error?.place?.rendered == "02/contracts.Pricing.Money")
         #expect(error?.message.contains("01") == true)
     }
 

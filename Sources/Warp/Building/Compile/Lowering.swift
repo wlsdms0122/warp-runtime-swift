@@ -478,10 +478,9 @@ struct Lowering {
         // Read through the walks that rewrite them, so which cases hold a type
         // is answered in one place; what those walks rebuild is dropped.
         var types: Set<Int> = []
-        var memberships: Set<Int> = []
 
         func stand(_ type: LoweredType) -> LoweredType {
-            type.standing(into: &types, and: &memberships)
+            type.standing(into: &types)
 
             return type
         }
@@ -500,22 +499,12 @@ struct Lowering {
             _ = value.rewritten(types: stand)
         }
 
-        let numbering = LoweredTypeNumbering(
-            types: Set(types.map { row in loweredTypes.labels[row] }),
-            memberships: Set(memberships.map { row in loweredTypes.constraintLabels[row] })
-        )
+        let numbering = LoweredTypeNumbering(types: Set(types.map { row in loweredTypes.labels[row] }))
 
         // Which number each row of this link stands at, so the walk that
         // writes them reads a place rather than hashing a name at every
         // type it meets.
-        let place = (
-            types: Self.placed(types, among: numbering.types, spelling: loweredTypes.labels),
-            memberships: Self.placed(
-                memberships,
-                among: numbering.memberships,
-                spelling: loweredTypes.constraintLabels
-            )
-        )
+        let place = Self.placed(types, among: numbering.types, spelling: loweredTypes.labels)
 
         let numbered = try rows.map { row -> Linked in
             let held = table[row]
@@ -1143,32 +1132,19 @@ struct Lowering {
     // something it did not read, which is this pass's own mistake.
     private func renumbered(
         _ type: LoweredType,
-        in place: (types: [Int: Int], memberships: [Int: Int]),
+        in place: [Int: Int],
         of label: Name
     ) throws -> LoweredType {
-        try type.renumbered(
-            type: { number in
-                guard let stands = place.types[number] else {
-                    throw BuildError.unjudged(
-                        "type \'\(loweredTypes.labels[number])\', which its document never numbered",
-                        at: Place.procedure(label.spelling, in: .assembled)
-                    )
-                }
-
-                return stands
-            },
-            membership: { number in
-                guard let stands = place.memberships[number] else {
-                    throw BuildError.unjudged(
-                        "membership \'\(loweredTypes.constraintLabels[number])\',"
-                            + " which its document never numbered",
-                        at: Place.procedure(label.spelling, in: .assembled)
-                    )
-                }
-
-                return stands
+        try type.renumbered { number in
+            guard let stands = place[number] else {
+                throw BuildError.unjudged(
+                    "type \'\(loweredTypes.labels[number])\', which its document never numbered",
+                    at: Place.procedure(label.spelling, in: .assembled)
+                )
             }
-        )
+
+            return stands
+        }
     }
 
     // Where each of a link's rows stands in the document's numbering, read

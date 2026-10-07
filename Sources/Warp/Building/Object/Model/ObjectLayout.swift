@@ -19,7 +19,6 @@ enum ObjectLayout {
         case document
         case dependencies
         case types
-        case constraints
         case contracts
         case claims
         case leaned
@@ -139,7 +138,6 @@ enum ObjectLayout {
         case constants
         case variables
         case types
-        case constraints
         case contracts
         case satisfies
         case imports
@@ -212,11 +210,6 @@ enum ObjectLayout {
         case noTypeNamed
         case noBoundNamed
         case namesItself
-    }
-
-    enum BoundTag: Int {
-        case membership
-        case contract
     }
 
     enum ImplementationTag: Int {

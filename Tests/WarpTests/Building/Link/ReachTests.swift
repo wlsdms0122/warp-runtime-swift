@@ -84,7 +84,7 @@ struct ReachTests {
                 ),
                 "App.tell": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
                         returns: .string
                     ),
                     body: [],

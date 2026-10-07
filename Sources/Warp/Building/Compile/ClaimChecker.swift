@@ -21,8 +21,8 @@ import Foundation
 //
 // A claim that does not hold puts its type under no contract, and where that
 // is refused turns on whether another document could put it right. A name this
-// list declares as a membership never becomes a contract, so the claim is
-// refused where it is written. A procedure nothing declares may be in a document
+// list declares as a type never becomes a contract, so the claim is refused
+// where it is written. A procedure nothing declares may be in a document
 // this list does not hold, so that reason waits beside the claim and is said
 // to whoever leans on the pair.
 //
@@ -222,7 +222,7 @@ struct ClaimChecker {
 
             // Declared as something else here, which no document arriving
             // later undoes: one name has one declarer.
-            guard contracts[type] == nil, table.constraints[type] == nil else {
+            guard contracts[type] == nil else {
                 throw BuildError(reason, at: claim.place)
             }
 
@@ -233,7 +233,7 @@ struct ClaimChecker {
             let reason = "'\(contract)' is not a contract this link declares,"
                 + " so there are no procedures for '\(type)' to answer"
 
-            guard types[contract] == nil, table.constraints[contract] == nil else {
+            guard types[contract] == nil else {
                 throw BuildError(reason, at: claim.place)
             }
 
@@ -395,7 +395,7 @@ struct ClaimChecker {
         // reading of it that its join is not. A bound nothing declares was
         // refused where the declaration was judged.
         for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
-            let bounds = names.compactMap { name in loweredTypes.bound(named: name) }.sorted()
+            let bounds = names.filter { name in loweredTypes.declaresContract(name) }.sorted()
 
             for reading in substitution.everyReading(of: parameter)
                 where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {

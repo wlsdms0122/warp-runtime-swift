@@ -131,7 +131,7 @@ public struct Signature: Sendable, Equatable {
     }
 
     // This signature with each type parameter's occurrences carrying the
-    // constraint declared for its name. The signature owns the bound and the
+    // bounds declared for its name. The signature owns the bound and the
     // occurrences read it. A notation writes `bounds: { N: Numeric }` once and
     // `some N` in the slots, and this is where the one meets the many.
     //
@@ -163,7 +163,7 @@ public struct Signature: Sendable, Equatable {
     // as one type parameter the contract bounds, which every position
     // writing it shares.
     func read(of contract: Name) -> Signature {
-        replacingSelf(with: .parameter(name: "Self", constraints: [contract]))
+        replacingSelf(with: .parameter(name: "Self", bounds: [contract]))
     }
 
     // This signature with `Self` written as `type` wherever it stands.

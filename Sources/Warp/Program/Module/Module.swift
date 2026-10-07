@@ -26,8 +26,8 @@ public struct Module: Sendable {
     // what the module declares; this is what it asks of whatever it is linked
     // with, and a link that does not declare all of them cannot run it.
     //
-    // Exactly what it uses, always: every procedure it sends and every type,
-    // constraint and contract it names without declaring. A host lays the
+    // Exactly what it uses, always: every procedure it sends and every type
+    // and contract it names without declaring. A host lays the
     // link from this list, so a list saying less would be trusted and wrong,
     // and one saying more asks for what the program has no use for. Which of
     // those the module is refused for is `Validator`'s to say.
@@ -58,19 +58,11 @@ public struct Module: Sendable {
     // what kind of thing the name stands for.
     public var types: [Name: TypeExpression] { source.types }
 
-    // Constraints this module declares: a name bound to the types a bounded
-    // parameter under that name admits. Declared the same way a type is and
-    // kept apart from the types, because nothing is ever *of* a constraint. It
-    // bounds `some T`, and a slot cannot declare it directly.
-    public var constraints: [Name: [TypeExpression]] { source.constraints }
-
-    // Contracts this module declares: a name bound to the procedures a value must
-    // answer to stand under it.
+    // Contracts this module declares: a name bound to the procedures a value's
+    // type must answer to stand under it.
     //
-    // Kept apart from the constraints for the reason the two are different
-    // questions. A constraint is a closed set of types and a value of one is
-    // one of them; a contract is an open set, and what puts a type in it is
-    // that it declares the procedures. Only one of those can be judged by listing.
+    // Kept apart from the types: a contract is an open set of types, and what
+    // puts a type in it is a claim that it answers the procedures.
     public var contracts: [Name: [Name: ContractProcedure]] { source.contracts }
 
     // Which contracts each type this document names answers. A type answers a
@@ -140,7 +132,6 @@ public struct Module: Sendable {
         description: String? = nil,
         imports: Set<Name>? = nil,
         types: [Name: TypeExpression] = [:],
-        constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
@@ -153,7 +144,6 @@ public struct Module: Sendable {
             description: description,
             imports: imports,
             types: types,
-            constraints: constraints,
             contracts: contracts,
             claims: claims,
             constants: constants,
@@ -169,7 +159,6 @@ public struct Module: Sendable {
         description: String? = nil,
         imports: Set<Name>? = nil,
         types: [Name: TypeExpression] = [:],
-        constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
@@ -183,8 +172,7 @@ public struct Module: Sendable {
                 description: description,
                 imports: imports,
                 types: types,
-                constraints: constraints,
-                contracts: contracts,
+                    contracts: contracts,
                 claims: claims,
                 constants: constants,
                 variables: variables,

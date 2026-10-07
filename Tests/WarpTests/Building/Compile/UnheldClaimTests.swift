@@ -26,7 +26,7 @@ struct UnheldClaimTests {
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
                         returns: .string
                     ),
                     body: [],
@@ -48,7 +48,7 @@ struct UnheldClaimTests {
             procedures: [
                 "App.mine": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
                         returns: .string
                     ),
                     body: [],
@@ -89,7 +89,7 @@ struct UnheldClaimTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -159,7 +159,7 @@ struct UnheldClaimTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -220,7 +220,7 @@ struct UnheldClaimTests {
                 "App.count": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .int
                     ),

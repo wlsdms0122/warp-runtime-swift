@@ -8,8 +8,7 @@
 import Foundation
 
 // What the compile refuses about a declaration on its own: a type mention that
-// resolves to nothing, a parameter no call could fit, and a constraint no value
-// satisfies.
+// resolves to nothing, and a parameter no call could fit.
 struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer
@@ -26,17 +25,14 @@ struct DeclarationChecker {
         numbered linkage: Linkage
     ) throws -> TypeTable {
         let declared = namespace.types
-        let members = namespace.constraints
 
-        // A document's types and its memberships each take a run of type rows
-        // the way its declarations take a run of table rows, in the order the
-        // documents stand, so a document's types are behind the types it names.
+        // A document's types take a run of type rows the way its declarations
+        // take a run of table rows, in the order the documents stand, so a
+        // document's types are behind the types it names.
         let table = TypeTable(
             types: declared.mapValues(\.held),
-            constraints: members.mapValues(\.held),
             contracts: namespace.contracts.mapValues(\.held),
             standing: documents.flatMap { document in document.types.keys.sorted() },
-            constraintStanding: documents.flatMap { document in document.constraints.keys.sorted() },
             of: linkage
         )
 
@@ -58,57 +54,9 @@ struct DeclarationChecker {
             )
         }
 
-        for (_, declaration) in members.sorted { $0.key < $1.key } {
-            let admitted = declaration.held
-
-            guard !admitted.isEmpty else {
-                throw BuildError(
-                    "admits nothing, so no parameter it"
-                        + " bounds could ever be filled",
-                    at: declaration.place
-                )
-            }
-
-            // A member is a concrete type. `some` stands for a type and names
-            // none, `Any` would admit everything a membership exists to narrow,
-            // and `Never` admits nothing. Each is a declaration that says
-            // nothing a membership could hold. Judged through every name a
-            // member hides behind, or one alias would carry the refused type
-            // in. The chain is finite because a name-only cycle was refused
-            // above.
-            for member in admitted {
-                var resolved = member
-
-                while case let .named(next) = resolved, let underneath = declared[next] {
-                    resolved = underneath.held
-                }
-
-                // A name left standing names no declared type: another
-                // membership, which is a set of types and stands; a
-                // contract, which is not a type; or nothing, which the
-                // mention below refuses by its own name.
-                let concrete = switch resolved {
-                case let .named(name): namespace.contracts[name] == nil
-                case .parameter, .any, .never, .composition, .selfType: false
-                case .null, .bool, .int, .double, .string, .ranged, .array,
-                    .dictionary, .record, .procedure, .variable, .inout, .linear, .consuming,
-                    .borrowing, .nullable, .projection: true
-                }
-
-                guard concrete else {
-                    throw BuildError(
-                        "a member is a concrete type."
-                            + " `\(member.rendered)` says nothing a"
-                            + " membership could hold",
-                        at: declaration.place
-                    )
-                }
-            }
-        }
-
-        // The two tables are walked whole rather than per module:
-        // they arrive carrying where each name was written, and asking a module
-        // again would be spelling that a second way.
+        // The table is walked whole rather than per module: it arrives
+        // carrying where each name was written, and asking a module again
+        // would be spelling that a second way.
         for (_, declaration) in declared.sorted { $0.key < $1.key } {
             try mentioned(
                 in: declaration.held,
@@ -119,17 +67,6 @@ struct DeclarationChecker {
             )
         }
 
-        for (_, declaration) in members.sorted { $0.key < $1.key } {
-            for member in declaration.held {
-                try mentioned(
-                    in: member,
-                    at: declaration.place,
-                    parameterized: false,
-                    resolve: table
-                )
-            }
-        }
-
         return table
     }
 
@@ -137,8 +74,6 @@ struct DeclarationChecker {
     // document is read on its own: what is judged is its own text, and the
     // table is what the whole link declared.
     func judge(_ modules: [Module], in table: TypeTable) throws {
-        try judge(memberships: modules, in: table)
-
         for module in modules {
             for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
@@ -214,7 +149,7 @@ struct DeclarationChecker {
     }
 
     // Everything a signature is held to where it is declared: every type it
-    // mentions resolves, every parameter could be filled, and every constraint
+    // mentions resolves, every parameter could be filled, and every bound
     // it names is declared and single. The facts every consumer of the
     // signature reads instead of re-deriving.
     private func judge(
@@ -252,7 +187,7 @@ struct DeclarationChecker {
             resolve: table
         )
 
-        try judgeConstraints(signature.parameterOccurrences, at: place, in: table)
+        try judgeBounds(signature.parameterOccurrences, at: place, in: table)
     }
 
     // A procedure the host answers calls a procedure it was handed with
@@ -337,7 +272,7 @@ struct DeclarationChecker {
     //
     // `parameterized` says whether a type parameter written here has a call to
     // fill it. A signature's slots do (the walk into a procedure type turns it
-    // on) and a declared type or a constraint member does not: a parameter
+    // on) and a declared type does not: a parameter
     // there would stand for nothing any call ever decides, so it is refused
     // where it is declared, and everything a `named` type can hide is judged
     // here rather than at the sites that name it.
@@ -449,11 +384,11 @@ struct DeclarationChecker {
                 resolve: table
             )
 
-            try judgeConstraints(type.parameterOccurrences, at: place, in: table)
+            try judgeBounds(type.parameterOccurrences, at: place, in: table)
 
         // A value of whatever type answers every name: each has to be a
-        // membership's or a contract's, since a type is one thing and not a
-        // bound on some other.
+        // contract's, since a type is one thing and not a bound on some
+        // other.
         case let .composition(names):
             guard !names.isEmpty, Set(names).count == names.count, names == names.sorted() else {
                 throw BuildError(
@@ -463,20 +398,19 @@ struct DeclarationChecker {
                 )
             }
 
-            for name in names where table.constraints[name] == nil && table.contracts[name] == nil {
+            for name in names where table.contracts[name] == nil {
                 throw BuildError(
-                    "joins '\(name)' with `&`, and `&` joins the names of memberships"
-                        + " and contracts, which no module in this link declares '\(name)' as",
+                    "joins '\(name)' with `&`, and `&` joins the names of contracts,"
+                        + " which no module in this link declares '\(name)' as",
                     at: place
                 )
             }
 
-        // Types, memberships and contracts are three tables and no name is in
-        // two, so a mention reaches whichever declares it. A membership
-        // standing here is a value of one of its members, and a contract
-        // standing here is a value of whatever type answers it.
+        // Types and contracts are two tables and no name is in both, so a
+        // mention reaches whichever declares it. A contract standing here is
+        // a value of whatever type answers it.
         case let .named(name):
-            guard table.types[name] != nil || table.constraints[name] != nil || table.contracts[name] != nil else {
+            guard table.types[name] != nil || table.contracts[name] != nil else {
                 throw BuildError(
                     "names type '\(name)', which no module in this"
                         + " link declares",
@@ -600,7 +534,7 @@ struct DeclarationChecker {
     ) throws {
         switch declared {
         // The mark names the type, because that is what the build follows the
-        // value by. What fills a type parameter or a membership is the call's,
+        // value by. What fills a type parameter or a composition is the call's,
         // so a body taking one there has no name to carry the obligation on
         // and the proof would end at this slot.
         case .consuming, .borrowing:
@@ -672,12 +606,11 @@ struct DeclarationChecker {
 
     // Whether a signature's bounded parameters could ever be judged: every
     // name a bound names has to be one somebody declared, and one name is
-    // held to one set of them. A bound names a membership or a contract, and
-    // the two are separate spaces no name is in both of, so a mention reaches
-    // whichever declares it. Each occurrence carries its bounds separately,
+    // held to one set of them. A bound names a contract. Each occurrence
+    // carries its bounds separately,
     // so occurrences carrying different sets for one name are two claims
     // about one thing.
-    private func judgeConstraints(
+    private func judgeBounds(
         _ occurrences: [ParameterOccurrence],
         at place: Place,
         in table: TypeTable
@@ -687,7 +620,7 @@ struct DeclarationChecker {
         var misspelled: Set<Name> = []
 
         for occurrence in occurrences {
-            let names = occurrence.constraints
+            let names = occurrence.bounds
 
             if Set(names).count != names.count || names != names.sorted() {
                 misspelled.insert(occurrence.name)
@@ -705,49 +638,13 @@ struct DeclarationChecker {
         }
 
         for (parameter, names) in bounds.table.sorted(by: { $0.key < $1.key }) {
-            for bound in names where table.constraints[bound] == nil && table.contracts[bound] == nil {
+            for bound in names where table.contracts[bound] == nil {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
-                        + " link declares as a membership or a contract",
+                        + " link declares as a contract",
                     at: place
                 )
             }
-        }
-    }
-
-    // A membership is handed on once when every member is, so one that mixes
-    // has no answer: a value of it would carry an obligation on some readings
-    // and not on others, and which it was is exactly what a membership does not
-    // say.
-    //
-    // Asked of every module before any procedure is judged, and in name order,
-    // because a slot naming such a membership reads its answer off this. A
-    // procedure judged first would be told its slot is the mistake, and the
-    // mistake is the declaration.
-    private func judge(memberships modules: [Module], in table: TypeTable) throws {
-        let declared = modules
-            .flatMap { module in module.constraints.map { name, members in (name, members, module) } }
-            .sorted { one, other in one.0 < other.0 }
-
-        for (name, members, module) in declared {
-            let (handed, rest) = members.reduce(into: ([TypeExpression](), [TypeExpression]())) { split, member in
-                if member.handedOnce(in: table) {
-                    split.0.append(member)
-                } else {
-                    split.1.append(member)
-                }
-            }
-
-            guard !handed.isEmpty, !rest.isEmpty else { continue }
-
-            throw BuildError(
-                "admits \(handed.map(\.rendered).sorted().joined(separator: " and ")),"
-                    + " which is handed on exactly once, beside"
-                    + " \(rest.map(\.rendered).sorted().joined(separator: " and ")),"
-                    + " which is not. A value of a membership is followed the same"
-                    + " way whichever member it is",
-                at: .constraint(name.spelling, in: .of(module))
-            )
         }
     }
 }

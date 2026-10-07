@@ -19,7 +19,7 @@ struct Substitution: Sendable {
     struct Held: Sendable {
         // MARK: - Property
         let reading: LoweredType
-        let bounds: [LoweredType.Bound]
+        let bounds: [Name]
         let orNull: Bool
 
         // MARK: - Initializer

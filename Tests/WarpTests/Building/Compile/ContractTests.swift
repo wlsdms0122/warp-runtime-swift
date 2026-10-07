@@ -282,7 +282,7 @@ struct ContractTests {
                 "Chart.draw": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["Chart.Plottable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["Chart.Plottable"]))
                         ],
                         returns: .int
                     ),
@@ -367,10 +367,9 @@ struct ContractTests {
 
     @Test("a claim names a type and a contract, and nothing else")
     func aClaimNamesWhatItIsAbout() async throws {
-        // Given. A constraint stands where the contract should
+        // Given. A type stands where the contract should
         let sut = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
-            constraints: ["App.Scalar": [.int, .string]],
+            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .int],
             claims: ["Bank.Account": ["App.Scalar"]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -419,7 +418,7 @@ struct ContractTests {
         }
     }
 
-    @Test("a name is a type or a membership or a contract, and never two of them")
+    @Test("a name is a type or a contract, and never both")
     func oneNameStandsForOneThing() async throws {
         // Given
         let sut = try Module(
@@ -432,7 +431,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("cannot be a type, a membership and a contract at once")
+            "\(error)".contains("cannot stand for a type and a contract at once")
         }
     }
 
@@ -484,7 +483,7 @@ struct ContractTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),
@@ -528,7 +527,7 @@ struct ContractTests {
             "App.tell": Procedure(
                 signature: Signature(
                     parameters: [
-                        Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                        Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                     ],
                     returns: .string
                 ),
@@ -572,7 +571,7 @@ struct ContractTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),

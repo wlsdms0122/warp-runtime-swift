@@ -11,7 +11,7 @@ import Testing
 import WarpStandard
 import WarpTestSupport
 
-// A type or constraint name is the spelling it was declared under, dot and
+// A type or contract name is the spelling it was declared under, dot and
 // all, and a mention is that spelling written out. These are the places that
 // rule decides something, and the places it refuses, because a spelling no
 // module declares names nothing.
@@ -181,8 +181,8 @@ struct DeclaredSpellingTests {
         }
     }
 
-    @Test("a constraint is named by its declared spelling")
-    func aConstraintIsNamedByItsSpelling() async throws {
+    @Test("a contract is named by its declared spelling")
+    func aContractIsNamedByItsSpelling() async throws {
         // Given. `Standard` declares `Comparable`, and a document-shaped module
         // bounds its own parameter with that spelling, `Standard.Comparable`
         let sut = try Module(
@@ -190,9 +190,9 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", constraints: ["Standard.Comparable"]))
+                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))
                         ],
-                        returns: .parameter(name: "T", constraints: ["Standard.Comparable"])
+                        returns: .parameter(name: "T", bounds: ["Standard.Comparable"])
                     ),
                     body: [],
                     result: reference("value")
@@ -246,11 +246,11 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("a name declared as a type and a constraint refuses in either order", arguments: [false, true])
+    @Test("a name declared as a type and a contract refuses in either order", arguments: [false, true])
     func aCrossSpaceCollisionRefusesInEitherOrder(typeFirst: Bool) async throws {
-        // Given. One module declares `Limit` as a constraint, another as a type
-        let membership = try Module(
-            constraints: ["Limit": [.int]],
+        // Given. One module declares `Limit` as a contract, another as a type
+        let contract = try Module(
+            contracts: ["Limit": [Name: Signature]()],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -265,25 +265,26 @@ struct DeclaredSpellingTests {
         // When / Then. The build sees its whole graph at once, so the order the
         // host listed the modules cannot change the conclusion
         await #expect {
-            try await builder.build(typeFirst ? [type, membership] : [membership, type])
+            try await builder.build(typeFirst ? [type, contract] : [contract, type])
         } throws: { error in
-            error is BuildError && "\(error)".contains("both a type and a constraint")
+            error is BuildError && "\(error)".contains("both a type and a contract")
         }
     }
 
-    @Test("a document's bare constraint does not capture what Standard meant")
+    @Test("a document's bare contract does not capture what Standard meant")
     func aBareDeclarationDoesNotCaptureTheStandardName() async throws {
-        // Given. A module declares its own `Numeric`, admitting text, and still
-        // leans on Standard.Math for arithmetic
+        // Given. A module declares its own `Numeric`, which text answers, and
+        // still leans on Standard for arithmetic
         let sut = try Module(
-            constraints: ["Numeric": [.string]],
+            contracts: ["Numeric": [Name: Signature]()],
+            claims: ["String": ["Numeric"]],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", constraints: ["Numeric"]))
+                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Numeric"]))
                         ],
-                        returns: .parameter(name: "T", constraints: ["Numeric"])
+                        returns: .parameter(name: "T", bounds: ["Numeric"])
                     ),
                     body: [],
                     result: reference("value")
@@ -308,10 +309,12 @@ struct DeclaredSpellingTests {
 
         #expect(answer == .string("a"))
 
-        // And Standard.Math's arithmetic still reads Standard's declaration: two pieces
-        // of text refuse exactly as they do without the document's `Numeric`
+        // And Standard's arithmetic still reads Standard's declaration: two
+        // pieces of text refuse exactly as they do without the document's
+        // `Numeric`
         let arithmetic = try Module(
-            constraints: ["Numeric": [.string]],
+            contracts: ["Numeric": [Name: Signature]()],
+            claims: ["String": ["Numeric"]],
             procedures: [
                 entryName: Procedure(
                     access: .public,

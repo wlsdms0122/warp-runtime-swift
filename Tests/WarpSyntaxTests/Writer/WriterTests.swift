@@ -124,7 +124,8 @@ struct WriterTests {
         "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan", "Standard.Logic.notEqual", "Standard.Numeric.plus"],
         "description": "one of every type",
         "types": ["Task": ["record": ["done": "Bool", "id": "String"]]],
-        "constraints": ["Scalar": ["Int", "String"]],
+        "contracts": ["Scalar": [:]],
+        "satisfies": ["Int": ["Scalar"], "String": ["Scalar"]],
         "const": ["limit": 10],
         "procedures": [
             "entry": [
@@ -470,13 +471,13 @@ struct WriterTests {
     func differingOccurrencesAreNotWritten() throws {
         // Given
         let sut = try Module(
-            constraints: ["A": [.int], "B": [.string]],
+            contracts: ["A": [Name: Signature](), "B": [Name: Signature]()],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
-                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
+                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["A"])),
+                            Parameter(name: "right", type: .parameter(name: "T", bounds: ["B"]))
                         ]
                     ),
                     body: [],
@@ -810,7 +811,7 @@ struct WriterTests {
         // would be a document that reads back meaning something else.
         let bounded = Signature(
             parameters: [
-                Parameter(name: "item", type: .parameter(name: "T", constraints: ["Scalar"]))
+                Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"]))
             ],
             returns: .bool
         )
@@ -830,12 +831,12 @@ struct WriterTests {
         // declaring procedure answers the same way, whichever entry the caller
         // came through
         #expect(throws: WritingError.self) {
-            try sut.value(of: Parameter(name: "item", type: .parameter(name: "T", constraints: ["Scalar"])))
+            try sut.value(of: Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"])))
         }
 
         // A bounded variable declared as a type directly refuses the same way
         let variable = try Module(
-            types: ["Loose": .parameter(name: "T", constraints: ["Scalar"])],
+            types: ["Loose": .parameter(name: "T", bounds: ["Scalar"])],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]

@@ -84,27 +84,17 @@ struct BytesTests {
     // so a type added to one and forgotten by the other fails here.
     @Test("a byte settles as itself exactly where the type says it does")
     func aByteSettlesAsItselfExactlyWhereTheTypeSaysIt() throws {
-        // Given. `Named` is bound twice on purpose. Once as a type and once as
-        // a constraint, which a table may do because they are two declarations.
-        // A walk that guarded both with one set would end the constraint's
-        // question by assuming the type's name and answer yes for `Textual`.
+        // Given. Every claim is in, so a bound is answered by what the
+        // claims say of `Int`, which is what every byte is.
         let types = TypeTable(
             types: [
                 "Small": .ranged(.whole(from: 0, to: .through(200))),
-                "Whole": .int,
-                "Named": .parameter(name: "Element", constraints: ["Named"])
+                "Whole": .int
             ],
-            constraints: [
-                "Ordered": [.int, .double, .string],
-                "Textual": [.string],
-                "Named": [.string],
-                // Members that divide the range between them take every byte
-                // even though no one of them takes it alone. A membership is
-                // met when some member takes the value, and asking each member
-                // to cover the whole range on its own would miss that.
-                "Split": [.ranged(.whole(from: 0, to: .through(127))), .ranged(.whole(from: 128, to: .through(255)))],
-                "Partial": [.ranged(.whole(from: 0, to: .through(127)))]
-            ]
+            contracts: ["Ordered": [:], "Textual": [:]],
+            satisfying: ["Ordered": ["Int", "Double", "String"], "Textual": ["String"]],
+            settled: true,
+            of: Linkage()
         )
 
         let typeExpressions: [TypeExpression] = [
@@ -120,15 +110,12 @@ struct BytesTests {
             .nullable(.int),
             .nullable(.ranged(.whole(from: 0, to: .through(254)))),
             .parameter(name: "Element"),
-            .parameter(name: "Element", constraints: ["Ordered"]),
-            .parameter(name: "Element", constraints: ["Textual"]),
-            .parameter(name: "Element", constraints: ["Nobody"]),
-            .parameter(name: "Element", constraints: ["Split"]),
-            .parameter(name: "Element", constraints: ["Partial"]),
+            .parameter(name: "Element", bounds: ["Ordered"]),
+            .parameter(name: "Element", bounds: ["Textual"]),
+            .parameter(name: "Element", bounds: ["Nobody"]),
             .named("Whole"),
             .named("Small"),
             .named("Nobody"),
-            .named("Named"),
             .array(.int),
             .dictionary(.int),
             .record([:])

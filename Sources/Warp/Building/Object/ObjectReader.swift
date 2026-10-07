@@ -60,7 +60,6 @@ struct ObjectReader {
         // every part is in.
         var dependencies: [Fingerprint] = []
         var types: [Name: TypeExpression] = [:]
-        var constraints: [Name: [TypeExpression]] = [:]
         var contracts: [Name: [Name: ContractProcedure]] = [:]
         var claims: [Name: Set<Name>] = [:]
         var leaned: [Claim: Place] = [:]
@@ -68,7 +67,7 @@ struct ObjectReader {
         var liftedRows: [Value] = []
         var answers: [Name: LoweredType] = [:]
         var numbered: Value = .null
-        var typeNumbering = LoweredTypeNumbering(types: [], memberships: [])
+        var typeNumbering = LoweredTypeNumbering(types: [])
         var variables: [(name: Name, value: Value)] = []
         var constants: [Name] = []
 
@@ -88,11 +87,6 @@ struct ObjectReader {
 
             case .types:
                 types = try keyed(part, of: "types", expression)
-
-            case .constraints:
-                constraints = try keyed(part, of: "constraints") { written in
-                    try Field(written, of: "constraints").list(expression)
-                }
 
             case .contracts:
                 contracts = try keyed(part, of: "contracts") { written in
@@ -124,8 +118,8 @@ struct ObjectReader {
             case .numbering:
                 numbered = part
 
-            // The types its bodies stand on and the memberships, which is what
-            // they number their types from.
+            // The types its bodies stand on, which is what they number their
+            // types from.
             case .typeNumbering:
                 typeNumbering = try LoweredTypeNumbering(written: part)
 
@@ -157,7 +151,6 @@ struct ObjectReader {
         return try Compiled(
             document: Place.Document(identity: identity),
             types: types,
-            constraints: constraints,
             contracts: contracts,
             claims: claims,
             leaned: leaned,
@@ -360,7 +353,7 @@ struct ObjectReader {
         case .parameter:
             read = .parameter(
                 name: try name(cursor.next()),
-                constraints: try Field(cursor.next(), of: "bounds").ordered(name)
+                bounds: try Field(cursor.next(), of: "bounds").ordered(name)
             )
 
         case .composition:
@@ -607,7 +600,6 @@ struct ObjectReader {
         case .constants: read = .constants
         case .variables: read = .variables
         case .types: read = .types
-        case .constraints: read = .constraints
         case .contracts: read = .contracts
         case .satisfies: read = .satisfies
         case .imports: read = .imports
@@ -735,11 +727,11 @@ struct ObjectReader {
         case .parameter:
             read = .parameter(
                 label: try name(cursor.next()),
-                bounds: try Field(cursor.next(), of: "bounds").ordered(bound)
+                bounds: try Field(cursor.next(), of: "bounds").ordered(name)
             )
 
         case .composition:
-            let bounds = try Field(cursor.next(), of: "composition").ordered(bound)
+            let bounds = try Field(cursor.next(), of: "composition").ordered(name)
 
             guard !bounds.isEmpty else {
                 throw ObjectRefused("'composition' holds a value to nothing")
@@ -771,21 +763,6 @@ struct ObjectReader {
         case .noBoundNamed: read = .noBoundNamed(try name(cursor.next()))
         case .namesItself: read = .namesItself
         case nil: throw ObjectRefused("'undeclared' is undeclared for a reason this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func bound(_ value: Value) throws -> LoweredType.Bound {
-        var cursor = try FieldCursor(value, of: "bound")
-        let read: LoweredType.Bound
-
-        switch ObjectLayout.BoundTag(rawValue: try cursor.field().integer()) {
-        case .membership: read = .membership(try cursor.field().count())
-        case .contract: read = .contract(try name(cursor.next()))
-        case nil: throw ObjectRefused("'bound' holds a parameter to nothing this reads")
         }
 
         try cursor.end()

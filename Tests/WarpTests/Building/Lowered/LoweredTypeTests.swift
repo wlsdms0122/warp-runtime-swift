@@ -24,12 +24,10 @@ struct LoweredTypeTests {
             "App.Byte": .ranged(.whole(from: 0, to: .through(255))),
             "App.Maybe": .nullable(.int)
         ],
-        constraints: [
-            "App.Ordered": [.int, .double, .string],
-            "App.Numbers": [.int, .double],
-            "App.Lists": [.array(.int), .array(.double)],
-            "App.NumberLists": [.array(.named("App.Numbers"))]
-        ]
+        contracts: ["App.Ordered": [:]],
+        satisfying: ["App.Ordered": ["Int", "Double", "String"]],
+        settled: true,
+        of: Linkage()
     )
 
     // MARK: - Initializer
@@ -41,7 +39,7 @@ struct LoweredTypeTests {
         let written: [TypeExpression] = Array(types.types.values) + [
             .array(.named("Bank.Acct")),
             .nullable(.named("Bank.Owner")),
-            .parameter(name: "T", constraints: ["App.Ordered"]),
+            .parameter(name: "T", bounds: ["App.Ordered"]),
             .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
             .dictionary(.named("App.Maybe"))
         ]
@@ -119,35 +117,18 @@ struct LoweredTypeTests {
         #expect(!other.accepts(parameter, in: table, rigid: true))
     }
 
-    @Test("a membership takes a parameter no call fills only where the parameter's own bounds prove it")
-    func aRigidParameterStandsInAMembershipByItsBounds() {
-        // Given. `App.Ordered` admits int, double and string
+    @Test("a contract standing as a type takes a parameter no call fills only where the parameter's own bounds prove it")
+    func aRigidParameterStandsInAContractByItsBounds() {
+        // Given. Int, Double and String answer `App.Ordered`
         let table = types.loweredTypes
         let ordered = TypeExpression.composition(["App.Ordered"]).lowered(in: table)
-        let bounded = TypeExpression.parameter(name: "T", constraints: ["App.Ordered"]).lowered(in: table)
+        let bounded = TypeExpression.parameter(name: "T", bounds: ["App.Ordered"]).lowered(in: table)
         let unbounded = TypeExpression.parameter(name: "T").lowered(in: table)
 
-        // When / Then. A parameter bounded by it is one of its members, and
-        // one bounded by nothing may be anything
+        // When / Then. A parameter bounded by it answers it, and one bounded
+        // by nothing may be anything
         #expect(ordered.accepts(bounded, in: table, rigid: true))
         #expect(!ordered.accepts(unbounded, in: table, rigid: true))
-    }
-
-    @Test("a membership takes a list of a parameter no call fills only where the parameter's bounds prove each element")
-    func aRigidParameterInsideAListStandsByItsBounds() {
-        // Given. `App.Lists` admits lists of ints and of doubles, and
-        // `App.NumberLists` lists of `App.Numbers`
-        let table = types.loweredTypes
-        let lists = TypeExpression.composition(["App.Lists"]).lowered(in: table)
-        let numberLists = TypeExpression.composition(["App.NumberLists"]).lowered(in: table)
-        let unbounded = LoweredType.array(TypeExpression.parameter(name: "T").lowered(in: table))
-        let bounded = LoweredType.array(TypeExpression.parameter(name: "T", constraints: ["App.Numbers"]).lowered(in: table))
-
-        // When / Then. A list of what may be anything is no member, and a
-        // list of a parameter every member of whose bound is admitted is
-        #expect(!lists.accepts(unbounded, in: table, rigid: true))
-        #expect(!numberLists.accepts(unbounded, in: table, rigid: true))
-        #expect(numberLists.accepts(bounded, in: table, rigid: true))
     }
 
     @Test("a name lowers to its row, and the row of the record it names is the chain's end")
@@ -236,8 +217,8 @@ struct LoweredTypeTests {
 
         // Then
         #expect(row.slots.map(\.name) == ["lhs", "rhs"])
-        #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: [.contract("Standard.Comparable")]), .parameter(label: "T", bounds: [.contract("Standard.Comparable")])])
-        #expect(row.returns == .parameter(label: "T", bounds: [.contract("Standard.Comparable")]))
+        #expect(row.slots.map(\.type) == [.parameter(label: "T", bounds: ["Standard.Comparable"]), .parameter(label: "T", bounds: ["Standard.Comparable"])])
+        #expect(row.returns == .parameter(label: "T", bounds: ["Standard.Comparable"]))
         #expect(try await Executor().run(image) == .int(2))
     }
 
@@ -276,7 +257,7 @@ struct LoweredTypeTests {
             return
         }
 
-        #expect(soft.parameters.first?.declaresNull(in: TypeTable(types: module.types, constraints: [:])) == true)
+        #expect(soft.parameters.first?.declaresNull(in: TypeTable(types: module.types)) == true)
     }
 
     @Test("one undeclared name passes every reading and is refused where a value meets it")

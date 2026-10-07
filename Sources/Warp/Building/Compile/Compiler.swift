@@ -372,7 +372,6 @@ struct Compiler {
         return try Compiled(
             document: .of(module),
             types: module.types,
-            constraints: module.constraints,
             contracts: module.contracts,
             claims: module.claims,
             leaned: fulfillment.claims(of: origin),

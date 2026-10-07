@@ -21,7 +21,6 @@ public struct ModuleReader: Decodable {
         case imports
         case description
         case types
-        case constraints
         case contracts
         case satisfies
         case const
@@ -81,8 +80,6 @@ public struct ModuleReader: Decodable {
             imports: try Self.imports(in: container),
             types: try Self.record(TypeReader.self, in: container, forKey: .types)
                 .mapValues(\.type),
-            constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
-                .mapValues { members in members.map(\.type) },
             contracts: try Self.record(ContractReader.self, in: container, forKey: .contracts)
                 .mapValues(\.procedures),
             // In key order, so that the same refusal comes first every run.

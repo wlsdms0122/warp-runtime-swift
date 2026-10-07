@@ -16,7 +16,6 @@ enum ObjectCoverageFixture {
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
-            constraints: ["a.four": [.int, .string]],
             contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .isolated)]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
@@ -38,7 +37,7 @@ enum ObjectCoverageFixture {
                 declared: ["a.eleven", "a.ten"],
                 closures: [.procedure("a.eleven"): 2]
             ),
-            typeNumbering: LoweredTypeNumbering(types: ["a.one", "a.two"], memberships: ["a.four"]),
+            typeNumbering: LoweredTypeNumbering(types: ["a.one", "a.two"]),
             // One of every kind of value, and a closure standing by what it is
             // spelled by, holding one of everything.
             judging: [
@@ -108,7 +107,7 @@ enum ObjectCoverageFixture {
         "borrowing": .borrowing(.string),
         "nullable": .nullable(.int),
         "named": .named("a.one"),
-        "parameter": .parameter(name: "T", constraints: ["a.four"]),
+        "parameter": .parameter(name: "T", bounds: ["a.four"]),
         "composition": .composition(["a.five", "a.four"]),
         "projection": .projection(
             of: "a.fifteen",
@@ -149,11 +148,10 @@ enum ObjectCoverageFixture {
         ("inoutish", .inout(.bool)),
         ("nullable", .nullable(.string)),
         ("named", .named(2)),
-        ("parameterMembership", .parameter(label: "T", bounds: [.membership(5)])),
-        ("parameterContract", .parameter(label: "U", bounds: [.contract("a.five")])),
+        ("parameterContract", .parameter(label: "U", bounds: ["a.five"])),
         ("parameterNone", .parameter(label: "V", bounds: [])),
         ("projection", .projection(of: "a.sixteen", path: [.index(1, optional: true)])),
-        ("composition", .composition([.membership(7), .contract("a.five")])),
+        ("composition", .composition(["a.five", "a.four"])),
         ("undeclaredBound", .undeclared(label: "W", because: .noBoundNamed("a.thirteen"))),
         ("undeclaredType", .undeclared(label: "X", because: .noTypeNamed("a.fourteen"))),
         ("undeclaredCycle", .undeclared(label: "Y", because: .namesItself))
@@ -180,7 +178,7 @@ enum ObjectCoverageFixture {
     }()
 
     static let everyPart: [Place.Part] = [
-        .procedures, .constants, .variables, .types, .constraints, .contracts, .satisfies,
+        .procedures, .constants, .variables, .types, .contracts, .satisfies,
         .imports, .parameters, .returns, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
         .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]

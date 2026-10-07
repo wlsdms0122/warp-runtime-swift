@@ -637,8 +637,7 @@ struct LinearTests {
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open")))
             ],
-            result: .array([.cast(reference("handle"), as: .named("App.Openable"), optional: false)]),
-            constraints: ["App.Openable": [.named("App.Handle")]]
+            result: .array([.cast(reference("handle"), as: .record(["name": .string]), optional: false)])
         )
 
         // When / Then
@@ -669,54 +668,6 @@ struct LinearTests {
         }
     }
 
-    @Test("a membership every member of which is handed on once is one")
-    func anAllLinearMembershipCarriesTheObligation() async throws {
-        // Given. A body binding what such a procedure answers takes the
-        // obligation, and dropping it is refused like any other
-        let sut = try holding(
-            body: [
-                Statement(binding: .constant("held"), expression: .call(Call(selector: "App.make")))
-            ],
-            result: .literal(.null),
-            constraints: ["App.Openable": [.named("App.Handle")]],
-            beside: [
-                "App.make": Procedure(
-                    signature: Signature(returns: .named("App.Openable")),
-                    body: [],
-                    result: .call(Call(selector: "App.open"))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("still holds 'held' where it ends")
-        }
-    }
-
-    @Test("a membership that mixes one with something else refuses")
-    func aMixedMembershipRefuses() async throws {
-        // Given. A value of it would carry an obligation on some readings and
-        // not on others, and which it was is what a membership does not say
-        let sut = try holding(
-            body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
-                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
-            ],
-            result: .literal(.null),
-            constraints: ["App.Openable": [.named("App.Handle"), .int]]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("beside Int, which is not")
-        }
-    }
-
     @Test("a cast that names one does not carry it into a list")
     func aCastNamingOneDoesNotCarryIt() async throws {
         // Given. Nothing inside the cast holds an obligation, and the cast
@@ -738,28 +689,6 @@ struct LinearTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("writes what this reads as 'App.Handle' inside a list")
-        }
-    }
-
-    @Test("two memberships that name each other are all of one thing or not")
-    func aRingOfMembershipsAnswersAsItStood() async throws {
-        // Given. `App.A` and `App.B` name each other, and every other member of
-        // either is `App.Handle`
-        let sut = try holding(
-            body: [
-                Statement(binding: .constant("handle"), expression: .call(Call(selector: "App.open"))),
-                Statement(expression: .call(Call(selector: "App.close", arguments: [reference("handle")])))
-            ],
-            result: .literal(.null),
-            constraints: [
-                "App.A": [.named("App.Handle"), .named("App.B")],
-                "App.B": [.named("App.Handle"), .named("App.A")]
-            ]
-        )
-
-        // When / Then
-        await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.standard)
         }
     }
 
@@ -1559,13 +1488,11 @@ struct LinearTests {
     private func holding(
         body: Body,
         result: Warp.Expression,
-        constraints: [Name: [TypeExpression]] = [:],
         taking parameters: [Parameter] = [],
         beside others: [Name: Procedure] = [:]
     ) throws -> Module {
         try Module(
             types: ["App.Handle": .linear(.record(["name": .string]))],
-            constraints: constraints,
             procedures: [
                 entryName: Procedure(
                     access: .public,

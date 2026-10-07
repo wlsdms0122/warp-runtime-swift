@@ -149,11 +149,6 @@ struct ObjectWriter {
         case .types:
             return try keyed(compiled.types, type)
 
-        case .constraints:
-            return try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in
-                .array(try types.map(type))
-            }
-
         case .contracts:
             return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
                 try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
@@ -306,8 +301,8 @@ struct ObjectWriter {
         case let .named(spelling):
             return tagged(Tag.named, name(spelling))
 
-        case let .parameter(spelling, constraints):
-            return tagged(Tag.parameter, name(spelling), .array(constraints.sorted().map(name)))
+        case let .parameter(spelling, bounds):
+            return tagged(Tag.parameter, name(spelling), .array(bounds.sorted().map(name)))
 
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), self.path(path))
@@ -488,7 +483,6 @@ struct ObjectWriter {
         case .constants: return tagged(Tag.constants)
         case .variables: return tagged(Tag.variables)
         case .types: return tagged(Tag.types)
-        case .constraints: return tagged(Tag.constraints)
         case .contracts: return tagged(Tag.contracts)
         case .satisfies: return tagged(Tag.satisfies)
         case .imports: return tagged(Tag.imports)
@@ -611,10 +605,10 @@ struct ObjectWriter {
             return tagged(Tag.named, .int(row))
 
         case let .parameter(label, bounds):
-            return tagged(Tag.parameter, name(label), .array(bounds.sorted().map(bound)))
+            return tagged(Tag.parameter, name(label), .array(bounds.sorted().map(name)))
 
         case let .composition(bounds):
-            return tagged(Tag.composition, .array(bounds.sorted().map(bound)))
+            return tagged(Tag.composition, .array(bounds.sorted().map(name)))
 
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), self.path(path))
@@ -631,18 +625,6 @@ struct ObjectWriter {
         case let .noTypeNamed(name): return tagged(Tag.noTypeNamed, self.name(name))
         case let .noBoundNamed(name): return tagged(Tag.noBoundNamed, self.name(name))
         case .namesItself: return tagged(Tag.namesItself)
-        }
-    }
-
-    private func bound(_ bound: LoweredType.Bound) -> Value {
-        typealias Tag = ObjectLayout.BoundTag
-
-        switch bound {
-        case let .membership(row):
-            return tagged(Tag.membership, .int(row))
-
-        case let .contract(spelling):
-            return tagged(Tag.contract, name(spelling))
         }
     }
 

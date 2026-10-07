@@ -22,8 +22,8 @@ import Foundation
 // as well as through what an author wrote, and that reading is the link's, so
 // what is in this space is read off the lowering and not off the document.
 //
-// Two lists, because a type names two tables. A declared type and a
-// membership are separate spaces and no name is in both.
+// Only declared types are numbered. A contract a bound names is written by
+// its name, since a contract stands on no row.
 struct LoweredTypeNumbering: Sendable {
     // What a number turned out to be, with the reason where it is not a row:
     // a name the link does not declare, or a number the document never gave.
@@ -38,18 +38,12 @@ struct LoweredTypeNumbering: Sendable {
     struct Renumbering {
         // MARK: - Property
         let types: [Resolution]
-        let memberships: [Resolution]
 
         // MARK: - Initializer
         // MARK: - Public
         // One type a document wrote, read as this link's rows.
         func read(_ type: LoweredType, at place: Place) throws -> LoweredType {
-            try type.renumbered(
-                type: { number in try row(types, at: number, calling: "named", in: place) },
-                membership: { number in
-                    try row(memberships, at: number, calling: "bounding a parameter", in: place)
-                }
-            )
+            try type.renumbered { number in try row(types, at: number, in: place) }
         }
 
         // MARK: - Private
@@ -58,7 +52,6 @@ struct LoweredTypeNumbering: Sendable {
         private func row(
             _ resolutions: [Resolution],
             at number: Int,
-            calling what: String,
             in place: Place
         ) throws -> Int {
             guard resolutions.indices.contains(number) else {
@@ -74,7 +67,7 @@ struct LoweredTypeNumbering: Sendable {
 
             case let .unfound(name):
                 throw BuildError(
-                    "'\(name)' is \(what) here, and no module in this link declares it",
+                    "'\(name)' is named here, and no module in this link declares it",
                     at: place
                 )
 
@@ -92,43 +85,30 @@ struct LoweredTypeNumbering: Sendable {
     // is what a caller cannot work out for itself, and the order is the
     // language's, so a reading holds a list to it.
     let types: [Name]
-    let memberships: [Name]
 
-    // The two lists said as one value, so an object carries what its bodies
+    // The list said as one value, so an object carries what its bodies
     // number their types from.
     var written: Value {
-        .array([
-            .array(types.map { name in .string(name.spelling) }),
-            .array(memberships.map { name in .string(name.spelling) })
-        ])
+        .array(types.map { name in .string(name.spelling) })
     }
 
     // MARK: - Initializer
-    init(types: Set<Name>, memberships: Set<Name>) {
+    init(types: Set<Name>) {
         self.types = types.sorted()
-        self.memberships = memberships.sorted()
     }
 
-    // Read back from an object: the two lists, in this order.
+    // Read back from an object: the names, in their order.
     init(written value: Value) throws {
-        var cursor = try FieldCursor(value, of: "type numbering")
-
-        self.types = try Field(cursor.next(), of: "type numbering types").ordered { written in
-            try Field(written, of: "type numbering types").name()
+        self.types = try Field(value, of: "type numbering").ordered { written in
+            try Field(written, of: "type numbering").name()
         }
-        self.memberships = try Field(cursor.next(), of: "type numbering memberships").ordered { written in
-            try Field(written, of: "type numbering memberships").name()
-        }
-
-        try cursor.end()
     }
 
     // MARK: - Public
     // Every number this gave, resolved to the rows of one link.
     func rows(in loweredTypes: LoweredTypeTable) -> Renumbering {
         Renumbering(
-            types: types.indices.map { number in type(number, in: loweredTypes) },
-            memberships: memberships.indices.map { number in membership(number, in: loweredTypes) }
+            types: types.indices.map { number in type(number, in: loweredTypes) }
         )
     }
 
@@ -139,14 +119,6 @@ struct LoweredTypeNumbering: Sendable {
         let name = types[number]
 
         return loweredTypes.row(named: name).map(Resolution.row) ?? .unfound(name)
-    }
-
-    func membership(_ number: Int, in loweredTypes: LoweredTypeTable) -> Resolution {
-        guard memberships.indices.contains(number) else { return .unnumbered }
-
-        let name = memberships[number]
-
-        return loweredTypes.constraintRow(named: name).map(Resolution.row) ?? .unfound(name)
     }
 
     // MARK: - Private

@@ -1,5 +1,5 @@
 //
-//  ConstraintTests.swift
+//  BoundTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/23/26.
@@ -11,19 +11,18 @@ import Testing
 import WarpStandard
 import WarpTestSupport
 
-// A constraint is a declared membership, and a bounded `some T` takes only what
-// the membership admits. These are the places the bound turns a reading into a
-// refusal before anything runs, and the one place it waits for the run, because
-// the text said nothing.
-@Suite("What a bounded type parameter admits")
-struct ConstraintTests {
+// A bounded `some T` takes only what answers every contract it is bounded by.
+// These are the places the bound turns a reading into a refusal before anything
+// runs, and the one place it waits for the run, because the text said nothing.
+@Suite("What a bounded type parameter takes")
+struct BoundTests {
     // MARK: - Property
     private let builder = Builder()
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a reading outside the constraint refuses at the build")
-    func aReadingOutsideTheConstraintRefusesAtTheBuild() async throws {
+    @Test("a reading outside the bound refuses at the build")
+    func aReadingOutsideTheBoundRefusesAtTheBuild() async throws {
         // Given. Both sides of `lessThan` are booleans, and no claim puts them
         // under `Comparable`. The reading is a literal, so the build can see it.
         let sut = try Module(
@@ -103,17 +102,19 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a module declares a constraint of its own and the bound holds")
-    func aModuleDeclaresAConstraintOfItsOwn() async throws {
-        // Given. The membership lives in the declaration, so a signature writes
-        // the name and the same judgment Standard's procedures get is this one's
+    @Test("a module declares a contract of its own and the bound holds")
+    func aModuleDeclaresAContractOfItsOwn() async throws {
+        // Given. What answers the contract is what the claims say, so a
+        // signature writes the name and the same judgment Standard's
+        // procedures get is this one's
         let sut = try Module(
-            constraints: ["Scalar": [.int, .string]],
+            contracts: Self.markers("Scalar"),
+            claims: ["Int": ["Scalar"], "String": ["Scalar"]],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "value", type: .parameter(name: "T", constraints: ["Scalar"]))],
-                        returns: .parameter(name: "T", constraints: ["Scalar"])
+                        parameters: [Parameter(name: "value", type: .parameter(name: "T", bounds: ["Scalar"]))],
+                        returns: .parameter(name: "T", bounds: ["Scalar"])
                     ),
                     body: [],
                     result: reference("value")
@@ -134,16 +135,17 @@ struct ConstraintTests {
         #expect(answered == .int(7))
     }
 
-    @Test("a reading a declared constraint does not admit refuses at the build")
-    func aDeclaredConstraintRefusesAtItsOwnBound() async throws {
+    @Test("a reading whose type answers no declared contract refuses at the build")
+    func aDeclaredContractRefusesAtItsOwnBound() async throws {
         // Given
         let sut = try Module(
-            constraints: ["Scalar": [.int, .string]],
+            contracts: Self.markers("Scalar"),
+            claims: ["Int": ["Scalar"], "String": ["Scalar"]],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "value", type: .parameter(name: "T", constraints: ["Scalar"]))],
-                        returns: .parameter(name: "T", constraints: ["Scalar"])
+                        parameters: [Parameter(name: "value", type: .parameter(name: "T", bounds: ["Scalar"]))],
+                        returns: .parameter(name: "T", bounds: ["Scalar"])
                     ),
                     body: [],
                     result: reference("value")
@@ -161,20 +163,20 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Scalar' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'Double' answers it")
         }
     }
 
-    @Test("a signature naming a constraint nobody declares refuses at the build")
-    func anUndeclaredConstraintRefusesAtTheBuild() async throws {
+    @Test("a signature naming a contract nobody declares refuses at the build")
+    func anUndeclaredContractRefusesAtTheBuild() async throws {
         // Given. Unreached code still has to compile, and a bound naming
         // nothing is a defect whether or not a call ever fills it
         let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "value", type: .parameter(name: "T", constraints: ["Sortable"]))],
-                        returns: .parameter(name: "T", constraints: ["Sortable"])
+                        parameters: [Parameter(name: "value", type: .parameter(name: "T", bounds: ["Sortable"]))],
+                        returns: .parameter(name: "T", bounds: ["Sortable"])
                     ),
                     body: [],
                     result: reference("value")
@@ -201,13 +203,13 @@ struct ConstraintTests {
         // Given. The bound is written inline, so two slots writing different
         // bounds for one name are two claims about one thing
         let sut = try Module(
-            constraints: ["A": [.int], "B": [.string]],
+            contracts: Self.markers("A", "B"),
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
-                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
+                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["A"])),
+                            Parameter(name: "right", type: .parameter(name: "T", bounds: ["B"]))
                         ]
                     ),
                     body: [],
@@ -227,11 +229,12 @@ struct ConstraintTests {
 
     @Test("a composition inside a slot is held to its bounds where the call is written")
     func aNestedCompositionIsJudgedAtTheBuild() async throws {
-        // Given. `A` admits int and string, `B` admits string alone, and the
-        // slot takes a list of what belongs to both
+        // Given. Int answers `A`, String answers `A` and `B`, and the slot
+        // takes a list of what answers both
         func module(handing element: Value) throws -> Module {
             try Module(
-                constraints: ["A": [.int, .string], "B": [.string]],
+                contracts: Self.markers("A", "B"),
+                claims: ["Int": ["A"], "String": ["A", "B"]],
                 procedures: [
                     "keep": Procedure(
                         signature: Signature(
@@ -257,32 +260,17 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([try module(handing: .int(1))] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("which 'B' does not admit")
-        }
-    }
-
-    @Test("a member that is a composition or a contract is not a concrete type")
-    func aCompositionIsNotAMember() async throws {
-        // Given
-        let sut = try Module(
-            constraints: ["A": [.int], "B": [.string], "Loop": [.composition(["A", "B"])]],
-            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("a member is a concrete type")
+            error is BuildError && "\(error)".contains("no document in this link says 'Int' answers it")
         }
     }
 
     @Test("a composition a declaration promises holds the answer to its bounds")
     func aPromisedCompositionIsJudgedAtTheBuild() async throws {
-        // Given. `A` admits int and string, `B` admits string alone, and the
-        // declaration promises what belongs to both while answering a whole number
+        // Given. Int answers `A`, String answers `A` and `B`, and the
+        // declaration promises what answers both while answering a whole number
         let sut = try Module(
-            constraints: ["A": [.int, .string], "B": [.string]],
+            contracts: Self.markers("A", "B"),
+            claims: ["Int": ["A"], "String": ["A", "B"]],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -297,15 +285,16 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("promises A & B")
+            error is BuildError && "\(error)".contains("hands 'Int' where 'B' is asked")
         }
     }
 
-    @Test("a name declared as a composition holds only what every bound admits")
+    @Test("a name declared as a composition holds only what answers every bound")
     func aDeclaredCompositionIsJudgedAtTheBuild() async throws {
         // Given
         let sut = try Module(
-            constraints: ["A": [.int, .string], "B": [.string]],
+            contracts: Self.markers("A", "B"),
+            claims: ["Int": ["A"], "String": ["A", "B"]],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -325,36 +314,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("holds A & B")
-        }
-    }
-
-    @Test("a value of a composition fits only a slot one of every membership's members fits")
-    func aCompositionValueIsHeldWhereItGoes() async throws {
-        // Given. `it` belongs to `A`, whose members are int and string, and is
-        // handed to a slot that takes bool
-        let sut = try Module(
-            constraints: ["A": [.int, .string]],
-            procedures: [
-                "flag": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "on", type: .bool)], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(parameters: [Parameter(name: "it", type: .composition(["A"]))], returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "flag", arguments: [reference("it")]))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("with on, which holds A where Bool is declared")
+            error is BuildError && "\(error)".contains("hands 'Int' where 'B' is asked")
         }
     }
 
@@ -377,33 +337,6 @@ struct ConstraintTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("answers { a: Int, b: String }, and its declaration promises")
-        }
-    }
-
-    @Test("a membership reaching a composition that names it back is asked once")
-    func aRingThroughACompositionEnds() async throws {
-        // Given. `A` admits a list of `X`, and `X` is what belongs to `A` and `B`
-        let sut = try Module(
-            types: ["X": .composition(["A", "B"])],
-            constraints: ["A": [.array(.named("X"))], "B": [.string]],
-            procedures: [
-                "keep": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .named("A"))], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(parameters: [Parameter(name: "it", type: .named("X"))], returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "keep", arguments: [reference("it")]))
-                )
-            ]
-        )
-
-        // When / Then. It builds, and the asking ends
-        await #expect(throws: Never.self) {
-            try await builder.build([sut] + Module.standard)
         }
     }
 
@@ -571,19 +504,18 @@ struct ConstraintTests {
         // Given. The contract's procedure bounds `T` by `A` in one slot and
         // by `B` in another, which is two claims about one name
         let sut = try Module(
-            constraints: ["A": [.int, .string], "B": [.string]],
-            contracts: [
+            contracts: Self.markers("A", "B").merging([
                 "App.Pairing": [
                     "pair": Signature(
                         parameters: [
                             Parameter(name: "of", type: .selfType),
-                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
-                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
+                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["A"])),
+                            Parameter(name: "right", type: .parameter(name: "T", bounds: ["B"]))
                         ],
                         returns: .int
                     )
                 ]
-            ],
+            ]) { held, _ in held },
             procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
         )
 
@@ -600,14 +532,14 @@ struct ConstraintTests {
         // Given. `T` is bound by `A`, `B` and `C` in three slots, so which
         // two the sentence names is fixed by name order and not by the walk
         let sut = try Module(
-            constraints: ["A": [.int], "B": [.string], "C": [.bool]],
+            contracts: Self.markers("A", "B", "C"),
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "x", type: .parameter(name: "T", constraints: ["C"])),
-                            Parameter(name: "y", type: .parameter(name: "T", constraints: ["B"])),
-                            Parameter(name: "z", type: .parameter(name: "T", constraints: ["A"]))
+                            Parameter(name: "x", type: .parameter(name: "T", bounds: ["C"])),
+                            Parameter(name: "y", type: .parameter(name: "T", bounds: ["B"])),
+                            Parameter(name: "z", type: .parameter(name: "T", bounds: ["A"]))
                         ],
                         returns: .int
                     ),
@@ -630,11 +562,11 @@ struct ConstraintTests {
     func aParameterNamesItsBoundsInOrder(bounds: [Name]) async throws {
         // Given. A signature assembled with `B & A`, which no reader writes
         let sut = try Module(
-            constraints: ["A": [.int, .string], "B": [.string]],
+            contracts: Self.markers("A", "B"),
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "left", type: .parameter(name: "T", constraints: bounds))],
+                        parameters: [Parameter(name: "left", type: .parameter(name: "T", bounds: bounds))],
                         returns: .int
                     ),
                     body: [],
@@ -652,17 +584,18 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a parameter bounded by two memberships takes only what both admit")
+    @Test("a parameter bounded by two contracts takes only what answers both")
     func twoBoundsOnOneParameterBothHold() async throws {
-        // Given. `A` admits int and string, `B` admits string alone, and `T`
-        // is bounded by both
+        // Given. Int answers `A`, String answers `A` and `B`, and `T` is
+        // bounded by both
         func module(handing argument: Value) throws -> Module {
             try Module(
-                constraints: ["A": [.int, .string], "B": [.string]],
+                contracts: Self.markers("A", "B"),
+                claims: ["Int": ["A"], "String": ["A", "B"]],
                 procedures: [
                     "keep": Procedure(
                         signature: Signature(
-                            parameters: [Parameter(name: "left", type: .parameter(name: "T", constraints: ["A", "B"]))],
+                            parameters: [Parameter(name: "left", type: .parameter(name: "T", bounds: ["A", "B"]))],
                             returns: .int
                         ),
                         body: [],
@@ -678,13 +611,13 @@ struct ConstraintTests {
             )
         }
 
-        // When / Then. A string is inside both; a whole number is outside `B`
+        // When / Then. A string answers both; a whole number does not answer `B`
         _ = try await builder.build([try module(handing: .string("x"))] + Module.standard)
 
         await #expect {
             try await builder.build([try module(handing: .int(1))] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("which 'B' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'Int' answers it")
         }
     }
 
@@ -693,12 +626,13 @@ struct ConstraintTests {
         // Given. A bounded `some T` in one slot and a bare one in another are
         // one parameter bounded once, so the bound judges both readings
         let sut = try Module(
-            constraints: ["Scalar": [.int, .string]],
+            contracts: Self.markers("Scalar"),
+            claims: ["Int": ["Scalar"], "String": ["Scalar"]],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["Scalar"])),
+                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["Scalar"])),
                             Parameter(name: "right", type: .parameter(name: "T"))
                         ]
                     ),
@@ -718,56 +652,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Scalar' does not admit")
-        }
-    }
-
-    @Test("a name cannot be a type and a constraint at once")
-    func aNameDeclaredAsTypeAndConstraintRefuses() async throws {
-        // Given
-        let sut = try Module(
-            types: ["Scalar": .int],
-            constraints: ["Scalar": [.int, .string]],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError
-                && "\(error)".contains("both a type and a constraint")
-        }
-    }
-
-    @Test("a constraint admitting nothing refuses at the build")
-    func anEmptyConstraintRefusesAtTheBuild() async throws {
-        // Given. No parameter it bounds could ever be filled, which is the same
-        // fact an empty enum states
-        let sut = try Module(
-            constraints: ["Nothing": []],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("no document in this link says 'Double' answers it")
         }
     }
 
@@ -776,7 +661,7 @@ struct ConstraintTests {
         // Given. A declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
         let sut = try Module(
-            types: ["Weird": .parameter(name: "T", constraints: ["Sortable"])],
+            types: ["Weird": .parameter(name: "T", bounds: ["Sortable"])],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
@@ -810,10 +695,10 @@ struct ConstraintTests {
         let sut = try Module(
             types: [
                 "Callback": .procedure(ProcedureType(
-                    parameters: [.parameter(name: "T", constraints: ["Scalar"])]
+                    parameters: [.parameter(name: "T", bounds: ["Scalar"])]
                 ))
             ],
-            constraints: ["Scalar": [.int, .string]],
+            contracts: Self.markers("Scalar"),
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -880,57 +765,6 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a constraint member is a concrete type", arguments: [
-        TypeExpression.parameter(name: "S", constraints: ["Loop"]), .any, .never
-    ])
-    func aConstraintMemberMustBeConcrete(member: TypeExpression) async throws {
-        // Given. `some` in member position stands for a type and names none;
-        // admitting it would also let a membership chase itself forever
-        let sut = try Module(
-            constraints: ["Loop": [member]],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("a member is a concrete type")
-        }
-    }
-
-    @Test("a member hiding a refused type behind a name still refuses")
-    func aMemberBehindANameIsJudgedResolved() async throws {
-        // Given. An alias is a name for a type, so what the type may not be
-        // the alias may not be either
-        let sut = try Module(
-            types: ["Anything": .any],
-            constraints: ["Loose": [.named("Anything")]],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("a member is a concrete type")
-        }
-    }
-
     @Test("a closure's signature is held to the same judgment as a declaration")
     func aClosureSignatureIsJudgedAtTheBuild() async throws {
         // Given. Unreached code still has to compile, and a signature written
@@ -944,7 +778,7 @@ struct ConstraintTests {
                         Statement(binding: .constant("kept"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        Parameter(name: "it", type: .parameter(name: "T", constraints: ["Nope"]))
+                                        Parameter(name: "it", type: .parameter(name: "T", bounds: ["Nope"]))
                                     ]
                                 ),
                                 body: [],
@@ -965,18 +799,17 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a constrained reading fed to a looser bound passes")
-    func aConstrainedReadingFitsALooserBound() async throws {
+    @Test("a bounded reading fed to the bound it carries passes")
+    func aBoundedReadingFitsItsOwnBound() async throws {
         // Given. Inside a generic body the argument reads as the enclosing
-        // parameter, and its membership is a subset of what the callee asks
+        // parameter, and its bound is what the callee asks
         let sut = try Module(
-            constraints: ["Exact": [.int]],
             procedures: [
                 "smallest": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["Exact"])),
-                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["Exact"]))
+                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["Standard.Comparable"])),
+                            Parameter(name: "right", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))
                         ],
                         returns: .bool
                     ),
@@ -1001,7 +834,7 @@ struct ConstraintTests {
         }
     }
 
-    @Test("sorting what Comparable does not admit refuses at the build")
+    @Test("sorting what does not answer Comparable refuses at the build")
     func sortingTheUnorderableRefuses() async throws {
         // Given. `sorted` is bounded by `Standard.Comparable`, and
         // booleans are a reading the build can see
@@ -1030,7 +863,7 @@ struct ConstraintTests {
     @Test("min handed null first is held to the parameter it declares first")
     func minHandedNullIsHeldToItsFirstParameter() async throws {
         // Given. The first argument is a reference that reads null. Null is a
-        // value, and `some T: Comparable` does not admit one, so the boundary
+        // value, and no value of `some T: Comparable` is one, so the boundary
         // refuses before the ordering procedure is asked anything
         let sut = try Module(
             procedures: [
@@ -1055,4 +888,9 @@ struct ConstraintTests {
 
     // MARK: - Public
     // MARK: - Private
+    // Contracts asking nothing, which a test bounds by where what answers
+    // them is what the claims say and nothing else.
+    private static func markers(_ names: Name...) -> [Name: [Name: Signature]] {
+        Dictionary(uniqueKeysWithValues: names.map { name in (name, [Name: Signature]()) })
+    }
 }
