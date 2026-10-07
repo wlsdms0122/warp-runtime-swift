@@ -79,15 +79,15 @@ struct TypeWriter {
     // What a type is written as, before the reading is asked about it.
     private func form(of type: TypeExpression) throws -> Value {
         switch type {
-        case .any: return .string("any")
-        case .never: return .string("never")
-        case .null: return .string("null")
-        case .bool: return .string("bool")
-        case .int: return .string("int")
-        case .double: return .string("double")
-        case .string: return .string("string")
+        case .any: return .string("Any")
+        case .never: return .string("Never")
+        case .null: return .string("Null")
+        case .bool: return .string("Bool")
+        case .int: return .string("Int")
+        case .double: return .string("Double")
+        case .string: return .string("String")
 
-        // The range rides in the name's spelling (`int(0...255)`) the way the
+        // The range rides in the name's spelling (`Int(0...255)`) the way the
         // reader takes it in. A bound with no spelling has nothing to ride in:
         // the language admits an infinity, because it orders like any other
         // bound, and a document that carried the words a message shows it in
@@ -183,9 +183,9 @@ struct TypeWriter {
             return try value(of: inner, under: .borrowing)
 
         case let .procedure(type, constness, isolation):
-            let spelling = TypeReader.procedureSpelling(constness, isolation)
+            guard let type else { return .string(TypeReader.procedureSpelling(constness, isolation, as: .name)) }
 
-            guard let type else { return .string(spelling) }
+            let spelling = TypeReader.procedureSpelling(constness, isolation, as: .key)
 
             // No bound check of its own: a procedure type written as a type has
             // no `bounds` surface, and the `.parameter` case refuses any bound
@@ -234,7 +234,7 @@ struct TypeWriter {
             return .dictionary([Name(normal: holding.rawValue): try value(of: element)])
         }
 
-        return .string("\(holding.rawValue)<\(spelling)>")
+        return .string("\(holding.spelling)<\(spelling)>")
     }
 
     // A marked slot is written with the mark in front of the inner type,

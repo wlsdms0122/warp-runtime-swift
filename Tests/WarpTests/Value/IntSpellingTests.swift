@@ -17,7 +17,7 @@ struct IntSpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a fraction reads as the int it is, and misses by the fact it is")
+    @Test("a fraction reads as the Int it is, and misses by the fact it is")
     func readingNamesTheFact() {
         // When / Then
         #expect({ if case .int(42) = IntNarrowing(42.0) { true } else { false } }())

@@ -31,13 +31,13 @@ warpt 1
       parameters [
         {
           name "value"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "held"
       }
-      returns "int"
+      returns "Int"
     }
     entry {
       access "public"
@@ -83,13 +83,13 @@ warpt 1
       parameters [
         {
           name "rounds"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "seen"
       }
-      returns "int"
+      returns "Int"
     }
   }
   warp 1

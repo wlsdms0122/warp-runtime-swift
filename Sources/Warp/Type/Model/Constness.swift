@@ -14,7 +14,7 @@ import Foundation
 // its argument inside a condition or a path needs an argument that can be run
 // there, and `procedure` alone does not say so.
 public enum Constness: Sendable, Equatable {
-    // No claim. Either kind fits, the way `any` fits any value.
+    // No claim. Either kind fits, the way `Any` fits any value.
     case unstated
 
     // Must answer without running. What stands here may be asked wherever a

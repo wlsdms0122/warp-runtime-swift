@@ -19,7 +19,7 @@ enum LiteralShape: Sendable {
     // MARK: - Property
     // The literal as one type, for a slot that judges it whole and for a
     // call filling a type parameter from it. An empty list holds no element,
-    // so it is a list of `never`, and the parts beside each other join part
+    // so it is a list of `Never`, and the parts beside each other join part
     // by part. An attempt's two ways join as two readings of one slot do.
     var folded: LoweredType {
         switch self {

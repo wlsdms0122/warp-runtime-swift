@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpTestSupport
 
-// A statement typed `never` does not finish, so it binds nothing and nothing
+// A statement typed `Never` does not finish, so it binds nothing and nothing
 // after it runs. The syntactic leaves are refused where they are read; a call
 // is the build's to refuse, because only the build knows what the procedure declares.
 @Suite("What never finishes binds nothing")
@@ -181,7 +181,7 @@ struct NeverTests {
         await #expect {
             try await Builder().build([refusing] + Module.standard)
         } throws: { error in
-            "\(error)".contains("holds string")
+            "\(error)".contains("holds String")
         }
     }
 
@@ -262,7 +262,7 @@ struct NeverTests {
     func aNeverBodiedLoopStillReadsAsItsResult() async throws {
         // Given. The result reads in what the entry left, and the reading says
         // so: `kept` holds the result's string, and a slot that declared int
-        // refuses it by that reading rather than by `never`
+        // refuses it by that reading rather than by `Never`
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
@@ -294,7 +294,7 @@ struct NeverTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("holds string")
+            "\(error)".contains("holds String")
         }
     }
 

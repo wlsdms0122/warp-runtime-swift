@@ -112,7 +112,7 @@ struct IndexReferenceJudgmentTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("expected int")
+            error is BuildError && "\(error)".contains("expected Int")
         }
     }
 

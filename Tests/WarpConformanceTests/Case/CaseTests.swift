@@ -99,10 +99,10 @@ struct CaseTests {
                     parameters [
                       {
                         name "it"
-                        type "int"
+                        type "Int"
                       }
                     ]
-                    returns "int"
+                    returns "Int"
                   }
                 }
               }

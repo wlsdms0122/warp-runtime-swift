@@ -74,13 +74,13 @@ warpt 1
       parameters [
         {
           name "rounds"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "held"
       }
-      returns "dictionary<int>"
+      returns "Dictionary<Int>"
     }
   }
   warp 1

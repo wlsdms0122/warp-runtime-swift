@@ -20,7 +20,7 @@ import Foundation
 // spelling, which is why a reader and a host may write one. A slot that
 // declares a type proves it: a value arriving there under another name is
 // refused. A slot that declares nothing proves nothing, so a name travelling
-// through `any` is the spelling it was written as.
+// through `Any` is the spelling it was written as.
 public struct Layout: Sendable, Hashable {
     // MARK: - Property
     public let name: Name?

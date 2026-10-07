@@ -100,7 +100,7 @@ struct IsolationTests {
             try await run([sut, .ticketing])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("right: const procedure<() -> any> }, which 'Standard.Concurrent.Pieces' does not admit")
+                && "\(error)".contains("right: const Procedure<() -> Any> }, which 'Standard.Concurrent.Pieces' does not admit")
         }
     }
 

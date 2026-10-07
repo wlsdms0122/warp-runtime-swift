@@ -62,7 +62,7 @@ struct NotationTests {
             "imports": ["Standard.Logic.equal"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "word", "type": "string"]],
+                    "parameters": [["name": "word", "type": "String"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -97,7 +97,7 @@ struct NotationTests {
         // notation's keys never was a condition type, which is what keeps the
         // spellings optional wherever a condition is asked for.
         let sut = try Loader.testing.loadProcedure([
-            "parameters": [["name": "ready", "type": "bool"]],
+            "parameters": [["name": "ready", "type": "Bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -206,7 +206,7 @@ struct NotationTests {
                 "imports": ["Standard.Text.joined", "Standard.Text.text"],
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "word", "type": "string"]],
+                        "parameters": [["name": "word", "type": "String"]],
                         "body": [
                             [
                                 "let": "line",
@@ -226,7 +226,7 @@ struct NotationTests {
         // Given / When. Which procedures a template lowers to is the notation's
         // answer, and the reader carries none of its own
         let sut = try Loader.testing.loadProcedure([
-            "parameters": [["name": "word", "type": "string"]],
+            "parameters": [["name": "word", "type": "String"]],
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
             ]
@@ -253,11 +253,11 @@ struct NotationTests {
         // written inside the cast, so the same document is a cast in every
         // notation rather than a send in some.
         let written: Value = [
-            "parameters": [["name": "flag", "type": "any"]],
+            "parameters": [["name": "flag", "type": "Any"]],
             "body": [
                 [
                     "value": ["conditional": [
-                        "when": ["as": ["of": ["ref": "flag"], "type": "bool"]],
+                        "when": ["as": ["of": ["ref": "flag"], "type": "Bool"]],
                         "then": [["let": "kept", "value": "yes"]]
                     ]
                 ]]
@@ -291,7 +291,7 @@ struct NotationTests {
                 "imports": [],
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "word", "type": "string"]],
+                        "parameters": [["name": "word", "type": "String"]],
                         "body": [
                             ["let": "asked", "value": asked]
                         ],

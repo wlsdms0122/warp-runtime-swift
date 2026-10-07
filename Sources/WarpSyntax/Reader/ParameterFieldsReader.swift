@@ -20,7 +20,7 @@ struct ParameterFieldsReader: Decodable {
 
     // MARK: - Property
     // Omitting `type:` declares nothing, which is not the same as declaring
-    // `any`. Both take whatever arrives; only one of them says so.
+    // `Any`. Both take whatever arrives; only one of them says so.
     let type: TypeExpression?
     let candidates: [String]?
     let description: String?

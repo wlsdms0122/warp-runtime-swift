@@ -25,7 +25,7 @@ struct VariableNotationTests {
         // Given. The one thing a binding cannot do: a conditional that ran changes
         // what an enclosing name means afterwards
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "kind", "type": "string"]],
+            "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
@@ -49,7 +49,7 @@ struct VariableNotationTests {
     func untakenBranchLeavesVariableAlone() async throws {
         // Given
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "kind", "type": "string"]],
+            "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
@@ -198,7 +198,7 @@ struct VariableNotationTests {
                 ]],
                 [
                     "let": "read",
-                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "int"]]]]
+                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "Int"]]]]
                 ]
             ],
             "result": ["record": ["result": ["ref": "read.left"]]]

@@ -96,7 +96,7 @@ struct LoweredTypeTests {
         // Then
         #expect(substitution.readings["T"] == .int)
         #expect(substitution.disagreeing["T"] == .string)
-        #expect(Set(substitution.everyReading(of: "T").map { reading in reading.rendered(in: table) }) == ["int", "string", "bool"])
+        #expect(Set(substitution.everyReading(of: "T").map { reading in reading.rendered(in: table) }) == ["Int", "String", "Bool"])
     }
 
     @Test("a parameter no call fills stands where a slot takes it by its structure, and nowhere else")
@@ -167,7 +167,7 @@ struct LoweredTypeTests {
         #expect(table.recordRows[byte] == nil)
     }
 
-    @Test("a projection lowers to itself, and every judgment answers it as any")
+    @Test("a projection lowers to itself, and every judgment answers it as Any")
     func aProjectionLowersToItself() throws {
         // Given
         let table = types.loweredTypes

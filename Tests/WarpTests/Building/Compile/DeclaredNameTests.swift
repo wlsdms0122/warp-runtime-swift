@@ -37,7 +37,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("holds int, and what it was given is string")
+            "\(error)".contains("holds Int, and what it was given is String")
         }
     }
 
@@ -122,7 +122,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("writes 'held' as string, and it holds int")
+            "\(error)".contains("writes 'held' as String, and it holds Int")
         }
     }
 
@@ -235,7 +235,7 @@ struct DeclaredNameTests {
         }
 
         // Then
-        #expect(refusal?.message == "holds int, and what it was given is int or string")
+        #expect(refusal?.message == "holds Int, and what it was given is Int or String")
     }
 
     @Test("an attempt inside a list literal writes each way into the element on its own")
@@ -274,7 +274,7 @@ struct DeclaredNameTests {
         }
 
         // Then
-        #expect(refusal?.message == "holds array<int>, and what it was given is [int or string]")
+        #expect(refusal?.message == "holds Array<Int>, and what it was given is [Int or String]")
     }
 
     @Test("a name declaring a type parameter is refused, because no call fills a name")
@@ -405,7 +405,7 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated procedure<(int) -> int> where inout procedure<(int) -> int> is declared")
+                && "\(error)".contains("which holds const isolated Procedure<(Int) -> Int> where inout Procedure<(Int) -> Int> is declared")
         }
     }
 

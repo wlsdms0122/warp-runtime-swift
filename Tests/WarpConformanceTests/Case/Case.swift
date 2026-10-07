@@ -288,7 +288,7 @@ struct Case: Sendable, CustomStringConvertible {
         let answers: Value
 
         // Whether it reaches outside the run. One that does not is what a
-        // constant may settle from, what a `const procedure` slot takes, and
+        // constant may settle from, what a `const Procedure` slot takes, and
         // what an operand may call.
         let runs: Bool
 
@@ -428,7 +428,7 @@ struct Case: Sendable, CustomStringConvertible {
             self.asked = try Self.encoded(.text(Data(bytes)), expecting: held, expected, in: written)
 
         case (nil, nil, .some, nil):
-            throw ConformanceError("the text a case asks about is written as a string, or as bytes")
+            throw ConformanceError("the text a case asks about is written as a String, or as bytes")
 
         // An object leans on what is written inside it, so it asks the runner
         // to bring nothing and lay nothing beside it.
@@ -688,7 +688,7 @@ struct Case: Sendable, CustomStringConvertible {
         case nil: return absent
         case let .bool(flag)?: return flag
         case let other?:
-            throw ConformanceError("'\(procedure)' writes `\(key)` as \(other), and it is a bool or is not written")
+            throw ConformanceError("'\(procedure)' writes `\(key)` as \(other), and it is a Bool or is not written")
         }
     }
 

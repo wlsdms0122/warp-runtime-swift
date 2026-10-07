@@ -44,7 +44,7 @@ struct ConditionTests {
             )
 
             guard case let .bool(answer) = try await Executor().run(image, arguments: bindings) else {
-                throw ReadingError("a condition must answer bool")
+                throw ReadingError("a condition must answer Bool")
             }
 
             return answer
@@ -104,7 +104,7 @@ struct ConditionTests {
         ))
     }
 
-    @Test("numeric equality crosses int and double")
+    @Test("numeric equality crosses Int and Double")
     func numericEqualityCrossesIntAndDouble() async throws {
         // Given
         let sut = Scope(scope)
@@ -184,7 +184,7 @@ struct ConditionTests {
     func doubleOperatorKeysRejected() {
         // Given
         let fixture: Value = [
-            "parameters": [["name": "k", "type": "string"]],
+            "parameters": [["name": "k", "type": "String"]],
             "body": [
                 [
                     "value": ["conditional": [

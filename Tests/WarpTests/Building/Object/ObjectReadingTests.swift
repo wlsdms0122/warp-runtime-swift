@@ -728,7 +728,7 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where the numbers behind the spellings run past what an int holds")
+    @Test("is refused where the numbers behind the spellings run past what an Int holds")
     func closureNumbersPastAnInt() async throws {
         // Given. Two declarations whose counts add up to exactly what an int
         // holds. The sum stands, and the number the second closure takes is
@@ -769,7 +769,7 @@ struct ObjectReadingTests {
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
-            error is ObjectRefused && "\(error)".contains("a numbering gives numbers past what an int holds")
+            error is ObjectRefused && "\(error)".contains("a numbering gives numbers past what an Int holds")
         }
     }
 
@@ -817,7 +817,7 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where the closure counts add up past what an int holds")
+    @Test("is refused where the closure counts add up past what an Int holds")
     func closureCountsPastAnInt() async throws {
         // Given. Two declarations, each counted for as many closures as an int
         // holds. Neither count is a number on its own, and their sum is the
@@ -858,7 +858,7 @@ struct ObjectReadingTests {
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
-            error is ObjectRefused && "\(error)".contains("a numbering gives numbers past what an int holds")
+            error is ObjectRefused && "\(error)".contains("a numbering gives numbers past what an Int holds")
         }
     }
 

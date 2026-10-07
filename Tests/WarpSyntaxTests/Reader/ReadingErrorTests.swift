@@ -372,7 +372,7 @@ struct ReadingErrorTests {
 
     @Test("a refusal about one key stands on that key", arguments: [
         (["access": "open"], "procedures.entry.access"),
-        (["bounds": ["T": "array<int>"], "parameters": [["name": "x", "type": "some T"]]], "procedures.entry.bounds.T"),
+        (["bounds": ["T": "Array<Int>"], "parameters": [["name": "x", "type": "some T"]]], "procedures.entry.bounds.T"),
         (["bounds": ["U": "Standard.Numeric"]], "procedures.entry.bounds"),
         (["result": ["ref": 5]], "procedures.entry.result.ref"),
         (["result": ["ref": "a[0"]], "procedures.entry.result.ref")

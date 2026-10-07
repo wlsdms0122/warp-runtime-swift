@@ -49,7 +49,7 @@ struct DictionaryProcedureTests {
 
     @Test("a procedure that counts fields counts either spelling")
     func countingReadsEitherSpelling() async throws {
-        // Given. The declaration answers `int`, so neither spelling may answer
+        // Given. The declaration answers `Int`, so neither spelling may answer
         // absence
         let held = Question<CountQuery>(arguments: ["collection": .dictionary(["a": .int(1), "b": .int(2)])])
         let laid = Question<CountQuery>(arguments: ["collection": .record(Record(name: "App.Point", ["a": .int(1)]))])

@@ -41,7 +41,7 @@ struct EncodedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("Standard.Text.encoded asks a string")
+            throw ExecutionError("Standard.Text.encoded asks a String")
         }
 
         guard

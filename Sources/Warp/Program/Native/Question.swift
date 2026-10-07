@@ -84,7 +84,7 @@ public struct Question<P: NativeProcedure>: Sendable {
 
     // Calling a closure this procedure was handed as a value. What may be
     // handed is what the build proved answers without running, which a
-    // procedure states by declaring the parameter `const procedure`. The
+    // procedure states by declaring the parameter `const Procedure`. The
     // arguments are handed by position, the way every call hands them.
     public func call(_ closure: Closure, handing arguments: [Value] = []) async throws -> Value {
         guard case let .settled(_, _, evaluator) = self.arguments else {

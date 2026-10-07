@@ -18,7 +18,7 @@ public extension Module {
                 description: "The shared ground: what counts as a number, what orders, and what has a count.",
                 types: [
                     // One element of bytes. A whole number a range refines, not a kind
-                    // of its own. Declared here so `bytes` and `array<byte>` can say
+                    // of its own. Declared here so `bytes` and `Array<Standard.Byte>` can say
                     // they are the same thing in one vocabulary.
                     "Standard.Byte": .byteElement
                 ],

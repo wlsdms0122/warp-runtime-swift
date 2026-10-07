@@ -134,7 +134,7 @@ struct CollectionTests {
 
     @Test("a walk refuses a procedure that reaches outside")
     func aWalkRefusesAProcedureThatRuns() async throws {
-        // Given. `map` declares `const procedure`, so a body that shouts is
+        // Given. `map` declares `const Procedure`, so a body that shouts is
         // refused at the build
         let loud = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .string)]),

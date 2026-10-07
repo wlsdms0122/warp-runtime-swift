@@ -15,7 +15,7 @@ import Warp
 // Ints stay ints, so `2 plus 2` answers 4 rather than 4.0. Division is the
 // exception, because a quotient is not generally whole.
 //
-// `int` is 64 bits, so a whole answer can fall off its edge. That is a
+// `Int` is 64 bits, so a whole answer can fall off its edge. That is a
 // fault of the program, not a condition of its data: an overflow and a divisor
 // of zero stop the run the way an index past the end does, without the
 // recoverable marker an `attempt` reads.
@@ -109,7 +109,7 @@ struct Arithmetic: Sendable {
 
         guard !answered.overflow else {
             throw ExecutionError(
-                "\(procedure) of \(left) and \(right) overflows int"
+                "\(procedure) of \(left) and \(right) overflows Int"
             )
         }
 

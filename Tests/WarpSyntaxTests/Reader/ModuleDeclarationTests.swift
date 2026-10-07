@@ -187,12 +187,12 @@ struct ModuleDeclarationTests {
         // neither
         let sut = try loader.loadDocument([
             "types": [
-                "Bank.Account": ["record": ["balance": "int"]],
-                "Bank.Card": ["record": ["last": "string"]]
+                "Bank.Account": ["record": ["balance": "Int"]],
+                "Bank.Card": ["record": ["last": "String"]]
             ],
             "contracts": [
                 "App.Describable": [
-                    "describe": ["parameters": [["name": "of", "type": "App.Describable"]], "returns": "string"]
+                    "describe": ["parameters": [["name": "of", "type": "App.Describable"]], "returns": "String"]
                 ]
             ],
             "satisfies": [
@@ -212,17 +212,17 @@ struct ModuleDeclarationTests {
                 "App.tell": [
                     "parameters": [["name": "it", "type": "some T"]],
                     "bounds": ["T": "App.Describable"],
-                    "returns": "string",
+                    "returns": "String",
                     "result": ["call": ["procedure": "App.Describable.describe", "arguments": [["ref": "it"]]]]
                 ],
                 "Bank.Account.describe": [
                     "parameters": [["name": "of", "type": "Bank.Account"]],
-                    "returns": "string",
+                    "returns": "String",
                     "result": "an account"
                 ],
                 "Bank.Card.describe": [
                     "parameters": [["name": "of", "type": "Bank.Card"]],
-                    "returns": "string",
+                    "returns": "String",
                     "result": "a card"
                 ]
             ]

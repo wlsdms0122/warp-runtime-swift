@@ -155,10 +155,10 @@ struct TypeTests {
     @Test("a type reads back in the spelling it was declared with")
     func typesRenderAsWritten() {
         // When / Then
-        #expect(TypeExpression.array(.string).rendered == "array<string>")
-        #expect(TypeExpression.dictionary(.named("Task")).rendered == "dictionary<Task>")
-        #expect(TypeExpression.array(.array(.int)).rendered == "array<array<int>>")
-        #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: string, b: int }")
+        #expect(TypeExpression.array(.string).rendered == "Array<String>")
+        #expect(TypeExpression.dictionary(.named("Task")).rendered == "Dictionary<Task>")
+        #expect(TypeExpression.array(.array(.int)).rendered == "Array<Array<Int>>")
+        #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: String, b: Int }")
     }
 
     @Test("a call handed to a parameter it cannot fit is refused at the build")
@@ -190,7 +190,7 @@ struct TypeTests {
             )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds Int where String is declared")
         }
     }
 
@@ -219,7 +219,7 @@ struct TypeTests {
                 [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])]
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("holds int where string is declared")
+            error is BuildError && "\(error)".contains("holds Int where String is declared")
         }
 
         // And a body whose answer nothing can be read from says nothing. An
@@ -265,7 +265,7 @@ struct TypeTests {
         #expect {
             try declared.settling(.string("x"), at: "limit")
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("expected int, got string")
+            error is ArgumentError && "\(error)".contains("expected Int, got String")
         }
     }
 
@@ -284,8 +284,8 @@ struct TypeTests {
     @Test("a nullable type spells itself in refusals")
     func aNullableRenders() {
         // When / Then
-        #expect(TypeExpression.nullable(.int).rendered == "int?")
-        #expect(TypeExpression.nullable(.array(.string)).rendered == "array<string>?")
+        #expect(TypeExpression.nullable(.int).rendered == "Int?")
+        #expect(TypeExpression.nullable(.array(.string)).rendered == "Array<String>?")
     }
 
     @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")

@@ -13,7 +13,7 @@ import WarpTestSupport
 
 // What a declaration answers when nobody wrote it down. The body is read, in
 // the call graph's order, and where the reading would have to come from itself
-// it says `any`.
+// it says `Any`.
 @Suite("An answer nobody wrote is read off the body")
 struct AnsweringTests {
     // MARK: - Property
@@ -78,7 +78,7 @@ struct AnsweringTests {
         // Given. A body whose result answers a record, with and without an
         // early `return` carrying a string. A body hands its caller either way
         // out, so the second answers what holds both, and a dot on that is
-        // refused the way a dot on `any` is. Reading the result alone would
+        // refused the way a dot on `Any` is. Reading the result alone would
         // have called both a record and let both dots stand.
         func module(leaving early: Bool) throws -> Module {
             try Module(
@@ -159,7 +159,7 @@ struct AnsweringTests {
 
     @Test("a dot on an answer that would come from itself refuses, and stands once the cycle is broken")
     func aDotOnACycleAnswerRefuses() async throws {
-        // Given. `any` is what saying nothing looks like at a call site. With
+        // Given. `Any` is what saying nothing looks like at a call site. With
         // the cycle broken, the same dot reads the record `pong` answers
         func reading(cycling: Bool) throws -> Module {
             try Module(
@@ -186,7 +186,7 @@ struct AnsweringTests {
         await #expect {
             try await builder.build([reading(cycling: true)] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("said.total reads a dot on any, which declares nothing")
+            error is BuildError && "\(error)".contains("said.total reads a dot on Any, which declares nothing")
         }
 
         _ = try await builder.build([reading(cycling: false)] + Module.standard)
@@ -241,7 +241,7 @@ struct AnsweringTests {
         }
 
         // And a field of it: a name only `peek` could read, which no call
-        // fills, so the caller reads `any` and the dot is refused
+        // fills, so the caller reads `Any` and the dot is refused
         await #expect {
             try await builder.build(
                 [module(
@@ -279,7 +279,7 @@ struct AnsweringTests {
         // whose body answers what that same call answers. An answer worked out
         // from its own is not one the text states, so nothing is known about it
         // and nothing is refused. That is the bound on the promise: inference
-        // answers where the text settles and `any` everywhere else.
+        // answers where the text settles and `Any` everywhere else.
         let sut = try Module(
             procedures: [
                 "callee": Procedure(
@@ -345,7 +345,7 @@ struct AnsweringTests {
         await #expect {
             try await builder.build([sut])
         } throws: { error in
-            error is BuildError && "\(error)".contains("holds null where int is declared")
+            error is BuildError && "\(error)".contains("holds Null where Int is declared")
         }
     }
 

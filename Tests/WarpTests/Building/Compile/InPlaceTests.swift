@@ -159,7 +159,7 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("writes 'seen' as string, and it holds dictionary<int>")
+            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<Int>")
         }
     }
 
@@ -177,7 +177,7 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("starts as string, and declares int")
+            error is BuildError && "\(error)".contains("starts as String, and declares Int")
         }
     }
 
@@ -672,7 +672,7 @@ struct InPlaceTests {
 
     @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
     func aRefusedLiteralIsNamedPartByPart() async throws {
-        // Given. `App.g` writes its own `some T` beside a value read as `any`, and a record of an empty list beside one of `any`, into lists it was handed in place
+        // Given. `App.g` writes its own `some T` beside a value read as `Any`, and a record of an empty list beside one of `Any`, into lists it was handed in place
         let generic = TypeExpression.parameter(name: "T")
         let list = try Module(
             procedures: [
@@ -728,8 +728,8 @@ struct InPlaceTests {
         }
 
         // Then
-        #expect(listRefusal?.message == "writes 'xs' as [some T, any], and it holds array<some T>")
-        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: array<any> }], and it holds array<dictionary<array<some T>>>")
+        #expect(listRefusal?.message == "writes 'xs' as [some T, Any], and it holds Array<some T>")
+        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: Array<Any> }], and it holds Array<Dictionary<Array<some T>>>")
     }
 
     // MARK: - Public

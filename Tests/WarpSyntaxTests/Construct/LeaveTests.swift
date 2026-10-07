@@ -33,8 +33,8 @@ struct LeaveTests {
     func returningAnswers() async throws {
         // Given
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "word", "type": "string"]],
-            "returns": "string",
+            "parameters": [["name": "word", "type": "String"]],
+            "returns": "String",
             "body": [
                 ["var": "early", "value": "kept going"],
                 [
@@ -99,7 +99,7 @@ struct LeaveTests {
         // Given. A round cut short wrote nothing further outward, which is what
         // skipping it means. So only the rounds that finished are seen.
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "names", "type": "array<string>"]],
+            "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 ["var": "seen", "value": ""],
                 [
@@ -198,13 +198,13 @@ struct LeaveTests {
         // successful early exit had to travel as a failure and could not be
         // told apart from one.
         let sut = try loader.loadProcedure([
-            "returns": "string",
+            "returns": "String",
             "body": [
                 [
                     "let": "tried",
                     "value": ["attempt": [
                         "body": [
-                            ["let": "checked", "value": ["as": ["of": 0, "type": "int(0...255)"]]],
+                            ["let": "checked", "value": ["as": ["of": 0, "type": "Int(0...255)"]]],
                             ["value": ["return": "left from inside"]]
                         ],
                         "rescue": ["result": "the rescue ran"]
@@ -254,7 +254,7 @@ struct LeaveTests {
         // *written* are not around where it runs.
         #expect {
             try loader.loadProcedure([
-                "parameters": [["name": "names", "type": "array<string>"]],
+                "parameters": [["name": "names", "type": "Array<String>"]],
                 "body": [
                     [
                         "let": "walked",
@@ -269,7 +269,7 @@ struct LeaveTests {
                                             ["ref": "names"],
                                             [
                                                 "closure": [
-                                                    "parameters": [["name": "item", "type": "string"]],
+                                                    "parameters": [["name": "item", "type": "String"]],
                                                     "body": [["value": ["break": Value.null]]]
                                                 ]
                                             ]
@@ -296,7 +296,7 @@ struct LeaveTests {
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "returns": "string",
+                    "returns": "String",
                     "body": [
                         ["let": "said", "value": ["call": ["procedure": "helper"]]],
                         [
@@ -304,7 +304,7 @@ struct LeaveTests {
                             "value": ["call": [
                                 "procedure": [
                                     "closure": [
-                                        "returns": "string",
+                                        "returns": "String",
                                         "body": [["value": ["return": "from the closure"]]]
                                     ]
                                 ]
@@ -314,7 +314,7 @@ struct LeaveTests {
                     "result": "the outer answer"
                 ],
                 "helper": [
-                    "returns": "string",
+                    "returns": "String",
                     "body": [["value": ["return": "from the procedure"]]]
                 ]
             ]
@@ -346,7 +346,7 @@ struct LeaveTests {
                     ],
                     "result": ["ref": "used"]
                 ],
-                "wants": ["parameters": [["name": "it", "type": "int"]], "returns": "int", "result": ["ref": "it"]]
+                "wants": ["parameters": [["name": "it", "type": "Int"]], "returns": "Int", "result": ["ref": "it"]]
             ]
         ]
 
@@ -356,7 +356,7 @@ struct LeaveTests {
                 [try loader.loadDocument(sut)] + Module.standard
             )
         } throws: { error in
-            "\(error)".contains("holds null where int is declared")
+            "\(error)".contains("holds Null where Int is declared")
         }
     }
 
@@ -377,7 +377,7 @@ struct LeaveTests {
                                 "let": "tried",
                                 "value": ["attempt": [
                                     "body": [
-                                        ["let": "checked", "value": ["as": ["of": 0, "type": "int(0...255)"]]],
+                                        ["let": "checked", "value": ["as": ["of": 0, "type": "Int(0...255)"]]],
                                         [
                                             "set": "seen",
                                             "value": ["call": [
@@ -441,7 +441,7 @@ struct LeaveTests {
         // same way a trailing statement is
         #expect {
             try loader.loadProcedure([
-                "returns": "int",
+                "returns": "Int",
                 "body": [["value": ["block": [
                     "body": [["value": ["return": 1]]],
                     "result": 2
@@ -462,7 +462,7 @@ struct LeaveTests {
         // author meant.
         #expect {
             try loader.loadProcedure([
-                "returns": "string",
+                "returns": "String",
                 "body": [
                     ["value": ["return": "here"]],
                     ["let": "unreachable", "value": "never"]
@@ -477,7 +477,7 @@ struct LeaveTests {
     func leavingDoesNotWidenALoop() throws {
         // Given. `break` carries nothing on purpose. Were it to carry a value,
         // a loop's type would be the join of its result and every break in it,
-        // and a loop over strings broken with an int would answer `any`.
+        // and a loop over strings broken with an int would answer `Any`.
         let sut: Value = [
             "body": [
                 [

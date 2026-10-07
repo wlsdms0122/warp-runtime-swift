@@ -57,7 +57,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // The root is the type parameter's spelling and the path is what was
     // walked from it, so two walks landing on one field land on one type.
     // Nothing is proven about what it holds, so every judgment answers it the
-    // way it answers `any`; it stands apart for the walk's own naming.
+    // way it answers `Any`; it stands apart for the walk's own naming.
     case projection(of: Name, path: Path)
 
     // A name the table does not answer, and why. Nothing can be said about
@@ -251,7 +251,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // What a judgment sees. A projection says a path was taken through a type
     // the call decides, which proves nothing about what it holds, and that is
-    // what `any` says.
+    // what `Any` says.
     var judged: LoweredType {
         if case .projection = self { return .any }
 
@@ -394,7 +394,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What every one of these readings joins to, and `any` where there are
+    // What every one of these readings joins to, and `Any` where there are
     // none.
     private init(joining readings: [LoweredType]) {
         self = readings.dropFirst().reduce(readings.first ?? .any) { joined, next in joined.joined(next) }
@@ -426,7 +426,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Where a field stands in this type, and what stands there. Nil where
     // the build did not prove a layout: a dictionary, a value that arrived
-    // through `any`, or a type a call still decides. A box is read through,
+    // through `Any`, or a type a call still decides. A box is read through,
     // since a path reads what the box holds.
     //
     // The place is the value's, not only the type's. A value settling to a
@@ -540,7 +540,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Two readings of one slot. Where they disagree the slot holds neither,
-    // which is what `any` says. A join that guessed would be a refusal an
+    // which is what `Any` says. A join that guessed would be a refusal an
     // author cannot act on.
     //
     // A reading that leaves is not one of the two. It contributes no value, so
@@ -564,10 +564,10 @@ indirect enum LoweredType: Sendable, Equatable {
             return joined(theirs).admittingNull
         }
 
-        // Two procedures join to a procedure rather than to `any`, keeping the
+        // Two procedures join to a procedure rather than to `Any`, keeping the
         // constness both of them have. Collapsing here would let one body that
         // runs, in a list of them, pass a slot that asked for none, because
-        // `any` is accepted everywhere.
+        // `Any` is accepted everywhere.
         if
             case let .procedure(mine, myAnswer, wanted, wantedIsolation) = self,
             case let .procedure(_, _, offered, offeredIsolation) = other
@@ -585,7 +585,7 @@ indirect enum LoweredType: Sendable, Equatable {
         guard self != other else { return self }
 
         // Unequal spellings may still be one type: the equations (a range is an
-        // int with a condition, bytes are `array<byte>`) are read through their
+        // int with a condition, bytes are `Array<Standard.Byte>`) are read through their
         // normal forms before the join gives up, and two arrays join by their
         // elements so the equation holds inside one.
         let mine = unrefined
@@ -601,7 +601,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // Two parts held side by side, as one type: joined as two readings join,
     // and part by part where a reading's join gives up, lists by their
     // elements and records of the same fields field by field, inside what
-    // may be null too. Records of other fields are `any`, since a record slot
+    // may be null too. Records of other fields are `Any`, since a record slot
     // takes either while no one record type holds both.
     func joinedPartByPart(_ part: LoweredType) -> LoweredType {
         switch (self, part) {
@@ -667,14 +667,14 @@ indirect enum LoweredType: Sendable, Equatable {
     // satisfy two types at once, and whether a candidate spelling could ever be
     // a value of a type. The build
     // asks them of readings; the run asks the first of a closure value that
-    // reached a procedure slot through `any`. A name the table does not answer
+    // reached a procedure slot through `Any`. A name the table does not answer
     // passes every judge but the second, which reads it as only itself:
     // nothing is knowable about it here, and the value judge refuses it where
     // a value arrives.
     //
     // Whether a value of `other` may stand where this is declared.
-    // Structural, and one-directional: `any` on the left accepts anything
-    // because nothing was declared, and `any` on the right is accepted by
+    // Structural, and one-directional: `Any` on the left accepts anything
+    // because nothing was declared, and `Any` on the right is accepted by
     // anything because nothing is known.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
         accepts(other, in: table, assumingPairs: [], asking: .nothing, rigid: false)
@@ -718,7 +718,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         switch (self, other) {
-        // What answers `never` never arrives, so it cannot be the value that
+        // What answers `Never` never arrives, so it cannot be the value that
         // disagrees with a declaration. The other way round it fits nowhere.
         case (_, .never):
             return true
@@ -935,7 +935,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A parameter no call fills, or a composition bounded by contracts
         // alone where nothing is judged on arrival, which no branch above
-        // took by its structure (`any`, a composition, a nullable or a name
+        // took by its structure (`Any`, a composition, a nullable or a name
         // around it). Last, because a refusal any earlier would answer for
         // those too.
         case (_, .parameter), (_, .composition):
@@ -1097,7 +1097,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Whether two types are one type exactly, names resolved. A name that
     // stands for a declared record is that record, and any other name is what
-    // it names. Nothing stands for anything else: `any` is no wildcard here,
+    // it names. Nothing stands for anything else: `Any` is no wildcard here,
     // since standing for anything is what `accepts` reads, and a type
     // parameter is itself, and so is a name the table does not answer.
     func identical(to other: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -1212,7 +1212,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // record meeting a nameless record of its fields gives the nameless one,
     // which is the one a value is sure to fit; two records of other fields
     // give a nameless record of the looser one's fields, each merged with
-    // the other's; a reading of `any` makes its position `any`; a name that
+    // the other's; a reading of `Any` makes its position `Any`; a name that
     // stands for no record meets the other reading as what it stands for.
     // Elsewhere it is the one that takes the other. Rigidly, because a
     // parameter read in a body is that body's own and nothing fills it. Nil
@@ -1367,7 +1367,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // This type read by its bounded parameters alone: each as the
-    // composition of its bounds, and every other position as `any`. What is
+    // composition of its bounds, and every other position as `Any`. What is
     // handed where it stands at a call has to fit this, and what the call
     // filled the parameters with judges the rest.
     var boundedAlone: LoweredType {
@@ -1408,7 +1408,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return bounded == .any ? .any : .inout(bounded)
 
         // A procedure's answer stands where it is held, and is held there. Its
-        // parameters are what it is handed and take `never`, which every
+        // parameters are what it is handed and take `Never`, which every
         // parameter takes, so they ask nothing.
         case let .procedure(parameters, returns, _, _):
             let answer = (returns ?? .any).boundedAlone
@@ -1428,7 +1428,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // This type with every parameter replaced by what it was read as. A
-    // parameter nothing filled reads `any`, which is what a declaration says
+    // parameter nothing filled reads `Any`, which is what a declaration says
     // when it says nothing.
     func filling(_ bound: [Name: LoweredType]) -> LoweredType {
         switch self {
@@ -1762,7 +1762,7 @@ indirect enum LoweredType: Sendable, Equatable {
     func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
         guard value != .null else {
             guard admitsNull(in: table) else {
-                throw ArgumentError("\(locus): expected \(rendered(in: table)), got null")
+                throw ArgumentError("\(locus): expected \(rendered(in: table)), got Null")
             }
 
             return value
@@ -1814,7 +1814,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether a null that arrives is one of this type's values. `any` is
+    // Whether a null that arrives is one of this type's values. `Any` is
     // here and not below: it accepts what it is handed, null included.
     func admitsNull(in table: LoweredTypeTable) -> Bool {
         admitsNull(in: table, asking: .nothing)
@@ -1841,7 +1841,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether null is one of this type's values rather than an absence: the
-    // fact `T?` exists to declare, and the boundary reads it. `any` is not
+    // fact `T?` exists to declare, and the boundary reads it. `Any` is not
     // this: an undeclared type accepts a null that arrives, but it does not
     // spell null as a value.
     func declaresNull(in table: LoweredTypeTable) -> Bool {
@@ -1926,7 +1926,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 boundAsking: boundAsking
             )
 
-        // `double` is the one widening the language has, so it changes every
+        // `Double` is the one widening the language has, so it changes every
         // byte it takes; the rest take no byte at all. Named rather than left
         // to a default, so that a kind added to the type language has to be
         // answered for here too.
@@ -1974,7 +1974,7 @@ indirect enum LoweredType: Sendable, Equatable {
     func rendered(in table: LoweredTypeTable) -> String {
         switch self {
         case .any:
-            return "any"
+            return "Any"
 
         // Spelled as what it is: the type reached by that path. No document
         // writes this, so the spelling answers to the message alone, and an
@@ -1983,22 +1983,22 @@ indirect enum LoweredType: Sendable, Equatable {
             return "some \(Path([.key(of)] + path.segments).rendered)"
 
         case .never:
-            return "never"
+            return "Never"
 
         case .null:
-            return "null"
+            return "Null"
 
         case .bool:
-            return "bool"
+            return "Bool"
 
         case .int:
-            return "int"
+            return "Int"
 
         case .double:
-            return "double"
+            return "Double"
 
         case .string:
-            return "string"
+            return "String"
 
         case let .ranged(refinement):
             return refinement.rendered
@@ -2019,7 +2019,7 @@ indirect enum LoweredType: Sendable, Equatable {
             let spelling = [
                 constness == .const ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
-                "procedure"
+                "Procedure"
             ]
             .compactMap { part in part }
             .joined(separator: " ")
@@ -2032,10 +2032,10 @@ indirect enum LoweredType: Sendable, Equatable {
                 + " -> \((returns ?? .any).rendered(in: table))>"
 
         case let .array(element):
-            return "array<\(element.rendered(in: table))>"
+            return "Array<\(element.rendered(in: table))>"
 
         case let .dictionary(entry):
-            return "dictionary<\(entry.rendered(in: table))>"
+            return "Dictionary<\(entry.rendered(in: table))>"
 
         case let .record(held):
             return Self.rendered(fields: held.named.map { name, field in (name, field.rendered(in: table)) })
@@ -2103,7 +2103,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // MARK: - Private
     // The join of two readings where one takes the other, `takingGiven`
     // saying which, walked in step. Each position below is asked the same.
-    // A reading of `any` at a position is `any` there, as it is for the
+    // A reading of `Any` at a position is `Any` there, as it is for the
     // whole parameter: it is the loosest reading there is, and `accepts`
     // cannot order it. A record's field is read without its `var`, which is
     // a fact about the field and not about the value joined.
@@ -2234,7 +2234,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // A row already being walked through stands as itself. A type may name
-    // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
+    // itself (`Tree` holding `Array<Tree>` is a declared type) so a walk that
     // expanded every row at every depth would chase one forever.
     private func resolved(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
         switch self {
@@ -2512,7 +2512,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A value arrived where nothing was supposed to, so the arrival is the
         // refusal: there is no type to compare it against.
         case .never:
-            throw ArgumentError("\(path()): declares never, and nothing is ever that")
+            throw ArgumentError("\(path()): declares Never, and nothing is ever that")
 
         case let .undeclared(label, because):
             switch because {
@@ -2555,7 +2555,7 @@ indirect enum LoweredType: Sendable, Equatable {
             // array to say nothing.
             if element == .any, case .array = value { return value }
 
-            // Otherwise the slot's spelling wins the way `double` settles a
+            // Otherwise the slot's spelling wins the way `Double` settles a
             // whole number, and both spellings are read through the one
             // projection that owns the equation.
             guard let items = value.elements else { throw mismatch(value, at: path(), in: table) }
@@ -2593,7 +2593,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A closure carries what the build derived about its text, its constness
         // and its isolation, and a slot that asks for either reads the
-        // carried fact. A closure that reached here through `any` or through
+        // carried fact. A closure that reached here through `Any` or through
         // an undeclared field is judged here for the first time.
         case let .procedure(required, returns, constness, isolation):
             return try settlingProcedure(
@@ -2633,7 +2633,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // A type parameter the call site filled, and the build is where it was
     // filled. Unbounded, there is nothing left to compare against. A bounded
-    // one still holds its constraint here: what arrived through `any` was
+    // one still holds its constraint here: what arrived through `Any` was
     // never read at the build, so membership is judged against the types the
     // constraint admits, and the value passes untouched. A parameter stands
     // for what arrived; it does not settle it.

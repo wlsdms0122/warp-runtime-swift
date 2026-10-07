@@ -102,7 +102,7 @@ struct TypeTableTests {
         #expect {
             try TypeExpression.named("App.M").settling(value, at: "x", in: sut)
         } throws: { error in
-            "\(error)".hasPrefix("x: expected App.M, and nothing 'App.M' admits takes array.")
+            "\(error)".hasPrefix("x: expected App.M, and nothing 'App.M' admits takes Array.")
         }
     }
 

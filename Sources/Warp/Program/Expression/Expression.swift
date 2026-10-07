@@ -49,7 +49,7 @@ public indirect enum Expression: Sendable {
     // procedure type its reading carries.
     case apply(Expression, arguments: [Expression])
 
-    // Reading a value as a type the text names. `any` declares nothing, so a
+    // Reading a value as a type the text names. `Any` declares nothing, so a
     // dot on one is refused at the build. This is the door: the author says what
     // they expect, the build judges every dot after it against that, and the run
     // asks the arriving value the one question the build could not.

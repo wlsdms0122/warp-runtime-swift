@@ -44,7 +44,7 @@ struct MathTests {
         }
     }
 
-    @Test("arithmetic off the int's edge is a fault, not a wrap")
+    @Test("arithmetic off the Int's edge is a fault, not a wrap")
     func wholeArithmeticOverflowFaults() async throws {
         // Given. Each of these falls off the edge of the int, and the
         // language stops rather than answering a number the digits do not say
@@ -138,7 +138,7 @@ struct MathTests {
         )
     }
 
-    @Test("rounding and magnitude stop at the int's edge")
+    @Test("rounding and magnitude stop at the Int's edge")
     func roundingPastTheIntFaults() async throws {
         // Given. A fraction whose whole part is past the int has no
         // int to answer, and the int's own minimum has no magnitude an int
@@ -165,7 +165,7 @@ struct MathTests {
             await #expect {
                 try await run(sut)
             } throws: { error in
-                "\(error)".contains("overflows int")
+                "\(error)".contains("overflows Int")
             }
         }
     }

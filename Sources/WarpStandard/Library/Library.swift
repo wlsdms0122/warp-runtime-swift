@@ -49,14 +49,14 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "inout array<some Element>"
+                      type "inout Array<some Element>"
                     }
                     {
                       name "element"
                       type "some Element"
                     }
                   ]
-                  returns "null"
+                  returns "Null"
                 }
                 "Standard.Collection.contains" {
                   body [
@@ -128,7 +128,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "element"
@@ -138,7 +138,7 @@ enum Library {
                   result {
                     ref "found"
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
                 "Standard.Collection.dropFirst" {
                   body [
@@ -212,7 +212,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -228,7 +228,7 @@ enum Library {
                       procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
                 "Standard.Collection.dropLast" {
                   body [
@@ -294,7 +294,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -310,7 +310,7 @@ enum Library {
                       procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
                 "Standard.Collection.filter" {
                   body [
@@ -394,7 +394,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "isIncluded"
@@ -403,7 +403,7 @@ enum Library {
                           parameters [
                             "some Element"
                           ]
-                          returns "bool"
+                          returns "Bool"
                         }
                       }
                     }
@@ -421,14 +421,14 @@ enum Library {
                       procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
                 "Standard.Collection.first" {
                   description "The first element."
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -464,7 +464,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -543,7 +543,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "transform"
@@ -560,7 +560,7 @@ enum Library {
                   result {
                     ref "answers"
                   }
-                  returns "array<some Answer>"
+                  returns "Array<some Answer>"
                 }
                 "Standard.Collection.prepending" {
                   body [
@@ -598,7 +598,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "element"
@@ -615,7 +615,7 @@ enum Library {
                       procedure "Standard.Collection.reversed"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
                 "Standard.Collection.reduce" {
                   body [
@@ -683,7 +683,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "initialResult"
@@ -788,7 +788,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -804,7 +804,7 @@ enum Library {
                       procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
                 "Standard.Collection.sorted" {
                   body [
@@ -1140,7 +1140,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -1156,7 +1156,7 @@ enum Library {
                       procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
                 "Standard.Collection.values" {
                   body [
@@ -1233,13 +1233,13 @@ enum Library {
                   parameters [
                     {
                       name "dictionary"
-                      type "dictionary<some Entry>"
+                      type "Dictionary<some Entry>"
                     }
                   ]
                   result {
                     ref "held"
                   }
-                  returns "array<some Entry>"
+                  returns "Array<some Entry>"
                 }
               }
               warp 1
@@ -1354,7 +1354,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "transform"
@@ -1362,7 +1362,7 @@ enum Library {
                         "isolated procedure" {
                           parameters [
                             "some Element"
-                            "int"
+                            "Int"
                           ]
                           returns "some Answer"
                         }
@@ -1379,7 +1379,7 @@ enum Library {
                       procedure "Standard.Concurrent.all"
                     }
                   }
-                  returns "array<some Answer>"
+                  returns "Array<some Answer>"
                 }
               }
               warp 1
@@ -1473,21 +1473,21 @@ enum Library {
                       type {
                         array {
                           "const procedure" {
-                            returns "bool"
+                            returns "Bool"
                           }
                         }
                       }
                     }
                   ]
                   result true
-                  returns "bool"
+                  returns "Bool"
                 }
                 "Standard.Logic.not" {
                   description "The opposite of a truth."
                   parameters [
                     {
                       name "value"
-                      type "bool"
+                      type "Bool"
                     }
                   ]
                   result {
@@ -1501,18 +1501,18 @@ enum Library {
                       procedure "Standard.Logic.equal"
                     }
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
                 "Standard.Logic.notEqual" {
                   description "Whether two values differ."
                   parameters [
                     {
                       name "lhs"
-                      type "any"
+                      type "Any"
                     }
                     {
                       name "rhs"
-                      type "any"
+                      type "Any"
                     }
                   ]
                   result {
@@ -1536,7 +1536,7 @@ enum Library {
                       procedure "Standard.Logic.equal"
                     }
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
                 "Standard.Logic.or" {
                   body [
@@ -1609,14 +1609,14 @@ enum Library {
                       type {
                         array {
                           "const procedure" {
-                            returns "bool"
+                            returns "Bool"
                           }
                         }
                       }
                     }
                   ]
                   result false
-                  returns "bool"
+                  returns "Bool"
                 }
                 "Standard.Logic.select" {
                   body [
@@ -1663,7 +1663,7 @@ enum Library {
                   parameters [
                     {
                       name "condition"
-                      type "bool"
+                      type "Bool"
                     }
                     {
                       name "then"
@@ -1782,7 +1782,7 @@ enum Library {
                       procedure "Standard.Math.lessThan"
                     }
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
                 "Standard.Math.max" {
                   body [
@@ -2094,15 +2094,15 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "other"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result false
-                  returns "bool"
+                  returns "Bool"
                 }
                 "Standard.Text.replacing" {
                   body [
@@ -2140,15 +2140,15 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "target"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "replacement"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result {
@@ -2174,7 +2174,7 @@ enum Library {
                       procedure "Standard.Text.joined"
                     }
                   }
-                  returns "string"
+                  returns "String"
                 }
                 "Standard.Text.split" {
                   body [
@@ -2504,11 +2504,11 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "separator"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result {
@@ -2532,7 +2532,7 @@ enum Library {
                       procedure "Standard.Collection.appending"
                     }
                   }
-                  returns "array<string>"
+                  returns "Array<String>"
                 }
                 "Standard.Text.startsWith" {
                   body [
@@ -2669,15 +2669,15 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "prefix"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result true
-                  returns "bool"
+                  returns "Bool"
                 }
               }
               warp 1

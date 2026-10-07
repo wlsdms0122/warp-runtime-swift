@@ -23,7 +23,7 @@ struct DeclaredNameNotationTests {
     func aDeclarationIsRead() throws {
         // Given
         let sut = try loader.loadProcedure([
-            "body": [["let": "held", "type": "double", "value": 1]],
+            "body": [["let": "held", "type": "Double", "value": 1]],
             "result": ["ref": "held"]
         ])
 
@@ -38,7 +38,7 @@ struct DeclaredNameNotationTests {
     func aBareVariableKeepsItsDeclaration() throws {
         // Given
         let sut = try loader.loadProcedure([
-            "body": [["var": "held", "type": "int?"]],
+            "body": [["var": "held", "type": "Int?"]],
             "result": ["ref": "held"]
         ])
 
@@ -53,7 +53,7 @@ struct DeclaredNameNotationTests {
     func aDeclarationRoundTrips() throws {
         // Given
         let sut = try loader.loadProcedure([
-            "body": [["var": "held", "type": ["procedure": ["returns": "int"]], "value": ["closure": ["result": 1]]]],
+            "body": [["var": "held", "type": ["procedure": ["returns": "Int"]], "value": ["closure": ["result": 1]]]],
             "result": ["ref": "held"]
         ])
 
@@ -74,7 +74,7 @@ struct DeclaredNameNotationTests {
             try loader.loadProcedure([
                 "body": [
                     ["var": "held", "value": 1],
-                    ["set": "held", "type": "int", "value": 2]
+                    ["set": "held", "type": "Int", "value": 2]
                 ],
                 "result": ["ref": "held"]
             ])
@@ -88,7 +88,7 @@ struct DeclaredNameNotationTests {
         // When / Then
         #expect {
             try loader.loadProcedure([
-                "body": [["type": "int", "value": 1]],
+                "body": [["type": "Int", "value": 1]],
                 "result": 1
             ])
         } throws: { error in

@@ -88,7 +88,7 @@ struct OneSpellingTests {
         let text: Value = [
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "held", "type": "bool"]],
+                    "parameters": [["name": "held", "type": "Bool"]],
                     "body": [["value": ["cond": ["when": ["ref": "held"], "then": []]]]]
                 ]
             ]
@@ -110,7 +110,7 @@ struct OneSpellingTests {
             "imports": [],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "held", "type": "bool"]],
+                    "parameters": [["name": "held", "type": "Bool"]],
                     "body": [["value": ["cond": ["when": ["ref": "held"], "then": []]]]]
                 ]
             ]
@@ -127,7 +127,7 @@ struct OneSpellingTests {
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "types": ["App.Outer": ["record": ["inner": ["id": "string"]]]],
+            "types": ["App.Outer": ["record": ["inner": ["id": "String"]]]],
             "procedures": ["entry": ["result": 1]]
         ]
 
@@ -153,7 +153,7 @@ struct OneSpellingTests {
 
     @Test("a refusal inside a record or a cast is placed under the tag the text wrote", arguments: [
         (written: Value.dictionary(["record": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.result.record.a"),
-        (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "int"])]), place: "procedures.entry.result.as?.of")
+        (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "Int"])]), place: "procedures.entry.result.as?.of")
     ])
     func aRefusalInsideATagIsPlacedUnderIt(written: Value, place: String) {
         // Given

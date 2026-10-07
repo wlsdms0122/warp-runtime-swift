@@ -167,7 +167,7 @@ struct ConcurrentTests {
         // Given. The closure asks for the element under `item`, the same name
         // the sequential walk reads it by
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "names", "type": "array<string>"]],
+            "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 [
                     "let": "greeted",
@@ -177,7 +177,7 @@ struct ConcurrentTests {
                             ["ref": "names"],
                             [
                                 "closure": [
-                                    "parameters": [["name": "item", "type": "string"], ["name": "index", "type": "int"]],
+                                    "parameters": [["name": "item", "type": "String"], ["name": "index", "type": "Int"]],
                                     "body": [
                                         [
                                             "let": "line",

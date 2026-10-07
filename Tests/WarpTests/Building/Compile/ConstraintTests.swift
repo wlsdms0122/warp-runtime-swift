@@ -76,7 +76,7 @@ struct ConstraintTests {
 
     @Test("a value arriving through any is judged at the boundary")
     func aValueArrivingThroughAnyIsJudgedAtTheBoundary() async throws {
-        // Given. The parameter is declared `any`, so the build reads nothing and
+        // Given. The parameter is declared `Any`, so the build reads nothing and
         // the membership is judged where the value arrives
         let sut = try Module(
             procedures: [
@@ -99,7 +99,7 @@ struct ConstraintTests {
         await #expect {
             try await run(sut, arguments: ["left": .bool(true)])
         } throws: { error in
-            "\(error)".contains("nothing 'Standard.Comparable' admits takes bool")
+            "\(error)".contains("nothing 'Standard.Comparable' admits takes Bool")
         }
     }
 
@@ -354,7 +354,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("with on, which holds A where bool is declared")
+            error is BuildError && "\(error)".contains("with on, which holds A where Bool is declared")
         }
     }
 
@@ -376,7 +376,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("answers { a: int, b: string }, and its declaration promises")
+            error is BuildError && "\(error)".contains("answers { a: Int, b: String }, and its declaration promises")
         }
     }
 
@@ -431,7 +431,7 @@ struct ConstraintTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'it' holds null, which does not answer every procedure")
+            error is BuildError && "\(error)".contains("'it' holds Null, which does not answer every procedure")
         }
     }
 
@@ -1049,7 +1049,7 @@ struct ConstraintTests {
         await #expect {
             try await run(sut, arguments: ["absent": .null])
         } throws: { error in
-            "\(error)".contains("input 'lhs': expected some T: Standard.Comparable, got null")
+            "\(error)".contains("input 'lhs': expected some T: Standard.Comparable, got Null")
         }
     }
 

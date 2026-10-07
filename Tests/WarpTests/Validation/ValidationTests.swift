@@ -503,26 +503,26 @@ struct ValidationTests {
 
     @Test("a claim about a type the language names is refused where the document is read")
     func aClaimAboutABuiltinTypeIsRefused() throws {
-        // When / Then. A claim is about a declared type: a value of `int`
+        // When / Then. A claim is about a declared type: a value of `Int`
         // wears no name a run could read, so no declaration could answer for
         // it.
         #expect {
             try Module(
                 imports: [],
                 contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Described"))], returns: .string)]],
-                claims: ["int": ["App.Described"]],
+                claims: ["Int": ["App.Described"]],
                 procedures: [
-                    "int.describe": Procedure(
+                    "Int.describe": Procedure(
                         signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .string),
                         body: [],
-                        result: .literal(.string("int"))
+                        result: .literal(.string("Int"))
                     ),
                     entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
                 ]
             )
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("'int' is a type the language names, and a claim is about a declared type")
+                && "\(error)".contains("'Int' is a type the language names, and a claim is about a declared type")
         }
     }
 

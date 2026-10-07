@@ -121,7 +121,7 @@ struct Numbering: Sendable {
             let (summed, overflowed) = standing.addingReportingOverflow(count)
 
             guard !overflowed else {
-                throw ObjectRefused("a numbering gives numbers past what an int holds")
+                throw ObjectRefused("a numbering gives numbers past what an Int holds")
             }
 
             standing = summed

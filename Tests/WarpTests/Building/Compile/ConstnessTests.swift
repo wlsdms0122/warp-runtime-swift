@@ -121,7 +121,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> Any> where const Procedure is declared")
         }
     }
 
@@ -152,7 +152,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds procedure<() -> any> where const procedure is declared")
+                && "\(error)".contains("which holds Procedure<() -> Any> where const Procedure is declared")
         }
     }
 
@@ -189,11 +189,11 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> Any> where const Procedure is declared")
         }
     }
 
-    @Test("a body applying a name a slot said holds a const procedure answers without running")
+    @Test("a body applying a name a slot said holds a const Procedure answers without running")
     func aBodyApplyingAConstProcedureSlotAnswers() async throws {
         // Given. `asking` applies what it was handed, and its slot asks for a
         // procedure that answers without running. A closure calling `asking`
@@ -240,7 +240,7 @@ struct ConstnessTests {
         #expect(answer == .string("answered"))
     }
 
-    @Test("a variable declared to hold a const procedure carries that into a closure that captured it")
+    @Test("a variable declared to hold a const Procedure carries that into a closure that captured it")
     func aDeclaredVariableCarriesItsClaimIntoACapture() async throws {
         // Given. The variable says what it holds, so every write into it is
         // held to that, and a closure capturing it applies what the
@@ -325,7 +325,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds procedure<() -> string> where const procedure is declared")
+                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure is declared")
         }
     }
 
@@ -381,7 +381,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds procedure<() -> string> where const procedure is declared")
+                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure is declared")
         }
     }
 
@@ -448,7 +448,7 @@ struct ConstnessTests {
         #expect(image["Standard.Collection.count"]?.constness == .const)
     }
 
-    @Test("a body that sends a const procedure is const")
+    @Test("a body that sends a const Procedure is const")
     func aBodyThatSendsIsStillConst() async throws {
         // Given. Constness is judged over the name a body wrote, and what that
         // name means depends on where it was written. `label` sends `joined`,

@@ -327,7 +327,7 @@ struct LoweringTests {
 
     @Test("a name is what it names, wherever a variable is handed in place")
     func aHandedVariableReadsThroughNames() async throws {
-        // Given. `Count` is a name for `int`, and a name for a scalar is what
+        // Given. `Count` is a name for `Int`, and a name for a scalar is what
         // it names: there is no representation to disagree about, so a variable
         // holding an int is what an `inout Count` slot declares.
         let sut = try Module(
@@ -439,7 +439,7 @@ struct LoweringTests {
             try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'App.tag' with of, which holds { a: int } where inout Tag is declared")
+                && "\(error)".contains("sending 'App.tag' with of, which holds { a: Int } where inout Tag is declared")
         }
 
         let image = try await builder.build(

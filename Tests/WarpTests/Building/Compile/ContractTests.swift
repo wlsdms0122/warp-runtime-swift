@@ -183,7 +183,7 @@ struct ContractTests {
         }
 
         // Then. Each refused where the argument is written, for what the author wrote
-        #expect(outside?.message == "sending 'App.Sized.size': input 'n': 99 is outside int(0...10)")
+        #expect(outside?.message == "sending 'App.Sized.size': input 'n': 99 is outside Int(0...10)")
         #expect(outside?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
         #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
         #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
@@ -215,7 +215,7 @@ struct ContractTests {
         } throws: { error in
             "\(error)".hasPrefix("procedures.entry.result: the module at 0 in this link")
                 && "\(error)".contains("declares 'Bank.Account.describe', which is named for")
-                && "\(error)".contains("answers int where the contract writes string")
+                && "\(error)".contains("answers Int where the contract writes String")
         }
     }
 

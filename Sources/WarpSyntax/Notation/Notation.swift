@@ -60,7 +60,7 @@ public struct Notation: Sendable {
     // document writes a record under `record`.
     public let readsBareRecords: Bool
 
-    // Whether a parameter may be written as one pair, `count: int` for
+    // Whether a parameter may be written as one pair, `count: Int` for
     // `{ name: count, type: int }` and `count: { type: int, enum: [1, 2] }`
     // for the record with the name inside. A document writes the record.
     public let pairedParameter: Bool

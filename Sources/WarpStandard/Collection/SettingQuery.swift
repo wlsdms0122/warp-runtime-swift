@@ -45,7 +45,7 @@ struct SettingQuery: Query {
             let held = question[.dictionary].asDictionary,
             case let .string(key) = question[.key]
         else {
-            throw ExecutionError("Standard.Collection.setting asks a dictionary and a string")
+            throw ExecutionError("Standard.Collection.setting asks a Dictionary and a String")
         }
 
         let field: Name

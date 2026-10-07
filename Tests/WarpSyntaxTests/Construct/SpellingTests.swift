@@ -42,7 +42,7 @@ struct SpellingTests {
             )
         )
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "kind", "type": "string"]],
+            "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "pick"],
                 [
@@ -116,7 +116,7 @@ struct SpellingTests {
         // When / Then
         #expect(throws: (any Error).self) {
             try loader.loadProcedure([
-                "parameters": [["name": "kind", "type": "string"]],
+                "parameters": [["name": "kind", "type": "String"]],
                 "body": [
                     [
                         "let": "pick",

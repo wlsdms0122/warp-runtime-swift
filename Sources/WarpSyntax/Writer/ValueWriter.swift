@@ -52,7 +52,7 @@ public struct ValueWriter: Encodable {
         // carrier does to `1.0`. A spelling is a fact about the value, and a
         // carrier that cannot hold one loses it. Refusing here instead would
         // close the only way out for a value that never spelled itself bytes:
-        // an `array<int>` slot hands on what it was given, and what it was
+        // an `Array<Int>` slot hands on what it was given, and what it was
         // given may have been written `x"6869"`.
         case let .bytes(bytes):
             try container.encode(bytes.map { byte in ValueWriter(.int(Int(byte))) })

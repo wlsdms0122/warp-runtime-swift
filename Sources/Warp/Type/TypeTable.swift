@@ -123,7 +123,7 @@ public struct TypeTable: Sendable {
     // declares the name. The caller says what an undeclared constraint means on
     // its surface, rather than this deciding for both. Membership is one-sided
     // the way every judgment before the run is: only what is provably outside
-    // is refused, and a reading nothing can be said about (`any`, or another
+    // is refused, and a reading nothing can be said about (`Any`, or another
     // type parameter with no constraint of its own) passes here and is judged
     // again where the value actually arrives.
     //

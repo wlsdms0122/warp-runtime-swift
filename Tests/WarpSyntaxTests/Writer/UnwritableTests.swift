@@ -57,10 +57,10 @@ struct UnwritableTests {
 
     @Test("a declared type named like a built-in has no document")
     func aTypeNamedLikeABuiltinIsRefused() {
-        // When / Then. Nothing stops a module declaring a type called `int`; a
+        // When / Then. Nothing stops a module declaring a type called `Int`; a
         // document just reads the name it knows as the type it knows
         #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.named("int"))
+            try sut.value(of: TypeExpression.named("Int"))
         }
 
         #expect(throws: Never.self) {
@@ -76,12 +76,12 @@ struct UnwritableTests {
             .nullable(.any),
             .nullable(.parameter(name: "T")),
             .nullable(.variable(.int)),
-            .composition(["Foo", "int"]),
-            .composition(["Foo", "array<int>"]),
+            .composition(["Foo", "Int"]),
+            .composition(["Foo", "Array<Int>"]),
             .parameter(name: "a.b"),
             .parameter(name: "a<b>"),
-            .named("array<int>"),
-            .array(.named("int"))
+            .named("Array<Int>"),
+            .array(.named("Int"))
         ]
     )
     func aSpellingThatDoesNotReadBackIsRefused(type: TypeExpression) {
@@ -125,7 +125,7 @@ struct UnwritableTests {
     func aCompositionIsWrittenInItsOneSpelling() throws {
         // When / Then
         #expect(try sut.value(of: TypeExpression.composition(["App.A"])) == .string("App.A"))
-        #expect(try sut.value(of: TypeExpression.array(.composition(["App.A"]))) == .string("array<App.A>"))
+        #expect(try sut.value(of: TypeExpression.array(.composition(["App.A"]))) == .string("Array<App.A>"))
         #expect(try sut.value(of: TypeExpression.composition(["App.B", "App.A"])) == .string("App.A & App.B"))
     }
 
@@ -133,10 +133,10 @@ struct UnwritableTests {
     func aNullableSpellsOrRefuses() throws {
         // When / Then. The trailing `?` needs a name in front of it, and a
         // record spells as a mapping rather than a name
-        #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("int?"))
+        #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("Int?"))
         #expect(
             try sut.value(of: TypeExpression.nullable(.array(.string)))
-                == .string("array<string>?")
+                == .string("Array<String>?")
         )
 
         #expect(throws: WritingError.self) {
@@ -153,11 +153,11 @@ struct UnwritableTests {
         // range.
         #expect(
             try sut.value(of: TypeExpression.ranged(.whole(from: 0, to: .through(255))))
-                == .string("int(0...255)")
+                == .string("Int(0...255)")
         )
         #expect(
             try sut.value(of: TypeExpression.ranged(.fraction(from: 0)))
-                == .string("double(0.0...)")
+                == .string("Double(0.0...)")
         )
 
         #expect(throws: WritingError.self) {

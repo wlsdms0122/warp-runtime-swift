@@ -73,7 +73,7 @@ struct FailingTests {
 
     @Test("abort sent null says the default message")
     func abortSentNullSaysTheDefault() async throws {
-        // Given. `abort` takes `of: any`, and null is a value `any` admits.
+        // Given. `abort` takes `of: Any`, and null is a value `Any` admits.
         // Null spells nothing, and a refusal says something
         let sut = try Module(
             imports: ["Standard.Control.abort"],

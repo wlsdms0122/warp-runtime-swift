@@ -40,7 +40,7 @@ struct GatheringQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
-        // Through the one projection that owns the `bytes = array<byte>`
+        // Through the one projection that owns the `bytes = Array<Standard.Byte>`
         // equation, so bytes are read where an array is, on either side.
         let collection = question[.array]
 

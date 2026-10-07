@@ -37,13 +37,13 @@ warpt 1
       parameters [
         {
           name "rounds"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "rounds"
       }
-      returns "int"
+      returns "Int"
     }
   }
   warp 1

@@ -459,7 +459,7 @@ struct PlaceTests {
     @Test("both stages point at the statement that leaves, not at what follows it")
     func theLeaveRuleIsPlacedOnTheLeavingStatement() async throws {
         // Given. The one rule both stages hold: the load catches the leaves the
-        // text shows, the build catches the procedure that declares `never`. What an
+        // text shows, the build catches the procedure that declares `Never`. What an
         // author has to change is the statement that ends the body, so that is
         // where each of them says it is.
         let declared = try Module(

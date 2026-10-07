@@ -67,7 +67,7 @@ struct ReturnTypeTests {
         await #expect {
             try await builder.build([sut])
         } throws: { error in
-            error is BuildError && "\(error)".contains("answers int, and its declaration promises string")
+            error is BuildError && "\(error)".contains("answers Int, and its declaration promises String")
         }
     }
 
@@ -93,13 +93,13 @@ struct ReturnTypeTests {
             ]
         )
 
-        // When / Then. Two answers that disagree would join to `any`, and
-        // `any` fits everything, so each is held on its own.
+        // When / Then. Two answers that disagree would join to `Any`, and
+        // `Any` fits everything, so each is held on its own.
         let refusal = await #expect(throws: BuildError.self) {
             try await builder.build([sut])
         }
 
-        #expect(refusal?.message.contains("declaration promises int") == true)
+        #expect(refusal?.message.contains("declaration promises Int") == true)
     }
 
     @Test("a declared type is settled on the way out, not only on the way in")
@@ -194,7 +194,7 @@ struct ReturnTypeTests {
         }
 
         // Then
-        #expect(refusal?.message == "answers int or string, and its declaration promises int")
+        #expect(refusal?.message == "answers Int or String, and its declaration promises Int")
     }
 
     // MARK: - Public

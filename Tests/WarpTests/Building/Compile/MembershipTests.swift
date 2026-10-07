@@ -68,13 +68,13 @@ struct MembershipTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'App.hold': 'it' holds int, which 'App.Text' does not admit")
+                && "\(error)".contains("sending 'App.hold': 'it' holds Int, which 'App.Text' does not admit")
         }
     }
 
     @Test("a value of a membership stands only where every member would")
     func aMembershipStandsWhereAllMembersDo() async throws {
-        // Given. `string` takes one of the two, so the whole membership does
+        // Given. `String` takes one of the two, so the whole membership does
         // not fit it
         let sut = try Module(
             constraints: ["App.Text": [.string, .array(.byteElement)]],
@@ -98,7 +98,7 @@ struct MembershipTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'App.narrow' with it, which holds App.Text where string is declared")
+                && "\(error)".contains("sending 'App.narrow' with it, which holds App.Text where String is declared")
         }
     }
 
@@ -130,7 +130,7 @@ struct MembershipTests {
         await #expect {
             try await Builder().build([try module(reading: .int)] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("reads App.Text as int, and no value is both")
+            error is BuildError && "\(error)".contains("reads App.Text as Int, and no value is both")
         }
     }
 
@@ -156,7 +156,7 @@ struct MembershipTests {
         await #expect {
             try await run(sut, arguments: ["it": .int(1)])
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("expected App.Text, and nothing 'App.Text' admits takes int")
+            error is ArgumentError && "\(error)".contains("expected App.Text, and nothing 'App.Text' admits takes Int")
         }
     }
 

@@ -56,8 +56,8 @@ struct RefinementTests {
 
         // And what it says, it says in its own spelling. The identity a
         // document is written with.
-        #expect(whole.rendered == "int(0..<256)")
-        #expect(fraction.rendered == "double(0.0..<1.0)")
+        #expect(whole.rendered == "Int(0..<256)")
+        #expect(fraction.rendered == "Double(0.0..<1.0)")
     }
 
     @Test("the kind under a range decides which way a value may widen")
@@ -147,7 +147,7 @@ struct RefinementTests {
 
     @Test("an infinite bound orders, so the range it bounds holds what is inside it")
     func anInfiniteBoundIsNotEmpty() throws {
-        // Given. `double(0.0...)` written the long way. An infinity compares
+        // Given. `Double(0.0...)` written the long way. An infinity compares
         // like any other bound, so the question a range asks (is this number
         // between them) has an answer, and half the fractions answer yes.
         let half = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
@@ -158,7 +158,7 @@ struct RefinementTests {
         #expect {
             try TypeExpression.ranged(half).settling(.double(-1), at: "value")
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("-1.0 is outside double(0.0...<infinity>)")
+            error is ArgumentError && "\(error)".contains("-1.0 is outside Double(0.0...<infinity>)")
         }
 
         // And the one that says nothing still says nothing.
@@ -217,16 +217,16 @@ struct RefinementTests {
         let unbounded = TypeExpression.ranged(.fraction())
 
         // When / Then. A range saying nothing is the kind, and one type reads
-        // one way. `double(...)` would be a second spelling for what `double`
+        // one way. `Double(...)` would be a second spelling for what `Double`
         // is.
-        #expect(unbounded.rendered == "double")
+        #expect(unbounded.rendered == "Double")
         #expect(unspellable.rendered != unbounded.rendered)
     }
 
     @Test("a range a document cannot spell is said rather than written")
     func anUnspellableBoundIsNotWritten() {
         // Given. An infinity is a bound the language admits on purpose: it
-        // orders like any other, and `double(0.0...)` written the long way is a
+        // orders like any other, and `Double(0.0...)` written the long way is a
         // range half the fractions are inside. What no document has is a
         // spelling for it, and the words a message shows it in read back as an
         // error rather than as the range.
@@ -245,12 +245,12 @@ struct RefinementTests {
         #expect(TypeExpression.Refinement.whole(to: .upTo(.min)).spellable)
 
         // The message still shows it, in this vocabulary's own terms
-        #expect(TypeExpression.ranged(infinite).rendered == "double(0.0...<infinity>)")
+        #expect(TypeExpression.ranged(infinite).rendered == "Double(0.0...<infinity>)")
     }
 
     @Test("a fraction range reads bytes out, because it changes every one")
     func aFractionRangeUnpacksBytes() async throws {
-        // Given. The compact spelling crosses an `array<…>` slot whole only
+        // Given. The compact spelling crosses an `Array<…>` slot whole only
         // where the element leaves every byte as it is. A fraction range takes
         // every byte and hands on a fraction, so the bytes are read out and
         // each arrives as what the declaration says it is.
@@ -321,7 +321,7 @@ struct RefinementTests {
         await #expect {
             try await run(sut, arguments: ["ratio": .double(1)])
         } throws: { error in
-            "\(error)".contains("1.0 is outside double(0.0..<1.0)")
+            "\(error)".contains("1.0 is outside Double(0.0..<1.0)")
         }
     }
 

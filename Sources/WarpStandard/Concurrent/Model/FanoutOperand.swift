@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // The pieces a fan-out is handed: closures under keys, or closures in order.
-// Two types and no third, which is what the membership says and what `any`
+// Two types and no third, which is what the membership says and what `Any`
 // could not.
 enum FanoutOperand: Int, ParameterSet {
     case pieces

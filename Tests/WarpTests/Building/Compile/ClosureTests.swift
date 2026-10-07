@@ -42,7 +42,7 @@ struct ClosureTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("where procedure<(int) -> any> is declared")
+            error is BuildError && "\(error)".contains("where Procedure<(Int) -> Any> is declared")
         }
     }
 
@@ -212,11 +212,11 @@ struct ClosureTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated procedure<(int, int?) -> any> where procedure<(int) -> any> is declared")
+                && "\(error)".contains("which holds const isolated Procedure<(Int, Int?) -> Any> where Procedure<(Int) -> Any> is declared")
         }
     }
 
-    @Test("a slot asking for a const procedure refuses one that reaches outside")
+    @Test("a slot asking for a const Procedure refuses one that reaches outside")
     func aClosureThatRunsIsRefusedWhereConstIsAsked() async throws {
         // Given. `twice` declares that whatever it is handed answers without
         // running. The closure handed to it shouts, and shouting is an effect
@@ -260,11 +260,11 @@ struct ClosureTests {
             try await Builder().build([sut, .shouting] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated procedure<() -> any> where const procedure is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> Any> where const Procedure is declared")
         }
     }
 
-    @Test("a slot asking for a const procedure takes one that answers")
+    @Test("a slot asking for a const Procedure takes one that answers")
     func aConstClosureFitsWhereConstIsAsked() async throws {
         // Given. The same declaration, handed a body that only reads
         let twice = Procedure(
@@ -403,7 +403,7 @@ struct ClosureTests {
         await #expect {
             try await answer(of: sut, result: reference("called"))
         } throws: { error in
-            error is BuildError && "\(error)".contains("calls a value of int, and only a procedure can be called")
+            error is BuildError && "\(error)".contains("calls a value of Int, and only a procedure can be called")
         }
     }
 

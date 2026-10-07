@@ -20,7 +20,7 @@ public extension Module {
             constraints: [
                 // What a fan-out is handed: closures under keys, or closures in
                 // order. Two types and no third, which is what a membership says
-                // and what `any` could not.
+                // and what `Any` could not.
                 "Standard.Concurrent.Pieces": [
                     .array(.procedure(nil, .unstated, .isolated)),
                     .dictionary(.procedure(nil, .unstated, .isolated))
@@ -30,7 +30,7 @@ public extension Module {
                 // `Standard.Collection.first` and `Standard.Concurrent.first` are two names
                 // in one link, so concurrency shows at the call site.
                 //
-                // What comes back is `any` because it is shaped like what went in,
+                // What comes back is `Any` because it is shaped like what went in,
                 // and a membership names a set of types rather than tying one of
                 // them to another. `map`, whose types are single, says it all.
                 "Standard.Concurrent.all": Procedure(

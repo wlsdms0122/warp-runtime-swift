@@ -8,7 +8,7 @@
 import Foundation
 
 // What a value is: a `Value` case, with a record and a dictionary both a
-// record. This answers about a value in hand, so there is no `any` here and
+// record. This answers about a value in hand, so there is no `Any` here and
 // nothing to compose. What a *declaration* says is `TypeExpression`.
 public enum ValueType: String, Sendable, CaseIterable, CustomStringConvertible {
     case null
@@ -24,7 +24,8 @@ public enum ValueType: String, Sendable, CaseIterable, CustomStringConvertible {
     case procedure
 
     // MARK: - Property
-    public var description: String { rawValue }
+    // Spelled as the type of the kind is.
+    public var description: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
 
     // MARK: - Initializer
     // MARK: - Public

@@ -35,12 +35,12 @@ let greet = Procedure(
 )
 
 let image = try await Builder().build(
-    [try Module(procedures: ["hello.greet": greet])] + Module.standard
+    [try Module(procedures: ["Hello.greet": greet])] + Module.standard
 )
 
 let value = try await Executor().run(
     image,
-    entry: "hello.greet",
+    entry: "Hello.greet",
     arguments: ["name": .string("warp")]
 )
 

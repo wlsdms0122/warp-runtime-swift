@@ -67,7 +67,7 @@ struct Activation: Sendable {
                 guard case let .int(index) = try value(at: inner) else {
                     throw ExecutionError(
                         "'\(spelled(address).rendered)' indexes with"
-                            + " '\(spelled(inner).rendered)', which is not an int"
+                            + " '\(spelled(inner).rendered)', which is not an Int"
                     )
                 }
 
@@ -164,7 +164,7 @@ struct Activation: Sendable {
 
                 case let .found(value):
                     return .unfit(
-                        "index reference \(name()) is \(value.type), expected int or string"
+                        "index reference \(name()) is \(value.type), expected Int or String"
                     )
 
                 case let .unfit(reason):
@@ -215,7 +215,7 @@ struct Activation: Sendable {
     }
 
     // One reading for both index spellings. What is indexed is whatever has
-    // elements: the projection owns the `array<byte>` equation, lazily, so
+    // elements: the projection owns the `Array<Standard.Byte>` equation, lazily, so
     // one element read does not unpack a compact spelling. Past the end is a
     // defect, not absence: the array is there and says how long it is.
     private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {

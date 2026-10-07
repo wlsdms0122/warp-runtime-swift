@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpTestSupport
 
-// `int(0...255)`. A range is a slot's condition on a number, not a new kind. It
+// `Int(0...255)`. A range is a slot's condition on a number, not a new kind. It
 // is judged where `enum` is: at the build for what the text shows, at the
 // boundary for what only the run can see. What the condition may say is
 // `RefinementTests`'; this suite is where a whole range is judged.
@@ -48,7 +48,7 @@ struct RangeTests {
         #expect(throws: (any Error).self) { try ceiling.settling(.int(256), at: "value") }
     }
 
-    @Test("acceptance reads a range as int, and the bounds wait for the value")
+    @Test("acceptance reads a range as Int, and the bounds wait for the value")
     func aRangeAcceptsAsInt() throws {
         // Given
         let byte = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
@@ -96,7 +96,7 @@ struct RangeTests {
         await #expect {
             try await run(sut, arguments: ["level": .int(256)])
         } throws: { error in
-            "\(error)".contains("outside int(0...255)")
+            "\(error)".contains("outside Int(0...255)")
         }
     }
 
@@ -124,7 +124,7 @@ struct RangeTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("outside int(0...255)")
+            error is BuildError && "\(error)".contains("outside Int(0...255)")
         }
     }
 
@@ -174,11 +174,11 @@ struct RangeTests {
         await #expect {
             try await run(sut, arguments: ["value": .int(256)])
         } throws: { error in
-            "\(error)".contains("outside int(0...255)")
+            "\(error)".contains("outside Int(0...255)")
         }
     }
 
-    @Test("a range fills a procedure's first parameter, the way an int does")
+    @Test("a range fills a procedure's first parameter, the way an Int does")
     func aRangeFillsAProceduresFirstParameter() async throws {
         // Given. A range's value stands where the int it narrows stands
         let sut = try Module(

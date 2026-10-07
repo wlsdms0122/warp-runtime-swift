@@ -18,7 +18,7 @@ public struct Signature: Sendable, Equatable {
     public let parameters: [Parameter]
 
     // What a call returns, or nil where nothing was declared. Absence is
-    // spelled by being absent rather than by a type meaning "no claim". `any`
+    // spelled by being absent rather than by a type meaning "no claim". `Any`
     // is a claim, so a declaration nobody wrote stays distinguishable from one
     // somebody wrote. Nothing is checked either way; they differ in what they
     // say.
@@ -53,7 +53,7 @@ public struct Signature: Sendable, Equatable {
 
     // Every type parameter mentioned in this signature, occurrence by
     // occurrence. A nested procedure type's parameters are collected too:
-    // they are this signature's own slots, so `array<some Element>` beside a
+    // they are this signature's own slots, so `Array<some Element>` beside a
     // procedure taking the same `some Element` is one parameter filled by one
     // call. Only a parameter behind a `named` type is not collected, because
     // the build refuses one anywhere but a procedure signature and never fills

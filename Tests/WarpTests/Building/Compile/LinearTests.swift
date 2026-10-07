@@ -378,7 +378,7 @@ struct LinearTests {
 
     @Test("a slot says neither about a type nothing is handed on once for")
     func aMarkWhereNothingIsOwedRefuses() async throws {
-        // Given. `consuming int` claims something about an obligation no value
+        // Given. `consuming Int` claims something about an obligation no value
         // of the type carries
         let sut = try holding(
             body: [
@@ -713,7 +713,7 @@ struct LinearTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("beside int, which is not")
+            "\(error)".contains("beside Int, which is not")
         }
     }
 

@@ -123,18 +123,18 @@ struct WriterTests {
         "warp": 1,
         "imports": ["Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Math.lessThan", "Standard.Math.plus"],
         "description": "one of every type",
-        "types": ["Task": ["record": ["done": "bool", "id": "string"]]],
-        "constraints": ["Scalar": ["int", "string"]],
+        "types": ["Task": ["record": ["done": "Bool", "id": "String"]]],
+        "constraints": ["Scalar": ["Int", "String"]],
         "const": ["limit": 10],
         "procedures": [
             "entry": [
                 "description": "every construct, once",
                 "parameters": [
-                    ["name": "kind", "type": "string", "enum": ["a", "b"]],
-                    ["name": "names", "type": "array<string>"],
-                    ["name": "procedure", "type": "string", "description": "what to match"]
+                    ["name": "kind", "type": "String", "enum": ["a", "b"]],
+                    ["name": "names", "type": "Array<String>"],
+                    ["name": "procedure", "type": "String", "description": "what to match"]
                 ],
-                "returns": "dictionary<any>",
+                "returns": "Dictionary<Any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
                     ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -205,7 +205,7 @@ struct WriterTests {
                         "let": "called",
                         "value": ["call": [
                             "procedure": [
-                                "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
+                                "closure": ["parameters": [["name": "n", "type": "Int"]], "result": ["ref": "n"]]
                             ],
                             "arguments": [1]
                         ]
@@ -215,14 +215,14 @@ struct WriterTests {
             ],
             "typed": [
                 "parameters": [
-                    ["name": "anything", "type": "procedure"],
+                    ["name": "anything", "type": "Procedure"],
                     ["name": "bounded", "type": "some T"],
-                    ["name": "how", "type": ["const procedure": ["parameters": ["int"], "returns": "bool"]]],
-                    ["name": "of", "type": "string"],
+                    ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
+                    ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
-                    ["name": "shaped", "type": ["record": ["done": "bool", "id": "string"]]]
+                    ["name": "shaped", "type": ["record": ["done": "Bool", "id": "String"]]]
                 ],
-                "returns": "never",
+                "returns": "Never",
                 "bounds": ["T": "Scalar"],
                 "result": ["ref": "of"]
             ]
@@ -236,16 +236,16 @@ struct WriterTests {
         // Literals, references, records, arrays and a field named like a tag
         [
             "description": "the types that need no name",
-            "types": ["Task": ["record": ["id": "string", "done": "bool"]]],
+            "types": ["Task": ["record": ["id": "String", "done": "Bool"]]],
             "const": ["limit": 10],
             "procedures": [
                 "entry": [
                     "parameters": [
-                        ["name": "counted", "type": "int", "description": "how many"],
-                        ["name": "kind", "type": "string", "enum": ["a", "b"]],
-                        ["name": "procedure", "type": "string"]
+                        ["name": "counted", "type": "Int", "description": "how many"],
+                        ["name": "kind", "type": "String", "enum": ["a", "b"]],
+                        ["name": "procedure", "type": "String"]
                     ],
-                    "returns": "dictionary<any>",
+                    "returns": "Dictionary<Any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
                         ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -262,7 +262,7 @@ struct WriterTests {
             "imports": ["Standard.Logic.and", "Standard.Logic.equal", "Standard.Logic.not"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "procedure", "type": "string"], ["name": "ready", "type": "bool"]],
+                    "parameters": [["name": "procedure", "type": "String"], ["name": "ready", "type": "Bool"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -315,7 +315,7 @@ struct WriterTests {
             "imports": ["test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Math.lessThan", "Standard.Math.plus"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "Array<String>"]],
                     "body": [
                         ["var": "seen", "value": 0],
                         [
@@ -361,8 +361,8 @@ struct WriterTests {
             "imports": ["Standard.Collection.count", "Standard.Math.lessThan"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"]],
-                    "returns": "any",
+                    "parameters": [["name": "names", "type": "Array<String>"]],
+                    "returns": "Any",
                     "body": [
                         [
                             "let": "outer",
@@ -406,7 +406,7 @@ struct WriterTests {
             "imports": ["Standard.Collection.filter", "Standard.Text.joined", "Standard.Logic.notEqual", "Standard.Text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"], ["name": "procedure", "type": "string"]],
+                    "parameters": [["name": "names", "type": "Array<String>"], ["name": "procedure", "type": "String"]],
                     "body": [
                         ["let": "shouted", "value": ["call": ["procedure": "shout", "arguments": [["ref": "procedure"]]]]],
                         [
@@ -417,8 +417,8 @@ struct WriterTests {
                                     ["ref": "names"],
                                     [
                                         "closure": [
-                                            "parameters": [["name": "item", "type": "string"]],
-                                            "returns": "bool",
+                                            "parameters": [["name": "item", "type": "String"]],
+                                            "returns": "Bool",
                                             "result": [
                                                 "call": [
                                                     "procedure": "Standard.Logic.notEqual",
@@ -434,7 +434,7 @@ struct WriterTests {
                             "let": "called",
                             "value": ["call": [
                                 "procedure": [
-                                    "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
+                                    "closure": ["parameters": [["name": "n", "type": "Int"]], "result": ["ref": "n"]]
                                 ],
                                 "arguments": [1]
                             ]
@@ -447,17 +447,17 @@ struct WriterTests {
                     "result": ["record": ["result": ["ref": "line"]]]
                 ],
                 "shout": [
-                    "parameters": [["name": "of", "type": "string"]],
-                    "returns": "string",
+                    "parameters": [["name": "of", "type": "String"]],
+                    "returns": "String",
                     "result": ["ref": "of"]
                 ],
                 "typed": [
                     "parameters": [
-                        ["name": "anything", "type": "procedure"],
-                        ["name": "how", "type": ["const procedure": ["parameters": ["int"], "returns": "bool"]]],
+                        ["name": "anything", "type": "Procedure"],
+                        ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
                         ["name": "parameter", "type": "some Element"]
                     ],
-                    "returns": "never",
+                    "returns": "Never",
                     "result": ["ref": "anything"]
                 ]
             ]
@@ -590,7 +590,7 @@ struct WriterTests {
         // document only if the writing side kept a spelling.
         let loader = Loader()
         let module = try loader.loadProcedure([
-            "parameters": [["name": "ready", "type": "bool"]],
+            "parameters": [["name": "ready", "type": "Bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -625,7 +625,7 @@ struct WriterTests {
             ],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"], ["name": "procedure", "type": "string"]],
+                    "parameters": [["name": "names", "type": "Array<String>"], ["name": "procedure", "type": "String"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -697,11 +697,11 @@ struct WriterTests {
 
     @Test("a spelling is written back as the procedures it stood for")
     func aSpellingIsWrittenPlainly() throws {
-        // Given. `{ of: x, <procedure>: y }` is a spelling, and what it means is a
+        // Given. `{ of: x, <Procedure>: y }` is a spelling, and what it means is a
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try loader.loadProcedure([
-            "parameters": [["name": "procedure", "type": "string"]],
+            "parameters": [["name": "procedure", "type": "String"]],
             "body": [
                 [
                     "value": ["conditional": [

@@ -170,7 +170,7 @@ struct ConcurrencyTests {
             try await answer(of: [sut], result: reference("placed"))
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("holds const isolated procedure<(any) -> any> where isolated procedure<(")
+                && "\(error)".contains("holds const isolated Procedure<(Any) -> Any> where isolated Procedure<(")
         }
     }
 
@@ -385,13 +385,13 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("with pieces, which holds [const isolated procedure<() -> any>, int] where Standard.Concurrent.Pieces is declared")
+            "\(error)".contains("with pieces, which holds [const isolated Procedure<() -> Any>, Int] where Standard.Concurrent.Pieces is declared")
         }
     }
 
     @Test("map refuses material that is not a collection")
     func mapRefusesUnfitMaterial() async throws {
-        // Given. The material arrives as `any`, so only the run can judge it,
+        // Given. The material arrives as `Any`, so only the run can judge it,
         // and the boundary every procedure shares is what judges it
         let sut = Statement(binding: .constant("walked"), expression: .call(
                 Call(
@@ -421,7 +421,7 @@ struct ConcurrencyTests {
                 signature: Signature(parameters: [Parameter(name: "subject", type: .any)])
             )
         } throws: { error in
-            "\(error)".contains("expected array") && "\(error)".contains("got string")
+            "\(error)".contains("expected Array") && "\(error)".contains("got String")
         }
     }
 

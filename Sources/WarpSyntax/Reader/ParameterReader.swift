@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // A parameter, written as a record under the name its body reads it by. A
-// notation may offer the pair form, `count: int`; a document has the one
+// notation may offer the pair form, `count: Int`; a document has the one
 // spelling.
 public struct ParameterReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {

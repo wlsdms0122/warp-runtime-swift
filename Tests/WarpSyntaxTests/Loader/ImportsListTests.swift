@@ -96,7 +96,7 @@ struct ImportsListTests {
             "imports": ["Standard.Math.plus"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "Array<String>"]],
                     "body": [
                         [
                             "let": "many",
@@ -307,7 +307,7 @@ struct ImportsListTests {
         let module = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "Array<String>"]],
                     "body": [["let": "many", "value": ["ref": "names.count"]]],
                     "result": ["ref": "many"]
                 ]
@@ -331,7 +331,7 @@ struct ImportsListTests {
             "imports": ["inClosure", "inLoop", "inBody", "inRescue", "inNestedData"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "Array<String>"]],
                     "body": [
                         [
                             "let": "held",

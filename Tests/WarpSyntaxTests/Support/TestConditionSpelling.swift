@@ -10,7 +10,7 @@ import Foundation
 @testable import WarpSyntax
 
 // A notation of the plainest kind: an operator record is a subject and a
-// procedure sent to it, `{ of: <expression>, <procedure>: <expression> }`. The
+// procedure sent to it, `{ of: <expression>, <Procedure>: <expression> }`. The
 // subject stands first and the operand second, the positions every standard
 // procedure the table reaches takes them at.
 //

@@ -38,9 +38,9 @@ struct HandBackProofTests {
         #expect(image["App.z"]?.handsBackAsDeclared == true)
     }
 
-    @Test("a body answering what one answering `any` answers is not proven")
+    @Test("a body answering what one answering `Any` answers is not proven")
     func aBodyLeaningOnAnUnprovenOneIsNot() async throws {
-        // Given. `App.z` answers a value of `any` for its own `some T`
+        // Given. `App.z` answers a value of `Any` for its own `some T`
         let sut = try Module(
             procedures: [
                 "App.a": generic(result: .call(Call(selector: "App.z", arguments: [.reference([.key("x")]), .reference([.key("x")])]))),
@@ -100,9 +100,9 @@ struct HandBackProofTests {
         #expect(image["App.b"]?.handsBackAsDeclared == true)
     }
 
-    @Test("a cycle leaning on a body answering `any` falls whole")
+    @Test("a cycle leaning on a body answering `Any` falls whole")
     func aCycleLeaningOnAnUnprovenOneFalls() async throws {
-        // Given. `App.a` and `App.b` lean on each other, and `App.b` also on `App.c`, the only one answering a value of `any` for its own `some T`
+        // Given. `App.a` and `App.b` lean on each other, and `App.b` also on `App.c`, the only one answering a value of `Any` for its own `some T`
         let sut = try Module(
             procedures: [
                 "App.a": generic(result: .call(Call(selector: "App.b", arguments: [.reference([.key("x")])]))),
@@ -144,7 +144,7 @@ struct HandBackProofTests {
 
     @Test("a fall carries back along the bodies leaning on it")
     func aFallCarriesBackAlongTheChain() async throws {
-        // Given. `App.a` leans on `App.b`, `App.b` on `App.c`, and only `App.c` answers a value of `any` for its own `some T`
+        // Given. `App.a` leans on `App.b`, `App.b` on `App.c`, and only `App.c` answers a value of `Any` for its own `some T`
         let sut = try Module(
             procedures: [
                 "App.a": generic(result: .call(Call(selector: "App.b", arguments: [.reference([.key("x")])]))),
@@ -174,7 +174,7 @@ struct HandBackProofTests {
 
     @Test("a body that wrote no answer proves what was read off it")
     func anUnsaidBodyProvesWhatWasReadOffIt() async throws {
-        // Given. `App.g` writes no `returns`, and what was read off it is its `some T`, carried from `App.f`, which answers a value of `any`
+        // Given. `App.g` writes no `returns`, and what was read off it is its `some T`, carried from `App.f`, which answers a value of `Any`
         let sut = try Module(
             procedures: [
                 "App.f": Procedure(
@@ -277,7 +277,7 @@ struct HandBackProofTests {
 
     @Test("a body filling a call's type parameter from its own beside what is not a value of it proves nothing")
     func aBodyFillingAParameterBesideAnotherValueIsNotProven() async throws {
-        // Given. `App.mixed` hands `App.pick` a list of its `some T` and a list read as `array<any>`, `App.same` hands it its own twice
+        // Given. `App.mixed` hands `App.pick` a list of its `some T` and a list read as `Array<Any>`, `App.same` hands it its own twice
         let pick = Procedure(
             signature: Signature(
                 parameters: [

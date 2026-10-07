@@ -41,9 +41,9 @@ public struct Statement: Sendable {
             }
         }
 
-        // What the name says it holds, where it says. Nil is not `any`: a name
+        // What the name says it holds, where it says. Nil is not `Any`: a name
         // that declares nothing holds what the build worked out for it, and one
-        // that declares `any` holds `any`.
+        // that declares `Any` holds `Any`.
         public var declared: TypeExpression? {
             switch self {
             case let .constant(_, declared), let .variable(_, declared):

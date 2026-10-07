@@ -20,7 +20,7 @@ struct NullableTests {
     // MARK: - Test
     @Test("a nullable reading is refused where the plain type is declared")
     func aNullableReadingIsRefusedAtACall() async throws {
-        // Given. The `?.` path answers `int?`, and the callee declares `int`
+        // Given. The `?.` path answers `Int?`, and the callee declares `Int`
         let sut = try Module(
             procedures: [
                 "half": Procedure(
@@ -50,7 +50,7 @@ struct NullableTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("holds int?")
+            error is BuildError && "\(error)".contains("holds Int?")
         }
     }
 
@@ -222,7 +222,7 @@ struct NullableTests {
 
     @Test("a ? that says nothing refuses behind a name too")
     func aNeedlessNullableBehindAnAliasIsRefused() async throws {
-        // Given. The reader refuses `any?` by spelling; a name may hide the
+        // Given. The reader refuses `Any?` by spelling; a name may hide the
         // same type, and the rule is the model's, held where names resolve
         let hidingAny = try Module(
             types: ["Loose": .any],
@@ -247,7 +247,7 @@ struct NullableTests {
             error is BuildError && "\(error)".contains("writes `?`")
         }
 
-        // And a nullable behind the name (`B = int?`, then `B?`) is the doubled
+        // And a nullable behind the name (`B = Int?`, then `B?`) is the doubled
         // `?` by another spelling.
         let hidingNullable = try Module(
             types: ["Maybe": .nullable(.int)],
@@ -305,7 +305,7 @@ struct NullableTests {
     @Test("a ?. that could not have read past anything is refused")
     func aNeedlessOptionalDotIsRefused() async throws {
         // Given. The field is proven present, so the spelling that expects
-        // absence says nothing, the way `int??` says nothing on a type
+        // absence says nothing, the way `Int??` says nothing on a type
         let onAField = try Module(
             procedures: [
                 entryName: Procedure(

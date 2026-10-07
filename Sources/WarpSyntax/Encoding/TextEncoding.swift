@@ -165,7 +165,7 @@ public struct TextEncoding {
             throw refused("\(version) is not a format's one writing", at: start)
 
         case .overflow:
-            throw refused("\(version) is a format past what an int holds", at: start)
+            throw refused("\(version) is a format past what an Int holds", at: start)
         }
 
         guard claimed == Self.format else {
@@ -540,7 +540,7 @@ public struct TextEncoding {
                     throw refused("\(bare) is not a whole number's one writing", at: offset)
 
                 case .overflow:
-                    throw refused("\(bare) is a whole number past what an int holds", at: offset)
+                    throw refused("\(bare) is a whole number past what an Int holds", at: offset)
                 }
             }
 

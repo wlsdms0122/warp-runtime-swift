@@ -8,11 +8,11 @@
 import Foundation
 
 // What a declaration says it takes. Distinct from `ValueType`, which is what a
-// value *is*: `any` is only ever something a declaration says, and a type
+// value *is*: `Any` is only ever something a declaration says, and a type
 // names an element, fields, or a declared name where a value has none.
 //
 // A type is an expression for the same reason an expression is: it composes.
-// `array<string>` is `array` applied to `string`, and a name is a name for one
+// `Array<String>` is `array` applied to `String`, and a name is a name for one
 // of these rather than a separate kind of thing, which is why a module declares
 // a type the same way it declares anything, by binding a name to something.
 //
@@ -21,13 +21,13 @@ import Foundation
 // outside. A payload gains fields, and a declaration saying which ones it needs
 // should not be a declaration that it needs nothing else to exist.
 public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertible {
-    // Nothing ever *is* `any`. It is what a declaration says when it accepts
+    // Nothing ever *is* `Any`. It is what a declaration says when it accepts
     // whatever it is handed.
     case any
 
-    // The other end of `any`. No value is ever of this type, which is how a
+    // The other end of `Any`. No value is ever of this type, which is how a
     // place control does not come back from is written down: a refusal answers
-    // `never` because it does not answer at all. Saying so is what keeps the
+    // `Never` because it does not answer at all. Saying so is what keeps the
     // arm that leaves from having an opinion about what the arm that stays
     // holds, without it, one branch failing would cost the other its type.
     case never
@@ -38,15 +38,15 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case double
     case string
 
-    // A number the slot admits only inside the range. `int(0...255)`,
-    // `double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
+    // A number the slot admits only inside the range. `Int(0...255)`,
+    // `Double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
     // the value is a whole number or a fraction, and the bounds are judged
     // where a value is settled, the way `enum` is. At the build for a constant,
     // at the boundary for what only the run can see. A module gives one a name
     // the way it names any type: `byte = int(0...255)`.
     case ranged(Refinement)
 
-    // A list of one type. The element is always written, so `array<any>` says
+    // A list of one type. The element is always written, so `Array<Any>` says
     // out loud that anything is accepted. A declaration that accepts anything
     // reads differently from one that has not been written yet.
     case array(TypeExpression)
@@ -60,7 +60,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // A value that can be called: the types it is applied with, in position
     // order, and what it answers. Nil is a declaration that has not been
-    // written ("some procedure") the way `any` is for a value, and it is
+    // written ("some procedure") the way `Any` is for a value, and it is
     // accepted by anything for the same reason.
     //
     // Constness and isolation are requirements rather than claims. A declaration
@@ -69,7 +69,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case procedure(ProcedureType?, Constness = .unstated, Isolation = .unstated)
 
     // A field that a path may write through. Only a declared type's field is
-    // one: `var int` in a type declaration says a `set` or an `inout` path may
+    // one: `var Int` in a type declaration says a `set` or an `inout` path may
     // pass this field, and a field written without it stops such a path at the
     // link. What the value holds is the inner type; this is a fact about the
     // slot and never about a value.
@@ -112,13 +112,13 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case nullable(TypeExpression)
 
     // A type a module declared. Kept rather than expanded so that a type may
-    // name itself (`Tree` with children of `array<Tree>` is a type, not a
+    // name itself (`Tree` with children of `Array<Tree>` is a type, not a
     // regress) which means resolving one needs the table it was declared in.
     case named(Name)
 
     // A type parameter, filled by whatever the call site puts there. The name
     // is what ties one signature's mentions together: `first` takes
-    // `array<some T>` and answers `some T`, so an array of strings answers a
+    // `Array<some T>` and answers `some T`, so an array of strings answers a
     // string and the declaration never had to say which.
     //
     // It stands for a type rather than naming one, which is why it is not
@@ -267,7 +267,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // left to the two orderings to imply.
         //
         // An infinity is not one of them. It compares like any other bound, and
-        // `double(0.0...)` written out the long way is a range half the fractions
+        // `Double(0.0...)` written out the long way is a range half the fractions
         // are inside. Asking for finiteness here would refuse it.
         public var admitsNothing: Bool {
             switch self {
@@ -311,7 +311,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // identity.
         public var rendered: String {
             // A range with neither bound is the kind itself, so it reads as the
-            // kind: one type has one spelling here, and `double(...)` would be a
+            // kind: one type has one spelling here, and `Double(...)` would be a
             // second one for what `saysNothing` already calls the same thing.
             guard !saysNothing else { return kind.rendered }
 
@@ -380,8 +380,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
 
         // Whether some value is inside both. Asked across kinds as well as within
-        // one: a whole number widens into a fraction slot, so `int(0...5)` and
-        // `double(0.0...5.0)` are two ranges one value satisfies.
+        // one: a whole number widens into a fraction slot, so `Int(0...5)` and
+        // `Double(0.0...5.0)` are two ranges one value satisfies.
         //
         // Only what is provably apart is refused, which is the bias every judgment
         // before a run takes.
@@ -471,7 +471,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // the kind's own, because that is what the floor means: `holds` reads a
         // missing floor as open downward and answers against every value the kind
         // has, so a question about emptiness that read it as "cannot say" would
-        // answer differently about the same range. `int(..<-9223372036854775808)`
+        // answer differently about the same range. `Int(..<-9223372036854775808)`
         // is a slot no call could fill, and it is spellable.
         private static func empty<Bound>(
             from: Bound?,
@@ -528,20 +528,20 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // declares stands beside these, and a reader answers one of these before
     // it looks for a declaration.
     public static let keywords: [Name: TypeExpression] = [
-        "any": .any,
+        "Any": .any,
         // A declaration a call never comes back from. Written out loud because
         // a procedure that always refuses is a procedure an author may declare.
-        "never": .never,
-        "null": .null,
-        "bool": .bool,
-        "int": .int,
-        "double": .double,
-        "string": .string,
-        "procedure": .procedure(nil)
+        "Never": .never,
+        "Null": .null,
+        "Bool": .bool,
+        "Int": .int,
+        "Double": .double,
+        "String": .string,
+        "Procedure": .procedure(nil)
     ]
 
-    // What one element of bytes is. The range `Standard` names `byte`. Owned here
-    // because the `bytes = array<byte>` equation reads it without a table, so it
+    // What one element of bytes is. The range `Standard` names `Standard.Byte`. Owned here
+    // because the `bytes = Array<Standard.Byte>` equation reads it without a table, so it
     // cannot live behind the name.
     public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
@@ -554,25 +554,25 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     public var rendered: String {
         switch self {
         case .any:
-            return "any"
+            return "Any"
 
         case .never:
-            return "never"
+            return "Never"
 
         case .null:
-            return "null"
+            return "Null"
 
         case .bool:
-            return "bool"
+            return "Bool"
 
         case .int:
-            return "int"
+            return "Int"
 
         case .double:
-            return "double"
+            return "Double"
 
         case .string:
-            return "string"
+            return "String"
 
         case let .ranged(refinement):
             // The exact spelling: what is rendered here is written into
@@ -617,7 +617,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             let spelling = [
                 constness == .const ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
-                "procedure"
+                "Procedure"
             ]
             .compactMap { part in part }
             .joined(separator: " ")
@@ -633,10 +633,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
                 + " -> \((type.returns ?? .any).rendered)>"
 
         case let .array(element):
-            return "array<\(element.rendered)>"
+            return "Array<\(element.rendered)>"
 
         case let .dictionary(entry):
-            return "dictionary<\(entry.rendered)>"
+            return "Dictionary<\(entry.rendered)>"
 
         case let .record(fields):
             let written = fields
@@ -676,7 +676,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     var unreadableClaim: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing."
-                + " A cast names the type a value is read as, and `any` is"
+                + " A cast names the type a value is read as, and `Any` is"
                 + " the absence of one"
         }
 
@@ -910,16 +910,16 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Whether null is one of this type's values. The fact `T?` exists to
     // declare.
     //
-    // `any` is not this. An undeclared type accepts a null that arrives, but
+    // `Any` is not this. An undeclared type accepts a null that arrives, but
     // it does not *spell* null as a value. The looser question, "does a null
-    // that arrives pass", is `admitsNull` and includes `any`.
+    // that arrives pass", is `admitsNull` and includes `Any`.
     public func declaresNull(in types: TypeTable) -> Bool {
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }
 
     // Whether a value of `other` may stand where this is declared. Structural,
-    // and one-directional: `any` on the left accepts anything because nothing
-    // was declared, and `any` on the right is accepted by anything because
+    // and one-directional: `Any` on the left accepts anything because nothing
+    // was declared, and `Any` on the right is accepted by anything because
     // nothing is known. An undeclared answer cannot be proven wrong.
     //
     // This is the half of checking the builder can do. What a body computes is
@@ -939,7 +939,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // MARK: - Private
     // A name already being walked through stands as itself. A type may name
-    // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
+    // itself (`Tree` holding `Array<Tree>` is a declared type) so a walk that
     // expanded every name at every depth would chase one forever. The link
     // refuses *cyclic name chains*, which makes a walk that only follows names
     // finite; this one goes into fields as well, so it is outside that

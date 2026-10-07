@@ -57,8 +57,8 @@ struct ControlTests {
 
     @Test("an arm that aborts does not decide what the arm that stays holds")
     func abortDoesNotWidenTheOtherArm() async throws {
-        // Given. `returns: never` is what keeps the conditional a string. Were it
-        // `any`, the consumer below would be allowed to disagree with it.
+        // Given. `returns: Never` is what keeps the conditional a string. Were it
+        // `Any`, the consumer below would be allowed to disagree with it.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

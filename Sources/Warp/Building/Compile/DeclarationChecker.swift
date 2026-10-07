@@ -41,7 +41,7 @@ struct DeclarationChecker {
         )
 
         // A name that reaches a type may name itself along the way: `Tree`
-        // holding `array<Tree>` is a type. A name that reaches only names
+        // holding `Array<Tree>` is a type. A name that reaches only names
         // never becomes one, and the lowering says which do, so the refusal
         // reads the lowering rather than walking the names a second way.
         // Refused first, so every walk below through `named` is finite.
@@ -70,8 +70,8 @@ struct DeclarationChecker {
             }
 
             // A member is a concrete type. `some` stands for a type and names
-            // none, `any` would admit everything a membership exists to narrow,
-            // and `never` admits nothing. Each is a declaration that says
+            // none, `Any` would admit everything a membership exists to narrow,
+            // and `Never` admits nothing. Each is a declaration that says
             // nothing a membership could hold. Judged through every name a
             // member hides behind, or one alias would carry the refused type
             // in. The chain is finite because a name-only cycle was refused

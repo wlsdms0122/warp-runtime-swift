@@ -32,7 +32,7 @@ struct IntegerConversion: Sendable {
         }
 
         guard let answered = Int(exactly: asked.rounded(rule)) else {
-            throw ExecutionError("\(procedure) of \(asked) overflows int")
+            throw ExecutionError("\(procedure) of \(asked) overflows Int")
         }
 
         return answered

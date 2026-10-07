@@ -65,14 +65,28 @@ public struct TypeReader: Decodable {
     }
 
     // A built-in taking another type, written under its own key where the
-    // inner type has no spelling of its own. `array<string>` is a name; an
-    // array of procedures is not, and this is the form that carries it.
+    // inner type has no spelling of its own. `Array<String>` is a name; an
+    // array of procedures is not, and this is the form that carries it. The
+    // key is the raw value, and the name is spelled like every type's.
     enum Holding: String, CaseIterable {
         case array
         case dictionary
 
         // MARK: - Property
+        var spelling: String {
+            switch self {
+            case .array: "Array"
+            case .dictionary: "Dictionary"
+            }
+        }
+
         // MARK: - Initializer
+        init?(spelling: String) {
+            guard let holding = Self.allCases.first(where: { holding in holding.spelling == spelling }) else { return nil }
+
+            self = holding
+        }
+
         // MARK: - Public
         func holding(_ inner: TypeExpression) -> TypeExpression {
             switch self {
@@ -94,9 +108,9 @@ public struct TypeReader: Decodable {
     public static let recordKey: Name = "record"
 
     // What a type that is neither a spelling nor a form is refused with.
-    private static let unread = "a type is a name like `string`, `array<string>` or"
+    private static let unread = "a type is a name like `String`, `Array<String>` or"
         + " `Task`, or a mapping under one of `record`, `procedure`, `linear`, `array`"
-        + " and `dictionary`. A record type is written { record: { id: string } }"
+        + " and `dictionary`. A record type is written { record: { id: String } }"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and
@@ -125,7 +139,7 @@ public struct TypeReader: Decodable {
         }
 
         // A trailing `?` reads first because it wraps the whole spelling:
-        // `array<int>?` is a nullable array, and what may be inside the
+        // `Array<Int>?` is a nullable array, and what may be inside the
         // brackets never carries one. `?` speaks about a slot, and only the
         // whole spelling is one. `inout` and `var` stand in front of the whole
         // type, including a trailing `?`, so they are read before anything else
@@ -193,7 +207,7 @@ public struct TypeReader: Decodable {
 
             case .never:
                 throw TypeFormError(
-                    "type '\(text)' writes `?` on never, which no value is"
+                    "type '\(text)' writes `?` on Never, which no value is"
                 )
 
             // A type parameter stands for what the call puts there, and what
@@ -236,13 +250,13 @@ public struct TypeReader: Decodable {
             return .parameter(name: try named(bare))
         }
 
-        // A range is spelled into the name: `int(0...255)`,
-        // `double(0.0..<1.0)`. Either bound optional but not both, and `..<`
+        // A range is spelled into the name: `Int(0...255)`,
+        // `Double(0.0..<1.0)`. Either bound optional but not both, and `..<`
         // leaving the far bound outside. Only a number takes one: a range is a
         // condition on a number, and no other kind is one. Which kind is
         // written out, because a bound is a value of the kind it bounds and the
         // two read their spellings differently.
-        for kind in ["int", "double"] where text.hasPrefix("\(kind)(") && text.hasSuffix(")") {
+        for kind in ["Int", "Double"] where text.hasPrefix("\(kind)(") && text.hasSuffix(")") {
             let inner = String(text.dropFirst("\(kind)(".count).dropLast())
 
             // `..<` first: `...` is inside neither spelling of the other, but
@@ -275,7 +289,7 @@ public struct TypeReader: Decodable {
                 )
             }
 
-            return kind == "int"
+            return kind == "Int"
                 ? .ranged(.whole(
                     from: try whole(written.lower, of: text),
                     to: edge(try whole(written.upper, of: text), excluding: open != nil)
@@ -291,11 +305,11 @@ public struct TypeReader: Decodable {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
             }
 
-            // A list or a map says what it holds. `array<any>` is a list of
+            // A list or a map says what it holds. `Array<Any>` is a list of
             // anything, and the bare word is not a second spelling of it.
-            guard Holding(rawValue: text) == nil else {
+            guard Holding(spelling: text) == nil else {
                 throw TypeFormError(
-                    "type '\(text)' says nothing of what it holds. Write `\(text)<any>`"
+                    "type '\(text)' says nothing of what it holds. Write `\(text)<Any>`"
                         + " for one of anything"
                 )
             }
@@ -313,10 +327,10 @@ public struct TypeReader: Decodable {
 
         let inner = String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
 
-        guard let holding = Holding(rawValue: head) else {
+        guard let holding = Holding(spelling: head) else {
             throw TypeFormError(
                 "type '\(head)' takes no argument. Only "
-                    + Holding.allCases.map { holding in "`\(holding.rawValue)<…>`" }.joined(separator: " and ")
+                    + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: " and ")
                     + " do"
             )
         }
@@ -358,10 +372,17 @@ public struct TypeReader: Decodable {
         return (mark, constness, isolation)
     }
 
+    // Where a procedure type's head is written: as a type's name, `Procedure`,
+    // or as the key of the form that carries its signature, `procedure`.
+    public enum ProcedureHead {
+        case name
+        case key
+    }
+
     // The one spelling of a procedure type's head: `const` before `isolated`,
-    // both before `procedure`.
-    public static func procedureSpelling(_ constness: Constness, _ isolation: Isolation) -> String {
-        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
+    // both before the head.
+    public static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
+        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? "Procedure" : "procedure"]
             .compactMap { part in part }
             .joined(separator: " ")
     }
@@ -510,7 +531,7 @@ public struct TypeReader: Decodable {
         case .overflow:
             throw TypeFormError(
                 "type '\(text)' bounds a range with '\(written)',"
-                    + " a whole number past what an int holds"
+                    + " a whole number past what an Int holds"
             )
         }
     }

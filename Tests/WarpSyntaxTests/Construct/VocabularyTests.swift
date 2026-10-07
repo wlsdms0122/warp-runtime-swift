@@ -71,7 +71,7 @@ struct VocabularyTests {
                 case let .string(text) = question[.of],
                 case let .int(limit) = question[.value]
             else {
-                throw ExecutionError("extra.longerThan asks a string and an int")
+                throw ExecutionError("extra.longerThan asks a String and an Int")
             }
 
             return .bool(text.count > limit)
@@ -105,7 +105,7 @@ struct VocabularyTests {
             ]
         )
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "names", "type": "array<string>"]],
+            "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 ["var": "verdict"],
                 ["let": "head", "value": ["call": ["procedure": "Standard.Collection.first", "arguments": [["ref": "names"]]]]],
@@ -136,7 +136,7 @@ struct VocabularyTests {
         // Given. Nothing is privileged, so the standard module is a file like
         // any other and leaving it out means leaving out what it declares
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "names", "type": "array<string>"]],
+            "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 ["let": "said", "value": ["call": ["procedure": "Standard.Collection.count"]]]
             ]

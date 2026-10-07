@@ -73,7 +73,7 @@ struct VariableTests {
             )
         ]
 
-        // When. `all` answers `any` by its declaration, so the type the author
+        // When. `all` answers `Any` by its declaration, so the type the author
         // expects is named before a dot reads it
         let answer = try await answer(
             of: Body(sut.statements + [

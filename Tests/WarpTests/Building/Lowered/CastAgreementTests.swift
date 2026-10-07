@@ -163,7 +163,7 @@ struct CastAgreementTests {
         // cannot reach: it only checks pairs some value satisfies, and a pair
         // no value satisfies is exactly what this walk is for. The bounds are
         // the whole of what tells these apart, so a walk that drops them
-        // answers about `int` beside `int` and lets the cast through.
+        // answers about `Int` beside `Int` and lets the cast through.
         let pairs: [(TypeExpression, TypeExpression)] = [
             (.ranged(.whole(from: 0, to: .through(5))), .ranged(.whole(from: 10, to: .through(15)))),
             (.ranged(.whole(from: 0, to: .upTo(10))), .ranged(.whole(from: 10))),

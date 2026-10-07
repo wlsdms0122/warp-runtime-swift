@@ -31,7 +31,7 @@ struct CanonicalTests {
         // Given. `{ of: x, is: 1 }` is one way to arrive at a condition. The
         // slot asks for an expression, and this is another.
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "count", "type": "int"]],
+            "parameters": [["name": "count", "type": "Int"]],
             "body": [
                 ["var": "pick"],
                 [
@@ -103,7 +103,7 @@ struct CanonicalTests {
         // to is writable, so nothing is only reachable by spelling it.
         func picking(on condition: Value) throws -> Module {
             try loader.loadProcedure([
-                "parameters": [["name": "word", "type": "string"]],
+                "parameters": [["name": "word", "type": "String"]],
                 "body": [
                     ["var": "pick"],
                     [
@@ -149,7 +149,7 @@ struct CanonicalTests {
         // boolean already is one, and demanding it be spelled as `{ of: x, is:
         // true }` would be the notation making up a requirement.
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "ready", "type": "bool"]],
+            "parameters": [["name": "ready", "type": "Bool"]],
             "body": [
                 ["var": "pick"],
                 [

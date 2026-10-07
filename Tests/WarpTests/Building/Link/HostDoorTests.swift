@@ -63,7 +63,7 @@ struct HostDoorTests {
         #expect {
             try image.settling(.dictionary(["balance": .string("much")]), as: "Bank.Account")
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("expected int, got string")
+            error is ArgumentError && "\(error)".contains("expected Int, got String")
         }
     }
 

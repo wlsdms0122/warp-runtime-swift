@@ -76,7 +76,7 @@ struct CallTests {
                 result: reference("probe")
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("'collection' holds int, which 'Standard.Collection' does not admit")
+            error is BuildError && "\(error)".contains("'collection' holds Int, which 'Standard.Collection' does not admit")
         }
     }
 
@@ -163,7 +163,7 @@ struct CallTests {
         await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'App.shout': input 'text': expected string, got int")
+            error is BuildError && "\(error)".contains("sending 'App.shout': input 'text': expected String, got Int")
         }
     }
 
@@ -374,7 +374,7 @@ struct CallTests {
             try await Builder().build([sut])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'callee' with base, which holds string where int is declared")
+                && "\(error)".contains("sending 'callee' with base, which holds String where Int is declared")
         }
     }
 

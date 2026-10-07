@@ -501,7 +501,7 @@ public struct Writer: Sendable {
         case .dictionary:
             throw WritingError(
                 "a dictionary has no document of its own. Write a record and cast it"
-                    + " to the `dictionary<T>` it is"
+                    + " to the `Dictionary<T>` it is"
             )
 
         case .record:

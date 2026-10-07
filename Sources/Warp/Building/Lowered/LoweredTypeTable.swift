@@ -222,7 +222,7 @@ final class LoweredTypeTable: Sendable {
     // What the members of a constraint said of a value, each settled once:
     // nothing where one takes it, and otherwise each member's reason, in
     // order. A member speaks through the same settlement a declared type
-    // applies, so what `int` admits as a slot it admits as a member,
+    // applies, so what `Int` admits as a slot it admits as a member,
     // widening included. A scalar member answers by kind and says only that
     // the kind is wrong, which is already in front of the reader; any other
     // is settled with this constraint joining what is being asked, and

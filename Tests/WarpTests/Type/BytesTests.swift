@@ -11,7 +11,7 @@ import Testing
 import WarpStandard
 import WarpTestSupport
 
-// `bytes = array<byte>`. Bytes are not a special material, they are a compact
+// `bytes = Array<byte>`. Bytes are not a special material, they are a compact
 // spelling of an array of small whole numbers. The worth is the elements', the
 // collection vocabulary applies, and only the spelling differs. `1` and `1.0`,
 // one collection up.
@@ -75,7 +75,7 @@ struct BytesTests {
             try TypeExpression.array(.ranged(.whole(from: 0, to: .through(200))))
                 .settling(.bytes([1, 255]), at: "value")
         } throws: { error in
-            "\(error)".contains("value[1]") && "\(error)".contains("outside int(0...200)")
+            "\(error)".contains("value[1]") && "\(error)".contains("outside Int(0...200)")
         }
     }
 
@@ -176,7 +176,7 @@ struct BytesTests {
         #expect(!TypeExpression.array(.byteElement).accepts(.array(.double)))
     }
 
-    @Test("an index reads one byte out as the int it is")
+    @Test("an index reads one byte out as the Int it is")
     func anIndexReadsAByte() async throws {
         // Given. The path is judged at the build, drilled at the run
         let sut = try Module(
@@ -204,9 +204,9 @@ struct BytesTests {
 
     @Test("a procedure wanting elements no byte can be refuses at the boundary, by the element")
     func aProcedureWantingOtherElementsRefusesAtTheBoundary() async throws {
-        // Given. `joined` declares `array<string>`, which leaves no byte as it
+        // Given. `joined` declares `Array<String>`, which leaves no byte as it
         // is, so the compact spelling does not cross: it is read out and
-        // settled element by element. The argument is read `any` here so the
+        // settled element by element. The argument is read `Any` here so the
         // build lets it through and the run is the one that answers.
         //
         // This is why a procedure whose elements no byte can be still asks for the
@@ -229,12 +229,12 @@ struct BytesTests {
         await #expect {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
-            "\(error)".contains("input 'strings'[0]: expected string, got int")
+            "\(error)".contains("input 'strings'[0]: expected String, got Int")
                 && !"\(error)".contains("expected array")
         }
     }
 
-    @Test("a walk over bytes reads the ordinary int each byte is")
+    @Test("a walk over bytes reads the ordinary Int each byte is")
     func aWalkOverBytesReadsInts() async throws {
         // Given. Bytes count and index the way an array does, so the loop that
         // walks one reads each byte as the ordinary int it is
@@ -300,7 +300,7 @@ struct BytesTests {
             ]
         )
 
-        // When / Then. The element declaration `array<int>` asks nothing of a
+        // When / Then. The element declaration `Array<Int>` asks nothing of a
         // byte, so the compact member crosses as itself and the long one as
         // itself: each value keeps the spelling it was written in.
         #expect(

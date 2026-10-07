@@ -748,7 +748,7 @@ struct ProcedureSendsTests {
         #expect(refusal?.place == Place.procedure("App.shouting", in: .of(Self.contradicting)).part(.imports))
     }
 
-    @Test("an isolated procedure sending one that keeps state is refused")
+    @Test("an isolated Procedure sending one that keeps state is refused")
     func anIsolatedProcedureSendingSharedStateIsRefused() async {
         // Given / When / Then. `App.counted` says it touches nothing shared
         // and sends `App.ticket`, which answers from a box it keeps between
@@ -763,7 +763,7 @@ struct ProcedureSendsTests {
         }
     }
 
-    @Test("an isolated procedure compiled apart from the stateful one it sends is refused at the build")
+    @Test("an isolated Procedure compiled apart from the stateful one it sends is refused at the build")
     func anIsolatedProcedureCompiledApartIsRefused() async throws {
         // Given. `App.ticket` is compiled on its own
         let ticketing = try await Builder().compile([.ticketing])
@@ -970,7 +970,7 @@ struct ProcedureSendsTests {
 
     @Test("a value a send hands over is held to the parameter it fills")
     func aHandedNullIsHeldToItsType() async throws {
-        // Given. `App.reporting` declares `said: string`, and null is not a
+        // Given. `App.reporting` declares `said: String`, and null is not a
         // string. The same gate an argument a body writes goes through
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
@@ -985,7 +985,7 @@ struct ProcedureSendsTests {
             try await Executor().run(image)
         }
 
-        #expect(refusal?.message.contains("expected string, got null") == true)
+        #expect(refusal?.message.contains("expected String, got Null") == true)
     }
 
     // MARK: - Public

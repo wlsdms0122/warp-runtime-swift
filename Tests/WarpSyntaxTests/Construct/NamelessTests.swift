@@ -30,7 +30,7 @@ struct NamelessTests {
             "imports": ["Standard.Math.plus"],
             "procedures": [
                 "entry": [
-                    "returns": "int",
+                    "returns": "Int",
                     "body": [
                         ["value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]]],
                         ["let": "kept", "value": 5]
@@ -95,7 +95,7 @@ struct NamelessTests {
         // When / Then. The leave rules reach through structure
         #expect {
             try loader.loadProcedure([
-                "returns": "int",
+                "returns": "Int",
                 "body": [[
                     "let": "done",
                     "value": ["conditional": [
@@ -117,7 +117,7 @@ struct NamelessTests {
         // When / Then. Order is a fact only the sequence shows
         #expect {
             try loader.loadProcedure([
-                "returns": "int",
+                "returns": "Int",
                 "body": [
                     ["value": ["return": 1]],
                     ["let": "unreachable", "value": 2]
@@ -188,7 +188,7 @@ struct NamelessTests {
             "imports": ["Standard.Math.plus"],
             "procedures": [
                 "entry": [
-                    "returns": "int",
+                    "returns": "Int",
                     "body": [
                         ["value": ["call": ["procedure": "Standard.Math.plus", "arguments": [1, 2]]]],
                         ["let": "kept", "value": 5]

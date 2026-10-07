@@ -112,7 +112,7 @@ struct Flow {
     // What every `return` inside here carried out of the procedure. Nothing
     // absorbs one, so this only ever gathers on the way up. Kept apart rather
     // than joined, so each is held to the declaration on its own: two that
-    // disagree join to `any`, and `any` fits everything.
+    // disagree join to `Any`, and `Any` fits everything.
     var answered: [Answer] = []
 
     // The names read here that the body this flow came out of did not

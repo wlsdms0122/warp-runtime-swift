@@ -246,7 +246,7 @@ struct ObservationTests {
                     body: [
                         // Nameless on both sides. `helper` declares no answer
                         // and its body never finishes, so the build reads the
-                        // call as `never` too, and a statement that never
+                        // call as `Never` too, and a statement that never
                         // finishes takes no name, so the place is its position.
                         Statement(
                             expression: .call(Call(selector: "helper"))

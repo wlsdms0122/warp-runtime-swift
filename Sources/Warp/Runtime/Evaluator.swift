@@ -968,7 +968,7 @@ struct Evaluator: Sendable {
 
     private func bool(_ value: Value) throws -> Bool {
         guard case let .bool(answer) = value else {
-            throw ExecutionError("a condition must answer bool, got \(value.type)")
+            throw ExecutionError("a condition must answer Bool, got \(value.type)")
         }
 
         return answer

@@ -36,7 +36,7 @@ struct CallTests {
                     "result": ["record": ["result": ["ref": "call.pair"]]]
                 ],
                 "callee": [
-                    "parameters": [["name": "base", "type": "int"], ["name": "bump", "type": "int?"]],
+                    "parameters": [["name": "base", "type": "Int"], ["name": "bump", "type": "Int?"]],
                     "body": [
                         [
                             "let": "echo",
@@ -44,7 +44,7 @@ struct CallTests {
                         ]
                     ],
                     "result": ["record": ["pair": ["ref": "echo"]]],
-                    "returns": ["record": ["pair": ["record": ["base": "int", "bump": "int?"]]]]
+                    "returns": ["record": ["pair": ["record": ["base": "Int", "bump": "Int?"]]]]
                 ]
             ]
         ])
@@ -71,7 +71,7 @@ struct CallTests {
                     ]
                 ],
                 "callee": [
-                    "parameters": [["name": "base", "type": "int"]],
+                    "parameters": [["name": "base", "type": "Int"]],
                     "body": [["let": "echo", "value": ["ref": "base"]]]
                 ]
             ]
@@ -101,7 +101,7 @@ struct CallTests {
                 "some-other-file.greet": [
                     "body": [["let": "word", "value": "hello"]],
                     "result": ["record": ["said": ["ref": "word"]]],
-                    "returns": ["record": ["said": "string"]]
+                    "returns": ["record": ["said": "String"]]
                 ]
             ]
         ])
@@ -122,7 +122,7 @@ struct CallTests {
             "imports": ["Standard.Text.joined", "Standard.Text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "word", "type": "string"]],
+                    "parameters": [["name": "word", "type": "String"]],
                     "body": [
                         [
                             "let": "said",
@@ -132,8 +132,8 @@ struct CallTests {
                     "result": ["record": ["result": ["ref": "said"]]]
                 ],
                 "shout": [
-                    "parameters": [["name": "of", "type": "string"]],
-                    "returns": "string",
+                    "parameters": [["name": "of", "type": "String"]],
+                    "returns": "String",
                     "body": [],
                     "result": ["format": "${of}!", "with": ["of": ["ref": "of"]]]
                 ]

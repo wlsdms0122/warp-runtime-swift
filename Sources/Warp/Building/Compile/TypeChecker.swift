@@ -14,12 +14,12 @@ import Foundation
 // is what knows: `said = call counts` followed by `wants(said)` is two
 // declarations disagreeing, and both are text.
 //
-// Nothing here is required to say anything: what cannot be read is `any`, and
-// `any` is accepted everywhere a value is passed. A wrong answer would be a refusal an author cannot act on,
+// Nothing here is required to say anything: what cannot be read is `Any`, and
+// `Any` is accepted everywhere a value is passed. A wrong answer would be a refusal an author cannot act on,
 // so the walk answers only where the text says so.
 //
 // Reading through one is the exception, and it is the one place saying nothing
-// is not enough: a dot needs a type to be judged against, so a dot on `any`
+// is not enough: a dot needs a type to be judged against, so a dot on `Any`
 // refuses rather than deferring to the run. The author names the type with
 // `as`, and the walk goes on from there.
 //
@@ -48,7 +48,7 @@ struct TypeChecker {
     // dot judged, every constant-headed path folded, every call gathered, every
     // refusal thrown) and it happens
     // once per site. Probing answers the type and flow questions alone and
-    // refuses nothing (what cannot be read is `any`) because its askers read a
+    // refuses nothing (what cannot be read is `Any`) because its askers read a
     // body out of place or more than once: an operand typed where it stands, a
     // round re-read until its writes settle, where a refusal would be transient
     // or repeated. One walk under two asks, so the rules cannot drift a copy at
@@ -252,7 +252,7 @@ struct TypeChecker {
     // A body's answer may be another body's, so the order is the call graph's. Each
     // declaration read after everything its answer could come from. Bodies that
     // reach one another's answers in a cycle, a recursive one included, are read
-    // as `any`: an answer worked out from itself is not one the text states, and a
+    // as `Any`: an answer worked out from itself is not one the text states, and a
     // guess there would be a refusal an author cannot act on. Writing `returns` is
     // what says more, and it removes the cycle by saying it.
     //
@@ -308,7 +308,7 @@ struct TypeChecker {
             // own parameter answers what the caller put there, and a body
             // answering a type only it could name (what a walk *through* a
             // parameter reaches, named for the path that reached it) fills with
-            // nothing, which is `any`. One rule, and the useful half comes for
+            // nothing, which is `Any`. One rule, and the useful half comes for
             // free.
             recording(only.symbol.declared, read ?? .any)
         }
@@ -526,7 +526,7 @@ struct TypeChecker {
     // takes nothing in place at a type parameter, settles what it hands back
     // to what it declares, so it proves it outright. Otherwise every answer
     // whose declared type names a type parameter has to be, at each type
-    // parameter, that parameter, with no reading of `any` and no member
+    // parameter, that parameter, with no reading of `Any` and no member
     // value; a call whose answer or variable handed back names a type
     // parameter and is judged where it stands hands back what proves nothing,
     // unless it reaches a declaration of this document, whose proof is the
@@ -599,7 +599,7 @@ struct TypeChecker {
 
     // What a call's answer is judged against where the call stands: what the
     // call reads it as, unless the callee already settles exactly that, or
-    // the call reads `any` or nothing. `answeredBy` is what the callee
+    // the call reads `Any` or nothing. `answeredBy` is what the callee
     // settles, nil where the callee is not known here.
     private func judgedAgainst(_ reading: LoweredType, answeredBy callee: LoweredType?) -> LoweredType? {
         switch reading {
@@ -633,7 +633,7 @@ struct TypeChecker {
     // parameter is judged against once the call is over, by position: what
     // the call filled the slot with. The callee writes it as its own
     // parameter, which says nothing of what filled it, unless its row proved
-    // it hands back what it declares. A variable read as `any` needs no
+    // it hands back what it declares. A variable read as `Any` needs no
     // judgement.
     private func handedBack(
         over slots: [Slot],
@@ -844,12 +844,12 @@ struct TypeChecker {
     // path's reading nullable.
     //
     // Three types stop the walk, and each stops it for its own reason. On
-    // `any` the walk **refuses**: nothing was declared, so there is nothing a
+    // `Any` the walk **refuses**: nothing was declared, so there is nothing a
     // dot could be judged against, and a dot no declaration proves is what a
     // run would otherwise have to decide for itself. The type is named
     // instead, with `as`. On a type parameter the segments stand **as
     // written**: the type is declared, at the call rather than here, and what
-    // the call filled in answers them. On `never` nothing arrives to be read at
+    // the call filled in answers them. On `Never` nothing arrives to be read at
     // all, so there is nothing to judge and nothing to refuse.
     private func reading(
         of path: Path,
@@ -889,15 +889,15 @@ struct TypeChecker {
 
             // What the dot lands on, settled: the walk-stopping types are
             // asked again after every unwrap, because what a `T?` holds is a
-            // type like any other (`any`, null, another name, another nullable)
+            // type like any other (`Any`, null, another name, another nullable)
             // and an unwrap that skipped the questions would judge on a type
             // nobody checked.
             settling: while true {
                 // Three types stop a walk, and they stop it for three
                 // different reasons, so they are asked separately, and each
                 // says its own. A dot is judged against what a declaration
-                // proves at this site: `any` declares nothing and never will, a
-                // type parameter's type is declared at the call, and `never`
+                // proves at this site: `Any` declares nothing and never will, a
+                // type parameter's type is declared at the call, and `Never`
                 // declares a value that does not arrive at all.
 
                 // Nothing was declared here, so nothing about this value can
@@ -923,7 +923,7 @@ struct TypeChecker {
                 // A type parameter is declared at the call, so the segments
                 // stand as written and the call's type answers them. The
                 // reading is what the parameter's type reaches through them,
-                // neither `any` nor the parameter itself, so a body naming a
+                // neither `Any` nor the parameter itself, so a body naming a
                 // step on the way (`held = of.inner`, then `held.count`) reads
                 // the same field.
                 if let reached = current.reaching(rest()) {
@@ -1073,7 +1073,7 @@ struct TypeChecker {
                             + " which \(current.rendered(in: context.loweredTypes)) does not declare."
                             + " A procedure is sent with a written call, and data"
                             + " past the declaration is read by declaring it,"
-                            + " or through `dictionary<any>`"
+                            + " or through `Dictionary<Any>`"
                     )
                 }
 
@@ -1117,7 +1117,7 @@ struct TypeChecker {
     // What a path write reaches, or why it may not. The head is a box; each
     // field on the way is one a declared type wrote `var`, or a field of a
     // type no declaration named; an element is written through its index. A
-    // type that may be null is not written into, and neither is `any`.
+    // type that may be null is not written into, and neither is `Any`.
     private func writable(
         _ path: Path,
         in environment: [Name: Binding],
@@ -1266,7 +1266,7 @@ struct TypeChecker {
     // each write both in one document, so each asks here rather than working
     // the question out again further on.
     //
-    // What opens to `any` stands and is settled where the value arrives.
+    // What opens to `Any` stands and is settled where the value arrives.
     private func held(
         written answer: LiteralShape,
         answered: [Flow.Answer],
@@ -1335,7 +1335,7 @@ struct TypeChecker {
 
     // The one machine that judges an index reference, wherever a walk meets
     // one, answering the refusal or nil. The inner path is a path of its own;
-    // what it reads has to be able to be an index. `int` is one; `double` and
+    // what it reads has to be able to be an index. `Int` is one; `Double` and
     // a bounded parameter may hold a whole value the run accepts, so only the
     // actual reading (the fold's, or the run's) refuses the fraction; what the
     // walk could not read might be anything. Everything else provably is not,
@@ -1357,7 +1357,7 @@ struct TypeChecker {
 
             default:
                 return "index reference \(inner.rendered) reads"
-                    + " \(innerType.rendered(in: context.loweredTypes)), expected int"
+                    + " \(innerType.rendered(in: context.loweredTypes)), expected Int"
             }
         }
     }
@@ -1383,7 +1383,7 @@ struct TypeChecker {
 
             default:
                 return "key reference \(inner.rendered) reads"
-                    + " \(innerType.rendered(in: context.loweredTypes)), expected string"
+                    + " \(innerType.rendered(in: context.loweredTypes)), expected String"
             }
         }
     }
@@ -1439,7 +1439,7 @@ struct TypeChecker {
 
         default:
             throw BuildError(
-                "index reference \(inner.rendered) is \(settled.type), expected int",
+                "index reference \(inner.rendered) is \(settled.type), expected Int",
                 at: place
             )
         }
@@ -1498,7 +1498,7 @@ struct TypeChecker {
     }
 
     // A condition chooses a way through a body, so what it reads has to be a
-    // bool. `any` passes, the way it passes every other slot: nothing was
+    // bool. `Any` passes, the way it passes every other slot: nothing was
     // declared, and the run judges what arrives.
     private func held(
         _ reading: LoweredType,
@@ -1510,7 +1510,7 @@ struct TypeChecker {
 
         try refuse(
             "reads \(reading.rendered(in: context.loweredTypes)), and a condition"
-                + " chooses a way through a body, so it answers a bool",
+                + " chooses a way through a body, so it answers a Bool",
             at: place,
             when: ask
         )
@@ -1534,7 +1534,7 @@ struct TypeChecker {
             return Inspection(rewritten: expression, reading: LoweredType(of: value, in: context.loweredTypes))
 
         // Nothing comes back from here, so there is no value to have a type.
-        // `never` fits wherever it is written, and what evaluating the carried
+        // `Never` fits wherever it is written, and what evaluating the carried
         // value wrote left with the leave.
         case let .leave(leave):
             // What the procedure answers this way. Only a `return` reaches the
@@ -1670,7 +1670,7 @@ struct TypeChecker {
         //
         // A claim the types already prove is refused, for the reason a needless
         // `?.` is: the mark of a doubt where no doubt is left says nothing, and
-        // a spelling that says nothing is a reading gone wrong. `as: any` lands
+        // a spelling that says nothing is a reading gone wrong. `as: Any` lands
         // here too, and rightly. Every reading fits it.
         case let .cast(value, type, optional):
             let inner = try await inspected(
@@ -1697,8 +1697,8 @@ struct TypeChecker {
             // reading is fully proven.
             //
             // Needless means the claim and the reading are the same type, not
-            // that one would accept the other. `accepts` holds between `int`
-            // and `int(0...10)`, and between anything and `any`, because the
+            // that one would accept the other. `accepts` holds between `Int`
+            // and `Int(0...10)`, and between anything and `Any`, because the
             // value is checked when it arrives, so a narrowing cast still says
             // something. Record names count at every depth: reading a nameless
             // record as a declared one attaches the name, so it is never a
@@ -1735,7 +1735,7 @@ struct TypeChecker {
             } else if claim.identical(to: inner.reading, in: context.loweredTypes)
                 || handed.identical(to: inner.reading, in: context.loweredTypes) {
                 // Asked of the reading this hands on, not of the spelling that
-                // made it. `payload as? int` hands on `int?` and `payload as?
+                // made it. `payload as? Int` hands on `Int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same type by two spellings, and
                 // reading the question off the spelling let the second catch a
                 // repeat that the first waved through.
@@ -2007,7 +2007,7 @@ struct TypeChecker {
 
         // Which value is called is settled at the run, and what it answers is
         // the slot's to say under either ask: a procedure type that wrote
-        // `returns` answers that, and one that wrote none opens to `any`. Its
+        // `returns` answers that, and one that wrote none opens to `Any`. Its
         // operands are data, held as operands below, and write nothing. What
         // the call carries out is the boxes it took: a variable it hands in
         // place, and what a closure among its operands took.
@@ -2357,7 +2357,7 @@ struct TypeChecker {
             )
 
         // A conditional answers nothing. A condition chooses a way through the
-        // body, not a value; the one thing its type still says is `never`, when
+        // body, not a value; the one thing its type still says is `Never`, when
         // both arms have it. The condition runs every way and the arms are the
         // fork, judged in the environment the condition left: an arm every run
         // takes does not exist unless both are written (a conditional with no
@@ -2431,7 +2431,7 @@ struct TypeChecker {
         // the rounds that finished or continued, so the condition and the body
         // read the settled environment. The one the rounds' own writes
         // have already joined into. Readings that cycle instead of settling
-        // would be widened to `any` behind the author's back. Judging says so
+        // would be widened to `Any` behind the author's back. Judging says so
         // out loud, where a refusal can carry the reason; the probing ask stays
         // total and takes the widened answer.
         case let .loop(condition, body):
@@ -2636,7 +2636,7 @@ struct TypeChecker {
 
     // A block: its body, then the result in the environment the body left
     // visible. A result after a statement no run comes back from is judging's
-    // to refuse. The probing ask answers `never` and moves on.
+    // to refuse. The probing ask answers `Never` and moves on.
     private func inspected(
         block: Block,
         at place: Place,
@@ -2708,7 +2708,7 @@ struct TypeChecker {
     }
 
     // A body read in order: the environment its statements leave behind,
-    // `never` where one of them ends every way through, and its outward writes.
+    // `Never` where one of them ends every way through, and its outward writes.
     // Each statement's own binding included, except the names the body declared
     // itself, which die with it. Only the box a `set` writes outlives the
     // block. The one statement of the sequence rule, whichever ask is walking.
@@ -2965,7 +2965,7 @@ struct TypeChecker {
     // of writes settles one link per look, so the bound is the chain's own
     // size: the names the body writes, times the few steps the join ladder has.
     // Past it the readings are not climbing (they are cycling) and everything
-    // the body writes falls to `any`, or to the type it is held to where
+    // the body writes falls to `Any`, or to the type it is held to where
     // something took it, over-wide and never wrong; the judging ask answers
     // that state out loud, where it can refuse.
     private func settled<Round>(
@@ -3054,7 +3054,7 @@ struct TypeChecker {
     // The positions of a call whose argument is not a value of what fills
     // its slot, where that names a type parameter of the body around. The
     // call reads the argument as the parameter, which takes a value every
-    // member of its bounds takes and what a reading of `any` stands for, and
+    // member of its bounds takes and what a reading of `Any` stands for, and
     // what the call answers or hands back may be that argument.
     private func loose(
         taking: [LoweredType],
