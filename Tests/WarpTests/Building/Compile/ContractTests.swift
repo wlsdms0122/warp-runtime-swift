@@ -383,19 +383,39 @@ struct ContractTests {
         }
     }
 
-    @Test("a contract asking nothing is refused, since every type answers it")
-    func anEmptyContractRefuses() async throws {
-        // Given
-        let sut = try Module(
-            contracts: ["App.Anything": [:] as [Name: ContractProcedure]],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
-        )
+    @Test("a contract asking nothing is answered by the types claimed for it alone")
+    func anEmptyContractIsAMark() async throws {
+        // Given. `Int` is claimed for a contract asking nothing, and `String` is not.
+        let module = { (handed: Warp.Expression) in
+            try Module(
+                contracts: ["App.Marked": [:] as [Name: ContractProcedure]],
+                claims: ["Int": ["App.Marked"]],
+                procedures: [
+                    "App.take": Procedure(
+                        signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Marked"))], returns: .int),
+                        body: [],
+                        result: .literal(.int(1))
+                    ),
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(selector: "App.take", arguments: [handed]))
+                    )
+                ]
+            )
+        }
 
-        // When / Then
+        // When
+        let image = try await Builder().build([try module(.literal(.int(1)))] + Module.standard)
+
+        // Then
+        #expect(try await Executor().run(image) == .int(1))
+
         await #expect {
-            try await Builder().build([sut] + Module.standard)
+            try await Builder().build([try module(.literal(.string("x")))] + Module.standard)
         } throws: { error in
-            "\(error)".contains("asks nothing, so every type satisfies it")
+            "\(error)".contains("no document in this link says 'String' answers it")
         }
     }
 

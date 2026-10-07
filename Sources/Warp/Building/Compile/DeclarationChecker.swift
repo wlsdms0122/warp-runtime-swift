@@ -162,15 +162,6 @@ struct DeclarationChecker {
             // is written `Self`, the type that answers the contract, which a
             // call reads as one type parameter the contract bounds.
             for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
-                guard !procedures.isEmpty else {
-                    throw BuildError(
-                        "asks nothing, so every type satisfies it. A contract is"
-                            + " the procedures a value answers, and one with no procedures"
-                            + " says nothing a slot could lean on",
-                        at: .contract(contract.spelling, in: .of(module))
-                    )
-                }
-
                 for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
                     let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
 
