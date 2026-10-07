@@ -487,8 +487,9 @@ struct Compiler {
             // A start written as a literal, or as a closure literal that
             // writes no answer, is read as what the variable declares.
             let start = variable.declared.map { declared in
-                declared.lowered(in: context.loweredTypes)
-                    .written(declared.completing(variable.start, in: context.types), in: context.loweredTypes)
+                let place = declared.lowered(in: context.loweredTypes)
+
+                return place.written(place.completing(variable.start, in: context.loweredTypes), in: context.loweredTypes)
             } ?? variable.start
 
             try await fulfillment.folding(place) {

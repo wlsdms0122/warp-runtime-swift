@@ -50,6 +50,29 @@ struct LoweredTypeTests {
         }
     }
 
+    @Test("a lowered type spells back to a type that lowers to it")
+    func aLoweredTypeSpellsBack() throws {
+        // Given. Every declared type, and a few that name them, a record and
+        // a procedure type among them
+        let table = types.loweredTypes
+        let written: [TypeExpression] = Array(types.types.values) + [
+            .array(.named("Bank.Acct")),
+            .nullable(.named("Bank.Owner")),
+            .parameter(name: "T", bounds: ["App.Ordered"]),
+            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
+            .procedure(nil),
+            .record(["a": .variable(.int), "b": .dictionary(.named("App.Maybe"))]),
+            .named("App.Ordered")
+        ]
+
+        // When / Then
+        for type in written {
+            let lowered = type.lowered(in: table)
+
+            #expect(lowered.spelled(in: table)?.lowered(in: table) == lowered, "\(type.rendered)")
+        }
+    }
+
     @Test("a type parameter read as ranges or as a range and its kind is the kind, whichever is read first")
     func aParameterReadAsRangesIsTheirKind() {
         // Given. Ranges meet by their kind, so two that overlap, or a range

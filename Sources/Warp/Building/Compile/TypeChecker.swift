@@ -191,7 +191,7 @@ struct TypeChecker {
     ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: HandBackProof) {
         let promised = returns?.lowered(in: context.loweredTypes)
         let inner = try await inspected(
-            block: block,
+            block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
             at: place,
             in: environment,
             with: context,
@@ -1618,12 +1618,19 @@ struct TypeChecker {
                 )
             }
 
-            let carried = try await inspected(value, naming: nil, at: place.child(.held), in: environment, with: context, ask: ask)
+            // What a `return` carries stands where the body declares its
+            // answer, a closure literal included.
+            let answer = leave.reach == .procedure ? ask.answer : nil
+            let carried = try await inspected(
+                answer.map { answer in answer.completing(value, in: context.loweredTypes) } ?? value,
+                naming: nil,
+                at: place.child(.held),
+                in: environment,
+                with: context,
+                ask: ask
+            )
 
-            // What a `return` carries stands where the body declares its answer.
-            let handed = leave.reach == .procedure
-                ? ask.answer.map { answer in answer.written(carried.rewritten, in: context.loweredTypes) } ?? carried.rewritten
-                : carried.rewritten
+            let handed = answer.map { answer in answer.written(carried.rewritten, in: context.loweredTypes) } ?? carried.rewritten
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -1942,7 +1949,7 @@ struct TypeChecker {
             // from outside is what the closure takes, which either ask needs.
             let promised = procedure.signature.returns?.lowered(in: context.loweredTypes)
             let inner = try await inspected(
-                block: block,
+                block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
                 at: place.child(.closure),
                 in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
                     _, own in own
@@ -2120,6 +2127,16 @@ struct TypeChecker {
                 answers = returns
             } else {
                 answers = .any
+            }
+
+            // A closure literal handed at a position the slot's type reads
+            // as a procedure type is completed by it.
+            let arguments = arguments.enumerated().map { position, argument in
+                guard case let .procedure(parameters?, _, _, _) = callee, parameters.indices.contains(position) else {
+                    return argument
+                }
+
+                return parameters[position].completing(argument, in: context.loweredTypes)
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -2343,7 +2360,8 @@ struct TypeChecker {
                 // A slot declaring a procedure type completes a closure
                 // literal written into it.
                 let argument = signature.parameters.indices.contains(position)
-                    ? signature.parameters[position].declared.completing(written, in: context.types)
+                    ? signature.parameters[position].declared.lowered(in: context.loweredTypes)
+                        .completing(written, in: context.loweredTypes)
                     : written
                 let inner = try await inspected(
                     argument,
@@ -2826,10 +2844,10 @@ struct TypeChecker {
         for (position, written) in body.statements.enumerated() {
             let here = place.statement(written, at: position)
 
-            // A name declaring a procedure type completes a closure literal
-            // written into it.
-            let statement = written.binding?.declared.map { declared in
-                Statement(binding: written.binding, expression: declared.completing(written.expression, in: context.types))
+            // A closure literal written into a place that reads a
+            // procedure type is completed by it.
+            let statement = destination(of: written.binding, in: environment, with: context, at: here).map { destination in
+                Statement(binding: written.binding, expression: destination.completing(written.expression, in: context.loweredTypes))
             } ?? written
 
             let inner = try await inspected(
@@ -3360,6 +3378,34 @@ struct TypeChecker {
     // is written is not a value of it. Answers the type the write was held
     // to, or nil where it was refused.
     @discardableResult
+    // The type a statement writes its value into, where it is known before
+    // the value is read: what a name declares, or what a write reaches in a
+    // box held to a type or through a path. A whole write a box takes as its
+    // new type writes into none, and neither does a write the check refuses.
+    private func destination(
+        of binding: Statement.Binding?,
+        in environment: [Name: Binding],
+        with context: TypingContext,
+        at place: Place
+    ) -> LoweredType? {
+        switch binding {
+        case let .constant(_, declared?)?, let .variable(_, declared?)?:
+            return declared.lowered(in: context.loweredTypes)
+
+        case let .assignment(path)?:
+            guard let head = path.head, let box = environment[head] else { return nil }
+
+            guard path.segments.count > 1 else { return box.heldType }
+
+            guard case let .reaches(reached) = writable(path, in: environment, with: context, at: place) else { return nil }
+
+            return reached
+
+        default:
+            return nil
+        }
+    }
+
     private func refuseUnfit(
         _ written: LiteralShape,
         writtenTo path: Path,

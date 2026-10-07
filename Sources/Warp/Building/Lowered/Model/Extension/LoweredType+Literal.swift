@@ -165,4 +165,64 @@ extension LoweredType {
     func written(_ block: Block, in table: LoweredTypeTable) -> Block {
         Block(body: block.body, result: block.result.map { result in written(result, in: table) })
     }
+
+    // A closure literal written where this is read, its signature completed
+    // by the place: one that writes no `returns`, written where a procedure
+    // type says what it answers, answers that, so its body is judged against
+    // it and a literal it answers is read as the place reads it. At every
+    // depth `written` reaches a literal, so where a closure is written does
+    // not decide when what it answers is judged. An answer a call fills is
+    // no place's to say, and anything else stands as written.
+    func completing(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
+        switch self {
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.completing(expression, in: table)
+
+        case let .named(row):
+            return table.loweredTypes[row].completing(expression, in: table)
+
+        default:
+            break
+        }
+
+        switch expression {
+        case let .closure(written):
+            guard
+                written.signature.returns == nil,
+                case let .procedure(_, returns?, _, _) = self,
+                let answer = returns.spelled(in: table),
+                !answer.isGeneric
+            else {
+                return expression
+            }
+
+            return .closure(written.with(signature: Signature(parameters: written.signature.parameters, returns: answer)))
+
+        case let .array(items):
+            guard let element = element(in: table) else { return expression }
+
+            return .array(items.map { item in element.completing(item, in: table) })
+
+        case let .record(fields):
+            return .record(
+                Dictionary(uniqueKeysWithValues: fields.map { name, field in
+                    (name, dotted(name, in: table).map { place in place.completing(field, in: table) } ?? field)
+                })
+            )
+
+        case let .block(block):
+            return .block(completing(block, in: table))
+
+        case let .attempt(block, rescue):
+            return .attempt(completing(block, in: table), rescue: completing(rescue, in: table))
+
+        default:
+            return expression
+        }
+    }
+
+    // The same for a block whose answer stands where this is read.
+    func completing(_ block: Block, in table: LoweredTypeTable) -> Block {
+        Block(body: block.body, result: block.result.map { result in completing(result, in: table) })
+    }
 }
