@@ -382,6 +382,39 @@ struct ContractTests {
         }
     }
 
+    @Test("a claim about Array answered for a bounded element names the element as whatever a list holds")
+    func aClaimAboutArrayNamesItsElementPlainly() async throws {
+        // Given. A list's element is whatever it holds, which a bound on the
+        // declaration's own parameter does not take
+        let sut = try Module(
+            contracts: ["App.Sortable": ["sort": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]],
+            claims: ["Array": ["App.Sortable"]],
+            procedures: [
+                "Array.sort": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .array(.parameter(name: "T", bounds: ["Standard.Comparable"])))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(0))
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "App.Sortable.sort", arguments: [.array([.literal(.int(1))])]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("reads 'T' as whatever element a value of 'Array' holds") && !"\(error)".contains("Self.Element")
+        }
+    }
+
     @Test("a contract asking nothing is answered by the types claimed for it alone")
     func anEmptyContractIsAMark() async throws {
         // Given. `Int` is claimed for a contract asking nothing, and `String` is not.

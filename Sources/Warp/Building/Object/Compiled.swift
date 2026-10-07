@@ -147,6 +147,38 @@ public struct Compiled: Sendable, Declaring {
         )
     }
 
+    // Every name this document reaches outside itself, read off what its
+    // object holds: what its bodies send, the types they and its signatures
+    // stand on, and the names its claims and the pairs it leaned on write.
+    // An object keeps no list of what its document named, so this is that
+    // list worked out again from the facts the object does keep.
+    var reaches: Set<Reference> {
+        var reached = Set(numbering.sending.map(Reference.procedure))
+
+        reached.formUnion(typeNumbering.types.map(Reference.type))
+
+        for row in table {
+            reached.formUnion(row.signature.mentions.map(Reference.type))
+        }
+
+        for procedures in contracts.values {
+            for asked in procedures.values {
+                reached.formUnion(asked.signature.mentions.map(Reference.type))
+            }
+        }
+
+        for (type, claimed) in claims {
+            reached.insert(.type(type))
+            reached.formUnion(claimed.map(Reference.type))
+        }
+
+        for claim in leaned.keys {
+            reached.formUnion([.type(claim.type), .type(claim.contract)])
+        }
+
+        return reached.subtracting(declares)
+    }
+
     // Which document this stands against, which is what a host keeps it
     // under and hands back when it reads one.
     public var identity: Identity? {

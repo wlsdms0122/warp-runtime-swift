@@ -933,11 +933,11 @@ struct Evaluator: Sendable {
             return (call, row, first)
         }
 
-        // Before the link, what answers is what a claim of a document this
-        // one stands on says, and a claim made anywhere else is not one a
-        // fold may lean on.
-        let because = dispatch.calls.isEmpty
-            ? ", and no document this one stands on says it answers '\(dispatch.contract)'"
+        // Before the link, what answers is a declaration a claim names in a
+        // document this one stands on, and one anywhere else is not one a
+        // fold may run.
+        let because = dispatch.calls.isEmpty && first.nominal != nil
+            ? ", and no document this one stands on declares what answers '\(dispatch.contract)' for it"
             : ", which answers no procedure of '\(dispatch.contract)'"
 
         throw ExecutionError(

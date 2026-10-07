@@ -323,19 +323,13 @@ public struct Builder: Sendable {
         var built: [Compiled] = []
 
         // What each document declares to the others and which of them it
-        // stands on, by the place it stands at. A document compiled already
-        // stands on the objects it says it was compiled against, and on every
-        // one beside it where it says nothing; one laid here stands on the
-        // ones declaring what it names.
+        // stands on, by the place it stands at: the ones declaring what it
+        // names, read off its object where it is compiled already, so how the
+        // host split the documents between compiles changes nothing.
         let supplied = compiled.map(\.declares) + laying.map(\.supplies)
-        let standingOn = compiled.indices.map { origin -> Set<Int> in
-            guard let against = compiled[origin].dependencies.map(Set.init) else {
-                return Set(compiled.indices).subtracting([origin])
-            }
-
-            return Set(compiled.indices.filter { other in compiled[other].fingerprint.map(against.contains) == true })
-        } + laying.map { module in
-            Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: module.references) })
+        let named = compiled.map(\.reaches) + laying.map(\.references)
+        let standingOn = named.map { reaches in
+            Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: reaches) })
         }
 
         for offset in laying.indices {

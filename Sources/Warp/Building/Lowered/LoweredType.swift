@@ -237,6 +237,18 @@ indirect enum LoweredType: Sendable, Equatable {
         return self
     }
 
+    // Whether this is of no type that answers a contract: null and a
+    // procedure are instances of none, so no value of a contract stands here.
+    var holdsNoValueOfAContract: Bool {
+        switch self {
+        case .null, .procedure:
+            return true
+
+        default:
+            return false
+        }
+    }
+
     // Whether this type proves nothing about the value it holds.
     var provesNothing: Bool {
         self == .any || self == .never || decidedAtCall
@@ -860,7 +872,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // judged where it arrives, unless `rigid`, which the last branch
         // answers. Null and a procedure are of no type that answers a
         // contract, so a slot of either is provably no place for one.
-        case (.null, .composition), (.procedure, .composition):
+        case (_, .composition) where throughAliases(in: table).holdsNoValueOfAContract:
             return false
 
         case (_, .composition) where !rigid:

@@ -262,6 +262,64 @@ struct FoldingReachTests {
         #expect(try await run(sut) == .int(2))
     }
 
+    @Test("a constant settles through a contract alike however the host split the documents between compiles")
+    func aConstantThroughAContractIgnoresHowTheDocumentsWereSplit() async throws {
+        // Given. The contract's document names a type of a third, and the
+        // claim and its declaration stand in a document the program never
+        // names, so the program stands on the contract and the third alone
+        let thing = try Module(types: ["Z.Thing": .int], procedures: [:])
+        let contract = try Module(
+            imports: ["Z.Thing"],
+            contracts: [
+                "App.Joinable": [
+                    "join": ContractProcedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "other", type: .selfType)],
+                            returns: .selfType
+                        ),
+                        constness: .const,
+                        isolation: .isolated
+                    )
+                ]
+            ],
+            procedures: [
+                "App.keep": Procedure(signature: Signature(parameters: [Parameter(name: "it", type: .named("Z.Thing"))]), body: [], result: .literal(.null))
+            ]
+        )
+        let answering = try Module(
+            imports: ["App.Joinable"],
+            claims: ["Int": ["App.Joinable"]],
+            procedures: [
+                "Int.join": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .int), Parameter(name: "other", type: .int)], returns: .int),
+                    body: [],
+                    result: reference("of")
+                )
+            ]
+        )
+        let program = try Module(
+            imports: ["App.Joinable.join"],
+            constants: ["joined": .call(Call(selector: "App.Joinable.join", arguments: [.literal(.int(1)), .literal(.int(2))]))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("joined"))]
+        )
+
+        // When / Then. Handed over at once, and compiled apart first, the
+        // constant refuses the same way
+        await #expect {
+            try await builder.build(Module.standard + [contract, answering, thing, program])
+        } throws: { error in
+            "\(error)".contains("no document this one stands on declares what answers 'App.Joinable'")
+        }
+
+        await #expect {
+            let laid = try await builder.compile([contract, answering, thing], against: [], supplying: Supplying(Module.standard))
+
+            _ = try await builder.compile([program], against: laid, supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("no document this one stands on declares what answers 'App.Joinable'")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

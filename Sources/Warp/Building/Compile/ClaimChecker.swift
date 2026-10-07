@@ -399,8 +399,14 @@ struct ClaimChecker {
 
             for reading in substitution.everyReading(of: parameter)
                 where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
+                // An element of a list or a map the claim is about is whatever
+                // it holds, which no spelling of a document names.
+                let read = reading == .parameter(label: TypeSpelling.selfElement, bounds: [])
+                    ? "whatever element a value of '\(type)' holds"
+                    : reading.rendered(in: loweredTypes)
+
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and reads '\(parameter)' as \(reading.rendered(in: loweredTypes))"
+                        + " '\(contract)' asks, and reads '\(parameter)' as \(read)"
                         + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
             }
         }

@@ -472,6 +472,37 @@ struct BoundTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
+    @Test("a name for a procedure type takes no value of a contract, as the procedure type does not")
+    func aNameForAProcedureTypeTakesNoContractValue() async throws {
+        // Given. A procedure is of no type that answers a contract, through
+        // a name standing for its type as well
+        let sut = try Module(
+            types: ["App.Pick": .procedure(ProcedureType(parameters: [.int], returns: .int))],
+            contracts: Self.markers("App.Marked"),
+            claims: ["Int": ["App.Marked"]],
+            procedures: [
+                "App.take": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "p", type: .named("App.Pick"))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                "App.hand": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Marked"))], returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "App.take", arguments: [reference("x")]))
+                ),
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.hand", arguments: [.literal(.int(1))])))
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which holds App.Marked where App.Pick is declared")
+        }
+    }
+
     @Test("a type handed on once answers no contract")
     func aLinearTypeAnswersNoContract() async throws {
         // Given. A contract standing where a type is written holds a value

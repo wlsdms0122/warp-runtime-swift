@@ -2697,10 +2697,10 @@ struct TypeChecker {
 
             flow.going = flow.going?.indefinite()
 
-            // The two ways answer one value, so a whole literal one of them
-            // answers beside a fraction the other answers is the fraction it
-            // names, the way one written beside fractions in a list is.
-            let reading = attempted.reading.joined(rescued.reading)
+            // The two ways answer one value, held side by side the way a list
+            // literal's elements are, so a whole literal one of them answers
+            // beside a fraction the other answers is the fraction it names.
+            let reading = attempted.reading.joinedPartByPart(rescued.reading)
 
             return Inspection(
                 rewritten: ask.rewrites

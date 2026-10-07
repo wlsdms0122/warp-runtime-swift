@@ -33,7 +33,7 @@ enum LiteralShape: Sendable {
             return reading
 
         case let .either(attempted, rescued):
-            return attempted.folded.joined(rescued.folded)
+            return attempted.folded.joinedPartByPart(rescued.folded)
         }
     }
 
