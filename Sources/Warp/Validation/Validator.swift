@@ -74,14 +74,26 @@ public struct Validator: Sendable {
             )
         }
 
-        // A claim is about a declared type. A value of a type the language
-        // names wears no name a run could read, so no declaration could answer
-        // a contract for it.
-        for name in module.claims.keys.sorted() where TypeExpression.keywords[name] != nil {
-            throw ValidationError(
-                "'\(name)' is a type the language names, and a claim is about a declared type",
-                at: .satisfies(name.spelling, in: .of(module))
-            )
+        // A claim is about a type a value is an instance of, under its name,
+        // since the run picks what answers by the type the value is. `Any`,
+        // `Never`, `Null` and `Procedure` are types no value is an instance
+        // of by name, and a spelling that is no name, `Array<Int>` included,
+        // names no such type.
+        for name in module.claims.keys.sorted() where TypeExpression.nominalTypes[name] == nil {
+            if TypeExpression.keywords[name] != nil {
+                throw ValidationError(
+                    "'\(name)' is not a type a value is an instance of, and a claim is about one",
+                    at: .satisfies(name.spelling, in: .of(module))
+                )
+            }
+
+            guard name.isDeclarable else {
+                throw ValidationError(
+                    "'\(name)' is not a type's name. A claim names the type it is about, and a list or a"
+                        + " map is named bare, `Array` or `Dictionary`",
+                    at: .satisfies(name.spelling, in: .of(module))
+                )
+            }
         }
 
         for (name, procedure) in module.procedures.sorted(by: { one, other in one.key < other.key }) {

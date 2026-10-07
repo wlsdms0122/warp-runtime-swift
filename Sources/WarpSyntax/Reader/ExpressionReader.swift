@@ -180,7 +180,11 @@ public struct ExpressionReader: Decodable {
         // A named record is data written as itself, so the name has no place
         // under the tag: kept, it would be a second spelling of that data, and
         // dropped, a name the text wrote that nothing reads.
-        guard written.nominal == nil, let record = written.asDictionary else {
+        if case let .record(named) = written, named.name != nil {
+            throw ExpressionFormError("{ record: } takes a mapping of its fields, and no name")
+        }
+
+        guard let record = written.asDictionary else {
             throw ExpressionFormError("{ record: } takes a mapping of its fields, and no name")
         }
 

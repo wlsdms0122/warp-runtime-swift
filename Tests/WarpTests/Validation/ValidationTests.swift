@@ -501,29 +501,42 @@ struct ValidationTests {
         }
     }
 
-    @Test("a claim about a type the language names is refused where the document is read")
-    func aClaimAboutABuiltinTypeIsRefused() throws {
-        // When / Then. A claim is about a declared type: a value of `Int`
-        // wears no name a run could read, so no declaration could answer for
-        // it.
+    @Test("a claim about a type no value is an instance of is refused where the document is read")
+    func aClaimAboutNoValuesTypeIsRefused() throws {
+        // When / Then. The run picks what answers by the type a value is, and
+        // no value is an instance of `Any` by name.
         #expect {
             try Module(
                 imports: [],
                 contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Described"))], returns: .string)]],
-                claims: ["Int": ["App.Described"]],
-                procedures: [
-                    "Int.describe": Procedure(
-                        signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .string),
-                        body: [],
-                        result: .literal(.string("Int"))
-                    ),
-                    entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
-                ]
+                claims: ["Any": ["App.Described"]],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("'Int' is a type the language names, and a claim is about a declared type")
+                && "\(error)".contains("'Any' is not a type a value is an instance of, and a claim is about one")
         }
+    }
+
+    @Test("a claim about a type the language names stands as one about a declared type")
+    func aClaimAboutALanguageTypeStands() throws {
+        // When / Then. `Int` is a type a value is an instance of, as a declared
+        // record is, and `Int` names no document to import.
+        let sut = try Module(
+            imports: [],
+            contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("App.Described"))], returns: .string)]],
+            claims: ["Int": ["App.Described"]],
+            procedures: [
+                "Int.describe": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .string),
+                    body: [],
+                    result: .literal(.string("Int"))
+                ),
+                entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        #expect(sut.claims == ["Int": ["App.Described"]])
     }
 
     @Test("a procedure is not data, so it cannot stand as a literal")

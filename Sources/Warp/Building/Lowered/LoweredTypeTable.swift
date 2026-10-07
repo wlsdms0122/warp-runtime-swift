@@ -170,8 +170,8 @@ final class LoweredTypeTable: Sendable {
         constraintRows[name]
     }
 
-    // Whether the type a value arrived wearing answers every procedure a contract
-    // asks. Nil where nothing declares the contract, the way an undeclared
+    // Whether the type a value that arrived is an instance of answers every
+    // procedure a contract asks. Nil where nothing declares the contract, the way an undeclared
     // constraint answers nil: what an undeclared name means is the asking
     // surface's.
     //
@@ -180,8 +180,9 @@ final class LoweredTypeTable: Sendable {
     func settles(contract name: Name, arrived type: Name?) -> Bool? {
         guard let members = satisfying[name] else { return nil }
 
-        // A value wearing no name answers no contract, and no claim anywhere
-        // changes that, so a partial table settles this one too.
+        // A value that is an instance of no type a claim names answers no
+        // contract, and no claim anywhere changes that, so a partial table
+        // settles this one too.
         guard let type else { return false }
         guard settled else { return nil }
 
@@ -529,18 +530,10 @@ final class LoweredTypeTable: Sendable {
         case _ where !orNull && reading.declaresNull(in: self):
             return .settled(false)
 
-        // A name for a record answers as that record, since a value settled
-        // under it wears the record's name; where nothing is judged on
-        // arrival, it is held to what the documents say about it. Any other
-        // name answers as what it stands for, since a value of it wears none.
+        // A name that stands for no record answers as what it stands for,
+        // since a value of it is an instance of that.
         case let .named(row) where recordRows[row] == nil:
             return answering(contract: name, reading: loweredTypes[row], assumingRows: assumingRows, rigid: rigid, orNull: orNull)
-
-        case let .named(row) where rigid:
-            return .settled(settles(contract: name, arrived: labels[recordRows[row] ?? row]) != false)
-
-        case let .named(row):
-            return .leansOn([labels[recordRows[row] ?? row]])
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of. A composition bounded by the
@@ -557,8 +550,16 @@ final class LoweredTypeTable: Sendable {
         case let .composition(bounds):
             return answering(contract: name, boundedBy: bounds, assumingRows: assumingRows, rigid: rigid, orNull: orNull) ?? .settled(!rigid)
 
+        // A reading of a type a value is an instance of answers as that type
+        // does: by what the documents claim about it, so the type comes back
+        // and the asker writes it down, and where nothing is judged on
+        // arrival it is held to what the documents say. A reading that is an
+        // instance of no type a claim names answers nothing.
         default:
-            return .settled(false)
+            guard let type = reading.nominal(in: self) else { return .settled(false) }
+            guard !rigid else { return .settled(settles(contract: name, arrived: type) != false) }
+
+            return .leansOn([type])
         }
     }
 

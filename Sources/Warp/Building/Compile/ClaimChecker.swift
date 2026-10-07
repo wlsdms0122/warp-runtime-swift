@@ -165,8 +165,8 @@ struct ClaimChecker {
     // the type that satisfies it, and beside it the reason each claim that did
     // not hold does not.
     //
-    // The run reads a row out of the first by the name its first argument
-    // wears, and a type standing in it has every procedure behind it.
+    // The run reads a row out of the first by the type its first argument is
+    // an instance of, and a type standing in it has every procedure behind it.
     private func witnesses(
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
@@ -212,7 +212,11 @@ struct ClaimChecker {
     ) throws -> Holding {
         let (type, contract) = (claim.held.type, claim.held.contract)
 
-        guard types[type] != nil else {
+        // A type the language names stands for itself, and one a document
+        // declares for the record behind it.
+        let nominal = TypeExpression.nominalTypes[type]
+
+        guard nominal != nil || types[type] != nil else {
             let reason = "'\(type)' is not a type this link declares, and only a"
                 + " type answers a contract"
 
@@ -236,21 +240,25 @@ struct ClaimChecker {
             return .waits("\(claim.spelled) says " + reason)
         }
 
-        // A value wears the name of the record it is and no other, so a claim
-        // about a name that is not itself a record, an alias included, is one
-        // no run could read.
-        guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
-            throw BuildError(
-                "'\(type)' is not itself a record, and a value of it wears no name of its own for a run"
-                    + " to read. A claim is about a declared record, under the name it was declared",
-                at: claim.place
-            )
+        // A value of a declared type is an instance of the record it is and of
+        // no other name, so a claim about a declared name that is not itself
+        // a record, an alias included, is about no type a value is.
+        if nominal == nil {
+            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
+                throw BuildError(
+                    "'\(type)' is not itself a record, and no value is an instance of it under that name."
+                        + " A claim about a declared type is about a record, under the name it was declared",
+                    at: claim.place
+                )
+            }
         }
+
+        let claimed = nominal ?? .named(type)
 
         // A value written `linear` is followed by the name that holds it, and
         // a contract standing where a type is written holds a value under no
         // name of its own.
-        guard !TypeExpression.named(type).handedOnce(in: table) else {
+        guard !claimed.handedOnce(in: table) else {
             throw BuildError(
                 "'\(type)' is handed on once and answers no contract. A value written"
                     + " `linear` is followed by the name that holds it, and a contract"
@@ -292,6 +300,7 @@ struct ClaimChecker {
                 as: witness.held.signature,
                 reading: witness.held.facts?.answer,
                 answering: type,
+                as: claimed,
                 of: contract,
                 procedure: procedure,
                 in: table
@@ -349,6 +358,7 @@ struct ClaimChecker {
         as given: Signature,
         reading read: LoweredType?,
         answering type: Name,
+        as claimed: TypeExpression,
         of contract: Name,
         procedure: Name,
         in table: TypeTable
@@ -362,7 +372,7 @@ struct ClaimChecker {
         }
 
         let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
-        let asks = [TypeExpression.named(type).lowered(in: loweredTypes)]
+        let asks = [claimed.lowered(in: loweredTypes)]
             + asked.parameters.dropFirst().map { parameter in parameter.declared.lowered(in: loweredTypes) }
         var substitution = Substitution()
 

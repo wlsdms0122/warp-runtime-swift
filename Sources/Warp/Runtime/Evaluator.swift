@@ -871,9 +871,9 @@ struct Evaluator: Sendable {
     }
 
     // Which row answers a call through a contract, and the value it answers
-    // about. The name the first argument wears is the whole of the choosing:
-    // the link gathered every type that answers this procedure and lowered a
-    // call for each, so nothing is resolved here.
+    // about. The type the first argument is an instance of is the whole of
+    // the choosing: the link gathered every type that answers this procedure
+    // and lowered a call for each, so nothing is resolved here.
     private func picked(
         _ dispatch: DispatchOperation,
         in activation: inout Activation,

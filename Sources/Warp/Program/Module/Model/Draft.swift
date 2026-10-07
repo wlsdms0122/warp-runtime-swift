@@ -235,9 +235,13 @@ public struct Draft: Sendable {
         // A claim names two types, and both are mentions like any other: the
         // type it is about and the contract it says that type answers. The
         // link reads the contract's procedures to hold the claim to them, so a
-        // document making one stands behind the document that wrote it.
+        // document making one stands behind the document that wrote it. A type
+        // the language names is no document's to stand behind.
         for (type, contracts) in claims {
-            named.insert(type)
+            if TypeExpression.nominalTypes[type] == nil {
+                named.insert(type)
+            }
+
             named.formUnion(contracts)
         }
 

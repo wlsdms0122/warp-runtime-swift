@@ -16,15 +16,16 @@ struct FoldedContractTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a value wearing no name is refused however much of the list is in hand")
-    func aNamelessValueIsRefused() async throws {
-        // Given. A procedure answering `Any` hands a string where a contract is
+    @Test("a value that is an instance of no type is refused however much of the list is in hand")
+    func aValueOfNoTypeIsRefused() async throws {
+        // Given. A procedure answering `Any` hands null where a contract is
         // asked, and the reading says nothing about what arrives.
-        let modules = try documents(returning: .any, giving: .literal(.string("x"))) + Module.standard
+        let modules = try documents(returning: .any, giving: .literal(.null)) + Module.standard
 
-        // When / Then. No claim puts a string under a contract, so a document
-        // compiled against part of the list settles this where the whole list
-        // would. The refusal stands where the constant is folded, which is the
+        // When / Then. Null is an instance of no type a claim names, so no
+        // claim anywhere puts it under a contract, and a document compiled
+        // against part of the list settles this where the whole list would.
+        // The refusal stands where the constant is folded, which is the
         // compile itself.
         await #expect {
             var compiled: [Compiled] = []
@@ -33,13 +34,35 @@ struct FoldedContractTests {
                 compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
-            "\(error)".contains("String does not answer every procedure 'App.Describable' asks")
+            "\(error)".contains("expected some T: App.Describable, got Null")
         }
 
         await #expect {
             try await Builder().build(modules)
         } throws: { error in
-            "\(error)".contains("String does not answer every procedure 'App.Describable' asks")
+            "\(error)".contains("expected some T: App.Describable, got Null")
+        }
+    }
+
+    @Test("a value of a type the language names leans on what the whole list claims")
+    func aValueOfALanguageTypeLeansOnTheList() async throws {
+        // Given. The same constant handing a string, which is an instance of
+        // `String`, and a claim about `String` is one any document may make.
+        let modules = try documents(returning: .any, giving: .literal(.string("x"))) + Module.standard
+
+        // When. Compiled against part of the list, the pair is written down
+        // rather than judged.
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        }
+
+        // Then. The whole list holds no such claim, and the refusal says so.
+        await #expect {
+            try await Builder().build(modules)
+        } throws: { error in
+            "\(error)".contains("hands 'String' where 'App.Describable' is asked, and no document in this link says 'String' answers it")
         }
     }
 

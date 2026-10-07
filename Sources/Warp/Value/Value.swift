@@ -259,12 +259,38 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The name this value wears, where it wears one. A record settled under a
-    // declared type carries its label; nothing else names itself.
+    // The type this value is an instance of, under the name a claim writes:
+    // a record under the declared name it settled to, and every other kind
+    // under the name the language gives it. Bytes are a list in a compact
+    // spelling and a record with no name holds its names as data, so they
+    // are `Array` and `Dictionary`. Null and a procedure are an instance of
+    // no type a claim can name.
     public var nominal: Name? {
-        guard case let .record(record) = self else { return nil }
+        switch self {
+        case .null, .procedure:
+            return nil
 
-        return record.name
+        case .bool:
+            return "Bool"
+
+        case .int:
+            return "Int"
+
+        case .double:
+            return "Double"
+
+        case .string:
+            return "String"
+
+        case .bytes, .array:
+            return "Array"
+
+        case .dictionary:
+            return "Dictionary"
+
+        case let .record(record):
+            return record.name ?? "Dictionary"
+        }
     }
 
     // Whether this holds fields under names: a record's layout's, or a

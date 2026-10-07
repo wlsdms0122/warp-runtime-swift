@@ -540,6 +540,20 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         "Procedure": .procedure(nil)
     ]
 
+    // The types the language names that a value is an instance of, under
+    // the name a claim writes and `Value.nominal` answers, each as the type
+    // a claim about it stands for. A list and a map are named bare: every
+    // list is a list whatever it holds, and a value does not say which
+    // elements a slot declared it to hold.
+    public static let nominalTypes: [Name: TypeExpression] = [
+        "Bool": .bool,
+        "Int": .int,
+        "Double": .double,
+        "String": .string,
+        "Array": .array(.any),
+        "Dictionary": .dictionary(.any)
+    ]
+
     // What one element of bytes is. The range `Standard` names `Standard.Byte`. Owned here
     // because the `bytes = Array<Standard.Byte>` equation reads it without a table, so it
     // cannot live behind the name.

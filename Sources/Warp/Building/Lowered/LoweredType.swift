@@ -624,6 +624,48 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // The type a value read as this is an instance of, under the name a
+    // claim writes and `Value.nominal` answers once the value arrives: a
+    // declared record by its name, a range as its kind, bytes as the list
+    // they are, and a record with no name as the map it is. Nil where the
+    // reading names no such type: null, a procedure, and every reading that
+    // stands for a type only a value decides.
+    func nominal(in table: LoweredTypeTable) -> Name? {
+        switch self {
+        case .bool:
+            return "Bool"
+
+        case .int:
+            return "Int"
+
+        case .double:
+            return "Double"
+
+        case .string:
+            return "String"
+
+        case let .ranged(refinement):
+            return refinement.lowered.nominal(in: table)
+
+        case .array:
+            return "Array"
+
+        case .dictionary, .record:
+            return "Dictionary"
+
+        case let .named(row):
+            guard let record = table.recordRows[row] else { return table.loweredTypes[row].nominal(in: table) }
+
+            return table.labels[record]
+
+        case let .variable(inner), let .inout(inner):
+            return inner.nominal(in: table)
+
+        case .any, .never, .null, .procedure, .nullable, .parameter, .composition, .projection, .undeclared:
+            return nil
+        }
+    }
+
     // Whether two procedure types declare the same slots and the same answer.
     // What each requires of the value is beside that, so a join may keep the
     // slots while reading the two requirements together.
