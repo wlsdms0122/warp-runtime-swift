@@ -16,10 +16,10 @@ import Foundation
 // of these rather than a separate kind of thing, which is why a module declares
 // a type the same way it declares anything, by binding a name to something.
 //
-// Checking is structural, and it is width-tolerant on records: a value with
-// more fields than the declaration names passes. What arrives here is data from
-// outside. A payload gains fields, and a declaration saying which ones it needs
-// should not be a declaration that it needs nothing else to exist.
+// A record type is exact: a value fits with exactly its name, or exactly its
+// fields where it has none. What arrives from outside gains fields, so the door
+// it comes through fits it to the declaration first, and every other place
+// holds a value as it is.
 public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertible {
     // Nothing ever *is* `Any`. It is what a declaration says when it accepts
     // whatever it is handed.
@@ -55,7 +55,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // declaration, which a `Value.dictionary` holds.
     case dictionary(TypeExpression)
 
-    // Named fields with types. The value may carry more.
+    // Named fields with types, exactly the ones a value holds.
     case record([Name: TypeExpression])
 
     // A value that can be called: the types it is applied with, in position
