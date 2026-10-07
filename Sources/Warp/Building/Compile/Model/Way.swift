@@ -41,20 +41,23 @@ struct Way {
     // How a write lands on what an earlier write left. A definite write
     // replaces; an indefinite one may not have happened, so it joins with what
     // was there, and whether the name was written at all stays the earlier
-    // fact.
-    mutating func land(_ later: (type: LoweredType, definite: Bool), on name: Name) {
-        guard let before = written[name], !later.definite else {
-            written[name] = later
+    // fact. What lands is a bound reading, so a literal whole number written
+    // to a name is an Int there.
+    mutating func land(_ written: (type: LoweredType, definite: Bool), on name: Name) {
+        let later = (type: written.type.bound, definite: written.definite)
+
+        guard let before = self.written[name], !later.definite else {
+            self.written[name] = later
             return
         }
 
-        written[name] = (before.type.joined(later.type), before.definite)
+        self.written[name] = (before.type.joined(later.type), before.definite)
     }
 
     // A box taken, held to what it read as. One taken already on this way
     // stays held to what it was taken as first: the walk read it held then.
     mutating func hold(_ type: LoweredType, on name: Name) {
-        held[name] = held[name] ?? type
+        held[name] = held[name] ?? type.bound
     }
 
     // This way, then another after it.

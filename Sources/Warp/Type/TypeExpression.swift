@@ -289,7 +289,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         // Whether every byte is inside and arrives as itself. The question the
         // compact spelling asks of an element declaration. A fraction range never
-        // is: it widens every byte it takes, and a widened byte is not the byte.
+        // is: it takes no whole number, and so no byte.
         public var holdsEveryByte: Bool {
             guard case let .whole(from, to) = self else { return false }
 
@@ -334,32 +334,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             }
         }
 
-        // The interval as fractions, for the one question two ranges of different
-        // kinds share, and for that pair alone: a whole bound past 2^53 arrives as
-        // a neighbour, and round-to-nearest-even picks it by the tie, so the edge
-        // may move inward as easily as outward. Two ranges of one kind are compared
-        // in that kind and never come through here.
-        private var span: (lower: Double?, upper: Edge<Double>?) {
-            switch self {
-            case let .whole(from, to):
-                let floor = from.map(Double.init)
-
-                switch to {
-                case let .through(bound):
-                    return (floor, .through(Double(bound)))
-
-                case let .upTo(bound):
-                    return (floor, .upTo(Double(bound)))
-
-                case nil:
-                    return (floor, nil)
-                }
-
-            case let .fraction(from, to):
-                return (from, to)
-            }
-        }
-
         // MARK: - Initializer
         // MARK: - Public
         public func settling(_ value: Value) -> Settlement {
@@ -371,11 +345,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
                     ? .settled(value)
                     : .outside(String(number))
 
-            // A whole number arrives at a fraction slot as the fraction it widens
-            // to, which is the one conversion the language has, so the bounds judge
-            // what the slot would hold rather than what was written.
             case let .fraction(from, to):
-                guard let number = Self.fraction(of: value) else { return .otherKind }
+                guard case let .double(number) = value else { return .otherKind }
 
                 guard Self.holds(number, from: from, to: to) else {
                     return .outside(number.shown)
@@ -385,30 +356,25 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             }
         }
 
-        // Whether some value is inside both. Asked across kinds as well as within
-        // one: a whole number widens into a fraction slot, so `Int(0...5)` and
-        // `Double(0.0...5.0)` are two ranges one value satisfies.
+        // Whether some value is inside both. A whole range and a fraction range
+        // hold none in common, since no value is both a whole number and a
+        // fraction, and two of one kind are compared in that kind.
         //
         // Only what is provably apart is refused, which is the bias every judgment
         // before a run takes.
         public func overlaps(_ other: Self) -> Bool {
             guard ordersAtAll, other.ordersAtAll else { return false }
 
-            // Two whole ranges are compared as whole numbers. Widening is what the
-            // question across kinds needs, and it is not free: past 2^53 a whole
-            // number arrives as a neighbour, and which neighbour depends on the
-            // tie, so two ranges that share a value up there can come out apart.
-            // Nothing has to be widened to compare two of the same kind.
-            if case let .whole(myFloor, myCeiling) = self,
-                case let .whole(theirFloor, theirCeiling) = other {
-                return Self.meeting(
-                    (myFloor, myCeiling),
-                    (theirFloor, theirCeiling),
-                    floor: Int.min
-                )
-            }
+            switch (self, other) {
+            case let (.whole(myFloor, myCeiling), .whole(theirFloor, theirCeiling)):
+                return Self.meeting((myFloor, myCeiling), (theirFloor, theirCeiling), floor: Int.min)
 
-            return Self.meeting(span, other.span, floor: -.infinity)
+            case let (.fraction(myFloor, myCeiling), .fraction(theirFloor, theirCeiling)):
+                return Self.meeting((myFloor, myCeiling), (theirFloor, theirCeiling), floor: -.infinity)
+
+            case (.whole, .fraction), (.fraction, .whole):
+                return false
+            }
         }
 
         // MARK: - Private
@@ -438,19 +404,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             switch edge {
             case let .through(bound), let .upTo(bound):
                 return bound
-            }
-        }
-
-        private static func fraction(of value: Value) -> Double? {
-            switch value {
-            case let .double(fraction):
-                return fraction
-
-            case let .int(whole):
-                return Double(whole)
-
-            default:
-                return nil
             }
         }
 

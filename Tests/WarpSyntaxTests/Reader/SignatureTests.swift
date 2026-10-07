@@ -94,10 +94,12 @@ struct SignatureTests {
             try settled(sut, given: ["count": .double(3)])
         }
 
-        // And the conversion that loses nothing still happens
-        let widened = Signature(parameters: [Parameter(name: "ratio", type: .double)])
+        // And a whole number is no fraction either
+        let ratio = Signature(parameters: [Parameter(name: "ratio", type: .double)])
 
-        #expect(try settled(widened, given: ["ratio": .int(3)])["ratio"] == .double(3))
+        #expect(throws: ArgumentError.self) {
+            try settled(ratio, given: ["ratio": .int(3)])
+        }
     }
 
     @Test("an undeclared input name is rejected")

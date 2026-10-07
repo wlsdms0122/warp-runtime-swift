@@ -57,12 +57,10 @@ struct BytesTests {
                 .settling(.bytes([104, 105]), at: "value") == .bytes([104, 105])
         )
 
-        // The one widening, per element: a byte where a fraction is declared.
-        // The declaration changes every byte, so every byte is read out.
-        #expect(
+        // A byte is a whole number, so a list of fractions takes none.
+        #expect(throws: (any Error).self) {
             try TypeExpression.array(.double).settling(.bytes([1]), at: "value")
-                == .array([.double(1)])
-        )
+        }
 
         // A range narrower than `byte` has something to ask of each one, and
         // the refusal names which byte and by how much.
@@ -169,7 +167,7 @@ struct BytesTests {
         // When / Then
         #expect(TypeExpression.array(.int).accepts(.array(.byteElement)))
         #expect(TypeExpression.array(.any).accepts(.array(.byteElement)))
-        #expect(TypeExpression.array(.double).accepts(.array(.byteElement)))
+        #expect(!TypeExpression.array(.double).accepts(.array(.byteElement)))
         #expect(TypeExpression.array(.byteElement).accepts(.array(.int)))
         #expect(!TypeExpression.array(.string).accepts(.array(.byteElement)))
         #expect(!TypeExpression.array(.byteElement).accepts(.array(.string)))

@@ -20,6 +20,13 @@ indirect enum LoweredType: Sendable, Equatable {
     case int
     case double
     case string
+
+    // What a whole number written as a literal reads as: an Int, or the
+    // fraction it names where the place it is written into declares a
+    // Double. A reading and never a declaration, and it is an Int wherever
+    // it is bound.
+    case wholeLiteral
+
     case ranged(TypeExpression.Refinement)
     case array(LoweredType)
     case dictionary(LoweredType)
@@ -121,7 +128,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .variable(inner):
             return inner
 
-        case .any, .never, .null, .bool, .int, .double, .string,
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
             .named, .parameter, .composition, .projection, .undeclared:
             return self
@@ -159,7 +166,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return (parameters ?? []).contains { parameter in parameter.namesParameter }
                 || (returns?.namesParameter ?? false)
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
             return false
         }
     }
@@ -191,7 +198,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 found.merge(part.boundedParameters) { first, _ in first }
             }
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
             return [:]
         }
     }
@@ -203,7 +210,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .variable(inner), let .inout(inner):
             return inner.slotUnwrapped
 
-        case .any, .never, .null, .bool, .int, .double, .string,
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .nullable,
             .named, .parameter, .composition, .projection, .undeclared:
             return self
@@ -227,11 +234,15 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // The spelling with its conditions dropped: a range is its kind.
+    // The spelling with its conditions dropped: a range is its kind, and a
+    // literal whole number is an Int.
     var unrefined: LoweredType {
         switch self {
         case let .ranged(refinement):
             return refinement.lowered
+
+        case .wholeLiteral:
+            return .int
 
         default:
             return self
@@ -271,6 +282,31 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return false
+        }
+    }
+
+    // This reading as a name holds it once it is bound: a literal whole
+    // number, wherever in it one stands, is an Int.
+    var bound: LoweredType {
+        switch self {
+        case .wholeLiteral:
+            return .int
+
+        case let .array(element):
+            return .array(element.bound)
+
+        case let .dictionary(entry):
+            return .dictionary(entry.bound)
+
+        case let .nullable(inner):
+            return .nullable(inner.bound)
+
+        case let .record(record):
+            return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.bound)))
+
+        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .procedure, .variable, .inout,
+            .named, .parameter, .composition, .projection, .undeclared:
+            return self
         }
     }
 
@@ -330,7 +366,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .parameter, .composition, .projection,
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .parameter, .composition, .projection,
             .undeclared:
             return false
         }
@@ -391,6 +427,34 @@ indirect enum LoweredType: Sendable, Equatable {
             self = .dictionary(
                 LoweredType(joining: dictionary.entries.map { entry in LoweredType(of: entry.value, in: table) })
             )
+        }
+    }
+
+    // What a value written as a literal reads as: a whole number as one
+    // whose place may read it as a fraction, at whatever depth of a list or
+    // a record it stands, and anything else as the value it is.
+    init(literal value: Value, in table: LoweredTypeTable) {
+        switch value {
+        case .int:
+            self = .wholeLiteral
+
+        case let .array(elements):
+            self = .array(LoweredType(joining: elements.map { element in LoweredType(literal: element, in: table) }))
+
+        case let .record(record) where record.name == nil:
+            self = .record(
+                Dictionary(
+                    zip(record.names, record.values).map { name, value in (name, LoweredType(literal: value, in: table)) }
+                ) { first, _ in first }
+            )
+
+        case let .dictionary(dictionary):
+            self = .dictionary(
+                LoweredType(joining: dictionary.entries.map { entry in LoweredType(literal: entry.value, in: table) })
+            )
+
+        default:
+            self = LoweredType(of: value, in: table)
         }
     }
 
@@ -564,6 +628,17 @@ indirect enum LoweredType: Sendable, Equatable {
             return joined(theirs).admittingNull
         }
 
+        // A literal whole number beside a number is read as that number's
+        // kind, the fraction it names beside a Double, and beside anything
+        // else it is the Int it is.
+        if self == .wholeLiteral || other == .wholeLiteral {
+            if self == other { return self }
+
+            let number = self == .wholeLiteral ? other.unrefined : unrefined
+
+            return number == .double ? .double : LoweredType.int.joined(number)
+        }
+
         // Two procedures join to a procedure rather than to `Any`, keeping the
         // constness both of them have. Collapsing here would let one body that
         // runs, in a list of them, pass a slot that asked for none, because
@@ -635,7 +710,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case .bool:
             return "Bool"
 
-        case .int:
+        case .int, .wholeLiteral:
             return "Int"
 
         case .double:
@@ -956,7 +1031,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assumingPairs: assumingPairs, asking: .nothing, rigid: rigid)
 
         // Two ranges are the one meeting where both sides are the text's
-        // fact: the kinds under them decide which way a value may widen, and
+        // fact: the kinds under them decide whether one takes the other, and
         // bounds that cannot overlap are provably apart.
         case let (.ranged(mine), .ranged(theirs)):
             return mine.lowered.accepts(theirs.lowered, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
@@ -970,9 +1045,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (_, .ranged(theirs)):
             return accepts(theirs.lowered, in: table, assumingPairs: assumingPairs, asking: asking, rigid: rigid)
 
-        // The one conversion the language has, the way that cannot lose
-        // anything.
-        case (.double, .int):
+        // A whole number written as a literal is an Int, or the fraction it
+        // names where the place declares a Double.
+        case (.int, .wholeLiteral), (.double, .wholeLiteral):
             return true
 
         // A parameter no call fills, or a composition bounded by contracts
@@ -1100,7 +1175,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case .any, .projection, .string, .undeclared:
             return true
 
-        case .int, .double:
+        case .int, .wholeLiteral, .double:
             return numeral(candidate, in: table) != nil
 
         // A candidate has to be a value the range itself would admit.
@@ -1471,11 +1546,12 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // This type with every parameter replaced by what it was read as. A
     // parameter nothing filled reads `Any`, which is what a declaration says
-    // when it says nothing.
+    // when it says nothing, and one read off literal whole numbers alone is
+    // filled with the Int they are.
     func filling(_ bound: [Name: LoweredType]) -> LoweredType {
         switch self {
         case let .parameter(name, _):
-            return bound[name] ?? .any
+            return (bound[name] ?? .any).bound
 
         // Nothing fills a walk through a parameter. It is named for a path only
         // the body that wrote it can read, and no call site says anything about
@@ -1601,7 +1677,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
-        case .any, .never, .null, .bool, .int, .double, .string,
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .ranged, .projection, .undeclared:
             return self
         }
@@ -1839,12 +1915,11 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether a scalar member admits a value: by kind, with the one widening,
-    // and without settling. Nil for a member that is not a scalar, which is
+    // Whether a scalar member admits a value: by kind, and without settling. Nil for a member that is not a scalar, which is
     // judged by settling the value against it.
     func admitsAsScalar(_ value: Value) -> Bool? {
         switch (self, value) {
-        case (.null, .null), (.bool, .bool), (.int, .int), (.double, .double), (.double, .int),
+        case (.null, .null), (.bool, .bool), (.int, .int), (.double, .double),
             (.string, .string):
             return true
 
@@ -1934,7 +2009,7 @@ indirect enum LoweredType: Sendable, Equatable {
         boundAsking: Asking
     ) -> Bool {
         switch self {
-        case .any, .projection, .int:
+        case .any, .projection, .int, .wholeLiteral:
             return true
 
         case let .variable(inner), let .inout(inner), let .nullable(inner):
@@ -1968,10 +2043,9 @@ indirect enum LoweredType: Sendable, Equatable {
                 boundAsking: boundAsking
             )
 
-        // `Double` is the one widening the language has, so it changes every
-        // byte it takes; the rest take no byte at all. Named rather than left
-        // to a default, so that a kind added to the type language has to be
-        // answered for here too.
+        // `Double` takes no whole number and so no byte, and neither do the
+        // rest. Named rather than left to a default, so that a kind added to
+        // the type language has to be answered for here too.
         case .never, .null, .bool, .double, .string,
              .array, .dictionary, .record, .procedure, .undeclared:
             return false
@@ -2033,7 +2107,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case .bool:
             return "Bool"
 
-        case .int:
+        case .int, .wholeLiteral:
             return "Int"
 
         case .double:
@@ -2102,7 +2176,7 @@ indirect enum LoweredType: Sendable, Equatable {
     static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
         switch (lhs, rhs) {
         case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
-            (.double, .double), (.string, .string):
+            (.wholeLiteral, .wholeLiteral), (.double, .double), (.string, .string):
             return true
 
         case let (.ranged(mine), .ranged(theirs)):
@@ -2486,7 +2560,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 }
             }
 
-        case .null, .bool, .int, .double, .string, .ranged, .array, .dictionary, .record:
+        case .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .array, .dictionary, .record:
             return false
         }
     }
@@ -2663,10 +2737,9 @@ indirect enum LoweredType: Sendable, Equatable {
                 throw ArgumentError("\(path()): \(number) is outside \(rendered(in: table))")
             }
 
-        // The scalars, plus the one widening the language has, one way only:
-        // an int where a double is declared. Nothing narrows; an int slot
-        // refuses every fraction, `2.0` included.
-        case .null, .bool, .int, .double, .string:
+        // The scalars, each by its own kind: an int slot refuses every
+        // fraction, `2.0` included, and a double slot every whole number.
+        case .null, .bool, .int, .wholeLiteral, .double, .string:
             guard let settled = scalar(value) else { throw mismatch(value, at: path(), in: table) }
 
             return settled
@@ -2883,19 +2956,13 @@ indirect enum LoweredType: Sendable, Equatable {
         return .procedure(closure.passing(returns, in: table))
     }
 
-    // The one conversion the language performs, and it goes one way: every
-    // whole number is a fraction, so a slot asking for a fraction can take a
-    // whole one and lose nothing.
+    // A scalar of the kind this declares, as it is. What a literal reads as
+    // takes the whole number the literal is.
     private func scalar(_ value: Value) -> Value? {
         switch (self, value) {
-        case (.null, .null), (.bool, .bool), (.int, .int), (.double, .double),
+        case (.null, .null), (.bool, .bool), (.int, .int), (.wholeLiteral, .int), (.double, .double),
             (.string, .string):
             return value
-
-        // The widening is binary64's own rounding, and every int has
-        // a fraction near it: the conversion cannot fail, only round.
-        case let (.double, .int(integer)):
-            return .double(Double(integer))
 
         default:
             return nil

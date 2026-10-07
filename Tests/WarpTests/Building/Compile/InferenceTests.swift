@@ -1073,10 +1073,10 @@ struct InferenceTests {
         }
     }
 
-    @Test("an Int may become a Double, so a cast onto Double stands")
-    func aCastOntoDoubleStands() async throws {
-        // Given. The one widening the language has. Refusing it at the build
-        // would refuse a cast that settles on every run
+    @Test("an Int never becomes a Double, so a cast onto Double refuses")
+    func aCastOntoDoubleRefuses() async throws {
+        // Given. A value is fixed at the build to the type it is read as, and
+        // no value is both a whole number and a fraction
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1093,7 +1093,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("reads Int as Double, and no value is both")
+        }
     }
 
     @Test("a nullable and null share null, so a cast between them stands")

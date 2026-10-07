@@ -471,9 +471,16 @@ struct Compiler {
         for (name, variable) in module.variables.sorted { $0.key < $1.key } {
             let place = Place.variable(name.spelling, in: .of(module))
 
+            // A start written as a literal, or as a closure literal that
+            // writes no answer, is read as what the variable declares.
+            let start = variable.declared.map { declared in
+                declared.lowered(in: context.loweredTypes)
+                    .literal(declared.completing(variable.start, in: context.types), in: context.loweredTypes)
+            } ?? variable.start
+
             try await fulfillment.folding(place) {
                 let (settled, reading) = try await self.settled(
-                    variable.start,
+                    start,
                     as: name,
                     at: place,
                     beside: known,

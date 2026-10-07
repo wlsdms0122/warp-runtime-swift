@@ -56,9 +56,10 @@ struct TypeChecker {
     // compound arm by arm into an exponential reading of nothing new.
     private enum Ask {
         // Judging carries what folds a constant-headed path, where there is
-        // one, and where it writes down the pairs its calls lean on. Probing
-        // writes nothing.
-        case judging(folding: Folding?, writing: Fulfillment)
+        // one, where it writes down the pairs its calls lean on, and what the
+        // body being judged declares it answers, which a literal it answers
+        // with is written into. Probing writes nothing.
+        case judging(folding: Folding?, writing: Fulfillment, answering: LoweredType?)
         case probing
 
         // MARK: - Property
@@ -73,6 +74,20 @@ struct TypeChecker {
             if case .judging = self { return true }
 
             return false
+        }
+
+        // What a `return` in the body being judged hands its answer to.
+        var answer: LoweredType? {
+            guard case let .judging(_, _, answering) = self else { return nil }
+
+            return answering
+        }
+
+        // The same ask for a body that declares it answers `type`.
+        func answering(_ type: LoweredType?) -> Ask {
+            guard case let .judging(folding, writing, _) = self else { return self }
+
+            return .judging(folding: folding, writing: writing, answering: type)
         }
 
         // MARK: - Initializer
@@ -174,12 +189,13 @@ struct TypeChecker {
         folding: Folding?,
         writing fulfillment: Fulfillment
     ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: HandBackProof) {
+        let promised = returns?.lowered(in: context.loweredTypes)
         let inner = try await inspected(
             block: block,
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, writing: fulfillment)
+            ask: .judging(folding: folding, writing: fulfillment, answering: promised)
         )
 
         try held(
@@ -200,7 +216,7 @@ struct TypeChecker {
             given: context
         )
 
-        return (inner.block, inner.calls, inner.judgements, proof)
+        return (promised.map { promised in promised.literal(inner.block, in: context.loweredTypes) } ?? inner.block, inner.calls, inner.judgements, proof)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -219,7 +235,7 @@ struct TypeChecker {
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, writing: fulfillment)
+            ask: .judging(folding: folding, writing: fulfillment, answering: nil)
         )
 
         return (inner.rewritten, inner.calls, inner.judgements, inner.reading)
@@ -239,7 +255,7 @@ struct TypeChecker {
             expression,
             asOperand: place,
             given: context,
-            when: .judging(folding: nil, writing: fulfillment)
+            when: .judging(folding: nil, writing: fulfillment, answering: nil)
         )
     }
 
@@ -310,7 +326,7 @@ struct TypeChecker {
             // parameter reaches, named for the path that reached it) fills with
             // nothing, which is `Any`. One rule, and the useful half comes for
             // free.
-            recording(only.symbol.declared, read ?? .any)
+            recording(only.symbol.declared, read?.bound ?? .any)
         }
     }
 
@@ -394,10 +410,10 @@ struct TypeChecker {
 
         // A constant answer is a value as well as a type, so it is held to
         // what the promise admits, the way a constant argument is held to its
-        // slot.
+        // slot, read as the promise reads it where it is a literal.
         if let constant {
             do {
-                try promised.admitting(constant, at: "answer", in: table)
+                try promised.admitting(promised.literal(constant, in: table), at: "answer", in: table)
             } catch {
                 throw BuildError(
                     "answers \(written.rendered(in: table)), and its"
@@ -1576,7 +1592,7 @@ struct TypeChecker {
     ) async throws -> Inspection {
         switch expression {
         case let .literal(value):
-            return Inspection(rewritten: expression, reading: LoweredType(of: value, in: context.loweredTypes))
+            return Inspection(rewritten: expression, reading: LoweredType(literal: value, in: context.loweredTypes))
 
         // Nothing comes back from here, so there is no value to have a type.
         // `Never` fits wherever it is written, and what evaluating the carried
@@ -1607,10 +1623,15 @@ struct TypeChecker {
 
             let carried = try await inspected(value, naming: nil, at: place.child(.held), in: environment, with: context, ask: ask)
 
+            // What a `return` carries stands where the body declares its answer.
+            let handed = leave.reach == .procedure
+                ? ask.answer.map { answer in answer.literal(carried.rewritten, in: context.loweredTypes) } ?? carried.rewritten
+                : carried.rewritten
+
             return Inspection(
                 rewritten: ask.rewrites
                     ? .leave(
-                        Leave(reach: leave.reach, target: leave.target, value: carried.rewritten)
+                        Leave(reach: leave.reach, target: leave.target, value: handed)
                     )
                     : expression,
                 calls: carried.calls,
@@ -1633,7 +1654,7 @@ struct TypeChecker {
                 return Inspection(rewritten: expression, reading: .any, flow: reached)
 
             case let .reads(read):
-                guard case let .judging(folding, _) = ask, let folding else {
+                guard case let .judging(folding, _, _) = ask, let folding else {
                     return Inspection(rewritten: expression, reading: read, flow: reached)
                 }
 
@@ -1699,6 +1720,12 @@ struct TypeChecker {
                 rewritten.append(inner.rewritten)
             }
 
+            // A literal element read beside fractions is the fraction it
+            // names, since the list holds one kind.
+            if let element, ask.rewrites {
+                rewritten = rewritten.map { item in element.literal(item, in: context.loweredTypes) }
+            }
+
             return Inspection(
                 rewritten: ask.rewrites ? .array(rewritten) : expression,
                 calls: calls,
@@ -1735,6 +1762,8 @@ struct TypeChecker {
                 )
             }
 
+            // A literal is cast as the value it is, so a whole number is an Int.
+            let read = inner.reading.bound
             let claim = type.lowered(in: context.loweredTypes)
             let settled = claim.resolved(in: context.loweredTypes)
 
@@ -1763,29 +1792,29 @@ struct TypeChecker {
                 ? LoweredType.nullable(claim)
                 : claim
 
-            if !claim.couldBothHold(reading: inner.reading, in: context.loweredTypes) {
+            if !claim.couldBothHold(reading: read, in: context.loweredTypes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
                 // which is the silent permanent null `as?` exists to avoid
                 // being. What is decidable before a run is decided before it.
                 try refuse(
-                    "reads \(inner.reading.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
+                    "reads \(read.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
                         + " and no value is both."
                         + " A cast names a type the value may turn out to"
                         + " have, and this one it never can",
                     at: place,
                     when: ask
                 )
-            } else if claim.identical(to: inner.reading, in: context.loweredTypes)
-                || handed.identical(to: inner.reading, in: context.loweredTypes) {
+            } else if claim.identical(to: read, in: context.loweredTypes)
+                || handed.identical(to: read, in: context.loweredTypes) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? Int` hands on `Int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same type by two spellings, and
                 // reading the question off the spelling let the second catch a
                 // repeat that the first waved through.
                 try refuse(
-                    "reads \(inner.reading.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
+                    "reads \(read.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
                         + " which it already is."
                         + " A cast opens what the types do not prove,"
                         + " and here they do",
@@ -1906,6 +1935,7 @@ struct TypeChecker {
 
             // The body read under the ask this walk answers: what it reaches
             // from outside is what the closure takes, which either ask needs.
+            let promised = procedure.signature.returns?.lowered(in: context.loweredTypes)
             let inner = try await inspected(
                 block: block,
                 at: place.child(.closure),
@@ -1913,7 +1943,7 @@ struct TypeChecker {
                     _, own in own
                 },
                 with: context.bounding(procedure.signature.parameterBounding.table),
-                ask: ask
+                ask: ask.answering(promised)
             )
 
             // A box the closure takes is one it reads and writes when it is
@@ -1928,7 +1958,7 @@ struct TypeChecker {
                 flow.hold(taken, on: name)
             }
 
-            if case let .judging(_, fulfillment) = ask {
+            if case let .judging(_, fulfillment, _) = ask {
                 // What the closure writes into a name it captured has to fit
                 // what the name holds: the closure runs when it is called,
                 // and the body that declared the variable reads it as the
@@ -1971,7 +2001,7 @@ struct TypeChecker {
                     fulfillment: fulfillment
                 )
 
-                body = inner.block
+                body = promised.map { promised in promised.literal(inner.block, in: context.loweredTypes) } ?? inner.block
                 calls = inner.calls
                 judgements = inner.judgements
             }
@@ -2102,7 +2132,7 @@ struct TypeChecker {
 
             flow = flow.followed(by: called.flow)
 
-            guard case let .judging(_, fulfillment) = ask else {
+            guard case let .judging(_, fulfillment, _) = ask else {
                 for (position, argument) in arguments.enumerated() {
                     flow = flow.followed(by: try await inspected(
                         argument,
@@ -2169,8 +2199,11 @@ struct TypeChecker {
 
             // The arguments are handed by position the way a call's are, and
             // held to what the slot's type takes by the judgement a call to a
-            // declaration is held by.
+            // declaration is held by. What is written into a slot as a
+            // literal is read as the slot reads it.
             if case let .procedure(parameters?, _, _, _) = callee {
+                rewritten = zip(rewritten, parameters).map { argument, slot in slot.literal(argument, in: context.loweredTypes) }
+
                 try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
 
                 try check(
@@ -2302,7 +2335,12 @@ struct TypeChecker {
             var calls: [CallSite] = []
             var judgements = JudgementTable()
 
-            for (position, argument) in call.arguments.enumerated() {
+            for (position, written) in call.arguments.enumerated() {
+                // A slot declaring a procedure type completes a closure
+                // literal written into it.
+                let argument = signature.parameters.indices.contains(position)
+                    ? signature.parameters[position].declared.completing(written, in: context.types)
+                    : written
                 let inner = try await inspected(
                     argument,
                     naming: nil,
@@ -2351,7 +2389,12 @@ struct TypeChecker {
                 judgements.loosen()
             }
 
-            let rewritten = Call(selector: call.selector, arguments: arguments)
+            // What is written into each slot as a literal is read as the slot
+            // reads it.
+            let rewritten = Call(
+                selector: call.selector,
+                arguments: zip(arguments, taking).map { argument, slot in slot.literal(argument, in: context.loweredTypes) }
+            )
             let reading = answered(
                 by: signature,
                 over: context.slots(of: call.selector),
@@ -2771,8 +2814,14 @@ struct TypeChecker {
         var calls: [CallSite] = []
         var judgements = JudgementTable()
 
-        for (position, statement) in body.statements.enumerated() {
-            let here = place.statement(statement, at: position)
+        for (position, written) in body.statements.enumerated() {
+            let here = place.statement(written, at: position)
+
+            // A name declaring a procedure type completes a closure literal
+            // written into it.
+            let statement = written.binding?.declared.map { declared in
+                Statement(binding: written.binding, expression: declared.completing(written.expression, in: context.types))
+            } ?? written
 
             let inner = try await inspected(
                 statement.expression,
@@ -2855,6 +2904,10 @@ struct TypeChecker {
                 )
             }
 
+            // What a literal written by this statement is written into: the
+            // type the name declares, or the one a write is held to.
+            var writtenInto: LoweredType?
+
             switch statement.binding {
             case let .constant(id, declared)?:
                 locals.insert(id)
@@ -2862,6 +2915,7 @@ struct TypeChecker {
                     .fixed(declared: declaredType),
                     try held(inner.reading, writing: inner.written, declaredAs: declared, at: here, with: context, when: ask)
                 )
+                writtenInto = declared?.lowered(in: context.loweredTypes)
 
             case let .variable(id, declared)?:
                 locals.insert(id)
@@ -2869,6 +2923,7 @@ struct TypeChecker {
                     declaredType.map(Binding.Holding.declared) ?? .assigned,
                     try held(inner.reading, writing: inner.written, declaredAs: declared, at: here, with: context, when: ask)
                 )
+                writtenInto = declared?.lowered(in: context.loweredTypes)
 
             // A write to a whole variable retypes it, the way a declaration
             // did, unless the box's type is fixed elsewhere, in which case what
@@ -2901,6 +2956,8 @@ struct TypeChecker {
                         judgements.record(write: held, at: here)
                     }
 
+                    writtenInto = held
+
                     if case let .held(held) = binding.holding, path.segments.count == 1 {
                         environment[id] = Binding(.held(held), held)
 
@@ -2931,6 +2988,7 @@ struct TypeChecker {
                             loosening: &judgements
                         ) {
                             judgements.record(write: reached, at: here)
+                            writtenInto = reached
                         }
 
                         if !locals.contains(id), let current = environment[id]?.type {
@@ -2950,6 +3008,17 @@ struct TypeChecker {
             // find.
             case nil:
                 break
+            }
+
+            if let writtenInto, ask.rewrites {
+                rewritten = Body(
+                    rewritten.statements.dropLast() + [
+                        Statement(
+                            binding: statement.binding,
+                            expression: writtenInto.literal(inner.rewritten, in: context.loweredTypes)
+                        )
+                    ]
+                )
             }
         }
 
@@ -3260,7 +3329,7 @@ struct TypeChecker {
             return declared
         }
 
-        guard case let .judging(_, fulfillment) = ask else { return declared }
+        guard case let .judging(_, fulfillment, _) = ask else { return declared }
 
         if let refusal = refusal(
             writing: written,
@@ -3317,7 +3386,7 @@ struct TypeChecker {
             return nil
         }
 
-        guard case let .judging(_, fulfillment) = ask else { return slot }
+        guard case let .judging(_, fulfillment, _) = ask else { return slot }
 
         if let refusal = refusal(
             writing: written,

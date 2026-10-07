@@ -1705,6 +1705,22 @@ enum Library {
                 "Standard.Math.absolute" {
                   body [
                     {
+                      let "zero"
+                      value {
+                        call {
+                          arguments [
+                            {
+                              ref "number"
+                            }
+                            {
+                              ref "number"
+                            }
+                          ]
+                          procedure "Standard.Math.minus"
+                        }
+                      }
+                    }
+                    {
                       value {
                         conditional {
                           then [
@@ -1719,7 +1735,9 @@ enum Library {
                           when {
                             call {
                               arguments [
-                                0
+                                {
+                                  ref "zero"
+                                }
                                 {
                                   ref "number"
                                 }
@@ -1744,7 +1762,9 @@ enum Library {
                   result {
                     call {
                       arguments [
-                        0
+                        {
+                          ref "zero"
+                        }
                         {
                           ref "number"
                         }

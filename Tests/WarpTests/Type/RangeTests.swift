@@ -68,9 +68,9 @@ struct RangeTests {
         #expect(byte.accepts(.ranged(.whole(from: 200, to: .through(300)))))
         #expect(byte.accepts(.ranged(.whole(to: .through(0)))))
 
-        // The other way a member is an int, and widens the way one does.
+        // The other way a byte is an Int, and only a whole slot takes it.
         #expect(TypeExpression.int.accepts(byte))
-        #expect(TypeExpression.double.accepts(byte))
+        #expect(!TypeExpression.double.accepts(byte))
         #expect(!TypeExpression.string.accepts(byte))
     }
 

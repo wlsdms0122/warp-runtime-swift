@@ -20,7 +20,7 @@ struct RefinementTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a fraction range judges fractions, and the whole numbers it widens")
+    @Test("a fraction range judges fractions, and takes no whole number")
     func aFractionRangeSettles() throws {
         // Given
         let ratio = TypeExpression.ranged(.fraction(from: 0, to: .through(1)))
@@ -30,11 +30,9 @@ struct RefinementTests {
         #expect(try ratio.settling(.double(0), at: "value") == .double(0))
         #expect(try ratio.settling(.double(1), at: "value") == .double(1))
 
-        // A whole number arrives as the fraction it widens to (the one
-        // conversion the language has) so the bounds judge what the slot would
-        // hold, and the slot holds the fraction.
-        #expect(try ratio.settling(.int(1), at: "value") == .double(1))
-        #expect(try ratio.settling(.int(0), at: "value") == .double(0))
+        // A whole number is no fraction, whatever it is worth.
+        #expect(throws: (any Error).self) { try ratio.settling(.int(1), at: "value") }
+        #expect(throws: (any Error).self) { try ratio.settling(.int(0), at: "value") }
 
         #expect(throws: (any Error).self) { try ratio.settling(.double(1.5), at: "value") }
         #expect(throws: (any Error).self) { try ratio.settling(.int(2), at: "value") }
@@ -60,32 +58,30 @@ struct RefinementTests {
         #expect(fraction.rendered == "Double(0.0..<1.0)")
     }
 
-    @Test("the kind under a range decides which way a value may widen")
+    @Test("the kind under a range decides what it takes, and it takes its own kind alone")
     func acceptanceReadsTheKindUnderTheRange() {
         // Given
         let byte = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
         let ratio = TypeExpression.ranged(.fraction(from: 0, to: .through(1)))
 
-        // When / Then. A fraction slot takes a whole reading, here as anywhere.
-        #expect(ratio.accepts(.int))
-        #expect(ratio.accepts(.ranged(.whole(from: 0, to: .through(1)))))
+        // When / Then. A fraction slot takes fractions.
         #expect(ratio.accepts(.double))
+        #expect(ratio.accepts(.ranged(.fraction(from: 0.5))))
 
-        // And nothing narrows: a whole slot takes no fraction, however the
-        // fraction is bounded.
+        // And no whole number, however it is bounded.
+        #expect(!ratio.accepts(.int))
+        #expect(!ratio.accepts(.ranged(.whole(from: 0, to: .through(1)))))
+
+        // Nor does a whole slot take a fraction.
         #expect(!byte.accepts(.double))
         #expect(!byte.accepts(ratio))
 
-        // Bounds that cannot overlap are provably apart, across kinds too.
-        #expect(!ratio.accepts(.ranged(.whole(from: 2, to: .through(3)))))
-        #expect(ratio.accepts(.ranged(.whole(from: 1, to: .through(3)))))
-
-        // The far bound's own fact: `..<1.0` and `1...` share nothing, and
-        // `...1.0` and `1...` share the one value at the edge.
+        // The far bound's own fact: `..<1.0` and `1.0...` share nothing, and
+        // `...1.0` and `1.0...` share the one value at the edge.
         #expect(!TypeExpression.ranged(.fraction(to: .upTo(1)))
-            .accepts(.ranged(.whole(from: 1))))
+            .accepts(.ranged(.fraction(from: 1))))
         #expect(TypeExpression.ranged(.fraction(to: .through(1)))
-            .accepts(.ranged(.whole(from: 1))))
+            .accepts(.ranged(.fraction(from: 1))))
     }
 
     @Test("a range whose bounds meet on an excluded edge admits nothing")
@@ -248,12 +244,11 @@ struct RefinementTests {
         #expect(TypeExpression.ranged(infinite).rendered == "Double(0.0...<infinity>)")
     }
 
-    @Test("a fraction range reads bytes out, because it changes every one")
-    func aFractionRangeUnpacksBytes() async throws {
-        // Given. The compact spelling crosses an `Array<…>` slot whole only
-        // where the element leaves every byte as it is. A fraction range takes
-        // every byte and hands on a fraction, so the bytes are read out and
-        // each arrives as what the declaration says it is.
+    @Test("a fraction range takes no bytes, since it takes no whole number")
+    func aFractionRangeTakesNoBytes() async throws {
+        // Given. The compact spelling crosses an `Array<…>` slot whole where
+        // the element takes every byte as it is. A fraction range takes no
+        // whole number, so no byte arrives there.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -271,10 +266,9 @@ struct RefinementTests {
         )
 
         // When / Then
-        #expect(
+        await #expect(throws: (any Error).self) {
             try await run(sut, arguments: ["blob": .bytes([1, 2])])
-                == .array([.double(1), .double(2)])
-        )
+        }
 
         // And a whole range that holds every byte leaves the spelling alone.
         let kept = try Module(

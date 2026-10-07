@@ -98,8 +98,8 @@ struct MathTests {
         }
     }
 
-    @Test("a whole number widens to a fraction on either side")
-    func wholeNumbersWiden() async throws {
+    @Test("a whole literal beside a fraction is the fraction it names, on either side")
+    func aWholeLiteralBesideAFractionIsOne() async throws {
         // When / Then
         #expect(try await run(sending("Standard.Math.plus", .int(1), .double(0.5))) == .double(1.5))
         #expect(try await run(sending("Standard.Math.plus", .double(0.5), .int(1))) == .double(1.5))
@@ -128,10 +128,9 @@ struct MathTests {
         #expect(try await run(divided(7, 2)) == .double(3.5))
         #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
 
-        // The quotient is binary64's own: each whole operand widens first (the
-        // same widening every mixed operation performs) and the division rounds
-        // once more. 2^53 + 1 widens to 2^53, and the answer is the widened
-        // pair's, bit for bit.
+        // The quotient is binary64's own: each whole operand reads as the
+        // fraction nearest it first and the division rounds once more. 2^53 + 1
+        // reads as 2^53, and the answer is that pair's, bit for bit.
         #expect(
             try await run(divided(9_007_199_254_740_993, 3))
                 == .double(9_007_199_254_740_992.0 / 3.0)
@@ -286,19 +285,6 @@ struct MathTests {
         #expect(Value.order(.int(.max), .double(0x1p63)) == .orderedAscending)
         #expect(Value.order(.int(.min), .double(-0x1p63)) == .orderedSame)
         #expect(Value.order(.int(0), .double(.nan)) == nil)
-
-        // max answers `rhs` on a tie, so `above` coming back is the int
-        // winning rather than a conversion flattening the two into a tie.
-        let picked = try await run(
-            Procedure(
-                body: [],
-                result: .call(
-                    Call(selector: "Standard.Math.max", arguments: [.literal(above), .literal(below)])
-                )
-            )
-        )
-
-        #expect(picked == above)
     }
 
     @Test("min and max order the way the comparison procedures do")

@@ -91,9 +91,11 @@ struct Binding: Equatable, Sendable {
     }
 
     // MARK: - Initializer
+    // A name holds what it was given as a bound reading: a literal whole
+    // number written to it is an Int from here on.
     init(_ holding: Holding, _ type: LoweredType) {
         self.holding = holding
-        self.type = type
+        self.type = type.bound
     }
 
     // A parameter as the body holds it: one handed in place is the caller's
@@ -104,7 +106,7 @@ struct Binding: Equatable, Sendable {
         case let .inout(inner):
             self.init(.declared(inner.slotUnwrapped), inner.slotUnwrapped)
 
-        case .any, .never, .null, .bool, .int, .double, .string,
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .ranged, .array, .dictionary, .record, .procedure, .variable, .nullable,
             .named, .parameter, .composition, .projection, .undeclared:
             self.init(.fixed(declared: declared), declared)
